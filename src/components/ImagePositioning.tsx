@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { getTemplateById } from "../utils/templates";
+import { loadTemplateById, type LoadedTemplate } from "../../app/utils/templates";
 import type { BadgeImage } from "../types/badge";
 
 interface ImagePositioningProps {
@@ -25,9 +25,26 @@ const ImagePositioning: React.FC<ImagePositioningProps> = ({
   badgeBackgroundImage,
   backgroundColor = "#f9fafb",
 }) => {
-  const template = useMemo(() => getTemplateById(templateId), [templateId]);
-  const ART_W = template.artboardWidth ?? 300;
-  const ART_H = template.artboardHeight ?? 100;
+  const [template, setTemplate] = useState<LoadedTemplate | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadTemplate = async () => {
+      try {
+        setLoading(true);
+        const loadedTemplate = await loadTemplateById(templateId);
+        setTemplate(loadedTemplate);
+      } catch (error) {
+        console.error("Failed to load template:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTemplate();
+  }, [templateId]);
+
+  const { width: ART_W, height: ART_H } = template ? { width: template.widthPx, height: template.heightPx } : { width: 300, height: 100 };
 
   // UI runs at 3x for easier manipulation
   const UI_SCALE = 3;
@@ -147,7 +164,19 @@ const ImagePositioning: React.FC<ImagePositioningProps> = ({
     });
   };
 
-  const clipId = useMemo(() => `imgpos-clip-${template.id}`, [template.id]);
+  const clipId = useMemo(() => `imgpos-clip-${template?.id || 'default'}`, [template?.id]);
+
+  if (loading || !template) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
+        <div className="bg-white rounded-lg shadow-xl p-6">
+          <div className="flex items-center justify-center">
+            <span className="text-gray-500">Loading template...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] no-select">
@@ -192,21 +221,16 @@ const ImagePositioning: React.FC<ImagePositioningProps> = ({
           >
             <defs>
               <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
-                {template.mask?.type === "oval" ? (
-                  <ellipse
-                    cx={UI_W / 2}
-                    cy={UI_H / 2}
-                    rx={UI_W / 2}
-                    ry={UI_H / 2}
-                  />
+                {template.innerElement ? (
+                  <g dangerouslySetInnerHTML={{ __html: template.innerElement }} />
                 ) : (
                   <rect
                     x={0}
                     y={0}
                     width={UI_W}
                     height={UI_H}
-                    rx={(template.mask?.rx ?? 4) * UI_SCALE}
-                    ry={(template.mask?.ry ?? 4) * UI_SCALE}
+                    rx={25}
+                    ry={25}
                   />
                 )}
               </clipPath>
@@ -265,24 +289,16 @@ const ImagePositioning: React.FC<ImagePositioningProps> = ({
             </g>
 
             {/* 4) FRAME/OUTLINE (always on top) */}
-            {template.mask?.type === "oval" ? (
-              <ellipse
-                cx={UI_W / 2}
-                cy={UI_H / 2}
-                rx={UI_W / 2}
-                ry={UI_H / 2}
-                fill="none"
-                stroke="#3b82f6"
-                strokeWidth="4"
-              />
+            {template.outlineElement ? (
+              <g dangerouslySetInnerHTML={{ __html: template.outlineElement }} />
             ) : (
               <rect
                 x={0}
                 y={0}
                 width={UI_W}
                 height={UI_H}
-                rx={(template.mask?.rx ?? 4) * UI_SCALE}
-                ry={(template.mask?.ry ?? 4) * UI_SCALE}
+                rx={25}
+                ry={25}
                 fill="none"
                 stroke="#3b82f6"
                 strokeWidth="4"

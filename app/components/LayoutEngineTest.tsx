@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Badge } from '../types/badge';
 import { computeBadgeLayout } from '../utils/layoutEngine';
 import { PreviewRenderer } from '../utils/renderers/previewRenderer';
-import BadgeSvgRenderer from '../../src/components/BadgeSvgRenderer';
+import { BadgeSvgRenderer } from '../../src/components/BadgeSvgRenderer';
 
 interface LayoutEngineTestProps {
   badge: Badge;
