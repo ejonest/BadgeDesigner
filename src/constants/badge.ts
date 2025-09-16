@@ -8,11 +8,34 @@ export const BADGE_CONSTANTS = {
 } as const;
 
 export const INITIAL_BADGE: Badge = {
+  id: "initial",
   templateId: 'rect-1x3',
   backgroundColor: '#FFFFFF',
-  backing: 'pin',
   lines: [
-    { text: 'Your Badge Text', size: 18, color: '#000000', bold: false, italic: false, underline: false, fontFamily: 'Roboto', alignment: 'center' },
+    { 
+      id: "line1",
+      text: 'Your Name', 
+      xNorm: 0.5, 
+      yNorm: 0.35, 
+      sizeNorm: 0.12,
+      color: '#000000', 
+      bold: true, 
+      italic: false, 
+      fontFamily: 'Roboto', 
+      alignment: 'center' 
+    },
+    { 
+      id: "line2",
+      text: 'Title', 
+      xNorm: 0.5, 
+      yNorm: 0.65, 
+      sizeNorm: 0.09,
+      color: '#000000', 
+      bold: false, 
+      italic: false, 
+      fontFamily: 'Roboto', 
+      alignment: 'center' 
+    },
   ],
   backgroundImage: undefined,
   logo: undefined,

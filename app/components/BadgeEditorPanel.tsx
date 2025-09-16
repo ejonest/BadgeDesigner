@@ -6,6 +6,23 @@ import BadgeSvgRenderer from '../../src/components/BadgeSvgRenderer';
 import { autoScaleFontSize } from '../utils/textMeasurement';
 import { FONT_COLORS } from '../constants/colors';
 import { FONT_FAMILIES } from '../constants/fonts';
+import { loadTemplateById } from '../utils/templates';
+
+// Helper functions for normalized font size conversion
+function sizeNormToPx(sizeNorm: number, designBoxHeight: number): number {
+  return Math.round(sizeNorm * designBoxHeight);
+}
+
+function sizePxToNorm(sizePx: number, designBoxHeight: number): number {
+  return Math.max(0.05, Math.min(0.5, sizePx / designBoxHeight));
+}
+
+function getMinMaxSizeNorm(designBoxHeight: number): { min: number; max: number } {
+  return {
+    min: sizePxToNorm(BADGE_CONSTANTS.MIN_FONT_SIZE, designBoxHeight),
+    max: sizePxToNorm(BADGE_CONSTANTS.MAX_FONT_SIZE, designBoxHeight)
+  };
+}
 
 export interface BadgeEditorPanelProps {
   badge: Badge;
@@ -34,6 +51,17 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   multiBadgeButton,
   editable = true,
 }) => {
+  // Get the current template's designBox for font size calculations
+  const [designBox, setDesignBox] = React.useState({ x: 0, y: 0, width: 288, height: 96 });
+  
+  React.useEffect(() => {
+    if (badge.templateId) {
+      loadTemplateById(badge.templateId).then(template => {
+        setDesignBox(template.designBox);
+      });
+    }
+  }, [badge.templateId]);
+
   const justifyMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
   const align = justifyMap[badge.lines[0].alignment as 'left' | 'center' | 'right'];
   return (
@@ -160,19 +188,36 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 <div className="flex gap-1 items-center min-w-0">
                   <span className="font-semibold text-sm mr-1">Size</span>
                   <div className="flex items-center">
-                    <button
-                      type="button"
-                      className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
-                      onClick={() => onLineChange(idx, { size: Math.max(BADGE_CONSTANTS.MIN_FONT_SIZE, line.size - 1) })}
-                      disabled={line.size <= BADGE_CONSTANTS.MIN_FONT_SIZE || !editable}
-                    >-</button>
-                    <span className="w-6 text-center text-sm">{line.size}</span>
-                    <button
-                      type="button"
-                      className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
-                      onClick={() => onLineChange(idx, { size: Math.min(BADGE_CONSTANTS.MAX_FONT_SIZE, line.size + 1) })}
-                      disabled={line.size >= BADGE_CONSTANTS.MAX_FONT_SIZE || !editable}
-                    >+</button>
+                    {(() => {
+                      // Get current size in pixels for display, prefer sizeNorm if available
+                      const currentSizePx = line.sizeNorm ? sizeNormToPx(line.sizeNorm, designBox.height) : (line.size || 13);
+                      const currentSizeNorm = line.sizeNorm ?? sizePxToNorm(line.size || 13, designBox.height);
+                      const { min: minSizeNorm, max: maxSizeNorm } = getMinMaxSizeNorm(designBox.height);
+                      
+                      return (
+                        <>
+                          <button
+                            type="button"
+                            className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
+                            onClick={() => {
+                              const newSizeNorm = Math.max(minSizeNorm, currentSizeNorm - 0.01);
+                              onLineChange(idx, { sizeNorm: newSizeNorm });
+                            }}
+                            disabled={currentSizeNorm <= minSizeNorm || !editable}
+                          >-</button>
+                          <span className="w-8 text-center text-sm">{currentSizePx}</span>
+                          <button
+                            type="button"
+                            className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
+                            onClick={() => {
+                              const newSizeNorm = Math.min(maxSizeNorm, currentSizeNorm + 0.01);
+                              onLineChange(idx, { sizeNorm: newSizeNorm });
+                            }}
+                            disabled={currentSizeNorm >= maxSizeNorm || !editable}
+                          >+</button>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

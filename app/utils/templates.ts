@@ -1,5 +1,6 @@
 // app/utils/templates.ts
 import templatesJson from "../data/templates.local.json";
+import svgPathBounds from 'svg-path-bounds';
 
 const DPI = 96;
 const toPx = (inches: number) => Math.round(inches * DPI);
@@ -47,37 +48,39 @@ function sanitizeInnerForClip(el: string, id: string): string {
 }
 
 function getDesignBox(innerElement: string): { x: number; y: number; width: number; height: number } {
-  if (typeof window !== "undefined" && "DOMParser" in window) {
-    // Browser: create temp SVG, insert inner element, get bounding box
-    const tempSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    tempSvg.setAttribute("viewBox", "0 0 1000 1000"); // Large enough viewBox
-    tempSvg.style.position = "absolute";
-    tempSvg.style.left = "-9999px";
-    tempSvg.style.top = "-9999px";
-    tempSvg.style.width = "1000px";
-    tempSvg.style.height = "1000px";
+  try {
+    // Parse the SVG element to extract the path data
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(innerElement, 'image/svg+xml');
+    const innerPath = doc.documentElement.firstElementChild;
     
-    document.body.appendChild(tempSvg);
-    
-    try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(innerElement, "image/svg+xml");
-      const element = doc.documentElement.firstElementChild;
-      
-      if (element) {
-        tempSvg.appendChild(element);
-        const bbox = element.getBBox();
-        document.body.removeChild(tempSvg);
-        return { x: bbox.x, y: bbox.y, width: bbox.width, height: bbox.height };
-      }
-    } catch (error) {
-      console.warn("[templates] Failed to getBBox, using fallback:", error);
-      document.body.removeChild(tempSvg);
+    if (!innerPath) {
+      console.warn("[templates] Could not parse inner element, using fallback");
+      return { x: 0, y: 0, width: 288, height: 96 };
     }
+
+    // Extract the 'd' attribute for path elements
+    const d = innerPath.getAttribute('d');
+    if (!d) {
+      console.warn("[templates] No 'd' attribute found, using fallback");
+      return { x: 0, y: 0, width: 288, height: 96 };
+    }
+
+    // Calculate bounds using svg-path-bounds
+    const [xMin, yMin, xMax, yMax] = svgPathBounds(d);
+    const designBox = { 
+      x: xMin, 
+      y: yMin, 
+      width: xMax - xMin, 
+      height: yMax - yMin 
+    };
+
+    console.log("[templates] Calculated designBox:", designBox);
+    return designBox;
+  } catch (error) {
+    console.warn("[templates] Failed to calculate designBox, using fallback:", error);
+    return { x: 0, y: 0, width: 288, height: 96 };
   }
-  
-  // Fallback: assume centered rectangle (will be refined when SVG files are clean)
-  return { x: 0, y: 0, width: 288, height: 96 };
 }
 
 async function fetchSvg(url: string): Promise<string> {

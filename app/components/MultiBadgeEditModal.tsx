@@ -3,7 +3,6 @@ import { Badge } from '../types/badge';
 import { BADGE_CONSTANTS } from '../constants/badge';
 import BadgeSvgRenderer from '../../src/components/BadgeSvgRenderer';
 import { BadgeEditorPanel } from './BadgeEditorPanel';
-import { BadgeTextLinesHeader } from './BadgeTextLinesHeader';
 
 interface MultiBadgeEditModalProps {
   badges: Badge[];
@@ -41,21 +40,25 @@ export const MultiBadgeEditModal: React.FC<MultiBadgeEditModalProps> = ({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <div style={{ color: 'red', fontWeight: 'bold' }}>DEBUG-TAG-123</div>
-                    <BadgeTextLinesHeader
-                      numLines={badge.lines.length}
-                      maxLines={BADGE_CONSTANTS.MAX_LINES}
-                      onAddLine={() => {
-                        const newBadges = [...badges];
-                        if (newBadges[index].lines.length < BADGE_CONSTANTS.MAX_LINES) {
-                          newBadges[index] = {
-                            ...newBadges[index],
-                            lines: [...newBadges[index].lines, { ...BADGE_CONSTANTS.DEFAULT_LINE }]
-                          };
-                          onBadgesChange(newBadges);
-                        }
-                      }}
-                    />
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-800">Text Lines</h3>
+                      <button
+                        onClick={() => {
+                          const newBadges = [...badges];
+                          if (newBadges[index].lines.length < BADGE_CONSTANTS.MAX_LINES) {
+                            newBadges[index] = {
+                              ...newBadges[index],
+                              lines: [...newBadges[index].lines, { ...BADGE_CONSTANTS.DEFAULT_LINE }]
+                            };
+                            onBadgesChange(newBadges);
+                          }
+                        }}
+                        disabled={badge.lines.length >= BADGE_CONSTANTS.MAX_LINES}
+                        className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      >
+                        Add Line ({badge.lines.length}/{BADGE_CONSTANTS.MAX_LINES})
+                      </button>
+                    </div>
                     <BadgeEditorPanel
                       badge={badge}
                       onLineChange={(lineIndex, changes) => {

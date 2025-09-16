@@ -26,11 +26,14 @@ import { generateFullBadgeImage, generateThumbnailFromFullImage } from '../utils
 import { getCurrentShop } from '../utils/shopAuth';
 import { createApi } from '../utils/api';
 
-import { loadTemplates, loadTemplateById, type LoadedTemplate } from '../utils/templates';
+import { loadTemplates, loadTemplateById } from '../utils/templates';
+import type { LoadedTemplate } from '../utils/templates';
 import BadgeSvgRenderer from './BadgeSvgRenderer';
 import { ImageControls } from '../../src/components/ImageControls';
 import { downloadSVG, downloadPNG, downloadCDR, downloadPDF, downloadTIFF } from '../utils/export';
-import { INITIAL_BADGE } from '../../src/constants/badge';
+import { BADGE_CONSTANTS } from '../constants/badge';
+
+const INITIAL_BADGE = BADGE_CONSTANTS.INITIAL_BADGE;
 
 interface BadgeDesignerProps {
   productId?: string | null;
@@ -46,6 +49,63 @@ const badgeWidth = BADGE_CONSTANTS.BADGE_WIDTH;
 const badgeHeight = BADGE_CONSTANTS.BADGE_HEIGHT;
 const MIN_FONT_SIZE = BADGE_CONSTANTS.MIN_FONT_SIZE;
 const LINE_HEIGHT_MULTIPLIER = 1.3;
+
+// Function to remap normalized coordinates when template changes
+function remapLinesForNewDesignBox(
+  lines: BadgeLine[], 
+  oldDesignBox: { x: number; y: number; width: number; height: number } | null,
+  newDesignBox: { x: number; y: number; width: number; height: number }
+): BadgeLine[] {
+  // If no old design box, keep lines as-is (they should already be normalized)
+  if (!oldDesignBox) {
+    return lines.map(line => ({
+      ...line,
+      // Ensure all lines have normalized coordinates
+      xNorm: line.xNorm ?? 0.5,
+      yNorm: line.yNorm ?? 0.5,
+      sizeNorm: line.sizeNorm ?? 0.15,
+    }));
+  }
+
+  // Calculate aspect ratio changes
+  const oldAspect = oldDesignBox.width / oldDesignBox.height;
+  const newAspect = newDesignBox.width / newDesignBox.height;
+  
+  return lines.map(line => {
+    // If line already has normalized coordinates, keep them
+    if (line.xNorm !== undefined && line.yNorm !== undefined && line.sizeNorm !== undefined) {
+      return line;
+    }
+
+    // Convert legacy absolute coordinates to normalized
+    let xNorm = 0.5, yNorm = 0.5, sizeNorm = 0.15;
+    
+    if (line.x !== undefined || line.y !== undefined) {
+      // Convert from old absolute coordinates to normalized
+      xNorm = line.x !== undefined ? (line.x - oldDesignBox.x) / oldDesignBox.width : 0.5;
+      yNorm = line.y !== undefined ? (line.y - oldDesignBox.y) / oldDesignBox.height : 0.5;
+      
+      // Clamp to valid range
+      xNorm = Math.max(0, Math.min(1, xNorm));
+      yNorm = Math.max(0, Math.min(1, yNorm));
+    }
+
+    if (line.size !== undefined) {
+      // Convert from old absolute font size to normalized
+      sizeNorm = line.size / oldDesignBox.height;
+      sizeNorm = Math.max(0.05, Math.min(0.5, sizeNorm)); // Clamp to reasonable range
+    }
+
+    // Remove legacy coordinates and add normalized ones
+    const { x, y, size, ...rest } = line;
+    return {
+      ...rest,
+      xNorm,
+      yNorm,
+      sizeNorm,
+    };
+  });
+}
 
 const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, shop: _shop, gadgetApiUrl, gadgetApiKey }) => {
   // API
@@ -80,7 +140,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
 
   // Load templates once, and ensure badge.templateId is initialized
   useEffect(() => {
-    const loadTemplatesAsync = async () => {
+    (async () => {
       try {
         const list = await loadTemplates();
         setTemplates(list);
@@ -101,19 +161,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
         });
       } catch (error) {
         console.error('Failed to load templates:', error);
-        // Set fallback template
-        setTemplates([{
-          id: 'rect-1x3',
-          name: 'Rectangle 1×3',
-          widthPx: 288,
-          heightPx: 96,
-          safeInsetPx: 6,
-          innerElement: '<path id="inner" d="M25,0 L275,0 A25,25 0 0,1 300,25 L300,75 A25,25 0 0,1 275,100 L25,100 A25,25 0 0,1 0,75 L0,25 A25,25 0 0,1 25,0 Z"/>'
-        }]);
       }
-    };
-
-    loadTemplatesAsync();
+    })();
   }, []);
 
   // Resolve the active template (single source of truth: badge.templateId)
@@ -141,10 +190,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     return template || templates[0] || { 
       id: 'rect-1x3', 
       name: 'Rectangle 1×3', 
-      widthPx: 288,
-      heightPx: 96,
+      widthIn: 3.0,
+      heightIn: 1.0,
       safeInsetPx: 6,
-      innerElement: '<path id="inner" d="M25,0 L275,0 A25,25 0 0,1 300,25 L300,75 A25,25 0 0,1 275,100 L25,100 A25,25 0 0,1 0,75 L0,25 A25,25 0 0,1 25,0 Z"/>'
+      innerPathSvg: '<path d="M25,0 L275,0 A25,25 0 0,1 300,25 L300,75 A25,25 0 0,1 275,100 L25,100 A25,25 0 0,1 0,75 L0,25 A25,25 0 0,1 25,0 Z" fill="#000"/>'
     };
   }, [template, templates, badge.templateId]);
 
@@ -233,19 +282,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
 
   const addLine = () => {
     if (badge.lines.length < maxLines) {
+      // Get the current template's designBox for positioning new lines
+      const currentTemplate = templates.find(t => t.id === badge.templateId);
+      const designBox = currentTemplate?.designBox || { x: 0, y: 0, width: 288, height: 96 };
+      
       setBadge({
         ...badge,
         lines: [
           ...badge.lines,
           {
-            text: 'Line Text',
-            size: 13,
-            color: '#000000',
-            bold: false,
-            italic: false,
-            underline: false,
-            fontFamily: 'Arial',
-            alignment: 'center',
+            ...BADGE_CONSTANTS.DEFAULT_LINE,
+            yNorm: 0.5 + (badge.lines.length * 0.1), // Stack vertically
           } as BadgeLine,
         ],
       });
@@ -524,7 +571,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
               <select
                 className="border rounded px-2 py-1 text-sm"
                 value={badge.templateId || templates[0]?.id || 'rect-1x3'}
-                onChange={(e) => setBadge({ ...badge, templateId: e.target.value })}
+                onChange={(e) => {
+                  const newTemplateId = e.target.value;
+                  setBadge(prevBadge => ({
+                    ...prevBadge,
+                    templateId: newTemplateId
+                  }));
+                }}
               >
                 {templates.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
@@ -1010,7 +1063,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                                         ...badgeToEdit,
                                         lines: [
                                           ...badgeToEdit.lines,
-                                          { text: 'Line Text', size: 13, color: '#000000', bold: false, italic: false, underline: false, fontFamily: 'Arial', alignment: 'center' } as BadgeLine,
+                                          { 
+                                            ...BADGE_CONSTANTS.DEFAULT_LINE,
+                                            yNorm: 0.5 + (badgeToEdit.lines.length * 0.1), // Stack vertically
+                                          } as BadgeLine,
                                         ],
                                       };
                                       setMultipleBadges(copy);
