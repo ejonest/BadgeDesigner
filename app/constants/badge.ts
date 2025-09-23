@@ -39,6 +39,7 @@ export const BADGE_CONSTANTS = {
 
   // Text formatting
   DEFAULT_LINE: {
+    id: 'default-line',
     text: 'Line Text',
     xNorm: 0.5,
     yNorm: 0.5,
@@ -46,9 +47,8 @@ export const BADGE_CONSTANTS = {
     color: '#000000',
     bold: false,
     italic: false,
-    underline: false,
     fontFamily: DEFAULT_FONT,
-    alignment: 'center'
+    align: 'center'
   } as const,
 
   // Initial badge state
@@ -57,6 +57,7 @@ export const BADGE_CONSTANTS = {
     templateId: 'rect-1x3',
     lines: [
       {
+        id: 'line-1',
         text: 'Your Name',
         xNorm: 0.5,
         yNorm: 0.35,
@@ -64,11 +65,11 @@ export const BADGE_CONSTANTS = {
         color: '#000000',
         bold: true,
         italic: false,
-        underline: false,
         fontFamily: DEFAULT_FONT,
-        alignment: 'center'
+        align: 'center'
       },
       {
+        id: 'line-2',
         text: 'Title',
         xNorm: 0.5,
         yNorm: 0.65,
@@ -76,9 +77,8 @@ export const BADGE_CONSTANTS = {
         color: '#000000',
         bold: false,
         italic: false,
-        underline: false,
         fontFamily: DEFAULT_FONT,
-        alignment: 'center'
+        align: 'center'
       }
     ],
     backgroundColor: '#FFFFFF',

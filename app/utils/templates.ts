@@ -47,39 +47,49 @@ function sanitizeInnerForClip(el: string, id: string): string {
   return el;
 }
 
-function getDesignBox(innerElement: string): { x: number; y: number; width: number; height: number } {
+function getDesignBox(innerElement: string, templateWidth: number, templateHeight: number): { x: number; y: number; width: number; height: number } {
   try {
-    // Parse the SVG element to extract the path data
+    // Parse the SVG element to get the full template dimensions
     const parser = new DOMParser();
     const doc = parser.parseFromString(innerElement, 'image/svg+xml');
-    const innerPath = doc.documentElement.firstElementChild;
+    const svgElement = doc.documentElement;
     
-    if (!innerPath) {
-      console.warn("[templates] Could not parse inner element, using fallback");
-      return { x: 0, y: 0, width: 288, height: 96 };
+    if (!svgElement) {
+      console.warn("[templates] Could not parse element, using fallback");
+      return { x: 0, y: 0, width: templateWidth, height: templateHeight };
     }
 
-    // Extract the 'd' attribute for path elements
-    const d = innerPath.getAttribute('d');
-    if (!d) {
-      console.warn("[templates] No 'd' attribute found, using fallback");
-      return { x: 0, y: 0, width: 288, height: 96 };
+    // Get the viewBox attribute to determine the full template dimensions
+    const viewBox = svgElement.getAttribute('viewBox');
+    if (viewBox) {
+      const parts = viewBox.trim().split(/\s+/);
+      if (parts.length === 4) {
+        const [, , width, height] = parts.map(Number);
+        const designBox = { 
+          x: 0, 
+          y: 0, 
+          width: width, 
+          height: height 
+        };
+
+        console.log("[templates] Calculated designBox from viewBox:", designBox);
+        return designBox;
+      }
     }
 
-    // Calculate bounds using svg-path-bounds
-    const [xMin, yMin, xMax, yMax] = svgPathBounds(d);
+    // Fallback: use the template dimensions passed in
     const designBox = { 
-      x: xMin, 
-      y: yMin, 
-      width: xMax - xMin, 
-      height: yMax - yMin 
+      x: 0, 
+      y: 0, 
+      width: templateWidth, 
+      height: templateHeight 
     };
 
-    console.log("[templates] Calculated designBox:", designBox);
+    console.log("[templates] Using template dimensions for designBox:", designBox);
     return designBox;
   } catch (error) {
     console.warn("[templates] Failed to calculate designBox, using fallback:", error);
-    return { x: 0, y: 0, width: 288, height: 96 };
+    return { x: 0, y: 0, width: templateWidth, height: templateHeight };
   }
 }
 
@@ -153,7 +163,7 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
   const outlineEl = extractElement(svg, "outline");
 
   const innerElSanitized = sanitizeInnerForClip(innerEl, c.id);
-  const designBox = getDesignBox(innerElSanitized);
+  const designBox = getDesignBox(innerElSanitized, widthPx, heightPx);
 
   const t: LoadedTemplate = {
     id: c.id,

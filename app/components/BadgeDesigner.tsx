@@ -19,7 +19,7 @@ import {
 import { generatePDFWithLayoutEngine as generatePDF } from '../utils/pdfGenerator';
 import { BadgeEditPanel } from './BadgeEditPanel';
 
-import { BadgeLine, Badge, BadgeImage } from '../../src/types/badge';
+import { BadgeLine, Badge } from '../types/badge';
 import { BACKGROUND_COLORS, FONT_COLORS, EXTENDED_BACKGROUND_COLORS } from '../constants/colors';
 import { BADGE_CONSTANTS } from '../constants/badge';
 import { generateFullBadgeImage, generateThumbnailFromFullImage } from '../utils/badgeThumbnail';
@@ -29,9 +29,7 @@ import { createApi } from '../utils/api';
 import { loadTemplates, loadTemplateById } from '../utils/templates';
 import type { LoadedTemplate } from '../utils/templates';
 import BadgeSvgRenderer from './BadgeSvgRenderer';
-import { ImageControls } from '../../src/components/ImageControls';
 import { downloadSVG, downloadPNG, downloadCDR, downloadPDF, downloadTIFF } from '../utils/export';
-import { BADGE_CONSTANTS } from '../constants/badge';
 
 const INITIAL_BADGE = BADGE_CONSTANTS.INITIAL_BADGE;
 
@@ -116,18 +114,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   const [templates, setTemplates] = useState<LoadedTemplate[]>([]);
   const [debug, setDebug] = useState(false);
 
-  // DEBUG: set a BG quickly from DevTools: window.setBg('data:,...')
-  if (typeof window !== "undefined") {
-    (window as any).setBg = (src: string) => {
-      loadTemplateById(badge.templateId).then(t => {
-        setBadge(b => ({
-          ...b,
-          backgroundImage: { src, widthPx: t.widthPx, heightPx: t.heightPx, scale: 1, offsetX: 0, offsetY: 0 },
-          backgroundColor: undefined
-        }));
-      });
-    };
-  }
 
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [csvText, setCsvText] = useState('');
@@ -197,24 +183,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     };
   }, [template, templates, badge.templateId]);
 
-  // If a background image exists, make line-1 white by default for readability
-  useEffect(() => {
-    const hasBgImage =
-      typeof badge.backgroundImage === 'string'
-        ? !!badge.backgroundImage
-        : !!badge.backgroundImage?.src;
-
-    if (hasBgImage) {
-      setBadge((prev) => ({
-        ...prev,
-        lines: prev.lines.map((l, i) =>
-          i === 0 && (!l.color || l.color.toLowerCase() === '#000000')
-            ? { ...l, color: '#FFFFFF' }
-            : l
-        ),
-      }));
-    }
-  }, [badge.backgroundImage]);
 
   // Measure text width for auto-shrink
   const measureTextWidth = (text: string, fontSize: number, fontFamily: string, bold: boolean, italic: boolean) => {
@@ -241,39 +209,39 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
       let updated = { ...l, ...changes };
 
       if (typeof changes.text !== 'undefined') {
-        let fontSize = updated.size;
+        let fontSize = updated.fontSize || 18;
         let textWidth = measureTextWidth(
           updated.text,
           fontSize,
-          updated.fontFamily,
-          updated.bold,
-          updated.italic
+          updated.fontFamily || 'Arial',
+          updated.bold || false,
+          updated.italic || false
         );
         while (textWidth > badgeWidth - 24 && fontSize > MIN_FONT_SIZE) {
           fontSize--;
           textWidth = measureTextWidth(
             updated.text,
             fontSize,
-            updated.fontFamily,
-            updated.bold,
-            updated.italic
+            updated.fontFamily || 'Arial',
+            updated.bold || false,
+            updated.italic || false
           );
         }
-        updated.size = fontSize;
+        updated.fontSize = fontSize;
       }
 
-      if (typeof updated.alignment !== 'undefined') {
-        updated.alignment =
-          updated.alignment === 'left' || updated.alignment === 'center' || updated.alignment === 'right'
-            ? updated.alignment
+      if (typeof updated.align !== 'undefined') {
+        updated.align =
+          updated.align === 'left' || updated.align === 'center' || updated.align === 'right'
+            ? updated.align
             : 'center';
       } else {
-        updated.alignment = 'center';
+        updated.align = 'center';
       }
       return updated;
     });
 
-    const totalHeight = newLines.reduce((sum, l) => sum + l.size * LINE_HEIGHT_MULTIPLIER, 0);
+    const totalHeight = newLines.reduce((sum, l) => sum + (l.fontSize || 18) * LINE_HEIGHT_MULTIPLIER, 0);
     if (totalHeight > badgeHeight - 8) {
       // Could surface a warning if desired.
     }
@@ -291,8 +259,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
         lines: [
           ...badge.lines,
           {
-            ...BADGE_CONSTANTS.DEFAULT_LINE,
+            id: `line-${Date.now()}`,
+            text: 'Line Text',
+            xNorm: 0.5,
             yNorm: 0.5 + (badge.lines.length * 0.1), // Stack vertically
+            sizeNorm: 0.15,
+            color: '#000000',
+            bold: false,
+            italic: false,
+            fontFamily: 'Arial',
+            align: 'center',
           } as BadgeLine,
         ],
       });
@@ -307,9 +283,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
         ...badge,
         lines: newLines.map((l) => ({
           ...l,
-          alignment:
-            l.alignment === 'left' || l.alignment === 'center' || l.alignment === 'right'
-              ? l.alignment
+          align:
+            l.align === 'left' || l.align === 'center' || l.align === 'right'
+              ? l.align
               : 'center',
         })),
       });
@@ -321,46 +297,36 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     setBadge({
       templateId: badge.templateId || fallbackId,
       lines: [
-        { text: 'Your Name', size: 18, color: '#000000', bold: false, italic: false, underline: false, fontFamily: 'Arial', alignment: 'center' } as BadgeLine,
-        { text: 'Title', size: 13, color: '#000000', bold: false, italic: false, underline: false, fontFamily: 'Arial', alignment: 'center' } as BadgeLine,
+        { 
+          id: 'line-1',
+          text: 'Your Name', 
+          xNorm: 0.5,
+          yNorm: 0.35,
+          sizeNorm: 0.12,
+          color: '#000000', 
+          bold: false, 
+          italic: false, 
+          fontFamily: 'Arial', 
+          align: 'center' 
+        } as BadgeLine,
+        { 
+          id: 'line-2',
+          text: 'Title', 
+          xNorm: 0.5,
+          yNorm: 0.65,
+          sizeNorm: 0.08,
+          color: '#000000', 
+          bold: false, 
+          italic: false, 
+          fontFamily: 'Arial', 
+          align: 'center' 
+        } as BadgeLine,
       ],
       backgroundColor: '#FFFFFF',
       backing: 'pin',
-      backgroundImage: undefined,
-      logo: undefined,
     });
   };
 
-  // Image helpers
-  const handleImageUpload = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target?.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-  const updateImagePosition = (type: 'backgroundImage' | 'logo', x: number, y: number) => {
-    const current = badge[type] as BadgeImage | undefined;
-    if (!current) return;
-    setBadge({
-      ...badge,
-      [type]: { ...current, x, y },
-    });
-  };
-
-  const updateImageScale = (type: 'backgroundImage' | 'logo', scale: number) => {
-    const current = badge[type] as BadgeImage | undefined;
-    if (!current) return;
-    setBadge({
-      ...badge,
-      [type]: { ...current, scale },
-    });
-  };
-
-  const removeImage = (type: 'backgroundImage' | 'logo') => {
-    setBadge({ ...badge, [type]: undefined });
-  };
 
   // Save design
   const saveBadge = async () => {
@@ -512,10 +478,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
             return {
               ...baseLine,
               text: cell || '',
-              size: i === 0 ? 18 : 13,
-              alignment:
-                baseLine.alignment === 'left' || baseLine.alignment === 'center' || baseLine.alignment === 'right'
-                  ? baseLine.alignment
+              fontSize: i === 0 ? 18 : 13,
+              align:
+                baseLine.align === 'left' || baseLine.align === 'center' || baseLine.align === 'right'
+                  ? baseLine.align
                   : 'center',
             } as BadgeLine;
           })
@@ -684,10 +650,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
             </details>
           )}
 
-          {/* Image Controls */}
-          <div className="mb-6">
-            <ImageControls badge={badge} onChange={(b) => setBadge(b)} />
-          </div>
 
           {/* Text Lines */}
           <BadgeEditPanel
@@ -698,7 +660,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
               setBadge({
                 ...badge,
                 lines: badge.lines.map((l, i) =>
-                  i === index ? { ...l, alignment: alignment as 'left' | 'center' | 'right' } : l
+                  i === index ? { ...l, align: alignment as 'left' | 'center' | 'right' } : l
                 ) as BadgeLine[],
               })
             }
@@ -752,173 +714,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
             </div>
           </div>
 
-          {/* Images */}
-          <div className="mb-4">
-            <h3 className="font-semibold text-gray-700 mb-2">Images</h3>
-
-            {/* Background Image */}
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Background Image</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      const imageData = await handleImageUpload(file);
-                      const tpl = await loadTemplateById(badge.templateId);
-                      console.log("[BadgeDesigner] Background image upload:", { imageData: imageData.substring(0, 50) + "...", template: tpl.id, dimensions: `${tpl.widthPx}x${tpl.heightPx}` });
-                      const updated = {
-                        ...badge,
-                        backgroundImage: {
-                          src: imageData,
-                          widthPx: tpl.widthPx,
-                          heightPx: tpl.heightPx,
-                          scale: 1,
-                          offsetX: 0,
-                          offsetY: 0
-                        },
-                        backgroundColor: undefined
-                      };
-                      console.log("[BadgeDesigner] Updated badge:", updated);
-                      setBadge(updated);
-                      // Make first line white if it was black
-                      setBadge(prev => ({
-                        ...prev,
-                        lines: prev.lines.map((ln, i) =>
-                          i === 0 && (!ln.color || ln.color.toLowerCase() === '#000000')
-                            ? { ...ln, color: '#FFFFFF' }
-                            : ln
-                        ),
-                      }));
-                    } catch (err) {
-                      console.error('Failed to upload background image:', err);
-                      alert('Failed to upload image. Please try again.');
-                    }
-                  }}
-                  className="text-sm"
-                />
-                {badge.backgroundImage && (
-                  <button
-                    onClick={() => removeImage('backgroundImage')}
-                    className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-
-              {badge.backgroundImage && (
-                <div className="mt-2 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs">X Position:</label>
-                    <input
-                      type="number"
-                      value={(badge.backgroundImage as BadgeImage).x}
-                      onChange={(e) =>
-                        updateImagePosition('backgroundImage', parseInt(e.target.value) || 0, (badge.backgroundImage as BadgeImage).y)
-                      }
-                      className="w-16 px-1 py-1 text-xs border rounded"
-                    />
-                    <label className="text-xs">Y Position:</label>
-                    <input
-                      type="number"
-                      value={(badge.backgroundImage as BadgeImage).y}
-                      onChange={(e) =>
-                        updateImagePosition('backgroundImage', (badge.backgroundImage as BadgeImage).x, parseInt(e.target.value) || 0)
-                      }
-                      className="w-16 px-1 py-1 text-xs border rounded"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs">Scale:</label>
-                    <input
-                      type="number"
-                      step="0.05"
-                      min="0.1"
-                      max="3.0"
-                      value={(badge.backgroundImage as BadgeImage).scale}
-                      onChange={(e) => updateImageScale('backgroundImage', parseFloat(e.target.value) || 1.0)}
-                      className="w-16 px-1 py-1 text-xs border rounded"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Logo */}
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Logo</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      const imageData = await handleImageUpload(file);
-                      setBadge({
-                        ...badge,
-                        logo: { src: imageData, x: 0, y: 0, scale: 1.0 },
-                      });
-                    } catch (err) {
-                      console.error('Failed to upload logo:', err);
-                      alert('Failed to upload image. Please try again.');
-                    }
-                  }}
-                  className="text-sm"
-                />
-                {badge.logo && (
-                  <button
-                    onClick={() => removeImage('logo')}
-                    className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-
-              {badge.logo && (
-                <div className="mt-2 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs">X Position:</label>
-                    <input
-                      type="number"
-                      value={(badge.logo as BadgeImage).x}
-                      onChange={(e) =>
-                        updateImagePosition('logo', parseInt(e.target.value) || 0, (badge.logo as BadgeImage).y)
-                      }
-                      className="w-16 px-1 py-1 text-xs border rounded"
-                    />
-                    <label className="text-xs">Y Position:</label>
-                    <input
-                      type="number"
-                      value={(badge.logo as BadgeImage).y}
-                      onChange={(e) =>
-                        updateImagePosition('logo', (badge.logo as BadgeImage).x, parseInt(e.target.value) || 0)
-                      }
-                      className="w-16 px-1 py-1 text-xs border rounded"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs">Scale:</label>
-                    <input
-                      type="number"
-                      step="0.05"
-                      min="0.1"
-                      max="3.0"
-                      value={(badge.logo as BadgeImage).scale}
-                      onChange={(e) => updateImageScale('logo', parseFloat(e.target.value) || 1.0)}
-                      className="w-16 px-1 py-1 text-xs border rounded"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Save / Add to cart */}
           <div className="flex justify-end mt-2 mb-4 gap-2">
@@ -1039,7 +834,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                                     copy[editModalIndex] = {
                                       ...badgeToEdit,
                                       lines: badgeToEdit.lines.map((l: any, ii: number) =>
-                                        ii === lineIdx ? { ...l, alignment: alignment as 'left' | 'center' | 'right' } : l
+                                        ii === lineIdx ? { ...l, align: alignment as 'left' | 'center' | 'right' } : l
                                       ),
                                     };
                                     setMultipleBadges(copy);
@@ -1064,8 +859,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                                         lines: [
                                           ...badgeToEdit.lines,
                                           { 
-                                            ...BADGE_CONSTANTS.DEFAULT_LINE,
+                                            id: `line-${Date.now()}`,
+                                            text: 'Line Text',
+                                            xNorm: 0.5,
                                             yNorm: 0.5 + (badgeToEdit.lines.length * 0.1), // Stack vertically
+                                            sizeNorm: 0.15,
+                                            color: '#000000',
+                                            bold: false,
+                                            italic: false,
+                                            fontFamily: 'Arial',
+                                            align: 'center',
                                           } as BadgeLine,
                                         ],
                                       };
