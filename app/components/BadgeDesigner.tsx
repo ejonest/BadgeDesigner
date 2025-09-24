@@ -88,14 +88,14 @@ function remapLinesForNewDesignBox(
       yNorm = Math.max(0, Math.min(1, yNorm));
     }
 
-    if (line.size !== undefined) {
+    if ((line as any).size !== undefined) {
       // Convert from old absolute font size to normalized
-      sizeNorm = line.size / oldDesignBox.height;
+      sizeNorm = (line as any).size / oldDesignBox.height;
       sizeNorm = Math.max(0.05, Math.min(0.5, sizeNorm)); // Clamp to reasonable range
     }
 
     // Remove legacy coordinates and add normalized ones
-    const { x, y, size, ...rest } = line;
+    const { x, y, size, ...rest } = line as any;
     return {
       ...rest,
       xNorm,
@@ -110,7 +110,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   const api = createApi(gadgetApiUrl, gadgetApiKey);
 
   // State
-  const [badge, setBadge] = useState<Badge>(INITIAL_BADGE);
+  const [badge, setBadge] = useState<Badge>({
+    ...INITIAL_BADGE,
+    lines: INITIAL_BADGE.lines.map(line => ({...line}))
+  });
   const [templates, setTemplates] = useState<LoadedTemplate[]>([]);
   const [debug, setDebug] = useState(false);
 
@@ -120,7 +123,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   const [csvPreview, setCsvPreview] = useState<string[][]>([]);
   const [csvError, setCsvError] = useState('');
   const [multipleBadges, setMultipleBadges] = useState<any[]>([]);
-  const [editModalIndex, setEditModalIndex] = useState<number | null>(null);
+  const [selectedBadgeIndex, setSelectedBadgeIndex] = useState<number>(0); // 0 = main badge, 1+ = CSV badges
+  const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Store badge 1's data separately
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showExtendedBgPicker, setShowExtendedBgPicker] = useState(false);
 
@@ -150,6 +154,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
       }
     })();
   }, []);
+
+  // Auto-save removed - now handled in selectBadge function to prevent data overwriting
+
+  // Initialize badge1Data when badge is first loaded, prevent overwriting from other badges
+  useEffect(() => {
+    // Only update badge1Data if we're currently on badge 1 and it's not already set
+    if (selectedBadgeIndex === 0 && !badge1Data && badge.lines.length > 0) {
+      console.log(`[DEBUG] useEffect: Initializing badge1Data with badge:`, badge.lines.map(l => l.text));
+      setBadge1Data(badge);
+    }
+  }, [badge, selectedBadgeIndex, badge1Data]);
 
   // Resolve the active template (single source of truth: badge.templateId)
   const template: LoadedTemplate | undefined = useMemo(() => {
@@ -183,6 +198,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     };
   }, [template, templates, badge.templateId]);
 
+  // Recalculate line positions when template changes
+  useEffect(() => {
+    if (activeTemplate?.designBox && badge.lines.length > 0) {
+      const centeredLines = calculateCenterPositions(badge.lines);
+      setBadge(prevBadge => ({
+        ...prevBadge,
+        lines: centeredLines
+      }));
+    }
+  }, [activeTemplate?.id]); // Only when template ID changes
 
   // Measure text width for auto-shrink
   const measureTextWidth = (text: string, fontSize: number, fontFamily: string, bold: boolean, italic: boolean) => {
@@ -193,15 +218,49 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     return ctx.measureText(text).width;
   };
 
+  // Calculate center-based line positions
+  const calculateCenterPositions = (lines: BadgeLine[]): BadgeLine[] => {
+    if (!activeTemplate?.designBox) return lines;
+    
+    const designBoxHeight = activeTemplate.designBox.height;
+    const designBoxCenterY = designBoxHeight / 2;
+    
+    // Calculate total text height
+    const totalTextHeight = lines.reduce((sum, line) => {
+      const fontSize = (line.sizeNorm || 0.15) * designBoxHeight;
+      return sum + fontSize * 1.2; // 1.2 for line spacing
+    }, 0);
+    
+    // Calculate starting Y position (center minus half total height)
+    const startY = designBoxCenterY - (totalTextHeight / 2);
+    
+    // Position each line
+    let currentY = startY;
+    return lines.map((line, index) => {
+      const fontSize = (line.sizeNorm || 0.15) * designBoxHeight;
+      const yPosition = currentY + (fontSize / 2); // Center the text on the line
+      
+      // Convert to normalized coordinates
+      const yNorm = yPosition / designBoxHeight;
+      
+      currentY += fontSize * 1.2; // Move to next line position
+      
+      return {
+        ...line,
+        yNorm: Math.max(0.1, Math.min(0.9, yNorm)) // Clamp to valid range
+      };
+    });
+  };
+
   // Text updates
   const updateLine = (index: number, changes: Partial<BadgeLine>) => {
     const newLines = badge.lines.map((l: BadgeLine, i: number) => {
       if (i !== index) {
         return {
           ...l,
-          alignment:
-            l.alignment === 'left' || l.alignment === 'center' || l.alignment === 'right'
-              ? l.alignment
+          align:
+            l.align === 'left' || l.align === 'center' || l.align === 'right'
+              ? l.align
               : 'center',
         };
       }
@@ -241,11 +300,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
       return updated;
     });
 
-    const totalHeight = newLines.reduce((sum, l) => sum + (l.fontSize || 18) * LINE_HEIGHT_MULTIPLIER, 0);
-    if (totalHeight > badgeHeight - 8) {
-      // Could surface a warning if desired.
-    }
-    setBadge({ ...badge, lines: newLines });
+    // Apply center-based positioning
+    const centeredLines = calculateCenterPositions(newLines);
+
+    setBadge({ ...badge, lines: centeredLines });
   };
 
   const addLine = () => {
@@ -254,23 +312,28 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
       const currentTemplate = templates.find(t => t.id === badge.templateId);
       const designBox = currentTemplate?.designBox || { x: 0, y: 0, width: 288, height: 96 };
       
+      const newLines = [
+        ...badge.lines,
+        {
+          id: `line-${Date.now()}`,
+          text: 'Line Text',
+          xNorm: 0.5,
+          yNorm: 0.5, // Will be repositioned by calculateCenterPositions
+          sizeNorm: 0.15,
+          color: '#000000',
+          bold: false,
+          italic: false,
+          fontFamily: 'Arial',
+          align: 'center',
+        } as BadgeLine,
+      ];
+      
+      // Apply center-based positioning to all lines
+      const centeredLines = calculateCenterPositions(newLines);
+      
       setBadge({
         ...badge,
-        lines: [
-          ...badge.lines,
-          {
-            id: `line-${Date.now()}`,
-            text: 'Line Text',
-            xNorm: 0.5,
-            yNorm: 0.5 + (badge.lines.length * 0.1), // Stack vertically
-            sizeNorm: 0.15,
-            color: '#000000',
-            bold: false,
-            italic: false,
-            fontFamily: 'Arial',
-            align: 'center',
-          } as BadgeLine,
-        ],
+        lines: centeredLines,
       });
     }
   };
@@ -279,9 +342,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     if (badge.lines.length > 1) {
       const newLines = [...badge.lines];
       newLines.splice(index, 1);
+      
+      // Apply center-based positioning to remaining lines
+      const centeredLines = calculateCenterPositions(newLines);
+      
       setBadge({
         ...badge,
-        lines: newLines.map((l) => ({
+        lines: centeredLines.map((l) => ({
           ...l,
           align:
             l.align === 'left' || l.align === 'center' || l.align === 'right'
@@ -294,38 +361,92 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
 
   const resetBadge = () => {
     const fallbackId = templates[0]?.id || 'rect-1x3';
+    const defaultLines = [
+      { 
+        id: 'line-1',
+        text: 'Your Name', 
+        xNorm: 0.5,
+        yNorm: 0.5, // Will be repositioned by calculateCenterPositions
+        sizeNorm: 0.12,
+        color: '#000000', 
+        bold: false, 
+        italic: false, 
+        fontFamily: 'Arial', 
+        align: 'center' 
+      } as BadgeLine,
+      { 
+        id: 'line-2',
+        text: 'Title', 
+        xNorm: 0.5,
+        yNorm: 0.5, // Will be repositioned by calculateCenterPositions
+        sizeNorm: 0.08,
+        color: '#000000', 
+        bold: false, 
+        italic: false, 
+        fontFamily: 'Arial', 
+        align: 'center' 
+      } as BadgeLine,
+    ];
+    
+    // Apply center-based positioning
+    const centeredLines = calculateCenterPositions(defaultLines);
+    
     setBadge({
       templateId: badge.templateId || fallbackId,
-      lines: [
-        { 
-          id: 'line-1',
-          text: 'Your Name', 
-          xNorm: 0.5,
-          yNorm: 0.35,
-          sizeNorm: 0.12,
-          color: '#000000', 
-          bold: false, 
-          italic: false, 
-          fontFamily: 'Arial', 
-          align: 'center' 
-        } as BadgeLine,
-        { 
-          id: 'line-2',
-          text: 'Title', 
-          xNorm: 0.5,
-          yNorm: 0.65,
-          sizeNorm: 0.08,
-          color: '#000000', 
-          bold: false, 
-          italic: false, 
-          fontFamily: 'Arial', 
-          align: 'center' 
-        } as BadgeLine,
-      ],
+      lines: centeredLines,
       backgroundColor: '#FFFFFF',
       backing: 'pin',
     });
   };
+
+  // Badge selection helpers
+  const selectBadge = (index: number) => {
+    console.log(`[DEBUG] selectBadge called: index=${index}, current selectedBadgeIndex=${selectedBadgeIndex}`);
+    console.log(`[DEBUG] Current badge text:`, badge.lines.map(l => l.text));
+    
+    // First, save the current badge before switching
+    if (selectedBadgeIndex === 0) {
+      // Currently on badge 1 - save to badge1Data
+      console.log(`[DEBUG] Saving badge 1 to badge1Data:`, badge.lines.map(l => l.text));
+      setBadge1Data(badge);
+    } else {
+      // Currently on a CSV badge - save current badge state to CSV array
+      // Only save if we're actually switching away from this badge
+      console.log(`[DEBUG] Saving CSV badge ${selectedBadgeIndex} to multipleBadges:`, badge.lines.map(l => l.text));
+      const newMultipleBadges = [...multipleBadges];
+      newMultipleBadges[selectedBadgeIndex - 1] = badge;
+      setMultipleBadges(newMultipleBadges);
+    }
+
+    // Now switch to the selected badge
+    setSelectedBadgeIndex(index);
+    
+    if (index === 0) {
+      // Select badge 1 - load from badge1Data or use current badge as fallback
+      if (badge1Data) {
+        console.log(`[DEBUG] Loading badge 1 from badge1Data:`, badge1Data.lines.map((l: BadgeLine) => l.text));
+        // Recalculate line positions for the loaded badge
+        const centeredLines = calculateCenterPositions(badge1Data.lines);
+        setBadge({ ...badge1Data, lines: centeredLines });
+      } else {
+        console.log(`[DEBUG] No badge1Data available, keeping current badge`);
+      }
+      // If no badge1Data, keep current badge state (initial state)
+    } else {
+      // Select CSV badge (index 1 = first CSV badge)
+      const csvBadge = multipleBadges[index - 1];
+      if (csvBadge) {
+        console.log(`[DEBUG] Loading CSV badge ${index} from multipleBadges:`, csvBadge.lines.map((l: BadgeLine) => l.text));
+        // Recalculate line positions for the loaded badge
+        const centeredLines = calculateCenterPositions(csvBadge.lines);
+        setBadge({ ...csvBadge, lines: centeredLines });
+      } else {
+        console.log(`[DEBUG] No CSV badge available at index ${index - 1}`);
+      }
+    }
+  };
+
+  // saveCurrentBadge function removed - logic now in selectBadge function
 
 
   // Save design
@@ -465,12 +586,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
 
   // CSV helpers
   function parseCsv(text: string) {
+    console.log(`[DEBUG] parseCsv called with current badge:`, badge.lines.map(l => l.text));
     try {
       setCsvError('');
       const rows = text.trim().split(/\r?\n/).map((row: string) => row.split(','));
       setCsvPreview(rows);
 
       if (rows.length > 0 && rows[0].length > 0) {
+        // Create badges based on current badge template but with CSV text
         const badges = rows.map((row: any) => ({
           ...badge,
           lines: row.map((cell: any, i: number) => {
@@ -486,7 +609,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
             } as BadgeLine;
           })
         }));
+        
+        console.log(`[DEBUG] Created ${badges.length} CSV badges:`, badges.map(b => b.lines.map((l: BadgeLine) => l.text)));
         setMultipleBadges(badges);
+        
+        // Initialize badge1Data with current badge if not already set
+        if (!badge1Data) {
+          console.log(`[DEBUG] Initializing badge1Data with current badge:`, badge.lines.map(l => l.text));
+          setBadge1Data(badge);
+        } else {
+          console.log(`[DEBUG] badge1Data already exists:`, badge1Data.lines.map(l => l.text));
+        }
       }
     } catch {
       setCsvError('Invalid CSV format.');
@@ -529,7 +662,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
         <div className="section-container mb-4">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-gray-800">Customize Your Badge</h2>
+              <h2 className="text-xl font-bold text-gray-800">
+                Customize Your Badge {selectedBadgeIndex === 0 ? '1' : `${selectedBadgeIndex + 1}`}
+                {multipleBadges.length > 0 && ` of ${multipleBadges.length + 1}`}
+              </h2>
               <span className="text-xl font-bold text-red-600">{activeTemplate.name}</span>
             </div>
             <div className="flex items-center gap-2">
@@ -593,19 +729,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
           <div className="mb-4">
             <h3 className="font-semibold text-gray-700 mb-2">Export Options</h3>
             <div className="mt-4 flex flex-wrap gap-2">
-              <button className="px-3 py-2 border rounded" onClick={() => downloadSVG(badge, activeTemplate, 'badge.svg')}>
+              <button className="px-3 py-2 border rounded" onClick={() => downloadSVG({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.svg')}>
                 Download SVG
               </button>
-              <button className="px-3 py-2 border rounded" onClick={() => downloadPNG(badge, activeTemplate, 'badge.png', 2)}>
+              <button className="px-3 py-2 border rounded" onClick={() => downloadPNG({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.png', 2)}>
                 Download PNG (2×)
               </button>
-              <button className="px-3 py-2 border rounded" onClick={() => downloadCDR(badge, activeTemplate, 'badge.cdr')}>
+              <button className="px-3 py-2 border rounded" onClick={() => downloadCDR({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.cdr')}>
                 Download CDR (SVG)
               </button>
-              <button className="px-3 py-2 border rounded" onClick={() => downloadPDF(badge, activeTemplate, 'badge.pdf', 3)}>
+              <button className="px-3 py-2 border rounded" onClick={() => downloadPDF({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.pdf', 3)}>
                 Download PDF
               </button>
-              <button className="px-3 py-2 border rounded" onClick={() => downloadTIFF(badge, activeTemplate, 'badge.tiff', 4)}>
+              <button className="px-3 py-2 border rounded" onClick={() => downloadTIFF({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.tiff', 4)}>
                 Download TIFF (placeholder)
               </button>
             </div>
@@ -744,9 +880,20 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
               <div className="flex flex-row items-center gap-2 w-full">
                 <div className="flex flex-col items-center justify-center mr-2">
                   <span className="text-lg font-bold mb-2" style={{ width: 32, textAlign: 'center' }}>1.</span>
+                  <button
+                    className={`control-button p-1 flex items-center justify-center ${
+                      selectedBadgeIndex === 0 
+                        ? 'bg-blue-500 text-white border-blue-600' 
+                        : 'bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200'
+                    }`}
+                    style={{ width: 28, height: 28 }}
+                    onClick={(e) => { e.preventDefault(); selectBadge(0); }}
+                  >
+                    <ArrowPathIcon className="w-4 h-4" />
+                  </button>
                 </div>
                 <div className="flex flex-col items-center w-full h-[200px]" style={{ overflow: "visible" }}>
-                  <BadgeSvgRenderer badge={badge} templateId={activeTemplate.id} />
+                  <BadgeSvgRenderer badge={badge1Data || badge} templateId={activeTemplate.id} />
                 </div>
               </div>
 
@@ -757,9 +904,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                     <div className="flex flex-col items-center justify-center mr-2">
                       <span className="text-lg font-bold mb-2" style={{ width: 32, textAlign: 'center' }}>{i + 2}.</span>
                       <button
-                        className="control-button p-1 bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200 flex items-center justify-center"
+                        className={`control-button p-1 flex items-center justify-center ${
+                          selectedBadgeIndex === (i + 1)
+                            ? 'bg-blue-500 text-white border-blue-600' 
+                            : 'bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200'
+                        }`}
                         style={{ width: 28, height: 28 }}
-                        onClick={(e) => { e.preventDefault(); setEditModalIndex(i); }}
+                        onClick={(e) => { e.preventDefault(); selectBadge(i + 1); }}
                       >
                         <ArrowPathIcon className="w-4 h-4" />
                       </button>
@@ -769,7 +920,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                         style={{ width: 28, height: 28 }}
                         onClick={(e) => { e.preventDefault(); setMultipleBadges(multipleBadges.filter((_, idx) => idx !== i)); }}
                       >
-                        <span style={{ fontSize: 20, color: '#b91c1c' }}>X</span>
+                        <XMarkIcon className="w-4 h-4" />
                       </button>
                     </div>
                     <div className="flex flex-col items-center w-full h-[200px]" style={{ overflow: "visible" }}>
@@ -777,123 +928,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                     </div>
                   </div>
 
-                  {/* Modal editor */}
-                  {editModalIndex === i && (
-                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-                      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
-                        <button
-                          className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl"
-                          onClick={(e) => { e.preventDefault(); setEditModalIndex(null); }}
-                          aria-label="Close"
-                        >
-                          <XMarkIcon className="w-6 h-6" />
-                        </button>
-                        <h3 className="text-lg font-bold mb-2">Edit Badge</h3>
-                        {(() => {
-                          const badgeToEdit = multipleBadges[editModalIndex];
-                          if (!badgeToEdit) return null;
-                          return (
-                            <div className="flex flex-col gap-4">
-                              <div className="flex flex-row gap-6 items-start w-full justify-center">
-                                <div className="flex flex-col items-end justify-center min-w-[120px] pr-2" style={{ alignSelf: 'center' }}>
-                                  <span className="font-semibold text-sm mb-1">Background Color</span>
-                                  <div className="grid grid-cols-4 grid-rows-2 gap-2">
-                                    {backgroundColors.map((bg: any) => (
-                                      <button
-                                        key={bg.value}
-                                        className={`color-button ${badgeToEdit.backgroundColor === bg.value ? 'ring-2 ring-offset-2 ' + bg.ring : ''}`}
-                                        style={{ backgroundColor: bg.value }}
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          const copy = [...multipleBadges];
-                                          copy[editModalIndex] = { ...badgeToEdit, backgroundColor: bg.value };
-                                          setMultipleBadges(copy);
-                                        }}
-                                      />
-                                    ))}
-                                  </div>
-                                </div>
-                                <div className="h-[200px] w-full">
-                                  <BadgeSvgRenderer badge={badgeToEdit} templateId={activeTemplate.id} />
-                                </div>
-                              </div>
-
-                              <div className="flex flex-col gap-6 w-full max-w-2xl">
-                                <BadgeEditPanel
-                                  badge={badgeToEdit}
-                                  maxLines={maxLines}
-                                  onLineChange={(lineIdx, changes) => {
-                                    const copy = [...multipleBadges];
-                                    const newLines = [...badgeToEdit.lines];
-                                    newLines[lineIdx] = { ...newLines[lineIdx], ...changes };
-                                    copy[editModalIndex] = { ...badgeToEdit, lines: newLines };
-                                    setMultipleBadges(copy);
-                                  }}
-                                  onAlignmentChange={(lineIdx, alignment) => {
-                                    const copy = [...multipleBadges];
-                                    copy[editModalIndex] = {
-                                      ...badgeToEdit,
-                                      lines: badgeToEdit.lines.map((l: any, ii: number) =>
-                                        ii === lineIdx ? { ...l, align: alignment as 'left' | 'center' | 'right' } : l
-                                      ),
-                                    };
-                                    setMultipleBadges(copy);
-                                  }}
-                                  onBackgroundColorChange={(backgroundColor) => {
-                                    const copy = [...multipleBadges];
-                                    copy[editModalIndex] = { ...badgeToEdit, backgroundColor };
-                                    setMultipleBadges(copy);
-                                  }}
-                                  onRemoveLine={(lineIdx) => {
-                                    const copy = [...multipleBadges];
-                                    const newLines = [...badgeToEdit.lines];
-                                    newLines.splice(lineIdx, 1);
-                                    copy[editModalIndex] = { ...badgeToEdit, lines: newLines };
-                                    setMultipleBadges(copy);
-                                  }}
-                                  addLine={() => {
-                                    if (badgeToEdit.lines.length < maxLines) {
-                                      const copy = [...multipleBadges];
-                                      copy[editModalIndex] = {
-                                        ...badgeToEdit,
-                                        lines: [
-                                          ...badgeToEdit.lines,
-                                          { 
-                                            id: `line-${Date.now()}`,
-                                            text: 'Line Text',
-                                            xNorm: 0.5,
-                                            yNorm: 0.5 + (badgeToEdit.lines.length * 0.1), // Stack vertically
-                                            sizeNorm: 0.15,
-                                            color: '#000000',
-                                            bold: false,
-                                            italic: false,
-                                            fontFamily: 'Arial',
-                                            align: 'center',
-                                          } as BadgeLine,
-                                        ],
-                                      };
-                                      setMultipleBadges(copy);
-                                    }
-                                  }}
-                                  showRemove={true}
-                                  editable={true}
-                                />
-                              </div>
-
-                              <div className="flex justify-end mt-4">
-                                <button
-                                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
-                                  onClick={(e) => { e.preventDefault(); setEditModalIndex(null); }}
-                                >
-                                  Save
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  )}
                 </React.Fragment>
               ))}
             </div>
