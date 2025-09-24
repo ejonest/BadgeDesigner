@@ -109,21 +109,6 @@ export function renderBadgeToSvgString(
     ? renderBg(badge.backgroundImage, designBox)
     : `<rect x="${designBox.x}" y="${designBox.y}" width="${designBox.width}" height="${designBox.height}" fill="${badge.backgroundColor || "#FFFFFF"}" />`;
 
-  // Debug crosshairs (optional)
-  const debugCross =
-    opts.showOutline
-      ? `<g stroke="#f66" stroke-dasharray="4 4" stroke-width="0.8" opacity="0.45">
-           <line x1="${designBox.x + designBox.width/2}" y1="${designBox.y}" x2="${designBox.x + designBox.width/2}" y2="${designBox.y + designBox.height}" />
-           <line x1="${designBox.x}" y1="${designBox.y + designBox.height/2}" x2="${designBox.x + designBox.width}" y2="${designBox.y + designBox.height/2}" />
-         </g>`
-      : "";
-
-  // Debug text position dots (optional)
-  const textDots = (badge.lines || []).map((ln: AnyLine) => {
-    const p = toPx(ln, designBox);
-    return `<circle cx="${p.x}" cy="${p.y}" r="1.8" fill="#f66" opacity="0.75"/>`;
-  }).join("");
-
   console.log("[lines]", badge.lines);
 
   // Text rendering
@@ -170,16 +155,12 @@ export function renderBadgeToSvgString(
     </clipPath>
   </defs>
 
-  ${debugCross}
-
   <!-- Clipped content group -->
   <g clip-path="url(#${clipId})">
     ${bgLayer}
     ${renderLogo(badge.logo, designBox)}
     ${text}
   </g>
-
-  ${textDots}
 
   <!-- Outline always on top -->
   ${template.outlineElement ? 

@@ -115,7 +115,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     lines: INITIAL_BADGE.lines.map(line => ({...line}))
   });
   const [templates, setTemplates] = useState<LoadedTemplate[]>([]);
-  const [debug, setDebug] = useState(false);
 
 
   const [showCsvModal, setShowCsvModal] = useState(false);
@@ -156,6 +155,23 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   }, []);
 
   // Auto-save removed - now handled in selectBadge function to prevent data overwriting
+
+  // Recalculate initial badge positions when templates load
+  useEffect(() => {
+    if (templates.length > 0 && badge.lines.length > 0) {
+      // Check if this is the initial badge with default positions
+      const hasDefaultPositions = badge.lines.every(line => line.yNorm === 0.5);
+      
+      if (hasDefaultPositions) {
+        console.log('[DEBUG] Recalculating initial badge positions');
+        const centeredLines = calculateCenterPositions(badge.lines);
+        setBadge(prevBadge => ({
+          ...prevBadge,
+          lines: centeredLines
+        }));
+      }
+    }
+  }, [templates.length]); // Only when templates first load
 
   // Initialize badge1Data when badge is first loaded, prevent overwriting from other badges
   useEffect(() => {
@@ -313,19 +329,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
       const designBox = currentTemplate?.designBox || { x: 0, y: 0, width: 288, height: 96 };
       
       const newLines = [
-        ...badge.lines,
-        {
+          ...badge.lines,
+          {
           id: `line-${Date.now()}`,
           text: 'Line Text',
           xNorm: 0.5,
           yNorm: 0.5, // Will be repositioned by calculateCenterPositions
-          sizeNorm: 0.15,
+          sizeNorm: badge.lines.length === 0 ? 0.20 : 0.143, // 14pt for line 1, 10pt for lines 2,3,4
           color: '#000000',
           bold: false,
           italic: false,
           fontFamily: 'Arial',
           align: 'center',
-        } as BadgeLine,
+          } as BadgeLine,
       ];
       
       // Apply center-based positioning to all lines
@@ -594,21 +610,27 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
 
       if (rows.length > 0 && rows[0].length > 0) {
         // Create badges based on current badge template but with CSV text
-        const badges = rows.map((row: any) => ({
+        const badges = rows.map((row: any) => {
+          const badgeWithCsvText = {
           ...badge,
           lines: row.map((cell: any, i: number) => {
             const baseLine = badge.lines[i] || badge.lines[0];
             return {
               ...baseLine,
               text: cell || '',
-              fontSize: i === 0 ? 18 : 13,
-              align:
-                baseLine.align === 'left' || baseLine.align === 'center' || baseLine.align === 'right'
-                  ? baseLine.align
+                sizeNorm: i === 0 ? 0.20 : 0.143, // 14pt for line 1, 10pt for lines 2,3,4
+                align:
+                  baseLine.align === 'left' || baseLine.align === 'center' || baseLine.align === 'right'
+                    ? baseLine.align
                   : 'center',
             } as BadgeLine;
           })
-        }));
+          };
+          
+          // Apply center-based positioning to CSV badges
+          const centeredLines = calculateCenterPositions(badgeWithCsvText.lines);
+          return { ...badgeWithCsvText, lines: centeredLines };
+        });
         
         console.log(`[DEBUG] Created ${badges.length} CSV badges:`, badges.map(b => b.lines.map((l: BadgeLine) => l.text)));
         setMultipleBadges(badges);
@@ -656,9 +678,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   }
 
   return (
-    <div className="flex flex-col md:flex-row bg-gray-100 p-4 md:p-6 rounded-lg shadow-lg mx-auto max-w-6xl min-h-[600px]">
+    <div className="flex flex-col md:flex-row bg-gray-100 p-4 md:p-6 rounded-lg shadow-lg mx-auto max-w-5xl min-h-[600px]">
       {/* LEFT COLUMN - Controls */}
-      <div className="w-full pr-4 mb-4 overflow-y-auto" style={{ maxHeight: '90vh' }}>
+      <div className="w-full mb-4 overflow-y-auto" style={{ maxHeight: '90vh' }}>
         <div className="section-container mb-4">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
@@ -669,22 +691,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
               <span className="text-xl font-bold text-red-600">{activeTemplate.name}</span>
             </div>
             <div className="flex items-center gap-2">
-              {/* Quick template switcher (bound to badge.templateId) */}
-              <select
-                className="border rounded px-2 py-1 text-sm"
-                value={badge.templateId || templates[0]?.id || 'rect-1x3'}
-                onChange={(e) => {
-                  const newTemplateId = e.target.value;
-                  setBadge(prevBadge => ({
-                    ...prevBadge,
-                    templateId: newTemplateId
-                  }));
-                }}
-              >
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
               <button
                 onClick={() => generatePDF(badge, multipleBadges)}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
@@ -694,15 +700,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
             </div>
           </div>
 
-          {/* Template Selector + Debug */}
+          {/* Template Selector */}
           <div className="mb-4">
-            <div className="flex items-center gap-3">
               <label className="block text-sm font-semibold mb-1">Shape / Template</label>
-              <label className="inline-flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={debug} onChange={(e) => setDebug(e.target.checked)} />
-                Debug
-              </label>
-            </div>
             <select
               className="border rounded px-2 py-1 text-sm bg-white"
               value={badge.templateId || templates[0]?.id || 'rect-1x3'}
@@ -720,38 +720,38 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                 ))
               )}
             </select>
-            <div className="mt-1 text-xs text-gray-500">
-              Current: <span className="font-mono">{activeTemplate.id}</span> ({activeTemplate.widthPx}×{activeTemplate.heightPx}px)
-            </div>
           </div>
 
           {/* Export Options */}
           <div className="mb-4">
             <h3 className="font-semibold text-gray-700 mb-2">Export Options</h3>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button className="px-3 py-2 border rounded" onClick={() => downloadSVG({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.svg')}>
-                Download SVG
+            <div className="mt-4 flex flex-wrap gap-1">
+              <button className="px-2 py-1 text-xs border rounded" onClick={() => downloadSVG({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.svg')}>
+                SVG
               </button>
-              <button className="px-3 py-2 border rounded" onClick={() => downloadPNG({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.png', 2)}>
-                Download PNG (2×)
+              <button className="px-2 py-1 text-xs border rounded" onClick={() => downloadPNG({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.png', 2)}>
+                PNG
               </button>
-              <button className="px-3 py-2 border rounded" onClick={() => downloadCDR({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.cdr')}>
-                Download CDR (SVG)
+              <button className="px-2 py-1 text-xs border rounded" onClick={() => downloadTIFF({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.tiff', 4)}>
+                TIFF
               </button>
-              <button className="px-3 py-2 border rounded" onClick={() => downloadPDF({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.pdf', 3)}>
-                Download PDF
+              <button className="px-2 py-1 text-xs border rounded" onClick={() => downloadPDF({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.pdf', 3)}>
+                PDF (Artwork)
               </button>
-              <button className="px-3 py-2 border rounded" onClick={() => downloadTIFF({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.tiff', 4)}>
-                Download TIFF (placeholder)
+              <button className="px-2 py-1 text-xs border rounded" onClick={() => downloadCDR({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.cdr')}>
+                CDR (Artwork)
+              </button>
+              <button className="px-2 py-1 text-xs border rounded" onClick={() => generatePDF(badge, multipleBadges)}>
+                PDF (Generator)
               </button>
             </div>
           </div>
 
           {/* Background + Preview */}
-          <div className="flex flex-row gap-6 items-center w-full mb-6">
-            <div className="flex flex-col items-start justify-center min-w-[120px] pr-2" style={{ alignSelf: 'flex-start' }}>
+          <div className="flex flex-row gap-6 items-start w-full mb-6">
+            <div className="flex flex-col items-start justify-center w-[180px]" style={{ alignSelf: 'flex-start' }}>
               <span className="font-semibold text-gray-700 mb-2">Background Color</span>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 gap-2 w-full">
                 {backgroundColors.map((bg: any) => (
                   <button
                     key={bg.value}
@@ -775,17 +775,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
               <BadgeSvgRenderer badge={badge} templateId={activeTemplate.id} />
             </div>
           </div>
-
-          {/* Debug state */}
-          {debug && (
-            <details className="mt-2">
-              <summary className="cursor-pointer text-sm">Badge State</summary>
-              <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto">
-                {JSON.stringify({ templateId: badge.templateId, badge }, null, 2)}
-              </pre>
-            </details>
-          )}
-
 
           {/* Text Lines */}
           <BadgeEditPanel

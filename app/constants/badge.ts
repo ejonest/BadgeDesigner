@@ -43,7 +43,7 @@ export const BADGE_CONSTANTS = {
     text: 'Line Text',
     xNorm: 0.5,
     yNorm: 0.5,
-    sizeNorm: 0.15,
+    sizeNorm: 0.143,  // 10pt equivalent (10/70 = 0.143)
     color: '#000000',
     bold: false,
     italic: false,
@@ -60,10 +60,10 @@ export const BADGE_CONSTANTS = {
         id: 'line-1',
         text: 'Your Name',
         xNorm: 0.5,
-        yNorm: 0.35,
-        sizeNorm: 0.12,
+        yNorm: 0.5,  // Use center position - will be recalculated
+        sizeNorm: 0.20,  // 14pt equivalent (14/70 = 0.20)
         color: '#000000',
-        bold: true,
+        bold: false,  // No default bold
         italic: false,
         fontFamily: DEFAULT_FONT,
         align: 'center'
@@ -72,8 +72,8 @@ export const BADGE_CONSTANTS = {
         id: 'line-2',
         text: 'Title',
         xNorm: 0.5,
-        yNorm: 0.65,
-        sizeNorm: 0.09,
+        yNorm: 0.5,  // Use center position - will be recalculated
+        sizeNorm: 0.143,  // 10pt equivalent (10/70 = 0.143)
         color: '#000000',
         bold: false,
         italic: false,
