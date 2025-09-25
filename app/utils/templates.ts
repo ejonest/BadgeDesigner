@@ -194,3 +194,23 @@ export async function loadTemplates(): Promise<LoadedTemplate[]> {
 export function listTemplateOptions(): { id: string; name: string }[] {
   return cfg.map(t => ({ id: t.id, name: t.name }));
 }
+
+// Template Resolution Utility for Stage 1 Refactor
+export async function resolveTemplateForBadge(
+  badge: { templateId?: string }, 
+  templates: LoadedTemplate[]
+): Promise<LoadedTemplate> {
+  // Priority: badge.templateId → templates[0] → fallback
+  if (badge.templateId) {
+    const template = templates.find(t => t.id === badge.templateId);
+    if (template) return template;
+  }
+  
+  // Fallback to first available template
+  if (templates.length > 0) {
+    return templates[0];
+  }
+  
+  // Ultimate fallback - load rect-1x3
+  return await loadTemplateById('rect-1x3');
+}
