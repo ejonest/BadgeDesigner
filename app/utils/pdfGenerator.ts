@@ -2,6 +2,7 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { Badge } from '../types/badge';
 import { getColorInfo } from '../constants/colors';
 import { generateBadgeTiff, generateFullBadgeImage } from './badgeThumbnail';
+import { loadTemplateById } from './templates';
 
 /* ---------- Color utils ---------- */
 
@@ -74,10 +75,8 @@ export const generatePDFNew = async (badgeData: Badge, multipleBadges?: Badge[])
 
          // Simple layout: two horizontal rectangles side by side
      const margin = 30;
-     const imageWidth = 300;  // Display size (will scale down from 900px)
-     const imageHeight = 100; // Display size (will scale down from 300px)
-     const tableX = margin + imageWidth + 20;
-     const tableWidth = 595.28 - tableX - margin;
+     const maxImageWidth = 300;  // Maximum display width
+     const maxImageHeight = 150; // Maximum display height
     
     let y = 800; // Start from top
 
@@ -87,26 +86,47 @@ export const generatePDFNew = async (badgeData: Badge, multipleBadges?: Badge[])
       const badge = allBadges[idx];
       console.log(`Processing Badge ${idx + 1}`);
 
+      // Load the correct template for this badge
+      const template = await loadTemplateById(badge.templateId || 'rect-1x3');
+      console.log(`Loaded template for badge ${idx + 1}:`, template.id, `(${template.widthPx}x${template.heightPx})`);
+
       // Generate high-resolution image
       console.log('Generating badge image...');
       const imageDataUrl = await generateFullBadgeImage(badge);
       console.log('Image generated successfully');
 
-             // Convert to Uint8Array and embed
-       const base64Data = imageDataUrl.split(',')[1];
-       const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-       const pdfImage = await pdfDoc.embedPng(imageBytes);
-       console.log('Image embedded in PDF');
-       console.log('PDF image dimensions:', { width: pdfImage.width, height: pdfImage.height });
+      // Convert to Uint8Array and embed
+      const base64Data = imageDataUrl.split(',')[1];
+      const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+      const pdfImage = await pdfDoc.embedPng(imageBytes);
+      console.log('Image embedded in PDF');
+      console.log('PDF image dimensions:', { width: pdfImage.width, height: pdfImage.height });
 
-             // Draw image on left side (fixed size, no scaling issues)
-       page.drawImage(pdfImage, {
-         x: margin,
-         y: y - imageHeight,
-         width: imageWidth,
-         height: imageHeight,
-       });
-       console.log('Image drawn at:', { x: margin, y: y - imageHeight, width: imageWidth, height: imageHeight });
+      // Calculate proper dimensions preserving aspect ratio
+      const templateAspectRatio = template.widthPx / template.heightPx;
+      let imageWidth = maxImageWidth;
+      let imageHeight = maxImageWidth / templateAspectRatio;
+      
+      // If height exceeds max, scale down based on height
+      if (imageHeight > maxImageHeight) {
+        imageHeight = maxImageHeight;
+        imageWidth = maxImageHeight * templateAspectRatio;
+      }
+      
+      console.log(`Calculated dimensions for badge ${idx + 1}:`, { width: imageWidth, height: imageHeight, aspectRatio: templateAspectRatio });
+
+      // Calculate table position based on actual image width
+      const tableX = margin + imageWidth + 20;
+      const tableWidth = 595.28 - tableX - margin;
+
+      // Draw image on left side (proper aspect ratio preserved)
+      page.drawImage(pdfImage, {
+        x: margin,
+        y: y - imageHeight,
+        width: imageWidth,
+        height: imageHeight,
+      });
+      console.log('Image drawn at:', { x: margin, y: y - imageHeight, width: imageWidth, height: imageHeight });
 
              // Draw badge title (smaller, left-justified)
        page.drawText(`Badge ${idx + 1}`, {

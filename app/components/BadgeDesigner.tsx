@@ -29,7 +29,10 @@ import { createApi } from '../utils/api';
 import { loadTemplates, loadTemplateById } from '../utils/templates';
 import type { LoadedTemplate } from '../utils/templates';
 import BadgeSvgRenderer from './BadgeSvgRenderer';
-import { downloadSVG, downloadPNG, downloadCDR, downloadPDF, downloadTIFF } from '../utils/export';
+import { 
+  downloadSVG, downloadPNG, downloadCDR, downloadPDF, downloadTIFF,
+  downloadMultipleSVGs, downloadMultiplePNGs, downloadMultipleCDRs, downloadMultiplePDFs, downloadMultipleTIFFs
+} from '../utils/export';
 
 const INITIAL_BADGE = BADGE_CONSTANTS.INITIAL_BADGE;
 
@@ -44,6 +47,41 @@ const backgroundColors = BACKGROUND_COLORS;
 const fontColors = FONT_COLORS;
 const maxLines = BADGE_CONSTANTS.MAX_LINES;
 const badgeWidth = BADGE_CONSTANTS.BADGE_WIDTH;
+
+// Helper functions for multi-badge exports
+const getAllBadges = (badge1Data: Badge | null, multipleBadges: Badge[]): Badge[] => {
+  // Ensure all badges have IDs and templateIds
+  const ensureBadgeIds = (b: Badge, index: number): Badge => ({
+    ...b,
+    id: b.id || `badge-${index + 1}`,
+    templateId: b.templateId || 'rect-1x3'
+  });
+  
+  // Use saved badge1Data instead of current main preview
+  const savedBadge1 = badge1Data || { 
+    id: 'badge-1', 
+    templateId: 'rect-1x3', 
+    lines: [], 
+    backgroundColor: '#FFFFFF', 
+    backing: 'pin' as const
+  };
+  return [ensureBadgeIds(savedBadge1, 0), ...multipleBadges.map((b, i) => ensureBadgeIds(b, i + 1))];
+};
+
+const getAllTemplates = (badge1Data: Badge | null, multipleBadges: Badge[], templates: LoadedTemplate[]): LoadedTemplate[] => {
+  // Get template for saved badge 1
+  const savedBadge1 = badge1Data || { templateId: 'rect-1x3' };
+  const badge1Template = templates.find(t => t.id === savedBadge1.templateId) || templates[0];
+  const allTemplates = [badge1Template];
+  
+  // For each additional badge, find its corresponding template
+  multipleBadges.forEach(badge => {
+    const template = templates.find(t => t.id === badge.templateId) || templates[0];
+    allTemplates.push(template);
+  });
+  
+  return allTemplates;
+};
 const badgeHeight = BADGE_CONSTANTS.BADGE_HEIGHT;
 const MIN_FONT_SIZE = BADGE_CONSTANTS.MIN_FONT_SIZE;
 const LINE_HEIGHT_MULTIPLIER = 1.3;
@@ -126,6 +164,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Store badge 1's data separately
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showExtendedBgPicker, setShowExtendedBgPicker] = useState(false);
+  const [globalTemplateId, setGlobalTemplateId] = useState<string>('rect-1x3');
 
   // Load templates once, and ensure badge.templateId is initialized
   useEffect(() => {
@@ -182,16 +221,24 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     }
   }, [badge, selectedBadgeIndex, badge1Data]);
 
-  // Resolve the active template (single source of truth: badge.templateId)
+  // Update badge1Data when editing Badge 1 (selectedBadgeIndex === 0)
+  useEffect(() => {
+    if (selectedBadgeIndex === 0 && badge1Data) {
+      console.log(`[DEBUG] Syncing badge1Data with current badge changes`);
+      setBadge1Data(badge);
+    }
+  }, [badge.backgroundColor, badge.lines, selectedBadgeIndex]); // Only sync when on Badge 1
+
+  // Resolve the active template (single source of truth: globalTemplateId)
   const template: LoadedTemplate | undefined = useMemo(() => {
-    const t = templates.find(t => t.id === badge.templateId);
+    const t = templates.find(t => t.id === globalTemplateId);
     if (!t) {
-      console.warn("[BadgeDesigner] Template not found:", badge.templateId, "Available:", templates.map(t=>t.id));
+      console.warn("[BadgeDesigner] Template not found:", globalTemplateId, "Available:", templates.map(t=>t.id));
     }
     // eslint-disable-next-line no-console
     console.log('[BadgeDesigner] template selected:', t?.id);
     return t;
-  }, [templates, badge.templateId]);
+  }, [templates, globalTemplateId]);
 
   // Hardened fallback - ensure we always have a valid template
   const activeTemplate: LoadedTemplate = useMemo(() => {
@@ -199,7 +246,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
       // eslint-disable-next-line no-console
       console.warn(
         '[BadgeDesigner] Template not found for id:',
-        badge.templateId,
+        globalTemplateId,
         'Available ids:',
         templates.map(t => t.id)
       );
@@ -212,7 +259,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
       safeInsetPx: 6,
       innerPathSvg: '<path d="M25,0 L275,0 A25,25 0 0,1 300,25 L300,75 A25,25 0 0,1 275,100 L25,100 A25,25 0 0,1 0,75 L0,25 A25,25 0 0,1 25,0 Z" fill="#000"/>'
     };
-  }, [template, templates, badge.templateId]);
+  }, [template, templates, globalTemplateId]);
 
   // Recalculate line positions when template changes
   useEffect(() => {
@@ -413,6 +460,24 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
       backgroundColor: '#FFFFFF',
       backing: 'pin',
     });
+  };
+
+  // Manual save function to lock in current badge state
+  const saveCurrentBadgeChanges = () => {
+    console.log(`[DEBUG] Manual save called: selectedBadgeIndex=${selectedBadgeIndex}`);
+    console.log(`[DEBUG] Current badge text:`, badge.lines.map(l => l.text));
+    
+    if (selectedBadgeIndex === 0) {
+      // Save Badge 1 to badge1Data
+      console.log(`[DEBUG] Manually saving Badge 1 to badge1Data:`, badge.lines.map(l => l.text));
+      setBadge1Data({ ...badge, templateId: badge.templateId || globalTemplateId });
+    } else {
+      // Save CSV badge to multipleBadges array
+      console.log(`[DEBUG] Manually saving Badge ${selectedBadgeIndex + 1} to multipleBadges:`, badge.lines.map(l => l.text));
+      const newMultipleBadges = [...multipleBadges];
+      newMultipleBadges[selectedBadgeIndex - 1] = { ...badge, templateId: badge.templateId || globalTemplateId };
+      setMultipleBadges(newMultipleBadges);
+    }
   };
 
   // Badge selection helpers
@@ -709,6 +774,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
               onChange={(e) => {
                 // eslint-disable-next-line no-console
                 console.log('[BadgeDesigner] Template changed to:', e.target.value);
+                setGlobalTemplateId(e.target.value);
                 setBadge({ ...badge, templateId: e.target.value });
               }}
             >
@@ -726,22 +792,70 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
           <div className="mb-4">
             <h3 className="font-semibold text-gray-700 mb-2">Export Options</h3>
             <div className="mt-4 flex flex-wrap gap-1">
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => downloadSVG({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.svg')}>
+              <button className="px-2 py-1 text-xs border rounded" onClick={() => {
+                if (multipleBadges.length > 0) {
+                  const allBadges = getAllBadges(badge1Data, multipleBadges);
+                  const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
+                  downloadMultipleSVGs(allBadges, allTemplates, 'badge');
+                } else {
+                  const exportBadge = badge1Data || badge;
+                  downloadSVG({...exportBadge, id: exportBadge.id || 'badge', templateId: exportBadge.templateId || 'rect-1x3'}, activeTemplate, 'badge.svg');
+                }
+              }}>
                 SVG
               </button>
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => downloadPNG({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.png', 2)}>
+              <button className="px-2 py-1 text-xs border rounded" onClick={() => {
+                if (multipleBadges.length > 0) {
+                  const allBadges = getAllBadges(badge1Data, multipleBadges);
+                  const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
+                  downloadMultiplePNGs(allBadges, allTemplates, 'badge');
+                } else {
+                  const exportBadge = badge1Data || badge;
+                  downloadPNG({...exportBadge, id: exportBadge.id || 'badge', templateId: exportBadge.templateId || 'rect-1x3'}, activeTemplate, 'badge.png', 2);
+                }
+              }}>
                 PNG
               </button>
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => downloadTIFF({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.tiff', 4)}>
+              <button className="px-2 py-1 text-xs border rounded" onClick={() => {
+                if (multipleBadges.length > 0) {
+                  const allBadges = getAllBadges(badge1Data, multipleBadges);
+                  const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
+                  downloadMultipleTIFFs(allBadges, allTemplates, 'badge');
+                } else {
+                  const exportBadge = badge1Data || badge;
+                  downloadTIFF({...exportBadge, id: exportBadge.id || 'badge', templateId: exportBadge.templateId || 'rect-1x3'}, activeTemplate, 'badge.tiff', 4);
+                }
+              }}>
                 TIFF
               </button>
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => downloadPDF({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.pdf', 3)}>
+              <button className="px-2 py-1 text-xs border rounded" onClick={() => {
+                if (multipleBadges.length > 0) {
+                  const allBadges = getAllBadges(badge1Data, multipleBadges);
+                  const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
+                  downloadMultiplePDFs(allBadges, allTemplates, 'badge');
+                } else {
+                  const exportBadge = badge1Data || badge;
+                  downloadPDF({...exportBadge, id: exportBadge.id || 'badge', templateId: exportBadge.templateId || 'rect-1x3'}, activeTemplate, 'badge.pdf', 6);
+                }
+              }}>
                 PDF (Artwork)
               </button>
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => downloadCDR({...badge, id: badge.id || 'badge', templateId: badge.templateId || 'rect-1x3'}, activeTemplate, 'badge.cdr')}>
+              <button className="px-2 py-1 text-xs border rounded" onClick={() => {
+                if (multipleBadges.length > 0) {
+                  const allBadges = getAllBadges(badge1Data, multipleBadges);
+                  const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
+                  downloadMultipleCDRs(allBadges, allTemplates, 'badge');
+                } else {
+                  const exportBadge = badge1Data || badge;
+                  downloadCDR({...exportBadge, id: exportBadge.id || 'badge', templateId: exportBadge.templateId || 'rect-1x3'}, activeTemplate, 'badge.cdr');
+                }
+              }}>
                 CDR (Artwork)
               </button>
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => generatePDF(badge, multipleBadges)}>
+              <button className="px-2 py-1 text-xs border rounded" onClick={() => {
+                const exportBadge = badge1Data || badge;
+                generatePDF(exportBadge, multipleBadges);
+              }}>
                 PDF (Generator)
               </button>
             </div>
@@ -773,6 +887,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
             {/* neutral, no borders/background/size clamps */}
             <div className="h-[320px] w-full" style={{ background: "transparent", border: "none", boxShadow: "none" }}>
               <BadgeSvgRenderer badge={badge} templateId={activeTemplate.id} />
+            </div>
+            
+            {/* Save Changes Button */}
+            <div className="flex justify-center mt-4 mb-4">
+              <button
+                onClick={saveCurrentBadgeChanges}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-medium"
+              >
+                Save Changes
+              </button>
             </div>
           </div>
 
@@ -870,19 +994,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                 <div className="flex flex-col items-center justify-center mr-2">
                   <span className="text-lg font-bold mb-2" style={{ width: 32, textAlign: 'center' }}>1.</span>
                   <button
-                    className={`control-button p-1 flex items-center justify-center ${
+                    className={`control-button flex items-center justify-center text-xs font-medium px-2 py-1 ${
                       selectedBadgeIndex === 0 
-                        ? 'bg-blue-500 text-white border-blue-600' 
+                        ? 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600' 
                         : 'bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200'
                     }`}
-                    style={{ width: 28, height: 28 }}
                     onClick={(e) => { e.preventDefault(); selectBadge(0); }}
                   >
-                    <ArrowPathIcon className="w-4 h-4" />
+                    Edit
                   </button>
                 </div>
                 <div className="flex flex-col items-center w-full h-[200px]" style={{ overflow: "visible" }}>
-                  <BadgeSvgRenderer badge={badge1Data || badge} templateId={activeTemplate.id} />
+                  <BadgeSvgRenderer 
+                    badge={badge1Data ? {...badge1Data, lines: calculateCenterPositions(badge1Data.lines)} : {...badge, lines: calculateCenterPositions(badge.lines)}} 
+                    templateId={activeTemplate.id} 
+                  />
                 </div>
               </div>
 
@@ -893,15 +1019,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                     <div className="flex flex-col items-center justify-center mr-2">
                       <span className="text-lg font-bold mb-2" style={{ width: 32, textAlign: 'center' }}>{i + 2}.</span>
                       <button
-                        className={`control-button p-1 flex items-center justify-center ${
+                        className={`control-button flex items-center justify-center text-xs font-medium px-2 py-1 ${
                           selectedBadgeIndex === (i + 1)
-                            ? 'bg-blue-500 text-white border-blue-600' 
+                            ? 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600' 
                             : 'bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200'
                         }`}
-                        style={{ width: 28, height: 28 }}
                         onClick={(e) => { e.preventDefault(); selectBadge(i + 1); }}
                       >
-                        <ArrowPathIcon className="w-4 h-4" />
+                        Edit
                       </button>
                       <div className="h-2" />
                       <button
@@ -913,7 +1038,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                       </button>
                     </div>
                     <div className="flex flex-col items-center w-full h-[200px]" style={{ overflow: "visible" }}>
-                      <BadgeSvgRenderer badge={b} templateId={activeTemplate.id} />
+                      <BadgeSvgRenderer badge={b} templateId={b.templateId || globalTemplateId} />
                     </div>
                   </div>
 

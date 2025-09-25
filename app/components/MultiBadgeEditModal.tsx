@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from '../types/badge';
 import { BADGE_CONSTANTS } from '../constants/badge';
-import BadgeSvgRenderer from '../../src/components/BadgeSvgRenderer';
+import BadgeSvgRenderer from './BadgeSvgRenderer';
 import { BadgeEditorPanel } from './BadgeEditorPanel';
 
 interface MultiBadgeEditModalProps {
@@ -117,4 +117,4 @@ export const MultiBadgeEditModal: React.FC<MultiBadgeEditModalProps> = ({
       </div>
     </div>
   );
-}; 
+};

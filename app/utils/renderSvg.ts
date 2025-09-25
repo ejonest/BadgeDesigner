@@ -1,6 +1,6 @@
 // app/utils/renderSvg.ts
 import type { LoadedTemplate } from "~/utils/templates";
-import type { Badge, BadgeImage } from "../../src/types/badge";
+import type { Badge, BadgeImage } from "../types/badge";
 
 type RenderOpts = { showOutline?: boolean };
 

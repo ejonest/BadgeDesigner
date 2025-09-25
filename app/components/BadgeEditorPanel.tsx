@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge, BadgeLine } from '../types/badge';
 import { BADGE_CONSTANTS } from '../constants/badge';
 import { BadgeLineEditor } from './BadgeLineEditor';
-import BadgeSvgRenderer from '../../src/components/BadgeSvgRenderer';
+import BadgeSvgRenderer from './BadgeSvgRenderer';
 import { autoScaleFontSize } from '../utils/textMeasurement';
 import { FONT_COLORS } from '../constants/colors';
 import { FONT_FAMILIES } from '../constants/fonts';
@@ -243,4 +243,4 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
       </div>
     </div>
   );
-}; 
+};
