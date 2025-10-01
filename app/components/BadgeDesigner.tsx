@@ -32,8 +32,8 @@ import { validateBadgeTemplate, validateBadgeData } from '../utils/badgeValidato
 import { migrateBadgeToTemplate, checkTemplateCompatibility, migrateLegacyBadge, migrateBadgeArray } from '../utils/badgeMigration';
 import BadgeSvgRenderer from './BadgeSvgRenderer';
 import { 
-  downloadSVG, downloadPNG, downloadCDR, downloadPDF, downloadTIFF,
-  downloadMultipleSVGs, downloadMultiplePNGs, downloadMultipleCDRs, downloadMultiplePDFs, downloadMultipleTIFFs
+  downloadSVG, downloadPNG, downloadCDR, downloadTIFF,
+  downloadMultipleSVGs, downloadMultiplePNGs, downloadMultipleCDRs, downloadMultipleTIFFs
 } from '../utils/export';
 
 const INITIAL_BADGE = BADGE_CONSTANTS.INITIAL_BADGE;
@@ -732,8 +732,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     reader.readAsText(file);
   }
 
-  // Pricing display
-  const prettyPrice = `$${totalPrice}`;
+    // Pricing display
+    const prettyPrice = `$${totalPrice}`;
+
 
   // Early guard - don't render until we have a concrete template
   if (!activeTemplate) {
@@ -801,10 +802,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                   const allBadges = getAllBadges(badge1Data, multipleBadges);
                   const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
                   downloadMultipleSVGs(allBadges, allTemplates, 'badge');
-                } else {
-                  const exportBadge = badge1Data || badge;
-                  downloadSVG({...exportBadge, id: exportBadge.id || 'badge', templateId: exportBadge.templateId || 'rect-1x3'}, activeTemplate, 'badge.svg');
-                }
+                  } else {
+                    downloadSVG({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.svg');
+                  }
               }}>
                 SVG
               </button>
@@ -813,10 +813,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                   const allBadges = getAllBadges(badge1Data, multipleBadges);
                   const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
                   downloadMultiplePNGs(allBadges, allTemplates, 'badge');
-                } else {
-                  const exportBadge = badge1Data || badge;
-                  downloadPNG({...exportBadge, id: exportBadge.id || 'badge', templateId: exportBadge.templateId || 'rect-1x3'}, activeTemplate, 'badge.png', 2);
-                }
+                  } else {
+                    downloadPNG({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.png', 2);
+                  }
               }}>
                 PNG
               </button>
@@ -825,10 +824,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                   const allBadges = getAllBadges(badge1Data, multipleBadges);
                   const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
                   downloadMultipleTIFFs(allBadges, allTemplates, 'badge');
-                } else {
-                  const exportBadge = badge1Data || badge;
-                  downloadTIFF({...exportBadge, id: exportBadge.id || 'badge', templateId: exportBadge.templateId || 'rect-1x3'}, activeTemplate, 'badge.tiff', 4);
-                }
+                  } else {
+                    downloadTIFF({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.tiff', 4);
+                  }
               }}>
                 TIFF
               </button>
@@ -836,31 +834,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                 if (multipleBadges.length > 0) {
                   const allBadges = getAllBadges(badge1Data, multipleBadges);
                   const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
-                  downloadMultiplePDFs(allBadges, allTemplates, 'badge');
-                } else {
-                  const exportBadge = badge1Data || badge;
-                  downloadPDF({...exportBadge, id: exportBadge.id || 'badge', templateId: exportBadge.templateId || 'rect-1x3'}, activeTemplate, 'badge.pdf', 6);
-                }
-              }}>
-                PDF (Artwork)
-              </button>
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => {
-                if (multipleBadges.length > 0) {
-                  const allBadges = getAllBadges(badge1Data, multipleBadges);
-                  const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
                   downloadMultipleCDRs(allBadges, allTemplates, 'badge');
-                } else {
-                  const exportBadge = badge1Data || badge;
-                  downloadCDR({...exportBadge, id: exportBadge.id || 'badge', templateId: exportBadge.templateId || 'rect-1x3'}, activeTemplate, 'badge.cdr');
-                }
+                  } else {
+                    downloadCDR({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.cdr');
+                  }
               }}>
                 CDR (Artwork)
-              </button>
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => {
-                const exportBadge = badge1Data || badge;
-                generatePDF(exportBadge, multipleBadges);
-              }}>
-                PDF (Generator)
               </button>
             </div>
           </div>
