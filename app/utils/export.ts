@@ -1,4 +1,4 @@
-import { renderBadgeToSvgString } from "./renderSvg";
+import { renderBadgeToSvgString, renderBadgeToSvgStringWithFonts } from "./renderSvg";
 import type { Badge } from "../types/badge";
 import type { LoadedTemplate } from "./templates";
 
@@ -11,23 +11,23 @@ export function downloadBlob(data: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function downloadSVG(badge: Badge, template: LoadedTemplate, filename = "badge.svg") {
-  const svg = renderBadgeToSvgString(badge, template);
+export async function downloadSVG(badge: Badge, template: LoadedTemplate, filename = "badge.svg") {
+  const svg = await renderBadgeToSvgStringWithFonts(badge, template);
   const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
   downloadBlob(blob, filename);
 }
 
 
-export function downloadCDR(badge: Badge, template: LoadedTemplate, filename = "badge.cdr") {
+export async function downloadCDR(badge: Badge, template: LoadedTemplate, filename = "badge.cdr") {
   // CorelDRAW opens SVGs. This is the same SVG with a .cdr filename for now.
-  const svg = renderBadgeToSvgString(badge, template);
+  const svg = await renderBadgeToSvgStringWithFonts(badge, template);
   const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
   downloadBlob(blob, filename);
 }
 
 
-export function rasterizeToPNGDataUrl(badge: Badge, template: LoadedTemplate, scale = 2): Promise<string> {
-  const svg = renderBadgeToSvgString(badge, template);
+export async function rasterizeToPNGDataUrl(badge: Badge, template: LoadedTemplate, scale = 2): Promise<string> {
+  const svg = await renderBadgeToSvgStringWithFonts(badge, template);
   const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
   const svgUrl = URL.createObjectURL(svgBlob);
 
@@ -54,25 +54,23 @@ export function rasterizeToPNGDataUrl(badge: Badge, template: LoadedTemplate, sc
   });
 }
 
-export function downloadPNG(badge: Badge, template: LoadedTemplate, filename = "badge.png", scale = 2) {
-  rasterizeToPNGDataUrl(badge, template, scale).then(dataUrl => {
-    fetch(dataUrl).then(res => res.blob()).then(blob => {
-      downloadBlob(blob, filename);
-    });
-  });
+export async function downloadPNG(badge: Badge, template: LoadedTemplate, filename = "badge.png", scale = 2) {
+  const dataUrl = await rasterizeToPNGDataUrl(badge, template, scale);
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  downloadBlob(blob, filename);
 }
 
 
 
 
-export function downloadTIFF(badge: Badge, template: LoadedTemplate, filename = "badge.tiff", scale = 4) {
+export async function downloadTIFF(badge: Badge, template: LoadedTemplate, filename = "badge.tiff", scale = 4) {
   // Placeholder: export a high-res PNG but with .tiff extension for now
-  rasterizeToPNGDataUrl(badge, template, scale).then(dataUrl => {
-    fetch(dataUrl).then(res => res.blob()).then(blob => {
-      const fakeTiff = new File([blob], "badge.tiff", { type: "image/tiff" });
-      downloadBlob(fakeTiff, filename);
-    });
-  });
+  const dataUrl = await rasterizeToPNGDataUrl(badge, template, scale);
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  const fakeTiff = new File([blob], "badge.tiff", { type: "image/tiff" });
+  downloadBlob(fakeTiff, filename);
 }
 
 

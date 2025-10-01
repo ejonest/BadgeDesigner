@@ -797,46 +797,46 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
           <div className="mb-4">
             <h3 className="font-semibold text-gray-700 mb-2">Export Options</h3>
             <div className="mt-4 flex flex-wrap gap-1">
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => {
+              <button className="px-2 py-1 text-xs border rounded" onClick={async () => {
                 if (multipleBadges.length > 0) {
                   const allBadges = getAllBadges(badge1Data, multipleBadges);
                   const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
                   downloadMultipleSVGs(allBadges, allTemplates, 'badge');
                   } else {
-                    downloadSVG({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.svg');
+                    await downloadSVG({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.svg');
                   }
               }}>
                 SVG
               </button>
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => {
+              <button className="px-2 py-1 text-xs border rounded" onClick={async () => {
                 if (multipleBadges.length > 0) {
                   const allBadges = getAllBadges(badge1Data, multipleBadges);
                   const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
                   downloadMultiplePNGs(allBadges, allTemplates, 'badge');
                   } else {
-                    downloadPNG({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.png', 2);
+                    await downloadPNG({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.png', 2);
                   }
               }}>
                 PNG
               </button>
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => {
+              <button className="px-2 py-1 text-xs border rounded" onClick={async () => {
                 if (multipleBadges.length > 0) {
                   const allBadges = getAllBadges(badge1Data, multipleBadges);
                   const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
                   downloadMultipleTIFFs(allBadges, allTemplates, 'badge');
                   } else {
-                    downloadTIFF({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.tiff', 4);
+                    await downloadTIFF({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.tiff', 4);
                   }
               }}>
                 TIFF
               </button>
-              <button className="px-2 py-1 text-xs border rounded" onClick={() => {
+              <button className="px-2 py-1 text-xs border rounded" onClick={async () => {
                 if (multipleBadges.length > 0) {
                   const allBadges = getAllBadges(badge1Data, multipleBadges);
                   const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
                   downloadMultipleCDRs(allBadges, allTemplates, 'badge');
                   } else {
-                    downloadCDR({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.cdr');
+                    await downloadCDR({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.cdr');
                   }
               }}>
                 CDR (Artwork)

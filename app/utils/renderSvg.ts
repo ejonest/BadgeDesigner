@@ -1,6 +1,7 @@
 // app/utils/renderSvg.ts
 import type { LoadedTemplate } from "~/utils/templates";
 import type { Badge, BadgeImage } from "../types/badge";
+import { loadFont } from "./fontLoader";
 
 type RenderOpts = { showOutline?: boolean };
 
@@ -150,6 +151,138 @@ export function renderBadgeToSvgString(
 
   return `${svgOpen}
   <defs>
+    <clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
+      ${template.innerElement}
+    </clipPath>
+  </defs>
+
+  <!-- Clipped content group -->
+  <g clip-path="url(#${clipId})">
+    ${bgLayer}
+    ${renderLogo(badge.logo, designBox)}
+    ${text}
+  </g>
+
+  <!-- Outline always on top -->
+  ${template.outlineElement ? 
+    template.outlineElement.replace(/\/?>$/, ' fill="none" stroke="#111" stroke-width="1.25"/>') :
+    template.innerElement.replace(/\/?>$/, ' fill="none" stroke="#111" stroke-width="1.25"/>')
+  }
+</svg>`.trim();
+}
+
+// Async version that embeds fonts for consistent rendering across all export formats
+export async function renderBadgeToSvgStringWithFonts(
+  badge: Badge,
+  template: LoadedTemplate,
+  opts: RenderOpts = {}
+): Promise<string> {
+  const W = template.widthPx;
+  const H = template.heightPx;
+  const designBox = template.designBox;
+
+  const clipId = `badge-clip-${badge.id || "anon"}`;
+
+  // Collect all unique font families used in the badge
+  const fontFamilies = new Set<string>();
+  (badge.lines || []).forEach(line => {
+    if (line.fontFamily) {
+      fontFamilies.add(line.fontFamily);
+    }
+  });
+
+  // Load and embed fonts
+  const fontDefs: string[] = [];
+  const fontMappings = new Map<string, string>(); // original name -> embedded name
+
+  for (const fontFamily of fontFamilies) {
+    try {
+      const fontData = await loadFont(fontFamily);
+      if (fontData) {
+        const embeddedName = `Embedded${fontFamily.replace(/\s+/g, '')}`;
+        fontMappings.set(fontFamily, embeddedName);
+        
+        fontDefs.push(`
+          @font-face {
+            font-family: "${embeddedName}";
+            src: url("data:font/ttf;base64,${fontData.regular}");
+            font-weight: normal;
+            font-style: normal;
+          }
+          @font-face {
+            font-family: "${embeddedName}";
+            src: url("data:font/ttf;base64,${fontData.regular}");
+            font-weight: bold;
+            font-style: normal;
+          }
+          @font-face {
+            font-family: "${embeddedName}";
+            src: url("data:font/ttf;base64,${fontData.regular}");
+            font-weight: normal;
+            font-style: italic;
+          }
+          @font-face {
+            font-family: "${embeddedName}";
+            src: url("data:font/ttf;base64,${fontData.regular}");
+            font-weight: bold;
+            font-style: italic;
+          }
+        `);
+      }
+    } catch (error) {
+      console.warn(`Failed to load font ${fontFamily}:`, error);
+    }
+  }
+
+  // Background layer (either color or image)
+  const bgLayer = badge.backgroundImage
+    ? renderBg(badge.backgroundImage, designBox)
+    : `<rect x="${designBox.x}" y="${designBox.y}" width="${designBox.width}" height="${designBox.height}" fill="${badge.backgroundColor || "#FFFFFF"}" />`;
+
+  // Text rendering with embedded fonts
+  const text = (badge.lines || []).map((line: any, i: number) => {
+    const { x, y } = toPx(line, designBox);
+    const size = line.sizeNorm ? Math.round(line.sizeNorm * designBox.height) :
+                 line.fontSizeRel ? Math.round(line.fontSizeRel * designBox.height) : 
+                 line.fontSize ?? Math.round(designBox.height * (i === 0 ? 0.23 : 0.17));
+    const anchor =
+      (line.alignment === "center" || line.align === "center") ? "middle" :
+      (line.alignment === "right" || line.align === "right")  ? "end"    : "start";
+    
+    // Use embedded font name if available, otherwise fallback to original
+    const originalFamily = line.fontFamily || "Inter, ui-sans-serif, system-ui";
+    const embeddedFamily = fontMappings.get(originalFamily) || originalFamily;
+    const family = esc(embeddedFamily);
+    const color = line.color || "#000";
+    
+    return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}"
+                  alignment-baseline="middle" font-family="${family}" fill="${color}"
+                  font-weight="${line.bold ? "bold" : "normal"}"
+                  font-style="${line.italic ? "italic" : "normal"}">${esc(line.text || "")}</text>`;
+  }).join("");
+
+  const outline = (() => {
+    if (!opts.showOutline) return "";
+    
+    if (template.outlineElement) {
+      return template.outlineElement.replace(/\/?>$/, ' fill="none" stroke="#222" stroke-width="1.25"/>');
+    } else {
+      return template.innerElement.replace(/\/?>$/, ' fill="none" stroke="#222" stroke-width="1.25"/>');
+    }
+  })();
+
+  const svgOpen = `
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="100%" height="100%"
+     viewBox="0 0 ${W} ${H}"
+     preserveAspectRatio="xMidYMid meet">`;
+
+  return `${svgOpen}
+  <defs>
+    <style type="text/css">
+      ${fontDefs.join('\n')}
+    </style>
     <clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
       ${template.innerElement}
     </clipPath>
