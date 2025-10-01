@@ -26,7 +26,9 @@ export const validateBadgeTemplate = (
   
   return {
     ...badge,
-    lines: validatedLines
+    lines: validatedLines,
+    // Ensure backgroundColor is preserved
+    backgroundColor: badge.backgroundColor || '#FFFFFF'
   };
 };
 

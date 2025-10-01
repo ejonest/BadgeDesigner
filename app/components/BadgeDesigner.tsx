@@ -29,7 +29,7 @@ import { createApi } from '../utils/api';
 import { loadTemplates, loadTemplateById } from '../utils/templates';
 import type { LoadedTemplate } from '../utils/templates';
 import { validateBadgeTemplate, validateBadgeData } from '../utils/badgeValidator';
-import { migrateBadgeToTemplate, checkTemplateCompatibility } from '../utils/badgeMigration';
+import { migrateBadgeToTemplate, checkTemplateCompatibility, migrateLegacyBadge, migrateBadgeArray } from '../utils/badgeMigration';
 import BadgeSvgRenderer from './BadgeSvgRenderer';
 import { 
   downloadSVG, downloadPNG, downloadCDR, downloadPDF, downloadTIFF,
@@ -71,18 +71,18 @@ const getAllBadges = (badge1Data: Badge | null, multipleBadges: Badge[]): Badge[
 };
 
 const getAllTemplates = (badge1Data: Badge | null, multipleBadges: Badge[], templates: LoadedTemplate[]): LoadedTemplate[] => {
-  // Get template for saved badge 1
-  const savedBadge1 = badge1Data || { templateId: 'rect-1x3' };
-  const badge1Template = templates.find(t => t.id === savedBadge1.templateId) || templates[0];
-  const allTemplates = [badge1Template];
+  // UNIVERSAL TEMPLATE: All badges use the same template
+  const universalTemplate = templates[0] || { 
+    id: 'rect-1x3', 
+    name: 'Rectangle 1×3', 
+    widthIn: 3.0,
+    heightIn: 1.0,
+    safeInsetPx: 6,
+    innerPathSvg: '<path d="M25,0 L275,0 A25,25 0 0,1 300,25 L300,75 A25,25 0 0,1 275,100 L25,100 A25,25 0 0,1 0,75 L0,25 A25,25 0 0,1 25,0 Z" fill="#000"/>'
+  };
   
-  // For each additional badge, find its corresponding template
-  multipleBadges.forEach(badge => {
-    const template = templates.find(t => t.id === badge.templateId) || templates[0];
-    allTemplates.push(template);
-  });
-  
-  return allTemplates;
+  // Return the same template for all badges
+  return Array(getAllBadges(badge1Data, multipleBadges).length).fill(universalTemplate);
 };
 const badgeHeight = BADGE_CONSTANTS.BADGE_HEIGHT;
 const MIN_FONT_SIZE = BADGE_CONSTANTS.MIN_FONT_SIZE;
@@ -166,29 +166,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Store badge 1's data separately
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showExtendedBgPicker, setShowExtendedBgPicker] = useState(false);
-  const [globalTemplateId, setGlobalTemplateId] = useState<string>('rect-1x3');
+  // UNIVERSAL TEMPLATE: Single template for all badges
+  const [universalTemplateId, setUniversalTemplateId] = useState<string>('rect-1x3');
 
-  // Load templates once, and ensure badge.templateId is initialized
+  // Load templates once
   useEffect(() => {
     (async () => {
       try {
         const list = await loadTemplates();
         setTemplates(list);
-        // eslint-disable-next-line no-console
         console.log('[BadgeDesigner] templates loaded:', list.map(t => t.id));
 
-        setBadge(prev => {
-          if (!prev?.templateId) {
-            const first = list[0]?.id ?? 'rect-1x3';
-            return { ...prev, templateId: first };
-          }
-          // If existing templateId is no longer present, fall back
-          if (!list.find(t => t.id === prev.templateId)) {
-            const first = list[0]?.id ?? 'rect-1x3';
-            return { ...prev, templateId: first };
-          }
-          return prev;
-        });
+        // Initialize with first template
+        if (list.length > 0) {
+          setUniversalTemplateId(list[0].id);
+        }
       } catch (error) {
         console.error('Failed to load templates:', error);
       }
@@ -225,29 +217,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
 
   // Stage 2: Removed problematic auto-sync - saving is now explicit via "Save Changes" button
 
-  // Stage 1: Resolve template with badge priority (backward compatible)
-  const template: LoadedTemplate | undefined = useMemo(() => {
-    // Priority: badge.templateId → globalTemplateId (fallback) → templates[0]
-    const templateId = badge.templateId || globalTemplateId;
-    const t = templates.find(t => t.id === templateId);
-    if (!t) {
-      console.warn("[BadgeDesigner] Template not found:", templateId, "Available:", templates.map(t=>t.id));
-    }
-    // eslint-disable-next-line no-console
-    console.log('[BadgeDesigner] template selected:', t?.id, 'from badge:', badge.templateId, 'global:', globalTemplateId);
-    return t;
-  }, [templates, badge.templateId, globalTemplateId]);
-
-  // Hardened fallback - ensure we always have a valid template
+  // UNIVERSAL TEMPLATE: Get the active template
   const activeTemplate: LoadedTemplate = useMemo(() => {
+    const template = templates.find(t => t.id === universalTemplateId);
     if (!template) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        '[BadgeDesigner] Template not found for id:',
-        globalTemplateId,
-        'Available ids:',
-        templates.map(t => t.id)
-      );
+      console.warn('[BadgeDesigner] Universal template not found:', universalTemplateId);
     }
     return template || templates[0] || { 
       id: 'rect-1x3', 
@@ -257,18 +231,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
       safeInsetPx: 6,
       innerPathSvg: '<path d="M25,0 L275,0 A25,25 0 0,1 300,25 L300,75 A25,25 0 0,1 275,100 L25,100 A25,25 0 0,1 0,75 L0,25 A25,25 0 0,1 25,0 Z" fill="#000"/>'
     };
-  }, [template, templates, globalTemplateId]);
+  }, [templates, universalTemplateId]);
 
-  // Recalculate line positions when template changes
-  useEffect(() => {
-    if (activeTemplate?.designBox && badge.lines.length > 0) {
-      const centeredLines = calculateCenterPositions(badge.lines);
-      setBadge(prevBadge => ({
-        ...prevBadge,
-        lines: centeredLines
-      }));
-    }
-  }, [activeTemplate?.id]); // Only when template ID changes
+  // UNIVERSAL TEMPLATE: No need to recalculate on template change since all badges use same template
 
   // Measure text width for auto-shrink
   const measureTextWidth = (text: string, fontSize: number, fontFamily: string, bold: boolean, italic: boolean) => {
@@ -279,14 +244,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     return ctx.measureText(text).width;
   };
 
-  // Calculate center-based line positions
+  // PRESERVE TEXT SIZES: Only recalculate positions, not sizes
   const calculateCenterPositions = (lines: BadgeLine[]): BadgeLine[] => {
     if (!activeTemplate?.designBox) return lines;
     
     const designBoxHeight = activeTemplate.designBox.height;
     const designBoxCenterY = designBoxHeight / 2;
     
-    // Calculate total text height
+    // Calculate total text height using existing sizeNorm values
     const totalTextHeight = lines.reduce((sum, line) => {
       const fontSize = (line.sizeNorm || 0.15) * designBoxHeight;
       return sum + fontSize * 1.2; // 1.2 for line spacing
@@ -295,7 +260,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     // Calculate starting Y position (center minus half total height)
     const startY = designBoxCenterY - (totalTextHeight / 2);
     
-    // Position each line
+    // Position each line while preserving sizeNorm
     let currentY = startY;
     return lines.map((line, index) => {
       const fontSize = (line.sizeNorm || 0.15) * designBoxHeight;
@@ -308,7 +273,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
       
       return {
         ...line,
-        yNorm: Math.max(0.1, Math.min(0.9, yNorm)) // Clamp to valid range
+        yNorm: Math.max(0.1, Math.min(0.9, yNorm)), // Only update position, preserve sizeNorm
+        xNorm: line.xNorm || 0.5 // Ensure xNorm exists
       };
     });
   };
@@ -462,50 +428,55 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
 
   // CLEAN ARCHITECTURE: Auto-save on switch (no manual save button)
 
-  // UNIFIED RENDERING: Same logic for all badges in right-hand column
+  // UNIVERSAL PREVIEW: All badges use the same template
   const getBadgeForPreview = (badgeIndex: number, savedBadge: Badge | null) => {
     const isCurrentlyEditing = selectedBadgeIndex === badgeIndex;
     
     if (isCurrentlyEditing) {
       // LIVE PREVIEW: Mirror left-hand preview when editing
-      console.log(`[UNIFIED] Badge ${badgeIndex} LIVE PREVIEW - using current badge with backgroundColor: ${badge.backgroundColor}`);
+      console.log(`[UNIVERSAL] Badge ${badgeIndex} LIVE PREVIEW - using current badge with backgroundColor: ${badge.backgroundColor}`);
       return {
         badge: badge,
-        templateId: activeTemplate.id
+        templateId: universalTemplateId // Always use universal template
       };
     } else {
       // STATIC: Show saved state when not editing
       if (savedBadge) {
-        console.log(`[UNIFIED] Badge ${badgeIndex} STATIC PREVIEW - using saved badge with backgroundColor: ${savedBadge.backgroundColor}, template: ${savedBadge.templateId}`);
+        console.log(`[UNIVERSAL] Badge ${badgeIndex} STATIC PREVIEW - using saved badge with backgroundColor: ${savedBadge.backgroundColor}`);
+        const previewBadge = {
+          ...savedBadge, 
+          lines: calculateCenterPositions(savedBadge.lines),
+          backgroundColor: savedBadge.backgroundColor // Explicitly preserve saved backgroundColor
+        };
         return {
-          badge: {...savedBadge, lines: calculateCenterPositions(savedBadge.lines)},
-          templateId: savedBadge.templateId || 'rect-1x3'
+          badge: previewBadge,
+          templateId: universalTemplateId // Always use universal template
         };
       } else {
         // Fallback to current badge if no saved state
-        console.log(`[UNIFIED] Badge ${badgeIndex} FALLBACK PREVIEW - no saved state, using current badge with backgroundColor: ${badge.backgroundColor}`);
+        console.log(`[UNIVERSAL] Badge ${badgeIndex} FALLBACK PREVIEW - no saved state, using current badge`);
         return {
           badge: badge,
-          templateId: activeTemplate.id
+          templateId: universalTemplateId // Always use universal template
         };
       }
     }
   };
 
-  // CLEAN ARCHITECTURE: Auto-save on switch, live preview mirroring
+  // UNIVERSAL TEMPLATE: Auto-save on switch, all badges use same template
   const selectBadge = (index: number) => {
-    console.log(`[CLEAN] selectBadge called: index=${index}, current selectedBadgeIndex=${selectedBadgeIndex}`);
+    console.log(`[UNIVERSAL] selectBadge called: index=${index}, current selectedBadgeIndex=${selectedBadgeIndex}`);
     
-    // AUTO-SAVE: Save current badge state when switching (no manual save needed)
+    // AUTO-SAVE: Save current badge state when switching
     if (selectedBadgeIndex === 0) {
       // Auto-save Badge 1
-      const validatedBadge = validateBadgeTemplate(badge, templates);
-      console.log(`[CLEAN] Auto-saving Badge 1:`, validatedBadge.lines.map(l => l.text), 'template:', validatedBadge.templateId);
+      const validatedBadge = { ...badge, templateId: universalTemplateId };
+      console.log(`[UNIVERSAL] Auto-saving Badge 1:`, validatedBadge.lines.map(l => l.text));
       setBadge1Data(validatedBadge);
     } else {
       // Auto-save CSV badge
-      const validatedBadge = validateBadgeTemplate(badge, templates);
-      console.log(`[CLEAN] Auto-saving CSV badge ${selectedBadgeIndex}:`, validatedBadge.lines.map(l => l.text), 'template:', validatedBadge.templateId);
+      const validatedBadge = { ...badge, templateId: universalTemplateId };
+      console.log(`[UNIVERSAL] Auto-saving CSV badge ${selectedBadgeIndex}:`, validatedBadge.lines.map(l => l.text));
       const newMultipleBadges = [...multipleBadges];
       newMultipleBadges[selectedBadgeIndex - 1] = validatedBadge;
       setMultipleBadges(newMultipleBadges);
@@ -517,24 +488,37 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     if (index === 0) {
       // Load Badge 1 for editing
       if (badge1Data) {
-        console.log(`[CLEAN] Loading Badge 1 for editing:`, badge1Data.lines.map((l: BadgeLine) => l.text), 'template:', badge1Data.templateId);
-        const validatedBadge = validateBadgeData(badge1Data);
-        const centeredLines = calculateCenterPositions(validatedBadge.lines);
-        setBadge({ ...validatedBadge, lines: centeredLines });
+        console.log(`[UNIVERSAL] Loading Badge 1 for editing:`, badge1Data.lines.map((l: BadgeLine) => l.text));
+        const centeredLines = calculateCenterPositions(badge1Data.lines);
+        setBadge({ ...badge1Data, lines: centeredLines, templateId: universalTemplateId });
       }
     } else {
       // Load CSV badge for editing
       const csvBadge = multipleBadges[index - 1];
       if (csvBadge) {
-        console.log(`[CLEAN] Loading CSV badge ${index} for editing:`, csvBadge.lines.map((l: BadgeLine) => l.text), 'template:', csvBadge.templateId);
-        const validatedBadge = validateBadgeData(csvBadge);
-        const centeredLines = calculateCenterPositions(validatedBadge.lines);
-        setBadge({ ...validatedBadge, lines: centeredLines });
+        console.log(`[UNIVERSAL] Loading CSV badge ${index} for editing:`, csvBadge.lines.map((l: BadgeLine) => l.text));
+        const centeredLines = calculateCenterPositions(csvBadge.lines);
+        setBadge({ ...csvBadge, lines: centeredLines, templateId: universalTemplateId });
       }
     }
   };
 
-  // saveCurrentBadge function removed - logic now in selectBadge function
+  // UNIVERSAL TEMPLATE: When template changes, update all badges
+  const handleUniversalTemplateChange = (newTemplateId: string) => {
+    console.log(`[UNIVERSAL] Template changed to: ${newTemplateId}`);
+    setUniversalTemplateId(newTemplateId);
+    
+    // Update current badge
+    setBadge(prev => ({ ...prev, templateId: newTemplateId }));
+    
+    // Update saved badge1Data
+    if (badge1Data) {
+      setBadge1Data(prev => prev ? { ...prev, templateId: newTemplateId } : null);
+    }
+    
+    // Update all CSV badges
+    setMultipleBadges(prev => prev.map(badge => ({ ...badge, templateId: newTemplateId })));
+  };
 
 
   // Save design
@@ -682,14 +666,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
 
       if (rows.length > 0 && rows[0].length > 0) {
         // Create badges based on current badge template but with CSV text
-        const badges = rows.map((row: any) => {
+        const badges = rows.map((row: any, index: number) => {
           const badgeWithCsvText = {
           ...badge,
+          // UNIVERSAL TEMPLATE: All CSV badges use the same universal template
+          templateId: universalTemplateId,
+          // DEFAULT COLORS: All CSV badges use white background
+          backgroundColor: '#FFFFFF',
           lines: row.map((cell: any, i: number) => {
             const baseLine = badge.lines[i] || badge.lines[0];
             return {
               ...baseLine,
               text: cell || '',
+              color: '#000000', // Black text for all CSV badges
                 sizeNorm: i === 0 ? 0.20 : 0.143, // 14pt for line 1, 10pt for lines 2,3,4
                 align:
                   baseLine.align === 'left' || baseLine.align === 'center' || baseLine.align === 'right'
@@ -701,21 +690,25 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
           
           // Apply center-based positioning to CSV badges
           const centeredLines = calculateCenterPositions(badgeWithCsvText.lines);
-          // CRITICAL FIX: Ensure each CSV badge maintains its own templateId
           return { 
             ...badgeWithCsvText, 
-            lines: centeredLines,
-            templateId: badgeWithCsvText.templateId || 'rect-1x3' // Lock in templateId
+            lines: centeredLines
           };
         });
         
         console.log(`[DEBUG] Created ${badges.length} CSV badges:`, badges.map(b => b.lines.map((l: BadgeLine) => l.text)));
-        setMultipleBadges(badges);
+        
+        // CRITICAL: Migrate badges to ensure they have proper backgroundColor
+        const migratedBadges = migrateBadgeArray(badges);
+        console.log(`[MIGRATION] Migrated ${migratedBadges.length} CSV badges with individual background colors:`, migratedBadges.map(b => b.backgroundColor));
+        setMultipleBadges(migratedBadges);
         
         // Initialize badge1Data with current badge if not already set
         if (!badge1Data) {
           console.log(`[DEBUG] Initializing badge1Data with current badge:`, badge.lines.map(l => l.text));
-          setBadge1Data(badge);
+          const migratedBadge1 = migrateLegacyBadge(badge);
+          console.log(`[MIGRATION] Migrated Badge 1 with backgroundColor: ${migratedBadge1.backgroundColor}`);
+          setBadge1Data(migratedBadge1);
         } else {
           console.log(`[DEBUG] badge1Data already exists:`, badge1Data.lines.map(l => l.text));
         }
@@ -782,34 +775,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
               <label className="block text-sm font-semibold mb-1">Shape / Template</label>
             <select
               className="border rounded px-2 py-1 text-sm bg-white"
-              value={badge.templateId || templates[0]?.id || 'rect-1x3'}
+              value={universalTemplateId}
               onChange={(e) => {
                 const newTemplateId = e.target.value;
-                console.log('[BadgeDesigner] Stage 3: Template changed to:', newTemplateId);
-                
-                // Stage 3: Enhanced template switching with migration
-                const oldTemplate = templates.find(t => t.id === badge.templateId) || templates[0];
-                const newTemplate = templates.find(t => t.id === newTemplateId);
-                
-                if (newTemplate && oldTemplate) {
-                  // Migrate badge data to new template
-                  const migratedBadge = migrateBadgeToTemplate(badge, oldTemplate, newTemplate);
-                  
-                  // Check compatibility and log warnings
-                  const compatibility = checkTemplateCompatibility(migratedBadge, newTemplate);
-                  if (!compatibility.compatible) {
-                    console.warn('[Template Switch] Compatibility warnings:', compatibility.warnings);
-                  }
-                  
-                  setBadge(migratedBadge);
-                } else {
-                  // Fallback: simple template update
-                  console.warn('[Template Switch] Template not found, using fallback');
-                  setBadge({ ...badge, templateId: newTemplateId });
-                }
-                
-                // Maintain globalTemplateId for backward compatibility (will be removed later)
-                setGlobalTemplateId(newTemplateId);
+                console.log('[UNIVERSAL] Template changed to:', newTemplateId);
+                handleUniversalTemplateChange(newTemplateId);
               }}
             >
               {templates.length === 0 ? (

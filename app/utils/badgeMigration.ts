@@ -129,3 +129,46 @@ export const suggestTemplateOptimizations = (
   
   return suggestions;
 };
+
+/**
+ * Migrates legacy badges to ensure they have all required properties
+ */
+export const migrateLegacyBadge = (badge: any): Badge => {
+  const migratedBadge: Badge = {
+    id: badge.id || `badge-${Date.now()}`,
+    templateId: badge.templateId || 'rect-1x3',
+    lines: badge.lines || [],
+    backgroundColor: badge.backgroundColor || '#FFFFFF', // CRITICAL: Ensure backgroundColor exists
+    backing: badge.backing || 'pin',
+    ...badge
+  };
+
+  // Validate and migrate lines
+  migratedBadge.lines = migratedBadge.lines.map((line, index) => ({
+    id: line.id || `line-${index + 1}`,
+    text: line.text || '',
+    xNorm: typeof line.xNorm === 'number' ? line.xNorm : 0.5,
+    yNorm: typeof line.yNorm === 'number' ? line.yNorm : 0.5,
+    sizeNorm: typeof line.sizeNorm === 'number' ? line.sizeNorm : 0.15,
+    color: line.color || '#000000',
+    bold: typeof line.bold === 'boolean' ? line.bold : false,
+    italic: typeof line.italic === 'boolean' ? line.italic : false,
+    fontFamily: line.fontFamily || 'Arial',
+    align: line.align || 'center',
+    ...line
+  }));
+
+  console.log(`[MIGRATION] Migrated badge with backgroundColor: ${migratedBadge.backgroundColor}`);
+  return migratedBadge;
+};
+
+/**
+ * Migrates an array of badges, ensuring all have proper backgroundColor
+ */
+export const migrateBadgeArray = (badges: any[]): Badge[] => {
+  return badges.map((badge, index) => {
+    const migrated = migrateLegacyBadge(badge);
+    console.log(`[MIGRATION] Badge ${index + 1} migrated with backgroundColor: ${migrated.backgroundColor}`);
+    return migrated;
+  });
+};
