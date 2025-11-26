@@ -31,7 +31,74 @@ type TemplatesFile = { version: number; templates: TemplateConfig[] };
 const cfg = (templatesJson as TemplatesFile).templates || [];
 const cache = new Map<string, LoadedTemplate>();
 
-function sanitizeInnerForClip(el: string, id: string): string {
+function resolveCssFill(svg: string, element: string): string {
+  // Extract class names from the element (handles nested elements)
+  const classMatch = element.match(/class\s*=\s*["']([^"']+)["']/i);
+  if (!classMatch) {
+    console.log(`[resolveCssFill] No class found in element for ${element.substring(0, 50)}...`);
+    return element;
+  }
+  
+  const classNames = classMatch[1].split(/\s+/);
+  console.log(`[resolveCssFill] Found classes: ${classNames.join(', ')}`);
+  
+  // Parse the SVG's style section to find fill values (handles CDATA)
+  const styleMatch = svg.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  if (!styleMatch) {
+    console.log(`[resolveCssFill] No style section found in SVG`);
+    return element;
+  }
+  
+  // Remove CDATA markers if present
+  let styleContent = styleMatch[1];
+  styleContent = styleContent.replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '');
+  
+  let resolvedFill: string | null = null;
+  
+  // Check each class for a fill definition
+  for (const className of classNames) {
+    // Escape special regex characters in className
+    const escapedClassName = className.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Look for .className { ... fill: value; ... } (more flexible regex)
+    const classStyleRegex = new RegExp(`\\.${escapedClassName}\\s*\\{[^}]*?fill\\s*:\\s*([^;\\}]+)`, 'i');
+    const classStyleMatch = classStyleRegex.exec(styleContent);
+    if (classStyleMatch) {
+      const fillValue = classStyleMatch[1].trim();
+      // Remove quotes if present
+      resolvedFill = fillValue.replace(/^["']|["']$/g, '');
+      console.log(`[resolveCssFill] Resolved fill for class ${className}: ${resolvedFill}`);
+      break; // Use first matching fill
+    }
+  }
+  
+  // If we found a fill value, add it as an inline attribute to the element with the class
+  if (resolvedFill !== null) {
+    // Find the element tag that has the class attribute and add fill to it
+    // This handles both simple elements and nested <g><path class="..."/></g> structures
+    if (element.match(/<[^>]*class\s*=\s*["'][^"']+["'][^>]*\s+fill\s*=\s*["'][^"']*["']/i)) {
+      // Replace existing fill on the element that has the class
+      const result = element.replace(/(<[^>]*class\s*=\s*["'][^"']+["'][^>]*)\s+fill\s*=\s*["'][^"']*["']/i, `$1 fill="${resolvedFill}"`);
+      console.log(`[resolveCssFill] Replaced existing fill`);
+      return result;
+    } else {
+      // Add fill attribute to the element that has the class
+      const result = element.replace(/(<[^>]*class\s*=\s*["'][^"']+["'])([^>]*>)/i, `$1 fill="${resolvedFill}"$2`);
+      console.log(`[resolveCssFill] Added fill="${resolvedFill}" to element`);
+      return result;
+    }
+  } else {
+    console.log(`[resolveCssFill] No fill value found for classes: ${classNames.join(', ')}`);
+  }
+  
+  return element;
+}
+
+function sanitizeInnerForClip(el: string, id: string, svg?: string): string {
+  // If SVG is provided, resolve CSS classes first
+  if (svg) {
+    el = resolveCssFill(svg, el);
+  }
+  
   // strip stroke attrs that can cause odd clip behavior
   el = el.replace(/\s+stroke(?:-width)?="[^"]*"/gi, "");
   // ensure a non-none fill exists
@@ -48,49 +115,18 @@ function sanitizeInnerForClip(el: string, id: string): string {
 }
 
 function getDesignBox(innerElement: string, templateWidth: number, templateHeight: number): { x: number; y: number; width: number; height: number } {
-  try {
-    // Parse the SVG element to get the full template dimensions
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(innerElement, 'image/svg+xml');
-    const svgElement = doc.documentElement;
-    
-    if (!svgElement) {
-      console.warn("[templates] Could not parse element, using fallback");
-      return { x: 0, y: 0, width: templateWidth, height: templateHeight };
-    }
+  // The innerElement is just a path/group element, not a full SVG
+  // The designBox should match the template dimensions directly
+  // This represents the full designable area within the template
+  const designBox = { 
+    x: 0, 
+    y: 0, 
+    width: templateWidth, 
+    height: templateHeight 
+  };
 
-    // Get the viewBox attribute to determine the full template dimensions
-    const viewBox = svgElement.getAttribute('viewBox');
-    if (viewBox) {
-      const parts = viewBox.trim().split(/\s+/);
-      if (parts.length === 4) {
-        const [, , width, height] = parts.map(Number);
-        const designBox = { 
-          x: 0, 
-          y: 0, 
-          width: width, 
-          height: height 
-        };
-
-        console.log("[templates] Calculated designBox from viewBox:", designBox);
-        return designBox;
-      }
-    }
-
-    // Fallback: use the template dimensions passed in
-    const designBox = { 
-      x: 0, 
-      y: 0, 
-      width: templateWidth, 
-      height: templateHeight 
-    };
-
-    console.log("[templates] Using template dimensions for designBox:", designBox);
-    return designBox;
-  } catch (error) {
-    console.warn("[templates] Failed to calculate designBox, using fallback:", error);
-    return { x: 0, y: 0, width: templateWidth, height: templateHeight };
-  }
+  console.log("[templates] Using template dimensions for designBox:", designBox);
+  return designBox;
 }
 
 async function fetchSvg(url: string): Promise<string> {
@@ -108,7 +144,27 @@ function extractElement(svg: string, id: "inner" | "outline"): string | undefine
       (doc.getElementById(id) as SVGGraphicsElement | null) ||
       (doc.getElementById(id.charAt(0).toUpperCase() + id.slice(1)) as SVGGraphicsElement | null) ||
       null;
-    if (el) return el.outerHTML; // full tag markup
+    if (el) {
+      // Check for parent transform groups and collect transforms
+      let parent = el.parentElement;
+      const transforms: string[] = [];
+      
+      while (parent && parent.tagName !== 'svg') {
+        const parentTransform = parent.getAttribute('transform');
+        if (parentTransform) {
+          transforms.unshift(parentTransform); // Add to front to maintain order
+        }
+        parent = parent.parentElement;
+      }
+      
+      // If there are transforms, wrap the element in a group with combined transform
+      if (transforms.length > 0) {
+        const combinedTransform = transforms.join(' ');
+        return `<g transform="${combinedTransform}">${el.outerHTML}</g>`;
+      }
+      
+      return el.outerHTML; // full tag markup
+    }
     return undefined;
   }
   // SSR fallback: regex for whole element tag with id (case insensitive)
@@ -162,7 +218,8 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
 
   const outlineEl = extractElement(svg, "outline");
 
-  const innerElSanitized = sanitizeInnerForClip(innerEl, c.id);
+  // Pass svg to sanitizeInnerForClip so it can resolve CSS classes
+  const innerElSanitized = sanitizeInnerForClip(innerEl, c.id, svg);
   const designBox = getDesignBox(innerElSanitized, widthPx, heightPx);
 
   const t: LoadedTemplate = {

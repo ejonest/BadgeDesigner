@@ -20,7 +20,7 @@ import { generatePDFWithLayoutEngine as generatePDF } from '../utils/pdfGenerato
 import { BadgeEditPanel } from './BadgeEditPanel';
 
 import { BadgeLine, Badge } from '../types/badge';
-import { BACKGROUND_COLORS, FONT_COLORS, EXTENDED_BACKGROUND_COLORS } from '../constants/colors';
+import { BACKGROUND_COLORS, FONT_COLORS, EXTENDED_BACKGROUND_COLORS, SMART_PALETTE_COLORS } from '../constants/colors';
 import { BADGE_CONSTANTS } from '../constants/badge';
 import { generateFullBadgeImage, generateThumbnailFromFullImage } from '../utils/badgeThumbnail';
 import { getCurrentShop } from '../utils/shopAuth';
@@ -165,7 +165,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   const [selectedBadgeIndex, setSelectedBadgeIndex] = useState<number>(0); // 0 = main badge, 1+ = CSV badges
   const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Store badge 1's data separately
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const [showExtendedBgPicker, setShowExtendedBgPicker] = useState(false);
   // UNIVERSAL TEMPLATE: Single template for all badges
   const [universalTemplateId, setUniversalTemplateId] = useState<string>('rect-1x3');
 
@@ -210,8 +209,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   useEffect(() => {
     // Only update badge1Data if we're currently on badge 1 and it's not already set
     if (selectedBadgeIndex === 0 && !badge1Data && badge.lines.length > 0) {
-      console.log(`[DEBUG] useEffect: Initializing badge1Data with badge:`, badge.lines.map(l => l.text));
-      setBadge1Data(badge);
+      // CRITICAL: Ensure backgroundColor is tracked as single source of truth
+      const badgeWithColor = {
+        ...badge,
+        backgroundColor: badge.backgroundColor || '#FFFFFF'
+      };
+      console.log(`[COLOR TRACKING] Initializing badge1Data with backgroundColor: ${badgeWithColor.backgroundColor}`);
+      setBadge1Data(badgeWithColor);
     }
   }, [badge, selectedBadgeIndex, badge1Data]);
 
@@ -468,15 +472,24 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     console.log(`[UNIVERSAL] selectBadge called: index=${index}, current selectedBadgeIndex=${selectedBadgeIndex}`);
     
     // AUTO-SAVE: Save current badge state when switching
+    // CRITICAL: Ensure backgroundColor is preserved as single source of truth
     if (selectedBadgeIndex === 0) {
       // Auto-save Badge 1
-      const validatedBadge = { ...badge, templateId: universalTemplateId };
-      console.log(`[UNIVERSAL] Auto-saving Badge 1:`, validatedBadge.lines.map(l => l.text));
+      const validatedBadge = { 
+        ...badge, 
+        templateId: universalTemplateId,
+        backgroundColor: badge.backgroundColor || '#FFFFFF' // Ensure color is tracked
+      };
+      console.log(`[COLOR TRACKING] Auto-saving Badge 1 with backgroundColor: ${validatedBadge.backgroundColor}`);
       setBadge1Data(validatedBadge);
     } else {
       // Auto-save CSV badge
-      const validatedBadge = { ...badge, templateId: universalTemplateId };
-      console.log(`[UNIVERSAL] Auto-saving CSV badge ${selectedBadgeIndex}:`, validatedBadge.lines.map(l => l.text));
+      const validatedBadge = { 
+        ...badge, 
+        templateId: universalTemplateId,
+        backgroundColor: badge.backgroundColor || '#FFFFFF' // Ensure color is tracked
+      };
+      console.log(`[COLOR TRACKING] Auto-saving CSV badge ${selectedBadgeIndex} with backgroundColor: ${validatedBadge.backgroundColor}`);
       const newMultipleBadges = [...multipleBadges];
       newMultipleBadges[selectedBadgeIndex - 1] = validatedBadge;
       setMultipleBadges(newMultipleBadges);
@@ -521,7 +534,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   };
 
 
-  // Save design
+  // Save design - FINALIZES and locks all badge states
   const saveBadge = async () => {
     try {
       const shopData = getCurrentShop(_shop);
@@ -529,6 +542,48 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
         alert('Shop information not found. Please reload the page.');
         return;
       }
+
+      // CRITICAL: Finalize all badge states before saving
+      // Auto-save current badge state first
+      let finalizedBadge1 = badge;
+      let finalizedMultipleBadges = [...multipleBadges];
+      
+      if (selectedBadgeIndex === 0) {
+        // Finalize Badge 1
+        finalizedBadge1 = {
+          ...badge,
+          templateId: universalTemplateId,
+          backgroundColor: badge.backgroundColor || '#FFFFFF'
+        };
+        setBadge1Data(finalizedBadge1);
+      } else {
+        // Finalize current CSV badge
+        finalizedBadge1 = badge1Data || {
+          ...badge,
+          templateId: universalTemplateId,
+          backgroundColor: badge.backgroundColor || '#FFFFFF'
+        };
+        const updatedMultiple = [...multipleBadges];
+        updatedMultiple[selectedBadgeIndex - 1] = {
+          ...badge,
+          templateId: universalTemplateId,
+          backgroundColor: badge.backgroundColor || '#FFFFFF'
+        };
+        finalizedMultipleBadges = updatedMultiple;
+        setMultipleBadges(updatedMultiple);
+      }
+
+      // Ensure all badges have consistent state
+      const allFinalizedBadges = [finalizedBadge1, ...finalizedMultipleBadges].map(b => ({
+        ...b,
+        templateId: b.templateId || universalTemplateId,
+        backgroundColor: b.backgroundColor || '#FFFFFF'
+      }));
+
+      console.log(`[FINALIZE] Saving ${allFinalizedBadges.length} badges with finalized states`);
+      allFinalizedBadges.forEach((b, i) => {
+        console.log(`[FINALIZE] Badge ${i + 1}: backgroundColor=${b.backgroundColor}, templateId=${b.templateId}`);
+      });
 
       const basePrice = 9.99;
       const backingPrice = badge.backing === 'magnetic' ? 2.00 : badge.backing === 'adhesive' ? 1.00 : 0;
@@ -540,20 +595,22 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
         designId: `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
         status: 'saved',
         designData: {
-          badge,
+          badge: finalizedBadge1,
+          multipleBadges: finalizedMultipleBadges,
+          allBadges: allFinalizedBadges,
           timestamp: new Date().toISOString(),
         },
-        backgroundColor: badge.backgroundColor,
-        backingType: badge.backing,
+        backgroundColor: finalizedBadge1.backgroundColor,
+        backingType: finalizedBadge1.backing,
         basePrice,
         backingPrice,
         totalPrice,
-        textLines: badge.lines,
+        textLines: finalizedBadge1.lines,
       };
 
       const savedDesign = await api.saveBadgeDesign(badgeDesignData, shopData);
       // eslint-disable-next-line no-alert
-      alert(`Badge design saved! Design ID: ${savedDesign.id || 'Unknown'}`);
+      alert(`Badge design saved and finalized! Design ID: ${savedDesign.id || 'Unknown'}`);
 
       api.sendToParent({
         action: 'design-saved',
@@ -666,13 +723,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
 
       if (rows.length > 0 && rows[0].length > 0) {
         // Create badges based on current badge template but with CSV text
+        // CRITICAL: Each badge maintains its own backgroundColor as single source of truth
         const badges = rows.map((row: any, index: number) => {
+          // Start with current badge's backgroundColor to maintain consistency
           const badgeWithCsvText = {
           ...badge,
+          id: `badge-csv-${index + 1}`,
           // UNIVERSAL TEMPLATE: All CSV badges use the same universal template
           templateId: universalTemplateId,
-          // DEFAULT COLORS: All CSV badges use white background
-          backgroundColor: '#FFFFFF',
+          // CRITICAL: Preserve backgroundColor from current badge (single source of truth)
+          backgroundColor: badge.backgroundColor || '#FFFFFF',
           lines: row.map((cell: any, i: number) => {
             const baseLine = badge.lines[i] || badge.lines[0];
             return {
@@ -690,10 +750,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
           
           // Apply center-based positioning to CSV badges
           const centeredLines = calculateCenterPositions(badgeWithCsvText.lines);
-          return { 
+          const finalBadge = { 
             ...badgeWithCsvText, 
             lines: centeredLines
           };
+          
+          // Ensure backgroundColor is explicitly set (single source of truth)
+          console.log(`[COLOR TRACKING] CSV Badge ${index + 1} created with backgroundColor: ${finalBadge.backgroundColor}`);
+          return finalBadge;
         });
         
         console.log(`[DEBUG] Created ${badges.length} CSV badges:`, badges.map(b => b.lines.map((l: BadgeLine) => l.text)));
@@ -761,36 +825,80 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
               </h2>
               <span className="text-xl font-bold text-red-600">{activeTemplate.name}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => generatePDF(badge, multipleBadges)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-              >
-                Download PDF
-              </button>
-            </div>
           </div>
 
-          {/* Template Selector */}
+          {/* Template Selector - Image Swatches */}
           <div className="mb-4">
-              <label className="block text-sm font-semibold mb-1">Shape / Template</label>
-            <select
-              className="border rounded px-2 py-1 text-sm bg-white"
-              value={universalTemplateId}
-              onChange={(e) => {
-                const newTemplateId = e.target.value;
-                console.log('[UNIVERSAL] Template changed to:', newTemplateId);
-                handleUniversalTemplateChange(newTemplateId);
-              }}
-            >
+            <label className="block text-sm font-semibold mb-2">Shape / Template</label>
+            <div className="grid grid-cols-2 gap-2">
               {templates.length === 0 ? (
-                <option value="rect-1x3">Loading templates...</option>
+                <div className="text-sm text-gray-500">Loading templates...</div>
               ) : (
-                templates.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))
+                templates.map((t) => {
+                  // Map template IDs to JPG thumbnail filenames
+                  const getThumbnailFilename = (templateId: string): string => {
+                    const thumbnailMap: Record<string, string> = {
+                      'rect-1x3': '3x1-Round-Corners-Badge-Dimension',
+                      'rect-1_5x3': '3x1.5-Rounded-Corner-Badge',
+                      'oval-1_5x3': '3x1.5-Oval-Badge',
+                      'house-1_5x3': '3x1.5-House-Badge',
+                      'square-1x3': '3x1-Square-Corner-Badge',
+                      'square-1_5x3': '3x1.5-Square-Corner-Badge',
+                      'designer-1x3': '3x1-Designer-Badge',
+                      'fancy-1_5x3': '3x1.5-Fancy-Badge',
+                    };
+                    return thumbnailMap[templateId] || templateId; // Fallback to templateId if not mapped
+                  };
+                  
+                  const thumbnailFilename = getThumbnailFilename(t.id);
+                  const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
+                  const svgPath = `/templates/${t.id}.svg`; // Fallback to SVG if JPG not found
+                  const isSelected = universalTemplateId === t.id;
+                  
+                  return (
+                    <div key={t.id} className="relative">
+                      <button
+                        type="button"
+                        className={`relative border-2 rounded-lg overflow-hidden transition-all w-full ${
+                          isSelected 
+                            ? 'border-blue-600 ring-2 ring-blue-300 shadow-md' 
+                            : 'border-gray-300 hover:border-gray-400'
+                        }`}
+                        onClick={() => {
+                          console.log('[UNIVERSAL] Template changed to:', t.id);
+                          handleUniversalTemplateChange(t.id);
+                        }}
+                        title={t.name}
+                      >
+                        <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                          {/* Try to load JPG thumbnail first, fallback to SVG */}
+                          <img
+                            src={thumbnailPath}
+                            alt={t.name}
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              // Fallback to SVG if JPG doesn't exist
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const svgImg = document.createElement('img');
+                              svgImg.src = svgPath;
+                              svgImg.className = 'w-full h-full object-contain';
+                              svgImg.alt = t.name;
+                              target.parentElement?.appendChild(svgImg);
+                            }}
+                          />
+                        </div>
+                        <div className={`absolute bottom-0 left-0 right-0 text-xs text-center py-0.5 ${
+                          isSelected ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+                        }`}>
+                          {t.name}
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })
               )}
-            </select>
+            </div>
           </div>
 
           {/* Export Options */}
@@ -803,7 +911,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                   const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
                   downloadMultipleSVGs(allBadges, allTemplates, 'badge');
                   } else {
-                    await downloadSVG({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.svg');
+                    const badgeToExport = badge1Data || badge;
+                    await downloadSVG({...badgeToExport, id: badgeToExport.id || 'badge', templateId: badgeToExport.templateId || universalTemplateId}, activeTemplate, 'badge.svg');
                   }
               }}>
                 SVG
@@ -814,7 +923,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                   const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
                   downloadMultiplePNGs(allBadges, allTemplates, 'badge');
                   } else {
-                    await downloadPNG({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.png', 2);
+                    const badgeToExport = badge1Data || badge;
+                    await downloadPNG({...badgeToExport, id: badgeToExport.id || 'badge', templateId: badgeToExport.templateId || universalTemplateId}, activeTemplate, 'badge.png', 2);
                   }
               }}>
                 PNG
@@ -825,7 +935,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                   const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
                   downloadMultipleTIFFs(allBadges, allTemplates, 'badge');
                   } else {
-                    await downloadTIFF({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.tiff', 4);
+                    const badgeToExport = badge1Data || badge;
+                    await downloadTIFF({...badgeToExport, id: badgeToExport.id || 'badge', templateId: badgeToExport.templateId || universalTemplateId}, activeTemplate, 'badge.tiff', 4);
                   }
               }}>
                 TIFF
@@ -836,7 +947,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                   const allTemplates = getAllTemplates(badge1Data, multipleBadges, templates);
                   downloadMultipleCDRs(allBadges, allTemplates, 'badge');
                   } else {
-                    await downloadCDR({...badge, id: badge.id || 'badge', templateId: badge.templateId || universalTemplateId}, activeTemplate, 'badge.cdr');
+                    const badgeToExport = badge1Data || badge;
+                    await downloadCDR({...badgeToExport, id: badgeToExport.id || 'badge', templateId: badgeToExport.templateId || universalTemplateId}, activeTemplate, 'badge.cdr');
                   }
               }}>
                 CDR (Artwork)
@@ -845,33 +957,36 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
           </div>
 
           {/* Background + Preview */}
-          <div className="flex flex-row gap-6 items-start w-full mb-6">
-            <div className="flex flex-col items-start justify-center w-[180px]" style={{ alignSelf: 'flex-start' }}>
+          <div className="flex flex-col items-center w-full mb-6">
+            {/* Badge Preview - Centered */}
+            <div className="h-[320px] w-full flex items-center justify-center mb-4" style={{ background: "transparent", border: "none", boxShadow: "none" }}>
+              <BadgeSvgRenderer badge={badge} templateId={activeTemplate.id} />
+            </div>
+
+            {/* Background Color - Smart palette grid (columns = color families, rows = gradients) */}
+            <div className="flex flex-col items-center w-full">
               <span className="font-semibold text-gray-700 mb-2">Background Color</span>
-              <div className="grid grid-cols-4 gap-2 w-full">
-                {backgroundColors.map((bg: any) => (
+              <div className="grid grid-cols-9 gap-2 w-full max-w-2xl">
+                {SMART_PALETTE_COLORS.map((c) => (
                   <button
-                    key={bg.value}
-                    className={`color-button ${badge.backgroundColor === bg.value ? 'ring-2 ring-offset-2 ' + bg.ring : ''}`}
-                    style={{ backgroundColor: bg.value }}
-                    onClick={(e) => { e.preventDefault(); setBadge({ ...badge, backgroundColor: bg.value }); }}
-                    title={bg.name}
+                    key={c.value}
+                    className={`w-7 h-7 border rounded ${badge.backgroundColor === c.value ? 'ring-2 ring-offset-1 ' + c.ring : ''}`}
+                    style={{ backgroundColor: c.value }}
+                    title={c.name}
+                    onClick={(e) => { 
+                      e.preventDefault(); 
+                      const updatedBadge = { ...badge, backgroundColor: c.value };
+                      console.log(`[COLOR TRACKING] Background color changed to: ${c.value}`);
+                      setBadge(updatedBadge);
+                      // CRITICAL: If we're on badge 1, update badge1Data immediately
+                      if (selectedBadgeIndex === 0) {
+                        setBadge1Data(updatedBadge);
+                      }
+                    }}
                   />
                 ))}
               </div>
-              <button
-                className="mt-3 text-xs px-2 py-1 border rounded bg-white hover:bg-gray-50"
-                onClick={(e) => { e.preventDefault(); setShowExtendedBgPicker(true); }}
-              >
-                More colors…
-              </button>
             </div>
-
-            {/* neutral, no borders/background/size clamps */}
-            <div className="h-[320px] w-full" style={{ background: "transparent", border: "none", boxShadow: "none" }}>
-              <BadgeSvgRenderer badge={badge} templateId={activeTemplate.id} />
-            </div>
-            
           </div>
 
           {/* Text Lines */}
@@ -879,14 +994,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
             badge={badge}
             maxLines={maxLines}
             onLineChange={updateLine}
-            onAlignmentChange={(index, alignment) =>
-              setBadge({
-                ...badge,
-                lines: badge.lines.map((l, i) =>
-                  i === index ? { ...l, align: alignment as 'left' | 'center' | 'right' } : l
-                ) as BadgeLine[],
-              })
-            }
+            onAlignmentChange={(index, alignment) => {
+              const newLines = badge.lines.map((l, i) => {
+                if (i === index) {
+                  // Set both align and alignment for compatibility
+                  return { ...l, align: alignment as 'left' | 'center' | 'right', alignment: alignment as 'left' | 'center' | 'right' };
+                }
+                return l;
+              }) as BadgeLine[];
+              setBadge({ ...badge, lines: newLines });
+            }}
             onBackgroundColorChange={(backgroundColor) => setBadge({ ...badge, backgroundColor })}
             onRemoveLine={removeLine}
             addLine={addLine}
@@ -1095,32 +1212,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
         </div>
       )}
 
-      {/* Extended BG picker */}
-      {showExtendedBgPicker && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-4 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
-            <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl"
-              onClick={(e) => { e.preventDefault(); setShowExtendedBgPicker(false); }}
-              aria-label="Close"
-            >
-              ×
-            </button>
-            <h3 className="text-lg font-bold mb-3">Choose Background Color</h3>
-            <div className="grid grid-cols-9 gap-2">
-              {EXTENDED_BACKGROUND_COLORS.map((c) => (
-                <button
-                  key={c.value}
-                  className={`w-7 h-7 border rounded ${badge.backgroundColor === c.value ? 'ring-2 ring-offset-1 ' + c.ring : ''}`}
-                  style={{ backgroundColor: c.value }}
-                  title={c.name}
-                  onClick={(e) => { e.preventDefault(); setBadge({ ...badge, backgroundColor: c.value }); setShowExtendedBgPicker(false); }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
