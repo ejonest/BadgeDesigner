@@ -8,16 +8,19 @@ viewBox="0 0 3150 1150"
  <defs>
   <style type="text/css">
    <![CDATA[
-    .str0 {stroke:#373435;stroke-width:3;stroke-miterlimit:22.9256}
-    .fil1 {fill:none;fill-rule:nonzero}
-    .fil0 {fill:#000001;fill-rule:nonzero}
+    .str0 {stroke:black;stroke-width:3;stroke-miterlimit:22.9256}
+    .fil0 {fill:none}
+    .fil1 {fill:#000001;fill-rule:nonzero}
    ]]>
   </style>
  </defs>
  <g id="Layer_x0020_1">
   <metadata id="CorelCorpID_0Corel-Layer"/>
-  <g id="_2049704271344">
-   <path id="Inner" class="fil1 str0" fill="none" d="M3044.32 104.61l0 940.79 -2938.64 0 0 -940.79 2938.64 0m3.41 -3.29l-2945.46 0 0 947.37 2945.46 0 0 -947.37 0 0z"/>
+  <g id="_2316827879808">
+   <path id="Outline" class="fil1" d="M0 0l0 1150 3150 0 0 -1150 -3150 0z"/>
+  </g>
+  <g id="_2316827878368">
+   <path id="Inner" class="fil0 str0" d="M75 75l0 1000 3000 0 0 -1000 -3000 0z"/>
   </g>
  </g>
 </svg>
