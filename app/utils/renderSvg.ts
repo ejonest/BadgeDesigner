@@ -192,6 +192,10 @@ export function renderBadgeToSvgString(
     }
   }
   
+  // Create a rectangle clipPath based on designBox for text containment
+  // This ensures text fits within badge boundaries without clipping
+  const textClipPath = `<rect x="${designBox.x}" y="${designBox.y}" width="${designBox.width}" height="${designBox.height}"/>`;
+  
   // Background image (if present)
   const bgImageLayer = badge.backgroundImage
     ? renderBg(badge.backgroundImage, designBox)
@@ -200,8 +204,8 @@ export function renderBadgeToSvgString(
   console.log("[renderSvg] designBox:", designBox);
   console.log("[renderSvg] backgroundColor:", badge.backgroundColor);
 
-  // Text rendering
-  const text = (badge.lines || []).map((line: any, i: number) => {
+  // Text rendering - wrap all text in a group with clipPath to contain within badge boundaries
+  const textElements = (badge.lines || []).map((line: any, i: number) => {
     const { x, y } = toPx(line, designBox);
     // Prefer sizeNorm (new normalized sizing)
     const size = line.sizeNorm ? Math.round(line.sizeNorm * designBox.height) :
@@ -217,14 +221,17 @@ export function renderBadgeToSvgString(
     const fontWeight = line.bold ? "bold" : "normal";
     const fontStyle = line.italic ? "italic" : "normal";
     const textDecoration = line.underline ? "underline" : "none";
-    // Apply clipPath to contain text within badge boundaries (only if clipPath is valid)
     return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}"
                   alignment-baseline="middle" font-family="${family}" fill="${color}"
                   font-weight="${fontWeight}"
                   font-style="${fontStyle}"
-                  text-decoration="${textDecoration}"
-                  ${innerPathData && innerPathData.includes('<path') ? `clip-path="url(#${clipId})"` : ''}>${esc(line.text || "")}</text>`;
+                  text-decoration="${textDecoration}">${esc(line.text || "")}</text>`;
   }).join("");
+  
+  // Wrap all text in a group with clipPath to contain within badge boundaries
+  const text = innerPathData && innerPathData.includes('<path') 
+    ? `<g clip-path="url(#${clipId})">${textElements}</g>`
+    : textElements;
 
   // Outline for border (no fill, stroke only)
   const outline = template.outlineElement 
@@ -243,6 +250,9 @@ export function renderBadgeToSvgString(
     ${innerPathData ? `<clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
       ${innerPathData}
     </clipPath>` : ''}
+    <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
+      ${textClipPath}
+    </clipPath>
   </defs>
 
   <!-- Single layer: padding offset -->
@@ -358,13 +368,17 @@ export async function renderBadgeToSvgStringWithFonts(
     }
   }
   
+  // Create a rectangle clipPath based on designBox for text containment
+  // This ensures text fits within badge boundaries without clipping
+  const textClipPath = `<rect x="${designBox.x}" y="${designBox.y}" width="${designBox.width}" height="${designBox.height}"/>`;
+  
   // Background image (if present) - rendered on top of filled inner path
   const bgImageLayer = badge.backgroundImage
     ? renderBg(badge.backgroundImage, designBox)
     : '';
 
-  // Text rendering with embedded fonts and clipPath
-  const text = (badge.lines || []).map((line: any, i: number) => {
+  // Text rendering with embedded fonts - wrap all text in a group with clipPath
+  const textElements = (badge.lines || []).map((line: any, i: number) => {
     const { x, y } = toPx(line, designBox);
     const size = line.sizeNorm ? Math.round(line.sizeNorm * designBox.height) :
                  line.fontSizeRel ? Math.round(line.fontSizeRel * designBox.height) : 
@@ -384,13 +398,16 @@ export async function renderBadgeToSvgStringWithFonts(
     const fontStyle = line.italic ? "italic" : "normal";
     const textDecoration = line.underline ? "underline" : "none";
     
-    // Apply clipPath to contain text within badge boundaries
     return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}"
                   alignment-baseline="middle" font-family="${family}" fill="${color}"
                   font-weight="${fontWeight}"
                   font-style="${fontStyle}"
                   text-decoration="${textDecoration}">${esc(line.text || "")}</text>`;
   }).join("");
+  
+  // Wrap all text in a group with clipPath to contain within badge boundaries
+  // Use designBox-based rectangle clipPath for text to prevent clipping issues
+  const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
 
   // Outline for border (no fill, stroke only)
   const outline = template.outlineElement 
@@ -409,8 +426,11 @@ export async function renderBadgeToSvgStringWithFonts(
     <style type="text/css">
       ${fontDefs.join('\n')}
     </style>
-    <clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
+    ${innerPathData ? `<clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
       ${innerPathData}
+    </clipPath>` : ''}
+    <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
+      ${textClipPath}
     </clipPath>
   </defs>
 

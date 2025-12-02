@@ -42,8 +42,33 @@ const cfg = (templatesJson as TemplatesFile).templates || [];
 // NO CACHE - Load fresh from SVG files every time
 
 /**
+ * Converts polygon points to SVG path data.
+ */
+function polygonToPathData(points: string): string {
+  // Parse points string (format: "x1,y1 x2,y2 x3,y3" or "x1 y1 x2 y2 x3 y3")
+  const coords = points.trim().split(/[\s,]+/).map(Number).filter(n => !isNaN(n));
+  if (coords.length < 4) return '';
+  
+  // Start with MoveTo command
+  let pathData = `M${coords[0]},${coords[1]}`;
+  
+  // Add LineTo commands for remaining points
+  for (let i = 2; i < coords.length; i += 2) {
+    if (i + 1 < coords.length) {
+      pathData += ` L${coords[i]},${coords[i + 1]}`;
+    }
+  }
+  
+  // Close the path
+  pathData += ' Z';
+  
+  return pathData;
+}
+
+/**
  * Extracts a path element from SVG content by ID.
  * Handles different attribute orders and case variations.
+ * Also supports polygon elements (converts to path data).
  */
 function extractPathFromSvg(svgContent: string, pathId: string): string | null {
   // Create a DOM parser to reliably extract path data
@@ -52,15 +77,27 @@ function extractPathFromSvg(svgContent: string, pathId: string): string | null {
       const parser = new DOMParser();
       const doc = parser.parseFromString(svgContent, 'image/svg+xml');
       
-      // Try exact case first
-      let path = doc.querySelector(`path[id="${pathId}"]`) || 
-                 doc.querySelector(`path[id="${pathId.toLowerCase()}"]`) ||
-                 doc.querySelector(`path[id="${pathId.toUpperCase()}"]`);
+      // Try path element first
+      let element = doc.querySelector(`path[id="${pathId}"]`) || 
+                    doc.querySelector(`path[id="${pathId.toLowerCase()}"]`) ||
+                    doc.querySelector(`path[id="${pathId.toUpperCase()}"]`);
       
-      if (path) {
-        const d = path.getAttribute('d');
+      if (element) {
+        const d = element.getAttribute('d');
         if (d) {
           return d;
+        }
+      }
+      
+      // Try polygon element
+      element = doc.querySelector(`polygon[id="${pathId}"]`) || 
+                doc.querySelector(`polygon[id="${pathId.toLowerCase()}"]`) ||
+                doc.querySelector(`polygon[id="${pathId.toUpperCase()}"]`);
+      
+      if (element) {
+        const points = element.getAttribute('points');
+        if (points) {
+          return polygonToPathData(points);
         }
       }
     } catch (e) {
@@ -70,7 +107,7 @@ function extractPathFromSvg(svgContent: string, pathId: string): string | null {
   
   // Fallback to regex for SSR or if DOM parsing fails
   // Match path with id attribute (handles different attribute orders)
-  const patterns = [
+  const pathPatterns = [
     // id="Inner" d="..."
     new RegExp(`<path[^>]*id=["']${pathId}["'][^>]*d=["']([^"']+)["']`, 'i'),
     // id="inner" d="..."
@@ -81,10 +118,29 @@ function extractPathFromSvg(svgContent: string, pathId: string): string | null {
     new RegExp(`<path[^>]*d=["']([^"']+)["'][^>]*id=["']${pathId.toLowerCase()}["']`, 'i'),
   ];
   
-  for (const pattern of patterns) {
+  for (const pattern of pathPatterns) {
     const match = svgContent.match(pattern);
     if (match && match[1]) {
       return match[1];
+    }
+  }
+  
+  // Try polygon patterns
+  const polygonPatterns = [
+    // id="Inner" points="..."
+    new RegExp(`<polygon[^>]*id=["']${pathId}["'][^>]*points=["']([^"']+)["']`, 'i'),
+    // id="inner" points="..."
+    new RegExp(`<polygon[^>]*id=["']${pathId.toLowerCase()}["'][^>]*points=["']([^"']+)["']`, 'i'),
+    // points="..." id="Inner"
+    new RegExp(`<polygon[^>]*points=["']([^"']+)["'][^>]*id=["']${pathId}["']`, 'i'),
+    // points="..." id="inner"
+    new RegExp(`<polygon[^>]*points=["']([^"']+)["'][^>]*id=["']${pathId.toLowerCase()}["']`, 'i'),
+  ];
+  
+  for (const pattern of polygonPatterns) {
+    const match = svgContent.match(pattern);
+    if (match && match[1]) {
+      return polygonToPathData(match[1]);
     }
   }
   

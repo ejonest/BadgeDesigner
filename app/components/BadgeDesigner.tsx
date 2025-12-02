@@ -261,16 +261,27 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   };
 
   // PRESERVE TEXT SIZES: Only recalculate positions, not sizes
+  // Fixed line spacing that doesn't change with font size
   const calculateCenterPositions = (lines: BadgeLine[]): BadgeLine[] => {
     if (!activeTemplate?.designBox) return lines;
     
     const designBoxHeight = activeTemplate.designBox.height;
     const designBoxCenterY = designBoxHeight / 2;
     
-    // Calculate total text height using existing sizeNorm values
-    const totalTextHeight = lines.reduce((sum, line) => {
+    // Fixed line spacing (in pixels) - doesn't change with font size
+    // Use a percentage of designBox height for consistent spacing
+    const FIXED_LINE_SPACING = designBoxHeight * 0.15; // 15% of badge height
+    
+    // Calculate total height needed: sum of font sizes + fixed spacing between lines
+    const totalTextHeight = lines.reduce((sum, line, index) => {
       const fontSize = (line.sizeNorm || 0.15) * designBoxHeight;
-      return sum + fontSize * 1.2; // 1.2 for line spacing
+      // Add font size for this line
+      sum += fontSize;
+      // Add spacing after this line (except for last line)
+      if (index < lines.length - 1) {
+        sum += FIXED_LINE_SPACING;
+      }
+      return sum;
     }, 0);
     
     // Calculate starting Y position (center minus half total height)
@@ -280,17 +291,20 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     let currentY = startY;
     return lines.map((line, index) => {
       const fontSize = (line.sizeNorm || 0.15) * designBoxHeight;
-      const yPosition = currentY + (fontSize / 2); // Center the text on the line
+      // Position text so its baseline is at currentY, then adjust for vertical centering
+      // SVG text y position is the baseline, so we add half the font size to center it
+      const yPosition = currentY + (fontSize / 2);
       
       // Convert to normalized coordinates
       const yNorm = yPosition / designBoxHeight;
       
-      currentY += fontSize * 1.2; // Move to next line position
+      // Move to next line: current position + font size + fixed spacing
+      currentY += fontSize + FIXED_LINE_SPACING;
       
       return {
         ...line,
         yNorm: Math.max(0.1, Math.min(0.9, yNorm)), // Only update position, preserve sizeNorm
-        xNorm: line.xNorm || 0.5 // Ensure xNorm exists
+        xNorm: line.xNorm ?? 0.5 // Ensure xNorm exists, default to center
       };
     });
   };
@@ -842,7 +856,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
           {/* Template Selector - Image Swatches */}
           <div className="mb-4">
             <label className="block text-sm font-semibold mb-2">Shape / Template</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pr-2">
               {templates.length === 0 ? (
                 <div className="text-sm text-gray-500">Loading templates...</div>
               ) : (
@@ -850,12 +864,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                   // Map template IDs to JPG thumbnail filenames
                   const getThumbnailFilename = (templateId: string): string => {
                     const thumbnailMap: Record<string, string> = {
-                      'rect-1x3': '3x1-Round-Corners-Badge-Dimension',
-                      'rect-1_5x3': '3x1.5-Rounded-Corner-Badge',
+                      'rect-1x3': '3x1-Round-Corners-Badge',
+                      'rect-1_5x3': '3x1.5-Round-Corners-Badge',
                       'oval-1_5x3': '3x1.5-Oval-Badge',
                       'house-1_5x3': '3x1.5-House-Badge',
-                      'square-1x3': '3x1-Square-Corner-Badge',
-                      'square-1_5x3': '3x1.5-Square-Corner-Badge',
+                      'square-1x3': '3x1-Badge',
+                      'square-1_5x3': '3x1.5-Badge',
                       'designer-1x3': '3x1-Designer-Badge',
                       'fancy-1_5x3': '3x1.5-Fancy-Badge',
                     };
@@ -871,39 +885,63 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
                     <div key={t.id} className="relative">
                       <button
                         type="button"
-                        className={`relative border-2 rounded-lg overflow-hidden transition-all w-full ${
+                        className={`relative rounded-lg overflow-hidden transition-all w-full border bg-white ${
                           isSelected 
                             ? 'border-blue-600 ring-2 ring-blue-300 shadow-md' 
                             : 'border-gray-300 hover:border-gray-400'
                         }`}
+                        style={{ 
+                          height: '140px',
+                          display: 'flex',
+                          flexDirection: 'column'
+                        }}
                         onClick={() => {
                           console.log('[UNIVERSAL] Template changed to:', t.id);
                           handleUniversalTemplateChange(t.id);
                         }}
                         title={t.name}
                       >
-                        <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                        {/* Label at top - fixed height, not obscuring the shape */}
+                        <div className={`text-[10px] text-center py-1 flex-shrink-0 ${
+                          isSelected ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+                        }`}>
+                          {t.name}
+                        </div>
+                        
+                        {/* Image container - fills remaining space, crops white space with small padding */}
+                        <div 
+                          className="flex-1 overflow-hidden flex items-center justify-center"
+                          style={{ 
+                            minHeight: 0,
+                            width: '100%',
+                            height: '100%',
+                            padding: '4px 6px 4px 4px'
+                          }}
+                        >
                           {/* Try to load JPG thumbnail first, fallback to SVG */}
                           <img
                             src={thumbnailPath}
                             alt={t.name}
-                            className="w-full h-full object-contain"
+                            className="object-cover"
+                            style={{ 
+                              width: '100%',
+                              height: '100%',
+                              transform: 'scale(0.95)'
+                            }}
                             onError={(e) => {
                               // Fallback to SVG if JPG doesn't exist
                               const target = e.target as HTMLImageElement;
                               target.style.display = 'none';
                               const svgImg = document.createElement('img');
                               svgImg.src = svgPath;
-                              svgImg.className = 'w-full h-full object-contain';
+                              svgImg.className = 'object-cover';
+                              svgImg.style.width = '100%';
+                              svgImg.style.height = '100%';
+                              svgImg.style.transform = 'scale(0.95)';
                               svgImg.alt = t.name;
                               target.parentElement?.appendChild(svgImg);
                             }}
                           />
-                        </div>
-                        <div className={`absolute bottom-0 left-0 right-0 text-xs text-center py-0.5 ${
-                          isSelected ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
-                        }`}>
-                          {t.name}
                         </div>
                       </button>
                     </div>
@@ -1010,7 +1048,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
               const newLines = badge.lines.map((l, i) => {
                 if (i === index) {
                   // Set both align and alignment for compatibility
-                  return { ...l, align: alignment as 'left' | 'center' | 'right', alignment: alignment as 'left' | 'center' | 'right' };
+                  // For center alignment, ensure xNorm is 0.5 for proper centering
+                  const updatedLine = { 
+                    ...l, 
+                    align: alignment as 'left' | 'center' | 'right', 
+                    alignment: alignment as 'left' | 'center' | 'right' 
+                  };
+                  if (alignment === 'center') {
+                    updatedLine.xNorm = 0.5;
+                  }
+                  return updatedLine;
                 }
                 return l;
               }) as BadgeLine[];
