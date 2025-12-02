@@ -173,11 +173,14 @@ export function renderBadgeToSvgString(
       alignment === "right" ? "end" : "start";
     const family = esc(line.fontFamily || "Inter, ui-sans-serif, system-ui");
     const color  = line.color || "#000";
+    const fontWeight = line.bold ? "bold" : "normal";
+    const fontStyle = line.italic ? "italic" : "normal";
+    const textDecoration = line.underline ? "underline" : "none";
     return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}"
                   alignment-baseline="middle" font-family="${family}" fill="${color}"
-                  font-weight="${line.bold ? "bold" : "normal"}"
-                  font-style="${line.italic ? "italic" : "normal}"
-                  text-decoration="${line.underline ? "underline" : "none"}">${esc(line.text || "")}</text>`;
+                  font-weight="${fontWeight}"
+                  font-style="${fontStyle}"
+                  text-decoration="${textDecoration}">${esc(line.text || "")}</text>`;
   }).join("");
 
   // Outline for border (no fill, stroke only)
@@ -312,12 +315,15 @@ export async function renderBadgeToSvgStringWithFonts(
     const embeddedFamily = fontMappings.get(originalFamily) || originalFamily;
     const family = esc(embeddedFamily);
     const color = line.color || "#000";
+    const fontWeight = line.bold ? "bold" : "normal";
+    const fontStyle = line.italic ? "italic" : "normal";
+    const textDecoration = line.underline ? "underline" : "none";
     
     return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}"
                   alignment-baseline="middle" font-family="${family}" fill="${color}"
-                  font-weight="${line.bold ? "bold" : "normal"}"
-                  font-style="${line.italic ? "italic" : "normal}"
-                  text-decoration="${line.underline ? "underline" : "none"}">${esc(line.text || "")}</text>`;
+                  font-weight="${fontWeight}"
+                  font-style="${fontStyle}"
+                  text-decoration="${textDecoration}">${esc(line.text || "")}</text>`;
   }).join("");
 
   // Outline for border (no fill, stroke only)
