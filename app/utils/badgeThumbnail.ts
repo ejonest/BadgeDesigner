@@ -1,5 +1,5 @@
 import { Badge, BadgeLine } from '../types/badge';
-import { renderBadgeToSvgString } from './renderSvg';
+import { renderBadgeToSvgString, renderBadgeToSvgStringWithFonts } from './renderSvg';
 import { loadTemplateById, type LoadedTemplate } from './templates';
 // import UTIF encoder
 // @ts-ignore
@@ -48,8 +48,8 @@ export async function generateBadgeThumbnail(
     // Load the template
     const template = await loadTemplateById(badge.templateId || 'rect-1x3');
     
-    // Generate SVG using unified renderer
-    const svgString = renderBadgeToSvgString(badge, template, { showOutline: false });
+    // Generate SVG using font-embedding version for consistent font rendering
+    const svgString = await renderBadgeToSvgStringWithFonts(badge, template, { showOutline: false });
     
     // Convert SVG to canvas for rasterization
     return new Promise((resolve, reject) => {
@@ -131,8 +131,8 @@ export async function generateFullBadgeImage(badge: Badge): Promise<string> {
     // Load the template
     const template = await loadTemplateById(badge.templateId || 'rect-1x3');
     
-    // Generate SVG using unified renderer
-    const svgString = renderBadgeToSvgString(badge, template, { showOutline: false });
+    // Generate SVG using font-embedding version for consistent font rendering
+    const svgString = await renderBadgeToSvgStringWithFonts(badge, template, { showOutline: false });
     
     // Convert SVG to high-resolution PNG
     return new Promise((resolve, reject) => {

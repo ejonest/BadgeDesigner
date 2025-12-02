@@ -165,13 +165,32 @@ export function renderBadgeToSvgString(
   const H = template.standardViewBoxHeight + (PADDING_PX * 2);
   const designBox = template.designBox;
 
-  const clipId = `badge-clip-${badge.id || "anon"}`;
+  const clipId = `badge-clip-${badge.id || Math.random().toString(36).substring(7)}`;
 
   // SINGLE LAYER APPROACH: Use inner path directly for background fill
   const innerPathWithFill = template.innerElement.replace(
     /fill="[^"]*"/,
     `fill="${badge.backgroundColor || "#FFFFFF"}"`
   );
+  
+  // Extract path data from inner element for clipPath
+  // The inner element might be wrapped in a <g transform> tag, so we need to extract just the path
+  let innerPathData = template.innerElement;
+  // Remove <g> wrapper if present (handles both opening and closing tags)
+  const gMatch = innerPathData.match(/<g[^>]*>(.*?)<\/g>/s);
+  if (gMatch) {
+    innerPathData = gMatch[1];
+  }
+  // Extract the path element itself (with all attributes) for clipPath
+  // If it's already a path, use it directly; otherwise extract path from within
+  const pathMatch = innerPathData.match(/<path[^>]*>/);
+  if (!pathMatch) {
+    // Fallback: try to extract d attribute and reconstruct
+    const dMatch = innerPathData.match(/d=["']([^"']+)["']/);
+    if (dMatch) {
+      innerPathData = `<path d="${dMatch[1]}"/>`;
+    }
+  }
   
   // Background image (if present)
   const bgImageLayer = badge.backgroundImage
@@ -198,11 +217,13 @@ export function renderBadgeToSvgString(
     const fontWeight = line.bold ? "bold" : "normal";
     const fontStyle = line.italic ? "italic" : "normal";
     const textDecoration = line.underline ? "underline" : "none";
+    // Apply clipPath to contain text within badge boundaries (only if clipPath is valid)
     return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}"
                   alignment-baseline="middle" font-family="${family}" fill="${color}"
                   font-weight="${fontWeight}"
                   font-style="${fontStyle}"
-                  text-decoration="${textDecoration}">${esc(line.text || "")}</text>`;
+                  text-decoration="${textDecoration}"
+                  ${innerPathData && innerPathData.includes('<path') ? `clip-path="url(#${clipId})"` : ''}>${esc(line.text || "")}</text>`;
   }).join("");
 
   // Outline for border (no fill, stroke only)
@@ -219,6 +240,9 @@ export function renderBadgeToSvgString(
 
   return `${svgOpen}
   <defs>
+    ${innerPathData ? `<clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
+      ${innerPathData}
+    </clipPath>` : ''}
   </defs>
 
   <!-- Single layer: padding offset -->
@@ -253,8 +277,6 @@ export async function renderBadgeToSvgStringWithFonts(
   const W = template.standardViewBoxWidth + (PADDING_PX * 2);
   const H = template.standardViewBoxHeight + (PADDING_PX * 2);
   const designBox = template.designBox;
-
-  const clipId = `badge-clip-${badge.id || "anon"}`;
 
   // Collect all unique font families used in the badge
   const fontFamilies = new Set<string>();
@@ -307,6 +329,8 @@ export async function renderBadgeToSvgStringWithFonts(
     }
   }
 
+  const clipId = `badge-clip-${badge.id || Math.random().toString(36).substring(7)}`;
+
   // SINGLE LAYER APPROACH: Use inner path directly for background fill
   // Replace the inner path's fill with the badge background color
   // This eliminates the separate rect and creates a single layer
@@ -315,12 +339,31 @@ export async function renderBadgeToSvgStringWithFonts(
     `fill="${badge.backgroundColor || "#FFFFFF"}"`
   );
   
+  // Extract path data from inner element for clipPath
+  // The inner element might be wrapped in a <g transform> tag, so we need to extract just the path
+  let innerPathData = template.innerElement;
+  // Remove <g> wrapper if present (handles both opening and closing tags)
+  const gMatch = innerPathData.match(/<g[^>]*>(.*?)<\/g>/s);
+  if (gMatch) {
+    innerPathData = gMatch[1];
+  }
+  // Extract the path element itself (with all attributes) for clipPath
+  // If it's already a path, use it directly; otherwise extract path from within
+  const pathMatch = innerPathData.match(/<path[^>]*>/);
+  if (!pathMatch) {
+    // Fallback: try to extract d attribute and reconstruct
+    const dMatch = innerPathData.match(/d=["']([^"']+)["']/);
+    if (dMatch) {
+      innerPathData = `<path d="${dMatch[1]}"/>`;
+    }
+  }
+  
   // Background image (if present) - rendered on top of filled inner path
   const bgImageLayer = badge.backgroundImage
     ? renderBg(badge.backgroundImage, designBox)
     : '';
 
-  // Text rendering with embedded fonts
+  // Text rendering with embedded fonts and clipPath
   const text = (badge.lines || []).map((line: any, i: number) => {
     const { x, y } = toPx(line, designBox);
     const size = line.sizeNorm ? Math.round(line.sizeNorm * designBox.height) :
@@ -341,6 +384,7 @@ export async function renderBadgeToSvgStringWithFonts(
     const fontStyle = line.italic ? "italic" : "normal";
     const textDecoration = line.underline ? "underline" : "none";
     
+    // Apply clipPath to contain text within badge boundaries
     return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}"
                   alignment-baseline="middle" font-family="${family}" fill="${color}"
                   font-weight="${fontWeight}"
@@ -365,6 +409,9 @@ export async function renderBadgeToSvgStringWithFonts(
     <style type="text/css">
       ${fontDefs.join('\n')}
     </style>
+    <clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
+      ${innerPathData}
+    </clipPath>
   </defs>
 
   <!-- Single layer: padding offset -->

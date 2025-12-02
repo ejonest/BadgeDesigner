@@ -12,7 +12,7 @@ export interface FontData {
 const FONT_PATHS: { [key: string]: string } = {
   'Roboto': '/Fonts/Roboto/static/Roboto-Regular.ttf',
   'Open Sans': '/Fonts/Open_Sans/static/OpenSans-Regular.ttf',
-  'Lato': '/Fonts/Lato/static/Lato-Regular.ttf',
+  'Lato': '/Fonts/Lato/Lato-Regular.ttf', // FIXED: No static/ folder
   'Montserrat': '/Fonts/Montserrat/static/Montserrat-Regular.ttf',
   'Oswald': '/Fonts/Oswald/static/Oswald-Regular.ttf',
   'Source Sans 3': '/Fonts/Source_Sans_3/static/SourceSans3-Regular.ttf',
@@ -21,7 +21,14 @@ const FONT_PATHS: { [key: string]: string } = {
   'Merriweather': '/Fonts/Merriweather/static/Merriweather-Regular.ttf',
   'Noto Sans': '/Fonts/Noto_Sans/static/NotoSans-Regular.ttf',
   'Noto Serif': '/Fonts/Noto_Serif/static/NotoSerif-Regular.ttf',
-  'Georgia': 'system' // Georgia is a system font
+  'Georgia': 'system', // Georgia is a system font
+  // New fonts
+  'Inter': '/Fonts/Inter/static/Inter_24pt-Regular.ttf',
+  'Cabin': '/Fonts/Cabin/static/Cabin-Regular.ttf',
+  'Nunito': '/Fonts/Nunito/static/Nunito-Regular.ttf',
+  'Roboto Mono': '/Fonts/Roboto_Mono/static/RobotoMono-Regular.ttf',
+  'Roboto Serif': '/Fonts/Roboto_Serif/static/RobotoSerif-Regular.ttf',
+  'Roboto Slab': '/Fonts/Roboto_Slab/static/RobotoSlab-Regular.ttf'
 };
 
 // Cache for loaded fonts

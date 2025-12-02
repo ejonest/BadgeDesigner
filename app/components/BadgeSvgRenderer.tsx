@@ -1,15 +1,18 @@
 import * as React from "react";
 import { loadTemplateById } from "~/utils/templates";
-import { renderBadgeToSvgString } from "~/utils/renderSvg";
+import { renderBadgeToSvgStringWithFonts } from "~/utils/renderSvg";
 import type { LoadedTemplate } from "~/utils/templates";
 
 type Props = { badge: any; templateId: string; actualSize?: boolean; className?: string };
 
 export default function BadgeSvgRenderer({ badge, templateId, actualSize = false, className }: Props) {
   const [svg, setSvg] = React.useState<string>("");
+  const [renderKey, setRenderKey] = React.useState(0);
 
   React.useEffect(() => {
     let on = true;
+    // Force fresh render by incrementing key
+    setRenderKey(prev => prev + 1);
     (async () => {
       try {
         const template = await loadTemplateById(templateId);
@@ -18,8 +21,8 @@ export default function BadgeSvgRenderer({ badge, templateId, actualSize = false
           return;
         }
         
-        // Use the working renderSvg.ts approach
-        const s = renderBadgeToSvgString(badge, template, { showOutline: true });
+        // Use font-embedding version for consistent font rendering
+        const s = await renderBadgeToSvgStringWithFonts(badge, template, { showOutline: true });
         
         if (on) {
           setSvg(s);
@@ -33,6 +36,7 @@ export default function BadgeSvgRenderer({ badge, templateId, actualSize = false
 
   return (
     <div
+      key={`badge-render-${templateId}-${renderKey}`}
       className={`w-full ${className || ""}`}
       style={{ 
         height: 280, 

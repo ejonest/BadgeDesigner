@@ -222,20 +222,32 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   // Stage 2: Removed problematic auto-sync - saving is now explicit via "Save Changes" button
 
   // UNIVERSAL TEMPLATE: Get the active template
-  const activeTemplate: LoadedTemplate = useMemo(() => {
+  const activeTemplate: LoadedTemplate | null = useMemo(() => {
+    // Wait for templates to load before trying to find one
+    if (templates.length === 0) {
+      return null; // Templates not loaded yet
+    }
+    
     const template = templates.find(t => t.id === universalTemplateId);
     if (!template) {
-      console.warn('[BadgeDesigner] Universal template not found:', universalTemplateId);
+      console.warn('[BadgeDesigner] Universal template not found:', universalTemplateId, 'Available:', templates.map(t => t.id));
+      // Fallback to first available template instead of broken fallback object
+      return templates[0] || null;
     }
-    return template || templates[0] || { 
-      id: 'rect-1x3', 
-      name: 'Rectangle 1×3', 
-      widthIn: 3.0,
-      heightIn: 1.0,
-      safeInsetPx: 6,
-      innerPathSvg: '<path d="M25,0 L275,0 A25,25 0 0,1 300,25 L300,75 A25,25 0 0,1 275,100 L25,100 A25,25 0 0,1 0,75 L0,25 A25,25 0 0,1 25,0 Z" fill="#000"/>'
-    };
+    return template;
   }, [templates, universalTemplateId]);
+
+  // Show loading state if template isn't ready yet
+  if (!activeTemplate) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading templates...</p>
+        </div>
+      </div>
+    );
+  }
 
   // UNIVERSAL TEMPLATE: No need to recalculate on template change since all badges use same template
 

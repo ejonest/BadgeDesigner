@@ -88,7 +88,7 @@ export async function downloadMultipleCDRs(badges: Badge[], templates: LoadedTem
     const template = templates[i] || templates[0];
     const filename = `${baseFilename}_${i + 1}.cdr`;
     
-    downloadCDR(badge, template, filename);
+    await downloadCDR(badge, template, filename);
     
     // Add small delay to prevent browser blocking multiple downloads
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -111,8 +111,8 @@ export async function downloadMultiPageCDR(badges: Badge[], templates: LoadedTem
       const badge = badges[i];
       const template = templates[i] || templates[0];
       
-      // Generate SVG for this badge
-      const badgeSvg = renderBadgeToSvgString(badge, template);
+      // Generate SVG for this badge with font embedding
+      const badgeSvg = await renderBadgeToSvgStringWithFonts(badge, template);
       
       // Extract the content from the badge SVG (remove the outer svg tags)
       const svgContent = badgeSvg.replace(/<svg[^>]*>/, '').replace(/<\/svg>$/, '');
@@ -150,7 +150,7 @@ export async function downloadMultipleTIFFs(badges: Badge[], templates: LoadedTe
     const template = templates[i] || templates[0];
     const filename = `${baseFilename}_${i + 1}.tiff`;
     
-    downloadTIFF(badge, template, filename, 4);
+    await downloadTIFF(badge, template, filename, 4);
     
     // Add small delay to prevent browser blocking multiple downloads
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -166,7 +166,7 @@ export async function downloadMultiplePNGs(badges: Badge[], templates: LoadedTem
     const template = templates[i] || templates[0];
     const filename = `${baseFilename}_${i + 1}.png`;
     
-    downloadPNG(badge, template, filename, 2);
+    await downloadPNG(badge, template, filename, 2);
     
     // Add small delay to prevent browser blocking multiple downloads
     await new Promise(resolve => setTimeout(resolve, 100));

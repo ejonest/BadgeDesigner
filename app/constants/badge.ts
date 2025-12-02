@@ -3,8 +3,10 @@ import { DEFAULT_FONT } from './fonts';
 export const BADGE_CONSTANTS = {
   // Layout
   MAX_LINES: 4,
-  BADGE_WIDTH: 300,
-  BADGE_HEIGHT: 100,
+  // Standard badge dimensions (3" width at 96 DPI)
+  // Height varies: 96px (1×3) or 144px (1.5×3) - use template dimensions for actual badges
+  BADGE_WIDTH: 288,  // 3.0" at 96 DPI (standard width for all badges)
+  BADGE_HEIGHT: 96,  // 1.0" at 96 DPI (default, but 1.5×3 badges use 144px)
   MIN_FONT_SIZE: 8,
   MAX_FONT_SIZE: 72,
   LINE_HEIGHT_MULTIPLIER: 1.3,
