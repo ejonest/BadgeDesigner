@@ -176,7 +176,8 @@ export function renderBadgeToSvgString(
     return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}"
                   alignment-baseline="middle" font-family="${family}" fill="${color}"
                   font-weight="${line.bold ? "bold" : "normal"}"
-                  font-style="${line.italic ? "italic" : "normal"}">${esc(line.text || "")}</text>`;
+                  font-style="${line.italic ? "italic" : "normal}"
+                  text-decoration="${line.underline ? "underline" : "none"}">${esc(line.text || "")}</text>`;
   }).join("");
 
   // Outline for border (no fill, stroke only)
@@ -315,7 +316,8 @@ export async function renderBadgeToSvgStringWithFonts(
     return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}"
                   alignment-baseline="middle" font-family="${family}" fill="${color}"
                   font-weight="${line.bold ? "bold" : "normal"}"
-                  font-style="${line.italic ? "italic" : "normal"}">${esc(line.text || "")}</text>`;
+                  font-style="${line.italic ? "italic" : "normal}"
+                  text-decoration="${line.underline ? "underline" : "none"}">${esc(line.text || "")}</text>`;
   }).join("");
 
   // Outline for border (no fill, stroke only)
