@@ -25,8 +25,23 @@ type AnyLine = {
 function toPx(line: AnyLine, designBox: { x: number; y: number; width: number; height: number }): { x: number; y: number } {
   // Prefer normalized coordinates (new preferred method)
   if (line.xNorm != null && line.yNorm != null) {
+    // Calculate base x position from normalized coordinate
+    let x = designBox.x + line.xNorm * designBox.width;
+    
+    // Adjust x position based on alignment for proper text-anchor behavior
+    // When alignment is left/right, we need to position x at the edge, not center
+    const alignment = line.align || line.alignment || "center";
+    if (alignment === "left") {
+      // For left alignment, position at left edge of designBox
+      x = designBox.x;
+    } else if (alignment === "right") {
+      // For right alignment, position at right edge of designBox
+      x = designBox.x + designBox.width;
+    }
+    // For center alignment, use xNorm as-is (already centered)
+    
     return { 
-      x: designBox.x + line.xNorm * designBox.width, 
+      x, 
       y: designBox.y + line.yNorm * designBox.height 
     };
   }
@@ -35,8 +50,15 @@ function toPx(line: AnyLine, designBox: { x: number; y: number; width: number; h
     return { x: line.xPx ?? line.x ?? 0, y: line.yPx ?? line.y ?? 0 };
   }
   // Default to center if no coordinates provided
+  const alignment = line.align || line.alignment || "center";
+  let defaultX = designBox.x + designBox.width * 0.5;
+  if (alignment === "left") {
+    defaultX = designBox.x;
+  } else if (alignment === "right") {
+    defaultX = designBox.x + designBox.width;
+  }
   return { 
-    x: designBox.x + designBox.width * 0.5, 
+    x: defaultX, 
     y: designBox.y + designBox.height * 0.6 
   };
 }
