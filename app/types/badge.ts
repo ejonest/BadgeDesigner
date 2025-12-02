@@ -13,6 +13,7 @@ export interface BadgeLine {
   align?: "left" | "center" | "right";
   bold?: boolean;
   italic?: boolean;
+  underline?: boolean;
   fontFamily?: string;
 }
 
