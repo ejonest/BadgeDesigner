@@ -266,11 +266,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     if (!activeTemplate?.designBox) return lines;
     
     const designBoxHeight = activeTemplate.designBox.height;
+    const designBoxWidth = activeTemplate.designBox.width;
     const designBoxCenterY = designBoxHeight / 2;
     
     // Fixed line spacing (in pixels) - doesn't change with font size
-    // Use a percentage of designBox height for consistent spacing
-    const FIXED_LINE_SPACING = designBoxHeight * 0.15; // 15% of badge height
+    // Smaller default gap between text lines for tighter spacing
+    const FIXED_LINE_SPACING = designBoxHeight * 0.03; // 3% of badge height (very tight spacing)
     
     // Calculate total height needed: sum of font sizes + fixed spacing between lines
     const totalTextHeight = lines.reduce((sum, line, index) => {
@@ -309,8 +310,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     });
   };
 
-  // Text updates
+  // Text updates with auto-scaling to fit badge boundaries
   const updateLine = (index: number, changes: Partial<BadgeLine>) => {
+    const designBox = activeTemplate?.designBox || { x: 0, y: 0, width: 288, height: 96 };
+    // Account for clipPath padding (2px on each side = 4px total) plus some margin
+    const CLIP_PADDING = 2;
+    const maxTextWidth = designBox.width - (CLIP_PADDING * 2) - 4; // Subtract padding and margin
+    
     const newLines = badge.lines.map((l: BadgeLine, i: number) => {
       if (i !== index) {
         return {
@@ -324,7 +330,39 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
 
       let updated = { ...l, ...changes };
 
+      // Auto-scale text if sizeNorm changes or text changes to ensure it fits within badge boundaries
+      if (typeof changes.sizeNorm !== 'undefined' || typeof changes.text !== 'undefined' || 
+          typeof changes.fontFamily !== 'undefined' || typeof changes.bold !== 'undefined' || 
+          typeof changes.italic !== 'undefined') {
+        const currentSizeNorm = updated.sizeNorm ?? 0.15;
+        const designBoxHeight = designBox.height;
+        let fontSize = currentSizeNorm * designBoxHeight;
+        const text = updated.text || '';
+        const fontFamily = updated.fontFamily || 'Arial';
+        const bold = updated.bold || false;
+        const italic = updated.italic || false;
+        
+        // Measure text width and auto-scale down if it exceeds badge width
+        if (text) {
+          let textWidth = measureTextWidth(text, fontSize, fontFamily, bold, italic);
+          const minSizeNorm = 0.05; // Minimum 5% of badge height
+          
+          // Auto-scale down if text is too wide - constrain to badge boundaries
+          while (textWidth > maxTextWidth) {
+            fontSize = fontSize * 0.95; // Reduce by 5% each iteration
+            const newSizeNorm = fontSize / designBoxHeight;
+            if (newSizeNorm <= minSizeNorm) {
+              updated.sizeNorm = minSizeNorm;
+              break;
+            }
+            textWidth = measureTextWidth(text, fontSize, fontFamily, bold, italic);
+            updated.sizeNorm = newSizeNorm;
+          }
+        }
+      }
+
       if (typeof changes.text !== 'undefined') {
+        // Legacy auto-scaling for text changes (keeping for backward compatibility)
         let fontSize = updated.fontSize || 18;
         let textWidth = measureTextWidth(
           updated.text,
