@@ -94,13 +94,40 @@ function renderLogo(logo: BadgeImage | undefined, designBox: { x: number; y: num
   `;
 }
 
-// Helper function to prepare element for outline display: remove existing fill, then add display attributes
+/**
+ * Remove fill/stroke attributes from all descendant SVG shapes
+ * and apply correct display attributes.
+ * Uses DOM parsing for robust attribute manipulation.
+ */
 function prepareElementForOutline(element: string, fill: string, stroke: string, strokeWidth: string): string {
-  // Remove any existing fill, stroke, and stroke-width attributes
+  if (typeof window !== "undefined" && "DOMParser" in window) {
+    const parser = new DOMParser();
+    // Wrap element in a temporary container for parsing
+    const wrapped = `<svg xmlns="http://www.w3.org/2000/svg">${element}</svg>`;
+    const doc = parser.parseFromString(wrapped, "image/svg+xml");
+    
+    // Find all relevant SVG shape elements and update their attributes
+    // This handles both direct elements and nested structures
+    doc.querySelectorAll("[id='Inner'], [id='inner'], path, rect, ellipse, circle, polygon, polyline").forEach((el) => {
+      el.removeAttribute("fill");
+      el.removeAttribute("stroke");
+      el.removeAttribute("stroke-width");
+      el.setAttribute("fill", fill);
+      el.setAttribute("stroke", stroke);
+      el.setAttribute("stroke-width", strokeWidth);
+    });
+    
+    // Extract the inner element back out
+    const svgEl = doc.documentElement;
+    const output = svgEl.innerHTML;
+    console.log('[prepareElementForOutline] Output:', output);
+    return output;
+  }
+  
+  // Fallback for SSR: use regex (less robust but works)
   let cleaned = element.replace(/\s+fill\s*=\s*["'][^"']*["']/gi, '');
   cleaned = cleaned.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, '');
   cleaned = cleaned.replace(/\s+stroke-width\s*=\s*["'][^"']*["']/gi, '');
-  // Add the new attributes before the closing tag
   return cleaned.replace(/\/?>$/, ` fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/>`);
 }
 
@@ -111,18 +138,26 @@ export function renderBadgeToSvgString(
 ): string {
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
   const PADDING_PX = 24;
-  const W = template.widthPx + (PADDING_PX * 2);
-  const H = template.heightPx + (PADDING_PX * 2);
+  // Use standardized viewBox for consistent display (shows relative sizes between 1×3 and 1.5×3)
+  const W = template.standardViewBoxWidth + (PADDING_PX * 2);
+  const H = template.standardViewBoxHeight + (PADDING_PX * 2);
   const designBox = template.designBox;
 
   const clipId = `badge-clip-${badge.id || "anon"}`;
 
-  // Background layer (either color or image)
-  const bgLayer = badge.backgroundImage
+  // SINGLE LAYER APPROACH: Use inner path directly for background fill
+  const innerPathWithFill = template.innerElement.replace(
+    /fill="[^"]*"/,
+    `fill="${badge.backgroundColor || "#FFFFFF"}"`
+  );
+  
+  // Background image (if present)
+  const bgImageLayer = badge.backgroundImage
     ? renderBg(badge.backgroundImage, designBox)
-    : `<rect x="${designBox.x}" y="${designBox.y}" width="${designBox.width}" height="${designBox.height}" fill="${badge.backgroundColor || "#FFFFFF"}" />`;
+    : '';
 
-  console.log("[lines]", badge.lines);
+  console.log("[renderSvg] designBox:", designBox);
+  console.log("[renderSvg] backgroundColor:", badge.backgroundColor);
 
   // Text rendering
   const text = (badge.lines || []).map((line: any, i: number) => {
@@ -144,18 +179,10 @@ export function renderBadgeToSvgString(
                   font-style="${line.italic ? "italic" : "normal"}">${esc(line.text || "")}</text>`;
   }).join("");
 
-  const outline = (() => {
-    if (!opts.showOutline) return "";
-    
-    if (template.outlineElement) {
-      // Use dedicated outline element if available
-      return prepareElementForOutline(template.outlineElement, "none", "#222", "1.25");
-    } else {
-      // Fallback: use inner element with stroke
-      // Remove fill that was added for clipping, then add display attributes
-      return prepareElementForOutline(template.innerElement, "none", "#222", "1.25");
-    }
-  })();
+  // Outline for border (no fill, stroke only)
+  const outline = template.outlineElement 
+    ? prepareElementForOutline(template.outlineElement, "none", "#111", "1.25")
+    : prepareElementForOutline(template.innerElement, "none", "#111", "1.25");
 
   const svgOpen = `
 <svg xmlns="http://www.w3.org/2000/svg"
@@ -166,25 +193,24 @@ export function renderBadgeToSvgString(
 
   return `${svgOpen}
   <defs>
-    <clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
-      ${template.innerElement}
-    </clipPath>
   </defs>
 
-  <!-- Content group with padding offset -->
+  <!-- Single layer: padding offset -->
   <g transform="translate(${PADDING_PX}, ${PADDING_PX})">
-    <!-- Clipped content group -->
-    <g clip-path="url(#${clipId})">
-      ${bgLayer}
-      ${renderLogo(badge.logo, designBox)}
-      ${text}
-    </g>
-
-    <!-- Outline always on top -->
-    ${template.outlineElement ? 
-      prepareElementForOutline(template.outlineElement, "none", "#111", "1.25") :
-      prepareElementForOutline(template.innerElement, "none", "#111", "1.25")
-    }
+    <!-- Background: inner path filled with color (defines editable area) -->
+    ${innerPathWithFill}
+    
+    <!-- Background image (if present) -->
+    ${bgImageLayer}
+    
+    <!-- Text on top of background -->
+    ${text}
+    
+    <!-- Logo (if present) -->
+    ${renderLogo(badge.logo, designBox)}
+    
+    <!-- Outline border on top -->
+    ${outline}
   </g>
 </svg>`.trim();
 }
@@ -197,8 +223,9 @@ export async function renderBadgeToSvgStringWithFonts(
 ): Promise<string> {
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
   const PADDING_PX = 24;
-  const W = template.widthPx + (PADDING_PX * 2);
-  const H = template.heightPx + (PADDING_PX * 2);
+  // Use standardized viewBox for consistent display (shows relative sizes between 1×3 and 1.5×3)
+  const W = template.standardViewBoxWidth + (PADDING_PX * 2);
+  const H = template.standardViewBoxHeight + (PADDING_PX * 2);
   const designBox = template.designBox;
 
   const clipId = `badge-clip-${badge.id || "anon"}`;
@@ -254,10 +281,18 @@ export async function renderBadgeToSvgStringWithFonts(
     }
   }
 
-  // Background layer (either color or image)
-  const bgLayer = badge.backgroundImage
+  // SINGLE LAYER APPROACH: Use inner path directly for background fill
+  // Replace the inner path's fill with the badge background color
+  // This eliminates the separate rect and creates a single layer
+  const innerPathWithFill = template.innerElement.replace(
+    /fill="[^"]*"/,
+    `fill="${badge.backgroundColor || "#FFFFFF"}"`
+  );
+  
+  // Background image (if present) - rendered on top of filled inner path
+  const bgImageLayer = badge.backgroundImage
     ? renderBg(badge.backgroundImage, designBox)
-    : `<rect x="${designBox.x}" y="${designBox.y}" width="${designBox.width}" height="${designBox.height}" fill="${badge.backgroundColor || "#FFFFFF"}" />`;
+    : '';
 
   // Text rendering with embedded fonts
   const text = (badge.lines || []).map((line: any, i: number) => {
@@ -283,16 +318,10 @@ export async function renderBadgeToSvgStringWithFonts(
                   font-style="${line.italic ? "italic" : "normal"}">${esc(line.text || "")}</text>`;
   }).join("");
 
-  const outline = (() => {
-    if (!opts.showOutline) return "";
-    
-    if (template.outlineElement) {
-      return prepareElementForOutline(template.outlineElement, "none", "#222", "1.25");
-    } else {
-      // Remove fill that was added for clipping, then add display attributes
-      return prepareElementForOutline(template.innerElement, "none", "#222", "1.25");
-    }
-  })();
+  // Outline for border (no fill, stroke only)
+  const outline = template.outlineElement 
+    ? prepareElementForOutline(template.outlineElement, "none", "#111", "1.25")
+    : prepareElementForOutline(template.innerElement, "none", "#111", "1.25");
 
   const svgOpen = `
 <svg xmlns="http://www.w3.org/2000/svg"
@@ -306,25 +335,24 @@ export async function renderBadgeToSvgStringWithFonts(
     <style type="text/css">
       ${fontDefs.join('\n')}
     </style>
-    <clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
-      ${template.innerElement}
-    </clipPath>
   </defs>
 
-  <!-- Content group with padding offset -->
+  <!-- Single layer: padding offset -->
   <g transform="translate(${PADDING_PX}, ${PADDING_PX})">
-    <!-- Clipped content group -->
-    <g clip-path="url(#${clipId})">
-      ${bgLayer}
-      ${renderLogo(badge.logo, designBox)}
-      ${text}
-    </g>
-
-    <!-- Outline always on top -->
-    ${template.outlineElement ? 
-      prepareElementForOutline(template.outlineElement, "none", "#111", "1.25") :
-      prepareElementForOutline(template.innerElement, "none", "#111", "1.25")
-    }
+    <!-- Background: inner path filled with color (defines editable area) -->
+    ${innerPathWithFill}
+    
+    <!-- Background image (if present) -->
+    ${bgImageLayer}
+    
+    <!-- Text on top of background -->
+    ${text}
+    
+    <!-- Logo (if present) -->
+    ${renderLogo(badge.logo, designBox)}
+    
+    <!-- Outline border on top -->
+    ${outline}
   </g>
 </svg>`.trim();
 }

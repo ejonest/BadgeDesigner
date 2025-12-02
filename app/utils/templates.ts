@@ -112,15 +112,154 @@ function pathToOutlineElement(pathData: string, id: string): string {
 }
 
 /**
- * Gets design box from template dimensions.
+ * Extracts the viewBox from SVG content.
+ * Returns { x, y, width, height } or null if not found.
  */
-function getDesignBox(templateWidth: number, templateHeight: number): { x: number; y: number; width: number; height: number } {
-  return { 
-    x: 0, 
-    y: 0, 
-    width: templateWidth, 
-    height: templateHeight 
-  };
+function extractViewBox(svgContent: string): { x: number; y: number; width: number; height: number } | null {
+  // Try DOM parsing first
+  if (typeof DOMParser !== 'undefined') {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svgContent, 'image/svg+xml');
+      const svg = doc.querySelector('svg');
+      if (svg) {
+        const viewBox = svg.getAttribute('viewBox');
+        if (viewBox) {
+          const parts = viewBox.split(/\s+/).map(Number);
+          if (parts.length === 4 && parts.every(n => !isNaN(n))) {
+            return { x: parts[0], y: parts[1], width: parts[2], height: parts[3] };
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[templates] DOM parsing failed for viewBox, falling back to regex:', e);
+    }
+  }
+  
+  // Fallback to regex
+  const viewBoxMatch = svgContent.match(/viewBox\s*=\s*["']([^"']+)["']/i);
+  if (viewBoxMatch) {
+    const parts = viewBoxMatch[1].split(/\s+/).map(Number);
+    if (parts.length === 4 && parts.every(n => !isNaN(n))) {
+      return { x: parts[0], y: parts[1], width: parts[2], height: parts[3] };
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Calculates the bounding box of an SVG path and scales it from viewBox coordinates to pixel coordinates.
+ * This gives us the actual editable area defined by the inner path in pixel space.
+ */
+function calculatePathBounds(
+  pathData: string,
+  viewBox: { x: number; y: number; width: number; height: number } | null,
+  targetWidthPx: number,
+  targetHeightPx: number
+): { x: number; y: number; width: number; height: number } {
+  let rawBounds: { x: number; y: number; width: number; height: number };
+  
+  // Use SVG API if available (browser environment)
+  if (typeof window !== 'undefined' && 'SVGPathElement' in window) {
+    try {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      // Set the viewBox on the SVG so getBBox returns coordinates in viewBox space
+      if (viewBox) {
+        svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+      }
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', pathData);
+      svg.appendChild(path);
+      document.body.appendChild(svg);
+      
+      const bbox = path.getBBox();
+      document.body.removeChild(svg);
+      
+      rawBounds = {
+        x: bbox.x,
+        y: bbox.y,
+        width: bbox.width,
+        height: bbox.height
+      };
+    } catch (e) {
+      console.warn('[templates] Failed to calculate path bounds using SVG API:', e);
+      rawBounds = parsePathBounds(pathData);
+    }
+  } else {
+    // Fallback: parse path data
+    rawBounds = parsePathBounds(pathData);
+  }
+  
+  // Scale from viewBox coordinates to pixel coordinates
+  if (viewBox && viewBox.width > 0 && viewBox.height > 0) {
+    const scaleX = targetWidthPx / viewBox.width;
+    const scaleY = targetHeightPx / viewBox.height;
+    
+    return {
+      x: rawBounds.x * scaleX,
+      y: rawBounds.y * scaleY,
+      width: rawBounds.width * scaleX,
+      height: rawBounds.height * scaleY
+    };
+  }
+  
+  // If no viewBox, assume path is already in pixel coordinates
+  return rawBounds;
+}
+
+/**
+ * Parses path data to find min/max coordinates (fallback method).
+ */
+function parsePathBounds(pathData: string): { x: number; y: number; width: number; height: number } {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  
+  // Parse path commands more accurately
+  // Match coordinates after path commands (M, L, C, Q, etc.)
+  const coordPattern = /[MLCQZ][\s,]*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)[\s,]*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)/g;
+  let match;
+  
+  while ((match = coordPattern.exec(pathData)) !== null) {
+    const x = parseFloat(match[1]);
+    const y = parseFloat(match[2]);
+    if (!isNaN(x) && !isNaN(y)) {
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+  
+  // Also try to match all number pairs (less accurate but catches more)
+  if (minX === Infinity) {
+    const numbers = pathData.match(/[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?/g);
+    if (numbers) {
+      for (let i = 0; i < numbers.length; i += 2) {
+        if (i + 1 < numbers.length) {
+          const x = parseFloat(numbers[i]);
+          const y = parseFloat(numbers[i + 1]);
+          if (!isNaN(x) && !isNaN(y)) {
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+          }
+        }
+      }
+    }
+  }
+  
+  if (minX !== Infinity) {
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY
+    };
+  }
+  
+  // Ultimate fallback
+  return { x: 0, y: 0, width: 288, height: 96 };
 }
 
 /**
@@ -148,19 +287,9 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
   const svgContent = await response.text();
   console.log(`[templates] ✓ Fetched SVG file for "${c.id}" (${svgContent.length} bytes)`);
 
-  // Extract original SVG viewBox to calculate scaling
-  // SVG files may have viewBoxes like "0 0 3150 1150" that need to be scaled to our standardized viewBox
-  let originalViewBoxWidth = 288;  // Default fallback (assumes already in pixels)
-  let originalViewBoxHeight = 144; // Default fallback
-  
-  const viewBoxMatch = svgContent.match(/viewBox\s*=\s*["']\s*0\s+0\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s*["']/i);
-  if (viewBoxMatch) {
-    originalViewBoxWidth = parseFloat(viewBoxMatch[1]);
-    originalViewBoxHeight = parseFloat(viewBoxMatch[2]);
-    console.log(`[templates] Extracted viewBox: ${originalViewBoxWidth} × ${originalViewBoxHeight}`);
-  } else {
-    console.warn(`[templates] Could not extract viewBox from SVG for "${c.id}", using defaults`);
-  }
+  // Extract viewBox from SVG to understand the coordinate system
+  const viewBox = extractViewBox(svgContent);
+  console.log(`[templates] Extracted viewBox for "${c.id}":`, viewBox);
 
   // Extract paths from SVG
   const innerPath = extractPathFromSvg(svgContent, "Inner");
@@ -172,61 +301,75 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
 
   console.log(`[templates] ✓ Extracted paths for "${c.id}" - Inner: ${innerPath.substring(0, 50)}..., Outline: ${outlinePath ? outlinePath.substring(0, 50) + '...' : 'none'}`);
 
-  // STANDARDIZED VIEWBOX - Single viewBox for all badges to show relative sizes
-  // All badges use 288 × 144 viewBox (fits tallest badge: 1.5×3 = 144px height)
-  // This allows visual comparison when switching between 1×3 and 1.5×3 badges
-  const STANDARD_VIEWBOX_WIDTH = 288;  // 3.0" at 96 DPI
-  const STANDARD_VIEWBOX_HEIGHT = 144; // 1.5" at 96 DPI (tallest badge)
-
-  // Actual badge dimensions for content positioning
+  // Actual badge dimensions in pixels
   const widthPx = Math.round(c.widthInches * DPI);
   const heightPx = Math.round(c.heightInches * DPI);
 
-  // Calculate scale factors to transform paths from original SVG viewBox to standardized viewBox
-  // Scale paths to match the badge's actual pixel dimensions within the standardized viewBox
-  const scaleX = widthPx / originalViewBoxWidth;
-  const scaleY = heightPx / originalViewBoxHeight;
-
-  // Calculate vertical offset to center 1×3 badges in standardized viewBox
-  // 1×3 badges (96px height) need to be centered in 144px viewBox = 24px offset
-  // 1.5×3 badges (144px height) fill the full viewBox = 0px offset
-  const verticalOffset = (STANDARD_VIEWBOX_HEIGHT - heightPx) / 2;
-
-  // Build transform: first scale from original viewBox to badge dimensions, then position in standardized viewBox
-  // SVG transforms are applied right-to-left, so we write: translate then scale (but scale is applied first)
-  // We want: scale first (in original coordinates), then translate (in scaled coordinates)
-  // So we write: translate(0, verticalOffset) scale(scaleX, scaleY)
-  // This scales the path, then translates it to the correct position
-  const transform = `translate(0, ${verticalOffset}) scale(${scaleX}, ${scaleY})`;
+  // Calculate designBox from inner path's actual bounds
+  // Scale from viewBox coordinates to pixel coordinates
+  // This is the "single source of truth" - the inner path defines the editable area
+  const innerPathBounds = calculatePathBounds(innerPath, viewBox, widthPx, heightPx);
   
-  const innerElement = `<g transform="${transform}">${pathToElement(innerPath, "Inner")}</g>`;
-  
-  const outlineElement = outlinePath 
-    ? `<g transform="${transform}">${pathToOutlineElement(outlinePath, "Outline")}</g>`
-    : undefined;
-
-  // designBox uses actual badge dimensions for content positioning
-  // Content (text, background) is positioned within the actual badge area
-  // Also needs vertical offset to match path positioning
+  // designBox represents the editable area (where text and background color go)
+  // It's calculated from the inner path's actual bounding box
   const designBox = {
-    x: 0,
-    y: verticalOffset,
-    width: widthPx,
-    height: heightPx
+    x: innerPathBounds.x,
+    y: innerPathBounds.y,
+    width: innerPathBounds.width,
+    height: innerPathBounds.height
   };
+  
+  console.log(`[templates] Inner path bounds for "${c.id}":`, innerPathBounds);
+  console.log(`[templates] designBox for "${c.id}":`, designBox);
+
+  // Scale paths from viewBox coordinates to pixel coordinates
+  // This ensures paths match the pixel-based viewBox we use in rendering
+  let innerElement: string;
+  let outlineElement: string | undefined;
+  
+  if (viewBox && viewBox.width > 0 && viewBox.height > 0) {
+    const scaleX = widthPx / viewBox.width;
+    const scaleY = heightPx / viewBox.height;
+    const transform = `scale(${scaleX}, ${scaleY})`;
+    
+    innerElement = `<g transform="${transform}">${pathToElement(innerPath, "Inner", "#000")}</g>`;
+    outlineElement = outlinePath 
+      ? `<g transform="${transform}">${pathToOutlineElement(outlinePath, "Outline")}</g>`
+      : undefined;
+  } else {
+    // No viewBox - assume paths are already in pixel coordinates
+    innerElement = pathToElement(innerPath, "Inner", "#000");
+    outlineElement = outlinePath 
+      ? pathToOutlineElement(outlinePath, "Outline")
+      : undefined;
+  }
+  
+  // ViewBox dimensions match actual badge size (no standardization needed)
+  const STANDARD_VIEWBOX_WIDTH = widthPx;  // 288px for 3" width
+  const STANDARD_VIEWBOX_HEIGHT = heightPx; // 96px for 1×3, 144px for 1.5×3
+  
+  console.log(`[templates] designBox for "${c.id}":`, {
+    designBox,
+    widthPx,
+    heightPx,
+    standardViewBoxWidth: STANDARD_VIEWBOX_WIDTH,
+    standardViewBoxHeight: STANDARD_VIEWBOX_HEIGHT
+  });
 
   const t: LoadedTemplate = {
     id: c.id,
     name: c.name,
     widthPx,
     heightPx,
-    safeInsetPx: c.safeInsetPx ?? 0,
+    safeInsetPx: c.safeInsetPx ?? Math.round(0.15 * DPI),
     innerElement,
     outlineElement,
     designBox,
     standardViewBoxWidth: STANDARD_VIEWBOX_WIDTH,
     standardViewBoxHeight: STANDARD_VIEWBOX_HEIGHT
   };
+  
+  console.log(`[templates] ✓ Loaded template "${c.id}": ${widthPx}×${heightPx}px, designBox:`, designBox);
   
   // NO CACHE - return fresh template every time
   return t;

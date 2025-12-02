@@ -1,18 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <!-- Creator: CorelDRAW Standard 2021 (64-Bit) -->
-<?xml-stylesheet href="oval-1_5x3.css" type="text/css"?>
-<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="3in" height="1.5in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="3in" height="1.5in" version="1.1" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd"
 viewBox="0 0 3000 1500"
  xmlns:xlink="http://www.w3.org/1999/xlink"
  xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
  <g id="Layer_x0020_1">
   <metadata id="CorelCorpID_0Corel-Layer"/>
   <g id="_2316827879808">
-   <path id="Outline" class="fil0" d="M1500 0.01c827.11,0 1500,336.44 1500,750 0,413.55 -672.89,750 -1500,750 -827.11,0 -1500,-336.44 -1500,-750 0,-413.55 672.89,-750 1500,-750z"/>
+   <path id="Outline" fill="black" d="M1500 0.01c827.11,0 1500,336.44 1500,750 0,413.55 -672.89,750 -1500,750 -827.11,0 -1500,-336.44 -1500,-750 0,-413.55 672.89,-750 1500,-750z"/>
   </g>
   <g id="_2316827878368">
-   <path id="Inner" class="fil1 str0" d="M1500 75.01c785.76,0 1425,302.8 1425,675 0,372.19 -639.24,675 -1425,675 -785.76,0 -1425,-302.8 -1425,-675 0,-372.19 639.24,-675 1425,-675z"/>
+   <path id="Inner" fill="black" d="M1500 0.01c827.11,0 1500,336.44 1500,750 0,413.54 -672.89,750 -1500,750 -827.11,0 -1500,-336.44 -1500,-750 0,-413.54 672.89,-750 1500,-750z"/>
   </g>
  </g>
 </svg>
