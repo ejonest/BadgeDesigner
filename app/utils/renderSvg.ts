@@ -168,10 +168,36 @@ export function renderBadgeToSvgString(
   const clipId = `badge-clip-${badge.id || Math.random().toString(36).substring(7)}`;
 
   // SINGLE LAYER APPROACH: Use inner path directly for background fill
-  const innerPathWithFill = template.innerElement.replace(
-    /fill="[^"]*"/,
-    `fill="${badge.backgroundColor || "#FFFFFF"}"`
-  );
+  // Handle both direct path elements and paths wrapped in <g transform> tags
+  // Extract the path, update fill, remove stroke, then reconstruct structure
+  let innerPathWithFill: string;
+  
+  // Check if innerElement is wrapped in a <g transform> tag (more robust regex)
+  // Match transform attribute with any whitespace, and capture content between tags
+  // Use [\s\S] instead of . to match newlines, and /i flag for case-insensitive
+  const gTransformMatch = template.innerElement.match(/<g[^>]*\btransform\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/g>/i);
+  
+  if (gTransformMatch && gTransformMatch[2].trim()) {
+    // Path is wrapped in transform group - extract path, update fill, reconstruct
+    const transform = gTransformMatch[1].trim();
+    const pathContent = gTransformMatch[2].trim();
+    
+    // Update fill and remove stroke from the path content (more robust regex)
+    let updatedPath = pathContent.replace(/fill\s*=\s*["'][^"']*["']/i, `fill="${badge.backgroundColor || "#FFFFFF"}"`);
+    updatedPath = updatedPath.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, '');
+    updatedPath = updatedPath.replace(/\s+stroke-width\s*=\s*["'][^"']*["']/gi, '');
+    
+    // Reconstruct with transform wrapper
+    innerPathWithFill = `<g transform="${transform}">${updatedPath}</g>`;
+  } else {
+    // Direct path element - update fill and remove stroke (more robust regex)
+    innerPathWithFill = template.innerElement.replace(
+      /fill\s*=\s*["'][^"']*["']/i,
+      `fill="${badge.backgroundColor || "#FFFFFF"}"`
+    );
+    innerPathWithFill = innerPathWithFill.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, '');
+    innerPathWithFill = innerPathWithFill.replace(/\s+stroke-width\s*=\s*["'][^"']*["']/gi, '');
+  }
   
   // Extract path data from inner element for clipPath
   // The inner element might be wrapped in a <g transform> tag, so we need to extract just the path
@@ -192,9 +218,12 @@ export function renderBadgeToSvgString(
     }
   }
   
-  // Create a rectangle clipPath based on designBox for text containment
-  // This ensures text fits within badge boundaries without clipping
-  const textClipPath = `<rect x="${designBox.x}" y="${designBox.y}" width="${designBox.width}" height="${designBox.height}"/>`;
+  // Use rectangle for text clipping with 0.1" (9.6px) inset - simpler and more reliable
+  // This ensures text is constrained within badge boundaries with proper buffer
+  const INSET_INCHES = 0.1;
+  const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
+  const textClipPath = `<rect x="${designBox.x + INSET_PX}" y="${designBox.y + INSET_PX}" 
+    width="${designBox.width - (INSET_PX * 2)}" height="${designBox.height - (INSET_PX * 2)}"/>`;
   
   // Background image (if present)
   const bgImageLayer = badge.backgroundImage
@@ -229,11 +258,12 @@ export function renderBadgeToSvgString(
   }).join("");
   
   // Wrap all text in a group with clipPath to contain within badge boundaries
-  const text = innerPathData && innerPathData.includes('<path') 
-    ? `<g clip-path="url(#${clipId})">${textElements}</g>`
-    : textElements;
+  // Always use the text-specific clipPath to prevent edge clipping
+  const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
 
   // Outline for border (no fill, stroke only)
+  // Note: Outline and Inner paths are now coextensive (same coordinates)
+  // The outline overlays exactly on top of the inner path to create a border effect
   const outline = template.outlineElement 
     ? prepareElementForOutline(template.outlineElement, "none", "#111", "1.25")
     : prepareElementForOutline(template.innerElement, "none", "#111", "1.25");
@@ -245,13 +275,16 @@ export function renderBadgeToSvgString(
      viewBox="0 0 ${W} ${H}"
      preserveAspectRatio="xMidYMid meet">`;
 
+  // Use the textClipPath already defined above (with CLIP_PADDING)
+  const textClipPathRect = textClipPath;
+
   return `${svgOpen}
   <defs>
     ${innerPathData ? `<clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
       ${innerPathData}
     </clipPath>` : ''}
     <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
-      ${textClipPath}
+      ${textClipPathRect}
     </clipPath>
   </defs>
 
@@ -342,12 +375,36 @@ export async function renderBadgeToSvgStringWithFonts(
   const clipId = `badge-clip-${badge.id || Math.random().toString(36).substring(7)}`;
 
   // SINGLE LAYER APPROACH: Use inner path directly for background fill
-  // Replace the inner path's fill with the badge background color
-  // This eliminates the separate rect and creates a single layer
-  const innerPathWithFill = template.innerElement.replace(
-    /fill="[^"]*"/,
-    `fill="${badge.backgroundColor || "#FFFFFF"}"`
-  );
+  // Handle both direct path elements and paths wrapped in <g transform> tags
+  // Extract the path, update fill, remove stroke, then reconstruct structure
+  let innerPathWithFill: string;
+  
+  // Check if innerElement is wrapped in a <g transform> tag (more robust regex)
+  // Match transform attribute with any whitespace, and capture content between tags
+  // Use [\s\S] instead of . to match newlines, and /i flag for case-insensitive
+  const gTransformMatch = template.innerElement.match(/<g[^>]*\btransform\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/g>/i);
+  
+  if (gTransformMatch && gTransformMatch[2].trim()) {
+    // Path is wrapped in transform group - extract path, update fill, reconstruct
+    const transform = gTransformMatch[1].trim();
+    const pathContent = gTransformMatch[2].trim();
+    
+    // Update fill and remove stroke from the path content (more robust regex)
+    let updatedPath = pathContent.replace(/fill\s*=\s*["'][^"']*["']/i, `fill="${badge.backgroundColor || "#FFFFFF"}"`);
+    updatedPath = updatedPath.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, '');
+    updatedPath = updatedPath.replace(/\s+stroke-width\s*=\s*["'][^"']*["']/gi, '');
+    
+    // Reconstruct with transform wrapper
+    innerPathWithFill = `<g transform="${transform}">${updatedPath}</g>`;
+  } else {
+    // Direct path element - update fill and remove stroke (more robust regex)
+    innerPathWithFill = template.innerElement.replace(
+      /fill\s*=\s*["'][^"']*["']/i,
+      `fill="${badge.backgroundColor || "#FFFFFF"}"`
+    );
+    innerPathWithFill = innerPathWithFill.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, '');
+    innerPathWithFill = innerPathWithFill.replace(/\s+stroke-width\s*=\s*["'][^"']*["']/gi, '');
+  }
   
   // Extract path data from inner element for clipPath
   // The inner element might be wrapped in a <g transform> tag, so we need to extract just the path
@@ -368,9 +425,12 @@ export async function renderBadgeToSvgStringWithFonts(
     }
   }
   
-  // Create a rectangle clipPath based on designBox for text containment
-  // This ensures text fits within badge boundaries without clipping
-  const textClipPath = `<rect x="${designBox.x}" y="${designBox.y}" width="${designBox.width}" height="${designBox.height}"/>`;
+  // Use rectangle for text clipping with 0.1" (9.6px) inset - simpler and more reliable
+  // This ensures text is constrained within badge boundaries with proper buffer
+  const INSET_INCHES = 0.1;
+  const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
+  const textClipPath = `<rect x="${designBox.x + INSET_PX}" y="${designBox.y + INSET_PX}" 
+    width="${designBox.width - (INSET_PX * 2)}" height="${designBox.height - (INSET_PX * 2)}"/>`;
   
   // Background image (if present) - rendered on top of filled inner path
   const bgImageLayer = badge.backgroundImage
@@ -410,6 +470,8 @@ export async function renderBadgeToSvgStringWithFonts(
   const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
 
   // Outline for border (no fill, stroke only)
+  // Note: Outline and Inner paths are now coextensive (same coordinates)
+  // The outline overlays exactly on top of the inner path to create a border effect
   const outline = template.outlineElement 
     ? prepareElementForOutline(template.outlineElement, "none", "#111", "1.25")
     : prepareElementForOutline(template.innerElement, "none", "#111", "1.25");

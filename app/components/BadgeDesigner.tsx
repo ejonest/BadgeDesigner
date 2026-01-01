@@ -155,7 +155,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     lines: INITIAL_BADGE.lines.map(line => ({...line}))
   });
   const [templates, setTemplates] = useState<LoadedTemplate[]>([]);
-
+  const [templateRefreshKey, setTemplateRefreshKey] = useState(0); // Force template refresh
 
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [csvText, setCsvText] = useState('');
@@ -168,10 +168,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   // UNIVERSAL TEMPLATE: Single template for all badges
   const [universalTemplateId, setUniversalTemplateId] = useState<string>('rect-1x3');
 
-  // Load templates once
+  // Load templates - refresh when templateRefreshKey changes
   useEffect(() => {
     (async () => {
       try {
+        console.log('[BadgeDesigner] Loading templates (refresh key:', templateRefreshKey, ')');
         const list = await loadTemplates();
         setTemplates(list);
         console.log('[BadgeDesigner] templates loaded:', list.map(t => t.id));
@@ -184,6 +185,20 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
         console.error('Failed to load templates:', error);
       }
     })();
+  }, [templateRefreshKey]);
+  
+  // Add keyboard shortcut to refresh templates (Ctrl+R or Cmd+R, but prevent page reload)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+R or Cmd+R to refresh templates
+      if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+        e.preventDefault();
+        console.log('[BadgeDesigner] Refreshing templates...');
+        setTemplateRefreshKey(prev => prev + 1);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Auto-save removed - now handled in selectBadge function to prevent data overwriting
@@ -313,9 +328,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   // Text updates with auto-scaling to fit badge boundaries
   const updateLine = (index: number, changes: Partial<BadgeLine>) => {
     const designBox = activeTemplate?.designBox || { x: 0, y: 0, width: 288, height: 96 };
-    // Account for clipPath padding (2px on each side = 4px total) plus some margin
-    const CLIP_PADDING = 2;
-    const maxTextWidth = designBox.width - (CLIP_PADDING * 2) - 4; // Subtract padding and margin
+    // Account for 0.1" (9.6px) inset on each side for text clipping
+    const INSET_INCHES = 0.1;
+    const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
+    const maxTextWidth = designBox.width - (INSET_PX * 2) - 4; // Subtract inset and margin
     
     const newLines = badge.lines.map((l: BadgeLine, i: number) => {
       if (i !== index) {
@@ -580,21 +596,78 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
     }
   };
 
-  // UNIVERSAL TEMPLATE: When template changes, update all badges
-  const handleUniversalTemplateChange = (newTemplateId: string) => {
+  // UNIVERSAL TEMPLATE: When template changes, update all badges and auto-scale text to fit
+  const handleUniversalTemplateChange = async (newTemplateId: string) => {
     console.log(`[UNIVERSAL] Template changed to: ${newTemplateId}`);
     setUniversalTemplateId(newTemplateId);
     
-    // Update current badge
-    setBadge(prev => ({ ...prev, templateId: newTemplateId }));
-    
-    // Update saved badge1Data
-    if (badge1Data) {
-      setBadge1Data(prev => prev ? { ...prev, templateId: newTemplateId } : null);
+    // Load the new template to get its designBox
+    const newTemplate = await loadTemplateById(newTemplateId);
+    if (!newTemplate) {
+      console.error('Template not found:', newTemplateId);
+      return;
     }
     
-    // Update all CSV badges
-    setMultipleBadges(prev => prev.map(badge => ({ ...badge, templateId: newTemplateId })));
+    const newDesignBox = newTemplate.designBox;
+    // Account for 0.1" (9.6px) inset on each side for text clipping
+    const INSET_INCHES = 0.1;
+    const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
+    const maxTextWidth = newDesignBox.width - (INSET_PX * 2) - 4; // Subtract inset and margin
+    
+    // Auto-scale function to ensure text fits within new template boundaries
+    const autoScaleLinesForNewTemplate = (lines: BadgeLine[]): BadgeLine[] => {
+      return lines.map(line => {
+        const designBoxHeight = newDesignBox.height;
+        let fontSize = (line.sizeNorm ?? 0.15) * designBoxHeight;
+        const text = line.text || '';
+        const fontFamily = line.fontFamily || 'Arial';
+        const bold = line.bold || false;
+        const italic = line.italic || false;
+        
+        // Measure text width and auto-scale down if it exceeds badge width
+        if (text) {
+          let textWidth = measureTextWidth(text, fontSize, fontFamily, bold, italic);
+          const minSizeNorm = 0.05; // Minimum 5% of badge height
+          
+          // Auto-scale down if text is too wide - constrain to badge boundaries
+          while (textWidth > maxTextWidth) {
+            fontSize = fontSize * 0.95; // Reduce by 5% each iteration
+            const newSizeNorm = fontSize / designBoxHeight;
+            if (newSizeNorm <= minSizeNorm) {
+              return { ...line, sizeNorm: minSizeNorm };
+            }
+            textWidth = measureTextWidth(text, fontSize, fontFamily, bold, italic);
+            line.sizeNorm = newSizeNorm;
+          }
+        }
+        
+        return { ...line };
+      });
+    };
+    
+    // Update current badge with auto-scaled text
+    setBadge(prev => {
+      const scaledLines = autoScaleLinesForNewTemplate(prev.lines);
+      const centeredLines = calculateCenterPositions(scaledLines);
+      return { ...prev, templateId: newTemplateId, lines: centeredLines };
+    });
+    
+    // Update saved badge1Data with auto-scaled text
+    if (badge1Data) {
+      setBadge1Data(prev => {
+        if (!prev) return null;
+        const scaledLines = autoScaleLinesForNewTemplate(prev.lines);
+        const centeredLines = calculateCenterPositions(scaledLines);
+        return { ...prev, templateId: newTemplateId, lines: centeredLines };
+      });
+    }
+    
+    // Update all CSV badges with auto-scaled text
+    setMultipleBadges(prev => prev.map(badge => {
+      const scaledLines = autoScaleLinesForNewTemplate(badge.lines);
+      const centeredLines = calculateCenterPositions(scaledLines);
+      return { ...badge, templateId: newTemplateId, lines: centeredLines };
+    }));
   };
 
 
@@ -879,7 +952,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
   return (
     <div className="flex flex-col md:flex-row bg-gray-100 p-4 md:p-6 rounded-lg shadow-lg mx-auto max-w-5xl min-h-[600px]">
       {/* LEFT COLUMN - Controls */}
-      <div className="w-full mb-4 overflow-y-auto" style={{ maxHeight: '90vh' }}>
+      <div className="w-full md:w-1/2 mb-4 md:mb-0 md:pr-3 overflow-y-auto" style={{ maxHeight: '90vh' }}>
         <div className="section-container mb-4">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
@@ -889,12 +962,22 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
               </h2>
               <span className="text-xl font-bold text-red-600">{activeTemplate.name}</span>
             </div>
+            <button
+              className="px-2 py-1 text-xs border rounded bg-gray-100 hover:bg-gray-200"
+              onClick={() => {
+                console.log('[BadgeDesigner] Refreshing templates...');
+                setTemplateRefreshKey(prev => prev + 1);
+              }}
+              title="Refresh Templates (Ctrl+R)"
+            >
+              Refresh
+            </button>
           </div>
 
           {/* Template Selector - Image Swatches */}
           <div className="mb-4">
             <label className="block text-sm font-semibold mb-2">Shape / Template</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pr-2">
+            <div className="grid grid-cols-2 gap-2 pr-2">
               {templates.length === 0 ? (
                 <div className="text-sm text-gray-500">Loading templates...</div>
               ) : (
@@ -1041,6 +1124,23 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
               }}>
                 CDR (Artwork)
               </button>
+              <button className="px-2 py-1 text-xs border rounded" onClick={async () => {
+                try {
+                  if (multipleBadges.length > 0) {
+                    const allBadges = getAllBadges(badge1Data, multipleBadges);
+                    // generatePDF takes first badge as badgeData, rest as multipleBadges array
+                    await generatePDF(allBadges[0], allBadges.slice(1));
+                  } else {
+                    const badgeToExport = badge1Data || badge;
+                    await generatePDF({...badgeToExport, id: badgeToExport.id || 'badge', templateId: badgeToExport.templateId || universalTemplateId});
+                  }
+                } catch (error) {
+                  console.error('Error generating PDF:', error);
+                  alert('Error generating PDF. Please try again.');
+                }
+              }}>
+                PDF
+              </button>
             </div>
           </div>
 
@@ -1171,8 +1271,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
         </div>
       </div>
 
-      {/* RIGHT COLUMN - Previews for CSV multi-badges */}
-      <div className="w-full md:w-1/2 md:pl-3 flex flex-col items-center">
+      {/* RIGHT COLUMN - Previews for CSV multi-badges (Desktop only - appears on right side) */}
+      <div className="hidden md:flex md:w-1/2 md:pl-3 flex-col items-center">
         {multipleBadges.length > 0 && (
           <>
             <h2 className="text-xl font-bold mb-4">Badge Preview</h2>
@@ -1239,6 +1339,73 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({ productId: _productId, sh
           </>
         )}
       </div>
+
+      {/* MOBILE PREVIEW - Appears below all controls on mobile */}
+      {multipleBadges.length > 0 && (
+        <div className="w-full md:hidden mt-4 flex flex-col items-center">
+          <h2 className="text-xl font-bold mb-4">Badge Preview</h2>
+          <div className="flex flex-col gap-6 w-full items-center">
+            {/* First (original) */}
+            <div className="flex flex-row items-center gap-2 w-full">
+              <div className="flex flex-col items-center justify-center mr-2">
+                <span className="text-lg font-bold mb-2" style={{ width: 32, textAlign: 'center' }}>1.</span>
+                <button
+                  className={`control-button flex items-center justify-center text-xs font-medium px-2 py-1 ${
+                    selectedBadgeIndex === 0 
+                      ? 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600' 
+                      : 'bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200'
+                  }`}
+                  onClick={(e) => { e.preventDefault(); selectBadge(0); }}
+                >
+                  Edit
+                </button>
+              </div>
+              <div className="flex flex-col items-center w-full h-[200px]" style={{ overflow: "visible" }}>
+                <BadgeSvgRenderer 
+                  badge={getBadgeForPreview(0, badge1Data).badge}
+                  templateId={getBadgeForPreview(0, badge1Data).templateId}
+                />
+              </div>
+            </div>
+
+            {/* CSV-generated badges */}
+            {multipleBadges.map((b, i) => (
+              <React.Fragment key={i}>
+                <div className="flex flex-row items-center gap-2 w-full">
+                  <div className="flex flex-col items-center justify-center mr-2">
+                    <span className="text-lg font-bold mb-2" style={{ width: 32, textAlign: 'center' }}>{i + 2}.</span>
+                    <button
+                      className={`control-button flex items-center justify-center text-xs font-medium px-2 py-1 ${
+                        selectedBadgeIndex === (i + 1)
+                          ? 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600' 
+                          : 'bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200'
+                      }`}
+                      onClick={(e) => { e.preventDefault(); selectBadge(i + 1); }}
+                    >
+                      Edit
+                    </button>
+                    <div className="h-2" />
+                    <button
+                      className="control-button p-1 bg-red-100 text-red-700 border-red-300 hover:bg-red-200 flex items-center justify-center"
+                      style={{ width: 28, height: 28 }}
+                      onClick={(e) => { e.preventDefault(); setMultipleBadges(multipleBadges.filter((_, idx) => idx !== i)); }}
+                    >
+                      <XMarkIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex flex-col items-center w-full h-[200px]" style={{ overflow: "visible" }}>
+                    <BadgeSvgRenderer 
+                      badge={getBadgeForPreview(i + 1, b).badge}
+                      templateId={getBadgeForPreview(i + 1, b).templateId}
+                    />
+                  </div>
+                </div>
+
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* CSV Modal */}
       {showCsvModal && (

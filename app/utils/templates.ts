@@ -327,13 +327,20 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
 
   // Fetch the SVG file directly with aggressive cache-busting to force fresh loads
   // Use both timestamp and random number to ensure unique URL every time
-  const cacheBuster = `?v=${Date.now()}&r=${Math.random().toString(36).substring(7)}`;
-  const response = await fetch(`${c.svgFile}${cacheBuster}`, { 
+  // Add a version parameter that changes on every load to completely bypass cache
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(7);
+  const cacheBuster = `?v=${timestamp}&r=${random}&_=${performance.now()}`;
+  const url = `${c.svgFile}${cacheBuster}`;
+  console.log(`[templates] Fetching template "${c.id}" from: ${url}`);
+  
+  const response = await fetch(url, { 
     cache: 'no-store',
     headers: {
       'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
       'Pragma': 'no-cache',
-      'Expires': '0'
+      'Expires': '0',
+      'X-Requested-With': 'XMLHttpRequest' // Some servers respect this
     }
   });
   if (!response.ok) {
@@ -342,6 +349,9 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
   
   const svgContent = await response.text();
   console.log(`[templates] ✓ Fetched SVG file for "${c.id}" (${svgContent.length} bytes)`);
+  
+  // Log first 200 chars of SVG content to verify we're getting the right file
+  console.log(`[templates] SVG content preview for "${c.id}":`, svgContent.substring(0, 200));
 
   // Extract viewBox from SVG to understand the coordinate system
   const viewBox = extractViewBox(svgContent);
@@ -355,7 +365,17 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
     throw new Error(`[templates] Template "${c.id}" missing Inner path in SVG file`);
   }
 
-  console.log(`[templates] ✓ Extracted paths for "${c.id}" - Inner: ${innerPath.substring(0, 50)}..., Outline: ${outlinePath ? outlinePath.substring(0, 50) + '...' : 'none'}`);
+  console.log(`[templates] ✓ Extracted paths for "${c.id}" - Inner: ${innerPath.substring(0, 100)}..., Outline: ${outlinePath ? outlinePath.substring(0, 100) + '...' : 'none'}`);
+  
+  // Verify coextensive paths (Inner and Outline should match when coextensive)
+  if (outlinePath && innerPath === outlinePath) {
+    console.log(`[templates] ✓ Template "${c.id}" has coextensive Inner and Outline paths`);
+  } else if (outlinePath) {
+    console.log(`[templates] ⚠ Template "${c.id}" has different Inner and Outline paths`);
+    console.log(`[templates] Inner path length: ${innerPath.length}, Outline path length: ${outlinePath.length}`);
+    console.log(`[templates] Inner starts with: ${innerPath.substring(0, 50)}`);
+    console.log(`[templates] Outline starts with: ${outlinePath.substring(0, 50)}`);
+  }
 
   // Actual badge dimensions in pixels
   const widthPx = Math.round(c.widthInches * DPI);
@@ -367,12 +387,13 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
   const innerPathBounds = calculatePathBounds(innerPath, viewBox, widthPx, heightPx);
   
   // designBox represents the editable area (where text and background color go)
-  // It's calculated from the inner path's actual bounding box
+  // Use the full badge dimensions to ensure badges fill the SVG properly
+  // The inner path bounds are used for clipping, but designBox should match badge size for proper scaling
   const designBox = {
-    x: innerPathBounds.x,
-    y: innerPathBounds.y,
-    width: innerPathBounds.width,
-    height: innerPathBounds.height
+    x: 0,
+    y: 0,
+    width: widthPx,  // Full badge width: 288px (3")
+    height: heightPx  // Full badge height: 96px (1×3) or 144px (1.5×3)
   };
   
   console.log(`[templates] Inner path bounds for "${c.id}":`, innerPathBounds);
@@ -400,9 +421,11 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
       : undefined;
   }
   
-  // ViewBox dimensions match actual badge size (no standardization needed)
-  const STANDARD_VIEWBOX_WIDTH = widthPx;  // 288px for 3" width
-  const STANDARD_VIEWBOX_HEIGHT = heightPx; // 96px for 1×3, 144px for 1.5×3
+  // Standardized viewBox - all badges are 3" wide, so use 288px (3" * 96 DPI)
+  // Height matches actual badge height: 96px for 1×3, 144px for 1.5×3
+  // This ensures badges fill the SVG properly without compression
+  const STANDARD_VIEWBOX_WIDTH = 288;  // Always 288px for 3" width (standardized)
+  const STANDARD_VIEWBOX_HEIGHT = heightPx; // Use actual badge height: 96px (1×3) or 144px (1.5×3)
   
   console.log(`[templates] designBox for "${c.id}":`, {
     designBox,
