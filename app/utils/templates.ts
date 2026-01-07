@@ -1,7 +1,7 @@
 // app/utils/templates.ts
 /**
  * Template Loading System - Loads directly from SVG files
- * 
+ *
  * NO CACHING - Templates are loaded fresh from SVG files on every request
  * to ensure changes to SVG files are immediately visible.
  */
@@ -27,7 +27,7 @@ export type LoadedTemplate = {
   heightPx: number;
   safeInsetPx: number;
   // Store full element markup so we can support <path> or <ellipse>
-  innerElement: string;    // REQUIRED (clip) - full HTML element like <path id="Inner" d="..." fill="#000"/>
+  innerElement: string; // REQUIRED (clip) - full HTML element like <path id="Inner" d="..." fill="#000"/>
   outlineElement?: string; // OPTIONAL (visible preview stroke) - full HTML element
   designBox: { x: number; y: number; width: number; height: number };
   // Standardized viewBox dimensions (same for all badges - shows relative sizes)
@@ -46,22 +46,26 @@ const cfg = (templatesJson as TemplatesFile).templates || [];
  */
 function polygonToPathData(points: string): string {
   // Parse points string (format: "x1,y1 x2,y2 x3,y3" or "x1 y1 x2 y2 x3 y3")
-  const coords = points.trim().split(/[\s,]+/).map(Number).filter(n => !isNaN(n));
-  if (coords.length < 4) return '';
-  
+  const coords = points
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number)
+    .filter((n) => !isNaN(n));
+  if (coords.length < 4) return "";
+
   // Start with MoveTo command
   let pathData = `M${coords[0]},${coords[1]}`;
-  
+
   // Add LineTo commands for remaining points
   for (let i = 2; i < coords.length; i += 2) {
     if (i + 1 < coords.length) {
       pathData += ` L${coords[i]},${coords[i + 1]}`;
     }
   }
-  
+
   // Close the path
-  pathData += ' Z';
-  
+  pathData += " Z";
+
   return pathData;
 }
 
@@ -72,30 +76,32 @@ function polygonToPathData(points: string): string {
  */
 function extractPathFromSvg(svgContent: string, pathId: string): string | null {
   // Create a DOM parser to reliably extract path data
-  if (typeof DOMParser !== 'undefined') {
+  if (typeof DOMParser !== "undefined") {
     try {
       const parser = new DOMParser();
-      const doc = parser.parseFromString(svgContent, 'image/svg+xml');
-      
+      const doc = parser.parseFromString(svgContent, "image/svg+xml");
+
       // Try path element first
-      let element = doc.querySelector(`path[id="${pathId}"]`) || 
-                    doc.querySelector(`path[id="${pathId.toLowerCase()}"]`) ||
-                    doc.querySelector(`path[id="${pathId.toUpperCase()}"]`);
-      
+      let element =
+        doc.querySelector(`path[id="${pathId}"]`) ||
+        doc.querySelector(`path[id="${pathId.toLowerCase()}"]`) ||
+        doc.querySelector(`path[id="${pathId.toUpperCase()}"]`);
+
       if (element) {
-        const d = element.getAttribute('d');
+        const d = element.getAttribute("d");
         if (d) {
           return d;
         }
       }
-      
+
       // Try polygon element
-      element = doc.querySelector(`polygon[id="${pathId}"]`) || 
-                doc.querySelector(`polygon[id="${pathId.toLowerCase()}"]`) ||
-                doc.querySelector(`polygon[id="${pathId.toUpperCase()}"]`);
-      
+      element =
+        doc.querySelector(`polygon[id="${pathId}"]`) ||
+        doc.querySelector(`polygon[id="${pathId.toLowerCase()}"]`) ||
+        doc.querySelector(`polygon[id="${pathId.toUpperCase()}"]`);
+
       if (element) {
-        const points = element.getAttribute('points');
+        const points = element.getAttribute("points");
         if (points) {
           return polygonToPathData(points);
         }
@@ -104,46 +110,64 @@ function extractPathFromSvg(svgContent: string, pathId: string): string | null {
       console.warn(`[templates] DOM parsing failed, falling back to regex:`, e);
     }
   }
-  
+
   // Fallback to regex for SSR or if DOM parsing fails
   // Match path with id attribute (handles different attribute orders)
   const pathPatterns = [
     // id="Inner" d="..."
-    new RegExp(`<path[^>]*id=["']${pathId}["'][^>]*d=["']([^"']+)["']`, 'i'),
+    new RegExp(`<path[^>]*id=["']${pathId}["'][^>]*d=["']([^"']+)["']`, "i"),
     // id="inner" d="..."
-    new RegExp(`<path[^>]*id=["']${pathId.toLowerCase()}["'][^>]*d=["']([^"']+)["']`, 'i'),
+    new RegExp(
+      `<path[^>]*id=["']${pathId.toLowerCase()}["'][^>]*d=["']([^"']+)["']`,
+      "i"
+    ),
     // d="..." id="Inner"
-    new RegExp(`<path[^>]*d=["']([^"']+)["'][^>]*id=["']${pathId}["']`, 'i'),
+    new RegExp(`<path[^>]*d=["']([^"']+)["'][^>]*id=["']${pathId}["']`, "i"),
     // d="..." id="inner"
-    new RegExp(`<path[^>]*d=["']([^"']+)["'][^>]*id=["']${pathId.toLowerCase()}["']`, 'i'),
+    new RegExp(
+      `<path[^>]*d=["']([^"']+)["'][^>]*id=["']${pathId.toLowerCase()}["']`,
+      "i"
+    ),
   ];
-  
+
   for (const pattern of pathPatterns) {
     const match = svgContent.match(pattern);
     if (match && match[1]) {
       return match[1];
     }
   }
-  
+
   // Try polygon patterns
   const polygonPatterns = [
     // id="Inner" points="..."
-    new RegExp(`<polygon[^>]*id=["']${pathId}["'][^>]*points=["']([^"']+)["']`, 'i'),
+    new RegExp(
+      `<polygon[^>]*id=["']${pathId}["'][^>]*points=["']([^"']+)["']`,
+      "i"
+    ),
     // id="inner" points="..."
-    new RegExp(`<polygon[^>]*id=["']${pathId.toLowerCase()}["'][^>]*points=["']([^"']+)["']`, 'i'),
+    new RegExp(
+      `<polygon[^>]*id=["']${pathId.toLowerCase()}["'][^>]*points=["']([^"']+)["']`,
+      "i"
+    ),
     // points="..." id="Inner"
-    new RegExp(`<polygon[^>]*points=["']([^"']+)["'][^>]*id=["']${pathId}["']`, 'i'),
+    new RegExp(
+      `<polygon[^>]*points=["']([^"']+)["'][^>]*id=["']${pathId}["']`,
+      "i"
+    ),
     // points="..." id="inner"
-    new RegExp(`<polygon[^>]*points=["']([^"']+)["'][^>]*id=["']${pathId.toLowerCase()}["']`, 'i'),
+    new RegExp(
+      `<polygon[^>]*points=["']([^"']+)["'][^>]*id=["']${pathId.toLowerCase()}["']`,
+      "i"
+    ),
   ];
-  
+
   for (const pattern of polygonPatterns) {
     const match = svgContent.match(pattern);
     if (match && match[1]) {
       return polygonToPathData(match[1]);
     }
   }
-  
+
   return null;
 }
 
@@ -152,7 +176,11 @@ function extractPathFromSvg(svgContent: string, pathId: string): string | null {
  * The path needs a fill for clipPath to work properly.
  * No stroke should be visible (stroke is removed to prevent double rendering).
  */
-function pathToElement(pathData: string, id: string, fill: string = "#000"): string {
+function pathToElement(
+  pathData: string,
+  id: string,
+  fill: string = "#000"
+): string {
   // Explicitly set stroke to none to prevent any stroke from showing
   return `<path id="${id}" d="${pathData}" fill="${fill}" stroke="none"/>`;
 }
@@ -171,36 +199,46 @@ function pathToOutlineElement(pathData: string, id: string): string {
  * Extracts the viewBox from SVG content.
  * Returns { x, y, width, height } or null if not found.
  */
-function extractViewBox(svgContent: string): { x: number; y: number; width: number; height: number } | null {
+function extractViewBox(
+  svgContent: string
+): { x: number; y: number; width: number; height: number } | null {
   // Try DOM parsing first
-  if (typeof DOMParser !== 'undefined') {
+  if (typeof DOMParser !== "undefined") {
     try {
       const parser = new DOMParser();
-      const doc = parser.parseFromString(svgContent, 'image/svg+xml');
-      const svg = doc.querySelector('svg');
+      const doc = parser.parseFromString(svgContent, "image/svg+xml");
+      const svg = doc.querySelector("svg");
       if (svg) {
-        const viewBox = svg.getAttribute('viewBox');
+        const viewBox = svg.getAttribute("viewBox");
         if (viewBox) {
           const parts = viewBox.split(/\s+/).map(Number);
-          if (parts.length === 4 && parts.every(n => !isNaN(n))) {
-            return { x: parts[0], y: parts[1], width: parts[2], height: parts[3] };
+          if (parts.length === 4 && parts.every((n) => !isNaN(n))) {
+            return {
+              x: parts[0],
+              y: parts[1],
+              width: parts[2],
+              height: parts[3],
+            };
           }
         }
       }
     } catch (e) {
-      console.warn('[templates] DOM parsing failed for viewBox, falling back to regex:', e);
+      console.warn(
+        "[templates] DOM parsing failed for viewBox, falling back to regex:",
+        e
+      );
     }
   }
-  
+
   // Fallback to regex
   const viewBoxMatch = svgContent.match(/viewBox\s*=\s*["']([^"']+)["']/i);
   if (viewBoxMatch) {
     const parts = viewBoxMatch[1].split(/\s+/).map(Number);
-    if (parts.length === 4 && parts.every(n => !isNaN(n))) {
+    if (parts.length === 4 && parts.every((n) => !isNaN(n))) {
       return { x: parts[0], y: parts[1], width: parts[2], height: parts[3] };
     }
   }
-  
+
   return null;
 }
 
@@ -215,51 +253,60 @@ function calculatePathBounds(
   targetHeightPx: number
 ): { x: number; y: number; width: number; height: number } {
   let rawBounds: { x: number; y: number; width: number; height: number };
-  
+
   // Use SVG API if available (browser environment)
-  if (typeof window !== 'undefined' && 'SVGPathElement' in window) {
+  if (typeof window !== "undefined" && "SVGPathElement" in window) {
     try {
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       // Set the viewBox on the SVG so getBBox returns coordinates in viewBox space
       if (viewBox) {
-        svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+        svg.setAttribute(
+          "viewBox",
+          `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`
+        );
       }
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', pathData);
+      const path = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "path"
+      );
+      path.setAttribute("d", pathData);
       svg.appendChild(path);
       document.body.appendChild(svg);
-      
+
       const bbox = path.getBBox();
       document.body.removeChild(svg);
-      
+
       rawBounds = {
         x: bbox.x,
         y: bbox.y,
         width: bbox.width,
-        height: bbox.height
+        height: bbox.height,
       };
     } catch (e) {
-      console.warn('[templates] Failed to calculate path bounds using SVG API:', e);
+      console.warn(
+        "[templates] Failed to calculate path bounds using SVG API:",
+        e
+      );
       rawBounds = parsePathBounds(pathData);
     }
   } else {
     // Fallback: parse path data
     rawBounds = parsePathBounds(pathData);
   }
-  
+
   // Scale from viewBox coordinates to pixel coordinates
   if (viewBox && viewBox.width > 0 && viewBox.height > 0) {
     const scaleX = targetWidthPx / viewBox.width;
     const scaleY = targetHeightPx / viewBox.height;
-    
+
     return {
       x: rawBounds.x * scaleX,
       y: rawBounds.y * scaleY,
       width: rawBounds.width * scaleX,
-      height: rawBounds.height * scaleY
+      height: rawBounds.height * scaleY,
     };
   }
-  
+
   // If no viewBox, assume path is already in pixel coordinates
   return rawBounds;
 }
@@ -267,14 +314,23 @@ function calculatePathBounds(
 /**
  * Parses path data to find min/max coordinates (fallback method).
  */
-function parsePathBounds(pathData: string): { x: number; y: number; width: number; height: number } {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  
+function parsePathBounds(pathData: string): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
+
   // Parse path commands more accurately
   // Match coordinates after path commands (M, L, C, Q, etc.)
-  const coordPattern = /[MLCQZ][\s,]*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)[\s,]*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)/g;
+  const coordPattern =
+    /[MLCQZ][\s,]*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)[\s,]*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)/g;
   let match;
-  
+
   while ((match = coordPattern.exec(pathData)) !== null) {
     const x = parseFloat(match[1]);
     const y = parseFloat(match[2]);
@@ -285,7 +341,7 @@ function parsePathBounds(pathData: string): { x: number; y: number; width: numbe
       maxY = Math.max(maxY, y);
     }
   }
-  
+
   // Also try to match all number pairs (less accurate but catches more)
   if (minX === Infinity) {
     const numbers = pathData.match(/[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?/g);
@@ -304,16 +360,16 @@ function parsePathBounds(pathData: string): { x: number; y: number; width: numbe
       }
     }
   }
-  
+
   if (minX !== Infinity) {
     return {
       x: minX,
       y: minY,
       width: maxX - minX,
-      height: maxY - minY
+      height: maxY - minY,
     };
   }
-  
+
   // Ultimate fallback
   return { x: 0, y: 0, width: 288, height: 96 };
 }
@@ -323,7 +379,9 @@ function parsePathBounds(pathData: string): { x: number; y: number; width: numbe
  * This ensures changes to SVG files are immediately visible.
  */
 async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
-  console.log(`[templates] Loading template "${c.id}" from SVG file: ${c.svgFile}`);
+  console.log(
+    `[templates] Loading template "${c.id}" from SVG file: ${c.svgFile}`
+  );
 
   // Fetch the SVG file directly with aggressive cache-busting to force fresh loads
   // Use both timestamp and random number to ensure unique URL every time
@@ -333,25 +391,32 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
   const cacheBuster = `?v=${timestamp}&r=${random}&_=${performance.now()}`;
   const url = `${c.svgFile}${cacheBuster}`;
   console.log(`[templates] Fetching template "${c.id}" from: ${url}`);
-  
-  const response = await fetch(url, { 
-    cache: 'no-store',
+
+  const response = await fetch(url, {
+    cache: "no-store",
     headers: {
-      'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-      'X-Requested-With': 'XMLHttpRequest' // Some servers respect this
-    }
+      "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+      Pragma: "no-cache",
+      Expires: "0",
+      "X-Requested-With": "XMLHttpRequest", // Some servers respect this
+    },
   });
   if (!response.ok) {
-    throw new Error(`[templates] Failed to fetch SVG file "${c.svgFile}": ${response.status} ${response.statusText}`);
+    throw new Error(
+      `[templates] Failed to fetch SVG file "${c.svgFile}": ${response.status} ${response.statusText}`
+    );
   }
-  
+
   const svgContent = await response.text();
-  console.log(`[templates] ✓ Fetched SVG file for "${c.id}" (${svgContent.length} bytes)`);
-  
+  console.log(
+    `[templates] ✓ Fetched SVG file for "${c.id}" (${svgContent.length} bytes)`
+  );
+
   // Log first 200 chars of SVG content to verify we're getting the right file
-  console.log(`[templates] SVG content preview for "${c.id}":`, svgContent.substring(0, 200));
+  console.log(
+    `[templates] SVG content preview for "${c.id}":`,
+    svgContent.substring(0, 200)
+  );
 
   // Extract viewBox from SVG to understand the coordinate system
   const viewBox = extractViewBox(svgContent);
@@ -360,21 +425,38 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
   // Extract paths from SVG
   const innerPath = extractPathFromSvg(svgContent, "Inner");
   const outlinePath = extractPathFromSvg(svgContent, "Outline");
-  
+
   if (!innerPath) {
-    throw new Error(`[templates] Template "${c.id}" missing Inner path in SVG file`);
+    throw new Error(
+      `[templates] Template "${c.id}" missing Inner path in SVG file`
+    );
   }
 
-  console.log(`[templates] ✓ Extracted paths for "${c.id}" - Inner: ${innerPath.substring(0, 100)}..., Outline: ${outlinePath ? outlinePath.substring(0, 100) + '...' : 'none'}`);
-  
+  console.log(
+    `[templates] ✓ Extracted paths for "${c.id}" - Inner: ${innerPath.substring(
+      0,
+      100
+    )}..., Outline: ${
+      outlinePath ? outlinePath.substring(0, 100) + "..." : "none"
+    }`
+  );
+
   // Verify coextensive paths (Inner and Outline should match when coextensive)
   if (outlinePath && innerPath === outlinePath) {
-    console.log(`[templates] ✓ Template "${c.id}" has coextensive Inner and Outline paths`);
+    console.log(
+      `[templates] ✓ Template "${c.id}" has coextensive Inner and Outline paths`
+    );
   } else if (outlinePath) {
-    console.log(`[templates] ⚠ Template "${c.id}" has different Inner and Outline paths`);
-    console.log(`[templates] Inner path length: ${innerPath.length}, Outline path length: ${outlinePath.length}`);
+    console.log(
+      `[templates] ⚠ Template "${c.id}" has different Inner and Outline paths`
+    );
+    console.log(
+      `[templates] Inner path length: ${innerPath.length}, Outline path length: ${outlinePath.length}`
+    );
     console.log(`[templates] Inner starts with: ${innerPath.substring(0, 50)}`);
-    console.log(`[templates] Outline starts with: ${outlinePath.substring(0, 50)}`);
+    console.log(
+      `[templates] Outline starts with: ${outlinePath.substring(0, 50)}`
+    );
   }
 
   // Actual badge dimensions in pixels
@@ -384,18 +466,23 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
   // Calculate designBox from inner path's actual bounds
   // Scale from viewBox coordinates to pixel coordinates
   // This is the "single source of truth" - the inner path defines the editable area
-  const innerPathBounds = calculatePathBounds(innerPath, viewBox, widthPx, heightPx);
-  
+  const innerPathBounds = calculatePathBounds(
+    innerPath,
+    viewBox,
+    widthPx,
+    heightPx
+  );
+
   // designBox represents the editable area (where text and background color go)
   // Use the full badge dimensions to ensure badges fill the SVG properly
   // The inner path bounds are used for clipping, but designBox should match badge size for proper scaling
   const designBox = {
     x: 0,
     y: 0,
-    width: widthPx,  // Full badge width: 288px (3")
-    height: heightPx  // Full badge height: 96px (1×3) or 144px (1.5×3)
+    width: widthPx, // Full badge width: 288px (3")
+    height: heightPx, // Full badge height: 96px (1×3) or 144px (1.5×3)
   };
-  
+
   console.log(`[templates] Inner path bounds for "${c.id}":`, innerPathBounds);
   console.log(`[templates] designBox for "${c.id}":`, designBox);
 
@@ -403,36 +490,43 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
   // This ensures paths match the pixel-based viewBox we use in rendering
   let innerElement: string;
   let outlineElement: string | undefined;
-  
+
   if (viewBox && viewBox.width > 0 && viewBox.height > 0) {
     const scaleX = widthPx / viewBox.width;
     const scaleY = heightPx / viewBox.height;
     const transform = `scale(${scaleX}, ${scaleY})`;
-    
-    innerElement = `<g transform="${transform}">${pathToElement(innerPath, "Inner", "#000")}</g>`;
-    outlineElement = outlinePath 
-      ? `<g transform="${transform}">${pathToOutlineElement(outlinePath, "Outline")}</g>`
+
+    innerElement = `<g transform="${transform}">${pathToElement(
+      innerPath,
+      "Inner",
+      "#000"
+    )}</g>`;
+    outlineElement = outlinePath
+      ? `<g transform="${transform}">${pathToOutlineElement(
+          outlinePath,
+          "Outline"
+        )}</g>`
       : undefined;
   } else {
     // No viewBox - assume paths are already in pixel coordinates
     innerElement = pathToElement(innerPath, "Inner", "#000");
-    outlineElement = outlinePath 
+    outlineElement = outlinePath
       ? pathToOutlineElement(outlinePath, "Outline")
       : undefined;
   }
-  
+
   // Standardized viewBox - all badges are 3" wide, so use 288px (3" * 96 DPI)
   // Height matches actual badge height: 96px for 1×3, 144px for 1.5×3
   // This ensures badges fill the SVG properly without compression
-  const STANDARD_VIEWBOX_WIDTH = 288;  // Always 288px for 3" width (standardized)
+  const STANDARD_VIEWBOX_WIDTH = 288; // Always 288px for 3" width (standardized)
   const STANDARD_VIEWBOX_HEIGHT = heightPx; // Use actual badge height: 96px (1×3) or 144px (1.5×3)
-  
+
   console.log(`[templates] designBox for "${c.id}":`, {
     designBox,
     widthPx,
     heightPx,
     standardViewBoxWidth: STANDARD_VIEWBOX_WIDTH,
-    standardViewBoxHeight: STANDARD_VIEWBOX_HEIGHT
+    standardViewBoxHeight: STANDARD_VIEWBOX_HEIGHT,
   });
 
   const t: LoadedTemplate = {
@@ -445,11 +539,14 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
     outlineElement,
     designBox,
     standardViewBoxWidth: STANDARD_VIEWBOX_WIDTH,
-    standardViewBoxHeight: STANDARD_VIEWBOX_HEIGHT
+    standardViewBoxHeight: STANDARD_VIEWBOX_HEIGHT,
   };
-  
-  console.log(`[templates] ✓ Loaded template "${c.id}": ${widthPx}×${heightPx}px, designBox:`, designBox);
-  
+
+  console.log(
+    `[templates] ✓ Loaded template "${c.id}": ${widthPx}×${heightPx}px, designBox:`,
+    designBox
+  );
+
   // NO CACHE - return fresh template every time
   return t;
 }
@@ -459,7 +556,7 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
  * NO CACHING - loads fresh every time.
  */
 export async function loadTemplateById(id: string): Promise<LoadedTemplate> {
-  const found = cfg.find(t => t.id === id) || cfg[0];
+  const found = cfg.find((t) => t.id === id) || cfg[0];
   if (!found) {
     throw new Error(`Template not found: ${id}`);
   }
@@ -478,12 +575,15 @@ export async function loadTemplates(): Promise<LoadedTemplate[]> {
       const template = await loadOne(config);
       loaded.push(template);
     } catch (error) {
-      console.error(`[templates] Failed to load template "${config.id}":`, error);
+      console.error(
+        `[templates] Failed to load template "${config.id}":`,
+        error
+      );
       // Continue loading other templates instead of failing completely
     }
   }
   if (loaded.length === 0) {
-    throw new Error('[templates] No templates could be loaded');
+    throw new Error("[templates] No templates could be loaded");
   }
   return loaded;
 }
@@ -493,14 +593,16 @@ export async function loadTemplates(): Promise<LoadedTemplate[]> {
  * Note: This system no longer uses caching, but this function is kept for API compatibility.
  */
 export function clearTemplateCache(): void {
-  console.log('[templates] Cache clear requested (but no cache exists - templates load fresh from SVG files)');
+  console.log(
+    "[templates] Cache clear requested (but no cache exists - templates load fresh from SVG files)"
+  );
 }
 
 /**
  * Lists all available template options.
  */
 export function listTemplateOptions(): { id: string; name: string }[] {
-  return cfg.map(t => ({ id: t.id, name: t.name }));
+  return cfg.map((t) => ({ id: t.id, name: t.name }));
 }
 
 /**
@@ -508,20 +610,20 @@ export function listTemplateOptions(): { id: string; name: string }[] {
  * Resolves the appropriate template for a badge.
  */
 export async function resolveTemplateForBadge(
-  badge: { templateId?: string }, 
+  badge: { templateId?: string },
   templates: LoadedTemplate[]
 ): Promise<LoadedTemplate> {
   // Priority: badge.templateId → templates[0] → fallback
   if (badge.templateId) {
-    const template = templates.find(t => t.id === badge.templateId);
+    const template = templates.find((t) => t.id === badge.templateId);
     if (template) return template;
   }
-  
+
   // Fallback to first available template
   if (templates.length > 0) {
     return templates[0];
   }
-  
+
   // Ultimate fallback - load rect-1x3
-  return await loadTemplateById('rect-1x3');
+  return await loadTemplateById("rect-1x3");
 }
