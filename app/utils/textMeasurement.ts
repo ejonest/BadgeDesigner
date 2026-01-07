@@ -26,7 +26,8 @@ export function getMaxCharsForMinFont(
   minFontSize: number,
   fontFamily: string,
   bold: boolean,
-  italic: boolean
+  italic: boolean,
+  badgeWidth?: number  // Optional: use template width if provided
 ): number {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
@@ -34,7 +35,8 @@ export function getMaxCharsForMinFont(
 
   context.font = `${bold ? 'bold' : 'normal'} ${italic ? 'italic' : 'normal'} ${minFontSize}px ${fontFamily}`;
   const charWidth = context.measureText('W').width;
-  return Math.floor(BADGE_CONSTANTS.BADGE_WIDTH / charWidth);
+  const width = badgeWidth || BADGE_CONSTANTS.BADGE_WIDTH;
+  return Math.floor(width / charWidth);
 }
 
 /**
@@ -45,10 +47,12 @@ export function calculateTextFit(
   fontSize: number,
   fontFamily: string,
   bold: boolean,
-  italic: boolean
+  italic: boolean,
+  badgeWidth?: number  // Optional: use template width if provided
 ): boolean {
   const width = measureTextWidth(text, fontSize, fontFamily, bold, italic);
-  return width <= BADGE_CONSTANTS.BADGE_WIDTH;
+  const maxWidth = badgeWidth || BADGE_CONSTANTS.BADGE_WIDTH;
+  return width <= maxWidth;
 }
 
 /**

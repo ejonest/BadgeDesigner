@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "compiledAt": "2025-01-27T00:00:00.000Z",
+  "templates": [
+    {
+      "id": "rect-1x3",
+      "name": "Rectangle 1×3",
+      "widthIn": 3.0,
+      "heightIn": 1.0,
+      "safeInsetPx": 6,
+      "innerPathSvg": "<path d=\"M25,0 L275,0 A25,25 0 0,1 300,25 L300,75 A25,25 0 0,1 275,100 L25,100 A25,25 0 0,1 0,75 L0,25 A25,25 0 0,1 25,0 Z\" fill=\"#000\"/>",
+      "outlinePathSvg": "<path d=\"M25,0 L275,0 A25,25 0 0,1 300,25 L300,75 A25,25 0 0,1 275,100 L25,100 A25,25 0 0,1 0,75 L0,25 A25,25 0 0,1 25,0 Z\" fill=\"#000\"/>"
+    },
+    {
+      "id": "rect-1x3_5",
+      "name": "Rectangle 1×3.5",
+      "widthIn": 3.5,
+      "heightIn": 1.0,
+      "safeInsetPx": 6,
+      "innerPathSvg": "<path d=\"M25,0 L325,0 A25,25 0 0,1 350,25 L350,75 A25,25 0 0,1 325,100 L25,100 A25,25 0 0,1 0,75 L0,25 A25,25 0 0,1 25,0 Z\" fill=\"#000\"/>",
+      "outlinePathSvg": "<path d=\"M25,0 L325,0 A25,25 0 0,1 350,25 L350,75 A25,25 0 0,1 325,100 L25,100 A25,25 0 0,1 0,75 L0,25 A25,25 0 0,1 25,0 Z\" fill=\"#000\"/>"
+    },
+    {
+      "id": "oval-1x3_5", 
+      "name": "Oval 1×3.5",
+      "widthIn": 3.5,
+      "heightIn": 1.0,
+      "safeInsetPx": 6,
+      "innerPathSvg": "<ellipse cx=\"175\" cy=\"50\" rx=\"150\" ry=\"40\" fill=\"#000\"/>",
+      "outlinePathSvg": "<ellipse cx=\"175\" cy=\"50\" rx=\"150\" ry=\"40\" fill=\"#000\"/>"
+    },
+    {
+      "id": "house-outline-1x3_5",
+      "name": "House 1×3.5", 
+      "widthIn": 1.0,
+      "heightIn": 3.5,
+      "safeInsetPx": 6,
+      "innerPathSvg": "<path d=\"M50,20 L20,60 L20,320 L80,320 L80,60 Z\" fill=\"#000\"/>",
+      "outlinePathSvg": "<path d=\"M50,20 L20,60 L20,320 L80,320 L80,60 Z\" fill=\"#000\"/>"
+    }
+  ]
+}

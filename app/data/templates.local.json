@@ -1,0 +1,69 @@
+{
+  "version": 4,
+  "templates": [
+    {
+      "id": "rect-1_5x3",
+      "name": "Round 1.5 x 3\"",
+      "widthInches": 3.0,
+      "heightInches": 1.5,
+      "svgFile": "/templates/round-1.5x3.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "rect-1x3",
+      "name": "Round 1 x 3\"",
+      "widthInches": 3.0,
+      "heightInches": 1.0,
+      "svgFile": "/templates/round-1x3.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "square-1_5x3",
+      "name": "Square 1.5 x 3\"",
+      "widthInches": 3.0,
+      "heightInches": 1.5,
+      "svgFile": "/templates/square-1_5x3.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "square-1x3",
+      "name": "Square 1 x 3\"",
+      "widthInches": 3.0,
+      "heightInches": 1.0,
+      "svgFile": "/templates/square-1x3.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "house-1_5x3",
+      "name": "House 1.5 x 3\"",
+      "widthInches": 3.0,
+      "heightInches": 1.5,
+      "svgFile": "/templates/house-1.5x3.svg",
+      "safeInsetPx": 0
+    },
+    {
+      "id": "designer-1x3",
+      "name": "Designer 1 x 3\"",
+      "widthInches": 3.0,
+      "heightInches": 1.0,
+      "svgFile": "/templates/designer-1x3.svg",
+      "safeInsetPx": 0
+    },
+    {
+      "id": "fancy-1_5x3",
+      "name": "Fancy 1.5 x 3\"",
+      "widthInches": 3.0,
+      "heightInches": 1.5,
+      "svgFile": "/templates/fancy-1_5x3.svg",
+      "safeInsetPx": 0
+    },
+    {
+      "id": "oval-1_5x3",
+      "name": "Oval 1.5 x 3\"",
+      "widthInches": 3.0,
+      "heightInches": 1.5,
+      "svgFile": "/templates/oval-1_5x3.svg",
+      "safeInsetPx": 0
+    }
+  ]
+}

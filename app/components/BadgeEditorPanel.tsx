@@ -2,10 +2,27 @@ import React from 'react';
 import { Badge, BadgeLine } from '../types/badge';
 import { BADGE_CONSTANTS } from '../constants/badge';
 import { BadgeLineEditor } from './BadgeLineEditor';
-import { BadgePreview } from './BadgePreview';
+import BadgeSvgRenderer from './BadgeSvgRenderer';
 import { autoScaleFontSize } from '../utils/textMeasurement';
 import { FONT_COLORS } from '../constants/colors';
 import { FONT_FAMILIES } from '../constants/fonts';
+import { loadTemplateById } from '../utils/templates';
+
+// Helper functions for normalized font size conversion
+function sizeNormToPx(sizeNorm: number, designBoxHeight: number): number {
+  return Math.round(sizeNorm * designBoxHeight);
+}
+
+function sizePxToNorm(sizePx: number, designBoxHeight: number): number {
+  return Math.max(0.05, Math.min(0.5, sizePx / designBoxHeight));
+}
+
+function getMinMaxSizeNorm(designBoxHeight: number): { min: number; max: number } {
+  return {
+    min: sizePxToNorm(BADGE_CONSTANTS.MIN_FONT_SIZE, designBoxHeight),
+    max: sizePxToNorm(BADGE_CONSTANTS.MAX_FONT_SIZE, designBoxHeight)
+  };
+}
 
 export interface BadgeEditorPanelProps {
   badge: Badge;
@@ -34,8 +51,19 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   multiBadgeButton,
   editable = true,
 }) => {
+  // Get the current template's designBox for font size calculations
+  const [designBox, setDesignBox] = React.useState({ x: 0, y: 0, width: 288, height: 96 });
+  
+  React.useEffect(() => {
+    if (badge.templateId) {
+      loadTemplateById(badge.templateId).then(template => {
+        setDesignBox(template.designBox);
+      });
+    }
+  }, [badge.templateId]);
+
   const justifyMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
-  const align = justifyMap[badge.lines[0].alignment as 'left' | 'center' | 'right'];
+  const align = justifyMap[(badge.lines[0]?.align || badge.lines[0]?.alignment || 'center') as 'left' | 'center' | 'right'];
   return (
     <div className="w-full max-w-2xl mx-auto flex flex-col gap-6">
       {/* Line formatting boxes */}
@@ -98,7 +126,11 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 <div className="flex gap-1 items-center min-w-0">
                   <span className="font-semibold text-sm mr-1">Format:</span>
                   <button
-                    className={`control-button w-7 h-7 flex items-center justify-center ${line.bold ? 'bg-gray-100 border-gray-400' : ''}`}
+                    className={`control-button w-7 h-7 flex items-center justify-center transition-all ${
+                      line.bold 
+                        ? 'bg-blue-500 text-white border-blue-600 shadow-sm' 
+                        : 'bg-white hover:bg-gray-50 border-gray-300'
+                    }`}
                     onClick={() => onLineChange(idx, { bold: !line.bold })}
                     title="Bold"
                     disabled={!editable}
@@ -106,7 +138,11 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                     <span className="font-bold text-lg">B</span>
                   </button>
                   <button
-                    className={`control-button w-7 h-7 flex items-center justify-center ${line.italic ? 'bg-gray-100 border-gray-400' : ''}`}
+                    className={`control-button w-7 h-7 flex items-center justify-center transition-all ${
+                      line.italic 
+                        ? 'bg-blue-500 text-white border-blue-600 shadow-sm' 
+                        : 'bg-white hover:bg-gray-50 border-gray-300'
+                    }`}
                     onClick={() => onLineChange(idx, { italic: !line.italic })}
                     title="Italic"
                     disabled={!editable}
@@ -114,7 +150,11 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                     <span className="italic text-lg">I</span>
                   </button>
                   <button
-                    className={`control-button w-7 h-7 flex items-center justify-center ${line.underline ? 'bg-gray-100 border-gray-400' : ''}`}
+                    className={`control-button w-7 h-7 flex items-center justify-center transition-all ${
+                      line.underline 
+                        ? 'bg-blue-500 text-white border-blue-600 shadow-sm' 
+                        : 'bg-white hover:bg-gray-50 border-gray-300'
+                    }`}
                     onClick={() => onLineChange(idx, { underline: !line.underline })}
                     title="Underline"
                     disabled={!editable}
@@ -126,7 +166,11 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 <div className="flex gap-1 items-center min-w-0">
                   <span className="font-semibold text-sm mr-1">Align:</span>
                   <button
-                    className={`control-button w-7 h-7 flex items-center justify-center p-0 ${line.alignment === 'left' ? 'bg-gray-100 border-gray-400' : ''}`}
+                    className={`control-button w-7 h-7 flex items-center justify-center p-0 transition-all ${
+                      (line.align || line.alignment) === 'left' 
+                        ? 'bg-blue-500 text-white border-blue-600 shadow-sm' 
+                        : 'bg-white hover:bg-gray-50 border-gray-300'
+                    }`}
                     onClick={() => onAlignmentChange(idx, 'left')}
                     title="Align Left"
                     disabled={!editable}
@@ -136,7 +180,11 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                     </svg>
                   </button>
                   <button
-                    className={`control-button w-7 h-7 flex items-center justify-center p-0 ${line.alignment === 'center' ? 'bg-gray-100 border-gray-400' : ''}`}
+                    className={`control-button w-7 h-7 flex items-center justify-center p-0 transition-all ${
+                      (line.align || line.alignment) === 'center' 
+                        ? 'bg-blue-500 text-white border-blue-600 shadow-sm' 
+                        : 'bg-white hover:bg-gray-50 border-gray-300'
+                    }`}
                     onClick={() => onAlignmentChange(idx, 'center')}
                     title="Align Center"
                     disabled={!editable}
@@ -146,7 +194,11 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                     </svg>
                   </button>
                   <button
-                    className={`control-button w-7 h-7 flex items-center justify-center p-0 ${line.alignment === 'right' ? 'bg-gray-100 border-gray-400' : ''}`}
+                    className={`control-button w-7 h-7 flex items-center justify-center p-0 transition-all ${
+                      (line.align || line.alignment) === 'right' 
+                        ? 'bg-blue-500 text-white border-blue-600 shadow-sm' 
+                        : 'bg-white hover:bg-gray-50 border-gray-300'
+                    }`}
                     onClick={() => onAlignmentChange(idx, 'right')}
                     title="Align Right"
                     disabled={!editable}
@@ -160,19 +212,36 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 <div className="flex gap-1 items-center min-w-0">
                   <span className="font-semibold text-sm mr-1">Size</span>
                   <div className="flex items-center">
-                    <button
-                      type="button"
-                      className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
-                      onClick={() => onLineChange(idx, { size: Math.max(BADGE_CONSTANTS.MIN_FONT_SIZE, line.size - 1) })}
-                      disabled={line.size <= BADGE_CONSTANTS.MIN_FONT_SIZE || !editable}
-                    >-</button>
-                    <span className="w-6 text-center text-sm">{line.size}</span>
-                    <button
-                      type="button"
-                      className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
-                      onClick={() => onLineChange(idx, { size: Math.min(BADGE_CONSTANTS.MAX_FONT_SIZE, line.size + 1) })}
-                      disabled={line.size >= BADGE_CONSTANTS.MAX_FONT_SIZE || !editable}
-                    >+</button>
+                    {(() => {
+                      // Get current size in pixels for display, prefer sizeNorm if available
+                      const currentSizePx = line.sizeNorm ? sizeNormToPx(line.sizeNorm, designBox.height) : (line.size || 13);
+                      const currentSizeNorm = line.sizeNorm ?? sizePxToNorm(line.size || 13, designBox.height);
+                      const { min: minSizeNorm, max: maxSizeNorm } = getMinMaxSizeNorm(designBox.height);
+                      
+                      return (
+                        <>
+                          <button
+                            type="button"
+                            className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
+                            onClick={() => {
+                              const newSizeNorm = Math.max(minSizeNorm, currentSizeNorm - 0.01);
+                              onLineChange(idx, { sizeNorm: newSizeNorm });
+                            }}
+                            disabled={currentSizeNorm <= minSizeNorm || !editable}
+                          >-</button>
+                          <span className="w-8 text-center text-sm">{currentSizePx}</span>
+                          <button
+                            type="button"
+                            className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
+                            onClick={() => {
+                              const newSizeNorm = Math.min(maxSizeNorm, currentSizeNorm + 0.01);
+                              onLineChange(idx, { sizeNorm: newSizeNorm });
+                            }}
+                            disabled={currentSizeNorm >= maxSizeNorm || !editable}
+                          >+</button>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -198,4 +267,4 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
       </div>
     </div>
   );
-}; 
+};

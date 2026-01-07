@@ -6,6 +6,11 @@ export const FONT_FAMILIES = [
     isDefault: true
   },
   {
+    value: 'Inter',
+    label: 'Inter',
+    category: 'Sans-serif'
+  },
+  {
     value: 'Open Sans',
     label: 'Open Sans',
     category: 'Sans-serif'
@@ -41,6 +46,21 @@ export const FONT_FAMILIES = [
     category: 'Sans-serif'
   },
   {
+    value: 'Cabin',
+    label: 'Cabin',
+    category: 'Sans-serif'
+  },
+  {
+    value: 'Nunito',
+    label: 'Nunito',
+    category: 'Sans-serif'
+  },
+  {
+    value: 'Roboto Mono',
+    label: 'Roboto Mono',
+    category: 'Monospace'
+  },
+  {
     value: 'Merriweather',
     label: 'Merriweather',
     category: 'Serif'
@@ -56,6 +76,16 @@ export const FONT_FAMILIES = [
     category: 'Serif'
   },
   {
+    value: 'Roboto Serif',
+    label: 'Roboto Serif',
+    category: 'Serif'
+  },
+  {
+    value: 'Roboto Slab',
+    label: 'Roboto Slab',
+    category: 'Serif'
+  },
+  {
     value: 'Georgia',
     label: 'Georgia',
     category: 'Serif'
@@ -64,7 +94,8 @@ export const FONT_FAMILIES = [
 
 export const FONT_CATEGORIES = [
   'Sans-serif',
-  'Serif'
+  'Serif',
+  'Monospace'
 ] as const;
 
 export type FontFamily = typeof FONT_FAMILIES[number]['value'];

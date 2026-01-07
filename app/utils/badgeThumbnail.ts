@@ -1,14 +1,34 @@
 import { Badge, BadgeLine } from '../types/badge';
+import { renderBadgeToSvgString, renderBadgeToSvgStringWithFonts } from './renderSvg';
+import { loadTemplateById, type LoadedTemplate } from './templates';
+// import UTIF encoder
+// @ts-ignore
+import * as UTIF from 'utif';
 
 export interface BadgeThumbnailOptions {
   width?: number;
   height?: number;
   quality?: number;
-  format?: 'image/png' | 'image/jpeg' | 'image/webp';
+  format?: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/tiff';
 }
 
+// helper to convert RGBA → TIFF data URL
+function rgbaToTiff(rgba: Uint8Array, w: number, h: number): string {
+  try {
+    const tiff = UTIF.encodeImage(rgba, w, h);
+    const tiffArray = new Uint8Array(tiff);
+    const binaryString = Array.from(tiffArray, byte => String.fromCharCode(byte)).join('');
+    return `data:image/tiff;base64,${btoa(binaryString)}`;
+  } catch (error) {
+    console.error('Error in rgbaToTiff:', error);
+    throw error;
+  }
+}
+
+// Legacy function removed - now using unified renderer
+
 /**
- * Generates a thumbnail image of a badge design
+ * Generates a thumbnail image of a badge design using the unified renderer
  * @param badge The badge design data
  * @param options Thumbnail generation options
  * @returns Promise<string> Base64 encoded image data URL
@@ -24,134 +44,170 @@ export async function generateBadgeThumbnail(
     format = 'image/png'
   } = options;
 
-  return new Promise((resolve, reject) => {
-    try {
-      // Create canvas element
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+  try {
+    // Load the template
+    const template = await loadTemplateById(badge.templateId || 'rect-1x3');
+    
+    // Generate SVG using font-embedding version for consistent font rendering
+    const svgString = await renderBadgeToSvgStringWithFonts(badge, template, { showOutline: false });
+    
+    // Convert SVG to canvas for rasterization
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const svgUrl = URL.createObjectURL(svgBlob);
       
-      if (!ctx) {
-        console.error('Could not get canvas context');
-        reject(new Error('Could not get canvas context'));
-        return;
-      }
-
-      // Set canvas dimensions
-      canvas.width = width;
-      canvas.height = height;
-
-      // Fill background with fallback
-      const backgroundColor = badge.backgroundColor || '#FFFFFF';
-      ctx.fillStyle = backgroundColor;
-      ctx.fillRect(0, 0, width, height);
-
-      // Add border
-      ctx.strokeStyle = '#888';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(1, 1, width - 2, height - 2);
-
-      // Calculate text positioning
-      const padding = Math.max(8, width * 0.04); // Responsive padding
-      const availableWidth = width - (padding * 2);
-      const availableHeight = height - (padding * 2);
-
-      // Calculate total text height and positioning
-      const totalTextHeight = badge.lines.reduce((sum, line) => {
-        return sum + (line.size * 1.3); // 1.3 line height multiplier
-      }, 0);
-
-      let currentY = padding + (availableHeight - totalTextHeight) / 2;
-
-      // Draw each line of text
-      badge.lines.forEach((line: BadgeLine) => {
-        // Set font properties
-        const fontStyle = line.italic ? 'italic ' : '';
-        const fontWeight = line.bold ? 'bold ' : '';
-        const fontSize = Math.min(line.size, height * 0.4); // Cap font size to prevent overflow
-        ctx.font = `${fontStyle}${fontWeight}${fontSize}px ${line.fontFamily}`;
-        ctx.fillStyle = line.color;
-        ctx.textAlign = line.alignment as CanvasTextAlign;
-        ctx.textBaseline = 'top';
-
-        // Calculate x position based on alignment
-        let x: number;
-        switch (line.alignment) {
-          case 'left':
-            x = padding;
-            break;
-          case 'right':
-            x = width - padding;
-            break;
-          default: // center
-            x = width / 2;
-            break;
-        }
-
-        // Truncate text if it's too long
-        let displayText = line.text;
-        const maxWidth = availableWidth - 4;
-        while (ctx.measureText(displayText).width > maxWidth && displayText.length > 0) {
-          displayText = displayText.slice(0, -1);
-        }
-
-        // Draw text
-        ctx.fillText(displayText, x, currentY);
-
-        // Move to next line
-        currentY += fontSize * 1.3;
-      });
-
-      // Convert to data URL
-      try {
-        const dataUrl = canvas.toDataURL(format, quality);
-        resolve(dataUrl);
-      } catch (toDataUrlError) {
-        console.error('Error converting canvas to data URL:', toDataUrlError);
-        // Try with lower quality
+      img.onload = () => {
         try {
-          const fallbackDataUrl = canvas.toDataURL('image/png', 0.5);
-          resolve(fallbackDataUrl);
-        } catch (fallbackError) {
-          console.error('Fallback thumbnail generation failed:', fallbackError);
-          reject(fallbackError);
-        }
-      }
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          if (!ctx) {
+            reject(new Error('Could not get canvas context'));
+            return;
+          }
 
-    } catch (error) {
-      console.error('Error generating badge thumbnail:', error);
-      // Return a basic fallback thumbnail instead of rejecting
-      try {
-        const fallbackThumbnail = generateFallbackThumbnail(badge);
-        resolve(fallbackThumbnail);
-      } catch (fallbackError) {
-        console.error('Fallback thumbnail also failed:', fallbackError);
+          // Set canvas dimensions
+          canvas.width = width;
+          canvas.height = height;
+
+          // Enable high-quality rendering
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+
+          // Draw the SVG scaled to canvas size
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Convert to data URL
+          if (format === 'image/tiff') {
+            // Obtain pixel data with ctx.getImageData(0,0,width,height).data
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const dataUrl = rgbaToTiff(new Uint8Array(imageData.data), width, height);
+            resolve(dataUrl);
+          } else {
+            const dataUrl = canvas.toDataURL(format, quality);
+            resolve(dataUrl);
+          }
+          
+          // Clean up
+          URL.revokeObjectURL(svgUrl);
+        } catch (error) {
+          console.error('Error converting SVG to canvas:', error);
+          reject(error);
+        }
+      };
+      
+      img.onerror = (error) => {
+        console.error('Error loading SVG:', error);
+        URL.revokeObjectURL(svgUrl);
         reject(error);
-      }
+      };
+      
+      img.src = svgUrl;
+    });
+  } catch (error) {
+    console.error('Error generating badge thumbnail:', error);
+    // Return a fallback thumbnail instead of rejecting
+    try {
+      const fallbackThumbnail = generateFallbackThumbnail(badge);
+      return fallbackThumbnail;
+    } catch (fallbackError) {
+      console.error('Fallback thumbnail also failed:', fallbackError);
+      throw error;
     }
-  });
+  }
 }
 
 /**
- * Generates a full-size badge image (actual badge dimensions)
+ * Generates a full-size badge image using the unified renderer
  * @param badge The badge design data
  * @returns Promise<string> Base64 encoded image data URL
  */
 export async function generateFullBadgeImage(badge: Badge): Promise<string> {
   try {
-    // Generate full-size image (1" x 3" at 300 DPI = 300x900 pixels)
+    // Use the unified renderer for consistency
+    console.log('Generating full badge image using unified renderer...');
+    
+    // Load the template
+    const template = await loadTemplateById(badge.templateId || 'rect-1x3');
+    
+    // Generate SVG using font-embedding version for consistent font rendering
+    const svgString = await renderBadgeToSvgStringWithFonts(badge, template, { showOutline: false });
+    
+    // Convert SVG to high-resolution PNG
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const svgUrl = URL.createObjectURL(svgBlob);
+      
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          if (!ctx) {
+            reject(new Error('Could not get canvas context'));
+            return;
+          }
+
+          // Set high-resolution canvas dimensions (3x for crisp text)
+          const scale = 3;
+          canvas.width = template.widthPx * scale;
+          canvas.height = template.heightPx * scale;
+
+          // Enable high-quality rendering
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+
+          // Draw the SVG scaled to high resolution
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          // Convert to PNG data URL
+          const dataUrl = canvas.toDataURL('image/png', 1.0);
+          console.log('Full badge image generated successfully');
+          resolve(dataUrl);
+          
+          // Clean up
+          URL.revokeObjectURL(svgUrl);
+        } catch (error) {
+          console.error('Error converting SVG to high-res canvas:', error);
+          reject(error);
+        }
+      };
+      
+      img.onerror = (error) => {
+        console.error('Error loading SVG for full image:', error);
+        URL.revokeObjectURL(svgUrl);
+        reject(error);
+      };
+      
+      img.src = svgUrl;
+    });
+  } catch (error) {
+    console.error('Error generating full badge image:', error);
+    // Fallback to high-resolution canvas generation
+    console.log('Falling back to canvas generation...');
     const fullImage = await generateBadgeThumbnail(badge, {
-      width: 300,  // 1 inch at 300 DPI
-      height: 900, // 3 inches at 300 DPI
-      quality: 0.9, // High quality for full image
+      width: 900,  // 3x preview width for crisp text
+      height: 300, // 3x preview height for crisp text
+      quality: 1.0, // Maximum quality
       format: 'image/png' // PNG for best quality
     });
     return fullImage;
-  } catch (error) {
-    console.error('Error generating full badge image:', error);
-    // Return a fallback image
-    const fallback = generateFallbackFullImage(badge);
-    return fallback;
   }
+}
+
+/**
+ * Add a dedicated wrapper for high‑resolution badges using unified renderer
+ * @param badge The badge design data
+ * @returns Promise<string> Base64 encoded PNG data URL
+ */
+export async function generateBadgeTiff(badge: Badge): Promise<string> {
+  return generateBadgeThumbnail(badge, {
+    width: 900,   // 3" @300 dpi
+    height: 300,  // 1" @300 dpi
+    format: 'image/png' // Use PNG for now, TIFF conversion happens in export.ts
+  });
 }
 
 /**
@@ -255,10 +311,7 @@ function generateFallbackFullImage(badge: Badge): string {
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, 300, 900);
     
-    // Add border
-    ctx.strokeStyle = '#888';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(0, 0, 300, 900);
+    // No border - clean image
 
     // Add text with contrasting color
     const textColor = backgroundColor === '#FFFFFF' || backgroundColor === '#F0E68C' ? '#000000' : '#FFFFFF';
@@ -306,10 +359,7 @@ function generateFallbackThumbnail(badge: Badge): string {
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, 150, 50);
     
-    // Add border
-    ctx.strokeStyle = '#888';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0, 0, 150, 50);
+    // No border - clean image
 
     // Add text with contrasting color
     const textColor = backgroundColor === '#FFFFFF' || backgroundColor === '#F0E68C' ? '#000000' : '#FFFFFF';

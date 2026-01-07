@@ -3,8 +3,10 @@ import { DEFAULT_FONT } from './fonts';
 export const BADGE_CONSTANTS = {
   // Layout
   MAX_LINES: 4,
-  BADGE_WIDTH: 300,
-  BADGE_HEIGHT: 100,
+  // Standard badge dimensions (3" width at 96 DPI)
+  // Height varies: 96px (1×3) or 144px (1.5×3) - use template dimensions for actual badges
+  BADGE_WIDTH: 288,  // 3.0" at 96 DPI (standard width for all badges)
+  BADGE_HEIGHT: 96,  // 1.0" at 96 DPI (default, but 1.5×3 badges use 144px)
   MIN_FONT_SIZE: 8,
   MAX_FONT_SIZE: 72,
   LINE_HEIGHT_MULTIPLIER: 1.3,
@@ -39,38 +41,46 @@ export const BADGE_CONSTANTS = {
 
   // Text formatting
   DEFAULT_LINE: {
+    id: 'default-line',
     text: 'Line Text',
-    size: 13,
+    xNorm: 0.5,
+    yNorm: 0.5,
+    sizeNorm: 0.143,  // 10pt equivalent (10/70 = 0.143)
     color: '#000000',
     bold: false,
     italic: false,
-    underline: false,
     fontFamily: DEFAULT_FONT,
-    alignment: 'center'
+    align: 'center'
   } as const,
 
   // Initial badge state
   INITIAL_BADGE: {
+    id: "initial",
+    templateId: 'rect-1x3',
     lines: [
       {
+        id: 'line-1',
         text: 'Your Name',
-        size: 18,
+        xNorm: 0.5,
+        yNorm: 0.5,  // Use center position - will be recalculated
+        sizeNorm: 0.20,  // 14pt equivalent (14/70 = 0.20)
         color: '#000000',
-        bold: false,
+        bold: false,  // No default bold
         italic: false,
-        underline: false,
         fontFamily: DEFAULT_FONT,
-        alignment: 'center'
+        align: 'center'
       },
       {
+        id: 'line-2',
         text: 'Title',
-        size: 13,
+        xNorm: 0.5,
+        yNorm: 0.5,  // Use center position - will be recalculated
+        sizeNorm: 0.143,  // 10pt equivalent (10/70 = 0.143)
         color: '#000000',
         bold: false,
         italic: false,
-        underline: false,
         fontFamily: DEFAULT_FONT,
-        alignment: 'center'
+        align: 'center'
       }
     ],
     backgroundColor: '#FFFFFF',
