@@ -39,7 +39,7 @@
       "widthInches": 3.0,
       "heightInches": 1.5,
       "svgFile": "/templates/house-1.5x3.svg",
-      "safeInsetPx": 0
+      "safeInsetPx": 24
     },
     {
       "id": "designer-1x3",
@@ -63,7 +63,7 @@
       "widthInches": 3.0,
       "heightInches": 1.5,
       "svgFile": "/templates/oval-1_5x3.svg",
-      "safeInsetPx": 0
+      "safeInsetPx": 15
     }
   ]
 }
