@@ -476,11 +476,13 @@ async function loadOne(c: TemplateConfig): Promise<LoadedTemplate> {
   // designBox represents the editable area (where text and background color go)
   // Use the full badge dimensions to ensure badges fill the SVG properly
   // The inner path bounds are used for clipping, but designBox should match badge size for proper scaling
+  const inset = c.safeInsetPx ?? Math.round(0.15 * DPI);
+
   const designBox = {
-    x: 0,
-    y: 0,
-    width: widthPx, // Full badge width: 288px (3")
-    height: heightPx, // Full badge height: 96px (1×3) or 144px (1.5×3)
+    x: innerPathBounds.x + inset,
+    y: innerPathBounds.y + inset,
+    width: innerPathBounds.width - inset * 2,
+    height: innerPathBounds.height - inset * 2,
   };
 
   console.log(`[templates] Inner path bounds for "${c.id}":`, innerPathBounds);

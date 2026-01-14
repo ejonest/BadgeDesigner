@@ -2,6 +2,7 @@
 import type { LoadedTemplate } from "~/utils/templates";
 import type { Badge, BadgeImage } from "../types/badge";
 import { loadFont } from "./fontLoader";
+import { BADGE_CONSTANTS } from "../constants/badge";
 
 type RenderOpts = { showOutline?: boolean };
 
@@ -12,77 +13,395 @@ type AnyLine = {
   id?: string;
   text?: string;
   // New normalized coordinates (preferred)
-  xNorm?: number; yNorm?: number;// 0..1 normalized within designBox
+  xNorm?: number;
+  yNorm?: number; // 0..1 normalized within designBox
   sizeNorm?: number; // 0..1 relative to designBox.height
   // Legacy absolute coordinates (for backward compatibility)
-  x?: number; y?: number;        // legacy absolute px
-  xPx?: number; yPx?: number;    // absolute px alt
-  fontSize?: number; fontSizeRel?: number; // absolute px OR relative to designBox.height
-  color?: string; bold?: boolean; italic?: boolean; fontFamily?: string;
-  align?: "left"|"center"|"right";
+  x?: number;
+  y?: number; // legacy absolute px
+  xPx?: number;
+  yPx?: number; // absolute px alt
+  fontSize?: number;
+  fontSizeRel?: number; // absolute px OR relative to designBox.height
+  color?: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  fontFamily?: string;
+  align?: "left" | "center" | "right";
+  alignment?: "left" | "center" | "right"; // alternative property name
 };
 
-function toPx(line: AnyLine, designBox: { x: number; y: number; width: number; height: number }): { x: number; y: number } {
+function toPx(
+  line: AnyLine,
+  designBox: { x: number; y: number; width: number; height: number },
+  template?: LoadedTemplate
+): { x: number; y: number } {
   // Prefer normalized coordinates (new preferred method)
   if (line.xNorm != null && line.yNorm != null) {
     // Calculate base x position from normalized coordinate
     let x = designBox.x + line.xNorm * designBox.width;
-    
+
     // Adjust x position based on alignment for proper text-anchor behavior
-    // When alignment is left/right, we need to position x at the edge, not center
-    const alignment = line.align || line.alignment || "center";
-    if (alignment === "left") {
-      // For left alignment, position at left edge of designBox
-      x = designBox.x;
-    } else if (alignment === "right") {
-      // For right alignment, position at right edge of designBox
-      x = designBox.x + designBox.width;
+    const alignment = line.align || "center";
+    if (alignment === "left") x = designBox.x;
+    else if (alignment === "right") x = designBox.x + designBox.width;
+
+    // y position from normalized coordinates
+    let y = designBox.y + line.yNorm * designBox.height;
+
+    // Apply vertical visual offset for house template if desired
+    if (template?.id?.startsWith("house")) {
+      y += designBox.height * 0.06; // push text slightly down
     }
-    // For center alignment, use xNorm as-is (already centered)
-    
-    return { 
-      x, 
-      y: designBox.y + line.yNorm * designBox.height 
-    };
+
+    return { x, y };
   }
+
   // Fallback to absolute coordinates (backward compatibility)
-  if (line.xPx != null || line.yPx != null || line.x != null || line.y != null) {
+  if (
+    line.xPx != null ||
+    line.yPx != null ||
+    line.x != null ||
+    line.y != null
+  ) {
     return { x: line.xPx ?? line.x ?? 0, y: line.yPx ?? line.y ?? 0 };
   }
+
   // Default to center if no coordinates provided
-  const alignment = line.align || line.alignment || "center";
+  const alignment = line.align || "center";
   let defaultX = designBox.x + designBox.width * 0.5;
-  if (alignment === "left") {
-    defaultX = designBox.x;
-  } else if (alignment === "right") {
-    defaultX = designBox.x + designBox.width;
+  if (alignment === "left") defaultX = designBox.x;
+  else if (alignment === "right") defaultX = designBox.x + designBox.width;
+
+  // Default Y with optional house offset
+  let defaultY = designBox.y + designBox.height * 0.5; // geometric center
+  if (template?.id?.startsWith("house")) {
+    defaultY += designBox.height * 0.06; // push text slightly down
+  } else {
+    defaultY += designBox.height * 0.1; // small default push (was 0.6)
   }
-  return { 
-    x: defaultX, 
-    y: designBox.y + designBox.height * 0.6 
+
+  return { x: defaultX, y: defaultY };
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function measureTextPx(
+  text: string,
+  fontFamily: string,
+  fontSizePx: number,
+  fontWeight: string,
+  fontStyle: string
+): { width: number; height: number; ascent: number; descent: number } {
+  // SSR / non-browser fallback: rough estimates
+  if (typeof document === "undefined") {
+    const t = text || " ";
+    const ascent = fontSizePx * 0.8;
+    const descent = fontSizePx * 0.2;
+    return {
+      width: t.length * fontSizePx * 0.6,
+      height: ascent + descent,
+      ascent,
+      descent,
+    };
+  }
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    const t = text || " ";
+    const ascent = fontSizePx * 0.8;
+    const descent = fontSizePx * 0.2;
+    return {
+      width: t.length * fontSizePx * 0.6,
+      height: ascent + descent,
+      ascent,
+      descent,
+    };
+  }
+
+  ctx.font = `${fontStyle} ${fontWeight} ${fontSizePx}px ${fontFamily}`;
+  const metrics = ctx.measureText(text || " ");
+
+  const width = Math.max(1, metrics.width);
+  const ascent = (metrics as any).actualBoundingBoxAscent ?? fontSizePx * 0.8;
+  const descent = (metrics as any).actualBoundingBoxDescent ?? fontSizePx * 0.2;
+  const height = Math.max(1, ascent + descent);
+
+  return { width, height, ascent, descent };
+}
+
+/**
+ * Calculates optimal text layout with uniform spacing, proportional scaling, and boundary constraints
+ */
+function calculateTextLayout(
+  lines: AnyLine[],
+  designBox: { x: number; y: number; width: number; height: number },
+  template: LoadedTemplate,
+  fontMappings?: Map<string, string>
+): Array<{
+  line: AnyLine;
+  x: number;
+  y: number;
+  fontSize: number;
+  anchor: string;
+  familyRaw: string;
+  familyEscaped: string;
+  fontWeight: string;
+  fontStyle: string;
+}> {
+  if (lines.length === 0) return [];
+
+  const MIN_FONT = BADGE_CONSTANTS.MIN_FONT_SIZE;
+  const MAX_FONT = BADGE_CONSTANTS.MAX_FONT_SIZE;
+  const INSET_PX = 0.1 * 96; // 0.1" at 96 DPI
+  const EXTRA_TOP_PX = 4; // try 4–8
+
+  // Available text area (with inset for padding)
+  const textAreaLeft = designBox.x + INSET_PX;
+  const textAreaTop = designBox.y + INSET_PX + EXTRA_TOP_PX;
+  const textAreaRight = designBox.x + designBox.width - INSET_PX;
+  const textAreaBottom = designBox.y + designBox.height - INSET_PX;
+  const textAreaWidth = textAreaRight - textAreaLeft;
+  const textAreaHeight = textAreaBottom - textAreaTop;
+
+  // Uniform spacing between lines (3% of design box height)
+  const UNIFORM_SPACING = designBox.height * 0.03;
+
+  // Step 1: Calculate requested sizes for all lines
+  const lineData = lines.map((line, i) => {
+    const baseSize = line.sizeNorm
+      ? Math.round(line.sizeNorm * designBox.height)
+      : line.fontSizeRel
+      ? Math.round(line.fontSizeRel * designBox.height)
+      : line.fontSize ?? Math.round(designBox.height * (i === 0 ? 0.23 : 0.17));
+
+    const requestedSize = clamp(baseSize, MIN_FONT, MAX_FONT);
+    const alignment = line.align || line.alignment || "center";
+    const anchor =
+      alignment === "center"
+        ? "middle"
+        : alignment === "right"
+        ? "end"
+        : "start";
+
+    const originalFamily = line.fontFamily || "Inter, ui-sans-serif, system-ui";
+    const familyRaw = fontMappings?.get(originalFamily) || originalFamily;
+    const fontWeight = line.bold ? "bold" : "normal";
+    const fontStyle = line.italic ? "italic" : "normal";
+
+    return {
+      line,
+      requestedSize,
+      anchor,
+      familyRaw,
+      fontWeight,
+      fontStyle,
+    };
+  });
+
+  // Step 2: Measure all lines at their requested sizes
+  const measuredLines = lineData.map((item) => {
+    const metrics = measureTextPx(
+      item.line.text || "",
+      item.familyRaw,
+      item.requestedSize,
+      item.fontWeight,
+      item.fontStyle
+    );
+    return {
+      ...item,
+      metrics,
+    };
+  });
+
+  // Step 3: Calculate total vertical space needed with uniform spacing
+  const totalVerticalSpace = measuredLines.reduce((sum, item, index) => {
+    sum += item.metrics.height;
+    if (index < measuredLines.length - 1) {
+      sum += UNIFORM_SPACING;
+    }
+    return sum;
+  }, 0);
+
+  // Step 4: Calculate vertical scale factor if needed
+  let verticalScale = 1;
+  if (totalVerticalSpace > textAreaHeight) {
+    verticalScale = textAreaHeight / totalVerticalSpace;
+  }
+
+  // Step 5: For each line, calculate horizontal scale factor
+  const scaledLines = measuredLines.map((item) => {
+    // First apply vertical scaling
+    let scaledSize = item.requestedSize * verticalScale;
+
+    // Then check horizontal fit
+    const scaledMetrics = measureTextPx(
+      item.line.text || "",
+      item.familyRaw,
+      scaledSize,
+      item.fontWeight,
+      item.fontStyle
+    );
+
+    // Calculate available width based on alignment
+    // All alignments can use the full text area width since we'll position them correctly
+    const availableWidth = textAreaWidth;
+
+    // Calculate horizontal scale if needed
+    let horizontalScale = 1;
+    if (scaledMetrics.width > availableWidth) {
+      horizontalScale = availableWidth / scaledMetrics.width;
+    }
+
+    // Use the minimum of vertical and horizontal scales
+    const finalScale = Math.min(verticalScale, horizontalScale);
+    const finalSize = clamp(
+      item.requestedSize * finalScale,
+      MIN_FONT,
+      MAX_FONT
+    );
+
+    return {
+      ...item,
+      finalSize,
+      finalScale,
+    };
+  });
+
+  // Step 6–7: Build layout, then shrink uniformly until it fits (robust against font metric mismatch)
+  const SAFETY_PX = 2; // <-- small extra margin to avoid “1px clipped” cases
+  const MAX_ITERS = 12;
+  const SHRINK_STEP = 0.97; // shrink 3% each retry
+
+  // Start with the scales you already computed in Step 5
+  let uniformScale = 1;
+
+  // Helper builds positioned lines for a given extra uniformScale
+  const buildPositioned = (extraScale: number) => {
+    const metricsArr = scaledLines.map((item) =>
+      measureTextPx(
+        item.line.text || "",
+        item.familyRaw,
+        clamp(item.finalSize * extraScale, MIN_FONT, MAX_FONT),
+        item.fontWeight,
+        item.fontStyle
+      )
+    );
+
+    const totalHeight = metricsArr.reduce((sum, m, idx) => {
+      sum += m.height;
+      if (idx < metricsArr.length - 1) sum += UNIFORM_SPACING;
+      return sum;
+    }, 0);
+
+    const startY = textAreaTop + (textAreaHeight - totalHeight) / 2;
+
+    let currentY = startY;
+    const positioned = scaledLines.map((item, idx) => {
+      const m = metricsArr[idx];
+
+      // y is the visual middle because you render with dominant-baseline="middle"
+      const y = currentY + m.height / 2;
+
+      let x: number;
+      if (item.anchor === "middle") x = textAreaLeft + textAreaWidth / 2;
+      else if (item.anchor === "start") x = textAreaLeft;
+      else x = textAreaRight;
+
+      currentY +=
+        m.height + (idx < scaledLines.length - 1 ? UNIFORM_SPACING : 0);
+
+      return {
+        line: item.line,
+        x,
+        y,
+        fontSize: clamp(item.finalSize * extraScale, MIN_FONT, MAX_FONT),
+        anchor: item.anchor,
+        familyRaw: item.familyRaw,
+        familyEscaped: esc(item.familyRaw),
+        fontWeight: item.fontWeight,
+        fontStyle: item.fontStyle,
+      };
+    });
+
+    return { positioned, metricsArr };
   };
+
+  let positionedLines: ReturnType<typeof buildPositioned>["positioned"] = [];
+  let finalMetrics: ReturnType<typeof buildPositioned>["metricsArr"] = [];
+
+  for (let i = 0; i < MAX_ITERS; i++) {
+    const built = buildPositioned(uniformScale);
+    positionedLines = built.positioned;
+    finalMetrics = built.metricsArr;
+
+    // Compute glyph bounds using ascent/descent around the visual middle
+    const tops = positionedLines.map((p, idx) => {
+      const m = finalMetrics[idx];
+      const half = (m.ascent + m.descent) / 2;
+      return p.y - half;
+    });
+
+    const bottoms = positionedLines.map((p, idx) => {
+      const m = finalMetrics[idx];
+      const half = (m.ascent + m.descent) / 2;
+      return p.y + half;
+    });
+
+    const minTop = Math.min(...tops);
+    const maxBottom = Math.max(...bottoms);
+
+    const topOverflow = textAreaTop + SAFETY_PX - minTop; // positive means too high
+    const bottomOverflow = maxBottom - (textAreaBottom - SAFETY_PX); // positive means too low
+
+    if (topOverflow <= 0 && bottomOverflow <= 0) {
+      // Fits! Done.
+      return positionedLines;
+    }
+
+    // If it doesn't fit, shrink uniformly and retry
+    uniformScale *= SHRINK_STEP;
+  }
+
+  // Fallback: return last attempt (should be close even if fonts differ slightly)
+  return positionedLines;
 }
 
 // TEMP: force BG image sizing to prove rendering path works
 const FORCE_BG_SIZE_DEBUG = false;
 
-function renderBg(img: BadgeImage | undefined, designBox: { x: number; y: number; width: number; height: number }): string {
+function renderBg(
+  img: BadgeImage | undefined,
+  designBox: { x: number; y: number; width: number; height: number }
+): string {
   if (!img || !img.src) {
     // No background image, return empty string (background color will be handled separately)
     return "";
   }
 
   // Hard override while debugging: force the image to cover the whole designBox
-  const iw = FORCE_BG_SIZE_DEBUG ? designBox.width : Math.max(1, img.widthPx ?? designBox.width);
-  const ih = FORCE_BG_SIZE_DEBUG ? designBox.height : Math.max(1, img.heightPx ?? designBox.height);
-  const scale = FORCE_BG_SIZE_DEBUG ? 1 : (img.scale ?? 1);
-  const offX  = img.offsetX ?? 0;
-  const offY  = img.offsetY ?? 0;
+  const iw = FORCE_BG_SIZE_DEBUG
+    ? designBox.width
+    : Math.max(1, img.widthPx ?? designBox.width);
+  const ih = FORCE_BG_SIZE_DEBUG
+    ? designBox.height
+    : Math.max(1, img.heightPx ?? designBox.height);
+  const scale = FORCE_BG_SIZE_DEBUG ? 1 : img.scale ?? 1;
+  const offX = img.offsetX ?? 0;
+  const offY = img.offsetY ?? 0;
 
   // Center the image within the designBox
   const centerX = designBox.x + designBox.width / 2;
   const centerY = designBox.y + designBox.height / 2;
-  const transform = `translate(${centerX + offX}, ${centerY + offY}) translate(${iw/2}, ${ih/2}) scale(${scale}) translate(${-iw/2}, ${-ih/2})`;
+  const transform = `translate(${centerX + offX}, ${
+    centerY + offY
+  }) translate(${iw / 2}, ${ih / 2}) scale(${scale}) translate(${-iw / 2}, ${
+    -ih / 2
+  })`;
 
   // Emit BOTH href and xlink:href for maximum compatibility
   return `
@@ -98,14 +417,17 @@ function renderBg(img: BadgeImage | undefined, designBox: { x: number; y: number
   `;
 }
 
-function renderLogo(logo: BadgeImage | undefined, designBox: { x: number; y: number; width: number; height: number }): string {
+function renderLogo(
+  logo: BadgeImage | undefined,
+  designBox: { x: number; y: number; width: number; height: number }
+): string {
   if (!logo) return "";
   const lw = Math.max(1, logo.widthPx ?? Math.round(designBox.height * 0.3));
   const lh = Math.max(1, logo.heightPx ?? Math.round(designBox.height * 0.3));
-  
+
   // Default logo position: 10% from left, 20% from top of designBox
-  const x = logo.x ?? (designBox.x + designBox.width * 0.1);
-  const y = logo.y ?? (designBox.y + designBox.height * 0.2);
+  const x = logo.x ?? designBox.x + designBox.width * 0.1;
+  const y = logo.y ?? designBox.y + designBox.height * 0.2;
   const s = logo.scale ?? 1;
 
   return `
@@ -121,36 +443,48 @@ function renderLogo(logo: BadgeImage | undefined, designBox: { x: number; y: num
  * and apply correct display attributes.
  * Uses DOM parsing for robust attribute manipulation.
  */
-function prepareElementForOutline(element: string, fill: string, stroke: string, strokeWidth: string): string {
+function prepareElementForOutline(
+  element: string,
+  fill: string,
+  stroke: string,
+  strokeWidth: string
+): string {
   if (typeof window !== "undefined" && "DOMParser" in window) {
     const parser = new DOMParser();
     // Wrap element in a temporary container for parsing
     const wrapped = `<svg xmlns="http://www.w3.org/2000/svg">${element}</svg>`;
     const doc = parser.parseFromString(wrapped, "image/svg+xml");
-    
+
     // Find all relevant SVG shape elements and update their attributes
     // This handles both direct elements and nested structures
-    doc.querySelectorAll("[id='Inner'], [id='inner'], path, rect, ellipse, circle, polygon, polyline").forEach((el) => {
-      el.removeAttribute("fill");
-      el.removeAttribute("stroke");
-      el.removeAttribute("stroke-width");
-      el.setAttribute("fill", fill);
-      el.setAttribute("stroke", stroke);
-      el.setAttribute("stroke-width", strokeWidth);
-    });
-    
+    doc
+      .querySelectorAll(
+        "[id='Inner'], [id='inner'], path, rect, ellipse, circle, polygon, polyline"
+      )
+      .forEach((el) => {
+        el.removeAttribute("fill");
+        el.removeAttribute("stroke");
+        el.removeAttribute("stroke-width");
+        el.setAttribute("fill", fill);
+        el.setAttribute("stroke", stroke);
+        el.setAttribute("stroke-width", strokeWidth);
+      });
+
     // Extract the inner element back out
     const svgEl = doc.documentElement;
     const output = svgEl.innerHTML;
-    console.log('[prepareElementForOutline] Output:', output);
+    console.log("[prepareElementForOutline] Output:", output);
     return output;
   }
-  
+
   // Fallback for SSR: use regex (less robust but works)
-  let cleaned = element.replace(/\s+fill\s*=\s*["'][^"']*["']/gi, '');
-  cleaned = cleaned.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, '');
-  cleaned = cleaned.replace(/\s+stroke-width\s*=\s*["'][^"']*["']/gi, '');
-  return cleaned.replace(/\/?>$/, ` fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/>`);
+  let cleaned = element.replace(/\s+fill\s*=\s*["'][^"']*["']/gi, "");
+  cleaned = cleaned.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, "");
+  cleaned = cleaned.replace(/\s+stroke-width\s*=\s*["'][^"']*["']/gi, "");
+  return cleaned.replace(
+    /\/?>$/,
+    ` fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/>`
+  );
 }
 
 export function renderBadgeToSvgString(
@@ -161,32 +495,42 @@ export function renderBadgeToSvgString(
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
   const PADDING_PX = 24;
   // Use standardized viewBox for consistent display (shows relative sizes between 1×3 and 1.5×3)
-  const W = template.standardViewBoxWidth + (PADDING_PX * 2);
-  const H = template.standardViewBoxHeight + (PADDING_PX * 2);
+  const W = template.standardViewBoxWidth + PADDING_PX * 2;
+  const H = template.standardViewBoxHeight + PADDING_PX * 2;
   const designBox = template.designBox;
 
-  const clipId = `badge-clip-${badge.id || Math.random().toString(36).substring(7)}`;
+  const clipId = `badge-clip-${
+    badge.id || Math.random().toString(36).substring(7)
+  }`;
 
   // SINGLE LAYER APPROACH: Use inner path directly for background fill
   // Handle both direct path elements and paths wrapped in <g transform> tags
   // Extract the path, update fill, remove stroke, then reconstruct structure
   let innerPathWithFill: string;
-  
+
   // Check if innerElement is wrapped in a <g transform> tag (more robust regex)
   // Match transform attribute with any whitespace, and capture content between tags
   // Use [\s\S] instead of . to match newlines, and /i flag for case-insensitive
-  const gTransformMatch = template.innerElement.match(/<g[^>]*\btransform\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/g>/i);
-  
+  const gTransformMatch = template.innerElement.match(
+    /<g[^>]*\btransform\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/g>/i
+  );
+
   if (gTransformMatch && gTransformMatch[2].trim()) {
     // Path is wrapped in transform group - extract path, update fill, reconstruct
     const transform = gTransformMatch[1].trim();
     const pathContent = gTransformMatch[2].trim();
-    
+
     // Update fill and remove stroke from the path content (more robust regex)
-    let updatedPath = pathContent.replace(/fill\s*=\s*["'][^"']*["']/i, `fill="${badge.backgroundColor || "#FFFFFF"}"`);
-    updatedPath = updatedPath.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, '');
-    updatedPath = updatedPath.replace(/\s+stroke-width\s*=\s*["'][^"']*["']/gi, '');
-    
+    let updatedPath = pathContent.replace(
+      /fill\s*=\s*["'][^"']*["']/i,
+      `fill="${badge.backgroundColor || "#FFFFFF"}"`
+    );
+    updatedPath = updatedPath.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, "");
+    updatedPath = updatedPath.replace(
+      /\s+stroke-width\s*=\s*["'][^"']*["']/gi,
+      ""
+    );
+
     // Reconstruct with transform wrapper
     innerPathWithFill = `<g transform="${transform}">${updatedPath}</g>`;
   } else {
@@ -195,10 +539,16 @@ export function renderBadgeToSvgString(
       /fill\s*=\s*["'][^"']*["']/i,
       `fill="${badge.backgroundColor || "#FFFFFF"}"`
     );
-    innerPathWithFill = innerPathWithFill.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, '');
-    innerPathWithFill = innerPathWithFill.replace(/\s+stroke-width\s*=\s*["'][^"']*["']/gi, '');
+    innerPathWithFill = innerPathWithFill.replace(
+      /\s+stroke\s*=\s*["'][^"']*["']/gi,
+      ""
+    );
+    innerPathWithFill = innerPathWithFill.replace(
+      /\s+stroke-width\s*=\s*["'][^"']*["']/gi,
+      ""
+    );
   }
-  
+
   // Extract path data from inner element for clipPath
   // The inner element might be wrapped in a <g transform> tag, so we need to extract just the path
   let innerPathData = template.innerElement;
@@ -217,54 +567,61 @@ export function renderBadgeToSvgString(
       innerPathData = `<path d="${dMatch[1]}"/>`;
     }
   }
-  
+
   // Use rectangle for text clipping with 0.1" (9.6px) inset - simpler and more reliable
   // This ensures text is constrained within badge boundaries with proper buffer
   const INSET_INCHES = 0.1;
   const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
-  const textClipPath = `<rect x="${designBox.x + INSET_PX}" y="${designBox.y + INSET_PX}" 
-    width="${designBox.width - (INSET_PX * 2)}" height="${designBox.height - (INSET_PX * 2)}"/>`;
-  
+  const textClipPath = `<rect x="${designBox.x + INSET_PX}" y="${
+    designBox.y + INSET_PX
+  }" 
+    width="${designBox.width - INSET_PX * 2}" height="${
+    designBox.height - INSET_PX * 2
+  }"/>`;
+
   // Background image (if present)
   const bgImageLayer = badge.backgroundImage
     ? renderBg(badge.backgroundImage, designBox)
-    : '';
+    : "";
 
   console.log("[renderSvg] designBox:", designBox);
   console.log("[renderSvg] backgroundColor:", badge.backgroundColor);
 
-  // Text rendering - wrap all text in a group with clipPath to contain within badge boundaries
-  const textElements = (badge.lines || []).map((line: any, i: number) => {
-    const { x, y } = toPx(line, designBox);
-    // Prefer sizeNorm (new normalized sizing)
-    const size = line.sizeNorm ? Math.round(line.sizeNorm * designBox.height) :
-                 line.fontSizeRel ? Math.round(line.fontSizeRel * designBox.height) : 
-                 line.fontSize ?? Math.round(designBox.height * (i === 0 ? 0.23 : 0.17));
-    // Fix alignment mapping: left -> start, right -> end, center -> middle
-    const alignment = line.align || line.alignment || "center";
-    const anchor =
-      alignment === "center" ? "middle" :
-      alignment === "right" ? "end" : "start";
-    const family = esc(line.fontFamily || "Inter, ui-sans-serif, system-ui");
-    const color  = line.color || "#000";
-    const fontWeight = line.bold ? "bold" : "normal";
-    const fontStyle = line.italic ? "italic" : "normal";
-    const textDecoration = line.underline ? "underline" : "none";
-    return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}"
-                  alignment-baseline="middle" font-family="${family}" fill="${color}"
-                  font-weight="${fontWeight}"
-                  font-style="${fontStyle}"
-                  text-decoration="${textDecoration}">${esc(line.text || "")}</text>`;
-  }).join("");
-  
-  // Wrap all text in a group with clipPath to contain within badge boundaries
-  // Always use the text-specific clipPath to prevent edge clipping
+  // Text rendering with uniform spacing and proportional scaling
+  const lineLayout = calculateTextLayout(
+    badge.lines || [],
+    designBox,
+    template
+  );
+
+  // Render text elements
+  const textElements = lineLayout
+    .map((item) => {
+      const line = item.line;
+      const color = line.color || "#000";
+      const textDecoration = line.underline ? "underline" : "none";
+
+      return `<text x="${item.x}" y="${item.y}" font-size="${
+        item.fontSize
+      }" text-anchor="${item.anchor}"
+              dominant-baseline="middle" font-family="${
+                item.familyEscaped
+              }" fill="${color}"
+              font-weight="${item.fontWeight}"
+              font-style="${item.fontStyle}"
+              text-decoration="${textDecoration}">${esc(
+        line.text || ""
+      )}</text>`;
+    })
+    .join("");
+
+  // Text is already positioned within bounds, but keep clipPath as safety net
   const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
 
   // Outline for border (no fill, stroke only)
   // Note: Outline and Inner paths are now coextensive (same coordinates)
   // The outline overlays exactly on top of the inner path to create a border effect
-  const outline = template.outlineElement 
+  const outline = template.outlineElement
     ? prepareElementForOutline(template.outlineElement, "none", "#111", "1.25")
     : prepareElementForOutline(template.innerElement, "none", "#111", "1.25");
 
@@ -280,9 +637,13 @@ export function renderBadgeToSvgString(
 
   return `${svgOpen}
   <defs>
-    ${innerPathData ? `<clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
+    ${
+      innerPathData
+        ? `<clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
       ${innerPathData}
-    </clipPath>` : ''}
+    </clipPath>`
+        : ""
+    }
     <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
       ${textClipPathRect}
     </clipPath>
@@ -317,13 +678,13 @@ export async function renderBadgeToSvgStringWithFonts(
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
   const PADDING_PX = 24;
   // Use standardized viewBox for consistent display (shows relative sizes between 1×3 and 1.5×3)
-  const W = template.standardViewBoxWidth + (PADDING_PX * 2);
-  const H = template.standardViewBoxHeight + (PADDING_PX * 2);
+  const W = template.standardViewBoxWidth + PADDING_PX * 2;
+  const H = template.standardViewBoxHeight + PADDING_PX * 2;
   const designBox = template.designBox;
 
   // Collect all unique font families used in the badge
   const fontFamilies = new Set<string>();
-  (badge.lines || []).forEach(line => {
+  (badge.lines || []).forEach((line) => {
     if (line.fontFamily) {
       fontFamilies.add(line.fontFamily);
     }
@@ -337,9 +698,9 @@ export async function renderBadgeToSvgStringWithFonts(
     try {
       const fontData = await loadFont(fontFamily);
       if (fontData) {
-        const embeddedName = `Embedded${fontFamily.replace(/\s+/g, '')}`;
+        const embeddedName = `Embedded${fontFamily.replace(/\s+/g, "")}`;
         fontMappings.set(fontFamily, embeddedName);
-        
+
         fontDefs.push(`
           @font-face {
             font-family: "${embeddedName}";
@@ -372,28 +733,38 @@ export async function renderBadgeToSvgStringWithFonts(
     }
   }
 
-  const clipId = `badge-clip-${badge.id || Math.random().toString(36).substring(7)}`;
+  const clipId = `badge-clip-${
+    badge.id || Math.random().toString(36).substring(7)
+  }`;
 
   // SINGLE LAYER APPROACH: Use inner path directly for background fill
   // Handle both direct path elements and paths wrapped in <g transform> tags
   // Extract the path, update fill, remove stroke, then reconstruct structure
   let innerPathWithFill: string;
-  
+
   // Check if innerElement is wrapped in a <g transform> tag (more robust regex)
   // Match transform attribute with any whitespace, and capture content between tags
   // Use [\s\S] instead of . to match newlines, and /i flag for case-insensitive
-  const gTransformMatch = template.innerElement.match(/<g[^>]*\btransform\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/g>/i);
-  
+  const gTransformMatch = template.innerElement.match(
+    /<g[^>]*\btransform\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/g>/i
+  );
+
   if (gTransformMatch && gTransformMatch[2].trim()) {
     // Path is wrapped in transform group - extract path, update fill, reconstruct
     const transform = gTransformMatch[1].trim();
     const pathContent = gTransformMatch[2].trim();
-    
+
     // Update fill and remove stroke from the path content (more robust regex)
-    let updatedPath = pathContent.replace(/fill\s*=\s*["'][^"']*["']/i, `fill="${badge.backgroundColor || "#FFFFFF"}"`);
-    updatedPath = updatedPath.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, '');
-    updatedPath = updatedPath.replace(/\s+stroke-width\s*=\s*["'][^"']*["']/gi, '');
-    
+    let updatedPath = pathContent.replace(
+      /fill\s*=\s*["'][^"']*["']/i,
+      `fill="${badge.backgroundColor || "#FFFFFF"}"`
+    );
+    updatedPath = updatedPath.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, "");
+    updatedPath = updatedPath.replace(
+      /\s+stroke-width\s*=\s*["'][^"']*["']/gi,
+      ""
+    );
+
     // Reconstruct with transform wrapper
     innerPathWithFill = `<g transform="${transform}">${updatedPath}</g>`;
   } else {
@@ -402,10 +773,16 @@ export async function renderBadgeToSvgStringWithFonts(
       /fill\s*=\s*["'][^"']*["']/i,
       `fill="${badge.backgroundColor || "#FFFFFF"}"`
     );
-    innerPathWithFill = innerPathWithFill.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, '');
-    innerPathWithFill = innerPathWithFill.replace(/\s+stroke-width\s*=\s*["'][^"']*["']/gi, '');
+    innerPathWithFill = innerPathWithFill.replace(
+      /\s+stroke\s*=\s*["'][^"']*["']/gi,
+      ""
+    );
+    innerPathWithFill = innerPathWithFill.replace(
+      /\s+stroke-width\s*=\s*["'][^"']*["']/gi,
+      ""
+    );
   }
-  
+
   // Extract path data from inner element for clipPath
   // The inner element might be wrapped in a <g transform> tag, so we need to extract just the path
   let innerPathData = template.innerElement;
@@ -424,55 +801,59 @@ export async function renderBadgeToSvgStringWithFonts(
       innerPathData = `<path d="${dMatch[1]}"/>`;
     }
   }
-  
+
   // Use rectangle for text clipping with 0.1" (9.6px) inset - simpler and more reliable
   // This ensures text is constrained within badge boundaries with proper buffer
   const INSET_INCHES = 0.1;
   const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
-  const textClipPath = `<rect x="${designBox.x + INSET_PX}" y="${designBox.y + INSET_PX}" 
-    width="${designBox.width - (INSET_PX * 2)}" height="${designBox.height - (INSET_PX * 2)}"/>`;
-  
+  const textClipPath = `<rect x="${designBox.x + INSET_PX}" y="${
+    designBox.y + INSET_PX
+  }" 
+    width="${designBox.width - INSET_PX * 2}" height="${
+    designBox.height - INSET_PX * 2
+  }"/>`;
+
   // Background image (if present) - rendered on top of filled inner path
   const bgImageLayer = badge.backgroundImage
     ? renderBg(badge.backgroundImage, designBox)
-    : '';
+    : "";
 
-  // Text rendering with embedded fonts - wrap all text in a group with clipPath
-  const textElements = (badge.lines || []).map((line: any, i: number) => {
-    const { x, y } = toPx(line, designBox);
-    const size = line.sizeNorm ? Math.round(line.sizeNorm * designBox.height) :
-                 line.fontSizeRel ? Math.round(line.fontSizeRel * designBox.height) : 
-                 line.fontSize ?? Math.round(designBox.height * (i === 0 ? 0.23 : 0.17));
-    // Fix alignment mapping: left -> start, right -> end, center -> middle
-    const alignment = line.align || line.alignment || "center";
-    const anchor =
-      alignment === "center" ? "middle" :
-      alignment === "right" ? "end" : "start";
-    
-    // Use embedded font name if available, otherwise fallback to original
-    const originalFamily = line.fontFamily || "Inter, ui-sans-serif, system-ui";
-    const embeddedFamily = fontMappings.get(originalFamily) || originalFamily;
-    const family = esc(embeddedFamily);
-    const color = line.color || "#000";
-    const fontWeight = line.bold ? "bold" : "normal";
-    const fontStyle = line.italic ? "italic" : "normal";
-    const textDecoration = line.underline ? "underline" : "none";
-    
-    return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}"
-                  alignment-baseline="middle" font-family="${family}" fill="${color}"
-                  font-weight="${fontWeight}"
-                  font-style="${fontStyle}"
-                  text-decoration="${textDecoration}">${esc(line.text || "")}</text>`;
-  }).join("");
-  
-  // Wrap all text in a group with clipPath to contain within badge boundaries
-  // Use designBox-based rectangle clipPath for text to prevent clipping issues
+  // Text rendering with embedded fonts, uniform spacing and proportional scaling
+  const lineLayout = calculateTextLayout(
+    badge.lines || [],
+    designBox,
+    template,
+    fontMappings
+  );
+
+  // Render text elements
+  const textElements = lineLayout
+    .map((item) => {
+      const line = item.line;
+      const color = line.color || "#000";
+      const textDecoration = line.underline ? "underline" : "none";
+
+      return `<text x="${item.x}" y="${item.y}" font-size="${
+        item.fontSize
+      }" text-anchor="${item.anchor}"
+              dominant-baseline="middle" font-family="${
+                item.familyEscaped
+              }" fill="${color}"
+              font-weight="${item.fontWeight}"
+              font-style="${item.fontStyle}"
+              text-decoration="${textDecoration}">${esc(
+        line.text || ""
+      )}</text>`;
+    })
+    .join("");
+
+  // Text is already positioned within bounds, but keep clipPath as safety net
   const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
 
   // Outline for border (no fill, stroke only)
   // Note: Outline and Inner paths are now coextensive (same coordinates)
   // The outline overlays exactly on top of the inner path to create a border effect
-  const outline = template.outlineElement 
+  const outline = template.outlineElement
     ? prepareElementForOutline(template.outlineElement, "none", "#111", "1.25")
     : prepareElementForOutline(template.innerElement, "none", "#111", "1.25");
 
@@ -486,11 +867,15 @@ export async function renderBadgeToSvgStringWithFonts(
   return `${svgOpen}
   <defs>
     <style type="text/css">
-      ${fontDefs.join('\n')}
+      ${fontDefs.join("\n")}
     </style>
-    ${innerPathData ? `<clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
+    ${
+      innerPathData
+        ? `<clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
       ${innerPathData}
-    </clipPath>` : ''}
+    </clipPath>`
+        : ""
+    }
     <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
       ${textClipPath}
     </clipPath>

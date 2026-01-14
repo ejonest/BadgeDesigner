@@ -1,12 +1,12 @@
-import React from 'react';
-import { Badge, BadgeLine } from '../types/badge';
-import { BADGE_CONSTANTS } from '../constants/badge';
-import { BadgeLineEditor } from './BadgeLineEditor';
-import BadgeSvgRenderer from './BadgeSvgRenderer';
-import { autoScaleFontSize } from '../utils/textMeasurement';
-import { FONT_COLORS } from '../constants/colors';
-import { FONT_FAMILIES } from '../constants/fonts';
-import { loadTemplateById } from '../utils/templates';
+import React from "react";
+import { Badge, BadgeLine } from "../types/badge";
+import { BADGE_CONSTANTS } from "../constants/badge";
+import { BadgeLineEditor } from "./BadgeLineEditor";
+import BadgeSvgRenderer from "./BadgeSvgRenderer";
+import { autoScaleFontSize } from "../utils/textMeasurement";
+import { FONT_COLORS } from "../constants/colors";
+import { FONT_FAMILIES } from "../constants/fonts";
+import { loadTemplateById } from "../utils/templates";
 
 // Helper functions for normalized font size conversion
 function sizeNormToPx(sizeNorm: number, designBoxHeight: number): number {
@@ -17,10 +17,13 @@ function sizePxToNorm(sizePx: number, designBoxHeight: number): number {
   return Math.max(0.05, Math.min(0.5, sizePx / designBoxHeight));
 }
 
-function getMinMaxSizeNorm(designBoxHeight: number): { min: number; max: number } {
+function getMinMaxSizeNorm(designBoxHeight: number): {
+  min: number;
+  max: number;
+} {
   return {
     min: sizePxToNorm(BADGE_CONSTANTS.MIN_FONT_SIZE, designBoxHeight),
-    max: sizePxToNorm(BADGE_CONSTANTS.MAX_FONT_SIZE, designBoxHeight)
+    max: sizePxToNorm(BADGE_CONSTANTS.MAX_FONT_SIZE, designBoxHeight),
   };
 }
 
@@ -52,55 +55,107 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   editable = true,
 }) => {
   // Get the current template's designBox for font size calculations
-  const [designBox, setDesignBox] = React.useState({ x: 0, y: 0, width: 288, height: 96 });
-  
+  const [designBox, setDesignBox] = React.useState({
+    x: 0,
+    y: 0,
+    width: 288,
+    height: 96,
+  });
+
   React.useEffect(() => {
     if (badge.templateId) {
-      loadTemplateById(badge.templateId).then(template => {
+      loadTemplateById(badge.templateId).then((template) => {
         setDesignBox(template.designBox);
       });
     }
   }, [badge.templateId]);
 
-  const justifyMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
-  const align = justifyMap[(badge.lines[0]?.align || badge.lines[0]?.alignment || 'center') as 'left' | 'center' | 'right'];
+  const justifyMap = {
+    left: "flex-start",
+    center: "center",
+    right: "flex-end",
+  };
+  const align =
+    justifyMap[
+      (badge.lines[0]?.align || badge.lines[0]?.alignment || "center") as
+        | "left"
+        | "center"
+        | "right"
+    ];
   return (
     <div className="w-full max-w-2xl mx-auto flex flex-col gap-6">
       {/* Line formatting boxes */}
       <div className="flex flex-col gap-4">
         {badge.lines.map((line: BadgeLine, idx: number) => (
-          <div key={idx} className="rounded-lg p-4 flex flex-col gap-2 relative w-full min-w-0" style={{ backgroundColor: '#d5e0f1' }}>
-            <div className="flex w-full items-center gap-4 mb-1">
-              <label className="font-semibold text-sm">Line {idx + 1} Text</label>
-              <div className="flex gap-2 items-center">
-                <span className="font-semibold text-sm mr-1">Color:</span>
-                {FONT_COLORS.map((fc) => {
-                  const isDisabled = fc.value === badge.backgroundColor;
-                  return (
-                    <span key={fc.value} className="relative inline-block">
-                      <button
-                        className={`color-button w-5 h-5 lg:w-6 lg:h-6 ${line.color === fc.value ? 'ring-2 ring-offset-2 ' + fc.ring : ''} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        style={{ backgroundColor: fc.value }}
-                        onClick={() => onLineChange(idx, { color: fc.value })}
-                        disabled={isDisabled || !editable}
-                        title={isDisabled ? 'Cannot match background' : fc.name}
-                      />
-                      {isDisabled && (
-                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                          <svg width="14" height="14" viewBox="0 0 20 20" className="lg:w-5 lg:h-5"><line x1="3" y1="17" x2="17" y2="3" stroke="#b91c1c" strokeWidth="2.5" /></svg>
-                        </span>
-                      )}
-                    </span>
-                  );
-                })}
+          <div
+            key={idx}
+            className="rounded-lg p-4 flex flex-col gap-2 relative w-full min-w-0"
+            style={{ backgroundColor: "#d5e0f1" }}
+          >
+            <div className="flex flex-col w-full gap-2 mb-1">
+              <label className="font-semibold text-sm">
+                Line {idx + 1} Text
+              </label>
+              <div className="flex gap-1 sm:gap-2 items-center min-w-0 w-full">
+                <span className="font-semibold text-sm mr-1 sm:mr-1 flex-shrink-0">
+                  Color:
+                </span>
+                <div
+                  className="grid gap-1 sm:gap-2 items-center flex-1 min-w-0 w-full"
+                  style={{
+                    gridTemplateColumns: `repeat(${FONT_COLORS.length}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {FONT_COLORS.map((fc) => {
+                    const isDisabled = fc.value === badge.backgroundColor;
+                    return (
+                      <span
+                        key={fc.value}
+                        className="relative inline-block w-full"
+                        style={{ aspectRatio: "1" }}
+                      >
+                        <button
+                          className={`color-button w-full h-full ${
+                            line.color === fc.value
+                              ? "ring-1 ring-offset-1 sm:ring-2 sm:ring-offset-2 " +
+                                fc.ring
+                              : ""
+                          } ${
+                            isDisabled ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
+                          style={{ backgroundColor: fc.value }}
+                          onClick={() => onLineChange(idx, { color: fc.value })}
+                          disabled={isDisabled || !editable}
+                          title={
+                            isDisabled ? "Cannot match background" : fc.name
+                          }
+                        />
+                        {isDisabled && (
+                          <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                            <svg className="w-2/3 h-2/3" viewBox="0 0 20 20">
+                              <line
+                                x1="3"
+                                y1="17"
+                                x2="17"
+                                y2="3"
+                                stroke="#b91c1c"
+                                strokeWidth="2.5"
+                              />
+                            </svg>
+                          </span>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             </div>
             <input
               type="text"
               className="border rounded px-3 py-2 text-base w-full min-w-[120px]"
-              style={{ backgroundColor: '#fff' }}
+              style={{ backgroundColor: "#fff" }}
               value={line.text}
-              onChange={e => onLineChange(idx, { text: e.target.value })}
+              onChange={(e) => onLineChange(idx, { text: e.target.value })}
               placeholder={`Line ${idx + 1}`}
               disabled={!editable}
             />
@@ -112,7 +167,9 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   <select
                     className="border rounded px-2 py-1 text-sm"
                     value={line.fontFamily}
-                    onChange={e => onLineChange(idx, { fontFamily: e.target.value })}
+                    onChange={(e) =>
+                      onLineChange(idx, { fontFamily: e.target.value })
+                    }
                     disabled={!editable}
                   >
                     {FONT_FAMILIES.map((font) => (
@@ -127,9 +184,9 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   <span className="font-semibold text-sm mr-1">Format:</span>
                   <button
                     className={`control-button w-7 h-7 flex items-center justify-center transition-all ${
-                      line.bold 
-                        ? 'bg-blue-500 text-white border-blue-600 shadow-sm' 
-                        : 'bg-white hover:bg-gray-50 border-gray-300'
+                      line.bold
+                        ? "bg-blue-500 text-white border-blue-600 shadow-sm"
+                        : "bg-white hover:bg-gray-50 border-gray-300"
                     }`}
                     onClick={() => onLineChange(idx, { bold: !line.bold })}
                     title="Bold"
@@ -139,9 +196,9 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   </button>
                   <button
                     className={`control-button w-7 h-7 flex items-center justify-center transition-all ${
-                      line.italic 
-                        ? 'bg-blue-500 text-white border-blue-600 shadow-sm' 
-                        : 'bg-white hover:bg-gray-50 border-gray-300'
+                      line.italic
+                        ? "bg-blue-500 text-white border-blue-600 shadow-sm"
+                        : "bg-white hover:bg-gray-50 border-gray-300"
                     }`}
                     onClick={() => onLineChange(idx, { italic: !line.italic })}
                     title="Italic"
@@ -151,11 +208,13 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   </button>
                   <button
                     className={`control-button w-7 h-7 flex items-center justify-center transition-all ${
-                      line.underline 
-                        ? 'bg-blue-500 text-white border-blue-600 shadow-sm' 
-                        : 'bg-white hover:bg-gray-50 border-gray-300'
+                      line.underline
+                        ? "bg-blue-500 text-white border-blue-600 shadow-sm"
+                        : "bg-white hover:bg-gray-50 border-gray-300"
                     }`}
-                    onClick={() => onLineChange(idx, { underline: !line.underline })}
+                    onClick={() =>
+                      onLineChange(idx, { underline: !line.underline })
+                    }
                     title="Underline"
                     disabled={!editable}
                   >
@@ -167,44 +226,74 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   <span className="font-semibold text-sm mr-1">Align:</span>
                   <button
                     className={`control-button w-7 h-7 flex items-center justify-center p-0 transition-all ${
-                      (line.align || line.alignment) === 'left' 
-                        ? 'bg-blue-500 text-white border-blue-600 shadow-sm' 
-                        : 'bg-white hover:bg-gray-50 border-gray-300'
+                      (line.align || line.alignment) === "left"
+                        ? "bg-blue-500 text-white border-blue-600 shadow-sm"
+                        : "bg-white hover:bg-gray-50 border-gray-300"
                     }`}
-                    onClick={() => onAlignmentChange(idx, 'left')}
+                    onClick={() => onAlignmentChange(idx, "left")}
                     title="Align Left"
                     disabled={!editable}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h10M4 18h12" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2.5"
+                        d="M4 6h16M4 12h10M4 18h12"
+                      />
                     </svg>
                   </button>
                   <button
                     className={`control-button w-7 h-7 flex items-center justify-center p-0 transition-all ${
-                      (line.align || line.alignment) === 'center' 
-                        ? 'bg-blue-500 text-white border-blue-600 shadow-sm' 
-                        : 'bg-white hover:bg-gray-50 border-gray-300'
+                      (line.align || line.alignment) === "center"
+                        ? "bg-blue-500 text-white border-blue-600 shadow-sm"
+                        : "bg-white hover:bg-gray-50 border-gray-300"
                     }`}
-                    onClick={() => onAlignmentChange(idx, 'center')}
+                    onClick={() => onAlignmentChange(idx, "center")}
                     title="Align Center"
                     disabled={!editable}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M8 12h8M6 18h12" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2.5"
+                        d="M4 6h16M8 12h8M6 18h12"
+                      />
                     </svg>
                   </button>
                   <button
                     className={`control-button w-7 h-7 flex items-center justify-center p-0 transition-all ${
-                      (line.align || line.alignment) === 'right' 
-                        ? 'bg-blue-500 text-white border-blue-600 shadow-sm' 
-                        : 'bg-white hover:bg-gray-50 border-gray-300'
+                      (line.align || line.alignment) === "right"
+                        ? "bg-blue-500 text-white border-blue-600 shadow-sm"
+                        : "bg-white hover:bg-gray-50 border-gray-300"
                     }`}
-                    onClick={() => onAlignmentChange(idx, 'right')}
+                    onClick={() => onAlignmentChange(idx, "right")}
                     title="Align Right"
                     disabled={!editable}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M12 12h8M4 18h16" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2.5"
+                        d="M4 6h16M12 12h8M4 18h16"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -214,31 +303,52 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   <div className="flex items-center">
                     {(() => {
                       // Get current size in pixels for display, prefer sizeNorm if available
-                      const currentSizePx = line.sizeNorm ? sizeNormToPx(line.sizeNorm, designBox.height) : (line.size || 13);
-                      const currentSizeNorm = line.sizeNorm ?? sizePxToNorm(line.size || 13, designBox.height);
-                      const { min: minSizeNorm, max: maxSizeNorm } = getMinMaxSizeNorm(designBox.height);
-                      
+                      const currentSizePx = line.sizeNorm
+                        ? sizeNormToPx(line.sizeNorm, designBox.height)
+                        : line.size || 13;
+                      const currentSizeNorm =
+                        line.sizeNorm ??
+                        sizePxToNorm(line.size || 13, designBox.height);
+                      const { min: minSizeNorm, max: maxSizeNorm } =
+                        getMinMaxSizeNorm(designBox.height);
+
                       return (
                         <>
                           <button
                             type="button"
                             className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
                             onClick={() => {
-                              const newSizeNorm = Math.max(minSizeNorm, currentSizeNorm - 0.01);
+                              const newSizeNorm = Math.max(
+                                minSizeNorm,
+                                currentSizeNorm - 0.01
+                              );
                               onLineChange(idx, { sizeNorm: newSizeNorm });
                             }}
-                            disabled={currentSizeNorm <= minSizeNorm || !editable}
-                          >-</button>
-                          <span className="w-8 text-center text-sm">{currentSizePx}</span>
+                            disabled={
+                              currentSizeNorm <= minSizeNorm || !editable
+                            }
+                          >
+                            -
+                          </button>
+                          <span className="w-8 text-center text-sm">
+                            {currentSizePx}
+                          </span>
                           <button
                             type="button"
                             className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
                             onClick={() => {
-                              const newSizeNorm = Math.min(maxSizeNorm, currentSizeNorm + 0.01);
+                              const newSizeNorm = Math.min(
+                                maxSizeNorm,
+                                currentSizeNorm + 0.01
+                              );
                               onLineChange(idx, { sizeNorm: newSizeNorm });
                             }}
-                            disabled={currentSizeNorm >= maxSizeNorm || !editable}
-                          >+</button>
+                            disabled={
+                              currentSizeNorm >= maxSizeNorm || !editable
+                            }
+                          >
+                            +
+                          </button>
                         </>
                       );
                     })()}
@@ -253,7 +363,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 disabled={!editable}
                 title="Remove line"
               >
-                <span style={{ fontSize: 14, color: '#b91c1c' }}>X</span>
+                <span style={{ fontSize: 14, color: "#b91c1c" }}>X</span>
               </button>
             )}
           </div>
