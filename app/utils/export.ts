@@ -188,3 +188,20 @@ export async function downloadMultipleSVGs(badges: Badge[], templates: LoadedTem
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 }
+
+/**
+ * Generate SVG as a Blob (for upload, not download)
+ */
+export async function generateSVGAsBlob(badge: Badge, template: LoadedTemplate): Promise<Blob> {
+  const svg = await renderBadgeToSvgStringWithFonts(badge, template);
+  return new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+}
+
+/**
+ * Generate PNG as a Blob (for upload, not download)
+ */
+export async function generatePNGAsBlob(badge: Badge, template: LoadedTemplate, scale = 2): Promise<Blob> {
+  const dataUrl = await rasterizeToPNGDataUrl(badge, template, scale);
+  const res = await fetch(dataUrl);
+  return await res.blob();
+}

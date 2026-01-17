@@ -1,43 +1,59 @@
-import { json, type LoaderFunctionArgs } from '@remix-run/node'
-import { supabaseAdmin } from '~/utils/supabase'
+import { json, type LoaderFunctionArgs } from "@remix-run/node";
+import { supabaseAdmin } from "~/utils/supabase";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   try {
+    if (!supabaseAdmin) {
+      return json(
+        {
+          success: false,
+          error:
+            "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+          message: "Supabase configuration missing",
+        },
+        { status: 500 }
+      );
+    }
+
     // Test database connection
     const { data: designs, error: designsError } = await supabaseAdmin
-      .from('badge_designs')
-      .select('count')
-      .limit(1)
-    
+      .from("badge_designs")
+      .select("count")
+      .limit(1);
+
     // Test storage connection
-    const { data: buckets, error: bucketsError } = await supabaseAdmin.storage
-      .listBuckets()
-    
-    const badgeImagesBucket = buckets?.find(bucket => bucket.name === 'badge-images')
-    
+    const { data: buckets, error: bucketsError } =
+      await supabaseAdmin.storage.listBuckets();
+
+    const badgeImagesBucket = buckets?.find(
+      (bucket) => bucket.name === "badge-images"
+    );
+
     return json({
       success: true,
       database: {
         connected: !designsError,
         error: designsError?.message,
         tableExists: !designsError,
-        count: designs?.length || 0
+        count: designs?.length || 0,
       },
       storage: {
         connected: !bucketsError,
         error: bucketsError?.message,
-        buckets: buckets?.map(b => b.name) || [],
-        badgeImagesBucket: !!badgeImagesBucket
+        buckets: buckets?.map((b) => b.name) || [],
+        badgeImagesBucket: !!badgeImagesBucket,
       },
-      message: 'Supabase connection test completed'
-    })
-    
+      message: "Supabase connection test completed",
+    });
   } catch (error) {
-    console.error('Supabase test error:', error)
-    return json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      message: 'Failed to test Supabase connection'
-    }, { status: 500 })
+    console.error("Supabase test error:", error);
+    return json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Failed to test Supabase connection",
+      },
+      { status: 500 }
+    );
   }
-} 
+}

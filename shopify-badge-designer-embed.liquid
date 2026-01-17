@@ -1,0 +1,66 @@
+{% comment %}
+  Badge Designer Iframe Embed Snippet
+  Add this to your Shopify product page template or as a section
+  
+  Usage:
+  1. Copy this file to your theme's snippets folder
+  2. In your product template, add: {% render 'badge-designer-embed' %}
+  
+  Or add directly to product.liquid:
+{% endcomment %}
+
+{% comment %} Replace with your Vercel URL {% endcomment %}
+{% assign badge_designer_url = 'https://YOUR-VERCEL-URL.vercel.app' %}
+
+<div class="badge-designer-container" style="width: 100%; margin: 20px 0;">
+  <div style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <h2 style="margin-top: 0;">Customize Your Badge</h2>
+    
+    <iframe 
+      id="badge-designer-iframe"
+      src="{{ badge_designer_url }}?product={{ product.id }}&shop={{ shop.permanent_domain }}"
+      width="100%" 
+      height="800px" 
+      frameborder="0"
+      style="border: none; border-radius: 4px;"
+      allow="clipboard-read; clipboard-write">
+    </iframe>
+  </div>
+</div>
+
+<script>
+  // Listen for messages from the badge designer iframe
+  window.addEventListener('message', function(event) {
+    // Verify origin (replace with your Vercel URL)
+    if (event.origin !== '{{ badge_designer_url }}') {
+      return;
+    }
+    
+    const data = event.data;
+    
+    // Handle add-to-cart messages
+    if (data.action === 'add-to-cart') {
+      console.log('Add to cart received:', data.payload);
+      // The iframe will handle the cart addition via redirect
+      // But you can also handle it here if needed
+    }
+    
+    // Handle design saved messages
+    if (data.action === 'design-saved') {
+      console.log('Design saved:', data.payload);
+    }
+  });
+</script>
+
+<style>
+  .badge-designer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  @media (max-width: 768px) {
+    .badge-designer-container iframe {
+      height: 600px !important;
+    }
+  }
+</style>
