@@ -16,7 +16,10 @@ import {
   PencilIcon,
 } from "@heroicons/react/24/outline";
 
-import { generatePDFWithLayoutEngine as generatePDF } from "../utils/pdfGenerator";
+import {
+  generatePDFWithLayoutEngine as generatePDF,
+  generatePDFAsBlob,
+} from "../utils/pdfGenerator";
 import { BadgeEditPanel } from "./BadgeEditPanel";
 
 import { BadgeLine, Badge } from "../types/badge";
@@ -56,6 +59,8 @@ import {
   downloadMultiplePNGs,
   downloadMultipleCDRs,
   downloadMultipleTIFFs,
+  generateSVGAsBlob,
+  generatePNGAsBlob,
 } from "../utils/export";
 
 const INITIAL_BADGE = BADGE_CONSTANTS.INITIAL_BADGE;
@@ -217,6 +222,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [selectedBadgeIndex, setSelectedBadgeIndex] = useState<number>(0); // 0 = main badge, 1+ = CSV badges
   const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Store badge 1's data separately
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isSendingToSupabase, setIsSendingToSupabase] = useState(false);
   // UNIVERSAL TEMPLATE: Single template for all badges
   const [universalTemplateId, setUniversalTemplateId] =
     useState<string>("rect-1x3");
@@ -855,6 +861,157 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         return { ...badge, templateId: newTemplateId, lines: centeredLines };
       })
     );
+  };
+
+  // Send to Supabase - Upload PDF, SVG, PNG and save to badge_order_items
+  const sendToSupabase = async () => {
+    if (isSendingToSupabase) return;
+    setIsSendingToSupabase(true);
+
+    try {
+      // Bypass shop check for testing - will add shop connection later
+      const shopData = getCurrentShop(_shop);
+
+      // Finalize all badge states before generating files
+      let finalizedBadge1 = badge;
+      let finalizedMultipleBadges = [...multipleBadges];
+
+      if (selectedBadgeIndex === 0) {
+        finalizedBadge1 = {
+          ...badge,
+          templateId: universalTemplateId,
+          backgroundColor: badge.backgroundColor || "#FFFFFF",
+        };
+        setBadge1Data(finalizedBadge1);
+      } else {
+        finalizedBadge1 = badge1Data || {
+          ...badge,
+          templateId: universalTemplateId,
+          backgroundColor: badge.backgroundColor || "#FFFFFF",
+        };
+        const updatedMultiple = [...multipleBadges];
+        updatedMultiple[selectedBadgeIndex - 1] = {
+          ...badge,
+          templateId: universalTemplateId,
+          backgroundColor: badge.backgroundColor || "#FFFFFF",
+        };
+        finalizedMultipleBadges = updatedMultiple;
+        setMultipleBadges(updatedMultiple);
+      }
+
+      // Get the badge to export (use badge1Data if available, otherwise current badge)
+      const badgeToExport = finalizedBadge1;
+      const templateToUse = activeTemplate;
+
+      if (!templateToUse) {
+        alert("Template not loaded. Please wait and try again.");
+        return;
+      }
+
+      // Generate design ID
+      const designId = `design_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 11)}`;
+
+      // Generate files as blobs
+      console.log("Generating PDF, SVG, and PNG...");
+
+      // Generate PDF
+      const pdfBlob = await generatePDFAsBlob(
+        badgeToExport,
+        finalizedMultipleBadges.length > 0 ? finalizedMultipleBadges : undefined
+      );
+
+      // Generate SVG
+      const svgBlob = await generateSVGAsBlob(badgeToExport, templateToUse);
+
+      // Generate PNG (use scale 2 for good quality)
+      const pngBlob = await generatePNGAsBlob(badgeToExport, templateToUse, 2);
+
+      // Prepare design data (use shop data if available, otherwise use defaults for testing)
+      const designData = {
+        badge: badgeToExport,
+        multipleBadges: finalizedMultipleBadges,
+        allBadges: [badgeToExport, ...finalizedMultipleBadges],
+        timestamp: new Date().toISOString(),
+        shopId: shopData?.shopId || "test-shop",
+        productId: _productId || "test-product",
+        backgroundColor: badgeToExport.backgroundColor,
+        backingType: badgeToExport.backing,
+        textLines: badgeToExport.lines,
+      };
+
+      // Get Shopify customer ID (if available)
+      // You may need to adjust this based on how you get the customer ID
+      const shopifyCustomerId = null; // TODO: Get from shop data or session
+
+      // Upload to Supabase
+      console.log("Uploading to Supabase...");
+      const formData = new FormData();
+      formData.append("designId", designId);
+      formData.append("designData", JSON.stringify(designData));
+      if (shopifyCustomerId) {
+        formData.append("shopifyCustomerId", shopifyCustomerId);
+      }
+      formData.append("pdf", pdfBlob, "badge-design.pdf");
+      formData.append("svg", svgBlob, "badge-design.svg");
+      formData.append("png", pngBlob, "badge-design.png");
+
+      const response = await fetch("/api/send-to-supabase", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to upload to Supabase");
+      }
+
+      const result = await response.json();
+      console.log("Upload response:", result);
+
+      if (result.success) {
+        const uploadStatus = result.uploads
+          ? `PDF: ${result.uploads.pdf ? "✓" : "✗"}, SVG: ${
+              result.uploads.svg ? "✓" : "✗"
+            }, PNG: ${result.uploads.png ? "✓" : "✗"}`
+          : "";
+        alert(
+          `${result.message}\nDesign ID: ${designId}${
+            uploadStatus ? `\n${uploadStatus}` : ""
+          }`
+        );
+      } else {
+        // Show more helpful error message
+        const errorMsg = result.error || result.message || "Unknown error";
+        if (result.warning) {
+          alert(
+            `Warning: ${errorMsg}\n\nFiles were generated but could not be uploaded to Supabase.`
+          );
+        } else {
+          alert(`Failed to upload badge design to Supabase:\n${errorMsg}`);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to send to Supabase:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+
+      // Check if it's a network error
+      if (
+        errorMessage.includes("ENOTFOUND") ||
+        errorMessage.includes("fetch failed") ||
+        errorMessage.includes("Failed to fetch")
+      ) {
+        alert(
+          `Cannot connect to Supabase.\n\nPlease check:\n- Your network connection\n- Supabase configuration\n- That Supabase is accessible\n\nError: ${errorMessage}`
+        );
+      } else {
+        alert(`Failed to upload badge design to Supabase:\n${errorMessage}`);
+      }
+    } finally {
+      setIsSendingToSupabase(false);
+    }
   };
 
   // Save design - FINALIZES and locks all badge states
@@ -1672,6 +1829,20 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               }}
             >
               Save Design
+            </button>
+            <button
+              className={`px-4 py-2 rounded shadow ${
+                isSendingToSupabase
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-purple-600 hover:bg-purple-700"
+              } text-white`}
+              onClick={(e) => {
+                e.preventDefault();
+                if (!isSendingToSupabase) sendToSupabase();
+              }}
+              disabled={isSendingToSupabase}
+            >
+              {isSendingToSupabase ? "Uploading..." : "Send to Supabase"}
             </button>
             <button
               className={`px-4 py-2 rounded shadow ${
