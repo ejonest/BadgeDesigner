@@ -35,7 +35,7 @@ type AnyLine = {
 function toPx(
   line: AnyLine,
   designBox: { x: number; y: number; width: number; height: number },
-  template?: LoadedTemplate
+  template?: LoadedTemplate,
 ): { x: number; y: number } {
   // Prefer normalized coordinates (new preferred method)
   if (line.xNorm != null && line.yNorm != null) {
@@ -94,7 +94,7 @@ function measureTextPx(
   fontFamily: string,
   fontSizePx: number,
   fontWeight: string,
-  fontStyle: string
+  fontStyle: string,
 ): { width: number; height: number; ascent: number; descent: number } {
   // SSR / non-browser fallback: rough estimates
   if (typeof document === "undefined") {
@@ -141,7 +141,7 @@ function calculateTextLayout(
   lines: AnyLine[],
   designBox: { x: number; y: number; width: number; height: number },
   template: LoadedTemplate,
-  fontMappings?: Map<string, string>
+  fontMappings?: Map<string, string>,
 ): Array<{
   line: AnyLine;
   x: number;
@@ -168,8 +168,8 @@ function calculateTextLayout(
   const textAreaWidth = textAreaRight - textAreaLeft;
   const textAreaHeight = textAreaBottom - textAreaTop;
 
-  // Uniform spacing between lines (3% of design box height)
-  const UNIFORM_SPACING = designBox.height * 0.03;
+  // Uniform spacing between lines (7% of design box height)
+  const UNIFORM_SPACING = designBox.height * 0.07;
 
   // Step 1: Calculate requested sizes for all lines
   const lineData = lines.map((line, i) => {
@@ -210,7 +210,7 @@ function calculateTextLayout(
       item.familyRaw,
       item.requestedSize,
       item.fontWeight,
-      item.fontStyle
+      item.fontStyle,
     );
     return {
       ...item,
@@ -244,7 +244,7 @@ function calculateTextLayout(
       item.familyRaw,
       scaledSize,
       item.fontWeight,
-      item.fontStyle
+      item.fontStyle,
     );
 
     // Calculate available width based on alignment
@@ -262,7 +262,7 @@ function calculateTextLayout(
     const finalSize = clamp(
       item.requestedSize * finalScale,
       MIN_FONT,
-      MAX_FONT
+      MAX_FONT,
     );
 
     return {
@@ -288,8 +288,8 @@ function calculateTextLayout(
         item.familyRaw,
         clamp(item.finalSize * extraScale, MIN_FONT, MAX_FONT),
         item.fontWeight,
-        item.fontStyle
-      )
+        item.fontStyle,
+      ),
     );
 
     const totalHeight = metricsArr.reduce((sum, m, idx) => {
@@ -376,7 +376,7 @@ const FORCE_BG_SIZE_DEBUG = false;
 
 function renderBg(
   img: BadgeImage | undefined,
-  designBox: { x: number; y: number; width: number; height: number }
+  designBox: { x: number; y: number; width: number; height: number },
 ): string {
   if (!img || !img.src) {
     // No background image, return empty string (background color will be handled separately)
@@ -419,7 +419,7 @@ function renderBg(
 
 function renderLogo(
   logo: BadgeImage | undefined,
-  designBox: { x: number; y: number; width: number; height: number }
+  designBox: { x: number; y: number; width: number; height: number },
 ): string {
   if (!logo) return "";
   const lw = Math.max(1, logo.widthPx ?? Math.round(designBox.height * 0.3));
@@ -447,7 +447,7 @@ function prepareElementForOutline(
   element: string,
   fill: string,
   stroke: string,
-  strokeWidth: string
+  strokeWidth: string,
 ): string {
   if (typeof window !== "undefined" && "DOMParser" in window) {
     const parser = new DOMParser();
@@ -459,7 +459,7 @@ function prepareElementForOutline(
     // This handles both direct elements and nested structures
     doc
       .querySelectorAll(
-        "[id='Inner'], [id='inner'], path, rect, ellipse, circle, polygon, polyline"
+        "[id='Inner'], [id='inner'], path, rect, ellipse, circle, polygon, polyline",
       )
       .forEach((el) => {
         el.removeAttribute("fill");
@@ -483,14 +483,14 @@ function prepareElementForOutline(
   cleaned = cleaned.replace(/\s+stroke-width\s*=\s*["'][^"']*["']/gi, "");
   return cleaned.replace(
     /\/?>$/,
-    ` fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/>`
+    ` fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/>`,
   );
 }
 
 export function renderBadgeToSvgString(
   badge: Badge,
   template: LoadedTemplate,
-  opts: RenderOpts = {}
+  opts: RenderOpts = {},
 ): string {
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
   const PADDING_PX = 24;
@@ -512,7 +512,7 @@ export function renderBadgeToSvgString(
   // Match transform attribute with any whitespace, and capture content between tags
   // Use [\s\S] instead of . to match newlines, and /i flag for case-insensitive
   const gTransformMatch = template.innerElement.match(
-    /<g[^>]*\btransform\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/g>/i
+    /<g[^>]*\btransform\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/g>/i,
   );
 
   if (gTransformMatch && gTransformMatch[2].trim()) {
@@ -523,12 +523,12 @@ export function renderBadgeToSvgString(
     // Update fill and remove stroke from the path content (more robust regex)
     let updatedPath = pathContent.replace(
       /fill\s*=\s*["'][^"']*["']/i,
-      `fill="${badge.backgroundColor || "#FFFFFF"}"`
+      `fill="${badge.backgroundColor || "#FFFFFF"}"`,
     );
     updatedPath = updatedPath.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, "");
     updatedPath = updatedPath.replace(
       /\s+stroke-width\s*=\s*["'][^"']*["']/gi,
-      ""
+      "",
     );
 
     // Reconstruct with transform wrapper
@@ -537,15 +537,15 @@ export function renderBadgeToSvgString(
     // Direct path element - update fill and remove stroke (more robust regex)
     innerPathWithFill = template.innerElement.replace(
       /fill\s*=\s*["'][^"']*["']/i,
-      `fill="${badge.backgroundColor || "#FFFFFF"}"`
+      `fill="${badge.backgroundColor || "#FFFFFF"}"`,
     );
     innerPathWithFill = innerPathWithFill.replace(
       /\s+stroke\s*=\s*["'][^"']*["']/gi,
-      ""
+      "",
     );
     innerPathWithFill = innerPathWithFill.replace(
       /\s+stroke-width\s*=\s*["'][^"']*["']/gi,
-      ""
+      "",
     );
   }
 
@@ -591,7 +591,7 @@ export function renderBadgeToSvgString(
   const lineLayout = calculateTextLayout(
     badge.lines || [],
     designBox,
-    template
+    template,
   );
 
   // Render text elements
@@ -610,7 +610,7 @@ export function renderBadgeToSvgString(
               font-weight="${item.fontWeight}"
               font-style="${item.fontStyle}"
               text-decoration="${textDecoration}">${esc(
-        line.text || ""
+        line.text || "",
       )}</text>`;
     })
     .join("");
@@ -673,7 +673,7 @@ export function renderBadgeToSvgString(
 export async function renderBadgeToSvgStringWithFonts(
   badge: Badge,
   template: LoadedTemplate,
-  opts: RenderOpts = {}
+  opts: RenderOpts = {},
 ): Promise<string> {
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
   const PADDING_PX = 24;
@@ -746,7 +746,7 @@ export async function renderBadgeToSvgStringWithFonts(
   // Match transform attribute with any whitespace, and capture content between tags
   // Use [\s\S] instead of . to match newlines, and /i flag for case-insensitive
   const gTransformMatch = template.innerElement.match(
-    /<g[^>]*\btransform\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/g>/i
+    /<g[^>]*\btransform\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/g>/i,
   );
 
   if (gTransformMatch && gTransformMatch[2].trim()) {
@@ -757,12 +757,12 @@ export async function renderBadgeToSvgStringWithFonts(
     // Update fill and remove stroke from the path content (more robust regex)
     let updatedPath = pathContent.replace(
       /fill\s*=\s*["'][^"']*["']/i,
-      `fill="${badge.backgroundColor || "#FFFFFF"}"`
+      `fill="${badge.backgroundColor || "#FFFFFF"}"`,
     );
     updatedPath = updatedPath.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, "");
     updatedPath = updatedPath.replace(
       /\s+stroke-width\s*=\s*["'][^"']*["']/gi,
-      ""
+      "",
     );
 
     // Reconstruct with transform wrapper
@@ -771,15 +771,15 @@ export async function renderBadgeToSvgStringWithFonts(
     // Direct path element - update fill and remove stroke (more robust regex)
     innerPathWithFill = template.innerElement.replace(
       /fill\s*=\s*["'][^"']*["']/i,
-      `fill="${badge.backgroundColor || "#FFFFFF"}"`
+      `fill="${badge.backgroundColor || "#FFFFFF"}"`,
     );
     innerPathWithFill = innerPathWithFill.replace(
       /\s+stroke\s*=\s*["'][^"']*["']/gi,
-      ""
+      "",
     );
     innerPathWithFill = innerPathWithFill.replace(
       /\s+stroke-width\s*=\s*["'][^"']*["']/gi,
-      ""
+      "",
     );
   }
 
@@ -823,7 +823,7 @@ export async function renderBadgeToSvgStringWithFonts(
     badge.lines || [],
     designBox,
     template,
-    fontMappings
+    fontMappings,
   );
 
   // Render text elements
@@ -842,7 +842,7 @@ export async function renderBadgeToSvgStringWithFonts(
               font-weight="${item.fontWeight}"
               font-style="${item.fontStyle}"
               text-decoration="${textDecoration}">${esc(
-        line.text || ""
+        line.text || "",
       )}</text>`;
     })
     .join("");

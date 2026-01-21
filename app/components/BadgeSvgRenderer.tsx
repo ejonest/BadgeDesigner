@@ -3,9 +3,16 @@ import { loadTemplateById } from "~/utils/templates";
 import { renderBadgeToSvgStringWithFonts } from "~/utils/renderSvg";
 import type { LoadedTemplate } from "~/utils/templates";
 
-type Props = { badge: any; templateId: string; actualSize?: boolean; className?: string };
+type Props = {
+  badge: any;
+  templateId: string;
+  actualSize?: boolean;
+  className?: string;
+  /** When set, overrides the default 280px wrapper height. Use "100%" to fill the parent. */
+  height?: number | "100%";
+};
 
-export default function BadgeSvgRenderer({ badge, templateId, actualSize = false, className }: Props) {
+export default function BadgeSvgRenderer({ badge, templateId, actualSize = false, className, height }: Props) {
   const [svg, setSvg] = React.useState<string>("");
   const [renderKey, setRenderKey] = React.useState(0);
 
@@ -39,7 +46,7 @@ export default function BadgeSvgRenderer({ badge, templateId, actualSize = false
       key={`badge-render-${templateId}-${renderKey}`}
       className={`w-full ${className || ""}`}
       style={{ 
-        height: 280, 
+        height: height === "100%" ? "100%" : (height ?? 280), 
         display: "flex", 
         alignItems: "center", 
         justifyContent: "center",
