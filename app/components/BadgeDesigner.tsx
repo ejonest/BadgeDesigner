@@ -14,6 +14,9 @@ import {
   ArrowsRightLeftIcon,
   XMarkIcon,
   PencilIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  Squares2X2Icon,
 } from "@heroicons/react/24/outline";
 
 import {
@@ -76,6 +79,16 @@ const backgroundColors = BACKGROUND_COLORS;
 const fontColors = FONT_COLORS;
 const maxLines = BADGE_CONSTANTS.MAX_LINES;
 const badgeWidth = BADGE_CONSTANTS.BADGE_WIDTH;
+
+/** Mobile preview (top of screen): tweak these to adjust the box and badge size. */
+const MOBILE_PREVIEW = {
+  /** Vertical padding of the surrounding box (rem). Smaller = tighter top/bottom margins. */
+  boxMarginYRem: 0.5,
+  /** Horizontal padding around the badge (rem, each side). Smaller = larger badge (less space for arrows/margin). */
+  badgeMarginXRem: 1.25,
+  /** Height of the badge in vh (the "1" in 3:1). Bigger = larger badge. Width is 3× this to keep 3:1. */
+  badgeHeightVh: 20,
+} as const;
 
 // Helper functions for multi-badge exports
 const getAllBadges = (
@@ -215,6 +228,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [templateRefreshKey, setTemplateRefreshKey] = useState(0); // Force template refresh
 
   const [showCsvModal, setShowCsvModal] = useState(false);
+  const [showBadgeGridModal, setShowBadgeGridModal] = useState(false);
   const [csvText, setCsvText] = useState("");
   const [csvPreview, setCsvPreview] = useState<string[][]>([]);
   const [csvError, setCsvError] = useState("");
@@ -327,6 +341,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     return template;
   }, [templates, universalTemplateId]);
 
+  const touchStartX = React.useRef<number>(0);
+
   // Show loading state if template isn't ready yet
   if (!activeTemplate) {
     return (
@@ -368,8 +384,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     const designBoxCenterY = designBoxHeight / 2;
 
     // Fixed line spacing (in pixels) - doesn't change with font size
-    // Smaller default gap between text lines for tighter spacing
-    const FIXED_LINE_SPACING = designBoxHeight * 0.03; // 3% of badge height (very tight spacing)
+    const FIXED_LINE_SPACING = designBoxHeight * 0.07; // 7% of badge height
 
     // Calculate total height needed: sum of font sizes + fixed spacing between lines
     const totalTextHeight = lines.reduce((sum, line, index) => {
@@ -1367,15 +1382,100 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     );
   }
 
+  const totalBadges = 1 + multipleBadges.length;
+  const canGoPrev = selectedBadgeIndex > 0;
+  const canGoNext = selectedBadgeIndex < totalBadges - 1;
+
+  const getSavedBadgeFor = (i: number) =>
+    i === 0 ? badge1Data : multipleBadges[i - 1] ?? null;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (dx < -50 && canGoNext) selectBadge(selectedBadgeIndex + 1);
+    else if (dx > 50 && canGoPrev) selectBadge(selectedBadgeIndex - 1);
+  };
+
   return (
-    <div className="flex flex-col md:flex-row bg-gray-100 p-4 md:p-6 rounded-lg shadow-lg mx-auto max-w-5xl min-h-[600px]">
+    <div className="flex flex-col md:flex-row bg-gray-100 p-4 md:p-6 rounded-lg shadow-lg mx-auto max-w-5xl h-screen overflow-hidden md:h-auto md:min-h-[600px] md:overflow-visible">
+      {/* MOBILE: Header + preview fixed at top; editor scrolls below */}
+      <div className="flex-shrink-0 md:hidden flex flex-col mb-2">
+        {/* Header: title left, grid picker right */}
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex flex-col gap-1 min-w-0">
+            <h2 className="text-xl font-bold text-gray-800">
+              Customize Your Badge{" "}
+              {selectedBadgeIndex === 0 ? "1" : `${selectedBadgeIndex + 1}`}
+              {multipleBadges.length > 0 ? ` of ${totalBadges}` : ""}
+            </h2>
+            <span className="text-xl font-bold text-red-600">
+              {activeTemplate.name}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="flex-shrink-0 p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+            onClick={() => setShowBadgeGridModal(true)}
+            aria-label="View all badges"
+            title="View all badges"
+          >
+            <Squares2X2Icon className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Large preview: one badge, prev/next arrows, swipe to change. Sizing from MOBILE_PREVIEW. */}
+        <div
+          className="w-full flex items-center justify-center relative select-none bg-white/60 rounded-lg border border-gray-200 overflow-x-auto"
+          style={{
+            padding: `${MOBILE_PREVIEW.boxMarginYRem}rem ${MOBILE_PREVIEW.badgeMarginXRem}rem`,
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          {totalBadges > 1 && canGoPrev && (
+            <button
+              type="button"
+              className="absolute left-2 z-10 p-2 rounded-full bg-white/90 shadow border border-gray-200 text-gray-700 hover:bg-gray-100"
+              onClick={() => selectBadge(selectedBadgeIndex - 1)}
+              aria-label="Previous badge"
+            >
+              <ChevronLeftIcon className="w-6 h-6" />
+            </button>
+          )}
+          {totalBadges > 1 && canGoNext && (
+            <button
+              type="button"
+              className="absolute right-2 z-10 p-2 rounded-full bg-white/90 shadow border border-gray-200 text-gray-700 hover:bg-gray-100"
+              onClick={() => selectBadge(selectedBadgeIndex + 1)}
+              aria-label="Next badge"
+            >
+              <ChevronRightIcon className="w-6 h-6" />
+            </button>
+          )}
+          <div
+            className="flex flex-shrink-0 items-center justify-center"
+            style={{
+              height: `${MOBILE_PREVIEW.badgeHeightVh}vh`,
+              width: `${3 * MOBILE_PREVIEW.badgeHeightVh}vh`,
+            }}
+          >
+            <BadgeSvgRenderer
+              badge={getBadgeForPreview(selectedBadgeIndex, getSavedBadgeFor(selectedBadgeIndex)).badge}
+              templateId={getBadgeForPreview(selectedBadgeIndex, getSavedBadgeFor(selectedBadgeIndex)).templateId}
+              height="100%"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* LEFT COLUMN - Controls */}
       <div
-        className="w-full md:w-1/2 mb-4 md:mb-0 md:pr-3 overflow-y-auto"
-        style={{ maxHeight: "90vh" }}
+        className="w-full md:w-1/2 mb-4 md:mb-0 md:pr-3 overflow-y-auto flex-1 min-h-0 md:flex-initial md:min-h-0 md:max-h-[90vh]"
       >
         <div className="section-container mb-4">
-          <div className="flex justify-between items-center mb-4">
+          <div className="hidden md:flex justify-between items-center mb-4">
             <div className="flex flex-col gap-2">
               <h2 className="text-xl font-bold text-gray-800">
                 Customize Your Badge{" "}
@@ -1659,20 +1759,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </div>
           </div>
 
-          {/* Background + Preview */}
+          {/* Background Color */}
           <div className="flex flex-col items-center w-full mb-6">
-            {/* Badge Preview - Centered */}
-            <div
-              className="h-[320px] w-full flex items-center justify-center mb-4"
-              style={{
-                background: "transparent",
-                border: "none",
-                boxShadow: "none",
-              }}
-            >
-              <BadgeSvgRenderer badge={badge} templateId={activeTemplate.id} />
-            </div>
-
             {/* Background Color - Smart palette grid (columns = color families, rows = gradients) */}
             <div className="flex flex-col items-center w-full">
               <span className="font-semibold text-gray-700 mb-2">
@@ -1864,190 +1952,158 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         </div>
       </div>
 
-      {/* RIGHT COLUMN - Previews for CSV multi-badges (Desktop only - appears on right side) */}
-      <div className="hidden md:flex md:w-1/2 md:pl-3 flex-col items-center">
-        {multipleBadges.length > 0 && (
-          <>
-            <h2 className="text-xl font-bold mb-4">Badge Preview</h2>
-            <div className="flex flex-col gap-6 w-full items-center">
-              {/* First (original) */}
-              <div className="flex flex-row items-center gap-2 w-full">
-                <div className="flex flex-col items-center justify-center mr-2">
-                  <span
-                    className="text-lg font-bold mb-2"
-                    style={{ width: 32, textAlign: "center" }}
-                  >
-                    1.
-                  </span>
-                  <button
-                    className={`control-button flex items-center justify-center text-xs font-medium px-2 py-1 ${
-                      selectedBadgeIndex === 0
-                        ? "bg-blue-500 text-white border-blue-600 hover:bg-blue-600"
-                        : "bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200"
-                    }`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      selectBadge(0);
-                    }}
-                  >
-                    Edit
-                  </button>
-                </div>
-                <div
-                  className="flex flex-col items-center w-full h-[200px]"
-                  style={{ overflow: "visible" }}
-                >
-                  <BadgeSvgRenderer
-                    badge={getBadgeForPreview(0, badge1Data).badge}
-                    templateId={getBadgeForPreview(0, badge1Data).templateId}
-                  />
-                </div>
-              </div>
-
-              {/* CSV-generated badges */}
-              {multipleBadges.map((b, i) => (
-                <React.Fragment key={i}>
-                  <div className="flex flex-row items-center gap-2 w-full">
-                    <div className="flex flex-col items-center justify-center mr-2">
-                      <span
-                        className="text-lg font-bold mb-2"
-                        style={{ width: 32, textAlign: "center" }}
-                      >
-                        {i + 2}.
-                      </span>
-                      <button
-                        className={`control-button flex items-center justify-center text-xs font-medium px-2 py-1 ${
-                          selectedBadgeIndex === i + 1
-                            ? "bg-blue-500 text-white border-blue-600 hover:bg-blue-600"
-                            : "bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200"
-                        }`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          selectBadge(i + 1);
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <div className="h-2" />
-                      <button
-                        className="control-button p-1 bg-red-100 text-red-700 border-red-300 hover:bg-red-200 flex items-center justify-center"
-                        style={{ width: 28, height: 28 }}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setMultipleBadges(
-                            multipleBadges.filter((_, idx) => idx !== i)
-                          );
-                        }}
-                      >
-                        <XMarkIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div
-                      className="flex flex-col items-center w-full h-[200px]"
-                      style={{ overflow: "visible" }}
-                    >
-                      <BadgeSvgRenderer
-                        badge={getBadgeForPreview(i + 1, b).badge}
-                        templateId={getBadgeForPreview(i + 1, b).templateId}
-                      />
-                    </div>
-                  </div>
-                </React.Fragment>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* MOBILE PREVIEW - Appears below all controls on mobile */}
-      {multipleBadges.length > 0 && (
-        <div className="w-full md:hidden mt-4 flex flex-col items-center">
-          <h2 className="text-xl font-bold mb-4">Badge Preview</h2>
-          <div className="flex flex-col gap-6 w-full items-center">
-            {/* First (original) */}
-            <div className="flex flex-row items-center gap-2 w-full">
-              <div className="flex flex-col items-center justify-center mr-2">
-                <span
-                  className="text-lg font-bold mb-2"
-                  style={{ width: 32, textAlign: "center" }}
-                >
-                  1.
-                </span>
-                <button
-                  className={`control-button flex items-center justify-center text-xs font-medium px-2 py-1 ${
-                    selectedBadgeIndex === 0
-                      ? "bg-blue-500 text-white border-blue-600 hover:bg-blue-600"
-                      : "bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200"
-                  }`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    selectBadge(0);
-                  }}
-                >
-                  Edit
-                </button>
+      {/* RIGHT COLUMN - Badge preview (Desktop only). Current badge at top; rest scrollable. */}
+      <div
+        className={`hidden md:flex md:w-1/2 md:pl-3 flex-col items-center min-h-0 ${
+          multipleBadges.length > 0 ? "md:h-[90vh]" : ""
+        }`}
+      >
+        <div className="flex items-center justify-between w-full mb-4 flex-shrink-0">
+          <h2 className="text-xl font-bold">Badge Preview</h2>
+          <button
+            type="button"
+            className="p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+            onClick={() => setShowBadgeGridModal(true)}
+            aria-label="View all badges"
+            title="View all badges"
+          >
+            <Squares2X2Icon className="w-5 h-5" />
+          </button>
+        </div>
+        {multipleBadges.length === 0 ? (
+          <div
+            className="flex flex-col items-center w-full h-[200px] flex-shrink-0"
+            style={{ overflow: "visible" }}
+          >
+            <BadgeSvgRenderer
+              badge={getBadgeForPreview(0, badge1Data).badge}
+              templateId={getBadgeForPreview(0, badge1Data).templateId}
+            />
+          </div>
+        ) : (
+          <div className="flex flex-col w-full items-center gap-4 flex-1 min-h-0">
+            {/* Current badge being edited - fixed at top */}
+            <div className="flex flex-col items-center w-full flex-shrink-0">
+              <div className="text-sm font-semibold text-blue-600 mb-0.5">
+                Now editing badge {selectedBadgeIndex + 1}
               </div>
               <div
-                className="flex flex-col items-center w-full h-[200px]"
-                style={{ overflow: "visible" }}
+                className="flex flex-col items-center justify-center w-full h-[260px] border-2 border-blue-400 rounded-lg bg-blue-50/50 py-2"
+                style={{ overflow: "hidden" }}
               >
                 <BadgeSvgRenderer
-                  badge={getBadgeForPreview(0, badge1Data).badge}
-                  templateId={getBadgeForPreview(0, badge1Data).templateId}
+                  badge={getBadgeForPreview(selectedBadgeIndex, getSavedBadgeFor(selectedBadgeIndex)).badge}
+                  templateId={getBadgeForPreview(selectedBadgeIndex, getSavedBadgeFor(selectedBadgeIndex)).templateId}
+                  height="100%"
                 />
               </div>
             </div>
 
-            {/* CSV-generated badges */}
-            {multipleBadges.map((b, i) => (
-              <React.Fragment key={i}>
-                <div className="flex flex-row items-center gap-2 w-full">
-                  <div className="flex flex-col items-center justify-center mr-2">
-                    <span
-                      className="text-lg font-bold mb-2"
-                      style={{ width: 32, textAlign: "center" }}
-                    >
-                      {i + 2}.
-                    </span>
-                    <button
-                      className={`control-button flex items-center justify-center text-xs font-medium px-2 py-1 ${
-                        selectedBadgeIndex === i + 1
-                          ? "bg-blue-500 text-white border-blue-600 hover:bg-blue-600"
-                          : "bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200"
-                      }`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        selectBadge(i + 1);
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <div className="h-2" />
-                    <button
-                      className="control-button p-1 bg-red-100 text-red-700 border-red-300 hover:bg-red-200 flex items-center justify-center"
-                      style={{ width: 28, height: 28 }}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setMultipleBadges(
-                          multipleBadges.filter((_, idx) => idx !== i)
-                        );
-                      }}
-                    >
-                      <XMarkIcon className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div
-                    className="flex flex-col items-center w-full h-[200px]"
-                    style={{ overflow: "visible" }}
+            {/* Rest: scrollable list - click Edit to bring that badge to the top */}
+            <div className="flex flex-col gap-4 w-full flex-1 min-h-0 overflow-y-auto">
+              {Array.from({ length: totalBadges }, (_, i) => i)
+                .filter((i) => i !== selectedBadgeIndex)
+                .map((i) => {
+                  const saved = getSavedBadgeFor(i);
+                  const { badge: b, templateId: tid } = getBadgeForPreview(i, saved);
+                  return (
+                    <div key={i} className="flex flex-row items-center gap-2 w-full flex-shrink-0">
+                      <div className="flex flex-col items-center justify-center mr-2">
+                        <span
+                          className="text-lg font-bold mb-2"
+                          style={{ width: 32, textAlign: "center" }}
+                        >
+                          {i + 1}.
+                        </span>
+                        <button
+                          className="control-button flex items-center justify-center text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            selectBadge(i);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        {i >= 1 && (
+                          <>
+                            <div className="h-2" />
+                            <button
+                              className="control-button p-1 bg-red-100 text-red-700 border-red-300 hover:bg-red-200 flex items-center justify-center"
+                              style={{ width: 28, height: 28 }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setMultipleBadges(multipleBadges.filter((_, idx) => idx !== i - 1));
+                              }}
+                            >
+                              <XMarkIcon className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      <div
+                        className="flex flex-col items-center w-full h-[200px]"
+                        style={{ overflow: "visible" }}
+                      >
+                        <BadgeSvgRenderer badge={b} templateId={tid} />
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Badge grid picker modal (mobile + desktop) */}
+      {showBadgeGridModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
+          onClick={() => setShowBadgeGridModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Select badge to edit"
+        >
+          <div
+            className="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-bold text-gray-800">Select badge to edit</h3>
+              <button
+                type="button"
+                className="p-2 text-gray-500 hover:text-gray-700"
+                onClick={() => setShowBadgeGridModal(false)}
+                aria-label="Close"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 p-4 overflow-y-auto flex-1 min-h-0">
+              {Array.from({ length: totalBadges }, (_, i) => {
+                const { badge: b, templateId: tid } = getBadgeForPreview(i, getSavedBadgeFor(i));
+                const isSelected = selectedBadgeIndex === i;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`flex flex-col items-center p-2 rounded-lg border-2 transition-colors ${
+                      isSelected
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                    onClick={() => {
+                      selectBadge(i);
+                      setShowBadgeGridModal(false);
+                    }}
                   >
-                    <BadgeSvgRenderer
-                      badge={getBadgeForPreview(i + 1, b).badge}
-                      templateId={getBadgeForPreview(i + 1, b).templateId}
-                    />
-                  </div>
-                </div>
-              </React.Fragment>
-            ))}
+                    <span className="text-sm font-bold text-gray-700 mb-1">{i + 1}.</span>
+                    <div className="w-full flex items-center justify-center" style={{ height: 80 }}>
+                      <BadgeSvgRenderer badge={b} templateId={tid} height={80} />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
