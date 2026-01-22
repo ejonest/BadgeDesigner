@@ -27,6 +27,50 @@ function getMinMaxSizeNorm(designBoxHeight: number): {
   };
 }
 
+// Convert hex color to RGB values [r, g, b]
+function hexToRgb(hex: string): [number, number, number] {
+  const normalized = hex.trim().toLowerCase();
+  let cleanHex = normalized.startsWith('#') ? normalized.slice(1) : normalized;
+  
+  // Handle 3-digit hex
+  if (cleanHex.length === 3) {
+    cleanHex = cleanHex.split('').map(c => c + c).join('');
+  }
+  
+  if (cleanHex.length !== 6) {
+    return [0, 0, 0]; // Fallback to black
+  }
+  
+  const r = parseInt(cleanHex.slice(0, 2), 16);
+  const g = parseInt(cleanHex.slice(2, 4), 16);
+  const b = parseInt(cleanHex.slice(4, 6), 16);
+  
+  return [r, g, b];
+}
+
+// Calculate Euclidean distance between two colors in RGB space
+function colorDistance(color1: string, color2: string): number {
+  const [r1, g1, b1] = hexToRgb(color1);
+  const [r2, g2, b2] = hexToRgb(color2);
+  
+  const dr = r1 - r2;
+  const dg = g1 - g2;
+  const db = b1 - b2;
+  
+  return Math.sqrt(dr * dr + dg * dg + db * db);
+}
+
+// Check if two colors are similar (within threshold RGB units)
+function areColorsSimilar(color1: string, color2: string, threshold: number = 30): boolean {
+  return colorDistance(color1, color2) <= threshold;
+}
+
+// Check if a color is red (high red component, low green/blue)
+function isRedColor(color: string): boolean {
+  const [r, g, b] = hexToRgb(color);
+  return r > 200 && g < 100 && b < 100;
+}
+
 export interface BadgeEditorPanelProps {
   badge: Badge;
   onLineChange: (index: number, changes: Partial<BadgeLine>) => void;
@@ -39,6 +83,8 @@ export interface BadgeEditorPanelProps {
   resetButton: React.ReactNode;
   multiBadgeButton: React.ReactNode;
   editable?: boolean;
+  onOpenTextColorModal?: (lineIndex: number) => void;
+  onApplyFormattingToAll?: (lineIndex: number) => void;
 }
 
 export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
@@ -53,6 +99,8 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   resetButton,
   multiBadgeButton,
   editable = true,
+  onOpenTextColorModal,
+  onApplyFormattingToAll,
 }) => {
   // Get the current template's designBox for font size calculations
   const [designBox, setDesignBox] = React.useState({
@@ -96,34 +144,41 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
               <label className="font-semibold text-sm">
                 Line {idx + 1} Text
               </label>
-              <div className="flex gap-1 sm:gap-2 items-center min-w-0 w-full">
-                <span className="font-semibold text-sm mr-1 sm:mr-1 flex-shrink-0">
-                  Color:
-                </span>
-                <div
-                  className="grid gap-1 sm:gap-2 items-center flex-1 min-w-0 w-full"
-                  style={{
-                    gridTemplateColumns: `repeat(${FONT_COLORS.length}, minmax(0, 1fr))`,
-                  }}
-                >
-                  {FONT_COLORS.map((fc) => {
-                    const isDisabled = fc.value === badge.backgroundColor;
+              <div className="flex flex-col gap-1 min-w-0 w-full">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm">
+                    Text Color:
+                  </span>
+                  {line.color && areColorsSimilar(line.color, badge.backgroundColor, 100) && (
+                    <span className="text-xs text-red-600 font-medium">
+                      Similar colors may not show
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  {FONT_COLORS.filter(fc => fc.name !== 'Brown' && fc.name !== 'Ivory').map((fc) => {
+                    const isDisabled = areColorsSimilar(fc.value, badge.backgroundColor, 70);
+                    const isRed = isRedColor(fc.value);
                     return (
                       <span
                         key={fc.value}
-                        className="relative inline-block w-full"
-                        style={{ aspectRatio: "1" }}
+                        className="relative inline-block"
                       >
                         <button
-                          className={`color-button w-full h-full ${
-                            line.color === fc.value
-                              ? "ring-1 ring-offset-1 sm:ring-2 sm:ring-offset-2 " +
-                                fc.ring
-                              : ""
-                          } ${
-                            isDisabled ? "opacity-50 cursor-not-allowed" : ""
+                          className={`rounded border-2 transition-colors ${
+                            line.color === fc.value && !isDisabled
+                              ? "ring-2 ring-offset-1 " + fc.ring
+                              : isDisabled
+                              ? "border-gray-400 opacity-50 cursor-not-allowed"
+                              : "border-gray-300 hover:border-gray-400 cursor-pointer"
                           }`}
-                          style={{ backgroundColor: fc.value }}
+                          style={{ 
+                            backgroundColor: fc.value,
+                            width: '32px',
+                            height: '32px',
+                            minWidth: '32px',
+                            minHeight: '32px',
+                          }}
                           onClick={() => onLineChange(idx, { color: fc.value })}
                           disabled={isDisabled || !editable}
                           title={
@@ -131,15 +186,30 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                           }
                         />
                         {isDisabled && (
-                          <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                            <svg className="w-2/3 h-2/3" viewBox="0 0 20 20">
+                          <span 
+                            className="pointer-events-none absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                          >
+                            <svg 
+                              className="w-5 h-5" 
+                              viewBox="0 0 20 20"
+                            >
                               <line
                                 x1="3"
-                                y1="17"
+                                y1="3"
                                 x2="17"
-                                y2="3"
-                                stroke="#b91c1c"
+                                y2="17"
+                                stroke={isRed ? "#fbbf24" : "#b91c1c"}
                                 strokeWidth="2.5"
+                                strokeLinecap="round"
+                              />
+                              <line
+                                x1="17"
+                                y1="3"
+                                x2="3"
+                                y2="17"
+                                stroke={isRed ? "#fbbf24" : "#b91c1c"}
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
                               />
                             </svg>
                           </span>
@@ -148,6 +218,15 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                     );
                   })}
                 </div>
+                {onOpenTextColorModal && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenTextColorModal(idx)}
+                    className="text-sm text-blue-600 hover:text-blue-800 underline text-left w-fit mt-0.5"
+                  >
+                    more colors
+                  </button>
+                )}
               </div>
             </div>
             <input
@@ -356,6 +435,18 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 </div>
               </div>
             </div>
+            {onApplyFormattingToAll && (
+              <div className="mt-2 w-full">
+                <button
+                  className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
+                  onClick={() => onApplyFormattingToAll(idx)}
+                  disabled={!editable}
+                  title={`Apply formatting to all line ${idx + 1} text`}
+                >
+                  Apply format to all line {idx + 1} text
+                </button>
+              </div>
+            )}
             {showRemove && badge.lines.length > 1 && (
               <button
                 className="absolute top-2 right-2 control-button w-5 h-5 flex items-center justify-center bg-red-100 text-red-700 border-red-300 hover:bg-red-200"

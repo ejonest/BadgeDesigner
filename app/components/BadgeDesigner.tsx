@@ -1,5 +1,5 @@
 // app/components/BadgeDesigner.tsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { ArrowPathIcon } from "@heroicons/react/24/solid";
 import {
   ArrowPathIcon as ArrowPathIconOutline,
@@ -16,7 +16,12 @@ import {
   PencilIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   Squares2X2Icon,
+  Square2StackIcon,
+  SquaresPlusIcon,
+  ArrowPathRoundedSquareIcon,
 } from "@heroicons/react/24/outline";
 
 import {
@@ -24,6 +29,7 @@ import {
   generatePDFAsBlob,
 } from "../utils/pdfGenerator";
 import { BadgeEditPanel } from "./BadgeEditPanel";
+import { BadgeEditorPanel } from "./BadgeEditorPanel";
 
 import { BadgeLine, Badge } from "../types/badge";
 import {
@@ -216,6 +222,178 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   gadgetApiUrl,
   gadgetApiKey,
 }) => {
+  // Color similarity utility functions
+  const hexToRgb = (hex: string): [number, number, number] => {
+    const normalized = hex.trim().toLowerCase();
+    let cleanHex = normalized.startsWith('#') ? normalized.slice(1) : normalized;
+    
+    // Handle 3-digit hex
+    if (cleanHex.length === 3) {
+      cleanHex = cleanHex.split('').map(c => c + c).join('');
+    }
+    
+    if (cleanHex.length !== 6) {
+      return [0, 0, 0]; // Fallback to black
+    }
+    
+    const r = parseInt(cleanHex.slice(0, 2), 16);
+    const g = parseInt(cleanHex.slice(2, 4), 16);
+    const b = parseInt(cleanHex.slice(4, 6), 16);
+    
+    return [r, g, b];
+  };
+
+  const colorDistance = (color1: string, color2: string): number => {
+    const [r1, g1, b1] = hexToRgb(color1);
+    const [r2, g2, b2] = hexToRgb(color2);
+    
+    const dr = r1 - r2;
+    const dg = g1 - g2;
+    const db = b1 - b2;
+    
+    return Math.sqrt(dr * dr + dg * dg + db * db);
+  };
+
+  const areColorsSimilar = (color1: string, color2: string, threshold: number = 30): boolean => {
+    return colorDistance(color1, color2) <= threshold;
+  };
+
+  // Check if background color is similar to any existing text line colors
+  const checkBackgroundColorSimilarity = (newBackgroundColor: string): boolean => {
+    // Normalize the background color to uppercase hex format
+    const normalizedBgColor = newBackgroundColor.trim().toUpperCase();
+    const normalizedBgColorWithHash = normalizedBgColor.startsWith('#') 
+      ? normalizedBgColor 
+      : `#${normalizedBgColor}`;
+    
+    const hasSimilarColor = badge.lines.some(line => {
+      if (!line.color) return false;
+      // Normalize the text color to uppercase hex format
+      const normalizedTextColor = line.color.trim().toUpperCase();
+      const normalizedTextColorWithHash = normalizedTextColor.startsWith('#') 
+        ? normalizedTextColor 
+        : `#${normalizedTextColor}`;
+      
+      return areColorsSimilar(normalizedBgColorWithHash, normalizedTextColorWithHash, 100);
+    });
+    
+    return hasSimilarColor;
+  };
+
+  // Apply background color change (called after user confirms or if no warning needed)
+  const applyBackgroundColor = (colorValue: string) => {
+    const updatedBadge = {
+      ...badge,
+      backgroundColor: colorValue,
+    };
+    console.log(
+      `[COLOR TRACKING] Background color changed to: ${colorValue}`
+    );
+    setBadge(updatedBadge);
+    if (selectedBadgeIndex === 0) {
+      setBadge1Data(updatedBadge);
+    }
+  };
+
+  // Apply background color to all badges
+  const applyBackgroundColorToAll = () => {
+    const currentBackgroundColor = badge.backgroundColor;
+    
+    // Update current badge
+    setBadge({ ...badge, backgroundColor: currentBackgroundColor });
+    
+    // Update badge1Data
+    if (badge1Data) {
+      setBadge1Data({ ...badge1Data, backgroundColor: currentBackgroundColor });
+    }
+    
+    // Update all badges in multipleBadges
+    const updatedMultipleBadges = multipleBadges.map((b: Badge) => ({
+      ...b,
+      backgroundColor: currentBackgroundColor,
+    }));
+    setMultipleBadges(updatedMultipleBadges);
+    
+    console.log(
+      `[COLOR TRACKING] Background color ${currentBackgroundColor} applied to all badges`
+    );
+  };
+
+  // Apply all formatting (background color + all text formatting) from current badge to all badges
+  const applyAllFormattingToAll = () => {
+    const currentBackgroundColor = badge.backgroundColor;
+    const currentLines = badge.lines;
+
+    // Update current badge (ensure it's saved)
+    setBadge({ ...badge, backgroundColor: currentBackgroundColor, lines: currentLines });
+    
+    // Update badge1Data
+    if (badge1Data) {
+      // Apply background color
+      const updatedBadge1 = { ...badge1Data, backgroundColor: currentBackgroundColor };
+      
+      // Apply formatting to all lines (preserve text content)
+      const updatedBadge1Lines = badge1Data.lines.map((existingLine, lineIndex) => {
+        const sourceLine = currentLines[lineIndex];
+        if (!sourceLine) return existingLine; // If source doesn't have this line, keep existing
+        
+        // Extract only formatting properties (not text)
+        const formatting: Partial<BadgeLine> = {
+          color: sourceLine.color,
+          fontFamily: sourceLine.fontFamily,
+          bold: sourceLine.bold,
+          italic: sourceLine.italic,
+          underline: sourceLine.underline,
+          align: sourceLine.align,
+          sizeNorm: sourceLine.sizeNorm,
+          fontSize: sourceLine.fontSize,
+        };
+        
+        return { ...existingLine, ...formatting };
+      });
+      
+      setBadge1Data({ ...updatedBadge1, lines: updatedBadge1Lines });
+    }
+    
+    // Update all badges in multipleBadges
+    const updatedMultipleBadges = multipleBadges.map((b: Badge) => {
+      // Apply background color
+      const updatedBadge = { ...b, backgroundColor: currentBackgroundColor };
+      
+      // Apply formatting to all lines (preserve text content)
+      const updatedLines = b.lines.map((existingLine: BadgeLine, lineIndex: number) => {
+        const sourceLine = currentLines[lineIndex];
+        if (!sourceLine) return existingLine; // If source doesn't have this line, keep existing
+        
+        // Extract only formatting properties (not text)
+        const formatting: Partial<BadgeLine> = {
+          color: sourceLine.color,
+          fontFamily: sourceLine.fontFamily,
+          bold: sourceLine.bold,
+          italic: sourceLine.italic,
+          underline: sourceLine.underline,
+          align: sourceLine.align,
+          sizeNorm: sourceLine.sizeNorm,
+          fontSize: sourceLine.fontSize,
+        };
+        
+        return { ...existingLine, ...formatting };
+      });
+      
+      return { ...updatedBadge, lines: updatedLines };
+    });
+    setMultipleBadges(updatedMultipleBadges);
+    
+    console.log(
+      `[FORMATTING] All formatting (background color + text formatting) applied to all badges`
+    );
+  };
+
+  const isRedColor = (color: string): boolean => {
+    const [r, g, b] = hexToRgb(color);
+    return r > 200 && g < 100 && b < 100;
+  };
+
   // API
   const api = createApi(gadgetApiUrl, gadgetApiKey);
 
@@ -229,6 +407,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [showBadgeGridModal, setShowBadgeGridModal] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templateSortBy, setTemplateSortBy] = useState<'popularity' | 'size' | 'alphabetical'>('popularity');
+  const [showColorModal, setShowColorModal] = useState(false);
+  const [showTextColorModal, setShowTextColorModal] = useState(false);
+  const [textColorModalLineIndex, setTextColorModalLineIndex] = useState<number | null>(null);
+  const [customColorInput, setCustomColorInput] = useState('');
+  const [customTextColorInput, setCustomTextColorInput] = useState('');
+  const [showBackgroundColorWarning, setShowBackgroundColorWarning] = useState(false);
+  const [pendingBackgroundColor, setPendingBackgroundColor] = useState<string | null>(null);
   const [csvText, setCsvText] = useState("");
   const [csvPreview, setCsvPreview] = useState<string[][]>([]);
   const [csvError, setCsvError] = useState("");
@@ -240,6 +427,110 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   // UNIVERSAL TEMPLATE: Single template for all badges
   const [universalTemplateId, setUniversalTemplateId] =
     useState<string>("rect-1x3");
+  // Collapsible sections state - only first section (template) open by default
+  const [sectionsOpen, setSectionsOpen] = useState({
+    template: true,
+    export: false,
+    background: false,
+    textLines: false,
+  });
+  // Refs for section headers to enable scroll-into-view
+  const templateSectionRef = useRef<HTMLButtonElement | null>(null);
+  const exportSectionRef = useRef<HTMLButtonElement | null>(null);
+  const backgroundSectionRef = useRef<HTMLButtonElement | null>(null);
+  const textLinesSectionRef = useRef<HTMLButtonElement | null>(null);
+
+  // Helper function to scroll a section into view within its scrollable container
+  const scrollSectionIntoView = (element: HTMLElement | null, delay: number = 350) => {
+    if (!element) return;
+    
+    setTimeout(() => {
+      if (!element) return;
+      
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        if (!element) return;
+        
+        // Find the scrollable parent container
+        let scrollableParent = element.parentElement;
+        while (scrollableParent) {
+          const style = window.getComputedStyle(scrollableParent);
+          if (style.overflowY === 'auto' || style.overflowY === 'scroll' || 
+              style.overflow === 'auto' || style.overflow === 'scroll') {
+            break;
+          }
+          scrollableParent = scrollableParent.parentElement;
+        }
+        
+        if (scrollableParent) {
+          const containerRect = scrollableParent.getBoundingClientRect();
+          const elementRect = element.getBoundingClientRect();
+          const scrollTop = scrollableParent.scrollTop;
+          const elementTop = elementRect.top - containerRect.top + scrollTop;
+          
+          scrollableParent.scrollTo({
+            top: Math.max(0, elementTop - 20), // 20px offset from top, ensure non-negative
+            behavior: 'smooth',
+          });
+        } else {
+          // Fallback to standard scrollIntoView
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          });
+        }
+      });
+    }, delay);
+  };
+
+  // Track previous open section to determine scroll direction
+  // Initialize with 'template' since that's the default open section
+  const prevOpenSectionRef = useRef<string>('template');
+
+  // Scroll to section when it opens
+  useEffect(() => {
+    if (sectionsOpen.template && templateSectionRef.current) {
+      // If we're opening template and a section below was open, wait longer for collapse
+      const wasBelowOpen = prevOpenSectionRef.current === 'export' || 
+                          prevOpenSectionRef.current === 'background' || 
+                          prevOpenSectionRef.current === 'textLines';
+      scrollSectionIntoView(templateSectionRef.current, wasBelowOpen ? 150 : 350);
+      prevOpenSectionRef.current = 'template';
+    }
+  }, [sectionsOpen.template]);
+
+  useEffect(() => {
+    if (sectionsOpen.export && exportSectionRef.current) {
+      // If template was open above, wait longer for collapse
+      const wasAboveOpen = prevOpenSectionRef.current === 'template';
+      scrollSectionIntoView(exportSectionRef.current, wasAboveOpen ? 350 : 150);
+      prevOpenSectionRef.current = 'export';
+    }
+  }, [sectionsOpen.export]);
+
+  useEffect(() => {
+    if (sectionsOpen.background && backgroundSectionRef.current) {
+      // If template or export was open above, wait longer for collapse
+      const wasAboveOpen = prevOpenSectionRef.current === 'template' || 
+                          prevOpenSectionRef.current === 'export';
+      scrollSectionIntoView(backgroundSectionRef.current, wasAboveOpen ? 350 : 150);
+      prevOpenSectionRef.current = 'background';
+    }
+  }, [sectionsOpen.background]);
+
+  useEffect(() => {
+    if (sectionsOpen.textLines && textLinesSectionRef.current) {
+      // If any section above was open, wait longer for collapse (especially template)
+      const wasAboveOpen = prevOpenSectionRef.current === 'template' || 
+                          prevOpenSectionRef.current === 'export' || 
+                          prevOpenSectionRef.current === 'background';
+      // Template is the largest, so give it extra time
+      const delay = prevOpenSectionRef.current === 'template' ? 400 : 
+                   wasAboveOpen ? 350 : 150;
+      scrollSectionIntoView(textLinesSectionRef.current, delay);
+      prevOpenSectionRef.current = 'textLines';
+    }
+  }, [sectionsOpen.textLines]);
 
   // Load templates - refresh when templateRefreshKey changes
   useEffect(() => {
@@ -421,6 +712,55 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         xNorm: line.xNorm ?? 0.5, // Ensure xNorm exists, default to center
       };
     });
+  };
+
+  // Apply formatting from current line to all badges' corresponding lines
+  const applyFormattingToAllLines = (lineIndex: number) => {
+    const sourceLine = badge.lines[lineIndex];
+    if (!sourceLine) return;
+
+    // Extract only formatting properties (not text): size, alignment, bold, underline, italics, font, and font color
+    const formatting: Partial<BadgeLine> = {
+      color: sourceLine.color,
+      fontFamily: sourceLine.fontFamily,
+      bold: sourceLine.bold,
+      italic: sourceLine.italic,
+      underline: sourceLine.underline,
+      align: sourceLine.align,
+      sizeNorm: sourceLine.sizeNorm,
+      fontSize: sourceLine.fontSize,
+    };
+
+    // Update current badge's line
+    const currentBadgeLines = badge.lines.map((l, i) => 
+      i === lineIndex ? { ...l, ...formatting } : l
+    );
+    setBadge({ ...badge, lines: currentBadgeLines });
+
+    // Update badge1Data if it exists and is not the current badge
+    if (badge1Data && selectedBadgeIndex !== 0) {
+      const updatedBadge1Lines = badge1Data.lines.map((l, i) => 
+        i === lineIndex ? { ...l, ...formatting } : l
+      );
+      setBadge1Data({ ...badge1Data, lines: updatedBadge1Lines });
+    }
+
+    // Update all badges in multipleBadges
+    const updatedMultipleBadges = multipleBadges.map((b: Badge) => {
+      const updatedLines = b.lines.map((l: BadgeLine, i: number) => 
+        i === lineIndex ? { ...l, ...formatting } : l
+      );
+      return { ...b, lines: updatedLines };
+    });
+    setMultipleBadges(updatedMultipleBadges);
+
+    // Also update badge1Data if we're editing badge 1
+    if (selectedBadgeIndex === 0 && badge1Data) {
+      const updatedBadge1Lines = badge1Data.lines.map((l, i) => 
+        i === lineIndex ? { ...l, ...formatting } : l
+      );
+      setBadge1Data({ ...badge1Data, lines: updatedBadge1Lines });
+    }
   };
 
   // Text updates with auto-scaling to fit badge boundaries
@@ -1501,119 +1841,189 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
           {/* Template Selector - Image Swatches */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold mb-2">
-              Shape / Template
-            </label>
-            <div className="grid grid-cols-2 gap-2">
+            <button
+              ref={templateSectionRef}
+              type="button"
+              onClick={() => {
+                const willBeOpen = !sectionsOpen.template;
+                setSectionsOpen({
+                  template: willBeOpen,
+                  export: false,
+                  background: false,
+                  textLines: false,
+                });
+              }}
+              className="flex items-center justify-between w-full mb-2 text-left"
+            >
+              <label className="block text-sm font-semibold cursor-pointer">
+                Shape / Template
+              </label>
+              {sectionsOpen.template ? (
+                <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+              ) : (
+                <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
+            <div
+              className={`transition-all duration-300 overflow-hidden ${
+                sectionsOpen.template ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
+              }`}
+            >
               {templates.length === 0 ? (
                 <div className="text-sm text-gray-500">
                   Loading templates...
                 </div>
               ) : (
-                templates.map((t) => {
-                  // Map template IDs to JPG thumbnail filenames
-                  const getThumbnailFilename = (templateId: string): string => {
-                    const thumbnailMap: Record<string, string> = {
-                      "rect-1x3": "3x1-Round-Corners-Badge",
-                      "rect-1_5x3": "3x1.5-Round-Corners-Badge",
-                      "oval-1_5x3": "3x1.5-Oval-Badge",
-                      "house-1_5x3": "3x1.5-House-Badge",
-                      "square-1x3": "3x1-Badge",
-                      "square-1_5x3": "3x1.5-Badge",
-                      "designer-1x3": "3x1-Designer-Badge",
-                      "fancy-1_5x3": "3x1.5-Fancy-Badge",
+                <>
+                  {/* Helper function to get thumbnail filename */}
+                  {(() => {
+                    const getThumbnailFilename = (templateId: string): string => {
+                      const thumbnailMap: Record<string, string> = {
+                        "rect-1x3": "3x1-Round-Corners-Badge",
+                        "rect-1_5x3": "3x1.5-Round-Corners-Badge",
+                        "oval-1_5x3": "3x1.5-Oval-Badge",
+                        "house-1_5x3": "3x1.5-House-Badge",
+                        "square-1x3": "3x1-Badge",
+                        "square-1_5x3": "3x1.5-Badge",
+                        "designer-1x3": "3x1-Designer-Badge",
+                        "fancy-1_5x3": "3x1.5-Fancy-Badge",
+                      };
+                      return thumbnailMap[templateId] || templateId;
                     };
-                    return thumbnailMap[templateId] || templateId; // Fallback to templateId if not mapped
-                  };
 
-                  const thumbnailFilename = getThumbnailFilename(t.id);
-                  const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
-                  const svgPath = `/templates/${t.id}.svg`; // Fallback to SVG if JPG not found
-                  const isSelected = universalTemplateId === t.id;
+                    const renderTemplateButton = (t: LoadedTemplate) => {
+                      const thumbnailFilename = getThumbnailFilename(t.id);
+                      const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
+                      const svgPath = `/templates/${t.id}.svg`;
+                      const isSelected = universalTemplateId === t.id;
 
-                  return (
-                    <div key={t.id} className="relative">
-                      <button
-                        type="button"
-                        className={`relative rounded-lg overflow-hidden transition-all w-full border bg-white ${
-                          isSelected
-                            ? "border-blue-600 ring-2 ring-blue-300 shadow-md"
-                            : "border-gray-300 hover:border-gray-400"
-                        }`}
-                        style={{
-                          height: "140px",
-                          display: "flex",
-                          flexDirection: "column",
-                        }}
-                        onClick={() => {
-                          console.log("[UNIVERSAL] Template changed to:", t.id);
-                          handleUniversalTemplateChange(t.id);
-                        }}
-                        title={t.name}
-                      >
-                        {/* Label at top - fixed height, not obscuring the shape */}
-                        <div
-                          className={`text-[10px] text-center py-1 flex-shrink-0 ${
-                            isSelected
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-200 text-gray-700"
-                          }`}
-                        >
-                          {t.name}
-                        </div>
-
-                        {/* Image container - fills remaining space, crops white space with small padding */}
-                        <div
-                          className="flex-1 overflow-hidden flex items-center justify-center"
-                          style={{
-                            minHeight: 0,
-                            width: "100%",
-                            height: "100%",
-                            padding: "6px",
-                            boxSizing: "border-box",
-                          }}
-                        >
-                          {/* Try to load JPG thumbnail first, fallback to SVG */}
-                          <img
-                            src={thumbnailPath}
-                            alt={t.name}
-                            className="object-contain"
+                      return (
+                        <div key={t.id} className="relative">
+                          <button
+                            type="button"
+                            className={`relative rounded-lg overflow-hidden transition-all w-full border bg-white ${
+                              isSelected
+                                ? "border-blue-600 ring-2 ring-blue-300 shadow-md"
+                                : "border-gray-300 hover:border-gray-400"
+                            }`}
                             style={{
-                              maxWidth: "100%",
-                              maxHeight: "100%",
-                              width: "auto",
-                              height: "auto",
-                              objectFit: "contain",
+                              height: "140px",
+                              display: "flex",
+                              flexDirection: "column",
                             }}
-                            onError={(e) => {
-                              // Fallback to SVG if JPG doesn't exist
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = "none";
-                              const svgImg = document.createElement("img");
-                              svgImg.src = svgPath;
-                              svgImg.className = "object-contain";
-                              svgImg.style.maxWidth = "100%";
-                              svgImg.style.maxHeight = "100%";
-                              svgImg.style.width = "auto";
-                              svgImg.style.height = "auto";
-                              svgImg.style.objectFit = "contain";
-                              svgImg.alt = t.name;
-                              target.parentElement?.appendChild(svgImg);
+                            onClick={() => {
+                              console.log("[UNIVERSAL] Template changed to:", t.id);
+                              handleUniversalTemplateChange(t.id);
                             }}
-                          />
+                            title={t.name}
+                          >
+                            <div
+                              className={`text-[10px] text-center py-1 flex-shrink-0 ${
+                                isSelected
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-gray-200 text-gray-700"
+                              }`}
+                            >
+                              {t.name}
+                            </div>
+                            <div
+                              className="flex-1 overflow-hidden flex items-center justify-center"
+                              style={{
+                                minHeight: 0,
+                                width: "100%",
+                                height: "100%",
+                                padding: "6px",
+                                boxSizing: "border-box",
+                              }}
+                            >
+                              <img
+                                src={thumbnailPath}
+                                alt={t.name}
+                                className="object-contain"
+                                style={{
+                                  maxWidth: "100%",
+                                  maxHeight: "100%",
+                                  width: "auto",
+                                  height: "auto",
+                                  objectFit: "contain",
+                                }}
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = "none";
+                                  const svgImg = document.createElement("img");
+                                  svgImg.src = svgPath;
+                                  svgImg.className = "object-contain";
+                                  svgImg.style.maxWidth = "100%";
+                                  svgImg.style.maxHeight = "100%";
+                                  svgImg.style.width = "auto";
+                                  svgImg.style.height = "auto";
+                                  svgImg.style.objectFit = "contain";
+                                  svgImg.alt = t.name;
+                                  target.parentElement?.appendChild(svgImg);
+                                }}
+                              />
+                            </div>
+                          </button>
                         </div>
-                      </button>
-                    </div>
-                  );
-                })
+                      );
+                    };
+
+                    // Featured templates: Round 1x3, Round 1.5x3, Oval 1.5x3, House 1.5x3
+                    const featuredTemplateIds = ["rect-1x3", "rect-1_5x3", "oval-1_5x3", "house-1_5x3"];
+                    const featuredTemplates = featuredTemplateIds
+                      .map(id => templates.find(t => t.id === id))
+                      .filter((t): t is LoadedTemplate => t !== undefined);
+
+                    return (
+                      <>
+                        {/* 2x2 Grid of Featured Templates */}
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                          {featuredTemplates.map(renderTemplateButton)}
+                        </div>
+                        {/* More Templates Link */}
+                        <button
+                          type="button"
+                          onClick={() => setShowTemplateModal(true)}
+                          className="text-sm text-blue-600 hover:text-blue-800 underline text-right py-1"
+                        >
+                          more templates
+                        </button>
+                      </>
+                    );
+                  })()}
+                </>
               )}
             </div>
           </div>
 
           {/* Export Options */}
           <div className="mb-4">
-            <h3 className="font-semibold text-gray-700 mb-2">Export Options</h3>
-            <div className="mt-4 flex flex-wrap gap-1">
+            <button
+              ref={exportSectionRef}
+              type="button"
+              onClick={() => {
+                const willBeOpen = !sectionsOpen.export;
+                setSectionsOpen({
+                  template: false,
+                  export: willBeOpen,
+                  background: false,
+                  textLines: false,
+                });
+              }}
+              className="flex items-center justify-between w-full mb-2 text-left"
+            >
+              <h3 className="font-semibold text-gray-700">Export Options</h3>
+              {sectionsOpen.export ? (
+                <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+              ) : (
+                <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
+            <div
+              className={`mt-4 flex flex-wrap gap-1 transition-all duration-300 overflow-hidden ${
+                sectionsOpen.export ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+              }`}
+            >
               <button
                 className="px-2 py-1 text-xs border rounded"
                 onClick={async () => {
@@ -1760,106 +2170,261 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           </div>
 
           {/* Background Color */}
-          <div className="flex flex-col items-center w-full mb-6">
+          <div className="flex flex-col w-full mb-6">
             {/* Background Color - Smart palette grid (columns = color families, rows = gradients) */}
-            <div className="flex flex-col items-center w-full">
-              <span className="font-semibold text-gray-700 mb-2">
-                Background Color
-              </span>
-              <div className="grid grid-cols-9 gap-2 w-full max-w-2xl">
-                {SMART_PALETTE_COLORS.map((c) => (
-                  <button
-                    key={c.value}
-                    className={`w-7 h-7 border rounded ${
-                      badge.backgroundColor === c.value
-                        ? "ring-2 ring-offset-1 " + c.ring
-                        : ""
-                    }`}
-                    style={{ backgroundColor: c.value }}
-                    title={c.name}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      const updatedBadge = {
-                        ...badge,
-                        backgroundColor: c.value,
-                      };
-                      console.log(
-                        `[COLOR TRACKING] Background color changed to: ${c.value}`
-                      );
-                      setBadge(updatedBadge);
-                      // CRITICAL: If we're on badge 1, update badge1Data immediately
-                      if (selectedBadgeIndex === 0) {
-                        setBadge1Data(updatedBadge);
+            <div className="flex flex-col w-full">
+              <button
+                ref={backgroundSectionRef}
+                type="button"
+                onClick={() => {
+                  const willBeOpen = !sectionsOpen.background;
+                  setSectionsOpen({
+                    template: false,
+                    export: false,
+                    background: willBeOpen,
+                    textLines: false,
+                  });
+                }}
+                className="flex items-center justify-between w-full mb-2 text-left"
+              >
+                <span className="font-semibold text-gray-700">
+                  Background Color
+                </span>
+                {sectionsOpen.background ? (
+                  <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+                ) : (
+                  <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+                )}
+              </button>
+              <div
+                className={`transition-all duration-300 overflow-hidden ${
+                  sectionsOpen.background ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+                }`}
+              >
+                {/* Featured Colors: Black, White, Gold, Silver, Blue, Red */}
+                {(() => {
+                  const featuredColors = [
+                    { value: '#000000', name: 'Black', ring: 'ring-gray-900' },
+                    { value: '#FFFFFF', name: 'White', ring: 'ring-white' },
+                    { value: '#eac10c', name: 'Gold', ring: 'ring-yellow-400' },
+                    { value: '#C0C0C0', name: 'Silver', ring: 'ring-gray-300' },
+                    { value: '#0000FF', name: 'Blue', ring: 'ring-blue-500' },
+                    { value: '#FF0000', name: 'Red', ring: 'ring-red-500' },
+                  ];
+
+                  const handleColorClick = (colorValue: string) => {
+                    // Check if the new background color is similar to any text line colors
+                    if (checkBackgroundColorSimilarity(colorValue)) {
+                      setPendingBackgroundColor(colorValue);
+                      setShowBackgroundColorWarning(true);
+                    } else {
+                      applyBackgroundColor(colorValue);
+                    }
+                  };
+
+                  // Parse hex or RGB input and convert to hex
+                  const parseColorInput = (input: string): string | null => {
+                    const trimmed = input.trim();
+                    
+                    // Check if it's already a valid hex
+                    if (/^#?[0-9A-Fa-f]{6}$/.test(trimmed)) {
+                      return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+                    }
+                    
+                    // Check if it's a 3-digit hex
+                    if (/^#?[0-9A-Fa-f]{3}$/.test(trimmed)) {
+                      const hex = trimmed.startsWith('#') ? trimmed.slice(1) : trimmed;
+                      return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`;
+                    }
+                    
+                    // Check if it's RGB format: rgb(r, g, b) or r, g, b
+                    const rgbMatch = trimmed.match(/^rgb\(?\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)?$/i);
+                    if (rgbMatch) {
+                      const r = parseInt(rgbMatch[1], 10);
+                      const g = parseInt(rgbMatch[2], 10);
+                      const b = parseInt(rgbMatch[3], 10);
+                      if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+                        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
                       }
-                    }}
-                  />
-                ))}
+                    }
+                    
+                    return null;
+                  };
+
+                  return (
+                    <>
+                      <div className="grid grid-cols-3 gap-2 w-fit mb-2 ml-1.5 mt-1.5">
+                        {featuredColors.map((c) => (
+                          <button
+                            key={c.value}
+                            className={`w-12 h-12 border rounded ${
+                              badge.backgroundColor === c.value
+                                ? "ring-2 ring-offset-1 " + c.ring
+                                : ""
+                            }`}
+                            style={{ backgroundColor: c.value }}
+                            title={c.name}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleColorClick(c.value);
+                            }}
+                          />
+                        ))}
+                      </div>
+                      {/* More Colors Link */}
+                      <button
+                        type="button"
+                        onClick={() => setShowColorModal(true)}
+                        className="text-sm text-blue-600 hover:text-blue-800 underline text-left py-1 w-fit ml-1.5"
+                      >
+                        more colors
+                      </button>
+                      {/* Apply to All Button */}
+                      <div className="mt-2 ml-1.5">
+                        <button
+                          type="button"
+                          onClick={applyBackgroundColorToAll}
+                          className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
+                          title="Apply background color to all badges"
+                        >
+                          Apply background color to all badges
+                        </button>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
 
           {/* Text Lines */}
-          <BadgeEditPanel
-            badge={badge}
-            maxLines={maxLines}
-            onLineChange={updateLine}
-            onAlignmentChange={(index, alignment) => {
-              const newLines = badge.lines.map((l, i) => {
-                if (i === index) {
-                  // Set both align and alignment for compatibility
-                  // For center alignment, ensure xNorm is 0.5 for proper centering
-                  const updatedLine = {
-                    ...l,
-                    align: alignment as "left" | "center" | "right",
-                    alignment: alignment as "left" | "center" | "right",
-                  };
-                  if (alignment === "center") {
-                    updatedLine.xNorm = 0.5;
+          <div className="mb-4">
+            <button
+              ref={textLinesSectionRef}
+              type="button"
+              onClick={() => {
+                const willBeOpen = !sectionsOpen.textLines;
+                setSectionsOpen({
+                  template: false,
+                  export: false,
+                  background: false,
+                  textLines: willBeOpen,
+                });
+              }}
+              className="flex items-center justify-between w-full mb-2 text-left"
+            >
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-800">Text Lines</h3>
+                {badge.lines.some((l) => 
+                  l.color && areColorsSimilar(l.color, badge.backgroundColor, 100)
+                ) && (
+                  <span className="text-xs text-red-600 font-medium">
+                    Please check font colors
+                  </span>
+                )}
+              </div>
+              {sectionsOpen.textLines ? (
+                <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+              ) : (
+                <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
+            <div
+              className={`transition-all duration-300 overflow-hidden ${
+                sectionsOpen.textLines ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"
+              }`}
+            >
+              <div className="w-full">
+                <div className="flex items-center justify-end mb-4">
+                  <button
+                    onClick={addLine}
+                    disabled={badge.lines.length >= maxLines}
+                    className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    Add Line ({badge.lines.length}/{maxLines})
+                  </button>
+                </div>
+                <BadgeEditorPanel
+                  badge={badge}
+                  onLineChange={updateLine}
+                  onAlignmentChange={(index, alignment) => {
+                    const newLines = badge.lines.map((l, i) => {
+                      if (i === index) {
+                        // Set both align and alignment for compatibility
+                        // For center alignment, ensure xNorm is 0.5 for proper centering
+                        const updatedLine = {
+                          ...l,
+                          align: alignment as "left" | "center" | "right",
+                          alignment: alignment as "left" | "center" | "right",
+                        };
+                        if (alignment === "center") {
+                          updatedLine.xNorm = 0.5;
+                        }
+                        return updatedLine;
+                      }
+                      return l;
+                    }) as BadgeLine[];
+                    setBadge({ ...badge, lines: newLines });
+                  }}
+                  onBackgroundColorChange={(backgroundColor) =>
+                    setBadge({ ...badge, backgroundColor })
                   }
-                  return updatedLine;
-                }
-                return l;
-              }) as BadgeLine[];
-              setBadge({ ...badge, lines: newLines });
-            }}
-            onBackgroundColorChange={(backgroundColor) =>
-              setBadge({ ...badge, backgroundColor })
-            }
-            onRemoveLine={removeLine}
-            addLine={addLine}
-            showRemove={true}
-            editable={true}
-          />
+                  onRemoveLine={removeLine}
+                  showRemove={true}
+                  maxLines={maxLines}
+                  addLineButton={null}
+                  resetButton={null}
+                  multiBadgeButton={null}
+                  editable={true}
+                  onOpenTextColorModal={(lineIndex) => {
+                    setTextColorModalLineIndex(lineIndex);
+                    setShowTextColorModal(true);
+                  }}
+                  onApplyFormattingToAll={applyFormattingToAllLines}
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Actions */}
           <div className="flex justify-end items-center gap-2 mb-4">
             <button
-              className="control-button flex items-center gap-1 px-3 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400"
+              className="control-button w-10 h-10 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
               onClick={(e) => {
                 e.preventDefault();
                 resetBadge();
               }}
+              title="Reset current badge to default settings"
             >
-              <ArrowPathIcon className="w-5 h-5" />
-              Reset
+              <ArrowPathRoundedSquareIcon className="w-5 h-5" />
             </button>
 
             {multipleBadges.length > 0 && (
               <button
-                className="control-button flex items-center gap-1 px-3 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400"
+                className="control-button w-10 h-10 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
                 onClick={(e) => {
                   e.preventDefault();
                   resetAllBadges();
                 }}
+                title="Reset all badges to default settings"
               >
-                <ArrowPathIcon className="w-5 h-5" />
-                Reset All
+                <ArrowPathIconOutline className="w-5 h-5" />
               </button>
             )}
 
             <button
-              className="control-button bg-blue-500 text-white hover:bg-blue-600 px-3 py-2 text-sm"
-              style={{ minWidth: 120 }}
+              className="control-button w-10 h-10 flex items-center justify-center bg-green-500 text-white hover:bg-green-600 border border-green-600 rounded transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                applyAllFormattingToAll();
+              }}
+              title="Apply background color and all text formatting from current badge to all badges"
+            >
+              <Square2StackIcon className="w-5 h-5" />
+            </button>
+
+            <button
+              className="control-button w-10 h-10 flex items-center justify-center bg-blue-500 text-white hover:bg-blue-600 border border-blue-600 rounded transition-colors"
               onClick={(e) => {
                 e.preventDefault();
                 setCsvText("");
@@ -1867,8 +2432,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 setCsvError("");
                 setShowCsvModal(true);
               }}
+              title="Add multiple badges from CSV file or data"
             >
-              Add Multiple Badges
+              <SquaresPlusIcon className="w-5 h-5" />
             </button>
           </div>
 
@@ -2006,15 +2572,31 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 .map((i) => {
                   const saved = getSavedBadgeFor(i);
                   const { badge: b, templateId: tid } = getBadgeForPreview(i, saved);
+                  
+                  // Check if this badge has color similarity issues
+                  const hasColorIssues = b.lines.some((l: BadgeLine) => 
+                    l.color && areColorsSimilar(l.color, b.backgroundColor, 100)
+                  );
+                  
                   return (
                     <div key={i} className="flex flex-row items-center gap-2 w-full flex-shrink-0">
                       <div className="flex flex-col items-center justify-center mr-2">
-                        <span
-                          className="text-lg font-bold mb-2"
-                          style={{ width: 32, textAlign: "center" }}
-                        >
-                          {i + 1}.
-                        </span>
+                        <div className="flex items-center gap-1 mb-2" style={{ width: 32, justifyContent: "center" }}>
+                          <span className="text-lg font-bold">
+                            {i + 1}.
+                          </span>
+                          {hasColorIssues && (
+                            <div 
+                              className="relative w-4 h-4 flex items-center justify-center"
+                              title="Some text may not show well. Please check font colors"
+                            >
+                              <svg className="w-4 h-4 h-full text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                                <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                                <line x1="5" y1="5" x2="15" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
                         <button
                           className="control-button flex items-center justify-center text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200"
                           onClick={(e) => {
@@ -2082,6 +2664,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               {Array.from({ length: totalBadges }, (_, i) => {
                 const { badge: b, templateId: tid } = getBadgeForPreview(i, getSavedBadgeFor(i));
                 const isSelected = selectedBadgeIndex === i;
+                
+                // Check if this badge has color similarity issues
+                const hasColorIssues = b.lines.some((l: BadgeLine) => 
+                  l.color && areColorsSimilar(l.color, b.backgroundColor, 100)
+                );
+                
                 return (
                   <button
                     key={i}
@@ -2096,13 +2684,685 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       setShowBadgeGridModal(false);
                     }}
                   >
-                    <span className="text-sm font-bold text-gray-700 mb-1">{i + 1}.</span>
+                    <div className="flex items-center gap-1 mb-1">
+                      <span className="text-sm font-bold text-gray-700">{i + 1}.</span>
+                      {hasColorIssues && (
+                        <div 
+                          className="relative w-4 h-4 flex items-center justify-center"
+                          title="Some text may not show well. Please check font colors"
+                        >
+                          <svg className="w-4 h-4 h-full text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                            <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                            <line x1="5" y1="5" x2="15" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
                     <div className="w-full flex items-center justify-center" style={{ height: 80 }}>
                       <BadgeSvgRenderer badge={b} templateId={tid} height={80} />
                     </div>
                   </button>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template Modal - All Templates */}
+      {showTemplateModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
+          onClick={() => setShowTemplateModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Select template"
+        >
+          <div
+            className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-bold text-gray-800">Select Template</h3>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-600">Sort by:</label>
+                <select
+                  value={templateSortBy}
+                  onChange={(e) => setTemplateSortBy(e.target.value as 'popularity' | 'size' | 'alphabetical')}
+                  className="text-sm border border-gray-300 rounded px-2 py-1 bg-white"
+                >
+                  <option value="popularity">Popularity</option>
+                  <option value="size">Size(Height)</option>
+                  <option value="alphabetical">Alphabetical</option>
+                </select>
+                <button
+                  type="button"
+                  className="p-2 text-gray-500 hover:text-gray-700"
+                  onClick={() => setShowTemplateModal(false)}
+                  aria-label="Close"
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 overflow-y-auto flex-1 min-h-0">
+              {templates.length === 0 ? (
+                <div className="text-sm text-gray-500 col-span-full text-center py-4">
+                  Loading templates...
+                </div>
+              ) : (() => {
+                // Sort templates based on selected option
+                const sortedTemplates = [...templates].sort((a, b) => {
+                  if (templateSortBy === 'popularity') {
+                    // Popularity order: rect-1x3, rect-1_5x3, oval-1_5x3, house-1_5x3, square-1x3, square-1_5x3, fancy-1_5x3, designer-1x3
+                    const popularityOrder: Record<string, number> = {
+                      "rect-1x3": 1,
+                      "rect-1_5x3": 2,
+                      "oval-1_5x3": 3,
+                      "house-1_5x3": 4,
+                      "square-1x3": 5,
+                      "square-1_5x3": 6,
+                      "fancy-1_5x3": 7,
+                      "designer-1x3": 8,
+                    };
+                    const aOrder = popularityOrder[a.id] ?? 999;
+                    const bOrder = popularityOrder[b.id] ?? 999;
+                    return aOrder - bOrder;
+                  } else if (templateSortBy === 'size') {
+                    // Sort by height (heightPx)
+                    return a.heightPx - b.heightPx;
+                  } else {
+                    // Alphabetical by name
+                    return a.name.localeCompare(b.name);
+                  }
+                });
+
+                return sortedTemplates.map((t): JSX.Element => {
+                  const getThumbnailFilename = (templateId: string): string => {
+                    const thumbnailMap: Record<string, string> = {
+                      "rect-1x3": "3x1-Round-Corners-Badge",
+                      "rect-1_5x3": "3x1.5-Round-Corners-Badge",
+                      "oval-1_5x3": "3x1.5-Oval-Badge",
+                      "house-1_5x3": "3x1.5-House-Badge",
+                      "square-1x3": "3x1-Badge",
+                      "square-1_5x3": "3x1.5-Badge",
+                      "designer-1x3": "3x1-Designer-Badge",
+                      "fancy-1_5x3": "3x1.5-Fancy-Badge",
+                    };
+                    return thumbnailMap[templateId] || templateId;
+                  };
+
+                  const thumbnailFilename = getThumbnailFilename(t.id);
+                  const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
+                  const svgPath = `/templates/${t.id}.svg`;
+                  const isSelected = universalTemplateId === t.id;
+
+                  return (
+                    <div key={t.id} className="relative">
+                      <button
+                        type="button"
+                        className={`relative rounded-lg overflow-hidden transition-all w-full border bg-white ${
+                          isSelected
+                            ? "border-blue-600 ring-2 ring-blue-300 shadow-md"
+                            : "border-gray-300 hover:border-gray-400"
+                        }`}
+                        style={{
+                          height: "140px",
+                          display: "flex",
+                          flexDirection: "column",
+                        }}
+                        onClick={() => {
+                          console.log("[UNIVERSAL] Template changed to:", t.id);
+                          handleUniversalTemplateChange(t.id);
+                          setShowTemplateModal(false);
+                        }}
+                        title={t.name}
+                      >
+                        <div
+                          className={`text-[10px] text-center py-1 flex-shrink-0 ${
+                            isSelected
+                              ? "bg-blue-600 text-white"
+                              : "bg-gray-200 text-gray-700"
+                          }`}
+                        >
+                          {t.name}
+                        </div>
+                        <div
+                          className="flex-1 overflow-hidden flex items-center justify-center"
+                          style={{
+                            minHeight: 0,
+                            width: "100%",
+                            height: "100%",
+                            padding: "6px",
+                            boxSizing: "border-box",
+                          }}
+                        >
+                          <img
+                            src={thumbnailPath}
+                            alt={t.name}
+                            className="object-contain"
+                            style={{
+                              maxWidth: "100%",
+                              maxHeight: "100%",
+                              width: "auto",
+                              height: "auto",
+                              objectFit: "contain",
+                            }}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = "none";
+                              const svgImg = document.createElement("img");
+                              svgImg.src = svgPath;
+                              svgImg.className = "object-contain";
+                              svgImg.style.maxWidth = "100%";
+                              svgImg.style.maxHeight = "100%";
+                              svgImg.style.width = "auto";
+                              svgImg.style.height = "auto";
+                              svgImg.style.objectFit = "contain";
+                              svgImg.alt = t.name;
+                              target.parentElement?.appendChild(svgImg);
+                            }}
+                          />
+                        </div>
+                      </button>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Color Modal - All Colors */}
+      {showColorModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
+          onClick={() => setShowColorModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Select background color"
+        >
+          <div
+            className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+              <h3 className="text-lg font-bold text-gray-800">Select Background Color</h3>
+              <button
+                type="button"
+                className="p-2 text-gray-500 hover:text-gray-700"
+                onClick={() => setShowColorModal(false)}
+                aria-label="Close"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            {(() => {
+              // Extra row with 200-level colors (9 colors)
+              const extraRow200 = [
+                { value: '#FFFFFF', name: 'White', ring: 'ring-white' },
+                { value: '#fecaca', name: 'Red 200', ring: 'ring-red-200' },
+                { value: '#fed7aa', name: 'Orange 200', ring: 'ring-orange-200' },
+                { value: '#fef08a', name: 'Yellow 200', ring: 'ring-yellow-200' },
+                { value: '#bbf7d0', name: 'Green 200', ring: 'ring-green-200' },
+                { value: '#a5f3fc', name: 'Cyan 200', ring: 'ring-cyan-200' },
+                { value: '#bfdbfe', name: 'Blue 200', ring: 'ring-blue-200' },
+                { value: '#e9d5ff', name: 'Purple 200', ring: 'ring-purple-200' },
+                { value: '#fde68a', name: 'Amber 200', ring: 'ring-amber-200' },
+              ];
+              
+              // Desktop order: extra row + all SMART_PALETTE_COLORS (columns = color families)
+              const desktopOrder = [...extraRow200, ...SMART_PALETTE_COLORS];
+              
+              // Mobile order: TRANSPOSE so rows = color families, columns = lightness levels
+              // SMART_PALETTE_COLORS is organized as: 5 rows × 9 columns
+              // Each row is a lightness level, each column is a color family
+              // We want: 9 rows × 6 columns (each row is a color family, each column is a lightness level)
+              
+              const reorganizedForMobile: Array<{ value: string; name: string; ring: string }> = [];
+              
+              // Color families in order: Gray, Red, Orange, Yellow, Green, Cyan, Blue, Purple, Brown
+              // For each color family (column index 0-8)
+              for (let familyIndex = 0; familyIndex < 9; familyIndex++) {
+                // Get the 200-level color for this family (from extraRow200)
+                reorganizedForMobile.push(extraRow200[familyIndex]);
+                
+                // Get all lightness levels for this family from SMART_PALETTE_COLORS
+                // Each row in SMART_PALETTE_COLORS represents a lightness level
+                // We need to extract the color at position [row][familyIndex] for each row
+                for (let lightnessRow = 0; lightnessRow < 5; lightnessRow++) {
+                  const rowStart = lightnessRow * 9;
+                  const colorAtFamily = SMART_PALETTE_COLORS[rowStart + familyIndex];
+                  reorganizedForMobile.push(colorAtFamily);
+                }
+              }
+              
+              const renderColorButton = (c: { value: string; name: string; ring: string }) => (
+                <button
+                  key={c.value}
+                  className={`w-8 h-8 md:w-12 md:h-12 border rounded transition-all ${
+                    badge.backgroundColor === c.value
+                      ? "ring-2 ring-offset-1 " + c.ring + " scale-110"
+                      : "hover:scale-105"
+                  }`}
+                  style={{ backgroundColor: c.value }}
+                  title={c.name}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Check if the new background color is similar to any text line colors
+                    if (checkBackgroundColorSimilarity(c.value)) {
+                      setPendingBackgroundColor(c.value);
+                      setShowBackgroundColorWarning(true);
+                      setShowColorModal(false);
+                    } else {
+                      applyBackgroundColor(c.value);
+                      setShowColorModal(false);
+                    }
+                  }}
+                />
+              );
+              
+              return (
+                <>
+                  {/* Mobile: 6 columns, transposed order (rows = color families, columns = lightness levels) */}
+                  <div className="grid grid-cols-6 gap-1.5 p-3 overflow-y-auto flex-1 min-h-0 overflow-x-hidden md:hidden">
+                    {reorganizedForMobile.map(renderColorButton)}
+                  </div>
+                  {/* Desktop: 9 columns, original order (columns = color families, rows = lightness levels) */}
+                  <div className="hidden md:grid grid-cols-9 gap-3 p-4 overflow-y-auto flex-1 min-h-0 overflow-x-hidden">
+                    {desktopOrder.map(renderColorButton)}
+                  </div>
+                </>
+              );
+            })()}
+            {/* Custom Color Input */}
+            <div className="border-t p-3 md:p-4 flex-shrink-0">
+              {(() => {
+                // Parse hex or RGB input and convert to hex
+                const parseColorInput = (input: string): string | null => {
+                  const trimmed = input.trim();
+                  
+                  // Check if it's already a valid hex
+                  if (/^#?[0-9A-Fa-f]{6}$/.test(trimmed)) {
+                    return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+                  }
+                  
+                  // Check if it's a 3-digit hex
+                  if (/^#?[0-9A-Fa-f]{3}$/.test(trimmed)) {
+                    const hex = trimmed.startsWith('#') ? trimmed.slice(1) : trimmed;
+                    return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`;
+                  }
+                  
+                  // Check if it's RGB format: rgb(r, g, b) or r, g, b
+                  const rgbMatch = trimmed.match(/^rgb\(?\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)?$/i);
+                  if (rgbMatch) {
+                    const r = parseInt(rgbMatch[1], 10);
+                    const g = parseInt(rgbMatch[2], 10);
+                    const b = parseInt(rgbMatch[3], 10);
+                    if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+                      return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+                    }
+                  }
+                  
+                  return null;
+                };
+
+                const previewColor = parseColorInput(customColorInput);
+                const isValidColor = previewColor !== null;
+
+                const handleApplyCustomColor = () => {
+                  if (previewColor) {
+                    // Check if the new background color is similar to any text line colors
+                    if (checkBackgroundColorSimilarity(previewColor)) {
+                      setPendingBackgroundColor(previewColor);
+                      setShowBackgroundColorWarning(true);
+                      setShowColorModal(false);
+                      setCustomColorInput('');
+                    } else {
+                      applyBackgroundColor(previewColor);
+                      setShowColorModal(false);
+                      setCustomColorInput('');
+                    }
+                  }
+                };
+
+                return (
+                  <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-3">
+                    <label className="text-sm font-medium text-gray-700 md:flex-shrink-0">Custom Color:</label>
+                    <div className="flex items-center gap-2 border border-gray-300 rounded px-2 py-1 bg-white flex-1 min-w-0">
+                      <div
+                        className="w-6 h-6 md:w-8 md:h-8 border border-gray-300 rounded flex-shrink-0"
+                        style={{ 
+                          backgroundColor: isValidColor ? previewColor : '#f3f4f6',
+                        }}
+                        title={isValidColor ? previewColor : 'Invalid color'}
+                      />
+                      <input
+                        type="text"
+                        value={customColorInput}
+                        onChange={(e) => setCustomColorInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && isValidColor) {
+                            handleApplyCustomColor();
+                          }
+                        }}
+                        placeholder="Hex #xxxxxx or RGB (r, g, b)"
+                        className="text-sm flex-1 min-w-0 border-0 outline-0 focus:outline-0"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleApplyCustomColor}
+                      disabled={!isValidColor}
+                      className={`px-4 py-2 text-sm rounded transition-colors flex-shrink-0 ${
+                        isValidColor
+                          ? 'bg-blue-500 text-white hover:bg-blue-600'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      Apply
+                    </button>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Text Color Modal - All Colors */}
+      {showTextColorModal && textColorModalLineIndex !== null && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
+          onClick={() => {
+            setShowTextColorModal(false);
+            setTextColorModalLineIndex(null);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Select text color"
+        >
+          <div
+            className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+              <h3 className="text-lg font-bold text-gray-800">Select Text Color for Line {textColorModalLineIndex + 1}</h3>
+              <button
+                type="button"
+                className="p-2 text-gray-500 hover:text-gray-700"
+                onClick={() => {
+                  setShowTextColorModal(false);
+                  setTextColorModalLineIndex(null);
+                }}
+                aria-label="Close"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            {(() => {
+              // Extra row with 200-level colors (9 colors)
+              const extraRow200 = [
+                { value: '#FFFFFF', name: 'White', ring: 'ring-white' },
+                { value: '#fecaca', name: 'Red 200', ring: 'ring-red-200' },
+                { value: '#fed7aa', name: 'Orange 200', ring: 'ring-orange-200' },
+                { value: '#fef08a', name: 'Yellow 200', ring: 'ring-yellow-200' },
+                { value: '#bbf7d0', name: 'Green 200', ring: 'ring-green-200' },
+                { value: '#a5f3fc', name: 'Cyan 200', ring: 'ring-cyan-200' },
+                { value: '#bfdbfe', name: 'Blue 200', ring: 'ring-blue-200' },
+                { value: '#e9d5ff', name: 'Purple 200', ring: 'ring-purple-200' },
+                { value: '#fde68a', name: 'Amber 200', ring: 'ring-amber-200' },
+              ];
+              
+              // Desktop order: extra row + all SMART_PALETTE_COLORS (columns = color families)
+              const desktopOrder = [...extraRow200, ...SMART_PALETTE_COLORS];
+              
+              // Mobile order: TRANSPOSE so rows = color families, columns = lightness levels
+              const reorganizedForMobile: Array<{ value: string; name: string; ring: string }> = [];
+              
+              // For each color family (column index 0-8)
+              for (let familyIndex = 0; familyIndex < 9; familyIndex++) {
+                // Get the 200-level color for this family (from extraRow200)
+                reorganizedForMobile.push(extraRow200[familyIndex]);
+                
+                // Get all lightness levels for this family from SMART_PALETTE_COLORS
+                for (let lightnessRow = 0; lightnessRow < 5; lightnessRow++) {
+                  const rowStart = lightnessRow * 9;
+                  const colorAtFamily = SMART_PALETTE_COLORS[rowStart + familyIndex];
+                  reorganizedForMobile.push(colorAtFamily);
+                }
+              }
+              
+              const currentLine = badge.lines[textColorModalLineIndex];
+              const currentColor = currentLine?.color || '#000000';
+              
+              const renderColorButton = (c: { value: string; name: string; ring: string }) => {
+                const isDisabled = areColorsSimilar(c.value, badge.backgroundColor, 100);
+                const isRed = isRedColor(c.value);
+                
+                return (
+                  <span
+                    key={c.value}
+                    className="relative inline-block"
+                  >
+                    <button
+                      className={`border-2 rounded transition-all ${
+                        currentColor === c.value && !isDisabled
+                          ? "ring-2 ring-offset-1 " + c.ring + " scale-110"
+                          : isDisabled
+                          ? "border-gray-400 opacity-50 cursor-not-allowed"
+                          : "border-gray-300 hover:border-gray-400 hover:scale-105 cursor-pointer"
+                      }`}
+                      style={{ 
+                        backgroundColor: c.value,
+                        width: '32px',
+                        height: '32px',
+                        minWidth: '32px',
+                        minHeight: '32px',
+                      }}
+                      title={isDisabled ? "Too similar to background color" : c.name}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (!isDisabled) {
+                          updateLine(textColorModalLineIndex, { color: c.value });
+                          setShowTextColorModal(false);
+                          setTextColorModalLineIndex(null);
+                        }
+                      }}
+                      disabled={isDisabled}
+                    />
+                    {isDisabled && (
+                      <span 
+                        className="pointer-events-none absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                      >
+                        <svg 
+                          className="w-5 h-5 md:w-7 md:h-7" 
+                          viewBox="0 0 20 20"
+                        >
+                          <line
+                            x1="3"
+                            y1="3"
+                            x2="17"
+                            y2="17"
+                            stroke={isRed ? "#fbbf24" : "#b91c1c"}
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                          />
+                          <line
+                            x1="17"
+                            y1="3"
+                            x2="3"
+                            y2="17"
+                            stroke={isRed ? "#fbbf24" : "#b91c1c"}
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </span>
+                    )}
+                  </span>
+                );
+              };
+              
+              return (
+                <>
+                  {/* Mobile: 6 columns, transposed order (rows = color families, columns = lightness levels) */}
+                  <div className="flex flex-wrap gap-1.5 p-3 overflow-y-auto flex-1 min-h-0 overflow-x-hidden md:hidden">
+                    {reorganizedForMobile.map(renderColorButton)}
+                  </div>
+                  {/* Desktop: 9 columns, original order (columns = color families, rows = lightness levels) */}
+                  <div className="hidden md:flex md:flex-wrap md:gap-2 p-4 overflow-y-auto flex-1 min-h-0 overflow-x-hidden">
+                    {desktopOrder.map(renderColorButton)}
+                  </div>
+                </>
+              );
+            })()}
+            {/* Custom Text Color Input */}
+            <div className="border-t p-3 md:p-4 flex-shrink-0">
+              {(() => {
+                // Parse hex or RGB input and convert to hex
+                const parseColorInput = (input: string): string | null => {
+                  const trimmed = input.trim();
+                  
+                  // Check if it's already a valid hex
+                  if (/^#?[0-9A-Fa-f]{6}$/.test(trimmed)) {
+                    return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+                  }
+                  
+                  // Check if it's a 3-digit hex
+                  if (/^#?[0-9A-Fa-f]{3}$/.test(trimmed)) {
+                    const hex = trimmed.startsWith('#') ? trimmed.slice(1) : trimmed;
+                    return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`;
+                  }
+                  
+                  // Check if it's RGB format: rgb(r, g, b) or r, g, b
+                  const rgbMatch = trimmed.match(/^rgb\(?\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)?$/i);
+                  if (rgbMatch) {
+                    const r = parseInt(rgbMatch[1], 10);
+                    const g = parseInt(rgbMatch[2], 10);
+                    const b = parseInt(rgbMatch[3], 10);
+                    if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+                      return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+                    }
+                  }
+                  
+                  return null;
+                };
+
+                const previewColor = parseColorInput(customTextColorInput);
+                const isValidColor = previewColor !== null;
+
+                const handleApplyCustomTextColor = () => {
+                  if (previewColor && textColorModalLineIndex !== null) {
+                    updateLine(textColorModalLineIndex, { color: previewColor });
+                    setShowTextColorModal(false);
+                    setTextColorModalLineIndex(null);
+                    setCustomTextColorInput('');
+                  }
+                };
+
+                return (
+                  <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-3">
+                    <label className="text-sm font-medium text-gray-700 md:flex-shrink-0">Custom Color:</label>
+                    <div className="flex items-center gap-2 border border-gray-300 rounded px-2 py-1 bg-white flex-1 min-w-0">
+                      <div
+                        className="w-6 h-6 md:w-8 md:h-8 border border-gray-300 rounded flex-shrink-0"
+                        style={{ 
+                          backgroundColor: isValidColor ? previewColor : '#f3f4f6',
+                        }}
+                        title={isValidColor ? previewColor : 'Invalid color'}
+                      />
+                      <input
+                        type="text"
+                        value={customTextColorInput}
+                        onChange={(e) => setCustomTextColorInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && isValidColor) {
+                            handleApplyCustomTextColor();
+                          }
+                        }}
+                        placeholder="Hex #xxxxxx or RGB (r, g, b)"
+                        className="text-sm flex-1 min-w-0 border-0 outline-0 focus:outline-0"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleApplyCustomTextColor}
+                      disabled={!isValidColor}
+                      className={`px-4 py-2 text-sm rounded transition-colors flex-shrink-0 ${
+                        isValidColor
+                          ? 'bg-blue-500 text-white hover:bg-blue-600'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      Apply
+                    </button>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Background Color Warning Modal */}
+      {showBackgroundColorWarning && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
+          onClick={() => {
+            setShowBackgroundColorWarning(false);
+            setPendingBackgroundColor(null);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Background color warning"
+        >
+          <div
+            className="bg-white rounded-lg shadow-lg w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800">Color Similarity Warning</h3>
+              <button
+                type="button"
+                className="p-2 text-gray-500 hover:text-gray-700"
+                onClick={() => {
+                  setShowBackgroundColorWarning(false);
+                  setPendingBackgroundColor(null);
+                }}
+                aria-label="Close"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Some text may not show well with this background color. Consider picking a new background or text color.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+                onClick={() => {
+                  setShowBackgroundColorWarning(false);
+                  setPendingBackgroundColor(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded hover:bg-blue-600 transition-colors"
+                onClick={() => {
+                  if (pendingBackgroundColor) {
+                    applyBackgroundColor(pendingBackgroundColor);
+                  }
+                  setShowBackgroundColorWarning(false);
+                  setPendingBackgroundColor(null);
+                }}
+              >
+                Continue Anyway
+              </button>
             </div>
           </div>
         </div>
