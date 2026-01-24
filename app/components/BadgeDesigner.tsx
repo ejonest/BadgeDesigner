@@ -22,6 +22,7 @@ import {
   Square2StackIcon,
   SquaresPlusIcon,
   ArrowPathRoundedSquareIcon,
+  CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 
 import {
@@ -97,10 +98,7 @@ const MOBILE_PREVIEW = {
 } as const;
 
 // Helper functions for multi-badge exports
-const getAllBadges = (
-  badge1Data: Badge | null,
-  multipleBadges: Badge[]
-): Badge[] => {
+const getAllBadges = (multipleBadges: Badge[]): Badge[] => {
   // Ensure all badges have IDs and templateIds
   const ensureBadgeIds = (b: Badge, index: number): Badge => ({
     ...b,
@@ -108,24 +106,12 @@ const getAllBadges = (
     templateId: b.templateId || "rect-1x3",
   });
 
-  // Use saved badge1Data instead of current main preview
-  const savedBadge1 = badge1Data || {
-    id: "badge-1",
-    templateId: "rect-1x3",
-    lines: [],
-    backgroundColor: "#FFFFFF",
-    backing: "pin" as const,
-  };
-  return [
-    ensureBadgeIds(savedBadge1, 0),
-    ...multipleBadges.map((b, i) => ensureBadgeIds(b, i + 1)),
-  ];
+  return multipleBadges.map((b, i) => ensureBadgeIds(b, i));
 };
 
 const getAllTemplates = (
-  badge1Data: Badge | null,
   multipleBadges: Badge[],
-  templates: LoadedTemplate[]
+  templates: LoadedTemplate[],
 ): LoadedTemplate[] => {
   // UNIVERSAL TEMPLATE: All badges use the same template
   const universalTemplate = templates[0] || {
@@ -139,9 +125,7 @@ const getAllTemplates = (
   };
 
   // Return the same template for all badges
-  return Array(getAllBadges(badge1Data, multipleBadges).length).fill(
-    universalTemplate
-  );
+  return Array(multipleBadges.length).fill(universalTemplate);
 };
 const badgeHeight = BADGE_CONSTANTS.BADGE_HEIGHT;
 const MIN_FONT_SIZE = BADGE_CONSTANTS.MIN_FONT_SIZE;
@@ -151,7 +135,7 @@ const LINE_HEIGHT_MULTIPLIER = 1.3;
 function remapLinesForNewDesignBox(
   lines: BadgeLine[],
   oldDesignBox: { x: number; y: number; width: number; height: number } | null,
-  newDesignBox: { x: number; y: number; width: number; height: number }
+  newDesignBox: { x: number; y: number; width: number; height: number },
 ): BadgeLine[] {
   // If no old design box, keep lines as-is (they should already be normalized)
   if (!oldDesignBox) {
@@ -225,59 +209,136 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   // Color similarity utility functions
   const hexToRgb = (hex: string): [number, number, number] => {
     const normalized = hex.trim().toLowerCase();
-    let cleanHex = normalized.startsWith('#') ? normalized.slice(1) : normalized;
-    
+    let cleanHex = normalized.startsWith("#")
+      ? normalized.slice(1)
+      : normalized;
+
     // Handle 3-digit hex
     if (cleanHex.length === 3) {
-      cleanHex = cleanHex.split('').map(c => c + c).join('');
+      cleanHex = cleanHex
+        .split("")
+        .map((c) => c + c)
+        .join("");
     }
-    
+
     if (cleanHex.length !== 6) {
       return [0, 0, 0]; // Fallback to black
     }
-    
+
     const r = parseInt(cleanHex.slice(0, 2), 16);
     const g = parseInt(cleanHex.slice(2, 4), 16);
     const b = parseInt(cleanHex.slice(4, 6), 16);
-    
+
     return [r, g, b];
   };
 
+  // Calculate Euclidean distance between two colors in RGB space
   const colorDistance = (color1: string, color2: string): number => {
     const [r1, g1, b1] = hexToRgb(color1);
     const [r2, g2, b2] = hexToRgb(color2);
-    
+
     const dr = r1 - r2;
     const dg = g1 - g2;
     const db = b1 - b2;
-    
+
     return Math.sqrt(dr * dr + dg * dg + db * db);
   };
 
-  const areColorsSimilar = (color1: string, color2: string, threshold: number = 30): boolean => {
+  // Check if two colors are similar (within threshold RGB units)
+  const areColorsSimilar = (
+    color1: string,
+    color2: string,
+    threshold: number = 70,
+  ): boolean => {
     return colorDistance(color1, color2) <= threshold;
   };
 
   // Check if background color is similar to any existing text line colors
-  const checkBackgroundColorSimilarity = (newBackgroundColor: string): boolean => {
+  const checkBackgroundColorSimilarity = (
+    newBackgroundColor: string,
+  ): boolean => {
     // Normalize the background color to uppercase hex format
     const normalizedBgColor = newBackgroundColor.trim().toUpperCase();
-    const normalizedBgColorWithHash = normalizedBgColor.startsWith('#') 
-      ? normalizedBgColor 
+    const normalizedBgColorWithHash = normalizedBgColor.startsWith("#")
+      ? normalizedBgColor
       : `#${normalizedBgColor}`;
-    
-    const hasSimilarColor = badge.lines.some(line => {
+
+    const hasSimilarColor = badge.lines.some((line) => {
       if (!line.color) return false;
       // Normalize the text color to uppercase hex format
       const normalizedTextColor = line.color.trim().toUpperCase();
-      const normalizedTextColorWithHash = normalizedTextColor.startsWith('#') 
-        ? normalizedTextColor 
+      const normalizedTextColorWithHash = normalizedTextColor.startsWith("#")
+        ? normalizedTextColor
         : `#${normalizedTextColor}`;
-      
-      return areColorsSimilar(normalizedBgColorWithHash, normalizedTextColorWithHash, 100);
+
+      return areColorsSimilar(
+        normalizedBgColorWithHash,
+        normalizedTextColorWithHash,
+        70,
+      );
     });
-    
+
     return hasSimilarColor;
+  };
+
+  // Check if current badge has similar colors (for Supabase warning)
+  const checkCurrentBadgeColorSimilarity = (): boolean => {
+    // Check main badge
+    if (badge.backgroundColor) {
+      const normalizedBgColor = badge.backgroundColor.trim().toUpperCase();
+      const normalizedBgColorWithHash = normalizedBgColor.startsWith("#")
+        ? normalizedBgColor
+        : `#${normalizedBgColor}`;
+
+      const hasSimilarColor = badge.lines.some((line) => {
+        if (!line.color) return false;
+        const normalizedTextColor = line.color.trim().toUpperCase();
+        const normalizedTextColorWithHash = normalizedTextColor.startsWith("#")
+          ? normalizedTextColor
+          : `#${normalizedTextColor}`;
+
+        return areColorsSimilar(
+          normalizedBgColorWithHash,
+          normalizedTextColorWithHash,
+          70,
+        );
+      });
+
+      if (hasSimilarColor) return true;
+    }
+
+    // Check multiple badges if they exist
+    if (multipleBadges.length > 1) {
+      const allBadges = getAllBadges(multipleBadges);
+      for (const b of allBadges) {
+        if (b.backgroundColor) {
+          const normalizedBgColor = b.backgroundColor.trim().toUpperCase();
+          const normalizedBgColorWithHash = normalizedBgColor.startsWith("#")
+            ? normalizedBgColor
+            : `#${normalizedBgColor}`;
+
+          const hasSimilarColor = b.lines.some((line) => {
+            if (!line.color) return false;
+            const normalizedTextColor = line.color.trim().toUpperCase();
+            const normalizedTextColorWithHash = normalizedTextColor.startsWith(
+              "#",
+            )
+              ? normalizedTextColor
+              : `#${normalizedTextColor}`;
+
+            return areColorsSimilar(
+              normalizedBgColorWithHash,
+              normalizedTextColorWithHash,
+              70,
+            );
+          });
+
+          if (hasSimilarColor) return true;
+        }
+      }
+    }
+
+    return false;
   };
 
   // Apply background color change (called after user confirms or if no warning needed)
@@ -286,10 +347,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       ...badge,
       backgroundColor: colorValue,
     };
-    console.log(
-      `[COLOR TRACKING] Background color changed to: ${colorValue}`
-    );
+    console.log(`[COLOR TRACKING] Background color changed to: ${colorValue}`);
     setBadge(updatedBadge);
+
+    // Update the badge in multipleBadges array
+    const updatedMultipleBadges = [...multipleBadges];
+    if (updatedMultipleBadges[selectedBadgeIndex]) {
+      updatedMultipleBadges[selectedBadgeIndex] = updatedBadge;
+      setMultipleBadges(updatedMultipleBadges);
+    }
+
+    // Sync badge1Data if editing the first badge
     if (selectedBadgeIndex === 0) {
       setBadge1Data(updatedBadge);
     }
@@ -298,24 +366,24 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   // Apply background color to all badges
   const applyBackgroundColorToAll = () => {
     const currentBackgroundColor = badge.backgroundColor;
-    
+
     // Update current badge
     setBadge({ ...badge, backgroundColor: currentBackgroundColor });
-    
-    // Update badge1Data
-    if (badge1Data) {
-      setBadge1Data({ ...badge1Data, backgroundColor: currentBackgroundColor });
-    }
-    
+
     // Update all badges in multipleBadges
     const updatedMultipleBadges = multipleBadges.map((b: Badge) => ({
       ...b,
       backgroundColor: currentBackgroundColor,
     }));
     setMultipleBadges(updatedMultipleBadges);
-    
+
+    // Sync badge1Data with the first badge
+    if (updatedMultipleBadges[0]) {
+      setBadge1Data(updatedMultipleBadges[0]);
+    }
+
     console.log(
-      `[COLOR TRACKING] Background color ${currentBackgroundColor} applied to all badges`
+      `[COLOR TRACKING] Background color ${currentBackgroundColor} applied to all badges`,
     );
   };
 
@@ -325,67 +393,52 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     const currentLines = badge.lines;
 
     // Update current badge (ensure it's saved)
-    setBadge({ ...badge, backgroundColor: currentBackgroundColor, lines: currentLines });
-    
-    // Update badge1Data
-    if (badge1Data) {
-      // Apply background color
-      const updatedBadge1 = { ...badge1Data, backgroundColor: currentBackgroundColor };
-      
-      // Apply formatting to all lines (preserve text content)
-      const updatedBadge1Lines = badge1Data.lines.map((existingLine, lineIndex) => {
-        const sourceLine = currentLines[lineIndex];
-        if (!sourceLine) return existingLine; // If source doesn't have this line, keep existing
-        
-        // Extract only formatting properties (not text)
-        const formatting: Partial<BadgeLine> = {
-          color: sourceLine.color,
-          fontFamily: sourceLine.fontFamily,
-          bold: sourceLine.bold,
-          italic: sourceLine.italic,
-          underline: sourceLine.underline,
-          align: sourceLine.align,
-          sizeNorm: sourceLine.sizeNorm,
-          fontSize: sourceLine.fontSize,
-        };
-        
-        return { ...existingLine, ...formatting };
-      });
-      
-      setBadge1Data({ ...updatedBadge1, lines: updatedBadge1Lines });
-    }
-    
+    setBadge({
+      ...badge,
+      backgroundColor: currentBackgroundColor,
+      lines: currentLines,
+    });
+
+    // Sync badge1Data with the first badge after updating
+
     // Update all badges in multipleBadges
     const updatedMultipleBadges = multipleBadges.map((b: Badge) => {
       // Apply background color
       const updatedBadge = { ...b, backgroundColor: currentBackgroundColor };
-      
+
       // Apply formatting to all lines (preserve text content)
-      const updatedLines = b.lines.map((existingLine: BadgeLine, lineIndex: number) => {
-        const sourceLine = currentLines[lineIndex];
-        if (!sourceLine) return existingLine; // If source doesn't have this line, keep existing
-        
-        // Extract only formatting properties (not text)
-        const formatting: Partial<BadgeLine> = {
-          color: sourceLine.color,
-          fontFamily: sourceLine.fontFamily,
-          bold: sourceLine.bold,
-          italic: sourceLine.italic,
-          underline: sourceLine.underline,
-          align: sourceLine.align,
-          sizeNorm: sourceLine.sizeNorm,
-          fontSize: sourceLine.fontSize,
-        };
-        
-        return { ...existingLine, ...formatting };
-      });
-      
+      const updatedLines = b.lines.map(
+        (existingLine: BadgeLine, lineIndex: number) => {
+          const sourceLine = currentLines[lineIndex];
+          if (!sourceLine) return existingLine; // If source doesn't have this line, keep existing
+
+          // Extract only formatting properties (not text)
+          const formatting: Partial<BadgeLine> = {
+            color: sourceLine.color,
+            fontFamily: sourceLine.fontFamily,
+            bold: sourceLine.bold,
+            italic: sourceLine.italic,
+            underline: sourceLine.underline,
+            align: sourceLine.align,
+            sizeNorm: sourceLine.sizeNorm,
+            fontSize: sourceLine.fontSize,
+          };
+
+          return { ...existingLine, ...formatting };
+        },
+      );
+
       return { ...updatedBadge, lines: updatedLines };
     });
     setMultipleBadges(updatedMultipleBadges);
-    
+
+    // Sync badge1Data with the first badge
+    if (updatedMultipleBadges[0]) {
+      setBadge1Data(updatedMultipleBadges[0]);
+    }
+
     console.log(
-      `[FORMATTING] All formatting (background color + text formatting) applied to all badges`
+      `[FORMATTING] All formatting (background color + text formatting) applied to all badges`,
     );
   };
 
@@ -398,30 +451,50 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const api = createApi(gadgetApiUrl, gadgetApiKey);
 
   // State
-  const [badge, setBadge] = useState<Badge>({
+  // Initialize multipleBadges with one default badge
+  const initialDefaultBadge: Badge = {
     ...INITIAL_BADGE,
     lines: INITIAL_BADGE.lines.map((line) => ({ ...line })),
+  };
+  const [multipleBadges, setMultipleBadges] = useState<Badge[]>([
+    initialDefaultBadge,
+  ]);
+  const [badge, setBadge] = useState<Badge>({
+    ...initialDefaultBadge,
+    lines: initialDefaultBadge.lines.map((line) => ({ ...line })),
   });
   const [templates, setTemplates] = useState<LoadedTemplate[]>([]);
   const [templateRefreshKey, setTemplateRefreshKey] = useState(0); // Force template refresh
 
   const [showCsvModal, setShowCsvModal] = useState(false);
+  const [showCsvWarningModal, setShowCsvWarningModal] = useState(false);
+  const [pendingCsvAction, setPendingCsvAction] = useState<
+    "override" | "add" | null
+  >(null);
   const [showBadgeGridModal, setShowBadgeGridModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [templateSortBy, setTemplateSortBy] = useState<'popularity' | 'size' | 'alphabetical'>('popularity');
+  const [templateSortBy, setTemplateSortBy] = useState<
+    "popularity" | "size" | "alphabetical"
+  >("popularity");
   const [showColorModal, setShowColorModal] = useState(false);
   const [showTextColorModal, setShowTextColorModal] = useState(false);
-  const [textColorModalLineIndex, setTextColorModalLineIndex] = useState<number | null>(null);
-  const [customColorInput, setCustomColorInput] = useState('');
-  const [customTextColorInput, setCustomTextColorInput] = useState('');
-  const [showBackgroundColorWarning, setShowBackgroundColorWarning] = useState(false);
-  const [pendingBackgroundColor, setPendingBackgroundColor] = useState<string | null>(null);
+  const [textColorModalLineIndex, setTextColorModalLineIndex] = useState<
+    number | null
+  >(null);
+  const [customColorInput, setCustomColorInput] = useState("");
+  const [customTextColorInput, setCustomTextColorInput] = useState("");
+  const [showBackgroundColorWarning, setShowBackgroundColorWarning] =
+    useState(false);
+  const [pendingBackgroundColor, setPendingBackgroundColor] = useState<
+    string | null
+  >(null);
+  const [showSupabaseColorWarning, setShowSupabaseColorWarning] =
+    useState(false);
   const [csvText, setCsvText] = useState("");
   const [csvPreview, setCsvPreview] = useState<string[][]>([]);
   const [csvError, setCsvError] = useState("");
-  const [multipleBadges, setMultipleBadges] = useState<any[]>([]);
-  const [selectedBadgeIndex, setSelectedBadgeIndex] = useState<number>(0); // 0 = main badge, 1+ = CSV badges
-  const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Store badge 1's data separately
+  const [selectedBadgeIndex, setSelectedBadgeIndex] = useState<number>(0); // 0 = first badge (multipleBadges[0]), 1+ = additional badges
+  const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Keep for backward compatibility, synced with multipleBadges[0]
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isSendingToSupabase, setIsSendingToSupabase] = useState(false);
   // UNIVERSAL TEMPLATE: Single template for all badges
@@ -434,6 +507,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     background: false,
     textLines: false,
   });
+  // Track which sections have been opened at least once
+  const [sectionsOpened, setSectionsOpened] = useState({
+    template: false, // Template starts open, but we'll mark it as opened when user interacts
+    export: false,
+    background: false,
+    textLines: false,
+  });
   // Refs for section headers to enable scroll-into-view
   const templateSectionRef = useRef<HTMLButtonElement | null>(null);
   const exportSectionRef = useRef<HTMLButtonElement | null>(null);
@@ -441,42 +521,49 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const textLinesSectionRef = useRef<HTMLButtonElement | null>(null);
 
   // Helper function to scroll a section into view within its scrollable container
-  const scrollSectionIntoView = (element: HTMLElement | null, delay: number = 350) => {
+  const scrollSectionIntoView = (
+    element: HTMLElement | null,
+    delay: number = 350,
+  ) => {
     if (!element) return;
-    
+
     setTimeout(() => {
       if (!element) return;
-      
+
       // Use requestAnimationFrame to ensure DOM has updated
       requestAnimationFrame(() => {
         if (!element) return;
-        
+
         // Find the scrollable parent container
         let scrollableParent = element.parentElement;
         while (scrollableParent) {
           const style = window.getComputedStyle(scrollableParent);
-          if (style.overflowY === 'auto' || style.overflowY === 'scroll' || 
-              style.overflow === 'auto' || style.overflow === 'scroll') {
+          if (
+            style.overflowY === "auto" ||
+            style.overflowY === "scroll" ||
+            style.overflow === "auto" ||
+            style.overflow === "scroll"
+          ) {
             break;
           }
           scrollableParent = scrollableParent.parentElement;
         }
-        
+
         if (scrollableParent) {
           const containerRect = scrollableParent.getBoundingClientRect();
           const elementRect = element.getBoundingClientRect();
           const scrollTop = scrollableParent.scrollTop;
           const elementTop = elementRect.top - containerRect.top + scrollTop;
-          
+
           scrollableParent.scrollTo({
             top: Math.max(0, elementTop - 20), // 20px offset from top, ensure non-negative
-            behavior: 'smooth',
+            behavior: "smooth",
           });
         } else {
           // Fallback to standard scrollIntoView
           element.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
+            behavior: "smooth",
+            block: "start",
           });
         }
       });
@@ -485,50 +572,63 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // Track previous open section to determine scroll direction
   // Initialize with 'template' since that's the default open section
-  const prevOpenSectionRef = useRef<string>('template');
+  const prevOpenSectionRef = useRef<string>("template");
 
   // Scroll to section when it opens
   useEffect(() => {
     if (sectionsOpen.template && templateSectionRef.current) {
       // If we're opening template and a section below was open, wait longer for collapse
-      const wasBelowOpen = prevOpenSectionRef.current === 'export' || 
-                          prevOpenSectionRef.current === 'background' || 
-                          prevOpenSectionRef.current === 'textLines';
-      scrollSectionIntoView(templateSectionRef.current, wasBelowOpen ? 150 : 350);
-      prevOpenSectionRef.current = 'template';
+      const wasBelowOpen =
+        prevOpenSectionRef.current === "export" ||
+        prevOpenSectionRef.current === "background" ||
+        prevOpenSectionRef.current === "textLines";
+      scrollSectionIntoView(
+        templateSectionRef.current,
+        wasBelowOpen ? 150 : 350,
+      );
+      prevOpenSectionRef.current = "template";
     }
   }, [sectionsOpen.template]);
 
   useEffect(() => {
     if (sectionsOpen.export && exportSectionRef.current) {
       // If template was open above, wait longer for collapse
-      const wasAboveOpen = prevOpenSectionRef.current === 'template';
+      const wasAboveOpen = prevOpenSectionRef.current === "template";
       scrollSectionIntoView(exportSectionRef.current, wasAboveOpen ? 350 : 150);
-      prevOpenSectionRef.current = 'export';
+      prevOpenSectionRef.current = "export";
     }
   }, [sectionsOpen.export]);
 
   useEffect(() => {
     if (sectionsOpen.background && backgroundSectionRef.current) {
       // If template or export was open above, wait longer for collapse
-      const wasAboveOpen = prevOpenSectionRef.current === 'template' || 
-                          prevOpenSectionRef.current === 'export';
-      scrollSectionIntoView(backgroundSectionRef.current, wasAboveOpen ? 350 : 150);
-      prevOpenSectionRef.current = 'background';
+      const wasAboveOpen =
+        prevOpenSectionRef.current === "template" ||
+        prevOpenSectionRef.current === "export";
+      scrollSectionIntoView(
+        backgroundSectionRef.current,
+        wasAboveOpen ? 350 : 150,
+      );
+      prevOpenSectionRef.current = "background";
     }
   }, [sectionsOpen.background]);
 
   useEffect(() => {
     if (sectionsOpen.textLines && textLinesSectionRef.current) {
       // If any section above was open, wait longer for collapse (especially template)
-      const wasAboveOpen = prevOpenSectionRef.current === 'template' || 
-                          prevOpenSectionRef.current === 'export' || 
-                          prevOpenSectionRef.current === 'background';
+      const wasAboveOpen =
+        prevOpenSectionRef.current === "template" ||
+        prevOpenSectionRef.current === "export" ||
+        prevOpenSectionRef.current === "background";
       // Template is the largest, so give it extra time
-      const delay = prevOpenSectionRef.current === 'template' ? 400 : 
-                   wasAboveOpen ? 350 : 150;
+      const delay =
+        prevOpenSectionRef.current === "template"
+          ? 400
+          : wasAboveOpen
+          ? 350
+          : 150;
       scrollSectionIntoView(textLinesSectionRef.current, delay);
-      prevOpenSectionRef.current = 'textLines';
+      prevOpenSectionRef.current = "textLines";
     }
   }, [sectionsOpen.textLines]);
 
@@ -539,13 +639,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         console.log(
           "[BadgeDesigner] Loading templates (refresh key:",
           templateRefreshKey,
-          ")"
+          ")",
         );
         const list = await loadTemplates();
         setTemplates(list);
         console.log(
           "[BadgeDesigner] templates loaded:",
-          list.map((t) => t.id)
+          list.map((t) => t.id),
         );
 
         // Initialize with first template
@@ -579,7 +679,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     if (templates.length > 0 && badge.lines.length > 0) {
       // Check if this is the initial badge with default positions
       const hasDefaultPositions = badge.lines.every(
-        (line) => line.yNorm === 0.5
+        (line) => line.yNorm === 0.5,
       );
 
       if (hasDefaultPositions) {
@@ -593,21 +693,30 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   }, [templates.length]); // Only when templates first load
 
-  // Initialize badge1Data when badge is first loaded, prevent overwriting from other badges
+  // Initialize badge1Data to sync with multipleBadges[0] on mount
   useEffect(() => {
-    // Only update badge1Data if we're currently on badge 1 and it's not already set
-    if (selectedBadgeIndex === 0 && !badge1Data && badge.lines.length > 0) {
-      // CRITICAL: Ensure backgroundColor is tracked as single source of truth
+    if (multipleBadges.length > 0 && !badge1Data) {
+      const firstBadge = multipleBadges[0];
       const badgeWithColor = {
-        ...badge,
-        backgroundColor: badge.backgroundColor || "#FFFFFF",
+        ...firstBadge,
+        backgroundColor: firstBadge.backgroundColor || "#FFFFFF",
       };
       console.log(
-        `[COLOR TRACKING] Initializing badge1Data with backgroundColor: ${badgeWithColor.backgroundColor}`
+        `[COLOR TRACKING] Initializing badge1Data from multipleBadges[0] with backgroundColor: ${badgeWithColor.backgroundColor}`,
       );
       setBadge1Data(badgeWithColor);
     }
-  }, [badge, selectedBadgeIndex, badge1Data]);
+  }, [multipleBadges, badge1Data]);
+
+  // Sync badge1Data with multipleBadges[0] when it changes
+  useEffect(() => {
+    if (multipleBadges.length > 0) {
+      const firstBadge = multipleBadges[0];
+      if (!badge1Data || badge1Data.id !== firstBadge.id) {
+        setBadge1Data(firstBadge);
+      }
+    }
+  }, [multipleBadges[0]?.id]);
 
   // Stage 2: Removed problematic auto-sync - saving is now explicit via "Save Changes" button
 
@@ -624,7 +733,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         "[BadgeDesigner] Universal template not found:",
         universalTemplateId,
         "Available:",
-        templates.map((t) => t.id)
+        templates.map((t) => t.id),
       );
       // Fallback to first available template instead of broken fallback object
       return templates[0] || null;
@@ -654,7 +763,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     fontSize: number,
     fontFamily: string,
     bold: boolean,
-    italic: boolean
+    italic: boolean,
   ) => {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -732,34 +841,23 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     };
 
     // Update current badge's line
-    const currentBadgeLines = badge.lines.map((l, i) => 
-      i === lineIndex ? { ...l, ...formatting } : l
+    const currentBadgeLines = badge.lines.map((l, i) =>
+      i === lineIndex ? { ...l, ...formatting } : l,
     );
     setBadge({ ...badge, lines: currentBadgeLines });
 
-    // Update badge1Data if it exists and is not the current badge
-    if (badge1Data && selectedBadgeIndex !== 0) {
-      const updatedBadge1Lines = badge1Data.lines.map((l, i) => 
-        i === lineIndex ? { ...l, ...formatting } : l
-      );
-      setBadge1Data({ ...badge1Data, lines: updatedBadge1Lines });
-    }
-
     // Update all badges in multipleBadges
     const updatedMultipleBadges = multipleBadges.map((b: Badge) => {
-      const updatedLines = b.lines.map((l: BadgeLine, i: number) => 
-        i === lineIndex ? { ...l, ...formatting } : l
+      const updatedLines = b.lines.map((l: BadgeLine, i: number) =>
+        i === lineIndex ? { ...l, ...formatting } : l,
       );
       return { ...b, lines: updatedLines };
     });
     setMultipleBadges(updatedMultipleBadges);
 
-    // Also update badge1Data if we're editing badge 1
-    if (selectedBadgeIndex === 0 && badge1Data) {
-      const updatedBadge1Lines = badge1Data.lines.map((l, i) => 
-        i === lineIndex ? { ...l, ...formatting } : l
-      );
-      setBadge1Data({ ...badge1Data, lines: updatedBadge1Lines });
+    // Sync badge1Data with the first badge
+    if (updatedMultipleBadges[0]) {
+      setBadge1Data(updatedMultipleBadges[0]);
     }
   };
 
@@ -812,7 +910,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             fontSize,
             fontFamily,
             bold,
-            italic
+            italic,
           );
           const minSizeNorm = 0.05; // Minimum 5% of badge height
 
@@ -829,7 +927,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               fontSize,
               fontFamily,
               bold,
-              italic
+              italic,
             );
             updated.sizeNorm = newSizeNorm;
           }
@@ -844,7 +942,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           fontSize,
           updated.fontFamily || "Arial",
           updated.bold || false,
-          updated.italic || false
+          updated.italic || false,
         );
         while (textWidth > badgeWidth - 24 && fontSize > MIN_FONT_SIZE) {
           fontSize--;
@@ -853,7 +951,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             fontSize,
             updated.fontFamily || "Arial",
             updated.bold || false,
-            updated.italic || false
+            updated.italic || false,
           );
         }
         updated.fontSize = fontSize;
@@ -952,7 +1050,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           underline: false,
           fontFamily: "Arial",
           align: "center",
-        } as BadgeLine)
+        } as BadgeLine),
     );
   };
 
@@ -965,57 +1063,64 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     // Apply center-based positioning
     const centeredLines = calculateCenterPositions(resetLines);
 
-    setBadge({
+    const resetBadgeData = {
+      ...badge,
       templateId: badge.templateId || fallbackId,
       lines: centeredLines,
       backgroundColor: "#FFFFFF",
       backing: badge.backing || "pin", // Preserve backing if it exists
-    });
+    };
+
+    setBadge(resetBadgeData);
+
+    // Update the badge in multipleBadges array
+    const updatedMultipleBadges = [...multipleBadges];
+    if (updatedMultipleBadges[selectedBadgeIndex]) {
+      updatedMultipleBadges[selectedBadgeIndex] = resetBadgeData;
+      setMultipleBadges(updatedMultipleBadges);
+    }
+
+    // Sync badge1Data if editing the first badge
+    if (selectedBadgeIndex === 0) {
+      setBadge1Data(resetBadgeData);
+    }
   };
 
   const resetAllBadges = () => {
     const fallbackId = templates[0]?.id || "rect-1x3";
 
-    // Reset badge1Data if it exists
-    if (badge1Data) {
-      const resetLines = resetBadgeLines(badge1Data);
+    // Reset all badges in multipleBadges
+    const resetMultipleBadges = multipleBadges.map((badgeToReset) => {
+      const resetLines = resetBadgeLines(badgeToReset);
       const centeredLines = calculateCenterPositions(resetLines);
-      setBadge1Data({
-        ...badge1Data,
-        templateId: badge1Data.templateId || fallbackId,
+
+      return {
+        ...badgeToReset,
+        templateId: badgeToReset.templateId || fallbackId,
         lines: centeredLines,
         backgroundColor: "#FFFFFF",
-        backing: badge1Data.backing || "pin",
-      });
-    }
+        backing: badgeToReset.backing || "pin",
+      };
+    });
 
-    // Reset all badges in multipleBadges
-    if (multipleBadges.length > 0) {
-      const resetMultipleBadges = multipleBadges.map((badgeToReset) => {
-        const resetLines = resetBadgeLines(badgeToReset);
-        const centeredLines = calculateCenterPositions(resetLines);
+    setMultipleBadges(resetMultipleBadges);
 
-        return {
-          ...badgeToReset,
-          templateId: badgeToReset.templateId || fallbackId,
-          lines: centeredLines,
-          backgroundColor: "#FFFFFF",
-          backing: badgeToReset.backing || "pin",
-        };
-      });
-
-      setMultipleBadges(resetMultipleBadges);
+    // Sync badge1Data with the first badge
+    if (resetMultipleBadges[0]) {
+      setBadge1Data(resetMultipleBadges[0]);
     }
 
     // Also reset the currently editing badge
     const resetLines = resetBadgeLines(badge);
     const centeredLines = calculateCenterPositions(resetLines);
-    setBadge({
+    const resetBadgeData = {
+      ...badge,
       templateId: badge.templateId || fallbackId,
       lines: centeredLines,
       backgroundColor: "#FFFFFF",
       backing: badge.backing || "pin",
-    });
+    };
+    setBadge(resetBadgeData);
   };
 
   // CLEAN ARCHITECTURE: Auto-save on switch (no manual save button)
@@ -1027,7 +1132,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     if (isCurrentlyEditing) {
       // LIVE PREVIEW: Mirror left-hand preview when editing
       console.log(
-        `[UNIVERSAL] Badge ${badgeIndex} LIVE PREVIEW - using current badge with backgroundColor: ${badge.backgroundColor}`
+        `[UNIVERSAL] Badge ${badgeIndex} LIVE PREVIEW - using current badge with backgroundColor: ${badge.backgroundColor}`,
       );
       return {
         badge: badge,
@@ -1037,7 +1142,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       // STATIC: Show saved state when not editing
       if (savedBadge) {
         console.log(
-          `[UNIVERSAL] Badge ${badgeIndex} STATIC PREVIEW - using saved badge with backgroundColor: ${savedBadge.backgroundColor}`
+          `[UNIVERSAL] Badge ${badgeIndex} STATIC PREVIEW - using saved badge with backgroundColor: ${savedBadge.backgroundColor}`,
         );
         const previewBadge = {
           ...savedBadge,
@@ -1051,7 +1156,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       } else {
         // Fallback to current badge if no saved state
         console.log(
-          `[UNIVERSAL] Badge ${badgeIndex} FALLBACK PREVIEW - no saved state, using current badge`
+          `[UNIVERSAL] Badge ${badgeIndex} FALLBACK PREVIEW - no saved state, using current badge`,
         );
         return {
           badge: badge,
@@ -1064,69 +1169,50 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   // UNIVERSAL TEMPLATE: Auto-save on switch, all badges use same template
   const selectBadge = (index: number) => {
     console.log(
-      `[UNIVERSAL] selectBadge called: index=${index}, current selectedBadgeIndex=${selectedBadgeIndex}`
+      `[UNIVERSAL] selectBadge called: index=${index}, current selectedBadgeIndex=${selectedBadgeIndex}`,
     );
 
     // AUTO-SAVE: Save current badge state when switching
     // CRITICAL: Ensure backgroundColor is preserved as single source of truth
-    if (selectedBadgeIndex === 0) {
-      // Auto-save Badge 1
-      const validatedBadge = {
-        ...badge,
-        templateId: universalTemplateId,
-        backgroundColor: badge.backgroundColor || "#FFFFFF", // Ensure color is tracked
-      };
-      console.log(
-        `[COLOR TRACKING] Auto-saving Badge 1 with backgroundColor: ${validatedBadge.backgroundColor}`
-      );
-      setBadge1Data(validatedBadge);
-    } else {
-      // Auto-save CSV badge
-      const validatedBadge = {
-        ...badge,
-        templateId: universalTemplateId,
-        backgroundColor: badge.backgroundColor || "#FFFFFF", // Ensure color is tracked
-      };
-      console.log(
-        `[COLOR TRACKING] Auto-saving CSV badge ${selectedBadgeIndex} with backgroundColor: ${validatedBadge.backgroundColor}`
-      );
-      const newMultipleBadges = [...multipleBadges];
-      newMultipleBadges[selectedBadgeIndex - 1] = validatedBadge;
+    const validatedBadge = {
+      ...badge,
+      templateId: universalTemplateId,
+      backgroundColor: badge.backgroundColor || "#FFFFFF", // Ensure color is tracked
+    };
+    console.log(
+      `[COLOR TRACKING] Auto-saving badge ${
+        selectedBadgeIndex + 1
+      } with backgroundColor: ${validatedBadge.backgroundColor}`,
+    );
+
+    // Update the badge in multipleBadges array
+    const newMultipleBadges = [...multipleBadges];
+    if (newMultipleBadges[selectedBadgeIndex]) {
+      newMultipleBadges[selectedBadgeIndex] = validatedBadge;
       setMultipleBadges(newMultipleBadges);
+    }
+
+    // Sync badge1Data for backward compatibility
+    if (selectedBadgeIndex === 0) {
+      setBadge1Data(validatedBadge);
     }
 
     // SWITCH: Load the selected badge for editing
     setSelectedBadgeIndex(index);
 
-    if (index === 0) {
-      // Load Badge 1 for editing
-      if (badge1Data) {
-        console.log(
-          `[UNIVERSAL] Loading Badge 1 for editing:`,
-          badge1Data.lines.map((l: BadgeLine) => l.text)
-        );
-        const centeredLines = calculateCenterPositions(badge1Data.lines);
-        setBadge({
-          ...badge1Data,
-          lines: centeredLines,
-          templateId: universalTemplateId,
-        });
-      }
-    } else {
-      // Load CSV badge for editing
-      const csvBadge = multipleBadges[index - 1];
-      if (csvBadge) {
-        console.log(
-          `[UNIVERSAL] Loading CSV badge ${index} for editing:`,
-          csvBadge.lines.map((l: BadgeLine) => l.text)
-        );
-        const centeredLines = calculateCenterPositions(csvBadge.lines);
-        setBadge({
-          ...csvBadge,
-          lines: centeredLines,
-          templateId: universalTemplateId,
-        });
-      }
+    // Load the selected badge from multipleBadges array
+    const selectedBadge = multipleBadges[index];
+    if (selectedBadge) {
+      console.log(
+        `[UNIVERSAL] Loading badge ${index + 1} for editing:`,
+        selectedBadge.lines.map((l: BadgeLine) => l.text),
+      );
+      const centeredLines = calculateCenterPositions(selectedBadge.lines);
+      setBadge({
+        ...selectedBadge,
+        lines: centeredLines,
+        templateId: universalTemplateId,
+      });
     }
   };
 
@@ -1165,7 +1251,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             fontSize,
             fontFamily,
             bold,
-            italic
+            italic,
           );
           const minSizeNorm = 0.05; // Minimum 5% of badge height
 
@@ -1181,7 +1267,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               fontSize,
               fontFamily,
               bold,
-              italic
+              italic,
             );
             line.sizeNorm = newSizeNorm;
           }
@@ -1198,29 +1284,38 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       return { ...prev, templateId: newTemplateId, lines: centeredLines };
     });
 
-    // Update saved badge1Data with auto-scaled text
-    if (badge1Data) {
-      setBadge1Data((prev) => {
-        if (!prev) return null;
-        const scaledLines = autoScaleLinesForNewTemplate(prev.lines);
-        const centeredLines = calculateCenterPositions(scaledLines);
-        return { ...prev, templateId: newTemplateId, lines: centeredLines };
-      });
-    }
-
-    // Update all CSV badges with auto-scaled text
-    setMultipleBadges((prev) =>
-      prev.map((badge) => {
+    // Update all badges in multipleBadges with auto-scaled text
+    setMultipleBadges((prev) => {
+      const updated = prev.map((badge) => {
         const scaledLines = autoScaleLinesForNewTemplate(badge.lines);
         const centeredLines = calculateCenterPositions(scaledLines);
         return { ...badge, templateId: newTemplateId, lines: centeredLines };
-      })
-    );
+      });
+
+      // Sync badge1Data with the first badge
+      if (updated[0]) {
+        setBadge1Data(updated[0]);
+      }
+
+      return updated;
+    });
   };
 
   // Send to Supabase - Upload PDF, SVG, PNG and save to badge_order_items
   const sendToSupabase = async () => {
     if (isSendingToSupabase) return;
+
+    // Check for similar colors before sending
+    if (checkCurrentBadgeColorSimilarity()) {
+      setShowSupabaseColorWarning(true);
+      return;
+    }
+
+    await executeSendToSupabase();
+  };
+
+  // Actual Supabase upload function (called after warning is confirmed or if no warning needed)
+  const executeSendToSupabase = async () => {
     setIsSendingToSupabase(true);
 
     try {
@@ -1228,34 +1323,26 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const shopData = getCurrentShop(_shop);
 
       // Finalize all badge states before generating files
-      let finalizedBadge1 = badge;
-      let finalizedMultipleBadges = [...multipleBadges];
+      // Save current badge to multipleBadges array
+      const finalizedBadge = {
+        ...badge,
+        templateId: universalTemplateId,
+        backgroundColor: badge.backgroundColor || "#FFFFFF",
+      };
 
-      if (selectedBadgeIndex === 0) {
-        finalizedBadge1 = {
-          ...badge,
-          templateId: universalTemplateId,
-          backgroundColor: badge.backgroundColor || "#FFFFFF",
-        };
-        setBadge1Data(finalizedBadge1);
-      } else {
-        finalizedBadge1 = badge1Data || {
-          ...badge,
-          templateId: universalTemplateId,
-          backgroundColor: badge.backgroundColor || "#FFFFFF",
-        };
-        const updatedMultiple = [...multipleBadges];
-        updatedMultiple[selectedBadgeIndex - 1] = {
-          ...badge,
-          templateId: universalTemplateId,
-          backgroundColor: badge.backgroundColor || "#FFFFFF",
-        };
-        finalizedMultipleBadges = updatedMultiple;
-        setMultipleBadges(updatedMultiple);
+      const finalizedMultipleBadges = [...multipleBadges];
+      if (finalizedMultipleBadges[selectedBadgeIndex]) {
+        finalizedMultipleBadges[selectedBadgeIndex] = finalizedBadge;
+        setMultipleBadges(finalizedMultipleBadges);
       }
 
-      // Get the badge to export (use badge1Data if available, otherwise current badge)
-      const badgeToExport = finalizedBadge1;
+      // Sync badge1Data if editing the first badge
+      if (selectedBadgeIndex === 0) {
+        setBadge1Data(finalizedBadge);
+      }
+
+      // Get all badges for export
+      const allBadges = getAllBadges(finalizedMultipleBadges);
       const templateToUse = activeTemplate;
 
       if (!templateToUse) {
@@ -1269,31 +1356,74 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         .slice(2, 11)}`;
 
       // Generate files as blobs
-      console.log("Generating PDF, SVG, and PNG...");
+      console.log("Generating PDF and PNGs...");
 
-      // Generate PDF
+      // Generate PDF (first badge, rest as additional badges)
       const pdfBlob = await generatePDFAsBlob(
-        badgeToExport,
-        finalizedMultipleBadges.length > 0 ? finalizedMultipleBadges : undefined
+        allBadges[0],
+        allBadges.length > 1 ? allBadges.slice(1) : undefined,
       );
 
-      // Generate SVG
-      const svgBlob = await generateSVGAsBlob(badgeToExport, templateToUse);
+      // Generate low-quality PNGs (for thumbnails) and SVGs (for full images) for each badge
+      const thumbnailPngBlobs: Blob[] = [];
+      const svgBlobs: Blob[] = [];
 
-      // Generate PNG (use scale 2 for good quality)
-      const pngBlob = await generatePNGAsBlob(badgeToExport, templateToUse, 2);
+      for (let i = 0; i < allBadges.length; i++) {
+        const badge = allBadges[i];
+        try {
+          // Load template for this badge
+          const badgeTemplate = await loadTemplateById(
+            badge.templateId || templateToUse.id,
+          );
+          if (!badgeTemplate) {
+            console.warn(
+              `Template not found for badge ${i}, skipping image generation`,
+            );
+            continue;
+          }
+
+          // Generate low-quality PNG for thumbnail (scale 1 for smaller file size)
+          const thumbnailPngBlob = await generatePNGAsBlob(
+            badge,
+            badgeTemplate,
+            1,
+          );
+          if (thumbnailPngBlob && thumbnailPngBlob.size > 0) {
+            thumbnailPngBlobs.push(thumbnailPngBlob);
+          } else {
+            console.warn(
+              `Generated thumbnail PNG for badge ${i} is empty, skipping`,
+            );
+            thumbnailPngBlobs.push(new Blob()); // Push empty blob to maintain index alignment
+          }
+
+          // Generate SVG for full image (high quality, scalable)
+          const svgBlob = await generateSVGAsBlob(badge, badgeTemplate);
+          if (svgBlob && svgBlob.size > 0) {
+            svgBlobs.push(svgBlob);
+          } else {
+            console.warn(`Generated SVG for badge ${i} is empty, skipping`);
+            svgBlobs.push(new Blob()); // Push empty blob to maintain index alignment
+          }
+        } catch (error) {
+          console.error(`Error generating images for badge ${i}:`, error);
+          // Push empty blobs to maintain index alignment
+          thumbnailPngBlobs.push(new Blob());
+          svgBlobs.push(new Blob());
+        }
+      }
 
       // Prepare design data (use shop data if available, otherwise use defaults for testing)
       const designData = {
-        badge: badgeToExport,
-        multipleBadges: finalizedMultipleBadges,
-        allBadges: [badgeToExport, ...finalizedMultipleBadges],
+        badge: allBadges[0],
+        multipleBadges: allBadges.length > 1 ? allBadges.slice(1) : [],
+        allBadges: allBadges,
         timestamp: new Date().toISOString(),
         shopId: shopData?.shopId || "test-shop",
         productId: _productId || "test-product",
-        backgroundColor: badgeToExport.backgroundColor,
-        backingType: badgeToExport.backing,
-        textLines: badgeToExport.lines,
+        backgroundColor: allBadges[0].backgroundColor,
+        backingType: allBadges[0].backing,
+        textLines: allBadges[0].lines,
       };
 
       // Get Shopify customer ID (if available)
@@ -1309,8 +1439,22 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         formData.append("shopifyCustomerId", shopifyCustomerId);
       }
       formData.append("pdf", pdfBlob, "badge-design.pdf");
-      formData.append("svg", svgBlob, "badge-design.svg");
-      formData.append("png", pngBlob, "badge-design.png");
+      // Append each thumbnail PNG blob with index (low quality for thumbnails)
+      thumbnailPngBlobs.forEach((pngBlob, index) => {
+        if (pngBlob && pngBlob.size > 0) {
+          formData.append(
+            `thumbnail_png_${index}`,
+            pngBlob,
+            `badge-${index}-thumbnail.png`,
+          );
+        }
+      });
+      // Append each SVG blob with index (high quality for full images)
+      svgBlobs.forEach((svgBlob, index) => {
+        if (svgBlob && svgBlob.size > 0) {
+          formData.append(`svg_${index}`, svgBlob, `badge-${index}-design.svg`);
+        }
+      });
 
       const response = await fetch("/api/send-to-supabase", {
         method: "POST",
@@ -1327,21 +1471,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
       if (result.success) {
         const uploadStatus = result.uploads
-          ? `PDF: ${result.uploads.pdf ? "✓" : "✗"}, SVG: ${
-              result.uploads.svg ? "✓" : "✗"
-            }, PNG: ${result.uploads.png ? "✓" : "✗"}`
+          ? `PDF: ${result.uploads.pdf ? "✓" : "✗"}, PNG: ${
+              result.uploads.png ? "✓" : "✗"
+            }`
           : "";
         alert(
           `${result.message}\nDesign ID: ${designId}${
             uploadStatus ? `\n${uploadStatus}` : ""
-          }`
+          }`,
         );
       } else {
         // Show more helpful error message
         const errorMsg = result.error || result.message || "Unknown error";
         if (result.warning) {
           alert(
-            `Warning: ${errorMsg}\n\nFiles were generated but could not be uploaded to Supabase.`
+            `Warning: ${errorMsg}\n\nFiles were generated but could not be uploaded to Supabase.`,
           );
         } else {
           alert(`Failed to upload badge design to Supabase:\n${errorMsg}`);
@@ -1359,7 +1503,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         errorMessage.includes("Failed to fetch")
       ) {
         alert(
-          `Cannot connect to Supabase.\n\nPlease check:\n- Your network connection\n- Supabase configuration\n- That Supabase is accessible\n\nError: ${errorMessage}`
+          `Cannot connect to Supabase.\n\nPlease check:\n- Your network connection\n- Supabase configuration\n- That Supabase is accessible\n\nError: ${errorMessage}`,
         );
       } else {
         alert(`Failed to upload badge design to Supabase:\n${errorMessage}`);
@@ -1419,13 +1563,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       }));
 
       console.log(
-        `[FINALIZE] Saving ${allFinalizedBadges.length} badges with finalized states`
+        `[FINALIZE] Saving ${allFinalizedBadges.length} badges with finalized states`,
       );
       allFinalizedBadges.forEach((b, i) => {
         console.log(
           `[FINALIZE] Badge ${i + 1}: backgroundColor=${
             b.backgroundColor
-          }, templateId=${b.templateId}`
+          }, templateId=${b.templateId}`,
         );
       });
 
@@ -1446,17 +1590,18 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           .slice(2, 11)}`,
         status: "saved",
         designData: {
-          badge: finalizedBadge1,
-          multipleBadges: finalizedMultipleBadges,
+          badge: allFinalizedBadges[0],
+          multipleBadges:
+            allFinalizedBadges.length > 1 ? allFinalizedBadges.slice(1) : [],
           allBadges: allFinalizedBadges,
           timestamp: new Date().toISOString(),
         },
-        backgroundColor: finalizedBadge1.backgroundColor,
-        backingType: finalizedBadge1.backing,
+        backgroundColor: allFinalizedBadges[0].backgroundColor,
+        backingType: allFinalizedBadges[0].backing,
         basePrice,
         backingPrice,
         totalPrice,
-        textLines: finalizedBadge1.lines,
+        textLines: allFinalizedBadges[0].lines,
       };
 
       const savedDesign = await api.saveBadgeDesign(badgeDesignData, shopData);
@@ -1464,7 +1609,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       alert(
         `Badge design saved and finalized! Design ID: ${
           savedDesign.id || "Unknown"
-        }`
+        }`,
       );
 
       api.sendToParent({
@@ -1514,7 +1659,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           totalPrice,
           textLines: badge.lines,
         },
-        shopData
+        shopData,
       );
 
       // Variant resolver
@@ -1539,7 +1684,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         thumbnailImage = await generateThumbnailFromFullImage(
           fullImage,
           100,
-          50
+          50,
         );
 
         if (savedDesign.id) {
@@ -1590,7 +1735,28 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const rows = text
         .trim()
         .split(/\r?\n/)
+        .filter((row: string) => row.trim().length > 0) // Filter out empty rows
         .map((row: string) => row.split(","));
+
+      // Validate that each row has at most 4 comma-separated values
+      const maxLines = BADGE_CONSTANTS.MAX_LINES;
+      const invalidRows: number[] = [];
+      rows.forEach((row, index) => {
+        if (row.length > maxLines) {
+          invalidRows.push(index + 1); // 1-indexed for user display
+        }
+      });
+
+      if (invalidRows.length > 0) {
+        setCsvError(
+          `Each badge can have a maximum of ${maxLines} lines of text. ` +
+            `Row${invalidRows.length > 1 ? "s" : ""} ${invalidRows.join(
+              ", ",
+            )} ` +
+            `exceed${invalidRows.length > 1 ? "" : "s"} this limit.`,
+        );
+      }
+
       setCsvPreview(rows);
     } catch {
       setCsvError("Invalid CSV format.");
@@ -1599,17 +1765,39 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   }
 
   // Actually create badges from CSV
-  function parseCsv(text: string) {
+  function parseCsv(text: string, overrideExisting: boolean = false) {
     console.log(
       `[DEBUG] parseCsv called with current badge:`,
-      badge.lines.map((l) => l.text)
+      badge.lines.map((l) => l.text),
+      `overrideExisting: ${overrideExisting}`,
     );
     try {
       setCsvError("");
       const rows = text
         .trim()
         .split(/\r?\n/)
+        .filter((row: string) => row.trim().length > 0) // Filter out empty rows
         .map((row: string) => row.split(","));
+
+      // Validate that each row has at most 4 comma-separated values
+      const maxLines = BADGE_CONSTANTS.MAX_LINES;
+      const invalidRows: number[] = [];
+      rows.forEach((row, index) => {
+        if (row.length > maxLines) {
+          invalidRows.push(index + 1); // 1-indexed for user display
+        }
+      });
+
+      if (invalidRows.length > 0) {
+        setCsvError(
+          `Each badge can have a maximum of ${maxLines} lines of text. ` +
+            `Row${invalidRows.length > 1 ? "s" : ""} ${invalidRows.join(
+              ", ",
+            )} ` +
+            `exceed${invalidRows.length > 1 ? "" : "s"} this limit.`,
+        );
+        return; // Don't proceed with badge creation
+      }
 
       if (rows.length > 0 && rows[0].length > 0) {
         // Create badges based on current badge template but with CSV text
@@ -1618,7 +1806,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           // Start with current badge's backgroundColor to maintain consistency
           const badgeWithCsvText = {
             ...badge,
-            id: `badge-csv-${index + 1}`,
+            id: `badge-csv-${Date.now()}-${index}`,
             // UNIVERSAL TEMPLATE: All CSV badges use the same universal template
             templateId: universalTemplateId,
             // CRITICAL: Preserve backgroundColor from current badge (single source of truth)
@@ -1642,7 +1830,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
           // Apply center-based positioning to CSV badges
           const centeredLines = calculateCenterPositions(
-            badgeWithCsvText.lines
+            badgeWithCsvText.lines,
           );
           const finalBadge = {
             ...badgeWithCsvText,
@@ -1653,40 +1841,66 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           console.log(
             `[COLOR TRACKING] CSV Badge ${
               index + 1
-            } created with backgroundColor: ${finalBadge.backgroundColor}`
+            } created with backgroundColor: ${finalBadge.backgroundColor}`,
           );
           return finalBadge;
         });
 
         console.log(
           `[DEBUG] Created ${badges.length} CSV badges:`,
-          badges.map((b) => b.lines.map((l: BadgeLine) => l.text))
+          badges.map((b) => b.lines.map((l: BadgeLine) => l.text)),
         );
 
         // CRITICAL: Migrate badges to ensure they have proper backgroundColor
         const migratedBadges = migrateBadgeArray(badges);
         console.log(
           `[MIGRATION] Migrated ${migratedBadges.length} CSV badges with individual background colors:`,
-          migratedBadges.map((b) => b.backgroundColor)
+          migratedBadges.map((b) => b.backgroundColor),
         );
-        setMultipleBadges(migratedBadges);
 
-        // Initialize badge1Data with current badge if not already set
-        if (!badge1Data) {
+        // Save the current badge at index 0 first
+        const currentFirstBadge = {
+          ...badge,
+          templateId: universalTemplateId,
+          backgroundColor: badge.backgroundColor || "#FFFFFF",
+        };
+        const migratedFirstBadge = migrateLegacyBadge(currentFirstBadge);
+
+        // Update multipleBadges based on overrideExisting flag
+        if (overrideExisting) {
+          // Override: Replace ALL badges (including the default first badge) with CSV badges
+          // The first CSV badge becomes the new default badge at index 0
+          setMultipleBadges(migratedBadges);
           console.log(
-            `[DEBUG] Initializing badge1Data with current badge:`,
-            badge.lines.map((l) => l.text)
+            `[DEBUG] Override mode: Replaced all badges with ${migratedBadges.length} CSV badges`,
           );
-          const migratedBadge1 = migrateLegacyBadge(badge);
-          console.log(
-            `[MIGRATION] Migrated Badge 1 with backgroundColor: ${migratedBadge1.backgroundColor}`
-          );
-          setBadge1Data(migratedBadge1);
+          // Sync badge1Data with the new first badge
+          if (migratedBadges[0]) {
+            setBadge1Data(migratedBadges[0]);
+            // Also update the current badge being edited to the first CSV badge
+            setBadge(migratedBadges[0]);
+            setSelectedBadgeIndex(0);
+          }
         } else {
+          // Add: Keep all existing badges, append CSV badges
+          // First, save current badge to its position in multipleBadges
+          const updatedMultipleBadges = [...multipleBadges];
+          if (updatedMultipleBadges[selectedBadgeIndex]) {
+            updatedMultipleBadges[selectedBadgeIndex] = migratedFirstBadge;
+          }
+          // Then append the new CSV badges
+          setMultipleBadges([...updatedMultipleBadges, ...migratedBadges]);
           console.log(
-            `[DEBUG] badge1Data already exists:`,
-            badge1Data.lines.map((l) => l.text)
+            `[DEBUG] Add mode: Updated multipleBadges to ${
+              updatedMultipleBadges.length + migratedBadges.length
+            } total badges (${updatedMultipleBadges.length} existing + ${
+              migratedBadges.length
+            } CSV)`,
           );
+          // Sync badge1Data with the first badge
+          if (updatedMultipleBadges[0]) {
+            setBadge1Data(updatedMultipleBadges[0]);
+          }
         }
       }
     } catch {
@@ -1722,12 +1936,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     );
   }
 
-  const totalBadges = 1 + multipleBadges.length;
+  const totalBadges = multipleBadges.length;
   const canGoPrev = selectedBadgeIndex > 0;
   const canGoNext = selectedBadgeIndex < totalBadges - 1;
 
-  const getSavedBadgeFor = (i: number) =>
-    i === 0 ? badge1Data : multipleBadges[i - 1] ?? null;
+  const getSavedBadgeFor = (i: number) => multipleBadges[i] ?? null;
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -1746,23 +1959,29 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex flex-col gap-1 min-w-0">
             <h2 className="text-xl font-bold text-gray-800">
-              Customize Your Badge{" "}
-              {selectedBadgeIndex === 0 ? "1" : `${selectedBadgeIndex + 1}`}
-              {multipleBadges.length > 0 ? ` of ${totalBadges}` : ""}
+              Customize Your Badge {selectedBadgeIndex + 1}
+              {multipleBadges.length > 1 ? ` of ${totalBadges}` : ""}
             </h2>
             <span className="text-xl font-bold text-red-600">
               {activeTemplate.name}
             </span>
           </div>
-          <button
-            type="button"
-            className="flex-shrink-0 p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-            onClick={() => setShowBadgeGridModal(true)}
-            aria-label="View all badges"
-            title="View all badges"
-          >
-            <Squares2X2Icon className="w-6 h-6" />
-          </button>
+          <div className="flex flex-col items-center gap-1">
+            <button
+              type="button"
+              className="flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+              onClick={() => setShowBadgeGridModal(true)}
+              aria-label="View all badges"
+              title="View all badges"
+            >
+              <Squares2X2Icon className="w-6 h-6" />
+            </button>
+            <div className="text-[10px] text-gray-600 text-center leading-tight">
+              Grid
+              <br />
+              View
+            </div>
+          </div>
         </div>
 
         {/* Large preview: one badge, prev/next arrows, swipe to change. Sizing from MOBILE_PREVIEW. */}
@@ -1802,8 +2021,18 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             }}
           >
             <BadgeSvgRenderer
-              badge={getBadgeForPreview(selectedBadgeIndex, getSavedBadgeFor(selectedBadgeIndex)).badge}
-              templateId={getBadgeForPreview(selectedBadgeIndex, getSavedBadgeFor(selectedBadgeIndex)).templateId}
+              badge={
+                getBadgeForPreview(
+                  selectedBadgeIndex,
+                  getSavedBadgeFor(selectedBadgeIndex),
+                ).badge
+              }
+              templateId={
+                getBadgeForPreview(
+                  selectedBadgeIndex,
+                  getSavedBadgeFor(selectedBadgeIndex),
+                ).templateId
+              }
               height="100%"
             />
           </div>
@@ -1811,17 +2040,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       </div>
 
       {/* LEFT COLUMN - Controls */}
-      <div
-        className="w-full md:w-1/2 mb-4 md:mb-0 md:pr-3 overflow-y-auto flex-1 min-h-0 md:flex-initial md:min-h-0 md:max-h-[90vh]"
-      >
+      <div className="w-full md:w-1/2 mb-4 md:mb-0 md:pr-3 overflow-y-auto flex-1 min-h-0 md:flex-initial md:min-h-0 md:max-h-[90vh]">
         <div className="section-container mb-4">
           <div className="hidden md:flex justify-between items-center mb-4">
             <div className="flex flex-col gap-2">
               <h2 className="text-xl font-bold text-gray-800">
-                Customize Your Badge{" "}
-                {selectedBadgeIndex === 0 ? "1" : `${selectedBadgeIndex + 1}`}
-                {multipleBadges.length > 0 &&
-                  ` of ${multipleBadges.length + 1}`}
+                Customize Your Badge {selectedBadgeIndex + 1}
+                {multipleBadges.length > 1 && ` of ${totalBadges}`}
               </h2>
               <span className="text-xl font-bold text-red-600">
                 {activeTemplate.name}
@@ -1852,12 +2077,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   background: false,
                   textLines: false,
                 });
+                // Mark as opened when user interacts with the section
+                setSectionsOpened((prev) => ({ ...prev, template: true }));
               }}
               className="flex items-center justify-between w-full mb-2 text-left"
             >
-              <label className="block text-sm font-semibold cursor-pointer">
-                Shape / Template
-              </label>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Shape / Template
+                </h3>
+                {!sectionsOpen.template && sectionsOpened.template && (
+                  <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                )}
+              </div>
               {sectionsOpen.template ? (
                 <ChevronUpIcon className="w-5 h-5 text-gray-600" />
               ) : (
@@ -1866,7 +2098,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </button>
             <div
               className={`transition-all duration-300 overflow-hidden ${
-                sectionsOpen.template ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
+                sectionsOpen.template
+                  ? "max-h-[2000px] opacity-100"
+                  : "max-h-0 opacity-0"
               }`}
             >
               {templates.length === 0 ? (
@@ -1877,7 +2111,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 <>
                   {/* Helper function to get thumbnail filename */}
                   {(() => {
-                    const getThumbnailFilename = (templateId: string): string => {
+                    const getThumbnailFilename = (
+                      templateId: string,
+                    ): string => {
                       const thumbnailMap: Record<string, string> = {
                         "rect-1x3": "3x1-Round-Corners-Badge",
                         "rect-1_5x3": "3x1.5-Round-Corners-Badge",
@@ -1912,7 +2148,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                               flexDirection: "column",
                             }}
                             onClick={() => {
-                              console.log("[UNIVERSAL] Template changed to:", t.id);
+                              console.log(
+                                "[UNIVERSAL] Template changed to:",
+                                t.id,
+                              );
                               handleUniversalTemplateChange(t.id);
                             }}
                             title={t.name}
@@ -1969,9 +2208,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     };
 
                     // Featured templates: Round 1x3, Round 1.5x3, Oval 1.5x3, House 1.5x3
-                    const featuredTemplateIds = ["rect-1x3", "rect-1_5x3", "oval-1_5x3", "house-1_5x3"];
+                    const featuredTemplateIds = [
+                      "rect-1x3",
+                      "rect-1_5x3",
+                      "oval-1_5x3",
+                      "house-1_5x3",
+                    ];
                     const featuredTemplates = featuredTemplateIds
-                      .map(id => templates.find(t => t.id === id))
+                      .map((id) => templates.find((t) => t.id === id))
                       .filter((t): t is LoadedTemplate => t !== undefined);
 
                     return (
@@ -1996,179 +2240,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </div>
           </div>
 
-          {/* Export Options */}
-          <div className="mb-4">
-            <button
-              ref={exportSectionRef}
-              type="button"
-              onClick={() => {
-                const willBeOpen = !sectionsOpen.export;
-                setSectionsOpen({
-                  template: false,
-                  export: willBeOpen,
-                  background: false,
-                  textLines: false,
-                });
-              }}
-              className="flex items-center justify-between w-full mb-2 text-left"
-            >
-              <h3 className="font-semibold text-gray-700">Export Options</h3>
-              {sectionsOpen.export ? (
-                <ChevronUpIcon className="w-5 h-5 text-gray-600" />
-              ) : (
-                <ChevronDownIcon className="w-5 h-5 text-gray-600" />
-              )}
-            </button>
-            <div
-              className={`mt-4 flex flex-wrap gap-1 transition-all duration-300 overflow-hidden ${
-                sectionsOpen.export ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
-              }`}
-            >
-              <button
-                className="px-2 py-1 text-xs border rounded"
-                onClick={async () => {
-                  if (multipleBadges.length > 0) {
-                    const allBadges = getAllBadges(badge1Data, multipleBadges);
-                    const allTemplates = getAllTemplates(
-                      badge1Data,
-                      multipleBadges,
-                      templates
-                    );
-                    downloadMultipleSVGs(allBadges, allTemplates, "badge");
-                  } else {
-                    const badgeToExport = badge1Data || badge;
-                    await downloadSVG(
-                      {
-                        ...badgeToExport,
-                        id: badgeToExport.id || "badge",
-                        templateId:
-                          badgeToExport.templateId || universalTemplateId,
-                      },
-                      activeTemplate,
-                      "badge.svg"
-                    );
-                  }
-                }}
-              >
-                SVG
-              </button>
-              <button
-                className="px-2 py-1 text-xs border rounded"
-                onClick={async () => {
-                  if (multipleBadges.length > 0) {
-                    const allBadges = getAllBadges(badge1Data, multipleBadges);
-                    const allTemplates = getAllTemplates(
-                      badge1Data,
-                      multipleBadges,
-                      templates
-                    );
-                    downloadMultiplePNGs(allBadges, allTemplates, "badge");
-                  } else {
-                    const badgeToExport = badge1Data || badge;
-                    await downloadPNG(
-                      {
-                        ...badgeToExport,
-                        id: badgeToExport.id || "badge",
-                        templateId:
-                          badgeToExport.templateId || universalTemplateId,
-                      },
-                      activeTemplate,
-                      "badge.png",
-                      2
-                    );
-                  }
-                }}
-              >
-                PNG
-              </button>
-              <button
-                className="px-2 py-1 text-xs border rounded"
-                onClick={async () => {
-                  if (multipleBadges.length > 0) {
-                    const allBadges = getAllBadges(badge1Data, multipleBadges);
-                    const allTemplates = getAllTemplates(
-                      badge1Data,
-                      multipleBadges,
-                      templates
-                    );
-                    downloadMultipleTIFFs(allBadges, allTemplates, "badge");
-                  } else {
-                    const badgeToExport = badge1Data || badge;
-                    await downloadTIFF(
-                      {
-                        ...badgeToExport,
-                        id: badgeToExport.id || "badge",
-                        templateId:
-                          badgeToExport.templateId || universalTemplateId,
-                      },
-                      activeTemplate,
-                      "badge.tiff",
-                      4
-                    );
-                  }
-                }}
-              >
-                TIFF
-              </button>
-              <button
-                className="px-2 py-1 text-xs border rounded"
-                onClick={async () => {
-                  if (multipleBadges.length > 0) {
-                    const allBadges = getAllBadges(badge1Data, multipleBadges);
-                    const allTemplates = getAllTemplates(
-                      badge1Data,
-                      multipleBadges,
-                      templates
-                    );
-                    downloadMultipleCDRs(allBadges, allTemplates, "badge");
-                  } else {
-                    const badgeToExport = badge1Data || badge;
-                    await downloadCDR(
-                      {
-                        ...badgeToExport,
-                        id: badgeToExport.id || "badge",
-                        templateId:
-                          badgeToExport.templateId || universalTemplateId,
-                      },
-                      activeTemplate,
-                      "badge.cdr"
-                    );
-                  }
-                }}
-              >
-                CDR (Artwork)
-              </button>
-              <button
-                className="px-2 py-1 text-xs border rounded"
-                onClick={async () => {
-                  try {
-                    if (multipleBadges.length > 0) {
-                      const allBadges = getAllBadges(
-                        badge1Data,
-                        multipleBadges
-                      );
-                      // generatePDF takes first badge as badgeData, rest as multipleBadges array
-                      await generatePDF(allBadges[0], allBadges.slice(1));
-                    } else {
-                      const badgeToExport = badge1Data || badge;
-                      await generatePDF({
-                        ...badgeToExport,
-                        id: badgeToExport.id || "badge",
-                        templateId:
-                          badgeToExport.templateId || universalTemplateId,
-                      });
-                    }
-                  } catch (error) {
-                    console.error("Error generating PDF:", error);
-                    alert("Error generating PDF. Please try again.");
-                  }
-                }}
-              >
-                PDF
-              </button>
-            </div>
-          </div>
-
           {/* Background Color */}
           <div className="flex flex-col w-full mb-6">
             {/* Background Color - Smart palette grid (columns = color families, rows = gradients) */}
@@ -2184,12 +2255,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     background: willBeOpen,
                     textLines: false,
                   });
+                  // Mark as opened when user interacts with the section
+                  setSectionsOpened((prev) => ({ ...prev, background: true }));
                 }}
                 className="flex items-center justify-between w-full mb-2 text-left"
               >
-                <span className="font-semibold text-gray-700">
-                  Background Color
-                </span>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    Background Color
+                  </h3>
+                  {!sectionsOpen.background && sectionsOpened.background && (
+                    <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                  )}
+                </div>
                 {sectionsOpen.background ? (
                   <ChevronUpIcon className="w-5 h-5 text-gray-600" />
                 ) : (
@@ -2198,18 +2276,29 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               </button>
               <div
                 className={`transition-all duration-300 overflow-hidden ${
-                  sectionsOpen.background ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+                  sectionsOpen.background
+                    ? "max-h-[500px] opacity-100"
+                    : "max-h-0 opacity-0"
                 }`}
               >
                 {/* Featured Colors: Black, White, Gold, Silver, Blue, Red */}
                 {(() => {
                   const featuredColors = [
-                    { value: '#000000', name: 'Black', ring: 'ring-gray-900' },
-                    { value: '#FFFFFF', name: 'White', ring: 'ring-white' },
-                    { value: '#eac10c', name: 'Gold', ring: 'ring-yellow-400' },
-                    { value: '#C0C0C0', name: 'Silver', ring: 'ring-gray-300' },
-                    { value: '#0000FF', name: 'Blue', ring: 'ring-blue-500' },
-                    { value: '#FF0000', name: 'Red', ring: 'ring-red-500' },
+                    { value: "#000000", name: "Black", ring: "ring-gray-900" },
+                    { value: "#FFFFFF", name: "White", ring: "ring-white" },
+                    {
+                      value: "#eac10c",
+                      name: "Brushed Gold",
+                      ring: "ring-yellow-400",
+                    },
+                    {
+                      value: "#C0C0C0",
+                      name: "Brushed Silver",
+                      ring: "ring-gray-300",
+                    },
+                    { value: "#0000FF", name: "Blue", ring: "ring-blue-500" },
+
+                    { value: "#FF0000", name: "Red", ring: "ring-red-500" },
                   ];
 
                   const handleColorClick = (colorValue: string) => {
@@ -2225,70 +2314,126 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   // Parse hex or RGB input and convert to hex
                   const parseColorInput = (input: string): string | null => {
                     const trimmed = input.trim();
-                    
+
                     // Check if it's already a valid hex
                     if (/^#?[0-9A-Fa-f]{6}$/.test(trimmed)) {
-                      return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+                      return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
                     }
-                    
+
                     // Check if it's a 3-digit hex
                     if (/^#?[0-9A-Fa-f]{3}$/.test(trimmed)) {
-                      const hex = trimmed.startsWith('#') ? trimmed.slice(1) : trimmed;
+                      const hex = trimmed.startsWith("#")
+                        ? trimmed.slice(1)
+                        : trimmed;
                       return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`;
                     }
-                    
+
                     // Check if it's RGB format: rgb(r, g, b) or r, g, b
-                    const rgbMatch = trimmed.match(/^rgb\(?\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)?$/i);
+                    const rgbMatch = trimmed.match(
+                      /^rgb\(?\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)?$/i,
+                    );
                     if (rgbMatch) {
                       const r = parseInt(rgbMatch[1], 10);
                       const g = parseInt(rgbMatch[2], 10);
                       const b = parseInt(rgbMatch[3], 10);
-                      if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
-                        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+                      if (
+                        r >= 0 &&
+                        r <= 255 &&
+                        g >= 0 &&
+                        g <= 255 &&
+                        b >= 0 &&
+                        b <= 255
+                      ) {
+                        return `#${r.toString(16).padStart(2, "0")}${g
+                          .toString(16)
+                          .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
                       }
                     }
-                    
+
                     return null;
                   };
 
                   return (
                     <>
-                      <div className="grid grid-cols-3 gap-2 w-fit mb-2 ml-1.5 mt-1.5">
-                        {featuredColors.map((c) => (
+                      <div className="flex items-start gap-3 ml-1.5 mt-1.5">
+                        <div className="flex flex-col gap-2">
+                          <div className="grid grid-cols-3 gap-2 w-fit">
+                            {featuredColors.map((c) => (
+                              <div
+                                key={c.value}
+                                className="flex flex-col items-center gap-1"
+                              >
+                                <button
+                                  className={`w-12 h-12 border rounded ${
+                                    badge.backgroundColor === c.value
+                                      ? "ring-2 ring-offset-1 " + c.ring
+                                      : ""
+                                  }`}
+                                  style={{ backgroundColor: c.value }}
+                                  title={c.name}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handleColorClick(c.value);
+                                  }}
+                                />
+                                <span className="text-[10px] text-gray-600 text-center leading-tight">
+                                  {c.name === "Brushed Gold" ? (
+                                    <>
+                                      Brushed
+                                      <br />
+                                      Gold
+                                    </>
+                                  ) : c.name === "Brushed Silver" ? (
+                                    <>
+                                      Brushed
+                                      <br />
+                                      Silver
+                                    </>
+                                  ) : (
+                                    c.name
+                                  )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          {/* More Colors Link */}
                           <button
-                            key={c.value}
-                            className={`w-12 h-12 border rounded ${
-                              badge.backgroundColor === c.value
-                                ? "ring-2 ring-offset-1 " + c.ring
-                                : ""
-                            }`}
-                            style={{ backgroundColor: c.value }}
-                            title={c.name}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleColorClick(c.value);
+                            type="button"
+                            onClick={() => setShowColorModal(true)}
+                            className="text-sm text-blue-600 hover:text-blue-800 underline text-left py-1 w-fit"
+                          >
+                            more colors
+                          </button>
+                          {/* Apply to All Button */}
+                          {multipleBadges.length > 1 && (
+                            <div className="mt-2">
+                              <button
+                                type="button"
+                                onClick={applyBackgroundColorToAll}
+                                className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
+                                title="Apply background color to all badges"
+                              >
+                                Apply background color to all badges
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {/* Current Color Display - Large square aligned right */}
+                        <div className="flex-shrink-0 ml-auto flex flex-col items-center gap-1">
+                          <div
+                            className="w-24 h-24 md:w-32 md:h-32 border-2 border-gray-300 rounded shadow-sm"
+                            style={{
+                              backgroundColor:
+                                badge.backgroundColor || "#FFFFFF",
                             }}
+                            title={`Current background color: ${
+                              badge.backgroundColor || "#FFFFFF"
+                            }`}
                           />
-                        ))}
-                      </div>
-                      {/* More Colors Link */}
-                      <button
-                        type="button"
-                        onClick={() => setShowColorModal(true)}
-                        className="text-sm text-blue-600 hover:text-blue-800 underline text-left py-1 w-fit ml-1.5"
-                      >
-                        more colors
-                      </button>
-                      {/* Apply to All Button */}
-                      <div className="mt-2 ml-1.5">
-                        <button
-                          type="button"
-                          onClick={applyBackgroundColorToAll}
-                          className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
-                          title="Apply background color to all badges"
-                        >
-                          Apply background color to all badges
-                        </button>
+                          <span className="text-[10px] text-gray-600 text-center">
+                            Current color
+                          </span>
+                        </div>
                       </div>
                     </>
                   );
@@ -2310,13 +2455,22 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   background: false,
                   textLines: willBeOpen,
                 });
+                // Mark as opened when user interacts with the section
+                setSectionsOpened((prev) => ({ ...prev, textLines: true }));
               }}
               className="flex items-center justify-between w-full mb-2 text-left"
             >
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold text-gray-800">Text Lines</h3>
-                {badge.lines.some((l) => 
-                  l.color && areColorsSimilar(l.color, badge.backgroundColor, 100)
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Text Lines
+                </h3>
+                {!sectionsOpen.textLines && sectionsOpened.textLines && (
+                  <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                )}
+                {badge.lines.some(
+                  (l) =>
+                    l.color &&
+                    areColorsSimilar(l.color, badge.backgroundColor, 70),
                 ) && (
                   <span className="text-xs text-red-600 font-medium">
                     Please check font colors
@@ -2331,7 +2485,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </button>
             <div
               className={`transition-all duration-300 overflow-hidden ${
-                sectionsOpen.textLines ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"
+                sectionsOpen.textLines
+                  ? "max-h-[5000px] opacity-100"
+                  : "max-h-0 opacity-0"
               }`}
             >
               <div className="w-full">
@@ -2381,61 +2537,92 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     setShowTextColorModal(true);
                   }}
                   onApplyFormattingToAll={applyFormattingToAllLines}
+                  hasMultipleBadges={multipleBadges.length > 1}
                 />
               </div>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end items-center gap-2 mb-4">
-            <button
-              className="control-button w-10 h-10 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
-              onClick={(e) => {
-                e.preventDefault();
-                resetBadge();
-              }}
-              title="Reset current badge to default settings"
-            >
-              <ArrowPathRoundedSquareIcon className="w-5 h-5" />
-            </button>
-
-            {multipleBadges.length > 0 && (
+          <div className="flex justify-end items-start gap-3 mb-4">
+            <div className="flex flex-col items-center gap-1">
               <button
-                className="control-button w-10 h-10 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
+                className="control-button w-14 h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
                 onClick={(e) => {
                   e.preventDefault();
-                  resetAllBadges();
+                  resetBadge();
                 }}
-                title="Reset all badges to default settings"
+                title="Reset current badge to default settings"
               >
-                <ArrowPathIconOutline className="w-5 h-5" />
+                <ArrowPathRoundedSquareIcon className="w-6 h-6" />
               </button>
+              <div className="text-[10px] text-gray-600 text-center leading-tight">
+                Reset
+                <br />
+                Format
+              </div>
+            </div>
+
+            {multipleBadges.length > 1 && (
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  className="control-button w-14 h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    resetAllBadges();
+                  }}
+                  title="Reset all badges to default settings"
+                >
+                  <ArrowPathIconOutline className="w-6 h-6" />
+                </button>
+                <div className="text-[10px] text-gray-600 text-center leading-tight">
+                  Reset
+                  <br />
+                  All Badges
+                </div>
+              </div>
             )}
 
-            <button
-              className="control-button w-10 h-10 flex items-center justify-center bg-green-500 text-white hover:bg-green-600 border border-green-600 rounded transition-colors"
-              onClick={(e) => {
-                e.preventDefault();
-                applyAllFormattingToAll();
-              }}
-              title="Apply background color and all text formatting from current badge to all badges"
-            >
-              <Square2StackIcon className="w-5 h-5" />
-            </button>
+            {multipleBadges.length > 1 && (
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  className="control-button w-14 h-14 flex items-center justify-center bg-green-500 text-white hover:bg-green-600 border border-green-600 rounded transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    applyAllFormattingToAll();
+                  }}
+                  title="Apply background color and all text formatting from current badge to all badges"
+                >
+                  <Square2StackIcon className="w-6 h-6" />
+                </button>
+                <div className="text-[10px] text-gray-600 text-center leading-tight">
+                  Apply Format
+                  <br />
+                  to All Badges
+                </div>
+              </div>
+            )}
 
-            <button
-              className="control-button w-10 h-10 flex items-center justify-center bg-blue-500 text-white hover:bg-blue-600 border border-blue-600 rounded transition-colors"
-              onClick={(e) => {
-                e.preventDefault();
-                setCsvText("");
-                setCsvPreview([]);
-                setCsvError("");
-                setShowCsvModal(true);
-              }}
-              title="Add multiple badges from CSV file or data"
-            >
-              <SquaresPlusIcon className="w-5 h-5" />
-            </button>
+            <div className="flex flex-col items-center gap-1">
+              <button
+                className="control-button w-14 h-14 flex items-center justify-center bg-blue-500 text-white hover:bg-blue-600 border border-blue-600 rounded transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCsvText("");
+                  setCsvPreview([]);
+                  setCsvError("");
+                  setShowCsvModal(true);
+                }}
+                title="Add multiple badges from CSV file or data"
+              >
+                <SquaresPlusIcon className="w-6 h-6" />
+              </button>
+              <div className="text-[10px] text-gray-600 text-center leading-tight">
+                Add
+                <br />
+                Badges
+              </div>
+            </div>
           </div>
 
           {/* Backing Options */}
@@ -2515,35 +2702,212 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 : `Add to Cart - ${prettyPrice}`}
             </button>
           </div>
+
+          {/* Export Options */}
+          <div className="mb-4">
+            <button
+              ref={exportSectionRef}
+              type="button"
+              onClick={() => {
+                const willBeOpen = !sectionsOpen.export;
+                setSectionsOpen({
+                  template: false,
+                  export: willBeOpen,
+                  background: false,
+                  textLines: false,
+                });
+              }}
+              className="flex items-center justify-between w-full mb-2 text-left"
+            >
+              <h3 className="text-lg font-semibold text-gray-800">
+                Export Options
+              </h3>
+              {sectionsOpen.export ? (
+                <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+              ) : (
+                <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
+            <div
+              className={`mt-4 flex flex-wrap gap-1 transition-all duration-300 overflow-hidden ${
+                sectionsOpen.export
+                  ? "max-h-[500px] opacity-100"
+                  : "max-h-0 opacity-0"
+              }`}
+            >
+              <button
+                className="px-2 py-1 text-xs border rounded"
+                onClick={async () => {
+                  if (multipleBadges.length > 1) {
+                    const allBadges = getAllBadges(multipleBadges);
+                    const allTemplates = getAllTemplates(
+                      multipleBadges,
+                      templates,
+                    );
+                    downloadMultipleSVGs(allBadges, allTemplates, "badge");
+                  } else {
+                    const badgeToExport = badge1Data || badge;
+                    await downloadSVG(
+                      {
+                        ...badgeToExport,
+                        id: badgeToExport.id || "badge",
+                        templateId:
+                          badgeToExport.templateId || universalTemplateId,
+                      },
+                      activeTemplate,
+                      "badge.svg",
+                    );
+                  }
+                }}
+              >
+                SVG
+              </button>
+              <button
+                className="px-2 py-1 text-xs border rounded"
+                onClick={async () => {
+                  if (multipleBadges.length > 1) {
+                    const allBadges = getAllBadges(multipleBadges);
+                    const allTemplates = getAllTemplates(
+                      multipleBadges,
+                      templates,
+                    );
+                    downloadMultiplePNGs(allBadges, allTemplates, "badge");
+                  } else {
+                    const badgeToExport = badge1Data || badge;
+                    await downloadPNG(
+                      {
+                        ...badgeToExport,
+                        id: badgeToExport.id || "badge",
+                        templateId:
+                          badgeToExport.templateId || universalTemplateId,
+                      },
+                      activeTemplate,
+                      "badge.png",
+                      2,
+                    );
+                  }
+                }}
+              >
+                PNG
+              </button>
+              <button
+                className="px-2 py-1 text-xs border rounded"
+                onClick={async () => {
+                  if (multipleBadges.length > 1) {
+                    const allBadges = getAllBadges(multipleBadges);
+                    const allTemplates = getAllTemplates(
+                      multipleBadges,
+                      templates,
+                    );
+                    downloadMultipleTIFFs(allBadges, allTemplates, "badge");
+                  } else {
+                    const badgeToExport = badge1Data || badge;
+                    await downloadTIFF(
+                      {
+                        ...badgeToExport,
+                        id: badgeToExport.id || "badge",
+                        templateId:
+                          badgeToExport.templateId || universalTemplateId,
+                      },
+                      activeTemplate,
+                      "badge.tiff",
+                      4,
+                    );
+                  }
+                }}
+              >
+                TIFF
+              </button>
+              <button
+                className="px-2 py-1 text-xs border rounded"
+                onClick={async () => {
+                  if (multipleBadges.length > 1) {
+                    const allBadges = getAllBadges(multipleBadges);
+                    const allTemplates = getAllTemplates(
+                      multipleBadges,
+                      templates,
+                    );
+                    downloadMultipleCDRs(allBadges, allTemplates, "badge");
+                  } else {
+                    const badgeToExport = badge1Data || badge;
+                    await downloadCDR(
+                      {
+                        ...badgeToExport,
+                        id: badgeToExport.id || "badge",
+                        templateId:
+                          badgeToExport.templateId || universalTemplateId,
+                      },
+                      activeTemplate,
+                      "badge.cdr",
+                    );
+                  }
+                }}
+              >
+                CDR (Artwork)
+              </button>
+              <button
+                className="px-2 py-1 text-xs border rounded"
+                onClick={async () => {
+                  try {
+                    if (multipleBadges.length > 1) {
+                      const allBadges = getAllBadges(multipleBadges);
+                      // generatePDF takes first badge as badgeData, rest as multipleBadges array
+                      await generatePDF(allBadges[0], allBadges.slice(1));
+                    } else {
+                      const badgeToExport = badge1Data || badge;
+                      await generatePDF({
+                        ...badgeToExport,
+                        id: badgeToExport.id || "badge",
+                        templateId:
+                          badgeToExport.templateId || universalTemplateId,
+                      });
+                    }
+                  } catch (error) {
+                    console.error("Error generating PDF:", error);
+                    alert("Error generating PDF. Please try again.");
+                  }
+                }}
+              >
+                PDF
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* RIGHT COLUMN - Badge preview (Desktop only). Current badge at top; rest scrollable. */}
       <div
         className={`hidden md:flex md:w-1/2 md:pl-3 flex-col items-center min-h-0 ${
-          multipleBadges.length > 0 ? "md:h-[90vh]" : ""
+          multipleBadges.length > 1 ? "md:h-[90vh]" : ""
         }`}
       >
         <div className="flex items-center justify-between w-full mb-4 flex-shrink-0">
           <h2 className="text-xl font-bold">Badge Preview</h2>
-          <button
-            type="button"
-            className="p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-            onClick={() => setShowBadgeGridModal(true)}
-            aria-label="View all badges"
-            title="View all badges"
-          >
-            <Squares2X2Icon className="w-5 h-5" />
-          </button>
+          <div className="flex flex-col items-center gap-1">
+            <button
+              type="button"
+              className="w-14 h-14 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+              onClick={() => setShowBadgeGridModal(true)}
+              aria-label="View all badges"
+              title="View all badges"
+            >
+              <Squares2X2Icon className="w-6 h-6" />
+            </button>
+            <div className="text-[10px] text-gray-600 text-center leading-tight">
+              Grid
+              <br />
+              View
+            </div>
+          </div>
         </div>
-        {multipleBadges.length === 0 ? (
+        {multipleBadges.length === 1 ? (
           <div
             className="flex flex-col items-center w-full h-[200px] flex-shrink-0"
             style={{ overflow: "visible" }}
           >
             <BadgeSvgRenderer
-              badge={getBadgeForPreview(0, badge1Data).badge}
-              templateId={getBadgeForPreview(0, badge1Data).templateId}
+              badge={getBadgeForPreview(0, getSavedBadgeFor(0)).badge}
+              templateId={getBadgeForPreview(0, getSavedBadgeFor(0)).templateId}
             />
           </div>
         ) : (
@@ -2558,8 +2922,18 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 style={{ overflow: "hidden" }}
               >
                 <BadgeSvgRenderer
-                  badge={getBadgeForPreview(selectedBadgeIndex, getSavedBadgeFor(selectedBadgeIndex)).badge}
-                  templateId={getBadgeForPreview(selectedBadgeIndex, getSavedBadgeFor(selectedBadgeIndex)).templateId}
+                  badge={
+                    getBadgeForPreview(
+                      selectedBadgeIndex,
+                      getSavedBadgeFor(selectedBadgeIndex),
+                    ).badge
+                  }
+                  templateId={
+                    getBadgeForPreview(
+                      selectedBadgeIndex,
+                      getSavedBadgeFor(selectedBadgeIndex),
+                    ).templateId
+                  }
                   height="100%"
                 />
               </div>
@@ -2571,28 +2945,56 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 .filter((i) => i !== selectedBadgeIndex)
                 .map((i) => {
                   const saved = getSavedBadgeFor(i);
-                  const { badge: b, templateId: tid } = getBadgeForPreview(i, saved);
-                  
-                  // Check if this badge has color similarity issues
-                  const hasColorIssues = b.lines.some((l: BadgeLine) => 
-                    l.color && areColorsSimilar(l.color, b.backgroundColor, 100)
+                  const { badge: b, templateId: tid } = getBadgeForPreview(
+                    i,
+                    saved,
                   );
-                  
+
+                  // Check if this badge has color similarity issues
+                  const hasColorIssues = b.lines.some(
+                    (l: BadgeLine) =>
+                      l.color &&
+                      areColorsSimilar(l.color, b.backgroundColor, 70),
+                  );
+
                   return (
-                    <div key={i} className="flex flex-row items-center gap-2 w-full flex-shrink-0">
+                    <div
+                      key={i}
+                      className="flex flex-row items-center gap-2 w-full flex-shrink-0"
+                    >
                       <div className="flex flex-col items-center justify-center mr-2">
-                        <div className="flex items-center gap-1 mb-2" style={{ width: 32, justifyContent: "center" }}>
-                          <span className="text-lg font-bold">
-                            {i + 1}.
-                          </span>
+                        <div
+                          className="flex items-center gap-1 mb-2"
+                          style={{ width: 32, justifyContent: "center" }}
+                        >
+                          <span className="text-lg font-bold">{i + 1}.</span>
                           {hasColorIssues && (
-                            <div 
+                            <div
                               className="relative w-4 h-4 flex items-center justify-center"
                               title="Some text may not show well. Please check font colors"
                             >
-                              <svg className="w-4 h-4 h-full text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                                <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                                <line x1="5" y1="5" x2="15" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                              <svg
+                                className="w-4 h-4 h-full text-red-600"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <circle
+                                  cx="10"
+                                  cy="10"
+                                  r="9"
+                                  stroke="currentColor"
+                                  strokeWidth="1.5"
+                                  fill="none"
+                                />
+                                <line
+                                  x1="5"
+                                  y1="5"
+                                  x2="15"
+                                  y2="15"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                />
                               </svg>
                             </div>
                           )}
@@ -2614,7 +3016,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                               style={{ width: 28, height: 28 }}
                               onClick={(e) => {
                                 e.preventDefault();
-                                setMultipleBadges(multipleBadges.filter((_, idx) => idx !== i - 1));
+                                setMultipleBadges(
+                                  multipleBadges.filter(
+                                    (_, idx) => idx !== i - 1,
+                                  ),
+                                );
                               }}
                             >
                               <XMarkIcon className="w-4 h-4" />
@@ -2650,7 +3056,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-bold text-gray-800">Select badge to edit</h3>
+              <h3 className="text-lg font-bold text-gray-800">
+                Select badge to edit
+              </h3>
               <button
                 type="button"
                 className="p-2 text-gray-500 hover:text-gray-700"
@@ -2662,14 +3070,18 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </div>
             <div className="grid grid-cols-2 gap-3 p-4 overflow-y-auto flex-1 min-h-0">
               {Array.from({ length: totalBadges }, (_, i) => {
-                const { badge: b, templateId: tid } = getBadgeForPreview(i, getSavedBadgeFor(i));
-                const isSelected = selectedBadgeIndex === i;
-                
-                // Check if this badge has color similarity issues
-                const hasColorIssues = b.lines.some((l: BadgeLine) => 
-                  l.color && areColorsSimilar(l.color, b.backgroundColor, 100)
+                const { badge: b, templateId: tid } = getBadgeForPreview(
+                  i,
+                  getSavedBadgeFor(i),
                 );
-                
+                const isSelected = selectedBadgeIndex === i;
+
+                // Check if this badge has color similarity issues
+                const hasColorIssues = b.lines.some(
+                  (l: BadgeLine) =>
+                    l.color && areColorsSimilar(l.color, b.backgroundColor, 70),
+                );
+
                 return (
                   <button
                     key={i}
@@ -2685,21 +3097,49 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     }}
                   >
                     <div className="flex items-center gap-1 mb-1">
-                      <span className="text-sm font-bold text-gray-700">{i + 1}.</span>
+                      <span className="text-sm font-bold text-gray-700">
+                        {i + 1}.
+                      </span>
                       {hasColorIssues && (
-                        <div 
+                        <div
                           className="relative w-4 h-4 flex items-center justify-center"
                           title="Some text may not show well. Please check font colors"
                         >
-                          <svg className="w-4 h-4 h-full text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                            <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                            <line x1="5" y1="5" x2="15" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                          <svg
+                            className="w-4 h-4 h-full text-red-600"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <circle
+                              cx="10"
+                              cy="10"
+                              r="9"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              fill="none"
+                            />
+                            <line
+                              x1="5"
+                              y1="5"
+                              x2="15"
+                              y2="15"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                            />
                           </svg>
                         </div>
                       )}
                     </div>
-                    <div className="w-full flex items-center justify-center" style={{ height: 80 }}>
-                      <BadgeSvgRenderer badge={b} templateId={tid} height={80} />
+                    <div
+                      className="w-full flex items-center justify-center"
+                      style={{ height: 80 }}
+                    >
+                      <BadgeSvgRenderer
+                        badge={b}
+                        templateId={tid}
+                        height={80}
+                      />
                     </div>
                   </button>
                 );
@@ -2723,12 +3163,18 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-bold text-gray-800">Select Template</h3>
+              <h3 className="text-lg font-bold text-gray-800">
+                Select Template
+              </h3>
               <div className="flex items-center gap-2">
                 <label className="text-sm text-gray-600">Sort by:</label>
                 <select
                   value={templateSortBy}
-                  onChange={(e) => setTemplateSortBy(e.target.value as 'popularity' | 'size' | 'alphabetical')}
+                  onChange={(e) =>
+                    setTemplateSortBy(
+                      e.target.value as "popularity" | "size" | "alphabetical",
+                    )
+                  }
                   className="text-sm border border-gray-300 rounded px-2 py-1 bg-white"
                 >
                   <option value="popularity">Popularity</option>
@@ -2750,125 +3196,132 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 <div className="text-sm text-gray-500 col-span-full text-center py-4">
                   Loading templates...
                 </div>
-              ) : (() => {
-                // Sort templates based on selected option
-                const sortedTemplates = [...templates].sort((a, b) => {
-                  if (templateSortBy === 'popularity') {
-                    // Popularity order: rect-1x3, rect-1_5x3, oval-1_5x3, house-1_5x3, square-1x3, square-1_5x3, fancy-1_5x3, designer-1x3
-                    const popularityOrder: Record<string, number> = {
-                      "rect-1x3": 1,
-                      "rect-1_5x3": 2,
-                      "oval-1_5x3": 3,
-                      "house-1_5x3": 4,
-                      "square-1x3": 5,
-                      "square-1_5x3": 6,
-                      "fancy-1_5x3": 7,
-                      "designer-1x3": 8,
+              ) : (
+                (() => {
+                  // Sort templates based on selected option
+                  const sortedTemplates = [...templates].sort((a, b) => {
+                    if (templateSortBy === "popularity") {
+                      // Popularity order: rect-1x3, rect-1_5x3, oval-1_5x3, house-1_5x3, square-1x3, square-1_5x3, fancy-1_5x3, designer-1x3
+                      const popularityOrder: Record<string, number> = {
+                        "rect-1x3": 1,
+                        "rect-1_5x3": 2,
+                        "oval-1_5x3": 3,
+                        "house-1_5x3": 4,
+                        "square-1x3": 5,
+                        "square-1_5x3": 6,
+                        "fancy-1_5x3": 7,
+                        "designer-1x3": 8,
+                      };
+                      const aOrder = popularityOrder[a.id] ?? 999;
+                      const bOrder = popularityOrder[b.id] ?? 999;
+                      return aOrder - bOrder;
+                    } else if (templateSortBy === "size") {
+                      // Sort by height (heightPx)
+                      return a.heightPx - b.heightPx;
+                    } else {
+                      // Alphabetical by name
+                      return a.name.localeCompare(b.name);
+                    }
+                  });
+
+                  return sortedTemplates.map((t): JSX.Element => {
+                    const getThumbnailFilename = (
+                      templateId: string,
+                    ): string => {
+                      const thumbnailMap: Record<string, string> = {
+                        "rect-1x3": "3x1-Round-Corners-Badge",
+                        "rect-1_5x3": "3x1.5-Round-Corners-Badge",
+                        "oval-1_5x3": "3x1.5-Oval-Badge",
+                        "house-1_5x3": "3x1.5-House-Badge",
+                        "square-1x3": "3x1-Badge",
+                        "square-1_5x3": "3x1.5-Badge",
+                        "designer-1x3": "3x1-Designer-Badge",
+                        "fancy-1_5x3": "3x1.5-Fancy-Badge",
+                      };
+                      return thumbnailMap[templateId] || templateId;
                     };
-                    const aOrder = popularityOrder[a.id] ?? 999;
-                    const bOrder = popularityOrder[b.id] ?? 999;
-                    return aOrder - bOrder;
-                  } else if (templateSortBy === 'size') {
-                    // Sort by height (heightPx)
-                    return a.heightPx - b.heightPx;
-                  } else {
-                    // Alphabetical by name
-                    return a.name.localeCompare(b.name);
-                  }
-                });
 
-                return sortedTemplates.map((t): JSX.Element => {
-                  const getThumbnailFilename = (templateId: string): string => {
-                    const thumbnailMap: Record<string, string> = {
-                      "rect-1x3": "3x1-Round-Corners-Badge",
-                      "rect-1_5x3": "3x1.5-Round-Corners-Badge",
-                      "oval-1_5x3": "3x1.5-Oval-Badge",
-                      "house-1_5x3": "3x1.5-House-Badge",
-                      "square-1x3": "3x1-Badge",
-                      "square-1_5x3": "3x1.5-Badge",
-                      "designer-1x3": "3x1-Designer-Badge",
-                      "fancy-1_5x3": "3x1.5-Fancy-Badge",
-                    };
-                    return thumbnailMap[templateId] || templateId;
-                  };
+                    const thumbnailFilename = getThumbnailFilename(t.id);
+                    const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
+                    const svgPath = `/templates/${t.id}.svg`;
+                    const isSelected = universalTemplateId === t.id;
 
-                  const thumbnailFilename = getThumbnailFilename(t.id);
-                  const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
-                  const svgPath = `/templates/${t.id}.svg`;
-                  const isSelected = universalTemplateId === t.id;
-
-                  return (
-                    <div key={t.id} className="relative">
-                      <button
-                        type="button"
-                        className={`relative rounded-lg overflow-hidden transition-all w-full border bg-white ${
-                          isSelected
-                            ? "border-blue-600 ring-2 ring-blue-300 shadow-md"
-                            : "border-gray-300 hover:border-gray-400"
-                        }`}
-                        style={{
-                          height: "140px",
-                          display: "flex",
-                          flexDirection: "column",
-                        }}
-                        onClick={() => {
-                          console.log("[UNIVERSAL] Template changed to:", t.id);
-                          handleUniversalTemplateChange(t.id);
-                          setShowTemplateModal(false);
-                        }}
-                        title={t.name}
-                      >
-                        <div
-                          className={`text-[10px] text-center py-1 flex-shrink-0 ${
+                    return (
+                      <div key={t.id} className="relative">
+                        <button
+                          type="button"
+                          className={`relative rounded-lg overflow-hidden transition-all w-full border bg-white ${
                             isSelected
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-200 text-gray-700"
+                              ? "border-blue-600 ring-2 ring-blue-300 shadow-md"
+                              : "border-gray-300 hover:border-gray-400"
                           }`}
-                        >
-                          {t.name}
-                        </div>
-                        <div
-                          className="flex-1 overflow-hidden flex items-center justify-center"
                           style={{
-                            minHeight: 0,
-                            width: "100%",
-                            height: "100%",
-                            padding: "6px",
-                            boxSizing: "border-box",
+                            height: "140px",
+                            display: "flex",
+                            flexDirection: "column",
                           }}
+                          onClick={() => {
+                            console.log(
+                              "[UNIVERSAL] Template changed to:",
+                              t.id,
+                            );
+                            handleUniversalTemplateChange(t.id);
+                            setShowTemplateModal(false);
+                          }}
+                          title={t.name}
                         >
-                          <img
-                            src={thumbnailPath}
-                            alt={t.name}
-                            className="object-contain"
+                          <div
+                            className={`text-[10px] text-center py-1 flex-shrink-0 ${
+                              isSelected
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-200 text-gray-700"
+                            }`}
+                          >
+                            {t.name}
+                          </div>
+                          <div
+                            className="flex-1 overflow-hidden flex items-center justify-center"
                             style={{
-                              maxWidth: "100%",
-                              maxHeight: "100%",
-                              width: "auto",
-                              height: "auto",
-                              objectFit: "contain",
+                              minHeight: 0,
+                              width: "100%",
+                              height: "100%",
+                              padding: "6px",
+                              boxSizing: "border-box",
                             }}
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = "none";
-                              const svgImg = document.createElement("img");
-                              svgImg.src = svgPath;
-                              svgImg.className = "object-contain";
-                              svgImg.style.maxWidth = "100%";
-                              svgImg.style.maxHeight = "100%";
-                              svgImg.style.width = "auto";
-                              svgImg.style.height = "auto";
-                              svgImg.style.objectFit = "contain";
-                              svgImg.alt = t.name;
-                              target.parentElement?.appendChild(svgImg);
-                            }}
-                          />
-                        </div>
-                      </button>
-                    </div>
-                  );
-                });
-              })()}
+                          >
+                            <img
+                              src={thumbnailPath}
+                              alt={t.name}
+                              className="object-contain"
+                              style={{
+                                maxWidth: "100%",
+                                maxHeight: "100%",
+                                width: "auto",
+                                height: "auto",
+                                objectFit: "contain",
+                              }}
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = "none";
+                                const svgImg = document.createElement("img");
+                                svgImg.src = svgPath;
+                                svgImg.className = "object-contain";
+                                svgImg.style.maxWidth = "100%";
+                                svgImg.style.maxHeight = "100%";
+                                svgImg.style.width = "auto";
+                                svgImg.style.height = "auto";
+                                svgImg.style.objectFit = "contain";
+                                svgImg.alt = t.name;
+                                target.parentElement?.appendChild(svgImg);
+                              }}
+                            />
+                          </div>
+                        </button>
+                      </div>
+                    );
+                  });
+                })()
+              )}
             </div>
           </div>
         </div>
@@ -2888,7 +3341,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
-              <h3 className="text-lg font-bold text-gray-800">Select Background Color</h3>
+              <h3 className="text-lg font-bold text-gray-800">
+                Select Background Color
+              </h3>
               <button
                 type="button"
                 className="p-2 text-gray-500 hover:text-gray-700"
@@ -2901,68 +3356,93 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             {(() => {
               // Extra row with 200-level colors (9 colors)
               const extraRow200 = [
-                { value: '#FFFFFF', name: 'White', ring: 'ring-white' },
-                { value: '#fecaca', name: 'Red 200', ring: 'ring-red-200' },
-                { value: '#fed7aa', name: 'Orange 200', ring: 'ring-orange-200' },
-                { value: '#fef08a', name: 'Yellow 200', ring: 'ring-yellow-200' },
-                { value: '#bbf7d0', name: 'Green 200', ring: 'ring-green-200' },
-                { value: '#a5f3fc', name: 'Cyan 200', ring: 'ring-cyan-200' },
-                { value: '#bfdbfe', name: 'Blue 200', ring: 'ring-blue-200' },
-                { value: '#e9d5ff', name: 'Purple 200', ring: 'ring-purple-200' },
-                { value: '#fde68a', name: 'Amber 200', ring: 'ring-amber-200' },
+                { value: "#FFFFFF", name: "White", ring: "ring-white" },
+                { value: "#fecaca", name: "Red 200", ring: "ring-red-200" },
+                {
+                  value: "#fed7aa",
+                  name: "Orange 200",
+                  ring: "ring-orange-200",
+                },
+                {
+                  value: "#fef08a",
+                  name: "Yellow 200",
+                  ring: "ring-yellow-200",
+                },
+                { value: "#bbf7d0", name: "Green 200", ring: "ring-green-200" },
+                { value: "#a5f3fc", name: "Cyan 200", ring: "ring-cyan-200" },
+                { value: "#bfdbfe", name: "Blue 200", ring: "ring-blue-200" },
+                {
+                  value: "#e9d5ff",
+                  name: "Purple 200",
+                  ring: "ring-purple-200",
+                },
+                { value: "#fde68a", name: "Amber 200", ring: "ring-amber-200" },
               ];
-              
+
               // Desktop order: extra row + all SMART_PALETTE_COLORS (columns = color families)
               const desktopOrder = [...extraRow200, ...SMART_PALETTE_COLORS];
-              
+
               // Mobile order: TRANSPOSE so rows = color families, columns = lightness levels
               // SMART_PALETTE_COLORS is organized as: 5 rows × 9 columns
               // Each row is a lightness level, each column is a color family
               // We want: 9 rows × 6 columns (each row is a color family, each column is a lightness level)
-              
-              const reorganizedForMobile: Array<{ value: string; name: string; ring: string }> = [];
-              
+
+              const reorganizedForMobile: Array<{
+                value: string;
+                name: string;
+                ring: string;
+              }> = [];
+
               // Color families in order: Gray, Red, Orange, Yellow, Green, Cyan, Blue, Purple, Brown
               // For each color family (column index 0-8)
               for (let familyIndex = 0; familyIndex < 9; familyIndex++) {
                 // Get the 200-level color for this family (from extraRow200)
                 reorganizedForMobile.push(extraRow200[familyIndex]);
-                
+
                 // Get all lightness levels for this family from SMART_PALETTE_COLORS
                 // Each row in SMART_PALETTE_COLORS represents a lightness level
                 // We need to extract the color at position [row][familyIndex] for each row
                 for (let lightnessRow = 0; lightnessRow < 5; lightnessRow++) {
                   const rowStart = lightnessRow * 9;
-                  const colorAtFamily = SMART_PALETTE_COLORS[rowStart + familyIndex];
+                  const colorAtFamily =
+                    SMART_PALETTE_COLORS[rowStart + familyIndex];
                   reorganizedForMobile.push(colorAtFamily);
                 }
               }
-              
-              const renderColorButton = (c: { value: string; name: string; ring: string }) => (
-                <button
+
+              const renderColorButton = (c: {
+                value: string;
+                name: string;
+                ring: string;
+              }) => (
+                <div
                   key={c.value}
-                  className={`w-8 h-8 md:w-12 md:h-12 border rounded transition-all ${
-                    badge.backgroundColor === c.value
-                      ? "ring-2 ring-offset-1 " + c.ring + " scale-110"
-                      : "hover:scale-105"
-                  }`}
-                  style={{ backgroundColor: c.value }}
-                  title={c.name}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    // Check if the new background color is similar to any text line colors
-                    if (checkBackgroundColorSimilarity(c.value)) {
-                      setPendingBackgroundColor(c.value);
-                      setShowBackgroundColorWarning(true);
-                      setShowColorModal(false);
-                    } else {
-                      applyBackgroundColor(c.value);
-                      setShowColorModal(false);
-                    }
-                  }}
-                />
+                  className="relative flex items-center justify-center"
+                >
+                  <button
+                    className={`w-8 h-8 md:w-12 md:h-12 border-2 rounded transition-all ${
+                      badge.backgroundColor === c.value
+                        ? "ring-2 ring-offset-1 " + c.ring + " scale-110"
+                        : "border-gray-300 hover:scale-105"
+                    }`}
+                    style={{ backgroundColor: c.value }}
+                    title={c.name}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      // Check if the new background color is similar to any text line colors
+                      if (checkBackgroundColorSimilarity(c.value)) {
+                        setPendingBackgroundColor(c.value);
+                        setShowBackgroundColorWarning(true);
+                        setShowColorModal(false);
+                      } else {
+                        applyBackgroundColor(c.value);
+                        setShowColorModal(false);
+                      }
+                    }}
+                  />
+                </div>
               );
-              
+
               return (
                 <>
                   {/* Mobile: 6 columns, transposed order (rows = color families, columns = lightness levels) */}
@@ -2982,29 +3462,42 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 // Parse hex or RGB input and convert to hex
                 const parseColorInput = (input: string): string | null => {
                   const trimmed = input.trim();
-                  
+
                   // Check if it's already a valid hex
                   if (/^#?[0-9A-Fa-f]{6}$/.test(trimmed)) {
-                    return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+                    return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
                   }
-                  
+
                   // Check if it's a 3-digit hex
                   if (/^#?[0-9A-Fa-f]{3}$/.test(trimmed)) {
-                    const hex = trimmed.startsWith('#') ? trimmed.slice(1) : trimmed;
+                    const hex = trimmed.startsWith("#")
+                      ? trimmed.slice(1)
+                      : trimmed;
                     return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`;
                   }
-                  
+
                   // Check if it's RGB format: rgb(r, g, b) or r, g, b
-                  const rgbMatch = trimmed.match(/^rgb\(?\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)?$/i);
+                  const rgbMatch = trimmed.match(
+                    /^rgb\(?\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)?$/i,
+                  );
                   if (rgbMatch) {
                     const r = parseInt(rgbMatch[1], 10);
                     const g = parseInt(rgbMatch[2], 10);
                     const b = parseInt(rgbMatch[3], 10);
-                    if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
-                      return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+                    if (
+                      r >= 0 &&
+                      r <= 255 &&
+                      g >= 0 &&
+                      g <= 255 &&
+                      b >= 0 &&
+                      b <= 255
+                    ) {
+                      return `#${r.toString(16).padStart(2, "0")}${g
+                        .toString(16)
+                        .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
                     }
                   }
-                  
+
                   return null;
                 };
 
@@ -3018,32 +3511,36 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       setPendingBackgroundColor(previewColor);
                       setShowBackgroundColorWarning(true);
                       setShowColorModal(false);
-                      setCustomColorInput('');
+                      setCustomColorInput("");
                     } else {
                       applyBackgroundColor(previewColor);
                       setShowColorModal(false);
-                      setCustomColorInput('');
+                      setCustomColorInput("");
                     }
                   }
                 };
 
                 return (
                   <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-3">
-                    <label className="text-sm font-medium text-gray-700 md:flex-shrink-0">Custom Color:</label>
+                    <label className="text-sm font-medium text-gray-700 md:flex-shrink-0">
+                      Custom Color:
+                    </label>
                     <div className="flex items-center gap-2 border border-gray-300 rounded px-2 py-1 bg-white flex-1 min-w-0">
                       <div
                         className="w-6 h-6 md:w-8 md:h-8 border border-gray-300 rounded flex-shrink-0"
-                        style={{ 
-                          backgroundColor: isValidColor ? previewColor : '#f3f4f6',
+                        style={{
+                          backgroundColor: isValidColor
+                            ? previewColor
+                            : "#f3f4f6",
                         }}
-                        title={isValidColor ? previewColor : 'Invalid color'}
+                        title={isValidColor ? previewColor : "Invalid color"}
                       />
                       <input
                         type="text"
                         value={customColorInput}
                         onChange={(e) => setCustomColorInput(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && isValidColor) {
+                          if (e.key === "Enter" && isValidColor) {
                             handleApplyCustomColor();
                           }
                         }}
@@ -3057,8 +3554,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       disabled={!isValidColor}
                       className={`px-4 py-2 text-sm rounded transition-colors flex-shrink-0 ${
                         isValidColor
-                          ? 'bg-blue-500 text-white hover:bg-blue-600'
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          ? "bg-blue-500 text-white hover:bg-blue-600"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
                       }`}
                     >
                       Apply
@@ -3088,7 +3585,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
-              <h3 className="text-lg font-bold text-gray-800">Select Text Color for Line {textColorModalLineIndex + 1}</h3>
+              <h3 className="text-lg font-bold text-gray-800">
+                Select Text Color for Line {textColorModalLineIndex + 1}
+              </h3>
               <button
                 type="button"
                 className="p-2 text-gray-500 hover:text-gray-700"
@@ -3104,68 +3603,106 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             {(() => {
               // Extra row with 200-level colors (9 colors)
               const extraRow200 = [
-                { value: '#FFFFFF', name: 'White', ring: 'ring-white' },
-                { value: '#fecaca', name: 'Red 200', ring: 'ring-red-200' },
-                { value: '#fed7aa', name: 'Orange 200', ring: 'ring-orange-200' },
-                { value: '#fef08a', name: 'Yellow 200', ring: 'ring-yellow-200' },
-                { value: '#bbf7d0', name: 'Green 200', ring: 'ring-green-200' },
-                { value: '#a5f3fc', name: 'Cyan 200', ring: 'ring-cyan-200' },
-                { value: '#bfdbfe', name: 'Blue 200', ring: 'ring-blue-200' },
-                { value: '#e9d5ff', name: 'Purple 200', ring: 'ring-purple-200' },
-                { value: '#fde68a', name: 'Amber 200', ring: 'ring-amber-200' },
+                { value: "#FFFFFF", name: "White", ring: "ring-white" },
+                { value: "#fecaca", name: "Red 200", ring: "ring-red-200" },
+                {
+                  value: "#fed7aa",
+                  name: "Orange 200",
+                  ring: "ring-orange-200",
+                },
+                {
+                  value: "#fef08a",
+                  name: "Yellow 200",
+                  ring: "ring-yellow-200",
+                },
+                { value: "#bbf7d0", name: "Green 200", ring: "ring-green-200" },
+                { value: "#a5f3fc", name: "Cyan 200", ring: "ring-cyan-200" },
+                { value: "#bfdbfe", name: "Blue 200", ring: "ring-blue-200" },
+                {
+                  value: "#e9d5ff",
+                  name: "Purple 200",
+                  ring: "ring-purple-200",
+                },
+                { value: "#fde68a", name: "Amber 200", ring: "ring-amber-200" },
               ];
-              
+
               // Desktop order: extra row + all SMART_PALETTE_COLORS (columns = color families)
               const desktopOrder = [...extraRow200, ...SMART_PALETTE_COLORS];
-              
+
               // Mobile order: TRANSPOSE so rows = color families, columns = lightness levels
-              const reorganizedForMobile: Array<{ value: string; name: string; ring: string }> = [];
-              
+              const reorganizedForMobile: Array<{
+                value: string;
+                name: string;
+                ring: string;
+              }> = [];
+
               // For each color family (column index 0-8)
               for (let familyIndex = 0; familyIndex < 9; familyIndex++) {
                 // Get the 200-level color for this family (from extraRow200)
                 reorganizedForMobile.push(extraRow200[familyIndex]);
-                
+
                 // Get all lightness levels for this family from SMART_PALETTE_COLORS
                 for (let lightnessRow = 0; lightnessRow < 5; lightnessRow++) {
                   const rowStart = lightnessRow * 9;
-                  const colorAtFamily = SMART_PALETTE_COLORS[rowStart + familyIndex];
+                  const colorAtFamily =
+                    SMART_PALETTE_COLORS[rowStart + familyIndex];
                   reorganizedForMobile.push(colorAtFamily);
                 }
               }
-              
+
               const currentLine = badge.lines[textColorModalLineIndex];
-              const currentColor = currentLine?.color || '#000000';
-              
-              const renderColorButton = (c: { value: string; name: string; ring: string }) => {
-                const isDisabled = areColorsSimilar(c.value, badge.backgroundColor, 100);
-                const isRed = isRedColor(c.value);
-                
+              const currentColor = currentLine?.color || "#000000";
+
+              // Normalize background color for comparison
+              const normalizedBackgroundColor = badge.backgroundColor
+                ? (badge.backgroundColor.trim().startsWith("#")
+                    ? badge.backgroundColor.trim()
+                    : `#${badge.backgroundColor.trim()}`
+                  ).toUpperCase()
+                : "#FFFFFF";
+
+              const renderColorButton = (c: {
+                value: string;
+                name: string;
+                ring: string;
+              }) => {
+                // Normalize color value for comparison
+                const normalizedColorValue = c.value.trim().startsWith("#")
+                  ? c.value.trim()
+                  : `#${c.value.trim()}`;
+
+                const isDisabled = areColorsSimilar(
+                  normalizedColorValue,
+                  normalizedBackgroundColor,
+                  70,
+                );
+                const isRed = isRedColor(normalizedColorValue);
+
                 return (
-                  <span
+                  <div
                     key={c.value}
-                    className="relative inline-block"
+                    className="relative flex items-center justify-center"
                   >
                     <button
-                      className={`border-2 rounded transition-all ${
+                      className={`w-8 h-8 md:w-12 md:h-12 border-2 rounded transition-all ${
                         currentColor === c.value && !isDisabled
                           ? "ring-2 ring-offset-1 " + c.ring + " scale-110"
                           : isDisabled
                           ? "border-gray-400 opacity-50 cursor-not-allowed"
-                          : "border-gray-300 hover:border-gray-400 hover:scale-105 cursor-pointer"
+                          : "border-gray-300 hover:scale-105"
                       }`}
-                      style={{ 
+                      style={{
                         backgroundColor: c.value,
-                        width: '32px',
-                        height: '32px',
-                        minWidth: '32px',
-                        minHeight: '32px',
                       }}
-                      title={isDisabled ? "Too similar to background color" : c.name}
+                      title={
+                        isDisabled ? "Too similar to background color" : c.name
+                      }
                       onClick={(e) => {
                         e.preventDefault();
                         if (!isDisabled) {
-                          updateLine(textColorModalLineIndex, { color: c.value });
+                          updateLine(textColorModalLineIndex, {
+                            color: c.value,
+                          });
                           setShowTextColorModal(false);
                           setTextColorModalLineIndex(null);
                         }
@@ -3173,11 +3710,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       disabled={isDisabled}
                     />
                     {isDisabled && (
-                      <span 
-                        className="pointer-events-none absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-                      >
-                        <svg 
-                          className="w-5 h-5 md:w-7 md:h-7" 
+                      <span className="pointer-events-none absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
+                        <svg
+                          className="w-5 h-5 md:w-7 md:h-7"
                           viewBox="0 0 20 20"
                         >
                           <line
@@ -3201,18 +3736,18 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                         </svg>
                       </span>
                     )}
-                  </span>
+                  </div>
                 );
               };
-              
+
               return (
                 <>
                   {/* Mobile: 6 columns, transposed order (rows = color families, columns = lightness levels) */}
-                  <div className="flex flex-wrap gap-1.5 p-3 overflow-y-auto flex-1 min-h-0 overflow-x-hidden md:hidden">
+                  <div className="grid grid-cols-6 gap-1.5 p-3 overflow-y-auto flex-1 min-h-0 overflow-x-hidden md:hidden">
                     {reorganizedForMobile.map(renderColorButton)}
                   </div>
                   {/* Desktop: 9 columns, original order (columns = color families, rows = lightness levels) */}
-                  <div className="hidden md:flex md:flex-wrap md:gap-2 p-4 overflow-y-auto flex-1 min-h-0 overflow-x-hidden">
+                  <div className="hidden md:grid grid-cols-9 gap-3 p-4 overflow-y-auto flex-1 min-h-0 overflow-x-hidden">
                     {desktopOrder.map(renderColorButton)}
                   </div>
                 </>
@@ -3224,29 +3759,42 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 // Parse hex or RGB input and convert to hex
                 const parseColorInput = (input: string): string | null => {
                   const trimmed = input.trim();
-                  
+
                   // Check if it's already a valid hex
                   if (/^#?[0-9A-Fa-f]{6}$/.test(trimmed)) {
-                    return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+                    return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
                   }
-                  
+
                   // Check if it's a 3-digit hex
                   if (/^#?[0-9A-Fa-f]{3}$/.test(trimmed)) {
-                    const hex = trimmed.startsWith('#') ? trimmed.slice(1) : trimmed;
+                    const hex = trimmed.startsWith("#")
+                      ? trimmed.slice(1)
+                      : trimmed;
                     return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`;
                   }
-                  
+
                   // Check if it's RGB format: rgb(r, g, b) or r, g, b
-                  const rgbMatch = trimmed.match(/^rgb\(?\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)?$/i);
+                  const rgbMatch = trimmed.match(
+                    /^rgb\(?\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)?$/i,
+                  );
                   if (rgbMatch) {
                     const r = parseInt(rgbMatch[1], 10);
                     const g = parseInt(rgbMatch[2], 10);
                     const b = parseInt(rgbMatch[3], 10);
-                    if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
-                      return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+                    if (
+                      r >= 0 &&
+                      r <= 255 &&
+                      g >= 0 &&
+                      g <= 255 &&
+                      b >= 0 &&
+                      b <= 255
+                    ) {
+                      return `#${r.toString(16).padStart(2, "0")}${g
+                        .toString(16)
+                        .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
                     }
                   }
-                  
+
                   return null;
                 };
 
@@ -3255,30 +3803,38 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
                 const handleApplyCustomTextColor = () => {
                   if (previewColor && textColorModalLineIndex !== null) {
-                    updateLine(textColorModalLineIndex, { color: previewColor });
+                    updateLine(textColorModalLineIndex, {
+                      color: previewColor,
+                    });
                     setShowTextColorModal(false);
                     setTextColorModalLineIndex(null);
-                    setCustomTextColorInput('');
+                    setCustomTextColorInput("");
                   }
                 };
 
                 return (
                   <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-3">
-                    <label className="text-sm font-medium text-gray-700 md:flex-shrink-0">Custom Color:</label>
+                    <label className="text-sm font-medium text-gray-700 md:flex-shrink-0">
+                      Custom Color:
+                    </label>
                     <div className="flex items-center gap-2 border border-gray-300 rounded px-2 py-1 bg-white flex-1 min-w-0">
                       <div
                         className="w-6 h-6 md:w-8 md:h-8 border border-gray-300 rounded flex-shrink-0"
-                        style={{ 
-                          backgroundColor: isValidColor ? previewColor : '#f3f4f6',
+                        style={{
+                          backgroundColor: isValidColor
+                            ? previewColor
+                            : "#f3f4f6",
                         }}
-                        title={isValidColor ? previewColor : 'Invalid color'}
+                        title={isValidColor ? previewColor : "Invalid color"}
                       />
                       <input
                         type="text"
                         value={customTextColorInput}
-                        onChange={(e) => setCustomTextColorInput(e.target.value)}
+                        onChange={(e) =>
+                          setCustomTextColorInput(e.target.value)
+                        }
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && isValidColor) {
+                          if (e.key === "Enter" && isValidColor) {
                             handleApplyCustomTextColor();
                           }
                         }}
@@ -3292,8 +3848,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       disabled={!isValidColor}
                       className={`px-4 py-2 text-sm rounded transition-colors flex-shrink-0 ${
                         isValidColor
-                          ? 'bg-blue-500 text-white hover:bg-blue-600'
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          ? "bg-blue-500 text-white hover:bg-blue-600"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
                       }`}
                     >
                       Apply
@@ -3323,7 +3879,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-800">Color Similarity Warning</h3>
+              <h3 className="text-lg font-bold text-gray-800">
+                Color Similarity Warning
+              </h3>
               <button
                 type="button"
                 className="p-2 text-gray-500 hover:text-gray-700"
@@ -3337,7 +3895,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               </button>
             </div>
             <p className="text-gray-700 mb-6">
-              Some text may not show well with this background color. Consider picking a new background or text color.
+              Some text may not show well with this background color. Consider
+              picking a new background or text color.
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -3362,6 +3921,66 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 }}
               >
                 Continue Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Supabase Color Warning Modal */}
+      {showSupabaseColorWarning && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
+          onClick={() => {
+            setShowSupabaseColorWarning(false);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Color similarity warning"
+        >
+          <div
+            className="bg-white rounded-lg shadow-lg w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800">
+                Color Similarity Warning
+              </h3>
+              <button
+                type="button"
+                className="p-2 text-gray-500 hover:text-gray-700"
+                onClick={() => {
+                  setShowSupabaseColorWarning(false);
+                }}
+                aria-label="Close"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Some text colors may not show well with the selected background
+              color. Please review your badge design before uploading to
+              Supabase.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+                onClick={() => {
+                  setShowSupabaseColorWarning(false);
+                }}
+              >
+                Review
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded hover:bg-purple-700 transition-colors"
+                onClick={() => {
+                  setShowSupabaseColorWarning(false);
+                  executeSendToSupabase();
+                }}
+              >
+                I have verified my designs continue
               </button>
             </div>
           </div>
@@ -3461,21 +4080,103 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 Cancel
               </button>
               <button
-                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
+                className={`px-3 py-1 rounded ${
+                  csvError || !csvText.trim()
+                    ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                    : "bg-green-600 hover:bg-green-700 text-white"
+                }`}
                 onClick={(e) => {
                   e.preventDefault();
-                  if (csvText.trim()) {
-                    parseCsv(csvText);
-                    if (!csvError) {
-                      setCsvText("");
-                      setCsvPreview([]);
-                      setCsvError("");
-                      setShowCsvModal(false);
-                    }
+                  if (csvText.trim() && !csvError) {
+                    // Always show warning modal since we always have at least 1 badge (the default)
+                    // This allows user to choose to override or add to existing badges
+                    setShowCsvWarningModal(true);
                   }
                 }}
+                disabled={!!csvError || !csvText.trim()}
               >
                 Add Badges
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSV Warning Modal - asks user to override or add */}
+      {showCsvWarningModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl"
+              onClick={(e) => {
+                e.preventDefault();
+                setShowCsvWarningModal(false);
+                setPendingCsvAction(null);
+              }}
+              aria-label="Close"
+            >
+              &times;
+            </button>
+            <h3 className="text-lg font-bold mb-4">Existing Badges Found</h3>
+            <p className="mb-4 text-sm text-gray-700">
+              You currently have {multipleBadges.length} existing badge
+              {multipleBadges.length !== 1 ? "s" : ""}. How would you like to
+              proceed?
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setPendingCsvAction("override");
+                  setShowCsvWarningModal(false);
+                  // Parse CSV with override flag
+                  parseCsv(csvText, true);
+                  if (!csvError) {
+                    setCsvText("");
+                    setCsvPreview([]);
+                    setCsvError("");
+                    setShowCsvModal(false);
+                  }
+                  setPendingCsvAction(null);
+                }}
+              >
+                Override Existing Badges
+                <span className="block text-xs mt-1 opacity-90">
+                  (Replace all existing badges with new ones)
+                </span>
+              </button>
+              <button
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setPendingCsvAction("add");
+                  setShowCsvWarningModal(false);
+                  // Parse CSV with add flag
+                  parseCsv(csvText, false);
+                  if (!csvError) {
+                    setCsvText("");
+                    setCsvPreview([]);
+                    setCsvError("");
+                    setShowCsvModal(false);
+                  }
+                  setPendingCsvAction(null);
+                }}
+              >
+                Add to Existing Badges
+                <span className="block text-xs mt-1 opacity-90">
+                  (Keep existing badges and add new ones)
+                </span>
+              </button>
+              <button
+                className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowCsvWarningModal(false);
+                  setPendingCsvAction(null);
+                }}
+              >
+                Cancel
               </button>
             </div>
           </div>

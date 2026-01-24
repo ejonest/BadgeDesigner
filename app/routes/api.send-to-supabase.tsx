@@ -1,5 +1,5 @@
 import { json, type ActionFunctionArgs } from '@remix-run/node'
-import { uploadToBadgePdfsBucket, saveBadgeOrderItems } from '~/utils/supabase'
+import { uploadToBadgePdfsBucket, uploadToBadgeImagesBucket, saveBadgeOrderItems, convertBadgeToOrderItem } from '~/utils/supabase'
 
 export async function action({ request }: ActionFunctionArgs) {
   try {
@@ -9,50 +9,43 @@ export async function action({ request }: ActionFunctionArgs) {
     const designData = JSON.parse(formData.get('designData') as string)
     const shopifyCustomerId = formData.get('shopifyCustomerId') as string || null
     
+    // Count thumbnail PNG and SVG files
+    let thumbnailCount = 0
+    let svgCount = 0
+    let index = 0
+    while (formData.get(`thumbnail_png_${index}`) || formData.get(`svg_${index}`)) {
+      if (formData.get(`thumbnail_png_${index}`)) thumbnailCount++
+      if (formData.get(`svg_${index}`)) svgCount++
+      index++
+    }
+    
     console.log('Send to Supabase - Received data:', {
       designId,
       hasPdf: !!formData.get('pdf'),
-      hasSvg: !!formData.get('svg'),
-      hasPng: !!formData.get('png'),
+      thumbnailCount,
+      svgCount,
       shopifyCustomerId
     })
     
-    // Upload files to badge_pdfs bucket
+    // Upload PDF to badge-pdfs bucket - ONE PDF for the entire order
     let pdfUrl = ''
-    let svgUrl = ''
     
     const pdfFile = formData.get('pdf') as File
-    const svgFile = formData.get('svg') as File
-    const pngFile = formData.get('png') as File
     
-    // Upload PDF (shared across all badges)
+    // Upload PDF (contains all badges in one file) - ONLY to badge-pdfs bucket
     if (pdfFile && pdfFile.size > 0) {
       try {
         const pdfFileName = `${designId}/badge-design.pdf`
         pdfUrl = await uploadToBadgePdfsBucket(pdfFile, pdfFileName, 'application/pdf')
-        console.log('PDF uploaded successfully:', pdfUrl)
+        console.log(`PDF uploaded successfully to badge-pdfs (${(pdfFile.size / 1024).toFixed(2)} KB):`, pdfUrl)
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         console.error('PDF upload failed:', errorMessage)
         console.error('Full error:', error)
+        // Don't throw - continue with PNG uploads even if PDF fails
       }
     } else {
-      console.warn('PDF file is missing or empty')
-    }
-    
-    // Upload SVG (shared across all badges)
-    if (svgFile && svgFile.size > 0) {
-      try {
-        const svgFileName = `${designId}/badge-design.svg`
-        svgUrl = await uploadToBadgePdfsBucket(svgFile, svgFileName, 'image/svg+xml')
-        console.log('SVG uploaded successfully:', svgUrl)
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        console.error('SVG upload failed:', errorMessage)
-        console.error('Full error:', error)
-      }
-    } else {
-      console.warn('SVG file is missing or empty')
+      console.warn('PDF file is missing or empty - this should not happen')
     }
     
     // Get all badges from design data
@@ -64,41 +57,63 @@ export async function action({ request }: ActionFunctionArgs) {
     for (let badgeIndex = 0; badgeIndex < allBadges.length; badgeIndex++) {
       const badge = allBadges[badgeIndex]
       
-      // Upload PNG for this specific badge
-      // Note: Currently we only have one PNG file, so we'll use it for the first badge
-      // For multiple badges, you'd need to generate separate PNGs for each
+      // Get thumbnail PNG file (low quality) and SVG file (high quality) for this badge
+      const thumbnailPngFile = formData.get(`thumbnail_png_${badgeIndex}`) as File
+      const svgFile = formData.get(`svg_${badgeIndex}`) as File
+      
       let badgeThumbnailUrl = ''
       let badgeFullImageUrl = ''
       
-      if (pngFile && pngFile.size > 0) {
+      // Upload low-quality PNG for thumbnail - ONLY to badge-images bucket
+      if (thumbnailPngFile && thumbnailPngFile.size > 0) {
         try {
-          // Upload PNG - use badge index in filename to allow for multiple badges later
-          const pngFileName = `${designId}/badge-${badgeIndex}-design.png`
-          badgeFullImageUrl = await uploadToBadgePdfsBucket(pngFile, pngFileName, 'image/png')
-          console.log(`PNG uploaded successfully for badge ${badgeIndex}:`, badgeFullImageUrl)
-          
-          // For now, use the same PNG as thumbnail (you can optimize this later)
-          badgeThumbnailUrl = badgeFullImageUrl
+          const thumbnailFileName = `${designId}/badge-${badgeIndex}-thumbnail.png`
+          badgeThumbnailUrl = await uploadToBadgeImagesBucket(thumbnailPngFile, thumbnailFileName, 'image/png')
+          console.log(`Thumbnail PNG uploaded successfully to badge-images for badge ${badgeIndex}:`, badgeThumbnailUrl)
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-          console.error(`PNG upload failed for badge ${badgeIndex}:`, errorMessage)
+          console.error(`Thumbnail PNG upload failed for badge ${badgeIndex}:`, errorMessage)
           console.error('Full error:', error)
         }
       } else {
-        console.warn(`PNG file is missing or empty for badge ${badgeIndex}`)
+        if (thumbnailPngFile) {
+          console.warn(`Thumbnail PNG file for badge ${badgeIndex} is empty (size: ${thumbnailPngFile.size}), skipping upload`)
+        } else {
+          console.warn(`Thumbnail PNG file missing for badge ${badgeIndex}, skipping upload`)
+        }
       }
       
-      // Create badge order item
-      const badgeOrderItem = {
-        design_id: designId,
-        badge_index: badgeIndex,
-        badge_id: badge.id || `badge-${badgeIndex}`,
-        badge_data: badge, // Full badge design data
-        thumbnail_url: badgeThumbnailUrl,
-        full_image_url: badgeFullImageUrl,
-        pdf_url: pdfUrl, // Same PDF for all badges (contains all badges)
-        shopify_customer_id: shopifyCustomerId
+      // Upload SVG for full image - ONLY to badge-images bucket
+      if (svgFile && svgFile.size > 0) {
+        try {
+          const svgFileName = `${designId}/badge-${badgeIndex}-design.svg`
+          badgeFullImageUrl = await uploadToBadgeImagesBucket(svgFile, svgFileName, 'image/svg+xml')
+          console.log(`SVG uploaded successfully to badge-images for badge ${badgeIndex}:`, badgeFullImageUrl)
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          console.error(`SVG upload failed for badge ${badgeIndex}:`, errorMessage)
+          console.error('Full error:', error)
+        }
+      } else {
+        if (svgFile) {
+          console.warn(`SVG file for badge ${badgeIndex} is empty (size: ${svgFile.size}), skipping upload`)
+        } else {
+          console.warn(`SVG file missing for badge ${badgeIndex}, skipping upload`)
+        }
       }
+      
+      // Create badge order item using the helper function
+      const badgeOrderItem = convertBadgeToOrderItem(
+        badge,
+        designId,
+        badgeIndex,
+        {
+          thumbnail_url: badgeThumbnailUrl,
+          full_image_url: badgeFullImageUrl,
+          pdf_url: pdfUrl, // Same PDF for all badges (contains all badges)
+          shopify_customer_id: shopifyCustomerId
+        }
+      )
       
       badgeOrderItems.push(badgeOrderItem)
     }
@@ -130,7 +145,7 @@ export async function action({ request }: ActionFunctionArgs) {
     }
     
     // Check if any uploads succeeded
-    const hasAnyUploads = pdfUrl || svgUrl || (savedItems && savedItems.length > 0 && savedItems[0].full_image_url)
+    const hasAnyUploads = pdfUrl || (savedItems && savedItems.length > 0 && (savedItems[0].thumbnail_url || savedItems[0].full_image_url))
     if (!hasAnyUploads && !savedItems) {
       return json({ 
         success: false, 
@@ -140,7 +155,8 @@ export async function action({ request }: ActionFunctionArgs) {
     }
     
     const badgeCount = savedItems?.length || 0
-    const hasPng = savedItems && savedItems.length > 0 && !!savedItems[0].full_image_url
+    const hasThumbnail = savedItems && savedItems.length > 0 && !!savedItems[0].thumbnail_url
+    const hasFullImage = savedItems && savedItems.length > 0 && !!savedItems[0].full_image_url
     
     return json({ 
       success: true, 
@@ -148,8 +164,8 @@ export async function action({ request }: ActionFunctionArgs) {
       badgeCount,
       uploads: {
         pdf: !!pdfUrl,
-        svg: !!svgUrl,
-        png: hasPng
+        thumbnails: hasThumbnail,
+        fullImages: hasFullImage
       },
       message: hasAnyUploads 
         ? `Badge design uploaded successfully to Supabase (${badgeCount} badge${badgeCount !== 1 ? 's' : ''} saved)` 
