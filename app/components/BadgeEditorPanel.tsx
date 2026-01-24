@@ -30,21 +30,24 @@ function getMinMaxSizeNorm(designBoxHeight: number): {
 // Convert hex color to RGB values [r, g, b]
 function hexToRgb(hex: string): [number, number, number] {
   const normalized = hex.trim().toLowerCase();
-  let cleanHex = normalized.startsWith('#') ? normalized.slice(1) : normalized;
-  
+  let cleanHex = normalized.startsWith("#") ? normalized.slice(1) : normalized;
+
   // Handle 3-digit hex
   if (cleanHex.length === 3) {
-    cleanHex = cleanHex.split('').map(c => c + c).join('');
+    cleanHex = cleanHex
+      .split("")
+      .map((c) => c + c)
+      .join("");
   }
-  
+
   if (cleanHex.length !== 6) {
     return [0, 0, 0]; // Fallback to black
   }
-  
+
   const r = parseInt(cleanHex.slice(0, 2), 16);
   const g = parseInt(cleanHex.slice(2, 4), 16);
   const b = parseInt(cleanHex.slice(4, 6), 16);
-  
+
   return [r, g, b];
 }
 
@@ -52,16 +55,20 @@ function hexToRgb(hex: string): [number, number, number] {
 function colorDistance(color1: string, color2: string): number {
   const [r1, g1, b1] = hexToRgb(color1);
   const [r2, g2, b2] = hexToRgb(color2);
-  
+
   const dr = r1 - r2;
   const dg = g1 - g2;
   const db = b1 - b2;
-  
+
   return Math.sqrt(dr * dr + dg * dg + db * db);
 }
 
 // Check if two colors are similar (within threshold RGB units)
-function areColorsSimilar(color1: string, color2: string, threshold: number = 30): boolean {
+function areColorsSimilar(
+  color1: string,
+  color2: string,
+  threshold: number = 70,
+): boolean {
   return colorDistance(color1, color2) <= threshold;
 }
 
@@ -85,6 +92,7 @@ export interface BadgeEditorPanelProps {
   editable?: boolean;
   onOpenTextColorModal?: (lineIndex: number) => void;
   onApplyFormattingToAll?: (lineIndex: number) => void;
+  hasMultipleBadges?: boolean;
 }
 
 export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
@@ -101,6 +109,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   editable = true,
   onOpenTextColorModal,
   onApplyFormattingToAll,
+  hasMultipleBadges = false,
 }) => {
   // Get the current template's designBox for font size calculations
   const [designBox, setDesignBox] = React.useState({
@@ -146,77 +155,114 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
               </label>
               <div className="flex flex-col gap-1 min-w-0 w-full">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm">
-                    Text Color:
-                  </span>
-                  {line.color && areColorsSimilar(line.color, badge.backgroundColor, 100) && (
-                    <span className="text-xs text-red-600 font-medium">
-                      Similar colors may not show
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1.5 items-center">
-                  {FONT_COLORS.filter(fc => fc.name !== 'Brown' && fc.name !== 'Ivory').map((fc) => {
-                    const isDisabled = areColorsSimilar(fc.value, badge.backgroundColor, 70);
-                    const isRed = isRedColor(fc.value);
-                    return (
-                      <span
-                        key={fc.value}
-                        className="relative inline-block"
-                      >
-                        <button
-                          className={`rounded border-2 transition-colors ${
-                            line.color === fc.value && !isDisabled
-                              ? "ring-2 ring-offset-1 " + fc.ring
-                              : isDisabled
-                              ? "border-gray-400 opacity-50 cursor-not-allowed"
-                              : "border-gray-300 hover:border-gray-400 cursor-pointer"
-                          }`}
-                          style={{ 
-                            backgroundColor: fc.value,
-                            width: '32px',
-                            height: '32px',
-                            minWidth: '32px',
-                            minHeight: '32px',
-                          }}
-                          onClick={() => onLineChange(idx, { color: fc.value })}
-                          disabled={isDisabled || !editable}
-                          title={
-                            isDisabled ? "Cannot match background" : fc.name
-                          }
-                        />
-                        {isDisabled && (
-                          <span 
-                            className="pointer-events-none absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-                          >
-                            <svg 
-                              className="w-5 h-5" 
-                              viewBox="0 0 20 20"
-                            >
-                              <line
-                                x1="3"
-                                y1="3"
-                                x2="17"
-                                y2="17"
-                                stroke={isRed ? "#fbbf24" : "#b91c1c"}
-                                strokeWidth="2.5"
-                                strokeLinecap="round"
-                              />
-                              <line
-                                x1="17"
-                                y1="3"
-                                x2="3"
-                                y2="17"
-                                stroke={isRed ? "#fbbf24" : "#b91c1c"}
-                                strokeWidth="2.5"
-                                strokeLinecap="round"
-                              />
-                            </svg>
-                          </span>
-                        )}
+                  <span className="font-semibold text-sm">Text Color:</span>
+                  {line.color &&
+                    areColorsSimilar(
+                      line.color,
+                      badge.backgroundColor,
+                      70,
+                    ) && (
+                      <span className="text-xs text-red-600 font-medium">
+                        Similar colors may not show
                       </span>
-                    );
-                  })}
+                    )}
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <div className="flex flex-wrap gap-1.5 items-start flex-1">
+                    {FONT_COLORS.filter(
+                      (fc) => fc.name !== "Brown" && fc.name !== "Ivory",
+                    ).map((fc) => {
+                      const isDisabled = areColorsSimilar(
+                        fc.value,
+                        badge.backgroundColor,
+                        70,
+                      );
+                      const isRed = isRedColor(fc.value);
+                      return (
+                        <div key={fc.value} className="flex flex-col items-center gap-1">
+                          <span className="relative inline-block">
+                            <button
+                              className={`rounded border-2 transition-colors ${
+                                line.color === fc.value && !isDisabled
+                                  ? "ring-2 ring-offset-1 " + fc.ring
+                                  : isDisabled
+                                  ? "border-gray-400 opacity-50 cursor-not-allowed"
+                                  : "border-gray-300 hover:border-gray-400 cursor-pointer"
+                              }`}
+                              style={{
+                                backgroundColor: fc.value,
+                                width: "32px",
+                                height: "32px",
+                                minWidth: "32px",
+                                minHeight: "32px",
+                              }}
+                              onClick={() => onLineChange(idx, { color: fc.value })}
+                              disabled={isDisabled || !editable}
+                              title={
+                                isDisabled ? "Cannot match background" : fc.name
+                              }
+                            />
+                            {isDisabled && (
+                              <span className="pointer-events-none absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                <svg className="w-5 h-5" viewBox="0 0 20 20">
+                                  <line
+                                    x1="3"
+                                    y1="3"
+                                    x2="17"
+                                    y2="17"
+                                    stroke={isRed ? "#fbbf24" : "#b91c1c"}
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                  />
+                                  <line
+                                    x1="17"
+                                    y1="3"
+                                    x2="3"
+                                    y2="17"
+                                    stroke={isRed ? "#fbbf24" : "#b91c1c"}
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                  />
+                                </svg>
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-[10px] text-gray-600 text-center leading-tight">
+                            {fc.name === "Brushed Gold" ? (
+                              <>
+                                Brushed<br />Gold
+                              </>
+                            ) : fc.name === "Brushed Silver" ? (
+                              <>
+                                Brushed<br />Silver
+                              </>
+                            ) : (
+                              fc.name
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Current Color Display - Same size as other buttons, aligned right */}
+                  {line.color && (
+                    <div className="flex-shrink-0 flex flex-col items-center gap-1">
+                      <div
+                        className="rounded border-2 border-gray-300"
+                        style={{
+                          backgroundColor: line.color,
+                          width: "32px",
+                          height: "32px",
+                          minWidth: "32px",
+                          minHeight: "32px",
+                        }}
+                        title={`Current text color: ${line.color}`}
+                      />
+                      <span className="text-[10px] text-gray-600 text-center leading-tight">
+                        Current<br />color
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {onOpenTextColorModal && (
                   <button
@@ -399,7 +445,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                             onClick={() => {
                               const newSizeNorm = Math.max(
                                 minSizeNorm,
-                                currentSizeNorm - 0.01
+                                currentSizeNorm - 0.01,
                               );
                               onLineChange(idx, { sizeNorm: newSizeNorm });
                             }}
@@ -418,7 +464,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                             onClick={() => {
                               const newSizeNorm = Math.min(
                                 maxSizeNorm,
-                                currentSizeNorm + 0.01
+                                currentSizeNorm + 0.01,
                               );
                               onLineChange(idx, { sizeNorm: newSizeNorm });
                             }}
@@ -435,15 +481,15 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 </div>
               </div>
             </div>
-            {onApplyFormattingToAll && (
+            {onApplyFormattingToAll && hasMultipleBadges && (
               <div className="mt-2 w-full">
                 <button
                   className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
                   onClick={() => onApplyFormattingToAll(idx)}
                   disabled={!editable}
-                  title={`Apply formatting to all line ${idx + 1} text`}
+                  title={`Apply line ${idx + 1} format to all badges`}
                 >
-                  Apply format to all line {idx + 1} text
+                  Apply line {idx + 1} format to all badges
                 </button>
               </div>
             )}
