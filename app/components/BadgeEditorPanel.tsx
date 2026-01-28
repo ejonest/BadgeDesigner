@@ -27,6 +27,132 @@ function getMinMaxSizeNorm(designBoxHeight: number): {
   };
 }
 
+// Font Size Control Component - extracted to fix hooks violation
+interface FontSizeControlProps {
+  line: BadgeLine;
+  lineIndex: number;
+  designBox: { height: number };
+  editable: boolean;
+  onLineChange: (index: number, changes: Partial<BadgeLine>) => void;
+}
+
+const FontSizeControl: React.FC<FontSizeControlProps> = ({
+  line,
+  lineIndex,
+  designBox,
+  editable,
+  onLineChange,
+}) => {
+  // Get current size in pixels for display, prefer sizeNorm if available
+  const currentSizePx = line.sizeNorm
+    ? sizeNormToPx(line.sizeNorm, designBox.height)
+    : (line.fontSize || 13);
+  const currentSizeNorm =
+    line.sizeNorm ??
+    sizePxToNorm(line.fontSize || 13, designBox.height);
+  const { min: minSizeNorm, max: maxSizeNorm } =
+    getMinMaxSizeNorm(designBox.height);
+  const minSizePx = Math.round(minSizeNorm * designBox.height);
+  const maxSizePx = Math.round(maxSizeNorm * designBox.height);
+
+  // State for editable input
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [inputValue, setInputValue] = React.useState(
+    currentSizePx.toString()
+  );
+
+  // Update input value when current size changes
+  React.useEffect(() => {
+    if (!isEditing) {
+      setInputValue(currentSizePx.toString());
+    }
+  }, [currentSizePx, isEditing]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+  };
+
+  const handleInputBlur = () => {
+    const numValue = parseInt(inputValue, 10);
+    if (!isNaN(numValue) && numValue >= minSizePx && numValue <= maxSizePx) {
+      const newSizeNorm = sizePxToNorm(numValue, designBox.height);
+      onLineChange(lineIndex, { sizeNorm: newSizeNorm });
+    } else {
+      // Reset to current value if invalid
+      setInputValue(currentSizePx.toString());
+    }
+    setIsEditing(false);
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
+    } else if (e.key === 'Escape') {
+      setInputValue(currentSizePx.toString());
+      setIsEditing(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
+        onClick={() => {
+          const newSizeNorm = Math.max(
+            minSizeNorm,
+            currentSizeNorm - 0.01,
+          );
+          onLineChange(lineIndex, { sizeNorm: newSizeNorm });
+        }}
+        disabled={
+          currentSizeNorm <= minSizeNorm || !editable
+        }
+      >
+        -
+      </button>
+      {isEditing ? (
+        <input
+          type="number"
+          min={minSizePx}
+          max={maxSizePx}
+          value={inputValue}
+          onChange={handleInputChange}
+          onBlur={handleInputBlur}
+          onKeyDown={handleInputKeyDown}
+          className="w-12 text-center text-sm border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          autoFocus
+          disabled={!editable}
+        />
+      ) : (
+        <span
+          className="w-12 text-center text-sm cursor-text hover:bg-gray-100 rounded px-1 py-0.5 transition-colors"
+          onClick={() => editable && setIsEditing(true)}
+          title="Click to edit font size"
+        >
+          {currentSizePx}
+        </span>
+      )}
+      <button
+        type="button"
+        className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
+        onClick={() => {
+          const newSizeNorm = Math.min(
+            maxSizeNorm,
+            currentSizeNorm + 0.01,
+          );
+          onLineChange(lineIndex, { sizeNorm: newSizeNorm });
+        }}
+        disabled={
+          currentSizeNorm >= maxSizeNorm || !editable
+        }
+      >
+        +
+      </button>
+    </>
+  );
+};
+
 // Convert hex color to RGB values [r, g, b]
 function hexToRgb(hex: string): [number, number, number] {
   const normalized = hex.trim().toLowerCase();
@@ -67,7 +193,7 @@ function colorDistance(color1: string, color2: string): number {
 function areColorsSimilar(
   color1: string,
   color2: string,
-  threshold: number = 70,
+  threshold: number = 150,
 ): boolean {
   return colorDistance(color1, color2) <= threshold;
 }
@@ -157,11 +283,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-sm">Text Color:</span>
                   {line.color &&
-                    areColorsSimilar(
-                      line.color,
-                      badge.backgroundColor,
-                      70,
-                    ) && (
+                    areColorsSimilar(line.color, badge.backgroundColor, 70) && (
                       <span className="text-xs text-red-600 font-medium">
                         Similar colors may not show
                       </span>
@@ -169,40 +291,68 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 </div>
                 <div className="flex items-start gap-1.5">
                   <div className="flex flex-wrap gap-1.5 items-start flex-1">
-                    {FONT_COLORS.filter(
-                      (fc) => fc.name !== "Brown" && fc.name !== "Ivory",
-                    ).map((fc) => {
-                      const isDisabled = areColorsSimilar(
+                    {[
+                      ...FONT_COLORS.filter(
+                        (fc) => fc.name !== "Brown" && fc.name !== "Ivory",
+                      ),
+                      { value: "rainbow", name: "More Colors", ring: "ring-gray-400", isRainbow: true },
+                    ].map((fc) => {
+                      const isRainbow = (fc as any).isRainbow === true;
+                      const isDisabled = !isRainbow && areColorsSimilar(
                         fc.value,
                         badge.backgroundColor,
                         70,
                       );
-                      const isRed = isRedColor(fc.value);
+                      const isRed = !isRainbow && isRedColor(fc.value);
                       return (
-                        <div key={fc.value} className="flex flex-col items-center gap-1">
+                        <div
+                          key={fc.value}
+                          className="flex flex-col items-center gap-1"
+                        >
                           <span className="relative inline-block">
                             <button
                               className={`rounded border-2 transition-colors ${
-                                line.color === fc.value && !isDisabled
+                                line.color === fc.value && !isDisabled && !isRainbow
                                   ? "ring-2 ring-offset-1 " + fc.ring
-                                  : isDisabled
+                                  : isDisabled && !isRainbow
                                   ? "border-gray-400 opacity-50 cursor-not-allowed"
                                   : "border-gray-300 hover:border-gray-400 cursor-pointer"
                               }`}
-                              style={{
-                                backgroundColor: fc.value,
-                                width: "32px",
-                                height: "32px",
-                                minWidth: "32px",
-                                minHeight: "32px",
+                              style={
+                                isRainbow
+                                  ? {
+                                      background:
+                                        "linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)",
+                                      width: "32px",
+                                      height: "32px",
+                                      minWidth: "32px",
+                                      minHeight: "32px",
+                                    }
+                                  : {
+                                      backgroundColor: fc.value,
+                                      width: "32px",
+                                      height: "32px",
+                                      minWidth: "32px",
+                                      minHeight: "32px",
+                                    }
+                              }
+                              onClick={() => {
+                                if (isRainbow && onOpenTextColorModal) {
+                                  onOpenTextColorModal(idx);
+                                } else {
+                                  onLineChange(idx, { color: fc.value });
+                                }
                               }}
-                              onClick={() => onLineChange(idx, { color: fc.value })}
-                              disabled={isDisabled || !editable}
+                              disabled={(isDisabled && !isRainbow) || !editable}
                               title={
-                                isDisabled ? "Cannot match background" : fc.name
+                                isRainbow
+                                  ? "More Colors"
+                                  : isDisabled
+                                  ? "Cannot match background"
+                                  : fc.name
                               }
                             />
-                            {isDisabled && (
+                            {isDisabled && !isRainbow && (
                               <span className="pointer-events-none absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                                 <svg className="w-5 h-5" viewBox="0 0 20 20">
                                   <line
@@ -230,11 +380,21 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                           <span className="text-[10px] text-gray-600 text-center leading-tight">
                             {fc.name === "Brushed Gold" ? (
                               <>
-                                Brushed<br />Gold
+                                Brushed
+                                <br />
+                                Gold
                               </>
                             ) : fc.name === "Brushed Silver" ? (
                               <>
-                                Brushed<br />Silver
+                                Brushed
+                                <br />
+                                Silver
+                              </>
+                            ) : fc.name === "More Colors" ? (
+                              <>
+                                More
+                                <br />
+                                Colors
                               </>
                             ) : (
                               fc.name
@@ -259,20 +419,13 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                         title={`Current text color: ${line.color}`}
                       />
                       <span className="text-[10px] text-gray-600 text-center leading-tight">
-                        Current<br />color
+                        Current
+                        <br />
+                        color
                       </span>
                     </div>
                   )}
                 </div>
-                {onOpenTextColorModal && (
-                  <button
-                    type="button"
-                    onClick={() => onOpenTextColorModal(idx)}
-                    className="text-sm text-blue-600 hover:text-blue-800 underline text-left w-fit mt-0.5"
-                  >
-                    more colors
-                  </button>
-                )}
               </div>
             </div>
             <input
@@ -426,57 +579,13 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 <div className="flex gap-1 items-center min-w-0">
                   <span className="font-semibold text-sm mr-1">Size</span>
                   <div className="flex items-center">
-                    {(() => {
-                      // Get current size in pixels for display, prefer sizeNorm if available
-                      const currentSizePx = line.sizeNorm
-                        ? sizeNormToPx(line.sizeNorm, designBox.height)
-                        : line.size || 13;
-                      const currentSizeNorm =
-                        line.sizeNorm ??
-                        sizePxToNorm(line.size || 13, designBox.height);
-                      const { min: minSizeNorm, max: maxSizeNorm } =
-                        getMinMaxSizeNorm(designBox.height);
-
-                      return (
-                        <>
-                          <button
-                            type="button"
-                            className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
-                            onClick={() => {
-                              const newSizeNorm = Math.max(
-                                minSizeNorm,
-                                currentSizeNorm - 0.01,
-                              );
-                              onLineChange(idx, { sizeNorm: newSizeNorm });
-                            }}
-                            disabled={
-                              currentSizeNorm <= minSizeNorm || !editable
-                            }
-                          >
-                            -
-                          </button>
-                          <span className="w-8 text-center text-sm">
-                            {currentSizePx}
-                          </span>
-                          <button
-                            type="button"
-                            className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
-                            onClick={() => {
-                              const newSizeNorm = Math.min(
-                                maxSizeNorm,
-                                currentSizeNorm + 0.01,
-                              );
-                              onLineChange(idx, { sizeNorm: newSizeNorm });
-                            }}
-                            disabled={
-                              currentSizeNorm >= maxSizeNorm || !editable
-                            }
-                          >
-                            +
-                          </button>
-                        </>
-                      );
-                    })()}
+                    <FontSizeControl
+                      line={line}
+                      lineIndex={idx}
+                      designBox={designBox}
+                      editable={editable}
+                      onLineChange={onLineChange}
+                    />
                   </div>
                 </div>
               </div>
