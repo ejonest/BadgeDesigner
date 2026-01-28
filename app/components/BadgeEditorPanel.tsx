@@ -377,7 +377,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                               </span>
                             )}
                           </span>
-                          <span className="text-[10px] text-gray-600 text-center leading-tight">
+                          <span className="text-[8px] text-gray-600 text-center leading-tight">
                             {fc.name === "Brushed Gold" ? (
                               <>
                                 Brushed
@@ -418,7 +418,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                         }}
                         title={`Current text color: ${line.color}`}
                       />
-                      <span className="text-[10px] text-gray-600 text-center leading-tight">
+                      <span className="text-[8px] text-gray-600 text-center leading-tight">
                         Current
                         <br />
                         color

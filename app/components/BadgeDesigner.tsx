@@ -24,6 +24,7 @@ import {
   ArrowPathRoundedSquareIcon,
   CheckCircleIcon,
   QuestionMarkCircleIcon,
+  ArrowUturnLeftIcon,
 } from "@heroicons/react/24/outline";
 
 import {
@@ -33,7 +34,7 @@ import {
 import { BadgeEditPanel } from "./BadgeEditPanel";
 import { BadgeEditorPanel } from "./BadgeEditorPanel";
 
-import { BadgeLine, Badge } from "../types/badge";
+import { BadgeLine, Badge, UndoAction } from "../types/badge";
 import {
   BACKGROUND_COLORS,
   FONT_COLORS,
@@ -342,8 +343,391 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     return false;
   };
 
+  // Helper function to save state to undo history
+  const saveToUndoHistory = (
+    action: Omit<
+      UndoAction,
+      "previousBadge" | "previousMultipleBadges" | "previousUniversalTemplateId"
+    > & {
+      previousBadge?: Badge;
+      previousMultipleBadges?: Badge[];
+      previousUniversalTemplateId?: string;
+    },
+  ) => {
+    // Skip tracking text content changes - only track formatting
+    if (action.type === "line-property" && action.property === "text") {
+      return;
+    }
+
+    const fullAction: UndoAction = {
+      ...action,
+      previousBadge: action.previousBadge || JSON.parse(JSON.stringify(badge)),
+      previousMultipleBadges:
+        action.previousMultipleBadges ||
+        JSON.parse(JSON.stringify(multipleBadges)),
+      previousUniversalTemplateId:
+        action.previousUniversalTemplateId ||
+        (action.type === "template" ? universalTemplateId : undefined),
+    };
+
+    setUndoHistory((prev) => {
+      const newHistory = [...prev, fullAction];
+      // Limit history size
+      return newHistory.slice(-MAX_UNDO_HISTORY);
+    });
+  };
+
+  // Helper function to clear undo history
+  const clearUndoHistory = () => {
+    setUndoHistory([]);
+  };
+
+  // Handle undo - restore previous state
+  const handleUndo = () => {
+    if (undoHistory.length === 0) return;
+
+    // Get the most recent action
+    const lastAction = undoHistory[undoHistory.length - 1];
+
+    // If the change was made to a different badge, switch to that badge first
+    // Don't undo yet - wait for the next undo press
+    if (lastAction.badgeIndex !== selectedBadgeIndex) {
+      // Save current badge state before switching
+      const validatedBadge = {
+        ...badge,
+        templateId: universalTemplateId,
+        backgroundColor: badge.backgroundColor || "#FFFFFF",
+      };
+
+      // Update the badge in multipleBadges array
+      const updatedMultipleBadges = [...multipleBadges];
+      if (updatedMultipleBadges[selectedBadgeIndex]) {
+        updatedMultipleBadges[selectedBadgeIndex] = validatedBadge;
+        setMultipleBadges(updatedMultipleBadges);
+      }
+
+      // Sync badge1Data for backward compatibility
+      if (selectedBadgeIndex === 0) {
+        setBadge1Data(validatedBadge);
+      }
+
+      // Switch to the badge that was changed (but don't remove from history yet)
+      setSelectedBadgeIndex(lastAction.badgeIndex);
+
+      // Load the selected badge from multipleBadges array
+      const selectedBadge = updatedMultipleBadges[lastAction.badgeIndex];
+      if (selectedBadge) {
+        const centeredLines = calculateCenterPositions(selectedBadge.lines);
+        setBadge({
+          ...selectedBadge,
+          lines: centeredLines,
+          templateId: universalTemplateId,
+        });
+      }
+
+      // Don't remove from history - user needs to press undo again to actually undo
+      return;
+    }
+
+    // We're on the correct badge, so perform the undo
+    // Remove it from history
+    setUndoHistory((prev) => prev.slice(0, -1));
+
+    // Start with current multipleBadges state
+    let updatedMultipleBadges = [...multipleBadges];
+
+    // Restore state based on action type
+    switch (lastAction.type) {
+      case "line-property": {
+        // Restore specific line property
+        if (lastAction.lineIndex !== undefined) {
+          const previousLine =
+            lastAction.previousBadge.lines[lastAction.lineIndex];
+          if (previousLine) {
+            // Restore only the changed property
+            const property = lastAction.property;
+            if (property) {
+              const restoredValue = (previousLine as any)[property];
+
+              // Directly restore without triggering undo history
+              const updatedLines = badge.lines.map((l, i) => {
+                if (i === lastAction.lineIndex) {
+                  const restored = { ...l, [property]: restoredValue };
+                  // If restoring alignment, also update xNorm for center alignment
+                  if (property === "align" && restoredValue === "center") {
+                    restored.xNorm = 0.5;
+                  }
+                  return restored;
+                }
+                return l;
+              });
+
+              // Recalculate center positions (like updateLine does)
+              const centeredLines = calculateCenterPositions(updatedLines);
+
+              setBadge((prev) => ({ ...prev, lines: centeredLines }));
+
+              // Update the badge in multipleBadges array (use the updated reference)
+              if (updatedMultipleBadges[lastAction.badgeIndex]) {
+                updatedMultipleBadges[lastAction.badgeIndex] = {
+                  ...updatedMultipleBadges[lastAction.badgeIndex],
+                  lines: centeredLines,
+                };
+                setMultipleBadges(updatedMultipleBadges);
+              }
+
+              // Sync badge1Data if editing the first badge
+              if (lastAction.badgeIndex === 0) {
+                setBadge1Data(updatedMultipleBadges[0]);
+              }
+            }
+          }
+        }
+        break;
+      }
+      case "background-color": {
+        // Restore background color
+        const previousBadge = lastAction.previousBadge;
+        setBadge((prev) => ({
+          ...prev,
+          backgroundColor: previousBadge.backgroundColor,
+        }));
+
+        // Update the badge in multipleBadges array (use the updated reference)
+        if (updatedMultipleBadges[lastAction.badgeIndex]) {
+          updatedMultipleBadges[lastAction.badgeIndex] = {
+            ...updatedMultipleBadges[lastAction.badgeIndex],
+            backgroundColor: previousBadge.backgroundColor,
+          };
+          setMultipleBadges(updatedMultipleBadges);
+        }
+
+        // Sync badge1Data if editing the first badge
+        if (lastAction.badgeIndex === 0) {
+          setBadge1Data(updatedMultipleBadges[0]);
+        }
+        break;
+      }
+      case "template": {
+        // Restore template - use the saved previousUniversalTemplateId
+        const previousBadge = lastAction.previousBadge;
+        const previousTemplateId =
+          lastAction.previousUniversalTemplateId ||
+          previousBadge.templateId ||
+          universalTemplateId;
+
+        // Restore badge state
+        setBadge((prev) => ({
+          ...prev,
+          templateId: previousTemplateId,
+          lines: previousBadge.lines,
+        }));
+
+        // Update the badge in multipleBadges array (use the updated reference)
+        if (updatedMultipleBadges[lastAction.badgeIndex]) {
+          updatedMultipleBadges[lastAction.badgeIndex] = {
+            ...updatedMultipleBadges[lastAction.badgeIndex],
+            templateId: previousTemplateId,
+            lines: previousBadge.lines,
+          };
+          setMultipleBadges(updatedMultipleBadges);
+        }
+
+        // Restore universal template ID (this is the key fix)
+        if (lastAction.previousUniversalTemplateId) {
+          setUniversalTemplateId(lastAction.previousUniversalTemplateId);
+        }
+
+        // Sync badge1Data if editing the first badge
+        if (lastAction.badgeIndex === 0) {
+          setBadge1Data(updatedMultipleBadges[0]);
+        }
+        break;
+      }
+      case "apply-all-formatting": {
+        // Restore all badges to previous state
+        if (lastAction.previousMultipleBadges) {
+          setMultipleBadges(lastAction.previousMultipleBadges);
+
+          // Restore current badge (use the badge index from the action, which may have been switched)
+          const targetBadgeIndex = lastAction.badgeIndex;
+          if (lastAction.previousMultipleBadges[targetBadgeIndex]) {
+            const restoredBadge =
+              lastAction.previousMultipleBadges[targetBadgeIndex];
+            const centeredLines = calculateCenterPositions(restoredBadge.lines);
+            setBadge({
+              ...restoredBadge,
+              lines: centeredLines,
+              templateId: universalTemplateId,
+            });
+          }
+
+          // Sync badge1Data
+          if (lastAction.previousMultipleBadges[0]) {
+            setBadge1Data(lastAction.previousMultipleBadges[0]);
+          }
+        }
+        break;
+      }
+      case "apply-line-formatting": {
+        // Restore all badges' specific line formatting (except the parent badge that was the source)
+        if (
+          lastAction.previousMultipleBadges &&
+          lastAction.lineIndex !== undefined
+        ) {
+          const restoredBadges = lastAction.previousMultipleBadges.map(
+            (prevBadge, badgeIdx) => {
+              // Skip the parent badge (the one that was the source of the apply all operation)
+              if (badgeIdx === lastAction.badgeIndex) {
+                return (
+                  updatedMultipleBadges[badgeIdx] || multipleBadges[badgeIdx]
+                ); // Keep current state for parent badge
+              }
+
+              const currentBadge =
+                updatedMultipleBadges[badgeIdx] || multipleBadges[badgeIdx];
+              if (!currentBadge || !prevBadge.lines[lastAction.lineIndex!]) {
+                return currentBadge;
+              }
+
+              // Restore the specific line's formatting for other badges
+              const restoredLine = prevBadge.lines[lastAction.lineIndex!];
+              const updatedLines = currentBadge.lines.map((line, lineIdx) => {
+                if (lineIdx === lastAction.lineIndex) {
+                  return {
+                    ...line,
+                    color: restoredLine.color,
+                    fontFamily: restoredLine.fontFamily,
+                    bold: restoredLine.bold,
+                    italic: restoredLine.italic,
+                    underline: restoredLine.underline,
+                    align: restoredLine.align,
+                    sizeNorm: restoredLine.sizeNorm,
+                    fontSize: restoredLine.fontSize,
+                  };
+                }
+                return line;
+              });
+
+              return { ...currentBadge, lines: updatedLines };
+            },
+          );
+
+          setMultipleBadges(restoredBadges);
+
+          // Don't change the current badge - it should remain as is (the parent)
+          // The current badge's line was changed separately and should be undone individually
+
+          // Sync badge1Data
+          if (restoredBadges[0]) {
+            setBadge1Data(restoredBadges[0]);
+          }
+        }
+        break;
+      }
+      case "apply-background-color-to-all": {
+        // Restore all badges' background colors (except the parent badge that was the source)
+        if (lastAction.previousMultipleBadges) {
+          const restoredBadges = lastAction.previousMultipleBadges.map(
+            (prevBadge, badgeIdx) => {
+              // Skip the parent badge (the one that was the source of the apply all operation)
+              if (badgeIdx === lastAction.badgeIndex) {
+                return (
+                  updatedMultipleBadges[badgeIdx] || multipleBadges[badgeIdx]
+                ); // Keep current state for parent badge
+              }
+
+              const currentBadge =
+                updatedMultipleBadges[badgeIdx] || multipleBadges[badgeIdx];
+              if (!currentBadge) {
+                return currentBadge;
+              }
+
+              // Restore the background color for other badges
+              return {
+                ...currentBadge,
+                backgroundColor: prevBadge.backgroundColor,
+              };
+            },
+          );
+
+          setMultipleBadges(restoredBadges);
+
+          // Don't change the current badge - it should remain as is (the parent)
+          // The current badge's background color was changed separately and should be undone individually
+
+          // Sync badge1Data
+          if (restoredBadges[0]) {
+            setBadge1Data(restoredBadges[0]);
+          }
+        }
+        break;
+      }
+      case "reset-badge": {
+        // Restore the badge to its previous state before reset
+        const previousBadge = lastAction.previousBadge;
+        const centeredLines = calculateCenterPositions(previousBadge.lines);
+
+        const restoredBadge = {
+          ...previousBadge,
+          lines: centeredLines,
+          templateId: previousBadge.templateId || universalTemplateId,
+        };
+
+        setBadge(restoredBadge);
+
+        // Update the badge in multipleBadges array
+        if (updatedMultipleBadges[lastAction.badgeIndex]) {
+          updatedMultipleBadges[lastAction.badgeIndex] = restoredBadge;
+          setMultipleBadges(updatedMultipleBadges);
+        }
+
+        // Sync badge1Data if editing the first badge
+        if (lastAction.badgeIndex === 0) {
+          setBadge1Data(restoredBadge);
+        }
+        break;
+      }
+      case "reset-all-badges": {
+        // Restore all badges to their previous state before reset
+        if (lastAction.previousMultipleBadges) {
+          // Restore all badges
+          const restoredBadges = lastAction.previousMultipleBadges.map(
+            (prevBadge) => {
+              const centeredLines = calculateCenterPositions(prevBadge.lines);
+              return {
+                ...prevBadge,
+                lines: centeredLines,
+                templateId: prevBadge.templateId || universalTemplateId,
+              };
+            },
+          );
+
+          setMultipleBadges(restoredBadges);
+
+          // Restore current badge
+          if (restoredBadges[lastAction.badgeIndex]) {
+            setBadge(restoredBadges[lastAction.badgeIndex]);
+          }
+
+          // Sync badge1Data
+          if (restoredBadges[0]) {
+            setBadge1Data(restoredBadges[0]);
+          }
+        }
+        break;
+      }
+    }
+  };
+
   // Apply background color change (called after user confirms or if no warning needed)
   const applyBackgroundColor = (colorValue: string) => {
+    // Save to undo history before making changes
+    saveToUndoHistory({
+      type: "background-color",
+      badgeIndex: selectedBadgeIndex,
+    });
+
     const updatedBadge = {
       ...badge,
       backgroundColor: colorValue,
@@ -366,6 +750,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // Apply background color to all badges
   const applyBackgroundColorToAll = () => {
+    // Save to undo history before making changes
+    saveToUndoHistory({
+      type: "apply-background-color-to-all",
+      badgeIndex: selectedBadgeIndex,
+    });
+
     const currentBackgroundColor = badge.backgroundColor;
 
     // Update current badge
@@ -390,6 +780,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // Apply all formatting (background color + all text formatting) from current badge to all badges
   const applyAllFormattingToAll = () => {
+    // Save to undo history before making changes
+    saveToUndoHistory({
+      type: "apply-all-formatting",
+      badgeIndex: selectedBadgeIndex,
+    });
+
     const currentBackgroundColor = badge.backgroundColor;
     const currentLines = badge.lines;
 
@@ -499,6 +895,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Keep for backward compatibility, synced with multipleBadges[0]
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isSendingToSupabase, setIsSendingToSupabase] = useState(false);
+  // Undo history state
+  const [undoHistory, setUndoHistory] = useState<UndoAction[]>([]);
+  const MAX_UNDO_HISTORY = 50; // Limit undo history to prevent memory issues
   // UNIVERSAL TEMPLATE: Single template for all badges
   const [universalTemplateId, setUniversalTemplateId] =
     useState<string>("rect-1x3");
@@ -827,6 +1226,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // Apply formatting from current line to all badges' corresponding lines
   const applyFormattingToAllLines = (lineIndex: number) => {
+    // Save to undo history before making changes
+    saveToUndoHistory({
+      type: "apply-line-formatting",
+      badgeIndex: selectedBadgeIndex,
+      lineIndex: lineIndex,
+    });
+
     const sourceLine = badge.lines[lineIndex];
     if (!sourceLine) return;
 
@@ -865,6 +1271,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // Text updates with auto-scaling to fit badge boundaries
   const updateLine = (index: number, changes: Partial<BadgeLine>) => {
+    // Save to undo history before making changes (skip text content changes)
+    const changedProperty = Object.keys(changes)[0];
+    if (changedProperty && changedProperty !== "text") {
+      saveToUndoHistory({
+        type: "line-property",
+        badgeIndex: selectedBadgeIndex,
+        lineIndex: index,
+        property: changedProperty,
+      });
+    }
+
     const designBox = activeTemplate?.designBox || {
       x: 0,
       y: 0,
@@ -1124,6 +1541,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   };
 
   const resetBadge = () => {
+    // Save to undo history before resetting
+    saveToUndoHistory({
+      type: "reset-badge",
+      badgeIndex: selectedBadgeIndex,
+    });
+
     const fallbackId = templates[0]?.id || "rect-1x3";
 
     // Preserve current number of lines and text, reset all other properties
@@ -1156,6 +1579,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   };
 
   const resetAllBadges = () => {
+    // Save to undo history before resetting
+    saveToUndoHistory({
+      type: "reset-all-badges",
+      badgeIndex: selectedBadgeIndex,
+    });
+
     const fallbackId = templates[0]?.id || "rect-1x3";
 
     // Reset all badges in multipleBadges
@@ -1288,6 +1717,24 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   // UNIVERSAL TEMPLATE: When template changes, update all badges and auto-scale text to fit
   const handleUniversalTemplateChange = async (newTemplateId: string) => {
     console.log(`[UNIVERSAL] Template changed to: ${newTemplateId}`);
+
+    // Save to undo history before making changes (include current universalTemplateId)
+    saveToUndoHistory({
+      type: "template",
+      badgeIndex: selectedBadgeIndex,
+      previousUniversalTemplateId: universalTemplateId,
+    });
+
+    // Get the old template's designBox from the current badge's templateId BEFORE updating state
+    // This ensures we get the correct old template dimensions
+    const oldTemplateId = badge.templateId || universalTemplateId;
+    const oldTemplate = await loadTemplateById(oldTemplateId);
+    const oldDesignBox = oldTemplate?.designBox ||
+      activeTemplate?.designBox || {
+        height: 96,
+        width: 288,
+      };
+
     setUniversalTemplateId(newTemplateId);
 
     // Load the new template to get its designBox
@@ -1298,11 +1745,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
 
     const newDesignBox = newTemplate.designBox;
-    // Get the old template's designBox to calculate current pixel sizes
-    const oldDesignBox = activeTemplate?.designBox || {
-      height: 96,
-      width: 288,
-    };
 
     // Account for 0.1" (9.6px) inset on each side for text clipping
     const INSET_INCHES = 0.1;
@@ -1310,31 +1752,30 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     const maxTextWidth = newDesignBox.width - INSET_PX * 2 - 4; // Subtract inset and margin
 
     // Auto-scale function to ensure text fits within new template boundaries
-    const autoScaleLinesForNewTemplate = (lines: BadgeLine[]): BadgeLine[] => {
-      const isSingleLine = lines.length === 1;
-      const DEFAULT_FONT_SIZE_PX = 25; // Default for single line badges
-      const FONT_SIZE_TOLERANCE = 2; // Allow 2px tolerance (23-27px considered default)
+    // Preserves font sizes in pixels (points) when switching templates, only shrinking if needed to fit
+    const autoScaleLinesForNewTemplate = (
+      lines: BadgeLine[],
+      badgeOldTemplateId?: string,
+    ): BadgeLine[] => {
+      // Get the old designBox for this specific badge if provided, otherwise use the default oldDesignBox
+      let badgeOldDesignBox = oldDesignBox;
+      if (badgeOldTemplateId && badgeOldTemplateId !== oldTemplateId) {
+        // If this badge has a different template, we'd need to load it, but for now use the default
+        // In practice, with universal templates, all badges should have the same templateId
+        badgeOldDesignBox = oldDesignBox;
+      }
 
       return lines.map((line, lineIndex) => {
         const newDesignBoxHeight = newDesignBox.height;
 
         // Calculate current pixel size from old template
-        const oldFontSizePx = (line.sizeNorm ?? 0.15) * oldDesignBox.height;
+        // This preserves the actual font size in pixels/points across template changes
+        const oldFontSizePx =
+          (line.sizeNorm ?? 0.15) * badgeOldDesignBox.height;
 
-        // For single-line badges: if font size is close to default (25px), preserve it as 25px
-        // Otherwise, preserve the pixel size
-        let targetFontSizePx: number;
-        if (isSingleLine && lineIndex === 0) {
-          const isDefaultSize =
-            Math.abs(oldFontSizePx - DEFAULT_FONT_SIZE_PX) <=
-            FONT_SIZE_TOLERANCE;
-          targetFontSizePx = isDefaultSize
-            ? DEFAULT_FONT_SIZE_PX
-            : oldFontSizePx;
-        } else {
-          // For multi-line badges, preserve pixel size
-          targetFontSizePx = oldFontSizePx;
-        }
+        // Always preserve the pixel size (equivalent to preserving point size)
+        // Only shrink if text doesn't fit within the new template's width
+        let targetFontSizePx = oldFontSizePx;
 
         // Convert to new sizeNorm
         let fontSize = targetFontSizePx;
@@ -1379,7 +1820,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
     // Update current badge with auto-scaled text
     setBadge((prev) => {
-      const scaledLines = autoScaleLinesForNewTemplate(prev.lines);
+      const scaledLines = autoScaleLinesForNewTemplate(
+        prev.lines,
+        prev.templateId,
+      );
       const centeredLines = calculateCenterPositions(scaledLines);
       return { ...prev, templateId: newTemplateId, lines: centeredLines };
     });
@@ -1387,7 +1831,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     // Update all badges in multipleBadges with auto-scaled text
     setMultipleBadges((prev) => {
       const updated = prev.map((badge) => {
-        const scaledLines = autoScaleLinesForNewTemplate(badge.lines);
+        const scaledLines = autoScaleLinesForNewTemplate(
+          badge.lines,
+          badge.templateId,
+        );
         const centeredLines = calculateCenterPositions(scaledLines);
         return { ...badge, templateId: newTemplateId, lines: centeredLines };
       });
@@ -1912,23 +2359,45 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             // CRITICAL: Preserve backgroundColor from current badge (single source of truth)
             backgroundColor: badge.backgroundColor || "#FFFFFF",
             lines: row.map((cell: any, i: number) => {
-              const baseLine = badge.lines[i] || badge.lines[0];
               // Get designBox height for size calculation
               const designBoxHeight = activeTemplate?.designBox?.height || 96;
-              // Use the helper function to get appropriate size for each line
-              const lineSizeNorm = getDefaultSizeNorm(i, designBoxHeight);
-              return {
-                ...baseLine,
-                text: cell || "",
-                color: "#000000", // Black text for all CSV badges
-                sizeNorm: lineSizeNorm,
-                align:
-                  baseLine.align === "left" ||
-                  baseLine.align === "center" ||
-                  baseLine.align === "right"
-                    ? baseLine.align
-                    : "center",
-              } as BadgeLine;
+
+              // If this line index exists in the first badge, use its formatting
+              // Otherwise, use default formatting (black, 17pt for line 3+)
+              if (i < badge.lines.length) {
+                const baseLine = badge.lines[i];
+                const lineSizeNorm = getDefaultSizeNorm(i, designBoxHeight);
+                return {
+                  ...baseLine,
+                  text: cell || "",
+                  color: baseLine.color || "#000000",
+                  sizeNorm: baseLine.sizeNorm || lineSizeNorm,
+                  align:
+                    baseLine.align === "left" ||
+                    baseLine.align === "center" ||
+                    baseLine.align === "right"
+                      ? baseLine.align
+                      : "center",
+                } as BadgeLine;
+              } else {
+                // For lines beyond the first badge's line count, use default formatting
+                // Line 3 should be 17px (index 2)
+                const newLineSizePx = 17;
+                const newSizeNorm = newLineSizePx / designBoxHeight;
+                return {
+                  id: `line-${i}-${Date.now()}`,
+                  text: cell || "",
+                  xNorm: 0.5,
+                  yNorm: 0.5, // Will be repositioned by calculateCenterPositions
+                  sizeNorm: newSizeNorm,
+                  color: "#000000", // Default black
+                  bold: false,
+                  italic: false,
+                  underline: false,
+                  fontFamily: "Arial",
+                  align: "center",
+                } as BadgeLine;
+              }
             }),
           };
 
@@ -2080,7 +2549,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             >
               <Squares2X2Icon className="w-6 h-6" />
             </button>
-            <div className="text-[10px] text-gray-600 text-center leading-tight">
+            <div className="text-[8px] text-gray-600 text-center leading-tight">
               Grid
               <br />
               View
@@ -2261,7 +2730,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                             title={t.name}
                           >
                             <div
-                              className={`text-[10px] text-center py-1 flex-shrink-0 ${
+                              className={`text-[8px] text-center py-1 flex-shrink-0 ${
                                 isSelected
                                   ? "bg-blue-600 text-white"
                                   : "bg-gray-200 text-gray-700"
@@ -2496,7 +2965,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                     }
                                   }}
                                 />
-                                <span className="text-[10px] text-gray-600 text-center leading-tight">
+                                <span className="text-[8px] text-gray-600 text-center leading-tight">
                                   {c.name === "Brushed Gold" ? (
                                     <>
                                       Brushed
@@ -2548,7 +3017,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                               badge.backgroundColor || "#FFFFFF"
                             }`}
                           />
-                          <span className="text-[10px] text-gray-600 text-center">
+                          <span className="text-[8px] text-gray-600 text-center">
                             Current color
                           </span>
                         </div>
@@ -2622,6 +3091,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   badge={badge}
                   onLineChange={updateLine}
                   onAlignmentChange={(index, alignment) => {
+                    // Save to undo history before making changes
+                    saveToUndoHistory({
+                      type: "line-property",
+                      badgeIndex: selectedBadgeIndex,
+                      lineIndex: index,
+                      property: "align",
+                    });
+
                     const newLines = badge.lines.map((l, i) => {
                       if (i === index) {
                         // Set both align and alignment for compatibility
@@ -2638,7 +3115,25 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       }
                       return l;
                     }) as BadgeLine[];
-                    setBadge({ ...badge, lines: newLines });
+
+                    // Recalculate center positions
+                    const centeredLines = calculateCenterPositions(newLines);
+                    setBadge({ ...badge, lines: centeredLines });
+
+                    // Update the badge in multipleBadges array
+                    const updatedMultipleBadges = [...multipleBadges];
+                    if (updatedMultipleBadges[selectedBadgeIndex]) {
+                      updatedMultipleBadges[selectedBadgeIndex] = {
+                        ...updatedMultipleBadges[selectedBadgeIndex],
+                        lines: centeredLines,
+                      };
+                      setMultipleBadges(updatedMultipleBadges);
+                    }
+
+                    // Sync badge1Data if editing the first badge
+                    if (selectedBadgeIndex === 0) {
+                      setBadge1Data(updatedMultipleBadges[0]);
+                    }
                   }}
                   onBackgroundColorChange={(backgroundColor) =>
                     setBadge({ ...badge, backgroundColor })
@@ -2665,6 +3160,23 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           <div className="flex justify-end items-start gap-3 mb-4">
             <div className="flex flex-col items-center gap-1">
               <button
+                className="control-button w-14 h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors disabled:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleUndo();
+                }}
+                disabled={undoHistory.length === 0}
+                title="Undo last change"
+              >
+                <ArrowUturnLeftIcon className="w-6 h-6" />
+              </button>
+              <div className="text-[8px] text-gray-600 text-center leading-tight">
+                Undo
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-1">
+              <button
                 className="control-button w-14 h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
                 onClick={(e) => {
                   e.preventDefault();
@@ -2674,7 +3186,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               >
                 <ArrowPathRoundedSquareIcon className="w-6 h-6" />
               </button>
-              <div className="text-[10px] text-gray-600 text-center leading-tight">
+              <div className="text-[8px] text-gray-600 text-center leading-tight">
                 Reset
                 <br />
                 this Badge
@@ -2693,7 +3205,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 >
                   <ArrowPathIconOutline className="w-6 h-6" />
                 </button>
-                <div className="text-[10px] text-gray-600 text-center leading-tight">
+                <div className="text-[8px] text-gray-600 text-center leading-tight">
                   Reset
                   <br />
                   All Badges
@@ -2713,7 +3225,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 >
                   <Square2StackIcon className="w-6 h-6" />
                 </button>
-                <div className="text-[10px] text-gray-600 text-center leading-tight">
+                <div className="text-[8px] text-gray-600 text-center leading-tight">
                   Apply Format
                   <br />
                   to All Badges
@@ -2735,7 +3247,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               >
                 <SquaresPlusIcon className="w-6 h-6" />
               </button>
-              <div className="text-[10px] text-gray-600 text-center leading-tight">
+              <div className="text-[8px] text-gray-600 text-center leading-tight">
                 Create
                 <br />
                 Multiple Badges
@@ -2753,7 +3265,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               >
                 <QuestionMarkCircleIcon className="w-6 h-6" />
               </button>
-              <div className="text-[10px] text-gray-600 text-center leading-tight">
+              <div className="text-[8px] text-gray-600 text-center leading-tight">
                 Help <br></br> Center
               </div>
             </div>
@@ -3027,7 +3539,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             >
               <Squares2X2Icon className="w-6 h-6" />
             </button>
-            <div className="text-[10px] text-gray-600 text-center leading-tight">
+            <div className="text-[8px] text-gray-600 text-center leading-tight">
               Grid
               <br />
               View
@@ -3509,7 +4021,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                           title={t.name}
                         >
                           <div
-                            className={`text-[10px] text-center py-1 flex-shrink-0 ${
+                            className={`text-[8px] text-center py-1 flex-shrink-0 ${
                               isSelected
                                 ? "bg-blue-600 text-white"
                                 : "bg-gray-200 text-gray-700"
@@ -4449,6 +4961,24 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </div>
             <div className="overflow-y-auto flex-1 p-4">
               <div className="space-y-4">
+                {/* Undo */}
+                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                  <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
+                    <ArrowUturnLeftIcon className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-800 mb-1">Undo</h4>
+                    <p className="text-sm text-gray-600">
+                      Reverses your last change. Works for any changes to the
+                      font, alignment, background color, template/shape , and
+                      reset operations. If the change was made to a different
+                      badge, the first undo will switch to that badge, and the
+                      second undo will reverse the change. The button is
+                      disabled when there are no changes to undo.
+                    </p>
+                  </div>
+                </div>
+
                 {/* Reset This Badge */}
                 <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
                   <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
