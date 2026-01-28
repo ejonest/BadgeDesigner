@@ -63,7 +63,7 @@ export const BADGE_CONSTANTS = {
         text: 'Your Name',
         xNorm: 0.5,
         yNorm: 0.5,  // Use center position - will be recalculated
-        sizeNorm: 0.20,  // 14pt equivalent (14/70 = 0.20)
+        sizeNorm: 0.260,  // 25px for line 1 (25/96 = 0.260)
         color: '#000000',
         bold: false,  // No default bold
         italic: false,
@@ -75,7 +75,7 @@ export const BADGE_CONSTANTS = {
         text: 'Title',
         xNorm: 0.5,
         yNorm: 0.5,  // Use center position - will be recalculated
-        sizeNorm: 0.143,  // 10pt equivalent (10/70 = 0.143)
+        sizeNorm: 0.208,  // 20px for line 2 (20/96 = 0.208)
         color: '#000000',
         bold: false,
         italic: false,

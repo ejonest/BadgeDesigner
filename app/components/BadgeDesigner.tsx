@@ -23,6 +23,7 @@ import {
   SquaresPlusIcon,
   ArrowPathRoundedSquareIcon,
   CheckCircleIcon,
+  QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 
 import {
@@ -248,7 +249,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const areColorsSimilar = (
     color1: string,
     color2: string,
-    threshold: number = 70,
+    threshold: number = 150,
   ): boolean => {
     return colorDistance(color1, color2) <= threshold;
   };
@@ -473,6 +474,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   >(null);
   const [showBadgeGridModal, setShowBadgeGridModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   const [templateSortBy, setTemplateSortBy] = useState<
     "popularity" | "size" | "alphabetical"
   >("popularity");
@@ -987,6 +989,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         height: 96,
       };
 
+      // New line should be 17px (not using the shrinking scale)
+      const newLineSizePx = 17;
+      const newSizeNorm = newLineSizePx / designBox.height;
+
+      // Add the new line with 17px size
       const newLines = [
         ...badge.lines,
         {
@@ -994,7 +1001,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           text: "Line Text",
           xNorm: 0.5,
           yNorm: 0.5, // Will be repositioned by calculateCenterPositions
-          sizeNorm: badge.lines.length === 0 ? 0.2 : 0.143, // 14pt for line 1, 10pt for lines 2,3,4
+          sizeNorm: newSizeNorm,
           color: "#000000",
           bold: false,
           italic: false,
@@ -1003,8 +1010,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         } as BadgeLine,
       ];
 
+      // Scale all lines equally if they don't fit
+      const scaledLines = scaleLinesToFit(newLines, designBox);
+
       // Apply center-based positioning to all lines
-      const centeredLines = calculateCenterPositions(newLines);
+      const centeredLines = calculateCenterPositions(scaledLines);
 
       setBadge({
         ...badge,
@@ -1034,8 +1044,67 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   };
 
+  // Helper function to calculate default sizeNorm for a line based on its index
+  // Line 1: 25px, then shrinks for each additional line
+  const getDefaultSizeNorm = (
+    lineIndex: number,
+    designBoxHeight: number = 96,
+  ): number => {
+    // Base size for line 1: 25px
+    const baseSizePx = 25;
+    // Shrink factor for each subsequent line (80%, 68%, 60% of base)
+    const shrinkFactors = [1.0, 0.8, 0.68, 0.6];
+    const factor = shrinkFactors[lineIndex] || 0.6;
+    const fontSizePx = baseSizePx * factor;
+    // Convert to sizeNorm (normalized by designBox height)
+    return fontSizePx / designBoxHeight;
+  };
+
+  // Helper function to scale all lines equally to fit within badge boundaries
+  const scaleLinesToFit = (
+    lines: BadgeLine[],
+    designBox: { height: number },
+  ): BadgeLine[] => {
+    if (!activeTemplate?.designBox) return lines;
+
+    const designBoxHeight = designBox.height;
+    const FIXED_LINE_SPACING = designBoxHeight * 0.07; // 7% of badge height
+    const INSET_PX = 0.1 * 96; // 0.1" inset at 96 DPI
+    const availableHeight = designBoxHeight - INSET_PX * 2; // Available height with insets
+
+    // Calculate total height needed with current sizes
+    const totalTextHeight = lines.reduce((sum, line, index) => {
+      const fontSize = (line.sizeNorm || 0.15) * designBoxHeight;
+      sum += fontSize;
+      if (index < lines.length - 1) {
+        sum += FIXED_LINE_SPACING;
+      }
+      return sum;
+    }, 0);
+
+    // If it fits, return lines as-is
+    if (totalTextHeight <= availableHeight) {
+      return lines;
+    }
+
+    // Calculate scale factor to fit all lines
+    const scaleFactor = availableHeight / totalTextHeight;
+
+    // Apply scale factor to all lines equally
+    return lines.map((line) => ({
+      ...line,
+      sizeNorm: (line.sizeNorm || 0.15) * scaleFactor,
+    }));
+  };
+
   // Helper function to reset lines for a badge (preserves text and number of lines)
   const resetBadgeLines = (badgeToReset: Badge): BadgeLine[] => {
+    // Get designBox height from template
+    const currentTemplate = templates.find(
+      (t) => t.id === badgeToReset.templateId,
+    );
+    const designBoxHeight = currentTemplate?.designBox?.height || 96;
+
     return badgeToReset.lines.map(
       (line, index) =>
         ({
@@ -1043,7 +1112,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           text: line.text, // Preserve user input text
           xNorm: 0.5,
           yNorm: 0.5, // Will be repositioned by calculateCenterPositions
-          sizeNorm: index === 0 ? 0.12 : 0.08, // First line 0.12, others 0.08
+          sizeNorm: getDefaultSizeNorm(index, designBoxHeight),
           color: "#000000",
           bold: false,
           italic: false,
@@ -1229,6 +1298,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
 
     const newDesignBox = newTemplate.designBox;
+    // Get the old template's designBox to calculate current pixel sizes
+    const oldDesignBox = activeTemplate?.designBox || {
+      height: 96,
+      width: 288,
+    };
+
     // Account for 0.1" (9.6px) inset on each side for text clipping
     const INSET_INCHES = 0.1;
     const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
@@ -1236,9 +1311,35 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
     // Auto-scale function to ensure text fits within new template boundaries
     const autoScaleLinesForNewTemplate = (lines: BadgeLine[]): BadgeLine[] => {
-      return lines.map((line) => {
-        const designBoxHeight = newDesignBox.height;
-        let fontSize = (line.sizeNorm ?? 0.15) * designBoxHeight;
+      const isSingleLine = lines.length === 1;
+      const DEFAULT_FONT_SIZE_PX = 25; // Default for single line badges
+      const FONT_SIZE_TOLERANCE = 2; // Allow 2px tolerance (23-27px considered default)
+
+      return lines.map((line, lineIndex) => {
+        const newDesignBoxHeight = newDesignBox.height;
+
+        // Calculate current pixel size from old template
+        const oldFontSizePx = (line.sizeNorm ?? 0.15) * oldDesignBox.height;
+
+        // For single-line badges: if font size is close to default (25px), preserve it as 25px
+        // Otherwise, preserve the pixel size
+        let targetFontSizePx: number;
+        if (isSingleLine && lineIndex === 0) {
+          const isDefaultSize =
+            Math.abs(oldFontSizePx - DEFAULT_FONT_SIZE_PX) <=
+            FONT_SIZE_TOLERANCE;
+          targetFontSizePx = isDefaultSize
+            ? DEFAULT_FONT_SIZE_PX
+            : oldFontSizePx;
+        } else {
+          // For multi-line badges, preserve pixel size
+          targetFontSizePx = oldFontSizePx;
+        }
+
+        // Convert to new sizeNorm
+        let fontSize = targetFontSizePx;
+        let newSizeNorm = fontSize / newDesignBoxHeight;
+
         const text = line.text || "";
         const fontFamily = line.fontFamily || "Arial";
         const bold = line.bold || false;
@@ -1258,7 +1359,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           // Auto-scale down if text is too wide - constrain to badge boundaries
           while (textWidth > maxTextWidth) {
             fontSize = fontSize * 0.95; // Reduce by 5% each iteration
-            const newSizeNorm = fontSize / designBoxHeight;
+            newSizeNorm = fontSize / newDesignBoxHeight;
             if (newSizeNorm <= minSizeNorm) {
               return { ...line, sizeNorm: minSizeNorm };
             }
@@ -1269,11 +1370,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               bold,
               italic,
             );
-            line.sizeNorm = newSizeNorm;
           }
         }
 
-        return { ...line };
+        return { ...line, sizeNorm: newSizeNorm };
       });
     };
 
@@ -1813,11 +1913,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             backgroundColor: badge.backgroundColor || "#FFFFFF",
             lines: row.map((cell: any, i: number) => {
               const baseLine = badge.lines[i] || badge.lines[0];
+              // Get designBox height for size calculation
+              const designBoxHeight = activeTemplate?.designBox?.height || 96;
+              // Use the helper function to get appropriate size for each line
+              const lineSizeNorm = getDefaultSizeNorm(i, designBoxHeight);
               return {
                 ...baseLine,
                 text: cell || "",
                 color: "#000000", // Black text for all CSV badges
-                sizeNorm: i === 0 ? 0.2 : 0.143, // 14pt for line 1, 10pt for lines 2,3,4
+                sizeNorm: lineSizeNorm,
                 align:
                   baseLine.align === "left" ||
                   baseLine.align === "center" ||
@@ -2297,8 +2401,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       ring: "ring-gray-300",
                     },
                     { value: "#0000FF", name: "Blue", ring: "ring-blue-500" },
-
                     { value: "#FF0000", name: "Red", ring: "ring-red-500" },
+                    {
+                      value: "rainbow",
+                      name: "More Colors",
+                      ring: "ring-gray-400",
+                      isRainbow: true,
+                    },
                   ];
 
                   const handleColorClick = (colorValue: string) => {
@@ -2357,7 +2466,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     <>
                       <div className="flex items-start gap-3 ml-1.5 mt-1.5">
                         <div className="flex flex-col gap-2">
-                          <div className="grid grid-cols-3 gap-2 w-fit">
+                          <div className="grid grid-cols-4 gap-2 w-fit">
                             {featuredColors.map((c) => (
                               <div
                                 key={c.value}
@@ -2369,11 +2478,22 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                       ? "ring-2 ring-offset-1 " + c.ring
                                       : ""
                                   }`}
-                                  style={{ backgroundColor: c.value }}
+                                  style={
+                                    c.isRainbow
+                                      ? {
+                                          background:
+                                            "linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)",
+                                        }
+                                      : { backgroundColor: c.value }
+                                  }
                                   title={c.name}
                                   onClick={(e) => {
                                     e.preventDefault();
-                                    handleColorClick(c.value);
+                                    if (c.isRainbow) {
+                                      setShowColorModal(true);
+                                    } else {
+                                      handleColorClick(c.value);
+                                    }
                                   }}
                                 />
                                 <span className="text-[10px] text-gray-600 text-center leading-tight">
@@ -2389,6 +2509,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                       <br />
                                       Silver
                                     </>
+                                  ) : c.name === "More Colors" ? (
+                                    <>
+                                      More
+                                      <br />
+                                      Colors
+                                    </>
                                   ) : (
                                     c.name
                                   )}
@@ -2396,14 +2522,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                               </div>
                             ))}
                           </div>
-                          {/* More Colors Link */}
-                          <button
-                            type="button"
-                            onClick={() => setShowColorModal(true)}
-                            className="text-sm text-blue-600 hover:text-blue-800 underline text-left py-1 w-fit"
-                          >
-                            more colors
-                          </button>
                           {/* Apply to All Button */}
                           {multipleBadges.length > 1 && (
                             <div className="mt-2">
@@ -2559,7 +2677,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               <div className="text-[10px] text-gray-600 text-center leading-tight">
                 Reset
                 <br />
-                Format
+                this Badge
               </div>
             </div>
 
@@ -2618,9 +2736,25 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 <SquaresPlusIcon className="w-6 h-6" />
               </button>
               <div className="text-[10px] text-gray-600 text-center leading-tight">
-                Add
+                Create
                 <br />
-                Badges
+                Multiple Badges
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-1">
+              <button
+                className="control-button w-14 h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowHelpModal(true);
+                }}
+                title="Help - Learn about all the buttons"
+              >
+                <QuestionMarkCircleIcon className="w-6 h-6" />
+              </button>
+              <div className="text-[10px] text-gray-600 text-center leading-tight">
+                Help <br></br> Center
               </div>
             </div>
           </div>
@@ -3008,7 +3142,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                         >
                           Edit
                         </button>
-                        {i >= 1 && (
+                        {multipleBadges.length > 1 && (
                           <>
                             <div className="h-2" />
                             <button
@@ -3016,11 +3150,46 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                               style={{ width: 28, height: 28 }}
                               onClick={(e) => {
                                 e.preventDefault();
-                                setMultipleBadges(
-                                  multipleBadges.filter(
-                                    (_, idx) => idx !== i - 1,
-                                  ),
+
+                                // Delete the badge at index i
+                                const newMultipleBadges = multipleBadges.filter(
+                                  (_, idx) => idx !== i,
                                 );
+
+                                // Update selectedBadgeIndex appropriately
+                                let newSelectedIndex = selectedBadgeIndex;
+                                if (selectedBadgeIndex === i) {
+                                  // If we deleted the currently selected badge, select the first one
+                                  newSelectedIndex = 0;
+                                } else if (selectedBadgeIndex > i) {
+                                  // If we deleted a badge before the selected one, decrement the index
+                                  newSelectedIndex = selectedBadgeIndex - 1;
+                                }
+                                // If selectedBadgeIndex < i, no change needed
+
+                                setMultipleBadges(newMultipleBadges);
+                                setSelectedBadgeIndex(newSelectedIndex);
+
+                                // If we changed the selected index, load that badge
+                                if (newSelectedIndex !== selectedBadgeIndex) {
+                                  const badgeToLoad =
+                                    newMultipleBadges[newSelectedIndex];
+                                  if (badgeToLoad) {
+                                    const centeredLines =
+                                      calculateCenterPositions(
+                                        badgeToLoad.lines,
+                                      );
+                                    setBadge({
+                                      ...badgeToLoad,
+                                      lines: centeredLines,
+                                      templateId: universalTemplateId,
+                                    });
+                                    // Sync badge1Data if it's the first badge
+                                    if (newSelectedIndex === 0) {
+                                      setBadge1Data(badgeToLoad);
+                                    }
+                                  }
+                                }
                               }}
                             >
                               <XMarkIcon className="w-4 h-4" />
@@ -3029,8 +3198,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                         )}
                       </div>
                       <div
-                        className="flex flex-col items-center w-full h-[200px]"
+                        className="flex flex-col items-center w-full h-[200px] cursor-pointer hover:opacity-90 transition-opacity"
                         style={{ overflow: "visible" }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          selectBadge(i);
+                        }}
+                        title="Click to edit this badge"
                       >
                         <BadgeSvgRenderer badge={b} templateId={tid} />
                       </div>
@@ -3083,65 +3257,129 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 );
 
                 return (
-                  <button
+                  <div
                     key={i}
-                    type="button"
-                    className={`flex flex-col items-center p-2 rounded-lg border-2 transition-colors ${
+                    className={`relative flex flex-col items-center p-2 rounded-lg border-2 transition-colors ${
                       isSelected
                         ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                        : "border-gray-200 bg-white"
                     }`}
-                    onClick={() => {
-                      selectBadge(i);
-                      setShowBadgeGridModal(false);
-                    }}
                   >
-                    <div className="flex items-center gap-1 mb-1">
-                      <span className="text-sm font-bold text-gray-700">
-                        {i + 1}.
-                      </span>
-                      {hasColorIssues && (
-                        <div
-                          className="relative w-4 h-4 flex items-center justify-center"
-                          title="Some text may not show well. Please check font colors"
-                        >
-                          <svg
-                            className="w-4 h-4 h-full text-red-600"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <circle
-                              cx="10"
-                              cy="10"
-                              r="9"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              fill="none"
-                            />
-                            <line
-                              x1="5"
-                              y1="5"
-                              x2="15"
-                              y2="15"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                    <div
-                      className="w-full flex items-center justify-center"
-                      style={{ height: 80 }}
+                    {/* Delete button - only show if there are multiple badges */}
+                    {multipleBadges.length > 1 && (
+                      <button
+                        type="button"
+                        className="absolute top-1 right-1 p-1 bg-red-100 text-red-700 border border-red-300 hover:bg-red-200 rounded flex items-center justify-center z-10"
+                        style={{ width: 24, height: 24 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+
+                          // Delete the badge at index i
+                          const newMultipleBadges = multipleBadges.filter(
+                            (_, idx) => idx !== i,
+                          );
+
+                          // Update selectedBadgeIndex appropriately
+                          let newSelectedIndex = selectedBadgeIndex;
+                          if (selectedBadgeIndex === i) {
+                            // If we deleted the currently selected badge, select the first one
+                            newSelectedIndex = 0;
+                          } else if (selectedBadgeIndex > i) {
+                            // If we deleted a badge before the selected one, decrement the index
+                            newSelectedIndex = selectedBadgeIndex - 1;
+                          }
+                          // If selectedBadgeIndex < i, no change needed
+
+                          setMultipleBadges(newMultipleBadges);
+                          setSelectedBadgeIndex(newSelectedIndex);
+
+                          // If we changed the selected index, load that badge
+                          if (newSelectedIndex !== selectedBadgeIndex) {
+                            const badgeToLoad =
+                              newMultipleBadges[newSelectedIndex];
+                            if (badgeToLoad) {
+                              const centeredLines = calculateCenterPositions(
+                                badgeToLoad.lines,
+                              );
+                              setBadge({
+                                ...badgeToLoad,
+                                lines: centeredLines,
+                                templateId: universalTemplateId,
+                              });
+                              // Sync badge1Data if it's the first badge
+                              if (newSelectedIndex === 0) {
+                                setBadge1Data(badgeToLoad);
+                              }
+                            }
+                          }
+
+                          // If we deleted the last badge, close the modal
+                          if (newMultipleBadges.length === 1) {
+                            setShowBadgeGridModal(false);
+                          }
+                        }}
+                        title="Delete badge"
+                      >
+                        <XMarkIcon className="w-3 h-3" />
+                      </button>
+                    )}
+
+                    {/* Clickable badge preview */}
+                    <button
+                      type="button"
+                      className="w-full flex flex-col items-center"
+                      onClick={() => {
+                        selectBadge(i);
+                        setShowBadgeGridModal(false);
+                      }}
                     >
-                      <BadgeSvgRenderer
-                        badge={b}
-                        templateId={tid}
-                        height={80}
-                      />
-                    </div>
-                  </button>
+                      <div className="flex items-center gap-1 mb-1">
+                        <span className="text-sm font-bold text-gray-700">
+                          {i + 1}.
+                        </span>
+                        {hasColorIssues && (
+                          <div
+                            className="relative w-4 h-4 flex items-center justify-center"
+                            title="Some text may not show well. Please check font colors"
+                          >
+                            <svg
+                              className="w-4 h-4 h-full text-red-600"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <circle
+                                cx="10"
+                                cy="10"
+                                r="9"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                fill="none"
+                              />
+                              <line
+                                x1="5"
+                                y1="5"
+                                x2="15"
+                                y2="15"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <div
+                        className="w-full flex items-center justify-center"
+                        style={{ height: 80 }}
+                      >
+                        <BadgeSvgRenderer
+                          badge={b}
+                          templateId={tid}
+                          height={80}
+                        />
+                      </div>
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -4177,6 +4415,173 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 }}
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
+          onClick={() => setShowHelpModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Help - Button Guide"
+        >
+          <div
+            className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-bold text-gray-800">
+                Help - Button Guide
+              </h3>
+              <button
+                type="button"
+                className="p-2 text-gray-500 hover:text-gray-700"
+                onClick={() => setShowHelpModal(false)}
+                aria-label="Close"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 p-4">
+              <div className="space-y-4">
+                {/* Reset This Badge */}
+                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                  <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
+                    <ArrowPathRoundedSquareIcon className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-800 mb-1">
+                      Reset this Badge
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Resets the current badge you're editing to default
+                      settings, clearing all text and formatting while keeping
+                      the template and background color.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Reset All Badges */}
+                {multipleBadges.length > 1 && (
+                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                    <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
+                      <ArrowPathIconOutline className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-800 mb-1">
+                        Reset All Badges
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        Resets all badges in your design to default settings.
+                        This only appears when you have multiple badges.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Apply Format to All Badges */}
+                {multipleBadges.length > 1 && (
+                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                    <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
+                      <Square2StackIcon className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-800 mb-1">
+                        Apply Format to All Badges
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        Copies the background color and all text formatting
+                        (colors, fonts, sizes, styles) from the current badge to
+                        all other badges in your design.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Create Multiple Badges */}
+                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                  <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
+                    <SquaresPlusIcon className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-800 mb-1">
+                      Create Multiple Badges
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Opens a dialog to create multiple badges at once by
+                      uploading a CSV file or pasting CSV data. Each row in the
+                      CSV becomes a new badge.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Grid View */}
+                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                  <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
+                    <Squares2X2Icon className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-800 mb-1">
+                      Grid View
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Opens a grid view of all your badges, making it easy to
+                      see and select which badge you want to edit. You can also
+                      delete badges from this view.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Workflow Section */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h4 className="font-semibold text-gray-800 mb-3">
+                  How to Design Your Badge
+                </h4>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
+                  <li className="mb-2">
+                    <strong>Pick a badge design</strong> that fits your business
+                    - Choose from various shapes and sizes in the template
+                    section. Don't see what you're looking for? Check out more
+                    templates - we are always adding more designs.
+                  </li>
+                  <li className="mb-2">
+                    <strong>Select a background color</strong> - Pick a color
+                    that represents your brand or event.
+                  </li>
+                  <li className="mb-2">
+                    <strong>Add your text</strong> - Enter names, titles, or any
+                    information you want on the badge. You can add up to 4 lines
+                    of text.
+                  </li>
+                  <li className="mb-2">
+                    <strong>Modify to fit</strong> - Adjust font sizes, colors,
+                    alignment, and styles to make your badge look perfect.
+                  </li>
+                </ol>
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-900">
+                    <strong>Pro Tip:</strong> Try to pick colors with a good
+                    amount of contrast so they can be seen well in a
+                    professional setting. High contrast between text and
+                    background ensures your badges are readable, look
+                    professional and are ready to print in any setting.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end p-4 border-t">
+              <button
+                type="button"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors"
+                onClick={() => setShowHelpModal(false)}
+              >
+                Got it!
               </button>
             </div>
           </div>
