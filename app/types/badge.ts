@@ -58,4 +58,22 @@ export interface BadgeDesignerProps {
   productId?: string;
   onBadgeChange?: (badge: Badge) => void;
   initialBadge?: Badge;
+}
+
+export interface UndoAction {
+  type:
+    | "line-property"
+    | "background-color"
+    | "template"
+    | "apply-all-formatting"
+    | "apply-line-formatting"
+    | "apply-background-color-to-all"
+    | "reset-badge"
+    | "reset-all-badges";
+  previousBadge: Badge; // Full badge state before change
+  previousMultipleBadges?: Badge[]; // For "apply all" operations
+  previousUniversalTemplateId?: string; // For template changes, track the previous universal template ID
+  badgeIndex: number;
+  lineIndex?: number; // For line-specific changes
+  property?: string; // Which property changed (color, sizeNorm, fontFamily, etc.)
 } 
