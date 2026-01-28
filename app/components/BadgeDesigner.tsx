@@ -1075,6 +1075,33 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // Auto-save removed - now handled in selectBadge function to prevent data overwriting
 
+  // Keyboard shortcut for undo: Ctrl+Z (Windows/Linux) or Cmd+Z (Mac)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Ctrl+Z (Windows/Linux) or Cmd+Z (Mac)
+      const isUndoShortcut = (e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey;
+      
+      if (isUndoShortcut) {
+        // Don't intercept if user is typing in an input field, textarea, or contenteditable element
+        const target = e.target as HTMLElement;
+        const isInputField = 
+          target.tagName === 'INPUT' || 
+          target.tagName === 'TEXTAREA' || 
+          target.isContentEditable;
+        
+        if (!isInputField && undoHistory.length > 0) {
+          e.preventDefault();
+          handleUndo();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [undoHistory.length, handleUndo]); // Re-bind when undo history or handleUndo changes
+
   // Recalculate initial badge positions when templates load
   useEffect(() => {
     if (templates.length > 0 && badge.lines.length > 0) {
@@ -3248,9 +3275,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 <SquaresPlusIcon className="w-6 h-6" />
               </button>
               <div className="text-[8px] text-gray-600 text-center leading-tight">
-                Create
+                Add Multiple 
                 <br />
-                Multiple Badges
+                Badges
               </div>
             </div>
 
