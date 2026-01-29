@@ -1079,16 +1079,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Check for Ctrl+Z (Windows/Linux) or Cmd+Z (Mac)
-      const isUndoShortcut = (e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey;
-      
+      const isUndoShortcut =
+        (e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey;
+
       if (isUndoShortcut) {
         // Don't intercept if user is typing in an input field, textarea, or contenteditable element
         const target = e.target as HTMLElement;
-        const isInputField = 
-          target.tagName === 'INPUT' || 
-          target.tagName === 'TEXTAREA' || 
+        const isInputField =
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
           target.isContentEditable;
-        
+
         if (!isInputField && undoHistory.length > 0) {
           e.preventDefault();
           handleUndo();
@@ -1096,9 +1097,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [undoHistory.length, handleUndo]); // Re-bind when undo history or handleUndo changes
 
@@ -2584,6 +2585,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           </div>
         </div>
 
+        <h2 className="text-xl font-bold text-gray-800 mb-2 w-full text-center">
+          Badge Preview
+        </h2>
+
         {/* Large preview: one badge, prev/next arrows, swipe to change. Sizing from MOBILE_PREVIEW. */}
         <div
           className="w-full flex items-center justify-center relative select-none bg-white/60 rounded-lg border border-gray-200 overflow-x-auto"
@@ -3184,10 +3189,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end items-start gap-3 mb-4">
+          <div className="flex justify-end items-start gap-1.5 md:gap-3 mb-4 flex-wrap">
             <div className="flex flex-col items-center gap-1">
               <button
-                className="control-button w-14 h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors disabled:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors disabled:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={(e) => {
                   e.preventDefault();
                   handleUndo();
@@ -3195,7 +3200,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 disabled={undoHistory.length === 0}
                 title="Undo last change"
               >
-                <ArrowUturnLeftIcon className="w-6 h-6" />
+                <ArrowUturnLeftIcon className="w-5 h-5 md:w-6 md:h-6" />
               </button>
               <div className="text-[8px] text-gray-600 text-center leading-tight">
                 Undo
@@ -3204,14 +3209,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
             <div className="flex flex-col items-center gap-1">
               <button
-                className="control-button w-14 h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
+                className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
                 onClick={(e) => {
                   e.preventDefault();
                   resetBadge();
                 }}
                 title="Reset current badge to default settings"
               >
-                <ArrowPathRoundedSquareIcon className="w-6 h-6" />
+                <ArrowPathRoundedSquareIcon className="w-5 h-5 md:w-6 md:h-6" />
               </button>
               <div className="text-[8px] text-gray-600 text-center leading-tight">
                 Reset
@@ -3223,14 +3228,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             {multipleBadges.length > 1 && (
               <div className="flex flex-col items-center gap-1">
                 <button
-                  className="control-button w-14 h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
+                  className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
                   onClick={(e) => {
                     e.preventDefault();
                     resetAllBadges();
                   }}
                   title="Reset all badges to default settings"
                 >
-                  <ArrowPathIconOutline className="w-6 h-6" />
+                  <ArrowPathIconOutline className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
                 <div className="text-[8px] text-gray-600 text-center leading-tight">
                   Reset
@@ -3243,14 +3248,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             {multipleBadges.length > 1 && (
               <div className="flex flex-col items-center gap-1">
                 <button
-                  className="control-button w-14 h-14 flex items-center justify-center bg-green-500 text-white hover:bg-green-600 border border-green-600 rounded transition-colors"
+                  className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-green-500 text-white hover:bg-green-600 border border-green-600 rounded transition-colors"
                   onClick={(e) => {
                     e.preventDefault();
                     applyAllFormattingToAll();
                   }}
                   title="Apply background color and all text formatting from current badge to all badges"
                 >
-                  <Square2StackIcon className="w-6 h-6" />
+                  <Square2StackIcon className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
                 <div className="text-[8px] text-gray-600 text-center leading-tight">
                   Apply Format
@@ -3262,7 +3267,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
             <div className="flex flex-col items-center gap-1">
               <button
-                className="control-button w-14 h-14 flex items-center justify-center bg-blue-500 text-white hover:bg-blue-600 border border-blue-600 rounded transition-colors"
+                className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-blue-500 text-white hover:bg-blue-600 border border-blue-600 rounded transition-colors"
                 onClick={(e) => {
                   e.preventDefault();
                   setCsvText("");
@@ -3272,10 +3277,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 }}
                 title="Add multiple badges from CSV file or data"
               >
-                <SquaresPlusIcon className="w-6 h-6" />
+                <SquaresPlusIcon className="w-5 h-5 md:w-6 md:h-6" />
               </button>
               <div className="text-[8px] text-gray-600 text-center leading-tight">
-                Add Multiple 
+                Add Multiple
                 <br />
                 Badges
               </div>
@@ -3283,14 +3288,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
             <div className="flex flex-col items-center gap-1">
               <button
-                className="control-button w-14 h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
+                className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
                 onClick={(e) => {
                   e.preventDefault();
                   setShowHelpModal(true);
                 }}
                 title="Help - Learn about all the buttons"
               >
-                <QuestionMarkCircleIcon className="w-6 h-6" />
+                <QuestionMarkCircleIcon className="w-5 h-5 md:w-6 md:h-6" />
               </button>
               <div className="text-[8px] text-gray-600 text-center leading-tight">
                 Help <br></br> Center
@@ -3554,9 +3559,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           multipleBadges.length > 1 ? "md:h-[90vh]" : ""
         }`}
       >
-        <div className="flex items-center justify-between w-full mb-4 flex-shrink-0">
-          <h2 className="text-xl font-bold">Badge Preview</h2>
-          <div className="flex flex-col items-center gap-1">
+        <div className="relative flex items-center justify-center w-full mb-4 flex-shrink-0">
+          <h2 className="text-xl font-bold text-center">Badge Preview</h2>
+          <div className="absolute right-0 flex flex-col items-center gap-1">
             <button
               type="button"
               className="w-14 h-14 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
@@ -4781,13 +4786,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             >
               &times;
             </button>
-            <h3 className="text-lg font-bold mb-2">Add Multiple Badges</h3>
+            <h3 className="text-lg font-bold mb-2">
+              Add or Create Multiple Badges
+            </h3>
             <p className="mb-2 text-sm text-gray-700">
-              You can upload a CSV file or paste CSV data below. Each row should
-              represent a badge.
-            </p>
-            <p className="mb-2 text-sm text-gray-700">
-              <b>Add a comma (,) to indicate a new line. Add up to 4 lines.</b>
+              1. You can <strong>upload a CSV</strong> file or{" "}
+              <strong>paste CSV</strong> data below.
+              <br></br>
+              2. <strong>Each row</strong> should represent a badge.
+              <br></br>
+              3. <strong>Add a comma (,)</strong> to indicate a new line.
+              <br></br>
+              4. Add up to <strong>4 lines</strong>.<br></br>
+              5. Add as many rows as you want.
             </p>
             <div className="mb-2 text-sm">
               <b>Example:</b>
@@ -4997,7 +5008,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     <h4 className="font-semibold text-gray-800 mb-1">Undo</h4>
                     <p className="text-sm text-gray-600">
                       Reverses your last change. Works for any changes to the
-                      font, alignment, background color, template/shape , and
+                      font, alignment, background color, template/shape, and
                       reset operations. If the change was made to a different
                       badge, the first undo will switch to that badge, and the
                       second undo will reverse the change. The button is
@@ -5018,7 +5029,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     <p className="text-sm text-gray-600">
                       Resets the current badge you're editing to default
                       settings, clearing all text and formatting while keeping
-                      the template and background color.
+                      the template.
                     </p>
                   </div>
                 </div>
@@ -5067,12 +5078,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   </div>
                   <div className="flex-1">
                     <h4 className="font-semibold text-gray-800 mb-1">
-                      Create Multiple Badges
+                      Add Multiple Badges
                     </h4>
                     <p className="text-sm text-gray-600">
-                      Opens a dialog to create multiple badges at once by
-                      uploading a CSV file or pasting CSV data. Each row in the
-                      CSV becomes a new badge.
+                      You can upload a comma-separated CSV with up to 4 entries
+                      per row, with each row becoming its own badge. Don't have
+                      a file? Use the dialog box to add badges directly in the
+                      same format.
                     </p>
                   </div>
                 </div>
