@@ -2343,8 +2343,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         );
       }
 
-      // Variant resolver
+      // Variant resolver: use variant IDs from iframe URL (from Shopify product) so the correct store's variants are used. Fall back to hardcoded IDs only when not embedded in Shopify.
+      const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const variantIdFromUrl = (key: string) => urlParams?.get(key)?.trim() || null;
       const getVariantId = (backingType: string) => {
+        const fromUrl =
+          backingType === "pin"
+            ? variantIdFromUrl("variantIdPin")
+            : backingType === "magnetic"
+              ? variantIdFromUrl("variantIdMagnetic")
+              : backingType === "adhesive"
+                ? variantIdFromUrl("variantIdAdhesive")
+                : variantIdFromUrl("variantIdPin");
+        if (fromUrl) return fromUrl;
         switch (backingType) {
           case "pin":
             return "47037830299903";
