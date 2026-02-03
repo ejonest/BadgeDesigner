@@ -152,9 +152,13 @@ export function createApi(gadgetApiUrl?: string, gadgetApiKey?: string) {
       console.log('addToCart function called with:', badgeData);
       
       try {
-        // Get Shopify store URL from environment or use default
-        // In frontend, we'll use a default or get from window object if available
-        const shopifyStoreUrl = (typeof window !== 'undefined' && (window as any).SHOPIFY_STORE_URL) || 'badgesonly.myshopify.com';
+        // Resolve Shopify store URL: window.SHOPIFY_STORE_URL, then URL params (storeUrl or shop from iframe), then fallback
+        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const shopifyStoreUrl =
+          (typeof window !== 'undefined' && (window as any).SHOPIFY_STORE_URL) ||
+          urlParams?.get('storeUrl') ||
+          urlParams?.get('shop') ||
+          'badgesonly.myshopify.com';
         
         console.log('Adding to Shopify cart directly from frontend');
         console.log('Shopify store URL:', shopifyStoreUrl);
