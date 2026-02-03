@@ -335,6 +335,7 @@ export async function getCustomerDesigns(customerId: string) {
 export interface BadgeOrderItem {
   id?: string
   shopify_order_id?: string // TEXT - Shopify order ID
+  shopify_order_number?: string // TEXT - human-readable order number (e.g. #1001)
   design_id: string // TEXT - links to main order design_id
   badge_id?: string // TEXT - unique ID for this specific badge
   background_color?: string // Format: "ColorName #hexcode" or "#hexcode"
@@ -634,4 +635,35 @@ export async function saveBadgeOrderItems(items: BadgeOrderItem[]) {
   }
   
   return data
+}
+
+// Update badge_order_items with shopify_order_id and shopify_order_number by design_id (for link-order flow from Gadget)
+export async function updateBadgeOrderItemsByDesignIds(
+  designIds: string[],
+  shopifyOrderId: string,
+  shopifyOrderNumber?: string | null
+) {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+  }
+  if (!designIds.length) {
+    return { data: [], error: null }
+  }
+  const payload: Record<string, unknown> = {
+    shopify_order_id: shopifyOrderId,
+    updated_at: getPacificTimestamp()
+  }
+  if (shopifyOrderNumber != null && shopifyOrderNumber !== '') {
+    payload.shopify_order_number = shopifyOrderNumber
+  }
+  const { data, error } = await supabaseAdmin
+    .from('badge_order_items')
+    .update(payload)
+    .in('design_id', designIds)
+    .select()
+  if (error) {
+    console.error('Update badge order items by design_ids error:', error)
+    throw error
+  }
+  return { data, error: null }
 } 

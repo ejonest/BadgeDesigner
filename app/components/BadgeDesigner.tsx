@@ -894,7 +894,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [selectedBadgeIndex, setSelectedBadgeIndex] = useState<number>(0); // 0 = first badge (multipleBadges[0]), 1+ = additional badges
   const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Keep for backward compatibility, synced with multipleBadges[0]
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const [isSendingToSupabase, setIsSendingToSupabase] = useState(false);
   // Undo history state
   const [undoHistory, setUndoHistory] = useState<UndoAction[]>([]);
   const MAX_UNDO_HISTORY = 50; // Limit undo history to prevent memory issues
@@ -1876,23 +1875,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     });
   };
 
-  // Send to Supabase - Upload PDF, SVG, PNG and save to badge_order_items
-  const sendToSupabase = async () => {
-    if (isSendingToSupabase) return;
-
-    // Check for similar colors before sending
-    if (checkCurrentBadgeColorSimilarity()) {
-      setShowSupabaseColorWarning(true);
-      return;
-    }
-
-    await executeSendToSupabase();
-  };
-
-  // Actual Supabase upload function (called after warning is confirmed or if no warning needed)
+  // Supabase upload (logic also runs inside addToCart; this standalone flow kept for optional "Upload proof only" use)
   const executeSendToSupabase = async () => {
-    setIsSendingToSupabase(true);
-
     try {
       // Bypass shop check for testing - will add shop connection later
       const shopData = getCurrentShop(_shop);
@@ -2083,8 +2067,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       } else {
         alert(`Failed to upload badge design to Supabase:\n${errorMessage}`);
       }
-    } finally {
-      setIsSendingToSupabase(false);
     }
   };
 
@@ -2237,6 +2219,130 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         shopData,
       );
 
+      // Upload proof and design data to Supabase (same design_id as cart so Gadget can link order later)
+      const designIdForSupabase =
+        savedDesign.designId ??
+        savedDesign.id ??
+        `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      const shopifyCustomerIdFromUrl =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("customerId")
+          : null;
+      try {
+        const finalizedBadge = {
+          ...badge,
+          templateId: universalTemplateId,
+          backgroundColor: badge.backgroundColor || "#FFFFFF",
+        };
+        const finalizedMultipleBadges = [...multipleBadges];
+        if (finalizedMultipleBadges[selectedBadgeIndex]) {
+          finalizedMultipleBadges[selectedBadgeIndex] = finalizedBadge;
+        }
+        const allBadgesForSupabase = getAllBadges(finalizedMultipleBadges);
+        const templateToUse = activeTemplate;
+        if (templateToUse && allBadgesForSupabase.length > 0) {
+          const pdfBlob = await generatePDFAsBlob(
+            allBadgesForSupabase[0],
+            allBadgesForSupabase.length > 1
+              ? allBadgesForSupabase.slice(1)
+              : undefined,
+          );
+          const thumbnailPngBlobs: Blob[] = [];
+          const svgBlobs: Blob[] = [];
+          for (let i = 0; i < allBadgesForSupabase.length; i++) {
+            const b = allBadgesForSupabase[i];
+            try {
+              const badgeTemplate = await loadTemplateById(
+                b.templateId || templateToUse.id,
+              );
+              if (!badgeTemplate) continue;
+              const thumbnailPngBlob = await generatePNGAsBlob(
+                b,
+                badgeTemplate,
+                1,
+              );
+              thumbnailPngBlobs.push(
+                thumbnailPngBlob && thumbnailPngBlob.size > 0
+                  ? thumbnailPngBlob
+                  : new Blob(),
+              );
+              const svgBlob = await generateSVGAsBlob(b, badgeTemplate);
+              svgBlobs.push(svgBlob && svgBlob.size > 0 ? svgBlob : new Blob());
+            } catch {
+              thumbnailPngBlobs.push(new Blob());
+              svgBlobs.push(new Blob());
+            }
+          }
+          const designDataForSupabase = {
+            badge: allBadgesForSupabase[0],
+            multipleBadges:
+              allBadgesForSupabase.length > 1
+                ? allBadgesForSupabase.slice(1)
+                : [],
+            allBadges: allBadgesForSupabase,
+            timestamp: new Date().toISOString(),
+            shopId: shopData.shopId || "test-shop",
+            productId: _productId || "test-product",
+            backgroundColor: allBadgesForSupabase[0].backgroundColor,
+            backingType: allBadgesForSupabase[0].backing,
+            textLines: allBadgesForSupabase[0].lines,
+          };
+          const formDataForSupabase = new FormData();
+          formDataForSupabase.append("designId", designIdForSupabase);
+          formDataForSupabase.append(
+            "designData",
+            JSON.stringify(designDataForSupabase),
+          );
+          if (shopifyCustomerIdFromUrl) {
+            formDataForSupabase.append(
+              "shopifyCustomerId",
+              shopifyCustomerIdFromUrl,
+            );
+          }
+          formDataForSupabase.append("pdf", pdfBlob, "badge-design.pdf");
+          thumbnailPngBlobs.forEach((pngBlob, index) => {
+            if (pngBlob && pngBlob.size > 0) {
+              formDataForSupabase.append(
+                `thumbnail_png_${index}`,
+                pngBlob,
+                `badge-${index}-thumbnail.png`,
+              );
+            }
+          });
+          svgBlobs.forEach((svgBlob, index) => {
+            if (svgBlob && svgBlob.size > 0) {
+              formDataForSupabase.append(
+                `svg_${index}`,
+                svgBlob,
+                `badge-${index}-design.svg`,
+              );
+            }
+          });
+          const supabaseResponse = await fetch("/api/send-to-supabase", {
+            method: "POST",
+            body: formDataForSupabase,
+          });
+          if (!supabaseResponse.ok) {
+            const errData = await supabaseResponse.json().catch(() => ({}));
+            console.warn(
+              "Supabase proof upload failed (cart will still add):",
+              errData.message || supabaseResponse.statusText,
+            );
+            alert(
+              "Proof upload failed; your design will still be added to cart. Support may follow up for the proof.",
+            );
+          }
+        }
+      } catch (supabaseErr) {
+        console.warn(
+          "Supabase upload error (cart will still add):",
+          supabaseErr,
+        );
+        alert(
+          "Proof upload failed; your design will still be added to cart. Support may follow up for the proof.",
+        );
+      }
+
       // Variant resolver
       const getVariantId = (backingType: string) => {
         switch (backingType) {
@@ -2284,7 +2390,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           "Background Color": badge.backgroundColor,
           "Font Family": badge.lines[0]?.fontFamily || "Arial",
           "Backing Type": badge.backing,
-          "Design ID": savedDesign.designId,
+          "Design ID": designIdForSupabase,
           "Gadget Design ID": savedDesign.id,
           Price: `$${totalPrice}`,
         },
@@ -3348,20 +3454,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               }}
             >
               Save Design
-            </button>
-            <button
-              className={`px-4 py-2 rounded shadow ${
-                isSendingToSupabase
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-purple-600 hover:bg-purple-700"
-              } text-white`}
-              onClick={(e) => {
-                e.preventDefault();
-                if (!isSendingToSupabase) sendToSupabase();
-              }}
-              disabled={isSendingToSupabase}
-            >
-              {isSendingToSupabase ? "Uploading..." : "Send to Supabase"}
             </button>
             <button
               className={`px-4 py-2 rounded shadow ${
