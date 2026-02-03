@@ -188,8 +188,9 @@ export function createApi(gadgetApiUrl?: string, gadgetApiKey?: string) {
 
         const cartUrl = `https://${shopifyStoreUrl}/cart/add?${params.toString()}`;
         
-        // Redirect to the cart addition URL
-        window.location.href = cartUrl;
+        // Redirect to the cart addition URL (break out of iframe so Shopify loads in top window)
+        if (window.top) window.top.location.href = cartUrl;
+        else window.location.href = cartUrl;
 
         // Also send to parent window for additional integration
         this.sendToParent({
