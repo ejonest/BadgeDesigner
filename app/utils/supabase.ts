@@ -181,6 +181,12 @@ export async function uploadDataUrlToBadgeImagesBucket(
   return uploadToBadgeImagesBucket(blob, fileName, contentType)
 }
 
+// In Node, FormData File/Blob can be stream-backed; convert to Buffer so Supabase gets exact bytes.
+async function toUploadBuffer(file: File | Blob): Promise<Buffer> {
+  const ab = await file.arrayBuffer()
+  return Buffer.from(ab)
+}
+
 // Upload to badge-images bucket - ONLY accepts image files (PNG, etc.)
 export async function uploadToBadgeImagesBucket(
   file: File | Blob,
@@ -212,12 +218,12 @@ export async function uploadToBadgeImagesBucket(
   }
 
   const filePath = fileName
-  
-  console.log(`Uploading image to badge-images bucket: ${filePath} (${contentType}, ${file instanceof Blob ? file.size : file.size} bytes)`)
+  const body = await toUploadBuffer(file)
+  console.log(`Uploading image to badge-images bucket: ${filePath} (${contentType}, ${body.length} bytes)`)
   
   const { data, error } = await supabaseAdmin.storage
     .from('badge-images')
-    .upload(filePath, file, {
+    .upload(filePath, body, {
       contentType,
       upsert: true
     })
@@ -271,12 +277,12 @@ export async function uploadToBadgePdfsBucket(
   }
 
   const filePath = fileName
-  
-  console.log(`Uploading PDF to badge-pdfs bucket: ${filePath} (${contentType}, ${file instanceof Blob ? file.size : file.size} bytes)`)
+  const body = await toUploadBuffer(file)
+  console.log(`Uploading PDF to badge-pdfs bucket: ${filePath} (${contentType}, ${body.length} bytes)`)
   
   const { data, error } = await supabaseAdmin.storage
     .from('badge-pdfs')
-    .upload(filePath, file, {
+    .upload(filePath, body, {
       contentType: 'application/pdf', // Force PDF content type
       upsert: true
     })
