@@ -119,7 +119,8 @@ export async function action({ request }: ActionFunctionArgs) {
       badgeOrderItems.push(badgeOrderItem)
     }
     
-    // Storage-only mode (Add to Cart): upload files but do not insert into badge_order_items
+    // Storage-only mode (Add to Cart): upload files only; do not insert into badge_order_items.
+    // Rows are inserted by api/link-order-to-supabase when the order is paid (Gadget webhook), avoiding duplicates.
     if (storageOnly) {
       const hasAnyUploads = pdfUrl || badgeOrderItems.some((item) => item.thumbnail_url || item.full_image_url)
       return json({
