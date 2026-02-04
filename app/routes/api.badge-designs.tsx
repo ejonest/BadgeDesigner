@@ -3,7 +3,7 @@ import { json } from "@remix-run/node";
 import { Client } from "@gadget-client/allqualitybadges";
 
 const api = new Client({
-  environment: process.env.GADGET_API_URL || "https://allqualitybadges-development.gadget.app",
+  environment: process.env.GADGET_API_URL || "https://all-quality-badge-designer.gadget.app",
   authenticationMode: { apiKey: process.env.GADGET_API_KEY },
 });
 

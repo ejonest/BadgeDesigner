@@ -6,7 +6,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   
   try {
     // Use the exact same payload that worked in the playground
-    const gadgetUrl = "https://allqualitybadges.gadget.app/api/graphql";
+    const gadgetUrl = "https://all-quality-badge-designer.gadget.app/api/graphql";
     console.log('Test save - Calling Gadget GraphQL URL:', gadgetUrl);
     
     const graphqlQuery = `

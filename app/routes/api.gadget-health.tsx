@@ -6,7 +6,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 
   try {
     // Get environment variables
-    const GADGET_API_URL = process.env.GADGET_API_URL || 'https://allqualitybadges-development.gadget.app';
+    const GADGET_API_URL = process.env.GADGET_API_URL || 'https://all-quality-badge-designer.gadget.app';
     const GADGET_API_KEY = process.env.GADGET_API_KEY;
 
     const healthCheck: any = {
@@ -27,7 +27,7 @@ export const loader: LoaderFunction = async ({ request }) => {
         const getEnvironmentFromUrl = (url: string): string => {
           if (url.includes('--development')) return 'development';
           if (url.includes('--staging')) return 'staging';
-          if (url.includes('--production') || url.includes('allqualitybadges.gadget.app') && !url.includes('--')) return 'production';
+          if (url.includes('--production') || (url.includes('all-quality-badge-designer.gadget.app') && !url.includes('--'))) return 'production';
           return 'development';
         };
 

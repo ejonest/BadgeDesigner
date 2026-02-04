@@ -2,7 +2,10 @@ import type { ActionFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Client } from '@gadget-client/allqualitybadges';
 
+const GADGET_APP_URL = 'https://all-quality-badge-designer.gadget.app';
+
 export const action: ActionFunction = async ({ request }) => {
+  console.log('[BadgeDesigner] api.save-badge request received', new Date().toISOString(), request.method);
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }
@@ -11,7 +14,7 @@ export const action: ActionFunction = async ({ request }) => {
     const body = await request.json();
     const { designData, shopData } = body;
 
-    console.log('Received save-badge request:', { 
+    console.log('[BadgeDesigner] save-badge payload:', { 
       hasDesignData: !!designData, 
       hasShopData: !!shopData,
       designDataKeys: designData ? Object.keys(designData) : [],
@@ -19,7 +22,7 @@ export const action: ActionFunction = async ({ request }) => {
     });
 
     // Get environment variables (server-side only)
-    const GADGET_API_URL = process.env.GADGET_API_URL || 'https://allqualitybadges-development.gadget.app';
+    const GADGET_API_URL = process.env.GADGET_API_URL || GADGET_APP_URL;
     const GADGET_API_KEY = process.env.GADGET_API_KEY;
 
     console.log('Environment check:', {
@@ -46,7 +49,7 @@ export const action: ActionFunction = async ({ request }) => {
     const getEnvironmentFromUrl = (url: string): string => {
       if (url.includes('--development')) return 'development';
       if (url.includes('--staging')) return 'staging';
-      if (url.includes('--production') || url.includes('allqualitybadges.gadget.app') && !url.includes('--')) return 'production';
+      if (url.includes('--production') || (url.includes('all-quality-badge-designer.gadget.app') && !url.includes('--'))) return 'production';
       return 'development'; // fallback
     };
 

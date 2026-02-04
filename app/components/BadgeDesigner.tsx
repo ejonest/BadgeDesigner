@@ -2288,7 +2288,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             textLines: allBadgesForSupabase[0].lines,
           };
           const formDataForSupabase = new FormData();
-          formDataForSupabase.append("storageOnly", "true");
           formDataForSupabase.append("designId", designIdForSupabase);
           formDataForSupabase.append(
             "designData",

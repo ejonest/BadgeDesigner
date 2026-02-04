@@ -11,6 +11,7 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
+  console.log('[BadgeDesigner] index loader (iframe page load)', new Date().toISOString(), request.url);
   const url = new URL(request.url);
   const productId = url.searchParams.get("product");
   const shop = url.searchParams.get("shop");
@@ -25,7 +26,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     productId, 
     shop, 
     timestamp: Date.now(),
-    GADGET_API_URL: process.env.GADGET_API_URL || 'https://allqualitybadges-development.gadget.app',
+    GADGET_API_URL: process.env.GADGET_API_URL || 'https://all-quality-badge-designer.gadget.app',
     GADGET_API_KEY: process.env.GADGET_API_KEY,
   }, { headers });
 };

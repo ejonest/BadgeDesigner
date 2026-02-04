@@ -28,14 +28,15 @@ export interface ShopifyProduct {
 // Create a function that returns the API with proper configuration
 export function createApi(gadgetApiUrl?: string, gadgetApiKey?: string) {
   // API configuration
-  const GADGET_API_URL = normalizeEnvString(gadgetApiUrl) || 'https://allqualitybadges-development.gadget.app';
+  const GADGET_APP_URL = 'https://all-quality-badge-designer.gadget.app';
+  const GADGET_API_URL = normalizeEnvString(gadgetApiUrl) || GADGET_APP_URL;
   const GADGET_API_KEY = normalizeEnvString(gadgetApiKey);
 
   // Extract environment name from URL for Gadget client
   const getEnvironmentFromUrl = (url: string): string => {
     if (url.includes('--development')) return 'development';
     if (url.includes('--staging')) return 'staging';
-    if (url.includes('--production') || url.includes('allqualitybadges.gadget.app') && !url.includes('--')) return 'production';
+    if (url.includes('--production') || (url.includes('all-quality-badge-designer.gadget.app') && !url.includes('--'))) return 'production';
     return 'development'; // fallback
   };
 
