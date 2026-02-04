@@ -10,11 +10,14 @@
       }
     },
     "routeIdToServerBundleId": {
+      "routes/api.link-order-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.supabase-update-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.send-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.test-endpoints": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.badge-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.gadget-health": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.supabase-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/test-badge-shapes": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.update-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.upload-image": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.add-to-cart": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -24,14 +27,13 @@
       "routes/working-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/export.tiff": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/iframe-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
-      "routes/layout-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/static-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/export.cdr": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/export.pdf": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/test-route": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
-      "routes/simple": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/_index": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/simple": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0"
     },
     "routes": {
@@ -41,10 +43,28 @@
         "file": "app/root.tsx",
         "config": {}
       },
+      "routes/api.link-order-to-supabase": {
+        "file": "app/routes/api.link-order-to-supabase.tsx",
+        "id": "routes/api.link-order-to-supabase",
+        "path": "api/link-order-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.supabase-update-badge": {
         "file": "app/routes/api.supabase-update-badge.tsx",
         "id": "routes/api.supabase-update-badge",
         "path": "api/supabase-update-badge",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.send-to-supabase": {
+        "file": "app/routes/api.send-to-supabase.tsx",
+        "id": "routes/api.send-to-supabase",
+        "path": "api/send-to-supabase",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -81,6 +101,15 @@
         "file": "app/routes/api.supabase-test.tsx",
         "id": "routes/api.supabase-test",
         "path": "api/supabase-test",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/test-badge-shapes": {
+        "file": "app/routes/test-badge-shapes.tsx",
+        "id": "routes/test-badge-shapes",
+        "path": "test-badge-shapes",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -167,15 +196,6 @@
           "runtime": "nodejs"
         }
       },
-      "routes/layout-test": {
-        "file": "app/routes/layout-test.tsx",
-        "id": "routes/layout-test",
-        "path": "layout-test",
-        "parentId": "root",
-        "config": {
-          "runtime": "nodejs"
-        }
-      },
       "routes/static-test": {
         "file": "app/routes/static-test.tsx",
         "id": "routes/static-test",
@@ -221,19 +241,19 @@
           "runtime": "nodejs"
         }
       },
-      "routes/simple": {
-        "file": "app/routes/simple.tsx",
-        "id": "routes/simple",
-        "path": "simple",
+      "routes/_index": {
+        "file": "app/routes/_index.tsx",
+        "id": "routes/_index",
+        "index": true,
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
         }
       },
-      "routes/_index": {
-        "file": "app/routes/_index.tsx",
-        "id": "routes/_index",
-        "index": true,
+      "routes/simple": {
+        "file": "app/routes/simple.tsx",
+        "id": "routes/simple",
+        "path": "simple",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -251,9 +271,9 @@
     }
   },
   "remixConfig": {
-    "appDirectory": "C:\\Users\\Tom_P\\OneDrive\\Documents\\PSS\\2025 - Coding Projects\\Badge Tool\\badge-designer-frontend\\app",
+    "appDirectory": "/Users/ethanjones/Documents/Work/BadgeDesignerBackup/BadgeDesigner/app",
     "basename": "/",
-    "buildDirectory": "C:\\Users\\Tom_P\\OneDrive\\Documents\\PSS\\2025 - Coding Projects\\Badge Tool\\badge-designer-frontend\\build",
+    "buildDirectory": "/Users/ethanjones/Documents/Work/BadgeDesignerBackup/BadgeDesigner/build",
     "future": {
       "v3_fetcherPersist": true,
       "v3_relativeSplatPath": true,
@@ -271,10 +291,22 @@
         "id": "root",
         "file": "root.tsx"
       },
+      "routes/api.link-order-to-supabase": {
+        "file": "routes/api.link-order-to-supabase.tsx",
+        "id": "routes/api.link-order-to-supabase",
+        "path": "api/link-order-to-supabase",
+        "parentId": "root"
+      },
       "routes/api.supabase-update-badge": {
         "file": "routes/api.supabase-update-badge.tsx",
         "id": "routes/api.supabase-update-badge",
         "path": "api/supabase-update-badge",
+        "parentId": "root"
+      },
+      "routes/api.send-to-supabase": {
+        "file": "routes/api.send-to-supabase.tsx",
+        "id": "routes/api.send-to-supabase",
+        "path": "api/send-to-supabase",
         "parentId": "root"
       },
       "routes/api.test-endpoints": {
@@ -299,6 +331,12 @@
         "file": "routes/api.supabase-test.tsx",
         "id": "routes/api.supabase-test",
         "path": "api/supabase-test",
+        "parentId": "root"
+      },
+      "routes/test-badge-shapes": {
+        "file": "routes/test-badge-shapes.tsx",
+        "id": "routes/test-badge-shapes",
+        "path": "test-badge-shapes",
         "parentId": "root"
       },
       "routes/api.update-badge": {
@@ -355,12 +393,6 @@
         "path": "iframe-test",
         "parentId": "root"
       },
-      "routes/layout-test": {
-        "file": "routes/layout-test.tsx",
-        "id": "routes/layout-test",
-        "path": "layout-test",
-        "parentId": "root"
-      },
       "routes/static-test": {
         "file": "routes/static-test.tsx",
         "id": "routes/static-test",
@@ -391,16 +423,16 @@
         "path": "api/test",
         "parentId": "root"
       },
-      "routes/simple": {
-        "file": "routes/simple.tsx",
-        "id": "routes/simple",
-        "path": "simple",
-        "parentId": "root"
-      },
       "routes/_index": {
         "file": "routes/_index.tsx",
         "id": "routes/_index",
         "index": true,
+        "parentId": "root"
+      },
+      "routes/simple": {
+        "file": "routes/simple.tsx",
+        "id": "routes/simple",
+        "path": "simple",
         "parentId": "root"
       },
       "routes/test": {

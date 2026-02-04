@@ -94,7 +94,7 @@ export class AllqualitybadgesClient implements AnyClient {
   /**
    * The list of environments with a customized API root endpoint
    */
-  apiRoots: Record<string, string> = {"production":"https://allqualitybadges.gadget.app/","development":"https://allqualitybadges--development.gadget.app/"};
+  apiRoots: Record<string, string> = {"production":"https://all-quality-badge-designer.gadget.app/","development":"https://all-quality-badge-designer--development.gadget.app/"};
 
 
 
@@ -129,7 +129,7 @@ export class AllqualitybadgesClient implements AnyClient {
       apiRoot = this.apiRoots[this.environment];
     } else {
       const envPart = this.environment == productionEnv ? "" : `--${this.environment}`;
-      apiRoot = `https://allqualitybadges${envPart}.gadget.app`;
+      apiRoot = `https://all-quality-badge-designer${envPart}.gadget.app`;
     }
 
     const exchanges = {...options?.exchanges};
