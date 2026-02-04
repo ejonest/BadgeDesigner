@@ -1,4 +1,11 @@
 import { json, type ActionFunctionArgs } from '@remix-run/node';
+import { uploadDataUrlToBadgeImagesBucket } from '~/utils/supabase';
+
+const DATA_URL_PREFIX = 'data:image/';
+
+function isDataUrl(value: string | undefined): boolean {
+  return typeof value === 'string' && value.startsWith(DATA_URL_PREFIX);
+}
 
 export async function action({ request }: ActionFunctionArgs) {
   if (request.method !== 'POST') {
@@ -7,7 +14,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
   try {
     const { id, updateData } = await request.json();
-    console.log('Update badge request:', { id, updateData });
+    console.log('Update badge request:', { id, updateData: updateData ? { fullImageUrl: updateData.fullImageUrl?.slice(0, 50), thumbnailUrl: updateData.thumbnailUrl?.slice(0, 50) } : updateData });
 
     if (!id) {
       return json({ error: 'Badge design ID is required' }, { status: 400 });
@@ -31,6 +38,41 @@ export async function action({ request }: ActionFunctionArgs) {
       });
     }
 
+    // Gadget expects normal URL strings for fullImageUrl/thumbnailUrl, not base64 data URLs.
+    // If the client sent data URLs, upload to Supabase Storage first and send the resulting URLs.
+    let fullImageUrl = updateData?.fullImageUrl ?? '';
+    let thumbnailUrl = updateData?.thumbnailUrl ?? '';
+    const designIdForPath = String(id);
+
+    if (isDataUrl(fullImageUrl) || isDataUrl(thumbnailUrl)) {
+      try {
+        if (isDataUrl(fullImageUrl)) {
+          fullImageUrl = await uploadDataUrlToBadgeImagesBucket(fullImageUrl, designIdForPath, 'full');
+          console.log('[BadgeDesigner] Uploaded full image to Supabase, URL length:', fullImageUrl.length);
+        }
+        if (isDataUrl(thumbnailUrl)) {
+          thumbnailUrl = await uploadDataUrlToBadgeImagesBucket(thumbnailUrl, designIdForPath, 'thumb');
+          console.log('[BadgeDesigner] Uploaded thumbnail to Supabase, URL length:', thumbnailUrl.length);
+        }
+      } catch (uploadError) {
+        console.error('[BadgeDesigner] Image upload to Supabase failed:', uploadError);
+        return json({
+          success: false,
+          message: 'Failed to upload images to storage (Gadget expects URLs, not base64). Ensure Supabase is configured.',
+          id,
+          designData: updateData,
+          error: uploadError instanceof Error ? uploadError.message : 'Unknown error'
+        }, { status: 500 });
+      }
+    }
+
+    const updateInput = {
+      fullImageUrl,
+      thumbnailUrl
+    };
+
+    console.log('Updating badge design in Gadget with URL lengths:', { fullImageUrl: fullImageUrl.length, thumbnailUrl: thumbnailUrl.length });
+
     // Call Gadget GraphQL: Gadget schema uses GadgetID, UpdateBadgeDesignInput, and PascalCase BadgeDesign (argument + result)
     const graphqlUrl = `${GADGET_API_URL.replace(/\/$/, '')}/api/graphql`;
     const updateMutation = `
@@ -41,12 +83,6 @@ export async function action({ request }: ActionFunctionArgs) {
         }
       }
     `;
-    const updateInput = {
-      fullImageUrl: updateData.fullImageUrl,
-      thumbnailUrl: updateData.thumbnailUrl
-    };
-
-    console.log('Updating badge design with data:', updateData);
 
     const res = await fetch(graphqlUrl, {
       method: 'POST',
