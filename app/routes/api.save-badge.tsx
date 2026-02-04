@@ -2,7 +2,7 @@ import type { ActionFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Client } from '@gadget-client/allqualitybadges';
 
-const GADGET_APP_URL = 'https://all-quality-badge-designer.gadget.app';
+const GADGET_APP_URL = 'https://all-quality-badge-designer--development.gadget.app';
 
 export const action: ActionFunction = async ({ request }) => {
   console.log('[BadgeDesigner] api.save-badge request received', new Date().toISOString(), request.method);

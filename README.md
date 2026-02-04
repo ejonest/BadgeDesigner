@@ -46,7 +46,7 @@ Set these in your Vercel project (Settings → Environment Variables). See `.env
 
 **Required for badge designer + cart:**
 - `NODE_ENV=production`
-- `GADGET_API_URL` – Your Gadget app API URL (default: `https://all-quality-badge-designer.gadget.app`)
+- `GADGET_API_URL` – Your Gadget app API URL (default: `https://all-quality-badge-designer--development.gadget.app`)
 - `GADGET_API_KEY` – Gadget API key for server-side create/update of badge designs
 - `SHOPIFY_STORE_URL` – Shopify store hostname (e.g. `your-store.myshopify.com`), used when adding to cart from the app
 

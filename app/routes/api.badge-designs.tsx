@@ -2,8 +2,14 @@ import type { ActionFunction, LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Client } from "@gadget-client/allqualitybadges";
 
+function getGadgetEnvironment(): "development" | "production" {
+  const url = process.env.GADGET_API_URL || "https://all-quality-badge-designer--development.gadget.app";
+  if (url.includes("--production")) return "production";
+  return "development";
+}
+
 const api = new Client({
-  environment: process.env.GADGET_API_URL || "https://all-quality-badge-designer.gadget.app",
+  environment: getGadgetEnvironment(),
   authenticationMode: { apiKey: process.env.GADGET_API_KEY },
 });
 

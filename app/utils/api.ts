@@ -28,7 +28,7 @@ export interface ShopifyProduct {
 // Create a function that returns the API with proper configuration
 export function createApi(gadgetApiUrl?: string, gadgetApiKey?: string) {
   // API configuration
-  const GADGET_APP_URL = 'https://all-quality-badge-designer.gadget.app';
+  const GADGET_APP_URL = 'https://all-quality-badge-designer--development.gadget.app';
   const GADGET_API_URL = normalizeEnvString(gadgetApiUrl) || GADGET_APP_URL;
   const GADGET_API_KEY = normalizeEnvString(gadgetApiKey);
 
