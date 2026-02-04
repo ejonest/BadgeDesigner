@@ -66,12 +66,14 @@ export async function action({ request }: ActionFunctionArgs) {
       }
     }
 
-    const updateInput = {
-      fullImageUrl,
-      thumbnailUrl
-    };
+    // Gadget's UpdateBadgeDesignInput does not include fullImageUrl or thumbnailUrl (only e.g. backgroundColor, designData, status).
+    // We still upload images to Supabase above so URLs exist for the link-order/Supabase flow. Send only fields that exist on the schema.
+    const updateInput: Record<string, string> = {};
+    // If your Gadget BadgeDesign model adds fullImageUrl/thumbnailUrl, uncomment:
+    // if (fullImageUrl) updateInput.fullImageUrl = fullImageUrl;
+    // if (thumbnailUrl) updateInput.thumbnailUrl = thumbnailUrl;
 
-    console.log('Updating badge design in Gadget with URL lengths:', { fullImageUrl: fullImageUrl.length, thumbnailUrl: thumbnailUrl.length });
+    console.log('Updating badge design in Gadget (image URLs uploaded to Supabase; Gadget schema has no image URL fields):', { fullImageUrlLength: fullImageUrl.length, thumbnailUrlLength: thumbnailUrl.length });
 
     // Call Gadget GraphQL: Gadget schema uses GadgetID, UpdateBadgeDesignInput, and PascalCase BadgeDesign (argument + result)
     const graphqlUrl = `${GADGET_API_URL.replace(/\/$/, '')}/api/graphql`;
@@ -123,7 +125,9 @@ export async function action({ request }: ActionFunctionArgs) {
       success: true,
       message: 'Badge design updated successfully',
       id: updateResult.BadgeDesign?.id ?? updateResult.badgeDesign?.id ?? id,
-      designData: updateData
+      designData: updateData,
+      fullImageUrl,
+      thumbnailUrl
     });
   } catch (error) {
     console.error('Error in update-badge API:', error);
