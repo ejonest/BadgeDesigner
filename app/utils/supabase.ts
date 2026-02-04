@@ -163,12 +163,17 @@ export async function uploadDataUrlToBadgeImagesBucket(
   if (!dataUrl || !dataUrl.startsWith('data:image/')) {
     throw new Error('uploadDataUrlToBadgeImagesBucket expects a data URL starting with data:image/')
   }
-  const match = dataUrl.match(/^data:(image\/[a-z+]+);base64,(.+)$/i)
-  if (!match) {
-    throw new Error('Invalid image data URL format')
+  const base64Marker = ';base64,'
+  const base64Index = dataUrl.indexOf(base64Marker)
+  if (base64Index === -1) {
+    throw new Error('Invalid image data URL format: missing ;base64,')
   }
-  const contentType = match[1]
-  const base64 = match[2]
+  const contentType = dataUrl.slice(5, base64Index)
+  const rawBase64 = dataUrl.slice(base64Index + base64Marker.length)
+  const base64 = rawBase64.replace(/\s/g, '')
+  if (!base64.length) {
+    throw new Error('Invalid image data URL: empty base64 payload')
+  }
   const buffer = Buffer.from(base64, 'base64')
   const ext = contentType === 'image/svg+xml' ? 'svg' : 'png'
   const fileName = `${designId}/gadget-update-${fileNameSuffix}.${ext}`
