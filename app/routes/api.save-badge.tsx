@@ -1,6 +1,5 @@
 import type { ActionFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { Client } from '@gadget-client/allqualitybadges';
 
 const GADGET_APP_URL = 'https://all-quality-badge-designer--development.gadget.app';
 
@@ -45,43 +44,10 @@ export const action: ActionFunction = async ({ request }) => {
       });
     }
 
-    // Extract environment name from URL for Gadget client
-    const getEnvironmentFromUrl = (url: string): string => {
-      if (url.includes('--development')) return 'development';
-      if (url.includes('--staging')) return 'staging';
-      if (url.includes('--production') || (url.includes('all-quality-badge-designer.gadget.app') && !url.includes('--'))) return 'production';
-      return 'development'; // fallback
-    };
-
-    const environment = getEnvironmentFromUrl(GADGET_API_URL);
-
     console.log('Server-side Gadget API Configuration:', {
       GADGET_API_URL,
-      environment,
       GADGET_API_KEY: GADGET_API_KEY ? 'SET' : 'NOT SET'
     });
-
-    // Create Gadget client instance (server-side, so API key is safe)
-    let gadgetClient;
-    try {
-      gadgetClient = new Client({
-        environment: environment,
-        authenticationMode: { apiKey: GADGET_API_KEY },
-      });
-      console.log('Gadget client created successfully');
-    } catch (clientError) {
-      console.error('Error creating Gadget client:', clientError);
-      // Return fallback response
-      const designId = `design_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      return json({
-        success: true,
-        id: designId,
-        designId: designId,
-        designData: designData,
-        fallback: true,
-        message: 'Saved locally (Gadget client creation failed)'
-      });
-    }
 
     // Prepare the payload for Gadget. Store full designData (including allBadges) so on_order_paid can send it to Vercel.
     const badgeDesignData = designData.badge || designData;
@@ -111,17 +77,50 @@ export const action: ActionFunction = async ({ request }) => {
 
     console.log('Attempting to create badge design with payload:', gadgetPayload);
 
-    // Create the badge design using the Gadget client
-    let result;
+    // Call Gadget GraphQL with PascalCase "BadgeDesign" argument (API expects BadgeDesign, not badgeDesign)
+    const graphqlUrl = `${GADGET_API_URL.replace(/\/$/, '')}/api/graphql`;
+    const createMutation = `
+      mutation CreateBadgeDesign($BadgeDesign: CreateBadgeDesignInput!) {
+        createBadgeDesign(BadgeDesign: $BadgeDesign) {
+          success
+          errors { message code }
+          badgeDesign {
+            id
+            designId
+            shopId
+            status
+          }
+        }
+      }
+    `;
+    let result: { id: string; designId: string };
     try {
-      result = await gadgetClient.badgeDesign.create(gadgetPayload);
+      const res = await fetch(graphqlUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GADGET_API_KEY}`,
+        },
+        body: JSON.stringify({
+          query: createMutation,
+          variables: { BadgeDesign: gadgetPayload },
+        }),
+      });
+      const data = await res.json();
+      if (data.errors?.length) {
+        throw new Error(data.errors.map((e: { message: string }) => e.message).join('; '));
+      }
+      const createResult = data.data?.createBadgeDesign;
+      if (!createResult?.success || !createResult?.badgeDesign) {
+        throw new Error(createResult?.errors?.[0]?.message || 'Create failed');
+      }
+      result = {
+        id: createResult.badgeDesign.id,
+        designId: createResult.badgeDesign.designId ?? createResult.badgeDesign.id,
+      };
       console.log('Badge design creation result:', result);
-      console.log('Full result object keys:', Object.keys(result));
-      console.log('Result designData field:', result.designData);
-      console.log('Result textLines field:', result.textLines);
     } catch (apiError) {
       console.error('Error calling Gadget API:', apiError);
-      // Return fallback response
       const designId = `design_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       return json({
         success: true,
@@ -134,7 +133,6 @@ export const action: ActionFunction = async ({ request }) => {
       });
     }
 
-    // The Gadget client returns the badge design record directly
     return json({
       success: true,
       id: result.id,
