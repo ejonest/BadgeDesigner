@@ -17,7 +17,7 @@ export const loader: LoaderFunction = async ({ request }) => {
             message
             code
           }
-          badgeDesign {
+          BadgeDesign {
             id
             designId
             shopId
