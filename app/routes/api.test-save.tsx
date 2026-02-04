@@ -51,9 +51,9 @@ export const loader: LoaderFunction = async ({ request }) => {
       },
       backgroundColor: "#FFFFFF",
       backingType: "pin",
-      basePrice: 9.99,
-      backingPrice: 0,
-      totalPrice: 9.99,
+      basePrice: "9.99",
+      backingPrice: "0",
+      totalPrice: "9.99",
       textLines: [
         {
           text: "Your Name",

@@ -57,6 +57,7 @@ export const action: ActionFunction = async ({ request }) => {
     console.log('Debug - badgeDesignData:', badgeDesignData);
     console.log('Debug - badgeDesignData.lines:', badgeDesignData.lines);
 
+    // Gadget API expects basePrice, backingPrice, totalPrice as strings (GraphQL scalar)
     const gadgetPayload = {
       shopId: shopData?.shopId || "75389960447",
       productId: designData.productId,
@@ -65,9 +66,9 @@ export const action: ActionFunction = async ({ request }) => {
       designData: JSON.stringify(fullDesignDataForStorage),
       backgroundColor: badgeDesignData.backgroundColor || "#FFFFFF",
       backingType: badgeDesignData.backing || "pin",
-      basePrice: 9.99,
-      backingPrice: 0,
-      totalPrice: 9.99,
+      basePrice: "9.99",
+      backingPrice: "0",
+      totalPrice: "9.99",
       textLines: JSON.stringify(designData.textLines || []),
     };
 

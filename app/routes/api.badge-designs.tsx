@@ -26,6 +26,7 @@ export const action: ActionFunction = async ({ request }) => {
       return json({ error: "shopId is required" }, { status: 400 });
     }
 
+    // Gadget API expects basePrice, backingPrice, totalPrice as strings (GraphQL scalar)
     const gadgetPayload = {
       shopId,
       productId,
@@ -34,9 +35,9 @@ export const action: ActionFunction = async ({ request }) => {
       designData: designData.badge || designData,
       backgroundColor: designData.badge?.backgroundColor || "#FFFFFF",
       backingType: designData.badge?.backing || "pin",
-      basePrice: 9.99,
-      backingPrice: 0,
-      totalPrice: 9.99,
+      basePrice: "9.99",
+      backingPrice: "0",
+      totalPrice: "9.99",
       textLines: designData.badge?.lines || [],
     };
 
