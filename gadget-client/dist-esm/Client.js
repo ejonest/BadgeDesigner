@@ -39,7 +39,7 @@ class AllqualitybadgesClient {
     /**
      * The list of environments with a customized API root endpoint
      */
-    this.apiRoots = { "production": "https://allqualitybadges.gadget.app/", "development": "https://allqualitybadges--development.gadget.app/" };
+    this.apiRoots = { "production": "https://all-quality-badge-designer.gadget.app/", "development": "https://all-quality-badge-designer--development.gadget.app/" };
     this.applicationId = "254834";
     /** Start a transaction against the Gadget backend which will atomically commit (or rollback). */
     this.transaction = async (callback) => {
@@ -73,7 +73,7 @@ class AllqualitybadgesClient {
       apiRoot = this.apiRoots[this.environment];
     } else {
       const envPart = this.environment == productionEnv ? "" : `--${this.environment}`;
-      apiRoot = `https://allqualitybadges${envPart}.gadget.app`;
+      apiRoot = `https://all-quality-badge-designer${envPart}.gadget.app`;
     }
     const exchanges = { ...options?.exchanges };
     if (this.environment !== productionEnv) {
