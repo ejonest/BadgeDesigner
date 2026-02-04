@@ -84,7 +84,7 @@ export const action: ActionFunction = async ({ request }) => {
         createBadgeDesign(BadgeDesign: $BadgeDesign) {
           success
           errors { message code }
-          badgeDesign {
+          BadgeDesign {
             id
             designId
             shopId
@@ -111,12 +111,13 @@ export const action: ActionFunction = async ({ request }) => {
         throw new Error(data.errors.map((e: { message: string }) => e.message).join('; '));
       }
       const createResult = data.data?.createBadgeDesign;
-      if (!createResult?.success || !createResult?.badgeDesign) {
+      const created = createResult?.BadgeDesign ?? createResult?.badgeDesign;
+      if (!createResult?.success || !created) {
         throw new Error(createResult?.errors?.[0]?.message || 'Create failed');
       }
       result = {
-        id: createResult.badgeDesign.id,
-        designId: createResult.badgeDesign.designId ?? createResult.badgeDesign.id,
+        id: created.id,
+        designId: created.designId ?? created.id,
       };
       console.log('Badge design creation result:', result);
     } catch (apiError) {

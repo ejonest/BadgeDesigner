@@ -37,7 +37,7 @@ export async function action({ request }: ActionFunctionArgs) {
       mutation UpdateBadgeDesign($id: ID!, $BadgeDesign: InternalBadgeDesignInput!) {
         updateBadgeDesign(id: $id, BadgeDesign: $BadgeDesign) {
           success
-          badgeDesign { id designId }
+          BadgeDesign { id designId }
         }
       }
     `;
@@ -86,7 +86,7 @@ export async function action({ request }: ActionFunctionArgs) {
     return json({
       success: true,
       message: 'Badge design updated successfully',
-      id: updateResult.badgeDesign?.id ?? id,
+      id: updateResult.BadgeDesign?.id ?? updateResult.badgeDesign?.id ?? id,
       designData: updateData
     });
   } catch (error) {

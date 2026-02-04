@@ -49,7 +49,7 @@ export const action: ActionFunction = async ({ request }) => {
         createBadgeDesign(BadgeDesign: $BadgeDesign) {
           success
           errors { message code }
-          badgeDesign { id designId shopId status }
+          BadgeDesign { id designId shopId status }
         }
       }
     `;
@@ -69,7 +69,7 @@ export const action: ActionFunction = async ({ request }) => {
     if (!createResult?.success || !createResult?.badgeDesign) {
       throw new Error(createResult?.errors?.[0]?.message || "Create failed");
     }
-    const result = createResult.badgeDesign;
+    const result = createResult.BadgeDesign ?? createResult.badgeDesign;
 
     return json({
       success: true,
