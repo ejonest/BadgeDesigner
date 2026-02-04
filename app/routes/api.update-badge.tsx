@@ -31,13 +31,13 @@ export async function action({ request }: ActionFunctionArgs) {
       });
     }
 
-    // Call Gadget GraphQL: Gadget schema uses GadgetID (not ID) and UpdateBadgeDesignInput (not InternalBadgeDesignInput)
+    // Call Gadget GraphQL: Gadget schema uses GadgetID, UpdateBadgeDesignInput, and PascalCase BadgeDesign (argument + result)
     const graphqlUrl = `${GADGET_API_URL.replace(/\/$/, '')}/api/graphql`;
     const updateMutation = `
-      mutation UpdateBadgeDesign($id: GadgetID!, $badgeDesign: UpdateBadgeDesignInput!) {
-        updateBadgeDesign(id: $id, badgeDesign: $badgeDesign) {
+      mutation UpdateBadgeDesign($id: GadgetID!, $BadgeDesign: UpdateBadgeDesignInput!) {
+        updateBadgeDesign(id: $id, BadgeDesign: $BadgeDesign) {
           success
-          badgeDesign { id designId }
+          BadgeDesign { id designId }
         }
       }
     `;
@@ -56,7 +56,7 @@ export async function action({ request }: ActionFunctionArgs) {
       },
       body: JSON.stringify({
         query: updateMutation,
-        variables: { id, badgeDesign: updateInput },
+        variables: { id, BadgeDesign: updateInput },
       }),
     });
     const data = await res.json();
@@ -86,7 +86,7 @@ export async function action({ request }: ActionFunctionArgs) {
     return json({
       success: true,
       message: 'Badge design updated successfully',
-      id: updateResult.badgeDesign?.id ?? updateResult.BadgeDesign?.id ?? id,
+      id: updateResult.BadgeDesign?.id ?? updateResult.badgeDesign?.id ?? id,
       designData: updateData
     });
   } catch (error) {
