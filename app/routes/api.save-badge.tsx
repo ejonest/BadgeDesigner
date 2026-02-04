@@ -80,19 +80,20 @@ export const action: ActionFunction = async ({ request }) => {
       });
     }
 
-    // Prepare the payload for Gadget
+    // Prepare the payload for Gadget. Store full designData (including allBadges) so on_order_paid can send it to Vercel.
     const badgeDesignData = designData.badge || designData;
-    
+    const fullDesignDataForStorage = designData.allBadges != null ? designData : { ...designData, badge: badgeDesignData };
+
     console.log('Debug - designData:', designData);
     console.log('Debug - badgeDesignData:', badgeDesignData);
     console.log('Debug - badgeDesignData.lines:', badgeDesignData.lines);
-    
+
     const gadgetPayload = {
       shopId: shopData?.shopId || "75389960447",
       productId: designData.productId,
       designId: `design_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       status: "saved" as const,
-      designData: JSON.stringify(badgeDesignData),
+      designData: JSON.stringify(fullDesignDataForStorage),
       backgroundColor: badgeDesignData.backgroundColor || "#FFFFFF",
       backingType: badgeDesignData.backing || "pin",
       basePrice: 9.99,

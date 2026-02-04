@@ -4,7 +4,8 @@ import { uploadToBadgePdfsBucket, uploadToBadgeImagesBucket, saveBadgeOrderItems
 export async function action({ request }: ActionFunctionArgs) {
   try {
     const formData = await request.formData()
-    
+    const storageOnly = formData.get('storageOnly') === 'true' || new URL(request.url).searchParams.get('storageOnly') === 'true'
+
     const designId = formData.get('designId') as string
     const designData = JSON.parse(formData.get('designData') as string)
     const shopifyCustomerId = formData.get('shopifyCustomerId') as string || null
@@ -116,6 +117,17 @@ export async function action({ request }: ActionFunctionArgs) {
       )
       
       badgeOrderItems.push(badgeOrderItem)
+    }
+    
+    // Storage-only mode (Add to Cart): upload files but do not insert into badge_order_items
+    if (storageOnly) {
+      const hasAnyUploads = pdfUrl || badgeOrderItems.some((item) => item.thumbnail_url || item.full_image_url)
+      return json({
+        success: true,
+        storageOnly: true,
+        uploads: { pdf: !!pdfUrl, thumbnails: badgeOrderItems.some((i) => i.thumbnail_url), fullImages: badgeOrderItems.some((i) => i.full_image_url) },
+        message: hasAnyUploads ? 'Proof files uploaded to storage (order items will be created when order is paid)' : 'Proof upload completed',
+      })
     }
     
     // Save all badge order items to database
