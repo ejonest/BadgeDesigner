@@ -153,6 +153,29 @@ export async function uploadToSupabase(
   return publicUrl
 }
 
+// Upload from a base64 data URL (e.g. from canvas toDataURL) to badge-images and return public URL.
+// Use for Gadget update flow where client sends data URLs; Gadget expects normal URL strings.
+export async function uploadDataUrlToBadgeImagesBucket(
+  dataUrl: string,
+  designId: string,
+  fileNameSuffix: string
+): Promise<string> {
+  if (!dataUrl || !dataUrl.startsWith('data:image/')) {
+    throw new Error('uploadDataUrlToBadgeImagesBucket expects a data URL starting with data:image/')
+  }
+  const match = dataUrl.match(/^data:(image\/[a-z+]+);base64,(.+)$/i)
+  if (!match) {
+    throw new Error('Invalid image data URL format')
+  }
+  const contentType = match[1]
+  const base64 = match[2]
+  const buffer = Buffer.from(base64, 'base64')
+  const ext = contentType === 'image/svg+xml' ? 'svg' : 'png'
+  const fileName = `${designId}/gadget-update-${fileNameSuffix}.${ext}`
+  const blob = new Blob([buffer], { type: contentType })
+  return uploadToBadgeImagesBucket(blob, fileName, contentType)
+}
+
 // Upload to badge-images bucket - ONLY accepts image files (PNG, etc.)
 export async function uploadToBadgeImagesBucket(
   file: File | Blob,
