@@ -273,6 +273,15 @@ export async function uploadToBadgePdfsBucket(
   return publicUrl
 }
 
+// Get public URL for a file in Supabase storage (no upload). Use same bucket names and path conventions as uploads.
+export function getStoragePublicUrl(bucket: string, path: string): string {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+  }
+  const { data: { publicUrl } } = supabaseAdmin.storage.from(bucket).getPublicUrl(path)
+  return publicUrl
+}
+
 // Database helper functions
 export async function saveBadgeDesign(design: BadgeDesign) {
   if (!supabaseAdmin) {
@@ -454,6 +463,7 @@ export function convertBadgeToOrderItem(
   badgeIndex: number,
   options?: {
     shopify_order_id?: string
+    shopify_order_number?: string
     thumbnail_url?: string
     full_image_url?: string
     pdf_url?: string
@@ -466,6 +476,7 @@ export function convertBadgeToOrderItem(
     design_id: designId,
     badge_id: badge.id || `badge-${badgeIndex}`,
     shopify_order_id: options?.shopify_order_id,
+    shopify_order_number: options?.shopify_order_number,
     background_color: formatColor(badge.backgroundColor),
     // Line 1 (index 0)
     line_1_text: lines[0]?.text,
@@ -522,6 +533,7 @@ export async function saveBadgeOrderItem(item: BadgeOrderItem) {
       design_id: item.design_id,
       badge_id: item.badge_id,
       shopify_order_id: item.shopify_order_id,
+      shopify_order_number: item.shopify_order_number,
       background_color: item.background_color,
       line_1_text: item.line_1_text,
       line_1_font: item.line_1_font,
@@ -583,6 +595,7 @@ export async function saveBadgeOrderItems(items: BadgeOrderItem[]) {
     design_id: item.design_id,
     badge_id: item.badge_id,
     shopify_order_id: item.shopify_order_id,
+    shopify_order_number: item.shopify_order_number,
     background_color: item.background_color,
     line_1_text: item.line_1_text,
     line_1_font: item.line_1_font,
