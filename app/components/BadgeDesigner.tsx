@@ -2293,6 +2293,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             "designData",
             JSON.stringify(designDataForSupabase),
           );
+          formDataForSupabase.append("storageOnly", "true");
           if (shopifyCustomerIdFromUrl) {
             formDataForSupabase.append(
               "shopifyCustomerId",
@@ -2368,26 +2369,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         }
       };
 
-      // Generate images (best-effort)
-      let fullImage = "";
-      let thumbnailImage = "";
-      try {
-        fullImage = await generateFullBadgeImage(badge);
-        thumbnailImage = await generateThumbnailFromFullImage(
-          fullImage,
-          100,
-          50,
-        );
-
-        if (savedDesign.id) {
-          await api.updateBadgeDesign(savedDesign.id, {
-            fullImageUrl: fullImage,
-            thumbnailUrl: thumbnailImage,
-          });
-        }
-      } catch (e) {
-        console.warn("Failed to generate images:", e);
-      }
+      // Proof files (PDF, PNG thumbnails, SVG) are already uploaded via send-to-supabase above.
+      // We do not call updateBadgeDesign here so we avoid duplicate folders (gadget-update-* in a second folder).
 
       const badgeData = {
         variantId: getVariantId(badge.backing),
