@@ -19,7 +19,7 @@ export const action: ActionFunction = async ({ request }) => {
     });
 
     // Get environment variables
-    const GADGET_API_URL = process.env.GADGET_API_URL || 'https://all-quality-badge-designer.gadget.app';
+    const GADGET_API_URL = process.env.GADGET_API_URL || 'https://all-quality-badge-designer--development.gadget.app';
     const GADGET_API_KEY = process.env.GADGET_API_KEY;
 
     if (!GADGET_API_KEY) {

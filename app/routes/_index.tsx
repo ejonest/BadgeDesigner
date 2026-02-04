@@ -26,7 +26,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     productId, 
     shop, 
     timestamp: Date.now(),
-    GADGET_API_URL: process.env.GADGET_API_URL || 'https://all-quality-badge-designer.gadget.app',
+    GADGET_API_URL: process.env.GADGET_API_URL || 'https://all-quality-badge-designer--development.gadget.app',
     GADGET_API_KEY: process.env.GADGET_API_KEY,
   }, { headers });
 };

@@ -6,7 +6,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 
   try {
     // Get environment variables
-    const GADGET_API_URL = process.env.GADGET_API_URL || 'https://all-quality-badge-designer.gadget.app';
+    const GADGET_API_URL = process.env.GADGET_API_URL || 'https://all-quality-badge-designer--development.gadget.app';
     const GADGET_API_KEY = process.env.GADGET_API_KEY;
 
     const healthCheck: any = {

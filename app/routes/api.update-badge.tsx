@@ -16,7 +16,7 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     // Get environment variables (server-side only)
-    const GADGET_API_URL = process.env.GADGET_API_URL || 'https://all-quality-badge-designer.gadget.app';
+    const GADGET_API_URL = process.env.GADGET_API_URL || 'https://all-quality-badge-designer--development.gadget.app';
     const GADGET_API_KEY = process.env.GADGET_API_KEY;
 
     console.log('Environment check for update:', {
