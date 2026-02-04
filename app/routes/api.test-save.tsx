@@ -10,8 +10,8 @@ export const loader: LoaderFunction = async ({ request }) => {
     console.log('Test save - Calling Gadget GraphQL URL:', gadgetUrl);
     
     const graphqlQuery = `
-      mutation CreateBadgeDesign($badgeDesign: CreateBadgeDesignInput!) {
-        createBadgeDesign(badgeDesign: $badgeDesign) {
+      mutation CreateBadgeDesign($BadgeDesign: CreateBadgeDesignInput!) {
+        createBadgeDesign(BadgeDesign: $BadgeDesign) {
           success
           errors {
             message
@@ -71,7 +71,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     const graphqlPayload = {
       query: graphqlQuery,
       variables: {
-        badgeDesign: testPayload
+        BadgeDesign: testPayload
       }
     };
     
