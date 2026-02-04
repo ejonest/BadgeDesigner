@@ -2,6 +2,7 @@ import { json, type ActionFunctionArgs } from '@remix-run/node'
 import { uploadToBadgePdfsBucket, uploadToBadgeImagesBucket, saveBadgeOrderItems, convertBadgeToOrderItem } from '~/utils/supabase'
 
 export async function action({ request }: ActionFunctionArgs) {
+  console.log('[BadgeDesigner] api.send-to-supabase request received', new Date().toISOString(), request.method);
   try {
     const formData = await request.formData()
     const storageOnly = formData.get('storageOnly') === 'true' || new URL(request.url).searchParams.get('storageOnly') === 'true'
@@ -20,7 +21,7 @@ export async function action({ request }: ActionFunctionArgs) {
       index++
     }
     
-    console.log('Send to Supabase - Received data:', {
+    console.log('[BadgeDesigner] send-to-supabase payload:', {
       designId,
       hasPdf: !!formData.get('pdf'),
       thumbnailCount,

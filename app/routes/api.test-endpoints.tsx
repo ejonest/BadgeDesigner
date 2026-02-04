@@ -9,7 +9,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   // Test 1: Check if the badgeDesigns endpoint exists
   try {
     console.log('Testing badgeDesigns endpoint...');
-    const response = await fetch("https://allqualitybadges.gadget.app/api/badgeDesigns", {
+    const response = await fetch("https://all-quality-badge-designer.gadget.app/api/badgeDesigns", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -34,7 +34,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   // Test 2: Check if the badge-designs endpoint exists (with hyphen)
   try {
     console.log('Testing badge-designs endpoint...');
-    const response = await fetch("https://allqualitybadges.gadget.app/api/badge-designs", {
+    const response = await fetch("https://all-quality-badge-designer.gadget.app/api/badge-designs", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -59,7 +59,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   // Test 3: Check GraphQL endpoint
   try {
     console.log('Testing GraphQL endpoint...');
-    const response = await fetch("https://allqualitybadges.gadget.app/api/graphql", {
+    const response = await fetch("https://all-quality-badge-designer.gadget.app/api/graphql", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -95,7 +95,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   // Test 4: Check if there's a public API endpoint
   try {
     console.log('Testing public API endpoint...');
-    const response = await fetch("https://allqualitybadges.gadget.app/api/public/badgeDesigns", {
+    const response = await fetch("https://all-quality-badge-designer.gadget.app/api/public/badgeDesigns", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -120,7 +120,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   // Test 5: Check if there's a different endpoint structure
   try {
     console.log('Testing badgeDesign endpoint (singular)...');
-    const response = await fetch("https://allqualitybadges.gadget.app/api/badgeDesign", {
+    const response = await fetch("https://all-quality-badge-designer.gadget.app/api/badgeDesign", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -145,7 +145,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   // Test 6: Check if there's a REST API endpoint
   try {
     console.log('Testing REST API endpoint...');
-    const response = await fetch("https://allqualitybadges.gadget.app/api/rest/badgeDesigns", {
+    const response = await fetch("https://all-quality-badge-designer.gadget.app/api/rest/badgeDesigns", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

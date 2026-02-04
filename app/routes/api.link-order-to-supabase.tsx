@@ -50,13 +50,14 @@ function getBadgesFromDesignData(designData: unknown): Badge[] {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+  console.log('[BadgeDesigner] api.link-order-to-supabase request received', new Date().toISOString(), request.method);
   if (request.method !== 'POST') {
     return json({ error: 'Method not allowed' }, { status: 405 })
   }
 
   const secret = process.env.LINK_ORDER_SECRET
   if (!secret) {
-    console.error('LINK_ORDER_SECRET is not configured')
+    console.error('[BadgeDesigner] LINK_ORDER_SECRET is not configured')
     return json(
       { error: 'Server configuration error', message: 'Link order secret not configured' },
       { status: 500 }
@@ -65,8 +66,10 @@ export async function action({ request }: ActionFunctionArgs) {
 
   const providedSecret = getSecretFromRequest(request)
   if (providedSecret !== secret) {
+    console.warn('[BadgeDesigner] link-order-to-supabase unauthorized (missing or invalid Bearer secret)')
     return json({ error: 'Unauthorized', message: 'Invalid or missing link order secret' }, { status: 401 })
   }
+  console.log('[BadgeDesigner] link-order-to-supabase authorized, processing body')
 
   try {
     const body = await request.json()
@@ -142,6 +145,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
     const saved = await saveBadgeOrderItems(allBadgeOrderItems)
     const insertedCount = Array.isArray(saved) ? saved.length : 0
+    console.log('[BadgeDesigner] link-order-to-supabase success', { insertedCount, shopifyOrderId: body.shopifyOrderId })
 
     return json({
       success: true,

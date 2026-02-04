@@ -4,9 +4,10 @@
  * SETUP: Copy this entire file into your Gadget app as a new Global Action (e.g. name it "onOrderPaid").
  * Then: Triggers → + → Shopify webhooks → orders/paid (or orders/create).
  *
+ * Gadget app: https://all-quality-badge-designer.gadget.app/
  * In Gadget Settings → Environment variables, set:
  * - LINK_ORDER_SECRET (same value as in Vercel)
- * - VERCEL_LINK_ORDER_URL = https://badgedesigner.vercel.app/api/link-order-to-supabase
+ * - VERCEL_LINK_ORDER_URL = https://YOUR_VERCEL_DOMAIN/api/link-order-to-supabase (e.g. https://badgedesigner.vercel.app/api/link-order-to-supabase)
  *
  * Vercel API (link-order-to-supabase) expects:
  * - shopifyOrderId, shopifyOrderNumber, shopifyCustomerId
@@ -15,6 +16,7 @@
 
 const LINK_ORDER_URL =
   process.env.VERCEL_LINK_ORDER_URL || "https://badgedesigner.vercel.app/api/link-order-to-supabase";
+// VERCEL_LINK_ORDER_URL must be set in Gadget to your actual Vercel deployment URL
 const LINK_ORDER_SECRET = process.env.LINK_ORDER_SECRET;
 
 /**

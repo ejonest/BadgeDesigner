@@ -46,7 +46,7 @@ Set these in your Vercel project (Settings → Environment Variables). See `.env
 
 **Required for badge designer + cart:**
 - `NODE_ENV=production`
-- `GADGET_API_URL` – Your Gadget app API URL (e.g. `https://allqualitybadges-development.gadget.app`)
+- `GADGET_API_URL` – Your Gadget app API URL (default: `https://all-quality-badge-designer.gadget.app`)
 - `GADGET_API_KEY` – Gadget API key for server-side create/update of badge designs
 - `SHOPIFY_STORE_URL` – Shopify store hostname (e.g. `your-store.myshopify.com`), used when adding to cart from the app
 
@@ -54,6 +54,8 @@ Set these in your Vercel project (Settings → Environment Variables). See `.env
 - `SUPABASE_URL` – Supabase project URL
 - `SUPABASE_SERVICE_ROLE_KEY` – Supabase service role key (server-only; used by link-order API)
 - `LINK_ORDER_SECRET` – Shared secret for Gadget → Vercel `api/link-order-to-supabase` (e.g. `openssl rand -hex 32`). Set the same value in Gadget.
+
+**Seeing logs in Vercel:** All API routes and the index loader log with the prefix `[BadgeDesigner]`. In the Vercel dashboard go to your project → **Deployments** → select the deployment → **Functions** or **Runtime Logs**. Search for `[BadgeDesigner]` to see: `index loader (iframe page load)`, `api.save-badge request received`, `api.send-to-supabase request received`, and `api.link-order-to-supabase request received` (when Gadget calls after checkout). Ensure the Shopify product page iframe `src` is your Vercel URL (e.g. `https://badgedesigner.vercel.app/...`) so requests hit this deployment.
 
 ## Shopify Integration
 
