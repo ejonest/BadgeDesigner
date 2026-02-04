@@ -42,10 +42,18 @@ vercel --prod
 
 ## Environment Variables
 
-Set these in your Vercel dashboard:
+Set these in your Vercel project (Settings → Environment Variables). See `.env.example` for a full list.
 
+**Required for badge designer + cart:**
 - `NODE_ENV=production`
-- `GADGET_API_URL=https://allqualitybadges-development.gadget.app/api`
+- `GADGET_API_URL` – Your Gadget app API URL (e.g. `https://allqualitybadges-development.gadget.app`)
+- `GADGET_API_KEY` – Gadget API key for server-side create/update of badge designs
+- `SHOPIFY_STORE_URL` – Shopify store hostname (e.g. `your-store.myshopify.com`), used when adding to cart from the app
+
+**Required for “Send to Supabase” and checkout → Supabase flow:**
+- `SUPABASE_URL` – Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY` – Supabase service role key (server-only; used by link-order API)
+- `LINK_ORDER_SECRET` – Shared secret for Gadget → Vercel `api/link-order-to-supabase` (e.g. `openssl rand -hex 32`). Set the same value in Gadget.
 
 ## Shopify Integration
 

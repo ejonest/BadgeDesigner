@@ -1,11 +1,10 @@
 /**
  * Gadget action: on_order_paid
- * Place this in your Gadget app at: api/actions/on-order-paid.js (or .ts)
  *
- * Trigger: Shopify webhook "orders/paid" (or "orders/create" and filter for paid)
- * - In Gadget: open this action → Triggers → + → Shopify webhooks → orders/paid (or orders/create)
+ * SETUP: Copy this entire file into your Gadget app as a new Global Action (e.g. name it "onOrderPaid").
+ * Then: Triggers → + → Shopify webhooks → orders/paid (or orders/create).
  *
- * Environment: In Gadget Settings → Environment variables, set:
+ * In Gadget Settings → Environment variables, set:
  * - LINK_ORDER_SECRET (same value as in Vercel)
  * - VERCEL_LINK_ORDER_URL = https://badgedesigner.vercel.app/api/link-order-to-supabase
  *
