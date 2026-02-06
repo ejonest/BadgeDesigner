@@ -113,7 +113,7 @@ export async function action({ request }: ActionFunctionArgs) {
           thumbnail_url: badgeThumbnailUrl,
           full_image_url: badgeFullImageUrl,
           pdf_url: pdfUrl, // Same PDF for all badges (contains all badges)
-          shopify_customer_id: shopifyCustomerId
+          shopify_customer_id: shopifyCustomerId ?? undefined
         }
       )
       
@@ -128,6 +128,8 @@ export async function action({ request }: ActionFunctionArgs) {
         success: true,
         storageOnly: true,
         uploads: { pdf: !!pdfUrl, thumbnails: badgeOrderItems.some((i) => i.thumbnail_url), fullImages: badgeOrderItems.some((i) => i.full_image_url) },
+        thumbnailUrls: badgeOrderItems.map((i) => i.thumbnail_url || ''),
+        fullImageUrls: badgeOrderItems.map((i) => i.full_image_url || ''),
         message: hasAnyUploads ? 'Proof files uploaded to storage (order items will be created when order is paid)' : 'Proof upload completed',
       })
     }

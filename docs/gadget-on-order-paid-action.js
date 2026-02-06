@@ -1,17 +1,29 @@
 /**
  * Gadget action: on_order_paid
  *
- * SETUP: Copy this entire file into your Gadget app as a new Global Action (e.g. name it "onOrderPaid").
- * Then: Triggers → + → Shopify webhooks → orders/paid (or orders/create).
+ * PURPOSE: After Shopify checkout, this action sends the order + badge design data from Gadget
+ * to your Vercel API, which inserts rows into the Supabase badge_order_items table (filling in
+ * all fields: shopify_order_id, design_id, line_1_text, thumbnail_url, pdf_url, etc.).
  *
- * Gadget app (development): https://all-quality-badge-designer--development.gadget.app/
- * In Gadget Settings → Environment variables, set:
- * - LINK_ORDER_SECRET (same value as in Vercel)
- * - VERCEL_LINK_ORDER_URL = https://YOUR_VERCEL_DOMAIN/api/link-order-to-supabase (e.g. https://badgedesigner.vercel.app/api/link-order-to-supabase)
+ * SETUP:
+ * 1. In Gadget: create a new Global Action, paste this file's code, name it e.g. "onOrderPaid".
+ * 2. Triggers: add trigger → Shopify webhooks → orders/paid (recommended) or orders/create.
+ * 3. Environment variables (Gadget Settings → Environment variables):
+ *    - LINK_ORDER_SECRET = same secret as in Vercel (LINK_ORDER_SECRET)
+ *    - VERCEL_LINK_ORDER_URL = https://YOUR_VERCEL_DOMAIN/api/link-order-to-supabase
+ * 4. Vercel: set LINK_ORDER_SECRET (and SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY for the API).
  *
- * Vercel API (link-order-to-supabase) expects:
- * - shopifyOrderId, shopifyOrderNumber, shopifyCustomerId
- * - lineItems: [ { designId, gadgetDesignId?, designData } ] — designData = full design (e.g. allBadges) from BadgeDesign
+ * FLOW: Order paid → webhook fires → this action runs → reads line item properties "Design ID"
+ * and "Gadget Design ID" → fetches BadgeDesign from Gadget (by designId or id) → POSTs to
+ * Vercel with shopifyOrderId, shopifyOrderNumber, shopifyCustomerId, lineItems (each with
+ * designId, gadgetDesignId, designData). Vercel inserts into Supabase badge_order_items.
+ *
+ * TROUBLESHOOTING (no row in Supabase after checkout):
+ * - Confirm the Global Action exists and is triggered by orders/paid (or orders/create).
+ * - Confirm Gadget env vars LINK_ORDER_SECRET and VERCEL_LINK_ORDER_URL are set.
+ * - Confirm cart line items have "Design ID" and "Gadget Design ID" (add-to-cart sets these).
+ * - In Gadget logs, check for "on_order_paid: linked order to Supabase" or errors (e.g. BadgeDesign not found, fetch failed).
+ * - If Vercel returns 400 "no badges in designData", Gadget found the order but did not attach designData — check that BadgeDesign record exists with matching designId or id and has designData populated.
  */
 
 const LINK_ORDER_URL =
@@ -36,9 +48,10 @@ function getPropertiesMap(lineItem) {
 }
 
 /**
- * Extract design IDs from order line items (and optionally resolve designData from Gadget).
+ * Extract design IDs from order line items and resolve full designData from Gadget.
  * Cart sends "Design ID" and "Gadget Design ID" as line item properties.
- * If api is provided, fetches BadgeDesign by designId (or gadgetDesignId) and attaches designData.
+ * Fetches BadgeDesign by designId first, then by id (Gadget Design ID), and attaches designData
+ * so Vercel link-order-to-supabase can insert into the Supabase badge_order_items table.
  */
 async function getLineItemsWithDesignData(order, api, logger) {
   const lineItems = order.line_items ?? order.lineItems ?? [];
@@ -51,23 +64,30 @@ async function getLineItemsWithDesignData(order, api, logger) {
     const idToUse = designId || gadgetDesignId;
     if (!idToUse) continue;
 
+    const badgeIndexRaw = props["Badge Index"];
+    const badgeIndex = badgeIndexRaw !== undefined && badgeIndexRaw !== null && badgeIndexRaw !== ""
+      ? parseInt(String(badgeIndexRaw).trim(), 10)
+      : undefined;
     const entry = {
       designId: designId || gadgetDesignId,
       gadgetDesignId: gadgetDesignId || undefined,
+      badgeIndex: Number.isNaN(badgeIndex) ? undefined : badgeIndex,
     };
 
     if (api && (api.badgeDesign || api.BadgeDesign)) {
       const model = api.badgeDesign || api.BadgeDesign;
+      let design = null;
       try {
-        const design = designId
-          ? await model.findOne({ filter: { designId } })
-          : gadgetDesignId
-            ? await model.findOne({ filter: { id: gadgetDesignId } })
-            : null;
+        if (designId) {
+          design = await model.findOne({ filter: { designId } });
+        }
+        if (!design && gadgetDesignId) {
+          design = await model.findOne({ filter: { id: gadgetDesignId } });
+        }
         if (design && design.designData != null) {
           entry.designData = typeof design.designData === "string" ? JSON.parse(design.designData) : design.designData;
         } else {
-          logger.warn("on_order_paid: BadgeDesign not found for designId/gadgetDesignId", { designId, gadgetDesignId });
+          logger.warn("on_order_paid: BadgeDesign not found or missing designData", { designId, gadgetDesignId });
         }
       } catch (err) {
         logger.warn("on_order_paid: failed to fetch BadgeDesign", { designId, gadgetDesignId, error: err.message });

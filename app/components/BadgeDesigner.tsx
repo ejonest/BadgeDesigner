@@ -2200,45 +2200,52 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         return;
       }
 
-      const savedDesign = await api.saveBadgeDesign(
-        {
-          badge,
-          productId: _productId,
-          shopId: shopData.shopId,
-          designId: `design_${Date.now()}_${Math.random()
-            .toString(36)
-            .slice(2, 11)}`,
-          status: "saved",
-          backgroundColor: badge.backgroundColor,
-          backingType: badge.backing,
-          basePrice: 9.99,
-          backingPrice: 0,
-          totalPrice,
-          textLines: badge.lines,
-        },
-        shopData,
-      );
-
-      // Upload proof and design data to Supabase (same design_id as cart so Gadget can link order later)
-      const designIdForSupabase =
-        savedDesign.designId ??
-        savedDesign.id ??
-        `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      const designId = `design_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 11)}`;
       const shopifyCustomerIdFromUrl =
         typeof window !== "undefined"
           ? new URLSearchParams(window.location.search).get("customerId")
           : null;
+
+      const finalizedBadge = {
+        ...badge,
+        templateId: universalTemplateId,
+        backgroundColor: badge.backgroundColor || "#FFFFFF",
+      };
+      const finalizedMultipleBadges = [...multipleBadges];
+      if (finalizedMultipleBadges[selectedBadgeIndex]) {
+        finalizedMultipleBadges[selectedBadgeIndex] = finalizedBadge;
+      }
+      const allBadgesForSupabase = getAllBadges(finalizedMultipleBadges);
+
+      const savedDesign = await api.saveBadgeDesign(
+        {
+          badge: allBadgesForSupabase[0],
+          multipleBadges:
+            allBadgesForSupabase.length > 1
+              ? allBadgesForSupabase.slice(1)
+              : [],
+          allBadges: allBadgesForSupabase,
+          productId: _productId,
+          shopId: shopData.shopId,
+          designId,
+          status: "saved",
+          backgroundColor: allBadgesForSupabase[0].backgroundColor,
+          backingType: allBadgesForSupabase[0].backing,
+          basePrice: 9.99,
+          backingPrice: 0,
+          totalPrice,
+          textLines: allBadgesForSupabase[0].lines,
+        },
+        shopData,
+      );
+
+      const designIdForSupabase =
+        savedDesign.designId ?? savedDesign.id ?? designId;
+
+      let thumbnailUrls: string[] = [];
       try {
-        const finalizedBadge = {
-          ...badge,
-          templateId: universalTemplateId,
-          backgroundColor: badge.backgroundColor || "#FFFFFF",
-        };
-        const finalizedMultipleBadges = [...multipleBadges];
-        if (finalizedMultipleBadges[selectedBadgeIndex]) {
-          finalizedMultipleBadges[selectedBadgeIndex] = finalizedBadge;
-        }
-        const allBadgesForSupabase = getAllBadges(finalizedMultipleBadges);
         const templateToUse = activeTemplate;
         if (templateToUse && allBadgesForSupabase.length > 0) {
           const pdfBlob = await generatePDFAsBlob(
@@ -2323,7 +2330,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             method: "POST",
             body: formDataForSupabase,
           });
-          if (!supabaseResponse.ok) {
+          if (supabaseResponse.ok) {
+            const supabaseJson = await supabaseResponse.json().catch(() => ({}));
+            thumbnailUrls = Array.isArray(supabaseJson.thumbnailUrls)
+              ? supabaseJson.thumbnailUrls
+              : [];
+          } else {
             const errData = await supabaseResponse.json().catch(() => ({}));
             console.warn(
               "Supabase proof upload failed (cart will still add):",
@@ -2344,9 +2356,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         );
       }
 
-      // Variant resolver: use variant IDs from iframe URL (from Shopify product) so the correct store's variants are used. Fall back to hardcoded IDs only when not embedded in Shopify.
-      const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-      const variantIdFromUrl = (key: string) => urlParams?.get(key)?.trim() || null;
+      const urlParams =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search)
+          : null;
+      const variantIdFromUrl = (key: string) =>
+        urlParams?.get(key)?.trim() || null;
       const getVariantId = (backingType: string) => {
         const fromUrl =
           backingType === "pin"
@@ -2369,30 +2384,34 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         }
       };
 
-      // Proof files (PDF, PNG thumbnails, SVG) are already uploaded via send-to-supabase above.
-      // We do not call updateBadgeDesign here so we avoid duplicate folders (gadget-update-* in a second folder).
+      const cartItems = allBadgesForSupabase.map((b, i) => {
+        const backingP =
+          b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0;
+        const itemTotalPrice = (basePrice + backingP).toFixed(2);
+        return {
+          variantId: getVariantId(b.backing),
+          quantity: 1,
+          properties: {
+            "Custom Badge Design": "Yes",
+            "Badge Text Line 1": b.lines[0]?.text || "",
+            "Badge Text Line 2": b.lines[1]?.text || "",
+            "Badge Text Line 3": b.lines[2]?.text || "",
+            "Badge Text Line 4": b.lines[3]?.text || "",
+            "Background Color": b.backgroundColor,
+            "Font Family": b.lines[0]?.fontFamily || "Arial",
+            "Backing Type": b.backing,
+            "Design ID": designIdForSupabase,
+            "Gadget Design ID": savedDesign.id ?? "",
+            Price: `$${itemTotalPrice}`,
+            "Badge Index": String(i),
+            "Custom Thumbnail": thumbnailUrls[i] ?? "",
+          },
+        };
+      });
 
-      const badgeData = {
-        variantId: getVariantId(badge.backing),
-        quantity: 1,
-        properties: {
-          "Custom Badge Design": "Yes",
-          "Badge Text Line 1": badge.lines[0]?.text || "",
-          "Badge Text Line 2": badge.lines[1]?.text || "",
-          "Badge Text Line 3": badge.lines[2]?.text || "",
-          "Badge Text Line 4": badge.lines[3]?.text || "",
-          "Background Color": badge.backgroundColor,
-          "Font Family": badge.lines[0]?.fontFamily || "Arial",
-          "Backing Type": badge.backing,
-          "Design ID": designIdForSupabase,
-          "Gadget Design ID": savedDesign.id,
-          Price: `$${totalPrice}`,
-        },
-      };
-
-      const result = await api.addToCart(badgeData);
+      const result = await api.addToCartMultiple(cartItems);
       if (!result.success) {
-        alert("Failed to add badge to cart. Please try again.");
+        alert("Failed to add badge(s) to cart. Please try again.");
       }
     } catch (error) {
       console.error("Failed to add to cart:", error);
