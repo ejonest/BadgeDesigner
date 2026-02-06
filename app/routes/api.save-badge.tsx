@@ -58,10 +58,11 @@ export const action: ActionFunction = async ({ request }) => {
     console.log('Debug - badgeDesignData.lines:', badgeDesignData.lines);
 
     // Gadget API expects basePrice, backingPrice, totalPrice as strings (GraphQL scalar)
+    // Use client-provided designId when present so cart/Supabase/Gadget share the same id
     const gadgetPayload = {
       shopId: shopData?.shopId || "75389960447",
       productId: designData.productId,
-      designId: `design_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      designId: designData.designId || `design_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       status: "saved" as const,
       designData: JSON.stringify(fullDesignDataForStorage),
       backgroundColor: badgeDesignData.backgroundColor || "#FFFFFF",

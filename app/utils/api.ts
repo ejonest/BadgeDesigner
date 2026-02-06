@@ -148,73 +148,47 @@ export function createApi(gadgetApiUrl?: string, gadgetApiKey?: string) {
     }
   },
 
-  // Add to cart functionality - direct Shopify cart API call
+  // Add to cart functionality - direct Shopify cart API call (single item)
   async addToCart(badgeData: any) {
-      console.log('addToCart function called with:', badgeData);
-      
+      return this.addToCartMultiple([badgeData]);
+  },
+
+  // Add one or more badge line items to cart. Single item: redirect to cart/add. Multiple: postMessage for theme to call cart/add.js.
+  async addToCartMultiple(cartItems: Array<{ variantId: string; quantity: number; properties: Record<string, string> }>) {
+      if (!cartItems || cartItems.length === 0) {
+        console.error('addToCartMultiple: no items provided');
+        return { success: false, message: 'No items to add' };
+      }
       try {
-        // Resolve Shopify store URL: window.SHOPIFY_STORE_URL, then URL params (storeUrl or shop from iframe), then fallback
-        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-        const shopifyStoreUrl =
-          (typeof window !== 'undefined' && (window as any).SHOPIFY_STORE_URL) ||
-          urlParams?.get('storeUrl') ||
-          urlParams?.get('shop') ||
-          'badgesonly.myshopify.com';
-        
-        console.log('Adding to Shopify cart directly from frontend');
-        console.log('Shopify store URL:', shopifyStoreUrl);
-        console.log('Cart data:', badgeData);
-
-        // Prepare the cart addition data for Shopify
-        const cartData = {
-          items: [{
-            id: badgeData.variantId,
-            quantity: badgeData.quantity,
-            properties: badgeData.properties
-          }]
-        };
-
-        console.log('Cart data to send to Shopify:', cartData);
-
-        // Use a more reliable approach - redirect to cart/add with query parameters
-        // This avoids CORS issues and doesn't open new tabs
-        const params = new URLSearchParams();
-        params.append('id', badgeData.variantId);
-        params.append('quantity', badgeData.quantity.toString());
-        
-        // Add properties as query parameters
-        Object.entries(badgeData.properties).forEach(([key, value]) => {
-          params.append(`properties[${key}]`, value as string);
-        });
-
-        const cartUrl = `https://${shopifyStoreUrl}/cart/add?${params.toString()}`;
-        
-        // Redirect to the cart addition URL (break out of iframe so Shopify loads in top window)
-        if (window.top) window.top.location.href = cartUrl;
-        else window.location.href = cartUrl;
-
-        // Also send to parent window for additional integration
-        this.sendToParent({
-          action: 'add-to-cart',
-          payload: badgeData
-        });
-
-        return { 
-          success: true, 
-          message: 'Redirecting to add item to cart',
-          cartData: { redirectUrl: cartUrl },
-          badgeData 
-        };
-
+        if (cartItems.length === 1) {
+          const badgeData = cartItems[0];
+          const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+          const shopifyStoreUrl =
+            (typeof window !== 'undefined' && (window as any).SHOPIFY_STORE_URL) ||
+            urlParams?.get('storeUrl') ||
+            urlParams?.get('shop') ||
+            'badgesonly.myshopify.com';
+          const params = new URLSearchParams();
+          params.append('id', badgeData.variantId);
+          params.append('quantity', badgeData.quantity.toString());
+          Object.entries(badgeData.properties).forEach(([key, value]) => {
+            params.append(`properties[${key}]`, value as string);
+          });
+          const cartUrl = `https://${shopifyStoreUrl}/cart/add?${params.toString()}`;
+          if (window.top) window.top.location.href = cartUrl;
+          else window.location.href = cartUrl;
+          this.sendToParent({ action: 'add-to-cart', payload: badgeData });
+          return { success: true, message: 'Redirecting to add item to cart', cartData: { redirectUrl: cartUrl }, badgeData };
+        }
+        this.sendToParent({ action: 'add-to-cart-multiple', payload: { items: cartItems } });
+        return { success: true, message: `Adding ${cartItems.length} items to cart (theme will add via cart/add.js)` };
       } catch (error) {
         console.error('Error adding to cart:', error);
-        
-        // Fallback to just sending to parent window
-        this.sendToParent({
-          action: 'add-to-cart',
-          payload: badgeData
-        });
-        
+        if (cartItems.length === 1) {
+          this.sendToParent({ action: 'add-to-cart', payload: cartItems[0] });
+        } else {
+          this.sendToParent({ action: 'add-to-cart-multiple', payload: { items: cartItems } });
+        }
         throw error;
       }
   },
