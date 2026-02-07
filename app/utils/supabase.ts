@@ -507,9 +507,10 @@ export function convertBadgeToOrderItem(
 ): BadgeOrderItem {
   const lines = badge.lines || []
   
+  // Use badge-0, badge-1, ... so link-order (which uses Badge Index 0,1,... from cart) can match
   return {
     design_id: designId,
-    badge_id: badge.id || `badge-${badgeIndex}`,
+    badge_id: `badge-${badgeIndex}`,
     shopify_order_id: options?.shopify_order_id,
     shopify_order_number: options?.shopify_order_number,
     background_color: formatColor(badge.backgroundColor),

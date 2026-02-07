@@ -18,12 +18,12 @@
  * Vercel with shopifyOrderId, shopifyOrderNumber, shopifyCustomerId, lineItems (each with
  * designId, gadgetDesignId, designData). Vercel inserts into Supabase badge_order_items.
  *
- * TROUBLESHOOTING (no row in Supabase after checkout):
+ * TROUBLESHOOTING (badge_order_items not updated after checkout):
  * - Confirm the Global Action exists and is triggered by orders/paid (or orders/create).
  * - Confirm Gadget env vars LINK_ORDER_SECRET and VERCEL_LINK_ORDER_URL are set.
- * - Confirm cart line items have "Design ID" and "Gadget Design ID" (add-to-cart sets these).
- * - In Gadget logs, check for "on_order_paid: linked order to Supabase" or errors (e.g. BadgeDesign not found, fetch failed).
- * - If Vercel returns 400 "no badges in designData", Gadget found the order but did not attach designData — check that BadgeDesign record exists with matching designId or id and has designData populated.
+ * - Confirm cart line items have "Design ID" and "Badge Index" (add-to-cart sets these). Optional: "Gadget Design ID".
+ * - In Gadget logs, check for "on_order_paid: linked order to Supabase" and updatedCount > 0, or errors (e.g. fetch failed, 401).
+ * - If updatedCount is 0: Vercel received the request but no draft rows matched. Ensure draft rows in Supabase use design_id = same as "Design ID" and badge_id = badge-0, badge-1, ... (0-based). New inserts use badge-0, badge-1; old rows with badge-1, badge-2 will not match.
  */
 
 const LINK_ORDER_URL =
@@ -163,8 +163,8 @@ module.exports = async ({ api, params, trigger, record, logger }) => {
       return { success: false, status: res.status, error: data.message ?? data.error };
     }
 
-    logger.info("on_order_paid: linked order to Supabase", { insertedCount: data.insertedCount });
-    return { success: true, insertedCount: data.insertedCount, data };
+    logger.info("on_order_paid: linked order to Supabase", { updatedCount: data.updatedCount ?? data.insertedCount, data });
+    return { success: true, updatedCount: data.updatedCount ?? data.insertedCount, data };
   } catch (err) {
     logger.error("on_order_paid: fetch failed", { error: err.message });
     return { success: false, error: err.message };
