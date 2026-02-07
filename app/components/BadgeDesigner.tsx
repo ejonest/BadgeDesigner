@@ -2219,30 +2219,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       }
       const allBadgesForSupabase = getAllBadges(finalizedMultipleBadges);
 
-      const savedDesign = await api.saveBadgeDesign(
-        {
-          badge: allBadgesForSupabase[0],
-          multipleBadges:
-            allBadgesForSupabase.length > 1
-              ? allBadgesForSupabase.slice(1)
-              : [],
-          allBadges: allBadgesForSupabase,
-          productId: _productId,
-          shopId: shopData.shopId,
-          designId,
-          status: "saved",
-          backgroundColor: allBadgesForSupabase[0].backgroundColor,
-          backingType: allBadgesForSupabase[0].backing,
-          basePrice: 9.99,
-          backingPrice: 0,
-          totalPrice,
-          textLines: allBadgesForSupabase[0].lines,
-        },
-        shopData,
-      );
-
-      const designIdForSupabase =
-        savedDesign.designId ?? savedDesign.id ?? designId;
+      // Design metadata and files go only to Supabase (no Gadget at add-to-cart). designData is cached in Supabase for link-order when order is paid.
+      const designIdForSupabase = designId;
 
       let thumbnailUrls: string[] = [];
       try {
@@ -2401,7 +2379,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             "Font Family": b.lines[0]?.fontFamily || "Arial",
             "Backing Type": b.backing,
             "Design ID": designIdForSupabase,
-            "Gadget Design ID": savedDesign.id ?? "",
             Price: `$${itemTotalPrice}`,
             "Badge Index": String(i),
             "Custom Thumbnail": thumbnailUrls[i] ?? "",

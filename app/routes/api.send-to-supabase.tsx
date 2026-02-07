@@ -1,5 +1,5 @@
 import { json, type ActionFunctionArgs } from '@remix-run/node'
-import { uploadToBadgePdfsBucket, uploadToBadgeImagesBucket, saveBadgeOrderItems, convertBadgeToOrderItem } from '~/utils/supabase'
+import { uploadToBadgePdfsBucket, uploadToBadgeImagesBucket, saveBadgeOrderItems, convertBadgeToOrderItem, upsertDesignCache } from '~/utils/supabase'
 
 export async function action({ request }: ActionFunctionArgs) {
   console.log('[BadgeDesigner] api.send-to-supabase request received', new Date().toISOString(), request.method);
@@ -121,8 +121,20 @@ export async function action({ request }: ActionFunctionArgs) {
     }
     
     // Storage-only mode (Add to Cart): upload files only; do not insert into badge_order_items.
-    // Rows are inserted by api/link-order-to-supabase when the order is paid (Gadget webhook), avoiding duplicates.
+    // Cache design metadata in Supabase so link-order-to-supabase can fetch it when order is paid (no Gadget).
     if (storageOnly) {
+      const shopId = designData.shopId ?? 'test-shop'
+      const productId = designData.productId ?? 'test-product'
+      try {
+        await upsertDesignCache({
+          design_id: designId,
+          design_data: designData,
+          product_id: String(productId),
+          shop_id: String(shopId),
+        })
+      } catch (cacheErr) {
+        console.warn('Design cache upsert failed (link-order may still work if Gadget sends designData):', cacheErr)
+      }
       const hasAnyUploads = pdfUrl || badgeOrderItems.some((item) => item.thumbnail_url || item.full_image_url)
       return json({
         success: true,
