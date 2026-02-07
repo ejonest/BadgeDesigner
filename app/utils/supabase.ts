@@ -355,50 +355,6 @@ export async function getBadgeDesign(designId: string) {
   return data
 }
 
-/** Upsert design metadata into badge_designs for order-paid lookup (Supabase-only cache; no Gadget). */
-export async function upsertDesignCache(params: {
-  design_id: string
-  design_data: unknown
-  product_id: string
-  shop_id: string
-}) {
-  if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
-  }
-  const { data, error } = await supabaseAdmin
-    .from('badge_designs')
-    .upsert(
-      {
-        design_id: params.design_id,
-        design_data: params.design_data,
-        product_id: params.product_id,
-        shop_id: params.shop_id,
-        status: 'saved',
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'design_id' }
-    )
-    .select()
-    .single()
-  if (error) {
-    console.error('upsertDesignCache error:', error)
-    throw error
-  }
-  return data
-}
-
-/** Fetch design_data from Supabase by design_id (for link-order when Gadget does not send designData). Returns null if not found. */
-export async function getDesignDataFromSupabase(designId: string): Promise<unknown | null> {
-  if (!supabaseAdmin) return null
-  const { data, error } = await supabaseAdmin
-    .from('badge_designs')
-    .select('design_data')
-    .eq('design_id', designId)
-    .maybeSingle()
-  if (error || !data) return null
-  return data.design_data ?? null
-}
-
 export async function getCustomerDesigns(customerId: string) {
   if (!supabaseAdmin) {
     throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
@@ -466,6 +422,7 @@ export interface BadgeOrderItem {
   full_image_url?: string
   pdf_url?: string
   shopify_customer_id?: string
+  status?: 'draft' | 'order_placed' | 'fulfilled'
   created_at?: string
   updated_at?: string
 }
@@ -649,6 +606,7 @@ export async function saveBadgeOrderItem(item: BadgeOrderItem) {
       full_image_url: item.full_image_url,
       pdf_url: item.pdf_url,
       shopify_customer_id: item.shopify_customer_id,
+      status: item.status ?? 'draft',
       created_at: item.created_at || getPacificTimestamp(),
       updated_at: getPacificTimestamp()
     })
@@ -711,6 +669,7 @@ export async function saveBadgeOrderItems(items: BadgeOrderItem[]) {
     full_image_url: item.full_image_url,
     pdf_url: item.pdf_url,
     shopify_customer_id: item.shopify_customer_id,
+    status: item.status ?? 'draft',
     created_at: item.created_at || getPacificTimestamp(),
     updated_at: getPacificTimestamp()
   }))
@@ -757,4 +716,45 @@ export async function updateBadgeOrderItemsByDesignIds(
     throw error
   }
   return { data, error: null }
-} 
+}
+
+/** Update draft badge_order_items with order info by design_id + badge_id (single-table flow). */
+export async function updateDraftBadgeOrderItemsWithOrderInfo(params: {
+  lineItems: Array<{ designId: string; badgeIndex: number }>
+  shopifyOrderId: string
+  shopifyOrderNumber?: string | null
+  shopifyCustomerId?: string | null
+}) {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+  }
+  const { lineItems, shopifyOrderId, shopifyOrderNumber, shopifyCustomerId } = params
+  if (!lineItems.length) return { data: [], error: null }
+
+  const payload: Record<string, unknown> = {
+    shopify_order_id: shopifyOrderId,
+    status: 'order_placed',
+    updated_at: getPacificTimestamp()
+  }
+  if (shopifyOrderNumber != null && shopifyOrderNumber !== '') payload.shopify_order_number = shopifyOrderNumber
+  if (shopifyCustomerId != null && shopifyCustomerId !== '') payload.shopify_customer_id = shopifyCustomerId
+
+  const results: unknown[] = []
+  for (const { designId, badgeIndex } of lineItems) {
+    const badgeId = `badge-${badgeIndex}`
+    const { data, error } = await supabaseAdmin
+      .from('badge_order_items')
+      .update(payload)
+      .eq('design_id', designId)
+      .eq('badge_id', badgeId)
+      .eq('status', 'draft')
+      .select()
+      .maybeSingle()
+    if (error) {
+      console.error('updateDraftBadgeOrderItemsWithOrderInfo error:', error)
+      throw error
+    }
+    if (data) results.push(data)
+  }
+  return { data: results, error: null }
+}

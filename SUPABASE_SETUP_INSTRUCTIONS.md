@@ -41,13 +41,16 @@ Once testing is successful, you can:
 ## Database Schema Overview
 
 ### Tables Created:
+
 - **badge_designs**: Main table for storing badge designs
 - **order_designs**: Links orders to specific designs
 
 ### Storage Buckets:
+
 - **badge-images**: For storing badge thumbnails and full images
 
 ### Features:
+
 - ✅ Row Level Security (RLS) enabled
 - ✅ Automatic timestamps
 - ✅ Indexes for performance
@@ -74,4 +77,4 @@ After successful setup:
 1. **Data Migration**: Export data from Gadget and import to Supabase
 2. **Frontend Updates**: Update components to use Supabase
 3. **Cart Integration**: Modify cart to use Supabase data
-4. **Customer Features**: Add design history and reorder functionality 
+4. **Customer Features**: Add design history and reorder functionality

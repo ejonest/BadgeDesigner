@@ -1,14 +1,5 @@
 import { json, type ActionFunctionArgs } from "@remix-run/node";
-import {
-  getStoragePublicUrl,
-  convertBadgeToOrderItem,
-  saveBadgeOrderItems,
-  getDesignDataFromSupabase,
-} from "~/utils/supabase";
-import type { Badge } from "~/types/badge";
-
-const BADGE_PDFS_BUCKET = "badge-pdfs";
-const BADGE_IMAGES_BUCKET = "badge-images";
+import { updateDraftBadgeOrderItemsWithOrderInfo } from "~/utils/supabase";
 
 function getSecretFromRequest(request: Request): string | null {
   const authHeader = request.headers.get("Authorization");
@@ -20,43 +11,6 @@ function getSecretFromRequest(request: Request): string | null {
     return xHeader.trim() || null;
   }
   return null;
-}
-
-/** Build storage URLs for a design (same paths as api.send-to-supabase uploads). */
-function buildStorageUrls(designId: string, badgeCount: number) {
-  const pdfPath = `${designId}/badge-design.pdf`;
-  const pdfUrl = getStoragePublicUrl(BADGE_PDFS_BUCKET, pdfPath);
-  const thumbnailUrls: string[] = [];
-  const fullImageUrls: string[] = [];
-  for (let i = 0; i < badgeCount; i++) {
-    thumbnailUrls.push(
-      getStoragePublicUrl(
-        BADGE_IMAGES_BUCKET,
-        `${designId}/badge-${i}-thumbnail.png`,
-      ),
-    );
-    fullImageUrls.push(
-      getStoragePublicUrl(
-        BADGE_IMAGES_BUCKET,
-        `${designId}/badge-${i}-design.svg`,
-      ),
-    );
-  }
-  return { pdfUrl, thumbnailUrls, fullImageUrls };
-}
-
-/** Normalize designData from Gadget: may be object with allBadges or badge, or raw badge. */
-function getBadgesFromDesignData(designData: unknown): Badge[] {
-  if (designData == null) return [];
-  const data =
-    typeof designData === "string" ? JSON.parse(designData) : designData;
-  if (!data || typeof data !== "object") return [];
-  if (Array.isArray(data.allBadges) && data.allBadges.length > 0)
-    return data.allBadges;
-  if (data.badge && typeof data.badge === "object") return [data.badge];
-  if (data.lines != null && typeof data.backgroundColor === "string")
-    return [data as Badge];
-  return [];
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -142,8 +96,7 @@ export async function action({ request }: ActionFunctionArgs) {
         ? String(shopifyCustomerId).trim()
         : undefined;
 
-    const allBadgeOrderItems: ReturnType<typeof convertBadgeToOrderItem>[] = [];
-
+    const updateLineItems: Array<{ designId: string; badgeIndex: number }> = [];
     for (const item of lineItems) {
       const designId = (item.designId ?? item.gadgetDesignId)?.trim();
       if (!designId) {
@@ -152,96 +105,50 @@ export async function action({ request }: ActionFunctionArgs) {
         );
         continue;
       }
-      let designData = item.designData;
-      if (getBadgesFromDesignData(designData).length === 0) {
-        const fromSupabase = await getDesignDataFromSupabase(designId);
-        if (fromSupabase != null) designData = fromSupabase;
-      }
-      const badges = getBadgesFromDesignData(designData);
-      if (badges.length === 0) {
-        console.warn(
-          `link-order: no badges in designData for designId ${designId}, skipping`,
-        );
-        continue;
-      }
-
-      const { pdfUrl, thumbnailUrls, fullImageUrls } = buildStorageUrls(
-        designId,
-        badges.length,
-      );
-
       const rawIndex = item.badgeIndex;
-      const itemBadgeIndex =
+      const badgeIndex =
         typeof rawIndex === "number"
           ? rawIndex
           : typeof rawIndex === "string"
-            ? parseInt(rawIndex.trim(), 10)
-            : undefined;
-      const useSingleBadge =
-        itemBadgeIndex !== undefined &&
-        !Number.isNaN(itemBadgeIndex) &&
-        itemBadgeIndex >= 0 &&
-        itemBadgeIndex < badges.length;
-
-      if (useSingleBadge) {
-        const badge = badges[itemBadgeIndex] as Badge;
-        const badgeOrderItem = convertBadgeToOrderItem(
-          badge,
-          designId,
-          itemBadgeIndex,
-          {
-            shopify_order_id: orderIdTrimmed,
-            shopify_order_number: orderNumberTrimmed,
-            shopify_customer_id: customerIdTrimmed,
-            pdf_url: pdfUrl,
-            thumbnail_url: thumbnailUrls[itemBadgeIndex],
-            full_image_url: fullImageUrls[itemBadgeIndex],
-          },
+            ? parseInt(String(rawIndex).trim(), 10)
+            : 0;
+      if (Number.isNaN(badgeIndex) || badgeIndex < 0) {
+        console.warn(
+          "link-order: invalid badgeIndex for designId " + designId + ", using 0",
         );
-        allBadgeOrderItems.push(badgeOrderItem);
+        updateLineItems.push({ designId, badgeIndex: 0 });
       } else {
-        for (let badgeIndex = 0; badgeIndex < badges.length; badgeIndex++) {
-          const badge = badges[badgeIndex] as Badge;
-          const badgeOrderItem = convertBadgeToOrderItem(
-            badge,
-            designId,
-            badgeIndex,
-            {
-              shopify_order_id: orderIdTrimmed,
-              shopify_order_number: orderNumberTrimmed,
-              shopify_customer_id: customerIdTrimmed,
-              pdf_url: pdfUrl,
-              thumbnail_url: thumbnailUrls[badgeIndex],
-              full_image_url: fullImageUrls[badgeIndex],
-            },
-          );
-          allBadgeOrderItems.push(badgeOrderItem);
-        }
+        updateLineItems.push({ designId, badgeIndex });
       }
     }
 
-    if (allBadgeOrderItems.length === 0) {
+    if (updateLineItems.length === 0) {
       return json(
         {
           error: "Bad request",
           message:
-            "No valid badge items to insert (missing designId or designData)",
+            "No valid line items to update (missing designId or gadgetDesignId)",
         },
         { status: 400 },
       );
     }
 
-    const saved = await saveBadgeOrderItems(allBadgeOrderItems);
-    const insertedCount = Array.isArray(saved) ? saved.length : 0;
+    const { data: updated } = await updateDraftBadgeOrderItemsWithOrderInfo({
+      lineItems: updateLineItems,
+      shopifyOrderId: orderIdTrimmed,
+      shopifyOrderNumber: orderNumberTrimmed,
+      shopifyCustomerId: customerIdTrimmed,
+    });
+    const updatedCount = Array.isArray(updated) ? updated.length : 0;
     console.log("[BadgeDesigner] link-order-to-supabase success", {
-      insertedCount,
+      updatedCount,
       shopifyOrderId: body.shopifyOrderId,
     });
 
     return json({
       success: true,
-      insertedCount,
-      message: `Inserted ${insertedCount} badge order item(s) with shopify_order_id`,
+      updatedCount,
+      message: `Updated ${updatedCount} draft badge order item(s) with order info`,
     });
   } catch (err) {
     console.error("Link order to Supabase error:", err);
