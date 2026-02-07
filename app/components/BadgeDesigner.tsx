@@ -2362,27 +2362,57 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         }
       };
 
+      // Send minimal design data to Gadget so it can populate the cart and so order-paid can match by design id
+      let gadgetDesignId: string | undefined;
+      try {
+        const firstBadge = allBadgesForSupabase[0];
+        const minimalDesignData = {
+          designId: designIdForSupabase,
+          productId: _productId || "test-product",
+          shopId: shopData.shopId || "test-shop",
+          textLines: firstBadge?.lines ?? [],
+          badge: firstBadge
+            ? {
+                lines: firstBadge.lines,
+                backgroundColor: firstBadge.backgroundColor,
+                backing: firstBadge.backing,
+              }
+            : undefined,
+          allBadges: allBadgesForSupabase.map((b) => ({
+            lines: b.lines,
+            backgroundColor: b.backgroundColor,
+            backing: b.backing,
+          })),
+        };
+        const savedDesign = await api.saveBadgeDesign(minimalDesignData, shopData);
+        gadgetDesignId = savedDesign?.id;
+      } catch (gadgetErr) {
+        console.warn("Gadget save at add-to-cart failed (cart will still add):", gadgetErr);
+      }
+
       const cartItems = allBadgesForSupabase.map((b, i) => {
         const backingP =
           b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0;
         const itemTotalPrice = (basePrice + backingP).toFixed(2);
+        const properties: Record<string, string> = {
+          "Custom Badge Design": "Yes",
+          "Badge Text Line 1": b.lines[0]?.text || "",
+          "Badge Text Line 2": b.lines[1]?.text || "",
+          "Badge Text Line 3": b.lines[2]?.text || "",
+          "Badge Text Line 4": b.lines[3]?.text || "",
+          "Background Color": b.backgroundColor,
+          "Font Family": b.lines[0]?.fontFamily || "Arial",
+          "Backing Type": b.backing,
+          "Design ID": designIdForSupabase,
+          Price: `$${itemTotalPrice}`,
+          "Badge Index": String(i),
+          "Custom Thumbnail": thumbnailUrls[i] ?? "",
+        };
+        if (gadgetDesignId) properties["Gadget Design ID"] = gadgetDesignId;
         return {
           variantId: getVariantId(b.backing),
           quantity: 1,
-          properties: {
-            "Custom Badge Design": "Yes",
-            "Badge Text Line 1": b.lines[0]?.text || "",
-            "Badge Text Line 2": b.lines[1]?.text || "",
-            "Badge Text Line 3": b.lines[2]?.text || "",
-            "Badge Text Line 4": b.lines[3]?.text || "",
-            "Background Color": b.backgroundColor,
-            "Font Family": b.lines[0]?.fontFamily || "Arial",
-            "Backing Type": b.backing,
-            "Design ID": designIdForSupabase,
-            Price: `$${itemTotalPrice}`,
-            "Badge Index": String(i),
-            "Custom Thumbnail": thumbnailUrls[i] ?? "",
-          },
+          properties,
         };
       });
 
