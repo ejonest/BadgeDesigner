@@ -96,12 +96,19 @@ export async function action({ request }: ActionFunctionArgs) {
         ? String(shopifyCustomerId).trim()
         : undefined;
 
+    console.log("[BadgeDesigner] link-order payload:", {
+      shopifyOrderId: orderIdTrimmed,
+      lineItemCount: lineItems.length,
+      firstItem: lineItems[0],
+    });
+
     const updateLineItems: Array<{ designId: string; badgeIndex: number }> = [];
     for (const item of lineItems) {
       const designId = (item.designId ?? item.gadgetDesignId)?.trim();
       if (!designId) {
         console.warn(
           "link-order: lineItem missing designId and gadgetDesignId, skipping",
+          { item: JSON.stringify(item).slice(0, 200) },
         );
         continue;
       }
@@ -140,9 +147,10 @@ export async function action({ request }: ActionFunctionArgs) {
       shopifyCustomerId: customerIdTrimmed,
     });
     const updatedCount = Array.isArray(updated) ? updated.length : 0;
-    console.log("[BadgeDesigner] link-order-to-supabase success", {
+    console.log("[BadgeDesigner] link-order-to-supabase result", {
       updatedCount,
       shopifyOrderId: body.shopifyOrderId,
+      updateLineItems: updateLineItems.map((u) => `${u.designId}/badge-${u.badgeIndex}`),
     });
 
     return json({
