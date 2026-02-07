@@ -3,6 +3,7 @@ import {
   getStoragePublicUrl,
   convertBadgeToOrderItem,
   saveBadgeOrderItems,
+  getDesignDataFromSupabase,
 } from "~/utils/supabase";
 import type { Badge } from "~/types/badge";
 
@@ -151,7 +152,11 @@ export async function action({ request }: ActionFunctionArgs) {
         );
         continue;
       }
-      const designData = item.designData;
+      let designData = item.designData;
+      if (getBadgesFromDesignData(designData).length === 0) {
+        const fromSupabase = await getDesignDataFromSupabase(designId);
+        if (fromSupabase != null) designData = fromSupabase;
+      }
       const badges = getBadgesFromDesignData(designData);
       if (badges.length === 0) {
         console.warn(

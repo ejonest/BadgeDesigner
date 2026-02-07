@@ -355,6 +355,50 @@ export async function getBadgeDesign(designId: string) {
   return data
 }
 
+/** Upsert design metadata into badge_designs for order-paid lookup (Supabase-only cache; no Gadget). */
+export async function upsertDesignCache(params: {
+  design_id: string
+  design_data: unknown
+  product_id: string
+  shop_id: string
+}) {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+  }
+  const { data, error } = await supabaseAdmin
+    .from('badge_designs')
+    .upsert(
+      {
+        design_id: params.design_id,
+        design_data: params.design_data,
+        product_id: params.product_id,
+        shop_id: params.shop_id,
+        status: 'saved',
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'design_id' }
+    )
+    .select()
+    .single()
+  if (error) {
+    console.error('upsertDesignCache error:', error)
+    throw error
+  }
+  return data
+}
+
+/** Fetch design_data from Supabase by design_id (for link-order when Gadget does not send designData). Returns null if not found. */
+export async function getDesignDataFromSupabase(designId: string): Promise<unknown | null> {
+  if (!supabaseAdmin) return null
+  const { data, error } = await supabaseAdmin
+    .from('badge_designs')
+    .select('design_data')
+    .eq('design_id', designId)
+    .maybeSingle()
+  if (error || !data) return null
+  return data.design_data ?? null
+}
+
 export async function getCustomerDesigns(customerId: string) {
   if (!supabaseAdmin) {
     throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')

@@ -1,0 +1,36 @@
+{% comment %}
+  Renders the custom badge thumbnail as an image for the cart item (left column).
+  Use in the cart item media cell so the badge preview appears to the left of the product title.
+  Pass: item (cart item)
+{% endcomment %}
+{%- assign custom_thumb = item.properties._custom_thumbnail | default: item.properties['Custom Thumbnail'] -%}
+{%- if custom_thumb != blank -%}
+  {%- assign custom_thumb_url = custom_thumb | strip -%}
+  <a href="{{ item.url }}" class="cart-item__link" aria-hidden="true" tabindex="-1"> </a>
+  <div class="cart-item__image-container gradient global-media-settings">
+    {%- comment -%} External badge thumbnail URL (Supabase); height set for theme-check ImgWidthAndHeight {%- endcomment -%}
+    {% # theme-check-disable RemoteAsset %}
+    <img
+      src="{{ custom_thumb_url }}"
+      class="cart-item__image"
+      alt="Custom Badge Design"
+      loading="lazy"
+      width="100"
+      height="100"
+      style="max-width: 100px; height: auto; border: 1px solid #ddd; border-radius: 4px; object-fit: contain;"
+    >
+    {% # theme-check-enable RemoteAsset %}
+  </div>
+{%- elsif item.image -%}
+  <a href="{{ item.url }}" class="cart-item__link" aria-hidden="true" tabindex="-1"> </a>
+  <div class="cart-item__image-container gradient global-media-settings">
+    <img
+      src="{{ item.image | image_url: width: 300 }}"
+      class="cart-item__image"
+      alt="{{ item.image.alt | escape }}"
+      loading="lazy"
+      width="150"
+      height="{{ 150 | divided_by: item.image.aspect_ratio | ceil }}"
+    >
+  </div>
+{%- endif -%}
