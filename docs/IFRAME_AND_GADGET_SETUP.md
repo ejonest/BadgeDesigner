@@ -27,23 +27,17 @@ If you prefer not to use a snippet, paste the **whole block** (container + ifram
   Usage: {% render 'badge-designer-embed' %} on product page
 {% endcomment %}
 {% assign badge_designer_url = 'https://badgedesigner.vercel.app' %}
-
-<div class="badge-designer-container" style="width: 100%; margin: 20px 0;">
-  <div style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-    <h2 style="margin-top: 0;">Customize Your Badge</h2>
-    {% assign v0 = product.variants[0] %}
-    {% assign v1 = product.variants[1] | default: v0 %}
-    {% assign v2 = product.variants[2] | default: v0 %}
-    <iframe
-      id="badge-designer-iframe"
-      src="{{ badge_designer_url }}?shop={{ shop.permanent_domain | url_param_escape }}&storeUrl={{ shop.permanent_domain | url_param_escape }}&product={{ product.id | url_param_escape }}&variantIdPin={{ v0.id | url_param_escape }}&variantIdMagnetic={{ v1.id | url_param_escape }}&variantIdAdhesive={{ v2.id | url_param_escape }}{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}"
-      width="100%"
-      height="800px"
-      frameborder="0"
-      style="border: none; border-radius: 4px;"
-      allow="clipboard-read; clipboard-write"
-    ></iframe>
-  </div>
+{% assign v0 = product.variants[0] %}
+{% assign v1 = product.variants[1] | default: v0 %}
+{% assign v2 = product.variants[2] | default: v0 %}
+<div style="width:100%; min-height:900px;">
+  <iframe
+    id="badge-designer-iframe"
+    src="{{ badge_designer_url }}?shop={{ shop.permanent_domain | url_param_escape }}&storeUrl={{ shop.permanent_domain | url_param_escape }}&product={{ product.id | url_param_escape }}&variantIdPin={{ v0.id | url_param_escape }}&variantIdMagnetic={{ v1.id | url_param_escape }}&variantIdAdhesive={{ v2.id | url_param_escape }}{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}"
+    style="width:100%; height:900px; border:0;"
+    loading="lazy"
+    allow="clipboard-read; clipboard-write"
+  ></iframe>
 </div>
 
 <script>
@@ -76,13 +70,6 @@ If you prefer not to use a snippet, paste the **whole block** (container + ifram
     }
   });
 </script>
-
-<style>
-  .badge-designer-container { max-width: 1200px; margin: 0 auto; }
-  @media (max-width: 768px) {
-    .badge-designer-container iframe { height: 600px !important; }
-  }
-</style>
 ```
 
 **Important:** Replace `https://badgedesigner.vercel.app` with your actual Vercel app URL if different. The `event.origin` check must match that URL.

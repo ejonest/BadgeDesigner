@@ -923,6 +923,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const backgroundSectionRef = useRef<HTMLButtonElement | null>(null);
   const textLinesSectionRef = useRef<HTMLButtonElement | null>(null);
 
+  /** Stable design id for this session; used for incremental draft saves and add-to-cart. */
+  const sessionDesignIdRef = useRef<string | null>(null);
+
   // Helper function to scroll a section into view within its scrollable container
   const scrollSectionIntoView = (
     element: HTMLElement | null,
@@ -1171,6 +1174,89 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
     return template;
   }, [templates, universalTemplateId]);
+
+  // Set session design id once when we have badges and template (for incremental draft saves)
+  useEffect(() => {
+    if (activeTemplate && multipleBadges.length > 0 && !sessionDesignIdRef.current) {
+      sessionDesignIdRef.current = `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    }
+  }, [activeTemplate, multipleBadges.length]);
+
+  // Debounced draft save: persist badge PNGs/SVGs as user edits so add-to-cart only needs PDF
+  const DRAFT_SAVE_DEBOUNCE_MS = 800;
+  useEffect(() => {
+    if (!activeTemplate || multipleBadges.length === 0) return;
+    if (!sessionDesignIdRef.current) {
+      sessionDesignIdRef.current = `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    }
+    const designId = sessionDesignIdRef.current;
+
+    const timer = setTimeout(async () => {
+      const finalized = [...multipleBadges];
+      if (finalized[selectedBadgeIndex]) {
+        finalized[selectedBadgeIndex] = {
+          ...badge,
+          templateId: badge.templateId || universalTemplateId,
+          backgroundColor: badge.backgroundColor || "#FFFFFF",
+        };
+      }
+      const allBadgesForDraft = getAllBadges(finalized);
+      if (allBadgesForDraft.length === 0) return;
+
+      try {
+        const templateId = activeTemplate?.id || allBadgesForDraft[0]?.templateId || "rect-1x3";
+        const template = await loadTemplateById(templateId);
+        if (!template) return;
+
+        const badgePromises = allBadgesForDraft.map((b, i) =>
+          Promise.all([
+            generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
+            generateSVGAsBlob(b, template),
+          ])
+            .then(([pngBlob, svgBlob]) => ({
+              pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
+              svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
+              i,
+            }))
+            .catch(() => ({ pngBlob: new Blob(), svgBlob: new Blob(), i })),
+        );
+        const badgeResults = await Promise.all(badgePromises);
+        badgeResults.sort((a, b) => a.i - b.i);
+        const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
+        const svgBlobs = badgeResults.map((r) => r.svgBlob);
+
+        const designDataForDraft = {
+          badge: allBadgesForDraft[0],
+          multipleBadges: allBadgesForDraft.length > 1 ? allBadgesForDraft.slice(1) : [],
+          allBadges: allBadgesForDraft,
+          timestamp: new Date().toISOString(),
+          shopId: "test-shop",
+          productId: _productId || "test-product",
+          backgroundColor: allBadgesForDraft[0].backgroundColor,
+          backingType: allBadgesForDraft[0].backing,
+          textLines: allBadgesForDraft[0].lines,
+        };
+        const formData = new FormData();
+        formData.append("designId", designId);
+        formData.append("designData", JSON.stringify(designDataForDraft));
+        const shopifyCustomerIdFromUrl = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("customerId") : null;
+        if (shopifyCustomerIdFromUrl) formData.append("shopifyCustomerId", shopifyCustomerIdFromUrl);
+        thumbnailPngBlobs.forEach((pngBlob, index) => {
+          if (pngBlob?.size > 0) formData.append(`thumbnail_png_${index}`, pngBlob, `badge-${index}-thumbnail.png`);
+        });
+        svgBlobs.forEach((svgBlob, index) => {
+          if (svgBlob?.size > 0) formData.append(`svg_${index}`, svgBlob, `badge-${index}-design.svg`);
+        });
+
+        const res = await fetch("/api/save-draft-badges", { method: "POST", body: formData });
+        if (!res.ok) console.warn("[BadgeDesigner] Draft save failed:", await res.text());
+      } catch (err) {
+        console.warn("[BadgeDesigner] Draft save error:", err);
+      }
+    }, DRAFT_SAVE_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [activeTemplate, multipleBadges, badge, selectedBadgeIndex, universalTemplateId, _productId]);
 
   const touchStartX = React.useRef<number>(0);
 
@@ -2183,9 +2269,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         return;
       }
 
-      const designId = `design_${Date.now()}_${Math.random()
-        .toString(36)
-        .slice(2, 11)}`;
+      if (!sessionDesignIdRef.current) {
+        sessionDesignIdRef.current = `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      }
+      const designId = sessionDesignIdRef.current;
       const shopifyCustomerIdFromUrl =
         typeof window !== "undefined"
           ? new URLSearchParams(window.location.search).get("customerId")
@@ -2229,102 +2316,128 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
       let thumbnailUrls: string[] = [];
       try {
-        const templateToUse = activeTemplate;
-        const templateId =
-          templateToUse?.id ||
-          allBadgesForSupabase[0]?.templateId ||
-          "rect-1x3";
-        const template = await loadTemplateById(templateId);
-        if (template && allBadgesForSupabase.length > 0) {
-          const pdfPromise = generatePDFAsBlob(
-            allBadgesForSupabase[0],
-            allBadgesForSupabase.length > 1
-              ? allBadgesForSupabase.slice(1)
-              : undefined,
-          );
-          const badgePromises = allBadgesForSupabase.map((b, i) =>
-            Promise.all([
-              generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
-              generateSVGAsBlob(b, template),
-            ])
-              .then(([pngBlob, svgBlob]) => ({
-                pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
-                svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
-                i,
-              }))
-              .catch(() => ({ pngBlob: new Blob(), svgBlob: new Blob(), i })),
-          );
-          const [pdfBlob, ...badgeResults] = await Promise.all([
-            pdfPromise,
-            ...badgePromises,
-          ]);
-          badgeResults.sort((a, b) => a.i - b.i);
-          const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
-          const svgBlobs = badgeResults.map((r) => r.svgBlob);
-          const designDataForSupabase = {
-            badge: allBadgesForSupabase[0],
-            multipleBadges:
+        // Try finalize-draft first (PDF only); use draft rows from incremental saves when present
+        const pdfBlobForFinalize = await generatePDFAsBlob(
+          allBadgesForSupabase[0],
+          allBadgesForSupabase.length > 1
+            ? allBadgesForSupabase.slice(1)
+            : undefined,
+        );
+        const formDataFinalize = new FormData();
+        formDataFinalize.append("designId", designIdForSupabase);
+        formDataFinalize.append("pdf", pdfBlobForFinalize, "badge-design.pdf");
+        const finalizeRes = await fetch("/api/finalize-draft", {
+          method: "POST",
+          body: formDataFinalize,
+        });
+        const finalizeJson = await finalizeRes.json().catch(() => ({}));
+        const usedFinalize =
+          finalizeRes.ok &&
+          !finalizeJson.draftNotFound &&
+          Array.isArray(finalizeJson.thumbnailUrls) &&
+          finalizeJson.thumbnailUrls.length >= allBadgesForSupabase.length;
+
+        if (usedFinalize) {
+          thumbnailUrls = finalizeJson.thumbnailUrls;
+        } else {
+          // Fallback: no draft rows (e.g. add-to-cart before first debounced save) — full generate + send-to-supabase
+          const templateToUse = activeTemplate;
+          const templateId =
+            templateToUse?.id ||
+            allBadgesForSupabase[0]?.templateId ||
+            "rect-1x3";
+          const template = await loadTemplateById(templateId);
+          if (template && allBadgesForSupabase.length > 0) {
+            const pdfPromise = generatePDFAsBlob(
+              allBadgesForSupabase[0],
               allBadgesForSupabase.length > 1
                 ? allBadgesForSupabase.slice(1)
-                : [],
-            allBadges: allBadgesForSupabase,
-            timestamp: new Date().toISOString(),
-            shopId: shopData.shopId || "test-shop",
-            productId: _productId || "test-product",
-            backgroundColor: allBadgesForSupabase[0].backgroundColor,
-            backingType: allBadgesForSupabase[0].backing,
-            textLines: allBadgesForSupabase[0].lines,
-          };
-          const formDataForSupabase = new FormData();
-          formDataForSupabase.append("designId", designIdForSupabase);
-          formDataForSupabase.append(
-            "designData",
-            JSON.stringify(designDataForSupabase),
-          );
-          formDataForSupabase.append("storageOnly", "true");
-          if (shopifyCustomerIdFromUrl) {
+                : undefined,
+            );
+            const badgePromises = allBadgesForSupabase.map((b, i) =>
+              Promise.all([
+                generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
+                generateSVGAsBlob(b, template),
+              ])
+                .then(([pngBlob, svgBlob]) => ({
+                  pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
+                  svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
+                  i,
+                }))
+                .catch(() => ({ pngBlob: new Blob(), svgBlob: new Blob(), i })),
+            );
+            const [pdfBlob, ...badgeResults] = await Promise.all([
+              pdfPromise,
+              ...badgePromises,
+            ]);
+            badgeResults.sort((a, b) => a.i - b.i);
+            const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
+            const svgBlobs = badgeResults.map((r) => r.svgBlob);
+            const designDataForSupabase = {
+              badge: allBadgesForSupabase[0],
+              multipleBadges:
+                allBadgesForSupabase.length > 1
+                  ? allBadgesForSupabase.slice(1)
+                  : [],
+              allBadges: allBadgesForSupabase,
+              timestamp: new Date().toISOString(),
+              shopId: shopData.shopId || "test-shop",
+              productId: _productId || "test-product",
+              backgroundColor: allBadgesForSupabase[0].backgroundColor,
+              backingType: allBadgesForSupabase[0].backing,
+              textLines: allBadgesForSupabase[0].lines,
+            };
+            const formDataForSupabase = new FormData();
+            formDataForSupabase.append("designId", designIdForSupabase);
             formDataForSupabase.append(
-              "shopifyCustomerId",
-              shopifyCustomerIdFromUrl,
+              "designData",
+              JSON.stringify(designDataForSupabase),
             );
-          }
-          formDataForSupabase.append("pdf", pdfBlob, "badge-design.pdf");
-          thumbnailPngBlobs.forEach((pngBlob, index) => {
-            if (pngBlob && pngBlob.size > 0) {
+            formDataForSupabase.append("storageOnly", "true");
+            if (shopifyCustomerIdFromUrl) {
               formDataForSupabase.append(
-                `thumbnail_png_${index}`,
-                pngBlob,
-                `badge-${index}-thumbnail.png`,
+                "shopifyCustomerId",
+                shopifyCustomerIdFromUrl,
               );
             }
-          });
-          svgBlobs.forEach((svgBlob, index) => {
-            if (svgBlob && svgBlob.size > 0) {
-              formDataForSupabase.append(
-                `svg_${index}`,
-                svgBlob,
-                `badge-${index}-design.svg`,
+            formDataForSupabase.append("pdf", pdfBlob, "badge-design.pdf");
+            thumbnailPngBlobs.forEach((pngBlob, index) => {
+              if (pngBlob && pngBlob.size > 0) {
+                formDataForSupabase.append(
+                  `thumbnail_png_${index}`,
+                  pngBlob,
+                  `badge-${index}-thumbnail.png`,
+                );
+              }
+            });
+            svgBlobs.forEach((svgBlob, index) => {
+              if (svgBlob && svgBlob.size > 0) {
+                formDataForSupabase.append(
+                  `svg_${index}`,
+                  svgBlob,
+                  `badge-${index}-design.svg`,
+                );
+              }
+            });
+            const supabaseResponse = await fetch("/api/send-to-supabase", {
+              method: "POST",
+              body: formDataForSupabase,
+            });
+            if (supabaseResponse.ok) {
+              const supabaseJson = await supabaseResponse.json().catch(() => ({}));
+              thumbnailUrls = Array.isArray(supabaseJson.thumbnailUrls)
+                ? supabaseJson.thumbnailUrls
+                : [];
+            } else {
+              const errData = await supabaseResponse.json().catch(() => ({}));
+              console.warn(
+                "Supabase proof upload failed (cart will still add):",
+                errData.message || supabaseResponse.statusText,
+              );
+              alert(
+                "Proof upload failed; your design will still be added to cart. Support may follow up for the proof.",
               );
             }
-          });
-          const supabaseResponse = await fetch("/api/send-to-supabase", {
-            method: "POST",
-            body: formDataForSupabase,
-          });
-          if (supabaseResponse.ok) {
-            const supabaseJson = await supabaseResponse.json().catch(() => ({}));
-            thumbnailUrls = Array.isArray(supabaseJson.thumbnailUrls)
-              ? supabaseJson.thumbnailUrls
-              : [];
-          } else {
-            const errData = await supabaseResponse.json().catch(() => ({}));
-            console.warn(
-              "Supabase proof upload failed (cart will still add):",
-              errData.message || supabaseResponse.statusText,
-            );
-            alert(
-              "Proof upload failed; your design will still be added to cart. Support may follow up for the proof.",
-            );
           }
         }
       } catch (supabaseErr) {
