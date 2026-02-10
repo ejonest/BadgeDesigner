@@ -422,7 +422,7 @@ export interface BadgeOrderItem {
   full_image_url?: string
   pdf_url?: string
   shopify_customer_id?: string
-  status?: 'draft' | 'order_placed' | 'fulfilled'
+  status?: 'draft' | 'in_cart' | 'order_placed' | 'fulfilled'
   created_at?: string
   updated_at?: string
 }
@@ -790,6 +790,21 @@ export async function updateDraftPdfUrlAndReturnRows(
   return { thumbnailUrls, fullImageUrls, updatedCount: rows.length }
 }
 
+/** Set status for all badge_order_items with the given design_id (e.g. 'in_cart' when user adds to cart). */
+export async function updateBadgeOrderItemsStatusByDesignId(designId: string, status: string) {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+  }
+  const { error } = await supabaseAdmin
+    .from('badge_order_items')
+    .update({ status, updated_at: getPacificTimestamp() })
+    .eq('design_id', designId)
+  if (error) {
+    console.error('updateBadgeOrderItemsStatusByDesignId error:', error)
+    throw error
+  }
+}
+
 /** Delete draft rows for design_id whose badge_id is not in keepBadgeIds. */
 export async function deleteDraftBadgeOrderItemsExcept(designId: string, keepBadgeIds: string[]) {
   if (!supabaseAdmin) {
@@ -873,7 +888,7 @@ export async function updateDraftBadgeOrderItemsWithOrderInfo(params: {
       .update(payload)
       .eq('design_id', designId)
       .eq('badge_id', badgeId)
-      .eq('status', 'draft')
+      .in('status', ['draft', 'in_cart'])
       .select()
       .maybeSingle()
     if (error) {

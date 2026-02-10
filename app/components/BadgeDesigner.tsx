@@ -2327,16 +2327,32 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const basePrice = 9.99;
   const backingPrice =
     badge.backing === "magnetic" ? 2 : badge.backing === "adhesive" ? 1 : 0;
-  const totalPrice = (basePrice + backingPrice).toFixed(2);
+  const totalPriceAllBadges =
+    multipleBadges.length > 0
+      ? multipleBadges
+          .reduce(
+            (sum, b) =>
+              sum +
+              basePrice +
+              (b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0),
+            0
+          )
+          .toFixed(2)
+      : "0.00";
 
   const addToCart = async () => {
     if (isAddingToCart) return;
+    if (multipleBadges.length === 0) {
+      alert("Add at least one badge first.");
+      return;
+    }
     setIsAddingToCart(true);
 
     try {
       const shopData = getCurrentShop(_shop);
       if (!shopData) {
         alert("Shop information not found. Please reload the page.");
+        setIsAddingToCart(false);
         return;
       }
 
@@ -2828,8 +2844,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     reader.readAsText(file);
   }
 
-  // Pricing display
-  const prettyPrice = `$${totalPrice}`;
+  // Pricing display (total for all badges)
+  const prettyPrice = `$${totalPriceAllBadges}`;
 
   // Early guard - don't render until we have a concrete template
   if (!activeTemplate) {
@@ -3676,19 +3692,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </button>
             <button
               className={`px-4 py-2 rounded shadow ${
-                isAddingToCart
+                isAddingToCart || multipleBadges.length === 0
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700"
               } text-white`}
               onClick={(e) => {
                 e.preventDefault();
-                if (!isAddingToCart) addToCart();
+                if (!isAddingToCart && multipleBadges.length > 0) addToCart();
               }}
-              disabled={isAddingToCart}
+              disabled={isAddingToCart || multipleBadges.length === 0}
             >
               {isAddingToCart
                 ? "Adding to Cart..."
-                : `Add to Cart - ${prettyPrice}`}
+                : multipleBadges.length === 0
+                  ? "Add to Cart - Pick a template first"
+                  : `Add to Cart - ${prettyPrice}`}
             </button>
           </div>
 
