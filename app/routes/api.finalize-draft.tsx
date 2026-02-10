@@ -2,6 +2,7 @@ import { json, type ActionFunctionArgs } from "@remix-run/node";
 import {
   uploadToBadgePdfsBucket,
   updateDraftPdfUrlAndReturnRows,
+  updateBadgeOrderItemsStatusByDesignId,
 } from "~/utils/supabase";
 
 /**
@@ -56,6 +57,8 @@ export async function action({ request }: ActionFunctionArgs) {
         message: "No draft rows found for this design; use full add-to-cart flow.",
       });
     }
+
+    await updateBadgeOrderItemsStatusByDesignId(designId, "in_cart");
 
     return json({
       success: true,

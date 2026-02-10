@@ -4,6 +4,7 @@ import {
   uploadToBadgeImagesBucket,
   saveBadgeOrderItems,
   convertBadgeToOrderItem,
+  updateBadgeOrderItemsStatusByDesignId,
 } from "~/utils/supabase";
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -187,6 +188,7 @@ export async function action({ request }: ActionFunctionArgs) {
         console.log(
           `[BadgeDesigner] storageOnly: saved ${savedCount} draft badge order items for design ${designId}`,
         );
+        await updateBadgeOrderItemsStatusByDesignId(designId, "in_cart");
       } catch (saveErr) {
         console.error(
           "[BadgeDesigner] storageOnly: saveBadgeOrderItems failed:",
