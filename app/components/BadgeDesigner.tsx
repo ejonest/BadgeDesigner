@@ -89,8 +89,8 @@ const fontColors = FONT_COLORS;
 const maxLines = BADGE_CONSTANTS.MAX_LINES;
 const badgeWidth = BADGE_CONSTANTS.BADGE_WIDTH;
 
-/** Scale for thumbnail PNGs (cart/upload). Lower = smaller file and faster; 0.75 balances speed and clarity. */
-const THUMBNAIL_PNG_SCALE = 0.75;
+/** Scale for thumbnail PNGs (cart/upload). Lower = smaller file and faster; 0.5 for speed, revert to 0.75 if too soft. */
+const THUMBNAIL_PNG_SCALE = 0.5;
 
 /** Mobile preview (top of screen): tweak these to adjust the box and badge size. */
 const MOBILE_PREVIEW = {
@@ -2205,6 +2205,28 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       // Design metadata and files go only to Supabase (no Gadget at add-to-cart). designData is cached in Supabase for link-order when order is paid.
       const designIdForSupabase = designId;
 
+      // Start Gadget save in parallel with generation + upload so it doesn't block the critical path
+      const firstBadge = allBadgesForSupabase[0];
+      const minimalDesignData = {
+        designId: designIdForSupabase,
+        productId: _productId || "test-product",
+        shopId: shopData.shopId || "test-shop",
+        textLines: firstBadge?.lines ?? [],
+        badge: firstBadge
+          ? {
+              lines: firstBadge.lines,
+              backgroundColor: firstBadge.backgroundColor,
+              backing: firstBadge.backing,
+            }
+          : undefined,
+        allBadges: allBadgesForSupabase.map((b) => ({
+          lines: b.lines,
+          backgroundColor: b.backgroundColor,
+          backing: b.backing,
+        })),
+      };
+      const gadgetPromise = api.saveBadgeDesign(minimalDesignData, shopData);
+
       let thumbnailUrls: string[] = [];
       try {
         const templateToUse = activeTemplate;
@@ -2343,29 +2365,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         }
       };
 
-      // Send minimal design data to Gadget so it can populate the cart and so order-paid can match by design id
+      // Await Gadget promise (started in parallel above); use id for cart line properties when present
       let gadgetDesignId: string | undefined;
       try {
-        const firstBadge = allBadgesForSupabase[0];
-        const minimalDesignData = {
-          designId: designIdForSupabase,
-          productId: _productId || "test-product",
-          shopId: shopData.shopId || "test-shop",
-          textLines: firstBadge?.lines ?? [],
-          badge: firstBadge
-            ? {
-                lines: firstBadge.lines,
-                backgroundColor: firstBadge.backgroundColor,
-                backing: firstBadge.backing,
-              }
-            : undefined,
-          allBadges: allBadgesForSupabase.map((b) => ({
-            lines: b.lines,
-            backgroundColor: b.backgroundColor,
-            backing: b.backing,
-          })),
-        };
-        const savedDesign = await api.saveBadgeDesign(minimalDesignData, shopData);
+        const savedDesign = await gadgetPromise;
         gadgetDesignId = savedDesign?.id;
       } catch (gadgetErr) {
         console.warn("Gadget save at add-to-cart failed (cart will still add):", gadgetErr);
