@@ -1,41 +1,128 @@
-2026-02-07 00:41:30.153 [info] [BadgeDesigner] api.send-to-supabase request received 2026-02-07T00:41:30.152Z POST
-2026-02-07 00:41:30.172 [info] [BadgeDesigner] send-to-supabase payload: {
-  designId: 'design_1770424888831_gldcotf9o',
-  hasPdf: true,
-  thumbnailCount: 3,
-  svgCount: 3,
-  shopifyCustomerId: null
-}
-2026-02-07 00:41:30.675 [info] Uploading PDF to badge-pdfs bucket: design_1770424888831_gldcotf9o/badge-design.pdf (application/pdf, 57521 bytes)
-2026-02-07 00:41:31.008 [info] PDF uploaded successfully to badge-pdfs: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-pdfs/design_1770424888831_gldcotf9o/badge-design.pdf
-2026-02-07 00:41:31.009 [info] PDF uploaded successfully to badge-pdfs (56.17 KB): https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-pdfs/design_1770424888831_gldcotf9o/badge-design.pdf
-2026-02-07 00:41:31.135 [info] Uploading image to badge-images bucket: design_1770424888831_gldcotf9o/badge-0-thumbnail.png (image/png, 6885 bytes)
-2026-02-07 00:41:31.314 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770424888831_gldcotf9o/badge-0-thumbnail.png
-2026-02-07 00:41:31.314 [info] Thumbnail PNG uploaded successfully to badge-images for badge 0: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770424888831_gldcotf9o/badge-0-thumbnail.png
-2026-02-07 00:41:31.385 [info] Uploading image to badge-images bucket: design_1770424888831_gldcotf9o/badge-0-design.svg (image/svg+xml, 4725 bytes)
-2026-02-07 00:41:31.529 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770424888831_gldcotf9o/badge-0-design.svg
-2026-02-07 00:41:31.529 [info] SVG uploaded successfully to badge-images for badge 0: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770424888831_gldcotf9o/badge-0-design.svg
-2026-02-07 00:41:31.623 [info] Uploading image to badge-images bucket: design_1770424888831_gldcotf9o/badge-1-thumbnail.png (image/png, 6520 bytes)
-2026-02-07 00:41:31.785 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770424888831_gldcotf9o/badge-1-thumbnail.png
-2026-02-07 00:41:31.785 [info] Thumbnail PNG uploaded successfully to badge-images for badge 1: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770424888831_gldcotf9o/badge-1-thumbnail.png
-2026-02-07 00:41:31.878 [info] Uploading image to badge-images bucket: design_1770424888831_gldcotf9o/badge-1-design.svg (image/svg+xml, 4719 bytes)
-2026-02-07 00:41:32.016 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770424888831_gldcotf9o/badge-1-design.svg
-2026-02-07 00:41:32.016 [info] SVG uploaded successfully to badge-images for badge 1: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770424888831_gldcotf9o/badge-1-design.svg
-2026-02-07 00:41:32.138 [info] Uploading image to badge-images bucket: design_1770424888831_gldcotf9o/badge-2-thumbnail.png (image/png, 7934 bytes)
-2026-02-07 00:41:32.283 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770424888831_gldcotf9o/badge-2-thumbnail.png
-2026-02-07 00:41:32.283 [info] Thumbnail PNG uploaded successfully to badge-images for badge 2: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770424888831_gldcotf9o/badge-2-thumbnail.png
-2026-02-07 00:41:32.348 [info] Uploading image to badge-images bucket: design_1770424888831_gldcotf9o/badge-2-design.svg (image/svg+xml, 4721 bytes)
-2026-02-07 00:41:32.518 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770424888831_gldcotf9o/badge-2-design.svg
-2026-02-07 00:41:32.518 [info] SVG uploaded successfully to badge-images for badge 2: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770424888831_gldcotf9o/badge-2-design.svg
-2026-02-07 00:41:33.154 [error] upsertDesignCache error: {
-  code: 'PGRST205',
+Feb 10 14:50:35.81
+POST
+500
+badgedesigner.vercel.app
+/api/save-draft-badges
+11
+[save-draft-badges] error: { code: '42P10', details: null, hint: null, message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification' }
+Feb 10 14:50:10.61
+POST
+500
+badgedesigner.vercel.app
+/api/save-draft-badges
+7
+[save-draft-badges] error: { code: '42P10', details: null, hint: null, message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification' }
+Feb 10 14:50:06.45
+POST
+---
+badgedesigner.vercel.app
+/api/save-draft-badges
+7
+[save-draft-badges] error: { code: '42P10', details: null, hint: null, message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification' }
+Feb 10 14:50:04.23
+POST
+500
+badgedesigner.vercel.app
+/api/save-draft-badges
+7
+[save-draft-badges] error: { code: '42P10', details: null, hint: null, message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification' }
+Feb 10 14:49:57.29
+POST
+500
+badgedesigner.vercel.app
+/api/save-draft-badges
+7
+[save-draft-badges] error: { code: '42P10', details: null, hint: null, message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification' }
+Feb 10 14:49:56.00
+GET
+200
+badgedesigner.vercel.app
+/
+2
+Gadget API Configuration: { GADGET_API_URL: 'https://all-quality-badge-designer--development.gadget.app/', environment: 'development', GADGET_API_KEY: 'SET' }
+Feb 10 14:49:55.97
+POST
+500
+badgedesigner.vercel.app
+/api/save-draft-badges
+7
+[save-draft-badges] error: { code: '42P10', details: null, hint: null, message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification' }
+Feb 10 14:49:54.51
+GET
+200
+badgedesigner.vercel.app
+/
+2
+Gadget API Configuration: { GADGET_API_URL: 'https://all-quality-badge-designer--development.gadget.app/', environment: 'development', GADGET_API_KEY: 'SET' }
+Feb 10 14:49:49.34
+POST
+401
+badgedesigner-iwoo2214l-ethan-jones-projects-481b64bb.vercel.app
+/api/save-draft-badges
+Feb 10 14:49:45.19
+GET
+200
+badgedesigner-iwoo2214l-ethan-jones-projects-481b64bb.vercel.app
+/
+2
+Gadget API Configuration: { GADGET_API_URL: 'https://all-quality-badge-designer--development.gadget.app/', environment: 'development', GADGET_API_KEY: 'SET' }
+Feb 10 14:49:45.11
+GET
+---
+badgedesigner-iwoo2214l-ethan-jones-projects-481b64bb.vercel.app
+/
+2
+Gadget API Configuration: { GADGET_API_URL: 'https://all-quality-badge-designer--development.gadget.app/', environment: 'development', GADGET_API_KEY: 'SET' }
+Feb 10 14:49:43.20
+GET
+200
+badgedesigner-iwoo2214l-ethan-jones-projects-481b64bb.vercel.app
+/
+2
+Gadget API Configuration: { GADGET_API_URL: 'https://all-quality-badge-designer--development.gadget.app/', environment: 'development', GADGET_API_KEY: 'SET' }
+Feb 10 14:49:43.13
+GET
+200
+badgedesigner-iwoo2214l-ethan-jones-projects-481b64bb.vercel.app
+/
+2
+Gadget API Configuration: { GADGET_API_URL: 'https://all-quality-badge-designer--development.gadget.app/', environment: 'development', GADGET_API_KEY: 'SET' }
+Feb 10 14:49:43.00
+GET
+200
+badgedesigner-iwoo2214l-ethan-jones-projects-481b64bb.vercel.app
+/
+2
+Gadget API Configuration: { GADGET_API_URL: 'https://all-quality-badge-designer--development.gadget.app/', environment: 'development', GADGET_API_KEY: 'SET' }
+Feb 10 14:49:42.99
+GET
+200
+badgedesigner-iwoo2214l-ethan-jones-projects-481b64bb.vercel.app
+/
+2
+Gadget API Configuration: { GADGET_API_URL: 'https://all-quality-badge-designer--development.gadget.app/', environment: 'development', GADGET_API_KEY: 'SET' }
+
+
+
+//Start of full log for most recent
+2026-02-10 22:50:35.968 [info] [BadgeDesigner] api.save-draft-badges request received 2026-02-10T22:50:35.968Z
+2026-02-10 22:50:36.106 [info] Uploading image to badge-images bucket: design_1770763796402_kjfnmd3dg/badge-0-thumbnail.png (image/png, 3411 bytes)
+2026-02-10 22:50:36.246 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770763796402_kjfnmd3dg/badge-0-thumbnail.png
+2026-02-10 22:50:36.311 [info] Uploading image to badge-images bucket: design_1770763796402_kjfnmd3dg/badge-0-design.svg (image/svg+xml, 4382 bytes)
+2026-02-10 22:50:36.449 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770763796402_kjfnmd3dg/badge-0-design.svg
+2026-02-10 22:50:36.521 [info] Uploading image to badge-images bucket: design_1770763796402_kjfnmd3dg/badge-1-thumbnail.png (image/png, 3623 bytes)
+2026-02-10 22:50:36.670 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770763796402_kjfnmd3dg/badge-1-thumbnail.png
+2026-02-10 22:50:36.741 [info] Uploading image to badge-images bucket: design_1770763796402_kjfnmd3dg/badge-1-design.svg (image/svg+xml, 4715 bytes)
+2026-02-10 22:50:36.883 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770763796402_kjfnmd3dg/badge-1-design.svg
+2026-02-10 22:50:37.054 [error] upsertBadgeOrderItems error: {
+  code: '42P10',
   details: null,
-  hint: "Perhaps you meant the table 'public.badge_order_items'",
-  message: "Could not find the table 'public.badge_designs' in the schema cache"
+  hint: null,
+  message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification'
 }
-2026-02-07 00:41:33.154 [warning] Design cache upsert failed (link-order may still work if Gadget sends designData): {
-  code: 'PGRST205',
+2026-02-10 22:50:37.054 [error] [save-draft-badges] error: {
+  code: '42P10',
   details: null,
-  hint: "Perhaps you meant the table 'public.badge_order_items'",
-  message: "Could not find the table 'public.badge_designs' in the schema cache"
+  hint: null,
+  message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification'
 }
