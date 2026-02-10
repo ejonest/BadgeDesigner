@@ -2,13 +2,14 @@ import { json, type ActionFunctionArgs } from "@remix-run/node";
 import {
   uploadToBadgeImagesBucket,
   convertBadgeToOrderItem,
-  upsertBadgeOrderItems,
+  saveBadgeOrderItems,
   deleteDraftBadgeOrderItemsExcept,
 } from "~/utils/supabase";
 
 /**
  * Incremental draft save: accepts designId + badge PNGs/SVGs (no PDF), uploads to storage,
- * upserts badge_order_items, and deletes orphan draft rows for this design_id.
+ * replaces draft rows for this design_id (delete existing drafts then insert) so we don't
+ * depend on a unique constraint for upsert (table has a partial unique index only).
  */
 export async function action({ request }: ActionFunctionArgs) {
   if (request.method !== "POST") {
@@ -99,11 +100,9 @@ export async function action({ request }: ActionFunctionArgs) {
       badgeOrderItems.push(item);
     }
 
-    await upsertBadgeOrderItems(badgeOrderItems);
-    const keepBadgeIds = badgeOrderItems
-      .map((_, i) => `badge-${i}`)
-      .filter(Boolean);
-    await deleteDraftBadgeOrderItemsExcept(designId, keepBadgeIds);
+    // Delete all existing draft rows for this design, then insert (avoids ON CONFLICT / partial unique index issues)
+    await deleteDraftBadgeOrderItemsExcept(designId, []);
+    await saveBadgeOrderItems(badgeOrderItems);
 
     const thumbnailUrls = badgeOrderItems.map((i) => i.thumbnail_url || "");
     console.log("[BadgeDesigner] save-draft-badges OK:", designId, "savedCount:", badgeOrderItems.length);
