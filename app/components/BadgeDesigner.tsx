@@ -731,6 +731,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       badgeIndex: selectedBadgeIndex,
     });
 
+    setHasChosenBackgroundColor(true);
     const updatedBadge = {
       ...badge,
       backgroundColor: colorValue,
