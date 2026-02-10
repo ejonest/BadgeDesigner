@@ -89,6 +89,9 @@ const fontColors = FONT_COLORS;
 const maxLines = BADGE_CONSTANTS.MAX_LINES;
 const badgeWidth = BADGE_CONSTANTS.BADGE_WIDTH;
 
+/** Scale for thumbnail PNGs (cart/upload). Lower = smaller file and faster; 0.75 balances speed and clarity. */
+const THUMBNAIL_PNG_SCALE = 0.75;
+
 /** Mobile preview (top of screen): tweak these to adjust the box and badge size. */
 const MOBILE_PREVIEW = {
   /** Vertical padding of the surrounding box (rem). Smaller = tighter top/bottom margins. */
@@ -1914,63 +1917,43 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         .toString(36)
         .slice(2, 11)}`;
 
-      // Generate files as blobs
+      // Generate files as blobs (template once, then PDF + all badge PNGs/SVGs in parallel)
       console.log("Generating PDF and PNGs...");
 
-      // Generate PDF (first badge, rest as additional badges)
-      const pdfBlob = await generatePDFAsBlob(
+      const templateId =
+        templateToUse?.id || allBadges[0]?.templateId || "rect-1x3";
+      const template = await loadTemplateById(templateId);
+      if (!template) {
+        throw new Error("Template not found for image generation");
+      }
+
+      const pdfPromise = generatePDFAsBlob(
         allBadges[0],
         allBadges.length > 1 ? allBadges.slice(1) : undefined,
       );
+      const badgePromises = allBadges.map((badge, i) =>
+        Promise.all([
+          generatePNGAsBlob(badge, template, THUMBNAIL_PNG_SCALE),
+          generateSVGAsBlob(badge, template),
+        ])
+          .then(([pngBlob, svgBlob]) => ({
+            pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
+            svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
+            i,
+          }))
+          .catch((error) => {
+            console.error(`Error generating images for badge ${i}:`, error);
+            return { pngBlob: new Blob(), svgBlob: new Blob(), i };
+          }),
+      );
 
-      // Generate low-quality PNGs (for thumbnails) and SVGs (for full images) for each badge
-      const thumbnailPngBlobs: Blob[] = [];
-      const svgBlobs: Blob[] = [];
-
-      for (let i = 0; i < allBadges.length; i++) {
-        const badge = allBadges[i];
-        try {
-          // Load template for this badge
-          const badgeTemplate = await loadTemplateById(
-            badge.templateId || templateToUse.id,
-          );
-          if (!badgeTemplate) {
-            console.warn(
-              `Template not found for badge ${i}, skipping image generation`,
-            );
-            continue;
-          }
-
-          // Generate low-quality PNG for thumbnail (scale 1 for smaller file size)
-          const thumbnailPngBlob = await generatePNGAsBlob(
-            badge,
-            badgeTemplate,
-            1,
-          );
-          if (thumbnailPngBlob && thumbnailPngBlob.size > 0) {
-            thumbnailPngBlobs.push(thumbnailPngBlob);
-          } else {
-            console.warn(
-              `Generated thumbnail PNG for badge ${i} is empty, skipping`,
-            );
-            thumbnailPngBlobs.push(new Blob()); // Push empty blob to maintain index alignment
-          }
-
-          // Generate SVG for full image (high quality, scalable)
-          const svgBlob = await generateSVGAsBlob(badge, badgeTemplate);
-          if (svgBlob && svgBlob.size > 0) {
-            svgBlobs.push(svgBlob);
-          } else {
-            console.warn(`Generated SVG for badge ${i} is empty, skipping`);
-            svgBlobs.push(new Blob()); // Push empty blob to maintain index alignment
-          }
-        } catch (error) {
-          console.error(`Error generating images for badge ${i}:`, error);
-          // Push empty blobs to maintain index alignment
-          thumbnailPngBlobs.push(new Blob());
-          svgBlobs.push(new Blob());
-        }
-      }
+      const [pdfBlob, ...badgeResults] = await Promise.all([
+        pdfPromise,
+        ...badgePromises,
+      ]);
+      badgeResults.sort((a, b) => a.i - b.i);
+      const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
+      const svgBlobs = badgeResults.map((r) => r.svgBlob);
 
       // Prepare design data (use shop data if available, otherwise use defaults for testing)
       const designData = {
@@ -2225,39 +2208,37 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       let thumbnailUrls: string[] = [];
       try {
         const templateToUse = activeTemplate;
-        if (templateToUse && allBadgesForSupabase.length > 0) {
-          const pdfBlob = await generatePDFAsBlob(
+        const templateId =
+          templateToUse?.id ||
+          allBadgesForSupabase[0]?.templateId ||
+          "rect-1x3";
+        const template = await loadTemplateById(templateId);
+        if (template && allBadgesForSupabase.length > 0) {
+          const pdfPromise = generatePDFAsBlob(
             allBadgesForSupabase[0],
             allBadgesForSupabase.length > 1
               ? allBadgesForSupabase.slice(1)
               : undefined,
           );
-          const thumbnailPngBlobs: Blob[] = [];
-          const svgBlobs: Blob[] = [];
-          for (let i = 0; i < allBadgesForSupabase.length; i++) {
-            const b = allBadgesForSupabase[i];
-            try {
-              const badgeTemplate = await loadTemplateById(
-                b.templateId || templateToUse.id,
-              );
-              if (!badgeTemplate) continue;
-              const thumbnailPngBlob = await generatePNGAsBlob(
-                b,
-                badgeTemplate,
-                1,
-              );
-              thumbnailPngBlobs.push(
-                thumbnailPngBlob && thumbnailPngBlob.size > 0
-                  ? thumbnailPngBlob
-                  : new Blob(),
-              );
-              const svgBlob = await generateSVGAsBlob(b, badgeTemplate);
-              svgBlobs.push(svgBlob && svgBlob.size > 0 ? svgBlob : new Blob());
-            } catch {
-              thumbnailPngBlobs.push(new Blob());
-              svgBlobs.push(new Blob());
-            }
-          }
+          const badgePromises = allBadgesForSupabase.map((b, i) =>
+            Promise.all([
+              generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
+              generateSVGAsBlob(b, template),
+            ])
+              .then(([pngBlob, svgBlob]) => ({
+                pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
+                svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
+                i,
+              }))
+              .catch(() => ({ pngBlob: new Blob(), svgBlob: new Blob(), i })),
+          );
+          const [pdfBlob, ...badgeResults] = await Promise.all([
+            pdfPromise,
+            ...badgePromises,
+          ]);
+          badgeResults.sort((a, b) => a.i - b.i);
+          const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
+          const svgBlobs = badgeResults.map((r) => r.svgBlob);
           const designDataForSupabase = {
             badge: allBadgesForSupabase[0],
             multipleBadges:
