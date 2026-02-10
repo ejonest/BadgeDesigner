@@ -688,6 +688,131 @@ export async function saveBadgeOrderItems(items: BadgeOrderItem[]) {
   return data
 }
 
+/** Map BadgeOrderItem to row payload (shared by insert and upsert). */
+function badgeOrderItemToRow(item: BadgeOrderItem) {
+  return {
+    design_id: item.design_id,
+    badge_id: item.badge_id,
+    shopify_order_id: item.shopify_order_id,
+    shopify_order_number: item.shopify_order_number,
+    background_color: item.background_color,
+    line_1_text: item.line_1_text,
+    line_1_font: item.line_1_font,
+    line_1_font_size: item.line_1_font_size,
+    line_1_bold: item.line_1_bold,
+    line_1_underline: item.line_1_underline,
+    line_1_italicize: item.line_1_italicize,
+    line_1_color: item.line_1_color,
+    line_1_alignment: item.line_1_alignment,
+    line_2_text: item.line_2_text,
+    line_2_font: item.line_2_font,
+    line_2_font_size: item.line_2_font_size,
+    line_2_bold: item.line_2_bold,
+    line_2_underline: item.line_2_underline,
+    line_2_italicize: item.line_2_italicize,
+    line_2_color: item.line_2_color,
+    line_2_alignment: item.line_2_alignment,
+    line_3_text: item.line_3_text,
+    line_3_font: item.line_3_font,
+    line_3_font_size: item.line_3_font_size,
+    line_3_bold: item.line_3_bold,
+    line_3_underline: item.line_3_underline,
+    line_3_italicize: item.line_3_italicize,
+    line_3_color: item.line_3_color,
+    line_3_alignment: item.line_3_alignment,
+    line_4_text: item.line_4_text,
+    line_4_font: item.line_4_font,
+    line_4_font_size: item.line_4_font_size,
+    line_4_bold: item.line_4_bold,
+    line_4_underline: item.line_4_underline,
+    line_4_italicize: item.line_4_italicize,
+    line_4_color: item.line_4_color,
+    line_4_alignment: item.line_4_alignment,
+    thumbnail_url: item.thumbnail_url,
+    full_image_url: item.full_image_url,
+    pdf_url: item.pdf_url,
+    shopify_customer_id: item.shopify_customer_id,
+    status: item.status ?? 'draft',
+    updated_at: getPacificTimestamp()
+  }
+}
+
+/** Upsert badge order items by (design_id, badge_id). Used for incremental draft saves. */
+export async function upsertBadgeOrderItems(items: BadgeOrderItem[]) {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+  }
+  if (!items.length) return []
+  const rows = items.map(item => ({
+    ...badgeOrderItemToRow(item),
+    created_at: item.created_at || getPacificTimestamp()
+  }))
+  const { data, error } = await supabaseAdmin
+    .from('badge_order_items')
+    .upsert(rows, { onConflict: 'design_id,badge_id', ignoreDuplicates: false })
+    .select()
+  if (error) {
+    console.error('upsertBadgeOrderItems error:', error)
+    throw error
+  }
+  return data ?? []
+}
+
+/** Update draft rows for design_id with pdf_url and return rows (for thumbnailUrls). Returns empty if no rows updated. */
+export async function updateDraftPdfUrlAndReturnRows(
+  designId: string,
+  pdfUrl: string,
+): Promise<{ thumbnailUrls: string[]; fullImageUrls: string[]; updatedCount: number }> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+  }
+  const { data: updated, error: updateError } = await supabaseAdmin
+    .from('badge_order_items')
+    .update({
+      pdf_url: pdfUrl,
+      updated_at: getPacificTimestamp(),
+    })
+    .eq('design_id', designId)
+    .eq('status', 'draft')
+    .select('badge_id, thumbnail_url, full_image_url')
+  if (updateError) {
+    console.error('updateDraftPdfUrlAndReturnRows error:', updateError)
+    throw updateError
+  }
+  const rows = (updated ?? []) as Array<{ badge_id: string | null; thumbnail_url: string | null; full_image_url: string | null }>
+  rows.sort((a, b) => {
+    const aIdx = a.badge_id ? parseInt(a.badge_id.replace('badge-', ''), 10) : 0
+    const bIdx = b.badge_id ? parseInt(b.badge_id.replace('badge-', ''), 10) : 0
+    return aIdx - bIdx
+  })
+  const thumbnailUrls = rows.map((r) => r.thumbnail_url ?? '')
+  const fullImageUrls = rows.map((r) => r.full_image_url ?? '')
+  return { thumbnailUrls, fullImageUrls, updatedCount: rows.length }
+}
+
+/** Delete draft rows for design_id whose badge_id is not in keepBadgeIds. */
+export async function deleteDraftBadgeOrderItemsExcept(designId: string, keepBadgeIds: string[]) {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+  }
+  const { data: rows } = await supabaseAdmin
+    .from('badge_order_items')
+    .select('id, badge_id')
+    .eq('design_id', designId)
+    .eq('status', 'draft')
+  if (!rows?.length) return
+  const toDelete = rows.filter((r: { badge_id: string | null }) => r.badge_id && !keepBadgeIds.includes(r.badge_id)).map((r: { id: string }) => r.id)
+  if (!toDelete.length) return
+  const { error } = await supabaseAdmin
+    .from('badge_order_items')
+    .delete()
+    .in('id', toDelete)
+  if (error) {
+    console.error('deleteDraftBadgeOrderItemsExcept error:', error)
+    throw error
+  }
+}
+
 // Update badge_order_items with shopify_order_id and shopify_order_number by design_id (for link-order flow from Gadget)
 export async function updateBadgeOrderItemsByDesignIds(
   designIds: string[],
