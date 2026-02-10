@@ -779,6 +779,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     console.log(
       `[COLOR TRACKING] Background color ${currentBackgroundColor} applied to all badges`,
     );
+    setDraftSaveTrigger((t) => t + 1);
   };
 
   // Apply all formatting (background color + all text formatting) from current badge to all badges
@@ -840,6 +841,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     console.log(
       `[FORMATTING] All formatting (background color + text formatting) applied to all badges`,
     );
+    setDraftSaveTrigger((t) => t + 1);
   };
 
   const isRedColor = (color: string): boolean => {
@@ -850,19 +852,18 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   // API
   const api = createApi(gadgetApiUrl, gadgetApiKey);
 
-  // State
-  // Initialize multipleBadges with one default badge
+  // State: start with no badge; user must pick a template first
   const initialDefaultBadge: Badge = {
     ...INITIAL_BADGE,
     lines: INITIAL_BADGE.lines.map((line) => ({ ...line })),
   };
-  const [multipleBadges, setMultipleBadges] = useState<Badge[]>([
-    initialDefaultBadge,
-  ]);
+  const [multipleBadges, setMultipleBadges] = useState<Badge[]>([]);
   const [badge, setBadge] = useState<Badge>({
     ...initialDefaultBadge,
     lines: initialDefaultBadge.lines.map((line) => ({ ...line })),
   });
+  const [hasChosenBackgroundColor, setHasChosenBackgroundColor] =
+    useState(false);
   const [templates, setTemplates] = useState<LoadedTemplate[]>([]);
   const [templateRefreshKey, setTemplateRefreshKey] = useState(0); // Force template refresh
 
@@ -912,11 +913,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   });
   // Track which sections have been opened at least once
   const [sectionsOpened, setSectionsOpened] = useState({
-    template: false, // Template starts open, but we'll mark it as opened when user interacts
+    template: false,
     export: false,
     background: false,
     textLines: false,
   });
+  const stepsComplete =
+    multipleBadges.length > 0 &&
+    hasChosenBackgroundColor &&
+    sectionsOpened.textLines;
   // Refs for section headers to enable scroll-into-view
   const templateSectionRef = useRef<HTMLButtonElement | null>(null);
   const exportSectionRef = useRef<HTMLButtonElement | null>(null);
@@ -925,6 +930,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   /** Stable design id for this session; used for incremental draft saves and add-to-cart. */
   const sessionDesignIdRef = useRef<string | null>(null);
+
+  /** Bump to trigger a draft save after section close / apply-to-all / selectBadge (only when stepsComplete). */
+  const [draftSaveTrigger, setDraftSaveTrigger] = useState(0);
+  const multipleBadgesRef = useRef<Badge[]>(multipleBadges);
+  const badgeRef = useRef<Badge>(badge);
+  const selectedBadgeIndexRef = useRef<number>(selectedBadgeIndex);
+  const universalTemplateIdRef = useRef<string>(universalTemplateId);
+  multipleBadgesRef.current = multipleBadges;
+  badgeRef.current = badge;
+  selectedBadgeIndexRef.current = selectedBadgeIndex;
+  universalTemplateIdRef.current = universalTemplateId;
 
   // Helper function to scroll a section into view within its scrollable container
   const scrollSectionIntoView = (
@@ -1182,29 +1198,50 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   }, [activeTemplate, multipleBadges.length]);
 
-  // Debounced draft save: persist badge PNGs/SVGs as user edits so add-to-cart only needs PDF
-  const DRAFT_SAVE_DEBOUNCE_MS = 800;
+  const prevSectionsOpenRef = useRef(sectionsOpen);
   useEffect(() => {
-    if (!activeTemplate || multipleBadges.length === 0) return;
+    const prev = prevSectionsOpenRef.current;
+    const didClose =
+      (prev.template && !sectionsOpen.template) ||
+      (prev.background && !sectionsOpen.background) ||
+      (prev.textLines && !sectionsOpen.textLines) ||
+      (prev.export && !sectionsOpen.export);
+    prevSectionsOpenRef.current = sectionsOpen;
+    if (didClose) setDraftSaveTrigger((t) => t + 1);
+  }, [sectionsOpen]);
+
+  // Debounced draft save: only when stepsComplete, triggered by draftSaveTrigger (section close / apply-to-all / selectBadge)
+  const DRAFT_SAVE_DEBOUNCE_MS = 800;
+  const activeTemplateRef = useRef(activeTemplate);
+  activeTemplateRef.current = activeTemplate;
+  useEffect(() => {
+    if (!stepsComplete || !activeTemplateRef.current) return;
     if (!sessionDesignIdRef.current) {
       sessionDesignIdRef.current = `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
     }
     const designId = sessionDesignIdRef.current;
 
     const timer = setTimeout(async () => {
-      const finalized = [...multipleBadges];
-      if (finalized[selectedBadgeIndex]) {
-        finalized[selectedBadgeIndex] = {
-          ...badge,
-          templateId: badge.templateId || universalTemplateId,
-          backgroundColor: badge.backgroundColor || "#FFFFFF",
+      const multipleBadgesSnap = multipleBadgesRef.current;
+      const badgeSnap = badgeRef.current;
+      const selectedIdx = selectedBadgeIndexRef.current;
+      const universalId = universalTemplateIdRef.current;
+      const activeT = activeTemplateRef.current;
+      if (!activeT || multipleBadgesSnap.length === 0) return;
+
+      const finalized = [...multipleBadgesSnap];
+      if (finalized[selectedIdx]) {
+        finalized[selectedIdx] = {
+          ...badgeSnap,
+          templateId: badgeSnap.templateId || universalId,
+          backgroundColor: badgeSnap.backgroundColor || "#FFFFFF",
         };
       }
       const allBadgesForDraft = getAllBadges(finalized);
       if (allBadgesForDraft.length === 0) return;
 
       try {
-        const templateId = activeTemplate?.id || allBadgesForDraft[0]?.templateId || "rect-1x3";
+        const templateId = activeT?.id || allBadgesForDraft[0]?.templateId || "rect-1x3";
         const template = await loadTemplateById(templateId);
         if (!template) {
           console.warn("[BadgeDesigner] Draft save: template not loaded for", templateId);
@@ -1267,7 +1304,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }, DRAFT_SAVE_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [activeTemplate, multipleBadges, badge, selectedBadgeIndex, universalTemplateId, _productId]);
+  }, [draftSaveTrigger, stepsComplete, _productId]);
 
   const touchStartX = React.useRef<number>(0);
 
@@ -1793,6 +1830,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // UNIVERSAL TEMPLATE: Auto-save on switch, all badges use same template
   const selectBadge = (index: number) => {
+    if (multipleBadges.length === 0) return;
     console.log(
       `[UNIVERSAL] selectBadge called: index=${index}, current selectedBadgeIndex=${selectedBadgeIndex}`,
     );
@@ -1824,6 +1862,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
     // SWITCH: Load the selected badge for editing
     setSelectedBadgeIndex(index);
+    if (index !== selectedBadgeIndex) setDraftSaveTrigger((t) => t + 1);
 
     // Load the selected badge from multipleBadges array
     const selectedBadge = multipleBadges[index];
@@ -1844,6 +1883,26 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   // UNIVERSAL TEMPLATE: When template changes, update all badges and auto-scale text to fit
   const handleUniversalTemplateChange = async (newTemplateId: string) => {
     console.log(`[UNIVERSAL] Template changed to: ${newTemplateId}`);
+
+    if (multipleBadges.length === 0) {
+      const newTemplate = await loadTemplateById(newTemplateId);
+      if (!newTemplate) {
+        console.error("Template not found:", newTemplateId);
+        return;
+      }
+      const newBadge: Badge = {
+        ...INITIAL_BADGE,
+        templateId: newTemplateId,
+        backgroundColor: INITIAL_BADGE.backgroundColor ?? "#FFFFFF",
+        backing: INITIAL_BADGE.backing ?? "pin",
+        lines: INITIAL_BADGE.lines.map((line) => ({ ...line })),
+      };
+      setUniversalTemplateId(newTemplateId);
+      setMultipleBadges([newBadge]);
+      setBadge(newBadge);
+      setSectionsOpened((prev) => ({ ...prev, template: true }));
+      return;
+    }
 
     // Save to undo history before making changes (include current universalTemplateId)
     saveToUndoHistory({
@@ -2806,12 +2865,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex flex-col gap-1 min-w-0">
             <h2 className="text-xl font-bold text-gray-800">
-              Customize Your Badge {selectedBadgeIndex + 1}
-              {multipleBadges.length > 1 ? ` of ${totalBadges}` : ""}
+              {multipleBadges.length === 0
+                ? "Pick a template"
+                : `Customize Your Badge ${selectedBadgeIndex + 1}${multipleBadges.length > 1 ? ` of ${totalBadges}` : ""}`}
             </h2>
-            <span className="text-xl font-bold text-red-600">
-              {activeTemplate.name}
-            </span>
+            {multipleBadges.length > 0 && (
+              <span className="text-xl font-bold text-red-600">
+                {activeTemplate.name}
+              </span>
+            )}
           </div>
           <div className="flex flex-col items-center gap-1">
             <button
@@ -2871,21 +2933,27 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               width: `${3 * MOBILE_PREVIEW.badgeHeightVh}vh`,
             }}
           >
-            <BadgeSvgRenderer
-              badge={
-                getBadgeForPreview(
-                  selectedBadgeIndex,
-                  getSavedBadgeFor(selectedBadgeIndex),
-                ).badge
-              }
-              templateId={
-                getBadgeForPreview(
-                  selectedBadgeIndex,
-                  getSavedBadgeFor(selectedBadgeIndex),
-                ).templateId
-              }
-              height="100%"
-            />
+            {multipleBadges.length === 0 ? (
+              <div className="text-center text-gray-500 text-sm px-4">
+                Select a shape below to get started
+              </div>
+            ) : (
+              <BadgeSvgRenderer
+                badge={
+                  getBadgeForPreview(
+                    selectedBadgeIndex,
+                    getSavedBadgeFor(selectedBadgeIndex),
+                  ).badge
+                }
+                templateId={
+                  getBadgeForPreview(
+                    selectedBadgeIndex,
+                    getSavedBadgeFor(selectedBadgeIndex),
+                  ).templateId
+                }
+                height="100%"
+              />
+            )}
           </div>
         </div>
       </div>
@@ -2896,12 +2964,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           <div className="hidden md:flex justify-between items-center mb-4">
             <div className="flex flex-col gap-2">
               <h2 className="text-xl font-bold text-gray-800">
-                Customize Your Badge {selectedBadgeIndex + 1}
-                {multipleBadges.length > 1 && ` of ${totalBadges}`}
+                {multipleBadges.length === 0
+                  ? "Pick a template"
+                  : `Customize Your Badge ${selectedBadgeIndex + 1}${multipleBadges.length > 1 ? ` of ${totalBadges}` : ""}`}
               </h2>
-              <span className="text-xl font-bold text-red-600">
-                {activeTemplate.name}
-              </span>
+              {multipleBadges.length > 0 && (
+                <span className="text-xl font-bold text-red-600">
+                  {activeTemplate.name}
+                </span>
+              )}
             </div>
             {/* <button
               className="px-2 py-1 text-xs border rounded bg-gray-100 hover:bg-gray-200"
@@ -3099,6 +3170,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 ref={backgroundSectionRef}
                 type="button"
                 onClick={() => {
+                  if (multipleBadges.length === 0) {
+                    alert("Select a template first.");
+                    return;
+                  }
                   const willBeOpen = !sectionsOpen.background;
                   setSectionsOpen({
                     template: false,
@@ -3106,7 +3181,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     background: willBeOpen,
                     textLines: false,
                   });
-                  // Mark as opened when user interacts with the section
                   setSectionsOpened((prev) => ({ ...prev, background: true }));
                 }}
                 className="flex items-center justify-between w-full mb-2 text-left"
@@ -3313,6 +3387,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               ref={textLinesSectionRef}
               type="button"
               onClick={() => {
+                if (!hasChosenBackgroundColor) {
+                  alert("Select a background color first.");
+                  return;
+                }
                 const willBeOpen = !sectionsOpen.textLines;
                 setSectionsOpen({
                   template: false,
@@ -3320,7 +3398,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   background: false,
                   textLines: willBeOpen,
                 });
-                // Mark as opened when user interacts with the section
                 setSectionsOpened((prev) => ({ ...prev, textLines: true }));
               }}
               className="flex items-center justify-between w-full mb-2 text-left"
@@ -3413,9 +3490,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       setBadge1Data(updatedMultipleBadges[0]);
                     }
                   }}
-                  onBackgroundColorChange={(backgroundColor) =>
-                    setBadge({ ...badge, backgroundColor })
-                  }
+                  onBackgroundColorChange={(backgroundColor) => {
+                    setBadge({ ...badge, backgroundColor });
+                    setHasChosenBackgroundColor(true);
+                  }}
                   onRemoveLine={removeLine}
                   showRemove={true}
                   maxLines={maxLines}
@@ -3810,7 +3888,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </div>
           </div>
         </div>
-        {multipleBadges.length === 1 ? (
+        {multipleBadges.length === 0 ? (
+          <div className="flex flex-col items-center justify-center w-full h-[200px] flex-shrink-0 text-center text-gray-500 text-sm px-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50">
+            Select a shape below to get started
+          </div>
+        ) : multipleBadges.length === 1 ? (
           <div
             className="flex flex-col items-center w-full h-[200px] flex-shrink-0"
             style={{ overflow: "visible" }}
