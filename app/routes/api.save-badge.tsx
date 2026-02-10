@@ -3,6 +3,10 @@ import { json } from "@remix-run/node";
 
 const GADGET_APP_URL = 'https://all-quality-badge-designer--development.gadget.app';
 
+// Note: If Vercel logs show "upsertDesignCache" / "Could not find the table 'public.badge_designs'",
+// that error comes from the Gadget backend (Gadget may sync to Supabase). This route does not use
+// Supabase. Fix in Gadget: create badge_designs in Supabase or disable that sync.
+
 export const action: ActionFunction = async ({ request }) => {
   console.log('[BadgeDesigner] api.save-badge request received', new Date().toISOString(), request.method);
   if (request.method !== "POST") {

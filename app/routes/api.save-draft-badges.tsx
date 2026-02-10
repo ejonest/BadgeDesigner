@@ -14,6 +14,7 @@ export async function action({ request }: ActionFunctionArgs) {
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }
+  console.log("[BadgeDesigner] api.save-draft-badges request received", new Date().toISOString());
   try {
     const formData = await request.formData();
     const designId = (formData.get("designId") as string)?.trim();
@@ -105,6 +106,7 @@ export async function action({ request }: ActionFunctionArgs) {
     await deleteDraftBadgeOrderItemsExcept(designId, keepBadgeIds);
 
     const thumbnailUrls = badgeOrderItems.map((i) => i.thumbnail_url || "");
+    console.log("[BadgeDesigner] save-draft-badges OK:", designId, "savedCount:", badgeOrderItems.length);
     return json({
       success: true,
       thumbnailUrls,
