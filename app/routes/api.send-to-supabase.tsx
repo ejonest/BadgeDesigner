@@ -188,7 +188,11 @@ export async function action({ request }: ActionFunctionArgs) {
         console.log(
           `[BadgeDesigner] storageOnly: saved ${savedCount} draft badge order items for design ${designId}`,
         );
-        await updateBadgeOrderItemsStatusByDesignId(designId, "in_cart");
+        try {
+          await updateBadgeOrderItemsStatusByDesignId(designId, "in_cart");
+        } catch (statusErr) {
+          console.warn("[send-to-supabase] in_cart status update failed (run migration_add_in_cart_status.sql if needed):", statusErr);
+        }
       } catch (saveErr) {
         console.error(
           "[BadgeDesigner] storageOnly: saveBadgeOrderItems failed:",
