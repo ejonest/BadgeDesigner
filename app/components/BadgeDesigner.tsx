@@ -750,6 +750,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     if (selectedBadgeIndex === 0) {
       setBadge1Data(updatedBadge);
     }
+
+    // Trigger draft save so PNG/SVG in Supabase bucket reflect the new background color
+    setDraftSaveTrigger((t) => t + 1);
   };
 
   // Apply background color to all badges
@@ -2898,7 +2901,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           <div className="flex flex-col gap-1 min-w-0">
             <h2 className="text-xl font-bold text-gray-800">
               {multipleBadges.length === 0
-                ? "Pick a template"
+                ? "Design Your Badge"
                 : `Customize Your Badge ${selectedBadgeIndex + 1}${multipleBadges.length > 1 ? ` of ${totalBadges}` : ""}`}
             </h2>
             {multipleBadges.length > 0 && (
@@ -3003,7 +3006,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             <div className="flex flex-col gap-2">
               <h2 className="text-xl font-bold text-gray-800">
                 {multipleBadges.length === 0
-                  ? "Pick a template"
+                  ? "Design Your Badge"
                   : `Customize Your Badge ${selectedBadgeIndex + 1}${multipleBadges.length > 1 ? ` of ${totalBadges}` : ""}`}
               </h2>
               {multipleBadges.length > 0 && (
@@ -3044,7 +3047,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             >
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-gray-800">
-                  Shape / Template
+                  Step 1: Pick a template
                 </h3>
                 {!sectionsOpen.template && sectionsOpened.template && (
                   <CheckCircleIcon className="w-5 h-5 text-green-600" />
@@ -3225,7 +3228,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               >
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-semibold text-gray-800">
-                    Background Color
+                    Step 2: Pick a background Color
                   </h3>
                   {!sectionsOpen.background && sectionsOpened.background && (
                     <CheckCircleIcon className="w-5 h-5 text-green-600" />
@@ -3442,7 +3445,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             >
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-gray-800">
-                  Text Lines
+                  Step 3: Edit your text
                 </h3>
                 {!sectionsOpen.textLines && sectionsOpened.textLines && (
                   <CheckCircleIcon className="w-5 h-5 text-green-600" />
