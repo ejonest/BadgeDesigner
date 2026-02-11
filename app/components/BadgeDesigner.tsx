@@ -899,6 +899,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [selectedBadgeIndex, setSelectedBadgeIndex] = useState<number>(0); // 0 = first badge (multipleBadges[0]), 1+ = additional badges
   const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Keep for backward compatibility, synced with multipleBadges[0]
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  /** Shown after CSV "Override" or "Add to Existing" while we run draft save in background. */
+  const [isGeneratingBadges, setIsGeneratingBadges] = useState(false);
   // Undo history state
   const [undoHistory, setUndoHistory] = useState<UndoAction[]>([]);
   const MAX_UNDO_HISTORY = 50; // Limit undo history to prevent memory issues
@@ -1306,6 +1308,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
     return () => clearTimeout(timer);
   }, [draftSaveTrigger, stepsComplete, _productId]);
+
+  // After adding multiple badges via CSV (Override/Add to Existing): show "Generating badges" and trigger draft save so add-to-cart is fast later.
+  useEffect(() => {
+    if (!isGeneratingBadges) return;
+    const triggerMs = 400;
+    const hideMs = 3000;
+    const t1 = setTimeout(() => setDraftSaveTrigger((t) => t + 1), triggerMs);
+    const t2 = setTimeout(() => setIsGeneratingBadges(false), hideMs);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [isGeneratingBadges]);
 
   const touchStartX = React.useRef<number>(0);
 
@@ -2923,6 +2938,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
+          {isGeneratingBadges && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/90 rounded-lg">
+              <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-600 border-t-transparent mb-2" />
+              <span className="text-sm font-medium text-gray-700">Generating badges</span>
+            </div>
+          )}
           {totalBadges > 1 && canGoPrev && (
             <button
               type="button"
@@ -3070,7 +3091,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       const thumbnailFilename = getThumbnailFilename(t.id);
                       const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
                       const svgPath = `/templates/${t.id}.svg`;
-                      const isSelected = universalTemplateId === t.id;
+                      const isSelected = multipleBadges.length > 0 && universalTemplateId === t.id;
 
                       return (
                         <div key={t.id} className="relative">
@@ -3884,7 +3905,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
       {/* RIGHT COLUMN - Badge preview (Desktop only). Current badge at top; rest scrollable. */}
       <div
-        className={`hidden md:flex md:w-1/2 md:pl-3 flex-col items-center min-h-0 ${
+        className={`hidden md:flex md:w-1/2 md:pl-3 flex-col items-center min-h-0 relative ${
           multipleBadges.length > 1 ? "md:h-[90vh]" : ""
         }`}
       >
@@ -3907,6 +3928,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </div>
           </div>
         </div>
+        {isGeneratingBadges && (
+          <div className="absolute inset-0 top-12 z-20 flex flex-col items-center justify-center bg-white/90 rounded-lg">
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-600 border-t-transparent mb-2" />
+            <span className="text-sm font-medium text-gray-700">Generating badges</span>
+          </div>
+        )}
         {multipleBadges.length === 0 ? (
           <div className="flex flex-col items-center justify-center w-full h-[200px] flex-shrink-0 text-center text-gray-500 text-sm px-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50">
             Select a shape below to get started
@@ -4359,7 +4386,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     const thumbnailFilename = getThumbnailFilename(t.id);
                     const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
                     const svgPath = `/templates/${t.id}.svg`;
-                    const isSelected = universalTemplateId === t.id;
+                    const isSelected = multipleBadges.length > 0 && universalTemplateId === t.id;
 
                     return (
                       <div key={t.id} className="relative">
@@ -5251,13 +5278,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   e.preventDefault();
                   setPendingCsvAction("override");
                   setShowCsvWarningModal(false);
-                  // Parse CSV with override flag
                   parseCsv(csvText, true);
                   if (!csvError) {
                     setCsvText("");
                     setCsvPreview([]);
                     setCsvError("");
                     setShowCsvModal(false);
+                    setIsGeneratingBadges(true);
                   }
                   setPendingCsvAction(null);
                 }}
@@ -5273,13 +5300,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   e.preventDefault();
                   setPendingCsvAction("add");
                   setShowCsvWarningModal(false);
-                  // Parse CSV with add flag
                   parseCsv(csvText, false);
                   if (!csvError) {
                     setCsvText("");
                     setCsvPreview([]);
                     setCsvError("");
                     setShowCsvModal(false);
+                    setIsGeneratingBadges(true);
                   }
                   setPendingCsvAction(null);
                 }}

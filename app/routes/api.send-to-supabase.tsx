@@ -5,6 +5,7 @@ import {
   saveBadgeOrderItems,
   convertBadgeToOrderItem,
   updateBadgeOrderItemsStatusByDesignId,
+  deleteBadgeOrderItemsByDesignId,
 } from "~/utils/supabase";
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -178,11 +179,11 @@ export async function action({ request }: ActionFunctionArgs) {
       badgeOrderItems.push(badgeOrderItem);
     }
 
-    // Storage-only mode (Add to Cart): upload files and insert draft rows into badge_order_items.
-    // Order-paid will UPDATE those rows with order id/number/customer and status = 'order_placed'.
+    // Storage-only mode (Add to Cart): replace any existing rows for this design_id, then insert full set (avoids duplicate key when draft already had fewer badges).
     if (storageOnly) {
       let savedCount = 0;
       try {
+        await deleteBadgeOrderItemsByDesignId(designId);
         const saved = await saveBadgeOrderItems(badgeOrderItems);
         savedCount = Array.isArray(saved) ? saved.length : 0;
         console.log(

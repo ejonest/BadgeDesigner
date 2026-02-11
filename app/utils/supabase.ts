@@ -805,6 +805,21 @@ export async function updateBadgeOrderItemsStatusByDesignId(designId: string, st
   }
 }
 
+/** Delete all badge_order_items for the given design_id (any status). Use before replace-insert in send-to-supabase fallback. */
+export async function deleteBadgeOrderItemsByDesignId(designId: string) {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+  }
+  const { error } = await supabaseAdmin
+    .from('badge_order_items')
+    .delete()
+    .eq('design_id', designId)
+  if (error) {
+    console.error('deleteBadgeOrderItemsByDesignId error:', error)
+    throw error
+  }
+}
+
 /** Delete draft rows for design_id whose badge_id is not in keepBadgeIds. */
 export async function deleteDraftBadgeOrderItemsExcept(designId: string, keepBadgeIds: string[]) {
   if (!supabaseAdmin) {
