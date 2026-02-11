@@ -856,31 +856,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   // API
   const api = createApi(gadgetApiUrl, gadgetApiKey);
 
-  // Listen for theme saying "cart add done" so we only open cart after items are actually added (avoids empty cart)
-  useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      const data = event.data;
-      if (!data || data.action !== "cart-add-complete" || !data.cartUrl) return;
-      const storeFromUrl =
-        typeof window !== "undefined"
-          ? new URLSearchParams(window.location.search).get("storeUrl") ||
-            new URLSearchParams(window.location.search).get("shop")
-          : null;
-      const origin = event.origin || "";
-      const allowed =
-        storeFromUrl &&
-        (origin === `https://${storeFromUrl}` ||
-          origin === `http://${storeFromUrl}` ||
-          origin.includes(storeFromUrl));
-      if (!allowed && !origin.includes("myshopify.com")) return;
-      try {
-        if (window.top) window.top.location.href = data.cartUrl;
-      } catch (_) {}
-    };
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, []);
-
   // State: start with no badge; user must pick a template first
   const initialDefaultBadge: Badge = {
     ...INITIAL_BADGE,

@@ -49,20 +49,22 @@ If you prefer not to use a snippet, paste the **whole block** (container + ifram
     }
     if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
       var items = data.payload.items.map(function(item) {
-        return { id: item.variantId, quantity: item.quantity || 1, properties: item.properties || {} };
+        return { id: parseInt(item.variantId, 10) || item.variantId, quantity: item.quantity || 1, properties: item.properties || {} };
       });
       var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) ? window.Shopify.routes.root : '/';
+      var cartPath = cartRoot.replace(/\/$/, '') + '/cart';
+      var cartUrl = window.location.origin + cartPath;
       var cartAddUrl = cartRoot.replace(/\/$/, '') + '/cart/add.js';
       fetch(cartAddUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: items })
       })
-        .then(function(res) { return res.json(); })
-        .then(function() { window.location.href = cartRoot.replace(/\/$/, '') + '/cart'; })
+        .then(function(res) { return res.json().catch(function() { return {}; }); })
+        .then(function() { window.location.href = cartUrl; })
         .catch(function(err) {
           console.error('Badge designer: cart/add.js failed', err);
-          window.location.href = cartRoot.replace(/\/$/, '') + '/cart';
+          window.location.href = cartUrl;
         });
     }
     if (data.action === 'design-saved') {
@@ -73,6 +75,12 @@ If you prefer not to use a snippet, paste the **whole block** (container + ifram
 ```
 
 **Important:** Replace `https://badgedesigner.vercel.app` with your actual Vercel app URL if different. The `event.origin` check must match that URL.
+
+**Cart URL:** The theme must build the cart URL as a **full** URL using `window.location.origin` (e.g. `window.location.origin + (cartRoot.replace(/\/$/, '') + '/cart')`) so that when the theme redirects after add-to-cart, the user goes to the store’s cart, not a relative path that could resolve on the wrong origin. Use the actual snippet file `shopify-badge-designer-embed.liquid` in this repo, which does this correctly.
+
+**Add-to-cart:** The snippet uses a **single** `cart/add.js` request with all items, then redirects to the store cart. If a store sees failures with very large item counts (e.g. 20+), the snippet can be updated to chunk requests (e.g. 5–10 items per request, in parallel or sequence) while still using a full cart URL and theme-driven redirect. No change to the Badge Designer app is required for that.
+
+**Thumbnails in cart:** Each line item includes a `Custom Thumbnail` property with the Supabase image URL. The cart can open immediately; the store’s cart template can render these URLs and load images asynchronously if desired.
 
 **Add to cart and Gadget:** At add-to-cart the designer sends minimal design data (line text, background color, backing type, design id) to Gadget so Gadget has the design for order-paid. It also sends `add-to-cart-multiple` (or redirects for a single item) so the **parent frame** adds items to the Shopify cart. If the designer is embedded in a **Gadget app page** (not the Shopify theme), the Gadget page must handle the `add-to-cart-multiple` message (e.g. redirect to the store’s `/cart/add` or call the store’s Cart API) so the cart is populated.
 
