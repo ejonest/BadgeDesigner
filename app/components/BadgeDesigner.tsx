@@ -1216,8 +1216,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     if (didClose) setDraftSaveTrigger((t) => t + 1);
   }, [sectionsOpen]);
 
-  // Debounced draft save: only when stepsComplete, triggered by draftSaveTrigger (section close / apply-to-all / selectBadge)
-  const DRAFT_SAVE_DEBOUNCE_MS = 800;
+  // Debounced draft save: only when stepsComplete, triggered by draftSaveTrigger (section close / apply-to-all / selectBadge / background color)
+  const DRAFT_SAVE_DEBOUNCE_MS = 400;
   const activeTemplateRef = useRef(activeTemplate);
   activeTemplateRef.current = activeTemplate;
   useEffect(() => {
@@ -1228,6 +1228,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     const designId = sessionDesignIdRef.current;
 
     const timer = setTimeout(async () => {
+      // Read refs after a microtask so we get the latest committed state (PNG, SVG, and table all use this)
+      await new Promise((r) => setTimeout(r, 0));
       const multipleBadgesSnap = multipleBadgesRef.current;
       const badgeSnap = badgeRef.current;
       const selectedIdx = selectedBadgeIndexRef.current;
