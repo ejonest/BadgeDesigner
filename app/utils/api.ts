@@ -181,8 +181,6 @@ export function createApi(gadgetApiUrl?: string, gadgetApiKey?: string) {
           return { success: true, message: 'Redirecting to add item to cart', cartData: { redirectUrl: cartUrl }, badgeData };
         }
         this.sendToParent({ action: 'add-to-cart-multiple', payload: { items: cartItems } });
-        // Do not redirect here: the theme's postMessage handler adds items via cart/add.js then redirects to /cart.
-        // A fixed-time redirect (e.g. 900ms) was opening the cart before the theme finished adding items (especially with many badges), leaving the cart empty.
         return { success: true, message: `Adding ${cartItems.length} items to cart (theme will add via cart/add.js)` };
       } catch (error) {
         console.error('Error adding to cart:', error);

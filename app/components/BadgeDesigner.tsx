@@ -750,9 +750,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     if (selectedBadgeIndex === 0) {
       setBadge1Data(updatedBadge);
     }
-
-    // Trigger draft save after a short delay so React has committed state and refs are updated (ensures PNG/SVG in buckets get the new color)
-    setTimeout(() => setDraftSaveTrigger((t) => t + 1), 100);
   };
 
   // Apply background color to all badges
@@ -783,7 +780,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     console.log(
       `[COLOR TRACKING] Background color ${currentBackgroundColor} applied to all badges`,
     );
-    setTimeout(() => setDraftSaveTrigger((t) => t + 1), 100);
+    setDraftSaveTrigger((t) => t + 1);
   };
 
   // Apply all formatting (background color + all text formatting) from current badge to all badges
@@ -902,8 +899,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [selectedBadgeIndex, setSelectedBadgeIndex] = useState<number>(0); // 0 = first badge (multipleBadges[0]), 1+ = additional badges
   const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Keep for backward compatibility, synced with multipleBadges[0]
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  /** Shown after CSV "Override" or "Add to Existing" while we run draft save in background. */
-  const [isGeneratingBadges, setIsGeneratingBadges] = useState(false);
   // Undo history state
   const [undoHistory, setUndoHistory] = useState<UndoAction[]>([]);
   const MAX_UNDO_HISTORY = 50; // Limit undo history to prevent memory issues
@@ -1216,8 +1211,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     if (didClose) setDraftSaveTrigger((t) => t + 1);
   }, [sectionsOpen]);
 
-  // Debounced draft save: only when stepsComplete, triggered by draftSaveTrigger (section close / apply-to-all / selectBadge / background color)
-  const DRAFT_SAVE_DEBOUNCE_MS = 400;
+  // Debounced draft save: only when stepsComplete, triggered by draftSaveTrigger (section close / apply-to-all / selectBadge)
+  const DRAFT_SAVE_DEBOUNCE_MS = 800;
   const activeTemplateRef = useRef(activeTemplate);
   activeTemplateRef.current = activeTemplate;
   useEffect(() => {
@@ -1228,8 +1223,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     const designId = sessionDesignIdRef.current;
 
     const timer = setTimeout(async () => {
-      // Read refs after a microtask so we get the latest committed state (PNG, SVG, and table all use this)
-      await new Promise((r) => setTimeout(r, 0));
       const multipleBadgesSnap = multipleBadgesRef.current;
       const badgeSnap = badgeRef.current;
       const selectedIdx = selectedBadgeIndexRef.current;
@@ -1313,19 +1306,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
     return () => clearTimeout(timer);
   }, [draftSaveTrigger, stepsComplete, _productId]);
-
-  // After adding multiple badges via CSV (Override/Add to Existing): show "Generating badges" and trigger draft save so add-to-cart is fast later.
-  useEffect(() => {
-    if (!isGeneratingBadges) return;
-    const triggerMs = 400;
-    const hideMs = 3000;
-    const t1 = setTimeout(() => setDraftSaveTrigger((t) => t + 1), triggerMs);
-    const t2 = setTimeout(() => setIsGeneratingBadges(false), hideMs);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, [isGeneratingBadges]);
 
   const touchStartX = React.useRef<number>(0);
 
@@ -2840,12 +2820,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               migratedBadges.length
             } CSV)`,
           );
-          // Sync badge1Data and current badge with the first badge so the first badge is replaced (same design, no duplicate)
+          // Sync badge1Data with the first badge
           if (updatedMultipleBadges[0]) {
             setBadge1Data(updatedMultipleBadges[0]);
-            if (selectedBadgeIndex === 0) {
-              setBadge(updatedMultipleBadges[0]);
-            }
           }
         }
       }
@@ -2906,7 +2883,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           <div className="flex flex-col gap-1 min-w-0">
             <h2 className="text-xl font-bold text-gray-800">
               {multipleBadges.length === 0
-                ? "Design Your Badge"
+                ? "Pick a template"
                 : `Customize Your Badge ${selectedBadgeIndex + 1}${multipleBadges.length > 1 ? ` of ${totalBadges}` : ""}`}
             </h2>
             {multipleBadges.length > 0 && (
@@ -2946,12 +2923,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          {isGeneratingBadges && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/90 rounded-lg">
-              <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-600 border-t-transparent mb-2" />
-              <span className="text-sm font-medium text-gray-700">Generating badges</span>
-            </div>
-          )}
           {totalBadges > 1 && canGoPrev && (
             <button
               type="button"
@@ -3011,7 +2982,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             <div className="flex flex-col gap-2">
               <h2 className="text-xl font-bold text-gray-800">
                 {multipleBadges.length === 0
-                  ? "Design Your Badge"
+                  ? "Pick a template"
                   : `Customize Your Badge ${selectedBadgeIndex + 1}${multipleBadges.length > 1 ? ` of ${totalBadges}` : ""}`}
               </h2>
               {multipleBadges.length > 0 && (
@@ -3052,7 +3023,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             >
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-gray-800">
-                  Step 1: Pick a template
+                  Shape / Template
                 </h3>
                 {!sectionsOpen.template && sectionsOpened.template && (
                   <CheckCircleIcon className="w-5 h-5 text-green-600" />
@@ -3099,7 +3070,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       const thumbnailFilename = getThumbnailFilename(t.id);
                       const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
                       const svgPath = `/templates/${t.id}.svg`;
-                      const isSelected = multipleBadges.length > 0 && universalTemplateId === t.id;
+                      const isSelected = universalTemplateId === t.id;
 
                       return (
                         <div key={t.id} className="relative">
@@ -3233,7 +3204,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               >
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-semibold text-gray-800">
-                    Step 2: Pick a background Color
+                    Background Color
                   </h3>
                   {!sectionsOpen.background && sectionsOpened.background && (
                     <CheckCircleIcon className="w-5 h-5 text-green-600" />
@@ -3450,7 +3421,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             >
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-gray-800">
-                  Step 3: Edit your text
+                  Text Lines
                 </h3>
                 {!sectionsOpen.textLines && sectionsOpened.textLines && (
                   <CheckCircleIcon className="w-5 h-5 text-green-600" />
@@ -3913,7 +3884,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
       {/* RIGHT COLUMN - Badge preview (Desktop only). Current badge at top; rest scrollable. */}
       <div
-        className={`hidden md:flex md:w-1/2 md:pl-3 flex-col items-center min-h-0 relative ${
+        className={`hidden md:flex md:w-1/2 md:pl-3 flex-col items-center min-h-0 ${
           multipleBadges.length > 1 ? "md:h-[90vh]" : ""
         }`}
       >
@@ -3936,12 +3907,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </div>
           </div>
         </div>
-        {isGeneratingBadges && (
-          <div className="absolute inset-0 top-12 z-20 flex flex-col items-center justify-center bg-white/90 rounded-lg">
-            <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-600 border-t-transparent mb-2" />
-            <span className="text-sm font-medium text-gray-700">Generating badges</span>
-          </div>
-        )}
         {multipleBadges.length === 0 ? (
           <div className="flex flex-col items-center justify-center w-full h-[200px] flex-shrink-0 text-center text-gray-500 text-sm px-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50">
             Select a shape below to get started
@@ -4394,7 +4359,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     const thumbnailFilename = getThumbnailFilename(t.id);
                     const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
                     const svgPath = `/templates/${t.id}.svg`;
-                    const isSelected = multipleBadges.length > 0 && universalTemplateId === t.id;
+                    const isSelected = universalTemplateId === t.id;
 
                     return (
                       <div key={t.id} className="relative">
@@ -5286,13 +5251,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   e.preventDefault();
                   setPendingCsvAction("override");
                   setShowCsvWarningModal(false);
+                  // Parse CSV with override flag
                   parseCsv(csvText, true);
                   if (!csvError) {
                     setCsvText("");
                     setCsvPreview([]);
                     setCsvError("");
                     setShowCsvModal(false);
-                    setIsGeneratingBadges(true);
                   }
                   setPendingCsvAction(null);
                 }}
@@ -5308,13 +5273,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   e.preventDefault();
                   setPendingCsvAction("add");
                   setShowCsvWarningModal(false);
+                  // Parse CSV with add flag
                   parseCsv(csvText, false);
                   if (!csvError) {
                     setCsvText("");
                     setCsvPreview([]);
                     setCsvError("");
                     setShowCsvModal(false);
-                    setIsGeneratingBadges(true);
                   }
                   setPendingCsvAction(null);
                 }}
