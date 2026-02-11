@@ -181,6 +181,21 @@ export function createApi(gadgetApiUrl?: string, gadgetApiKey?: string) {
           return { success: true, message: 'Redirecting to add item to cart', cartData: { redirectUrl: cartUrl }, badgeData };
         }
         this.sendToParent({ action: 'add-to-cart-multiple', payload: { items: cartItems } });
+        // Fallback: ensure cart opens even if theme postMessage listener doesn't run (e.g. origin mismatch).
+        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const shopifyStoreUrl =
+          (typeof window !== 'undefined' && (window as any).SHOPIFY_STORE_URL) ||
+          (urlParams && urlParams.get('storeUrl')) ||
+          (urlParams && urlParams.get('shop')) ||
+          'badgesonly.myshopify.com';
+        const cartUrl = `https://${shopifyStoreUrl.replace(/^https?:\/\//, '').split('/')[0]}/cart`;
+        setTimeout(() => {
+          try {
+            if (typeof window !== 'undefined' && window.top) {
+              window.top.location.href = cartUrl;
+            }
+          } catch (_) {}
+        }, 900);
         return { success: true, message: `Adding ${cartItems.length} items to cart (theme will add via cart/add.js)` };
       } catch (error) {
         console.error('Error adding to cart:', error);
