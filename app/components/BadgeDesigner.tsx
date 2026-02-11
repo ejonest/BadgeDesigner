@@ -751,8 +751,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       setBadge1Data(updatedBadge);
     }
 
-    // Trigger draft save so PNG/SVG in Supabase bucket reflect the new background color
-    setDraftSaveTrigger((t) => t + 1);
+    // Trigger draft save after a short delay so React has committed state and refs are updated (ensures PNG/SVG in buckets get the new color)
+    setTimeout(() => setDraftSaveTrigger((t) => t + 1), 100);
   };
 
   // Apply background color to all badges
@@ -783,7 +783,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     console.log(
       `[COLOR TRACKING] Background color ${currentBackgroundColor} applied to all badges`,
     );
-    setDraftSaveTrigger((t) => t + 1);
+    setTimeout(() => setDraftSaveTrigger((t) => t + 1), 100);
   };
 
   // Apply all formatting (background color + all text formatting) from current badge to all badges
@@ -2840,9 +2840,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               migratedBadges.length
             } CSV)`,
           );
-          // Sync badge1Data with the first badge
+          // Sync badge1Data and current badge with the first badge so the first badge is replaced (same design, no duplicate)
           if (updatedMultipleBadges[0]) {
             setBadge1Data(updatedMultipleBadges[0]);
+            if (selectedBadgeIndex === 0) {
+              setBadge(updatedMultipleBadges[0]);
+            }
           }
         }
       }
