@@ -4,12 +4,13 @@ import {
   convertBadgeToOrderItem,
   saveBadgeOrderItems,
   deleteDraftBadgeOrderItemsExcept,
+  deleteBadgeImagesByDesignId,
 } from "~/utils/supabase";
 
 /**
- * Incremental draft save: accepts designId + badge PNGs/SVGs (no PDF), uploads to storage,
- * replaces draft rows for this design_id (delete existing drafts then insert) so we don't
- * depend on a unique constraint for upsert (table has a partial unique index only).
+ * Incremental draft save: accepts designId + badge PNGs/SVGs (no PDF).
+ * Deletes any existing PNG/SVG for this design in storage, then uploads new assets and replaces draft rows.
+ * Only the current design's assets remain (upload new, delete old).
  */
 export async function action({ request }: ActionFunctionArgs) {
   if (request.method !== "POST") {
@@ -48,8 +49,9 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     const badgeOrderItems: ReturnType<typeof convertBadgeToOrderItem>[] = [];
-    // Cache-bust: each save uses new paths so PNG/SVG/table always reflect latest (avoids CDN/browser serving old assets)
-    const saveTimestamp = Date.now();
+
+    // Delete all existing PNG/SVG for this design so only the current draft assets remain
+    await deleteBadgeImagesByDesignId(designId);
 
     for (let badgeIndex = 0; badgeIndex < allBadges.length; badgeIndex++) {
       const badge = allBadges[badgeIndex];
@@ -63,7 +65,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
       if (thumbnailPngFile?.size) {
         try {
-          const thumbnailFileName = `${designId}/badge-${badgeIndex}-thumbnail-${saveTimestamp}.png`;
+          const thumbnailFileName = `${designId}/badge-${badgeIndex}-thumbnail.png`;
           badgeThumbnailUrl = await uploadToBadgeImagesBucket(
             thumbnailPngFile,
             thumbnailFileName,
@@ -79,7 +81,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
       if (svgFile?.size) {
         try {
-          const svgFileName = `${designId}/badge-${badgeIndex}-design-${saveTimestamp}.svg`;
+          const svgFileName = `${designId}/badge-${badgeIndex}-design.svg`;
           badgeFullImageUrl = await uploadToBadgeImagesBucket(
             svgFile,
             svgFileName,

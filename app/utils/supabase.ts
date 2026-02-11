@@ -316,6 +316,44 @@ export function getStoragePublicUrl(bucket: string, path: string): string {
   return publicUrl
 }
 
+const BADGE_IMAGES_BUCKET = 'badge-images'
+const STORAGE_REMOVE_LIMIT = 1000
+
+/**
+ * Delete all PNG/SVG objects in badge-images bucket under the given designId prefix.
+ * Used so each draft save leaves only the current design's assets (upload new, delete old).
+ */
+export async function deleteBadgeImagesByDesignId(designId: string): Promise<void> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+  }
+  const { data: items, error: listError } = await supabaseAdmin.storage
+    .from(BADGE_IMAGES_BUCKET)
+    .list(designId, { limit: STORAGE_REMOVE_LIMIT })
+
+  if (listError) {
+    console.warn('[deleteBadgeImagesByDesignId] list failed:', listError.message)
+    return
+  }
+  if (!items?.length) return
+
+  const pathsToRemove = items
+    .filter((item) => item.name && (item.name.endsWith('.png') || item.name.endsWith('.svg')))
+    .map((item) => `${designId}/${item.name}`)
+
+  if (pathsToRemove.length === 0) return
+
+  const { error: removeError } = await supabaseAdmin.storage
+    .from(BADGE_IMAGES_BUCKET)
+    .remove(pathsToRemove)
+
+  if (removeError) {
+    console.warn('[deleteBadgeImagesByDesignId] remove failed:', removeError.message)
+    return
+  }
+  console.log('[deleteBadgeImagesByDesignId] removed', pathsToRemove.length, 'objects for design', designId)
+}
+
 // Database helper functions
 export async function saveBadgeDesign(design: BadgeDesign) {
   if (!supabaseAdmin) {
