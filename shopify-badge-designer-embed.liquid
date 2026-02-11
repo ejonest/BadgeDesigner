@@ -41,31 +41,29 @@
       console.log('Add to cart received:', data.payload);
     }
     
-    // Handle add-to-cart-multiple: single cart/add.js request, then redirect to store cart (full URL so iframe never redirects to wrong origin)
+    // Handle add-to-cart-multiple: add each badge as a separate line item via Cart API, then redirect to cart
     if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
-      const cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) ? window.Shopify.routes.root : '/';
-      const cartPath = cartRoot.replace(/\/$/, '') + '/cart';
-      const cartUrl = window.location.origin + cartPath;
-      const cartAddUrl = cartRoot.replace(/\/$/, '') + '/cart/add.js';
       const items = data.payload.items.map(function(item) {
         return {
-          id: parseInt(item.variantId, 10) || item.variantId,
-          quantity: typeof item.quantity === 'number' ? item.quantity : 1,
+          id: item.variantId,
+          quantity: item.quantity || 1,
           properties: item.properties || {}
         };
       });
+      const cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) ? window.Shopify.routes.root : '/';
+      const cartAddUrl = cartRoot.replace(/\/$/, '') + '/cart/add.js';
       fetch(cartAddUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: items })
       })
-        .then(function(res) { return res.json().catch(function() { return {}; }); })
+        .then(function(res) { return res.json(); })
         .then(function() {
-          window.location.href = cartUrl;
+          window.location.href = cartRoot.replace(/\/$/, '') + '/cart';
         })
         .catch(function(err) {
           console.error('Badge designer: cart/add.js failed', err);
-          window.location.href = cartUrl;
+          window.location.href = cartRoot.replace(/\/$/, '') + '/cart';
         });
     }
     
