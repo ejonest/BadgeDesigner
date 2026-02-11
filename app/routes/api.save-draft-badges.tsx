@@ -48,6 +48,8 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     const badgeOrderItems: ReturnType<typeof convertBadgeToOrderItem>[] = [];
+    // Cache-bust: each save uses new paths so PNG/SVG/table always reflect latest (avoids CDN/browser serving old assets)
+    const saveTimestamp = Date.now();
 
     for (let badgeIndex = 0; badgeIndex < allBadges.length; badgeIndex++) {
       const badge = allBadges[badgeIndex];
@@ -61,7 +63,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
       if (thumbnailPngFile?.size) {
         try {
-          const thumbnailFileName = `${designId}/badge-${badgeIndex}-thumbnail.png`;
+          const thumbnailFileName = `${designId}/badge-${badgeIndex}-thumbnail-${saveTimestamp}.png`;
           badgeThumbnailUrl = await uploadToBadgeImagesBucket(
             thumbnailPngFile,
             thumbnailFileName,
@@ -77,7 +79,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
       if (svgFile?.size) {
         try {
-          const svgFileName = `${designId}/badge-${badgeIndex}-design.svg`;
+          const svgFileName = `${designId}/badge-${badgeIndex}-design-${saveTimestamp}.svg`;
           badgeFullImageUrl = await uploadToBadgeImagesBucket(
             svgFile,
             svgFileName,
