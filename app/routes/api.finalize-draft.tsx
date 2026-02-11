@@ -54,11 +54,16 @@ export async function action({ request }: ActionFunctionArgs) {
       return json({
         success: false,
         draftNotFound: true,
-        message: "No draft rows found for this design; use full add-to-cart flow.",
+        message:
+          "No draft rows found for this design; use full add-to-cart flow.",
       });
     }
 
-    await updateBadgeOrderItemsStatusByDesignId(designId, "in_cart");
+    try {
+      await updateBadgeOrderItemsStatusByDesignId(designId, "in_cart");
+    } catch (statusErr) {
+      console.warn("[finalize-draft] in_cart status update failed (run migration_add_in_cart_status.sql if needed):", statusErr);
+    }
 
     return json({
       success: true,
@@ -69,9 +74,6 @@ export async function action({ request }: ActionFunctionArgs) {
   } catch (err) {
     console.error("[finalize-draft] error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
-    return json(
-      { success: false, error: message },
-      { status: 500 },
-    );
+    return json({ success: false, error: message }, { status: 500 });
   }
 }
