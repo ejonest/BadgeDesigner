@@ -41,7 +41,7 @@
       console.log('Add to cart received:', data.payload);
     }
     
-    // Handle add-to-cart-multiple: add each badge as a separate line item via Cart API, then redirect to cart
+    // Handle add-to-cart-multiple: add badges in chunks via Cart API (avoids limits on large single request), then redirect to cart
     if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
       const items = data.payload.items.map(function(item) {
         return {
@@ -52,12 +52,25 @@
       });
       const cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) ? window.Shopify.routes.root : '/';
       const cartAddUrl = cartRoot.replace(/\/$/, '') + '/cart/add.js';
-      fetch(cartAddUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: items })
-      })
-        .then(function(res) { return res.json(); })
+      const CHUNK_SIZE = 5;
+      function addChunk(offset) {
+        const chunk = items.slice(offset, offset + CHUNK_SIZE);
+        if (chunk.length === 0) return Promise.resolve();
+        return fetch(cartAddUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: chunk })
+        })
+          .then(function(res) { return res.json().then(function(body) { return { ok: res.ok, body: body }; }); })
+          .then(function(result) {
+            if (!result.ok && result.body && result.body.message) {
+              console.error('Badge designer: cart/add.js chunk error', result.body);
+            }
+            if (offset + CHUNK_SIZE >= items.length) return;
+            return addChunk(offset + CHUNK_SIZE);
+          });
+      }
+      addChunk(0)
         .then(function() {
           window.location.href = cartRoot.replace(/\/$/, '') + '/cart';
         })

@@ -1,185 +1,50 @@
-Feb 10 16:28:10.87
-POST
-503
-badgedesigner.vercel.app
-/api/send-to-supabase
-31
-[BadgeDesigner] storageOnly: saveBadgeOrderItems failed: { code: '23505', details: 'Key (design_id, badge_id)=(design_1770769676097_051z8x3qr, badge-0) already exists.', hint: null, message: 'duplicate key value violates unique constraint "idx_badge_order_items_unique"' }
-Feb 10 16:28:09.18
-POST
-200
-badgedesigner.vercel.app
-/api/finalize-draft
-4
-updateBadgeOrderItemsStatusByDesignId error: { code: '23514', details: 'Failing row contains (7bf722e1-873f-4d2e-824a-ed71fab880de, design_1770769676097_051z8x3qr, null, null, null, badge-0, https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., Brushed Gold #eac10c, in_cart, Your Name, 25, Roboto, f, f, f, Black #000000, center, Title, 20, Roboto, f, f, f, Black #000000, center, null, null, null, f, f, f, null, null, null, null, null, f, f, f, null, null, 2026-02-11 00:28:02+00, 2026-02-11 00:28:09.935042+00).', hint: null, message: 'new row for relation "badge_order_items" violates check constraint "badge_order_items_status_check"' }
-Feb 10 16:28:08.49
-POST
-200
-badgedesigner.vercel.app
-/api/save-badge
-12
-Badge design creation result: { id: '35', designId: 'design_1770769676097_051z8x3qr' }
-Feb 10 16:28:01.21
-POST
-200
-badgedesigner.vercel.app
-/api/save-draft-badges
-6
-[BadgeDesigner] save-draft-badges OK: design_1770769676097_051z8x3qr savedCount: 1
-Feb 10 16:27:59.93
-POST
-200
-badgedesigner.vercel.app
-/api/save-draft-badges
-6
-[BadgeDesigner] save-draft-badges OK: design_1770769676097_051z8x3qr savedCount: 1
-Feb 10 16:27:28.13
+
+Feb 11 10:29:30.28
 GET
 200
 badgedesigner.vercel.app
 /
 2
 Gadget API Configuration: { GADGET_API_URL: 'https://all-quality-badge-designer--development.gadget.app/', environment: 'development', GADGET_API_KEY: 'SET' }
-Feb 10 16:27:07.32
-POST
-503
-badgedesigner.vercel.app
-/api/send-to-supabase
-31
-[BadgeDesigner] storageOnly: saveBadgeOrderItems failed: { code: '23505', details: 'Key (design_id, badge_id)=(design_1770769602846_tompsiyct, badge-0) already exists.', hint: null, message: 'duplicate key value violates unique constraint "idx_badge_order_items_unique"' }
-Feb 10 16:27:05.07
+Feb 11 10:29:17.06
 POST
 200
 badgedesigner.vercel.app
 /api/finalize-draft
-4
-updateBa
-
-
-2026-02-11 00:27:05.558 [info] Uploading PDF to badge-pdfs bucket: design_1770769602846_tompsiyct/badge-design.pdf (application/pdf, 92447 bytes)
-2026-02-11 00:27:05.749 [info] PDF uploaded successfully to badge-pdfs: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-pdfs/design_1770769602846_tompsiyct/badge-design.pdf
-2026-02-11 00:27:06.036 [error] updateBadgeOrderItemsStatusByDesignId error: {
-  code: '23514',
-  details: 'Failing row contains (33dabb71-40cf-42d9-9780-173483b74208, design_1770769602846_tompsiyct, null, null, null, badge-0, https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., Red #FF0000, in_cart, Your Name, 25, Roboto, f, f, f, Black #000000, center, Title, 20, Roboto, f, f, f, Black #000000, center, null, null, null, f, f, f, null, null, null, null, null, f, f, f, null, null, 2026-02-11 00:26:50+00, 2026-02-11 00:27:05.988966+00).',
-  hint: null,
-  message: 'new row for relation "badge_order_items" violates check constraint "badge_order_items_status_check"'
-}
-2026-02-11 00:27:06.036 [warning] [finalize-draft] in_cart status update failed (run migration_add_in_cart_status.sql if needed): {
-  code: '23514',
-  details: 'Failing row contains (33dabb71-40cf-42d9-9780-173483b74208, design_1770769602846_tompsiyct, null, null, null, badge-0, https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., Red #FF0000, in_cart, Your Name, 25, Roboto, f, f, f, Black #000000, center, Title, 20, Roboto, f, f, f, Black #000000, center, null, null, null, f, f, f, null, null, null, null, null, f, f, f, null, null, 2026-02-11 00:26:50+00, 2026-02-11 00:27:05.988966+00).',
-  hint: null,
-  message: 'new row for relation "badge_order_items" violates check constraint "badge_order_items_status_check"'
-}
-
-2026-02-11 00:27:07.726 [info] [BadgeDesigner] api.send-to-supabase request received 2026-02-11T00:27:07.726Z POST
-2026-02-11 00:27:07.728 [info] [BadgeDesigner] send-to-supabase payload: {
-  designId: 'design_1770769602846_tompsiyct',
-  hasPdf: true,
-  thumbnailCount: 4,
-  svgCount: 4,
-  shopifyCustomerId: null
-}
-2026-02-11 00:27:07.815 [info] Uploading PDF to badge-pdfs bucket: design_1770769602846_tompsiyct/badge-design.pdf (application/pdf, 92447 bytes)
-2026-02-11 00:27:07.962 [info] PDF uploaded successfully to badge-pdfs: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-pdfs/design_1770769602846_tompsiyct/badge-design.pdf
-2026-02-11 00:27:07.962 [info] PDF uploaded successfully to badge-pdfs (90.28 KB): https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-pdfs/design_1770769602846_tompsiyct/badge-design.pdf
-2026-02-11 00:27:08.047 [info] Uploading image to badge-images bucket: design_1770769602846_tompsiyct/badge-0-thumbnail.png (image/png, 3700 bytes)
-2026-02-11 00:27:08.214 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-0-thumbnail.png
-2026-02-11 00:27:08.215 [info] Thumbnail PNG uploaded successfully to badge-images for badge 0: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-0-thumbnail.png
-2026-02-11 00:27:08.309 [info] Uploading image to badge-images bucket: design_1770769602846_tompsiyct/badge-0-design.svg (image/svg+xml, 2154 bytes)
-2026-02-11 00:27:08.504 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-0-design.svg
-2026-02-11 00:27:08.504 [info] SVG uploaded successfully to badge-images for badge 0: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-0-design.svg
-2026-02-11 00:27:08.623 [info] Uploading image to badge-images bucket: design_1770769602846_tompsiyct/badge-1-thumbnail.png (image/png, 3762 bytes)
-2026-02-11 00:27:08.822 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-1-thumbnail.png
-2026-02-11 00:27:08.822 [info] Thumbnail PNG uploaded successfully to badge-images for badge 1: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-1-thumbnail.png
-2026-02-11 00:27:08.930 [info] Uploading image to badge-images bucket: design_1770769602846_tompsiyct/badge-1-design.svg (image/svg+xml, 2473 bytes)
-2026-02-11 00:27:09.107 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-1-design.svg
-2026-02-11 00:27:09.107 [info] SVG uploaded successfully to badge-images for badge 1: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-1-design.svg
-2026-02-11 00:27:09.202 [info] Uploading image to badge-images bucket: design_1770769602846_tompsiyct/badge-2-thumbnail.png (image/png, 3960 bytes)
-2026-02-11 00:27:09.371 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-2-thumbnail.png
-2026-02-11 00:27:09.371 [info] Thumbnail PNG uploaded successfully to badge-images for badge 2: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-2-thumbnail.png
-2026-02-11 00:27:09.498 [info] Uploading image to badge-images bucket: design_1770769602846_tompsiyct/badge-2-design.svg (image/svg+xml, 2475 bytes)
-2026-02-11 00:27:09.873 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-2-design.svg
-2026-02-11 00:27:09.873 [info] SVG uploaded successfully to badge-images for badge 2: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-2-design.svg
-2026-02-11 00:27:10.000 [info] Uploading image to badge-images bucket: design_1770769602846_tompsiyct/badge-3-thumbnail.png (image/png, 4138 bytes)
-2026-02-11 00:27:10.212 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-3-thumbnail.png
-2026-02-11 00:27:10.212 [info] Thumbnail PNG uploaded successfully to badge-images for badge 3: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-3-thumbnail.png
-2026-02-11 00:27:10.334 [info] Uploading image to badge-images bucket: design_1770769602846_tompsiyct/badge-3-design.svg (image/svg+xml, 2478 bytes)
-2026-02-11 00:27:10.550 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-3-design.svg
-2026-02-11 00:27:10.550 [info] SVG uploaded successfully to badge-images for badge 3: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769602846_tompsiyct/badge-3-design.svg
-2026-02-11 00:27:10.644 [error] Save badge order items error: {
-  code: '23505',
-  details: 'Key (design_id, badge_id)=(design_1770769602846_tompsiyct, badge-0) already exists.',
-  hint: null,
-  message: 'duplicate key value violates unique constraint "idx_badge_order_items_unique"'
-}
-2026-02-11 00:27:10.644 [error] [BadgeDesigner] storageOnly: saveBadgeOrderItems failed: {
-  code: '23505',
-  details: 'Key (design_id, badge_id)=(design_1770769602846_tompsiyct, badge-0) already exists.',
-  hint: null,
-  message: 'duplicate key value violates unique constraint "idx_badge_order_items_unique"'
-}
-
-
-2026-02-11 00:28:09.585 [info] Uploading PDF to badge-pdfs bucket: design_1770769676097_051z8x3qr/badge-design.pdf (application/pdf, 103232 bytes)
-2026-02-11 00:28:09.793 [info] PDF uploaded successfully to badge-pdfs: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-pdfs/design_1770769676097_051z8x3qr/badge-design.pdf
-2026-02-11 00:28:09.953 [error] updateBadgeOrderItemsStatusByDesignId error: {
-  code: '23514',
-  details: 'Failing row contains (7bf722e1-873f-4d2e-824a-ed71fab880de, design_1770769676097_051z8x3qr, null, null, null, badge-0, https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., Brushed Gold #eac10c, in_cart, Your Name, 25, Roboto, f, f, f, Black #000000, center, Title, 20, Roboto, f, f, f, Black #000000, center, null, null, null, f, f, f, null, null, null, null, null, f, f, f, null, null, 2026-02-11 00:28:02+00, 2026-02-11 00:28:09.935042+00).',
-  hint: null,
-  message: 'new row for relation "badge_order_items" violates check constraint "badge_order_items_status_check"'
-}
-2026-02-11 00:28:09.953 [warning] [finalize-draft] in_cart status update failed (run migration_add_in_cart_status.sql if needed): {
-  code: '23514',
-  details: 'Failing row contains (7bf722e1-873f-4d2e-824a-ed71fab880de, design_1770769676097_051z8x3qr, null, null, null, badge-0, https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/publi..., Brushed Gold #eac10c, in_cart, Your Name, 25, Roboto, f, f, f, Black #000000, center, Title, 20, Roboto, f, f, f, Black #000000, center, null, null, null, f, f, f, null, null, null, null, null, f, f, f, null, null, 2026-02-11 00:28:02+00, 2026-02-11 00:28:09.935042+00).',
-  hint: null,
-  message: 'new row for relation "badge_order_items" violates check constraint "badge_order_items_status_check"'
-}
-
-
-2026-02-11 00:28:11.079 [info] [BadgeDesigner] api.send-to-supabase request received 2026-02-11T00:28:11.078Z POST
-2026-02-11 00:28:11.081 [info] [BadgeDesigner] send-to-supabase payload: {
-  designId: 'design_1770769676097_051z8x3qr',
-  hasPdf: true,
-  thumbnailCount: 4,
-  svgCount: 4,
-  shopifyCustomerId: null
-}
-2026-02-11 00:28:11.169 [info] Uploading PDF to badge-pdfs bucket: design_1770769676097_051z8x3qr/badge-design.pdf (application/pdf, 103232 bytes)
-2026-02-11 00:28:11.327 [info] PDF uploaded successfully to badge-pdfs: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-pdfs/design_1770769676097_051z8x3qr/badge-design.pdf
-2026-02-11 00:28:11.327 [info] PDF uploaded successfully to badge-pdfs (100.81 KB): https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-pdfs/design_1770769676097_051z8x3qr/badge-design.pdf
-2026-02-11 00:28:11.438 [info] Uploading image to badge-images bucket: design_1770769676097_051z8x3qr/badge-0-thumbnail.png (image/png, 4453 bytes)
-2026-02-11 00:28:11.554 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-0-thumbnail.png
-2026-02-11 00:28:11.554 [info] Thumbnail PNG uploaded successfully to badge-images for badge 0: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-0-thumbnail.png
-2026-02-11 00:28:11.637 [info] Uploading image to badge-images bucket: design_1770769676097_051z8x3qr/badge-0-design.svg (image/svg+xml, 2154 bytes)
-2026-02-11 00:28:11.782 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-0-design.svg
-2026-02-11 00:28:11.782 [info] SVG uploaded successfully to badge-images for badge 0: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-0-design.svg
-2026-02-11 00:28:11.865 [info] Uploading image to badge-images bucket: design_1770769676097_051z8x3qr/badge-1-thumbnail.png (image/png, 4561 bytes)
-2026-02-11 00:28:12.003 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-1-thumbnail.png
-2026-02-11 00:28:12.004 [info] Thumbnail PNG uploaded successfully to badge-images for badge 1: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-1-thumbnail.png
-2026-02-11 00:28:12.069 [info] Uploading image to badge-images bucket: design_1770769676097_051z8x3qr/badge-1-design.svg (image/svg+xml, 2473 bytes)
-2026-02-11 00:28:12.213 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-1-design.svg
-2026-02-11 00:28:12.214 [info] SVG uploaded successfully to badge-images for badge 1: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-1-design.svg
-2026-02-11 00:28:12.302 [info] Uploading image to badge-images bucket: design_1770769676097_051z8x3qr/badge-2-thumbnail.png (image/png, 4843 bytes)
-2026-02-11 00:28:12.464 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-2-thumbnail.png
-2026-02-11 00:28:12.464 [info] Thumbnail PNG uploaded successfully to badge-images for badge 2: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-2-thumbnail.png
-2026-02-11 00:28:12.552 [info] Uploading image to badge-images bucket: design_1770769676097_051z8x3qr/badge-2-design.svg (image/svg+xml, 2475 bytes)
-2026-02-11 00:28:12.656 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-2-design.svg
-2026-02-11 00:28:12.657 [info] SVG uploaded successfully to badge-images for badge 2: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-2-design.svg
-2026-02-11 00:28:12.733 [info] Uploading image to badge-images bucket: design_1770769676097_051z8x3qr/badge-3-thumbnail.png (image/png, 5105 bytes)
-2026-02-11 00:28:12.858 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-3-thumbnail.png
-2026-02-11 00:28:12.858 [info] Thumbnail PNG uploaded successfully to badge-images for badge 3: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-3-thumbnail.png
-2026-02-11 00:28:12.941 [info] Uploading image to badge-images bucket: design_1770769676097_051z8x3qr/badge-3-design.svg (image/svg+xml, 2478 bytes)
-2026-02-11 00:28:13.102 [info] Image uploaded successfully to badge-images: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-3-design.svg
-2026-02-11 00:28:13.102 [info] SVG uploaded successfully to badge-images for badge 3: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-images/design_1770769676097_051z8x3qr/badge-3-design.svg
-2026-02-11 00:28:13.170 [error] Save badge order items error: {
-  code: '23505',
-  details: 'Key (design_id, badge_id)=(design_1770769676097_051z8x3qr, badge-0) already exists.',
-  hint: null,
-  message: 'duplicate key value violates unique constraint "idx_badge_order_items_unique"'
-}
-2026-02-11 00:28:13.170 [error] [BadgeDesigner] storageOnly: saveBadgeOrderItems failed: {
-  code: '23505',
-  details: 'Key (design_id, badge_id)=(design_1770769676097_051z8x3qr, badge-0) already exists.',
-  hint: null,
-  message: 'duplicate key value violates unique constraint "idx_badge_order_items_unique"'
-}
+2
+PDF uploaded successfully to badge-pdfs: https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/badge-pdfs/design_1770834478759_ecksg0h4u/badge-design.pdf
+Feb 11 10:29:15.22
+POST
+---
+badgedesigner.vercel.app
+/api/save-badge
+12
+Badge design creation result: { id: '45', designId: 'design_1770834478759_ecksg0h4u' }
+Feb 11 10:28:53.33
+POST
+200
+badgedesigner.vercel.app
+/api/save-draft-badges
+43
+[BadgeDesigner] save-draft-badges OK: design_1770834478759_ecksg0h4u savedCount: 10
+Feb 11 10:28:05.43
+POST
+200
+badgedesigner.vercel.app
+/api/save-draft-badges
+7
+[BadgeDesigner] save-draft-badges OK: design_1770834478759_ecksg0h4u savedCount: 1
+Feb 11 10:28:03.89
+POST
+---
+badgedesigner.vercel.app
+/api/save-draft-badges
+6
+[BadgeDesigner] save-draft-badges OK: design_1770834478759_ecksg0h4u savedCount: 1
+Feb 11 10:27:29.14
+GET
+---
+badgedesigner.vercel.app
+/
+2
+Gadget API Configuration: { GADGET_API_URL: 'https://all-quality-badge-designer--development.gadget.app/', environment: 'development', GADGET_API_KEY: 'SET' }
