@@ -15,7 +15,10 @@ export async function action({ request }: ActionFunctionArgs) {
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, { status: 405 });
   }
-  console.log("[BadgeDesigner] api.save-draft-badges request received", new Date().toISOString());
+  console.log(
+    "[BadgeDesigner] api.save-draft-badges request received",
+    new Date().toISOString(),
+  );
   try {
     const formData = await request.formData();
     const designId = (formData.get("designId") as string)?.trim();
@@ -39,7 +42,8 @@ export async function action({ request }: ActionFunctionArgs) {
     const shopifyCustomerId =
       (formData.get("shopifyCustomerId") as string) || null;
 
-    const allBadges = designData.allBadges || (designData.badge ? [designData.badge] : []);
+    const allBadges =
+      designData.allBadges || (designData.badge ? [designData.badge] : []);
     if (allBadges.length === 0) {
       return json(
         { success: false, error: "No badges in designData" },
@@ -48,6 +52,8 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     const badgeOrderItems: ReturnType<typeof convertBadgeToOrderItem>[] = [];
+    // Cache-bust: each save uses new paths so PNG/SVG/table always reflect latest (avoids CDN/browser serving old assets)
+    const saveTimestamp = Date.now();
 
     for (let badgeIndex = 0; badgeIndex < allBadges.length; badgeIndex++) {
       const badge = allBadges[badgeIndex];
@@ -61,7 +67,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
       if (thumbnailPngFile?.size) {
         try {
-          const thumbnailFileName = `${designId}/badge-${badgeIndex}-thumbnail.png`;
+          const thumbnailFileName = `${designId}/badge-${badgeIndex}-thumbnail-${saveTimestamp}.png`;
           badgeThumbnailUrl = await uploadToBadgeImagesBucket(
             thumbnailPngFile,
             thumbnailFileName,
@@ -77,7 +83,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
       if (svgFile?.size) {
         try {
-          const svgFileName = `${designId}/badge-${badgeIndex}-design.svg`;
+          const svgFileName = `${designId}/badge-${badgeIndex}-design-${saveTimestamp}.svg`;
           badgeFullImageUrl = await uploadToBadgeImagesBucket(
             svgFile,
             svgFileName,
@@ -105,7 +111,12 @@ export async function action({ request }: ActionFunctionArgs) {
     await saveBadgeOrderItems(badgeOrderItems);
 
     const thumbnailUrls = badgeOrderItems.map((i) => i.thumbnail_url || "");
-    console.log("[BadgeDesigner] save-draft-badges OK:", designId, "savedCount:", badgeOrderItems.length);
+    console.log(
+      "[BadgeDesigner] save-draft-badges OK:",
+      designId,
+      "savedCount:",
+      badgeOrderItems.length,
+    );
     return json({
       success: true,
       thumbnailUrls,
@@ -114,9 +125,6 @@ export async function action({ request }: ActionFunctionArgs) {
   } catch (err) {
     console.error("[save-draft-badges] error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
-    return json(
-      { success: false, error: message },
-      { status: 500 },
-    );
+    return json({ success: false, error: message }, { status: 500 });
   }
 }
