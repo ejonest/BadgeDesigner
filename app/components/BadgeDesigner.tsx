@@ -5851,20 +5851,31 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             )}
             {csvPreview.length > 0 && (
               <div className="mb-2">
-                <div className="font-semibold mb-1">Preview:</div>
-                <table className="w-full text-xs border">
-                  <tbody>
-                    {csvPreview.map((row, i) => (
-                      <tr key={i} className="border-t">
-                        {row.map((cell, j) => (
-                          <td key={j} className="border px-2 py-1">
-                            {cell}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="font-semibold mb-1">
+                  Preview ({csvPreview.length} row{csvPreview.length === 1 ? "" : "s"})
+                </div>
+                {/* Scrollable container: show ~10 rows worth of height, max 40vh so it shrinks on short screens */}
+                <div
+                  className="border rounded overflow-y-auto bg-white"
+                  style={{
+                    maxHeight: "min(280px, 40vh)",
+                    minHeight: "80px",
+                  }}
+                >
+                  <table className="w-full text-xs border-collapse">
+                    <tbody>
+                      {csvPreview.map((row, i) => (
+                        <tr key={i} className="border-t border-gray-200">
+                          {row.map((cell, j) => (
+                            <td key={j} className="border border-gray-200 px-2 py-1">
+                              {cell}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
             <div className="flex justify-end">
