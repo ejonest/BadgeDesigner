@@ -1,5 +1,5 @@
 // app/components/BadgeDesigner.tsx
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { ArrowPathIcon } from "@heroicons/react/24/solid";
 import {
   ArrowPathIcon as ArrowPathIconOutline,
@@ -935,6 +935,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   /** Bump to trigger a draft save after section close / apply-to-all / selectBadge (only when stepsComplete). */
   const [draftSaveTrigger, setDraftSaveTrigger] = useState(0);
+  /** When set, addToCart waits for this promise so draft rows exist before finalize-draft. */
+  const draftSaveInProgressRef = useRef<Promise<void> | null>(null);
   const multipleBadgesRef = useRef<Badge[]>(multipleBadges);
   const badgeRef = useRef<Badge>(badge);
   const selectedBadgeIndexRef = useRef<number>(selectedBadgeIndex);
@@ -1312,6 +1314,90 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
     return () => clearTimeout(timer);
   }, [draftSaveTrigger, stepsComplete, _productId]);
+
+  /** Run draft save immediately for the given badges (e.g. after CSV override/add). Shows generating spinner over badges. */
+  const runDraftSaveForBadges = useCallback(
+    async (allBadges: Badge[]) => {
+      if (!allBadges?.length || !activeTemplateRef.current) return;
+      if (!sessionDesignIdRef.current) {
+        sessionDesignIdRef.current = `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      }
+      const designId = sessionDesignIdRef.current;
+      const promise = (async () => {
+      const activeT = activeTemplateRef.current;
+      const normalized = getAllBadges(allBadges);
+      if (normalized.length === 0) return;
+
+      setIsGeneratingDesigns(true);
+      try {
+        const templateId = activeT?.id || normalized[0]?.templateId || "rect-1x3";
+        const template = await loadTemplateById(templateId);
+        if (!template) {
+          console.warn("[BadgeDesigner] runDraftSaveForBadges: template not loaded for", templateId);
+          return;
+        }
+        const badgePromises = normalized.map((b, i) =>
+          Promise.all([
+            generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
+            generateSVGAsBlob(b, template),
+          ])
+            .then(([pngBlob, svgBlob]) => ({
+              pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
+              svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
+              i,
+            }))
+            .catch((err) => {
+              console.warn("[BadgeDesigner] runDraftSaveForBadges: badge", i, "PNG/SVG failed", err);
+              return { pngBlob: new Blob(), svgBlob: new Blob(), i };
+            }),
+        );
+        const badgeResults = await Promise.all(badgePromises);
+        badgeResults.sort((a, b) => a.i - b.i);
+        const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
+        const svgBlobs = badgeResults.map((r) => r.svgBlob);
+        const designDataForDraft = {
+          badge: normalized[0],
+          multipleBadges: normalized.length > 1 ? normalized.slice(1) : [],
+          allBadges: normalized,
+          timestamp: new Date().toISOString(),
+          shopId: "test-shop",
+          productId: _productId || "test-product",
+          backgroundColor: normalized[0].backgroundColor,
+          backingType: normalized[0].backing,
+          textLines: normalized[0].lines,
+        };
+        const formData = new FormData();
+        formData.append("designId", designId);
+        formData.append("designData", JSON.stringify(designDataForDraft));
+        const shopifyCustomerIdFromUrl =
+          typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("customerId") : null;
+        if (shopifyCustomerIdFromUrl) formData.append("shopifyCustomerId", shopifyCustomerIdFromUrl);
+        thumbnailPngBlobs.forEach((pngBlob, index) => {
+          if (pngBlob?.size > 0)
+            formData.append(`thumbnail_png_${index}`, pngBlob, `badge-${index}-thumbnail.png`);
+        });
+        svgBlobs.forEach((svgBlob, index) => {
+          if (svgBlob?.size > 0) formData.append(`svg_${index}`, svgBlob, `badge-${index}-design.svg`);
+        });
+        const res = await fetch("/api/save-draft-badges", { method: "POST", body: formData });
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data.savedCount)
+            console.log("[BadgeDesigner] runDraftSaveForBadges OK:", designId, "badges:", data.savedCount);
+        } else {
+          console.warn("[BadgeDesigner] runDraftSaveForBadges failed:", res.status, await res.text());
+        }
+      } catch (err) {
+        console.warn("[BadgeDesigner] runDraftSaveForBadges error:", err);
+      } finally {
+        setIsGeneratingDesigns(false);
+        draftSaveInProgressRef.current = null;
+      }
+      })();
+      draftSaveInProgressRef.current = promise;
+    },
+    [_productId],
+  );
 
   const touchStartX = React.useRef<number>(0);
 
@@ -2355,6 +2441,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     setIsAddingToCart(true);
 
     try {
+      if (draftSaveInProgressRef.current) {
+        await draftSaveInProgressRef.current;
+      }
       const shopData = getCurrentShop(_shop);
       if (!shopData) {
         alert("Shop information not found. Please reload the page.");
@@ -2667,8 +2756,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   }
 
-  // Actually create badges from CSV
-  function parseCsv(text: string, overrideExisting: boolean = false) {
+  // Actually create badges from CSV. Optional onBadgesUpdated(newBadges) is called after state is updated (e.g. to run draft save).
+  function parseCsv(
+    text: string,
+    overrideExisting: boolean = false,
+    onBadgesUpdated?: (newBadges: Badge[]) => void,
+  ) {
     console.log(
       `[DEBUG] parseCsv called with current badge:`,
       badge.lines.map((l) => l.text),
@@ -2810,6 +2903,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             setBadge(migratedBadges[0]);
             setSelectedBadgeIndex(0);
           }
+          onBadgesUpdated?.(migratedBadges);
         } else {
           // Add: Keep all existing badges, append CSV badges
           // First, save current badge to its position in multipleBadges
@@ -2830,6 +2924,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           if (updatedMultipleBadges[0]) {
             setBadge1Data(updatedMultipleBadges[0]);
           }
+          const newBadges = [...updatedMultipleBadges, ...migratedBadges];
+          onBadgesUpdated?.(newBadges);
         }
       }
     } catch {
@@ -2929,6 +3025,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
+          {isGeneratingDesigns && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/85 rounded-lg">
+              <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-blue-600 mb-2" />
+              <span className="text-gray-700 font-medium">Generating badge designs</span>
+              <span className="text-gray-500 text-sm mt-1">Saving to database…</span>
+            </div>
+          )}
           {totalBadges > 1 && canGoPrev && (
             <button
               type="button"
@@ -3686,12 +3789,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           </div>
 
           {/* Save / Add to cart */}
-          {isGeneratingDesigns && (
-            <div className="flex items-center gap-2 mt-2 mb-1 text-gray-600 text-sm">
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600" />
-              <span>Generating badge designs</span>
-            </div>
-          )}
           <div className="flex justify-end mt-2 mb-4 gap-2">
             <button
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
@@ -3919,22 +4016,30 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </div>
           </div>
         </div>
-        {multipleBadges.length === 0 ? (
-          <div className="flex flex-col items-center justify-center w-full h-[200px] flex-shrink-0 text-center text-gray-500 text-sm px-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50">
-            Select a shape below to get started
-          </div>
-        ) : multipleBadges.length === 1 ? (
-          <div
-            className="flex flex-col items-center w-full h-[200px] flex-shrink-0"
-            style={{ overflow: "visible" }}
-          >
-            <BadgeSvgRenderer
-              badge={getBadgeForPreview(0, getSavedBadgeFor(0)).badge}
-              templateId={getBadgeForPreview(0, getSavedBadgeFor(0)).templateId}
-            />
-          </div>
-        ) : (
-          <div className="flex flex-col w-full items-center gap-4 flex-1 min-h-0">
+        <div className="relative w-full">
+          {isGeneratingDesigns && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/85 rounded-lg border-2 border-blue-200">
+              <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-blue-600 mb-2" />
+              <span className="text-gray-700 font-medium">Generating badge designs</span>
+              <span className="text-gray-500 text-sm mt-1">Saving to database…</span>
+            </div>
+          )}
+          {multipleBadges.length === 0 ? (
+            <div className="flex flex-col items-center justify-center w-full h-[200px] flex-shrink-0 text-center text-gray-500 text-sm px-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50">
+              Select a shape below to get started
+            </div>
+          ) : multipleBadges.length === 1 ? (
+            <div
+              className="flex flex-col items-center w-full h-[200px] flex-shrink-0"
+              style={{ overflow: "visible" }}
+            >
+              <BadgeSvgRenderer
+                badge={getBadgeForPreview(0, getSavedBadgeFor(0)).badge}
+                templateId={getBadgeForPreview(0, getSavedBadgeFor(0)).templateId}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col w-full items-center gap-4 flex-1 min-h-0">
             {/* Current badge being edited - fixed at top */}
             <div className="flex flex-col items-center w-full flex-shrink-0">
               <div className="text-sm font-semibold text-blue-600 mb-0.5">
@@ -4102,7 +4207,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 })}
             </div>
           </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Badge grid picker modal (mobile + desktop) */}
@@ -5263,8 +5369,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   e.preventDefault();
                   setPendingCsvAction("override");
                   setShowCsvWarningModal(false);
-                  // Parse CSV with override flag
-                  parseCsv(csvText, true);
+                  parseCsv(csvText, true, (newBadges) => runDraftSaveForBadges(newBadges));
                   if (!csvError) {
                     setCsvText("");
                     setCsvPreview([]);
@@ -5285,8 +5390,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   e.preventDefault();
                   setPendingCsvAction("add");
                   setShowCsvWarningModal(false);
-                  // Parse CSV with add flag
-                  parseCsv(csvText, false);
+                  parseCsv(csvText, false, (newBadges) => runDraftSaveForBadges(newBadges));
                   if (!csvError) {
                     setCsvText("");
                     setCsvPreview([]);
