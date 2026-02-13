@@ -780,7 +780,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     console.log(
       `[COLOR TRACKING] Background color ${currentBackgroundColor} applied to all badges`,
     );
-    setDraftSaveTrigger((t) => t + 1);
+    runDraftSaveForBadges(updatedMultipleBadges);
   };
 
   // Apply all formatting (background color + all text formatting) from current badge to all badges
@@ -842,7 +842,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     console.log(
       `[FORMATTING] All formatting (background color + text formatting) applied to all badges`,
     );
-    setDraftSaveTrigger((t) => t + 1);
+    runDraftSaveForBadges(updatedMultipleBadges);
   };
 
   const isRedColor = (color: string): boolean => {
@@ -1246,7 +1246,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const allBadgesForDraft = getAllBadges(finalized);
       if (allBadgesForDraft.length === 0) return;
 
-      setIsGeneratingDesigns(true);
       try {
         const templateId = activeT?.id || allBadgesForDraft[0]?.templateId || "rect-1x3";
         const template = await loadTemplateById(templateId);
@@ -1307,8 +1306,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         }
       } catch (err) {
         console.warn("[BadgeDesigner] Draft save error:", err);
-      } finally {
-        setIsGeneratingDesigns(false);
       }
     }, DRAFT_SAVE_DEBOUNCE_MS);
 
@@ -3991,7 +3988,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         </div>
       </div>
 
-      {/* RIGHT COLUMN - Badge preview (Desktop only). Current badge at top; rest scrollable. */}
+      {/* RIGHT COLUMN - Badge preview (Desktop only). Current badge at top; rest in scrollable area. */}
       <div
         className={`hidden md:flex md:w-1/2 md:pl-3 flex-col items-center min-h-0 ${
           multipleBadges.length > 1 ? "md:h-[90vh]" : ""
@@ -4016,7 +4013,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </div>
           </div>
         </div>
-        <div className="relative w-full">
+        <div
+          className={`relative w-full ${multipleBadges.length > 1 ? "flex-1 min-h-0 flex flex-col overflow-hidden" : ""}`}
+        >
           {isGeneratingDesigns && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/85 rounded-lg border-2 border-blue-200">
               <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-blue-600 mb-2" />
