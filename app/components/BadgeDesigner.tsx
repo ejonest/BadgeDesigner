@@ -256,6 +256,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     return Math.sqrt(dr * dr + dg * dg + db * db);
   };
 
+  // Return black or white hex for readable text on the given background
+  const getContrastingTextColor = (backgroundColor: string): string => {
+    const [r, g, b] = hexToRgb(backgroundColor);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5 ? "#000000" : "#FFFFFF";
+  };
+
   // Check if two colors are similar (within threshold RGB units)
   const areColorsSimilar = (
     color1: string,
@@ -770,6 +777,56 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         background: true,
         textLines: true,
       }));
+      guidedFlowCompletedRef.current = true;
+    }
+  };
+
+  // Apply background and set any text line whose color is similar to the new background to a contrasting color
+  const applyBackgroundColorWithContrastUpdate = (colorValue: string) => {
+    saveToUndoHistory({
+      type: "background-color",
+      badgeIndex: selectedBadgeIndex,
+    });
+
+    setHasChosenBackgroundColor(true);
+    const contrastingText = getContrastingTextColor(colorValue);
+    const SIMILAR_THRESHOLD = 70;
+    const normalizedBg = (colorValue.trim().startsWith("#") ? colorValue.trim() : `#${colorValue.trim()}`).toUpperCase();
+
+    const updatedLines = badge.lines.map((line) => {
+      if (!line.color) return line;
+      const normalizedLine = (line.color.trim().startsWith("#") ? line.color.trim() : `#${line.color.trim()}`).toUpperCase();
+      if (areColorsSimilar(normalizedBg, normalizedLine, SIMILAR_THRESHOLD)) {
+        return { ...line, color: contrastingText };
+      }
+      return line;
+    });
+
+    const updatedBadge = {
+      ...badge,
+      backgroundColor: colorValue,
+      lines: updatedLines,
+    };
+    setBadge(updatedBadge);
+
+    const updatedMultipleBadges = [...multipleBadges];
+    if (updatedMultipleBadges[selectedBadgeIndex]) {
+      updatedMultipleBadges[selectedBadgeIndex] = updatedBadge;
+      setMultipleBadges(updatedMultipleBadges);
+    }
+
+    if (selectedBadgeIndex === 0) {
+      setBadge1Data(updatedBadge);
+    }
+
+    if (!guidedFlowCompletedRef.current) {
+      setSectionsOpen({
+        template: false,
+        export: false,
+        background: false,
+        textLines: true,
+      });
+      setSectionsOpened((prev) => ({ ...prev, background: true, textLines: true }));
       guidedFlowCompletedRef.current = true;
     }
   };
@@ -5308,7 +5365,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         </div>
       )}
 
-      {/* Background Color Warning Modal */}
+      {/* Background Color Warning Modal - text will be updated to contrast */}
       {showBackgroundColorWarning && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
@@ -5326,7 +5383,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-800">
-                Color Similarity Warning
+                Text color will be updated
               </h3>
               <button
                 type="button"
@@ -5340,10 +5397,27 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-gray-700 mb-6">
-              Some text may not show well with this background color. Consider
-              picking a new background or text color.
+            <p className="text-gray-700 mb-2">
+              This background is similar to some of your text colors. The following will be updated so text stays readable:
             </p>
+            {pendingBackgroundColor && (() => {
+              const SIMILAR_THRESHOLD = 70;
+              const normalizedBg = (pendingBackgroundColor.trim().startsWith("#") ? pendingBackgroundColor.trim() : `#${pendingBackgroundColor.trim()}`).toUpperCase();
+              const contrastingHex = getContrastingTextColor(pendingBackgroundColor);
+              const contrastingName = contrastingHex === "#FFFFFF" ? "white" : "black";
+              const indices: number[] = [];
+              badge.lines.forEach((line, i) => {
+                if (!line.color) return;
+                const normalizedLine = (line.color.trim().startsWith("#") ? line.color.trim() : `#${line.color.trim()}`).toUpperCase();
+                if (areColorsSimilar(normalizedBg, normalizedLine, SIMILAR_THRESHOLD)) indices.push(i + 1);
+              });
+              const lineLabel = indices.length === 1 ? `Line ${indices[0]}` : indices.map((n) => `Line ${n}`).join(", ");
+              return (
+                <p className="text-gray-700 mb-6 font-medium">
+                  {lineLabel} → <span style={{ color: contrastingHex === "#FFFFFF" ? "#6b7280" : "#111827" }}>{contrastingName}</span> text
+                </p>
+              );
+            })()}
             <div className="flex gap-3 justify-end">
               <button
                 type="button"
@@ -5360,13 +5434,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded hover:bg-blue-600 transition-colors"
                 onClick={() => {
                   if (pendingBackgroundColor) {
-                    applyBackgroundColor(pendingBackgroundColor);
+                    applyBackgroundColorWithContrastUpdate(pendingBackgroundColor);
                   }
                   setShowBackgroundColorWarning(false);
                   setPendingBackgroundColor(null);
                 }}
               >
-                Continue Anyway
+                Update background & text color
               </button>
             </div>
           </div>
