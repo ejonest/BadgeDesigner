@@ -503,23 +503,24 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         break;
       }
       case "background-color": {
-        // Restore background color
+        // Restore background color and line colors (e.g. when contrast update changed text colors)
         const previousBadge = lastAction.previousBadge;
+        const centeredLines = calculateCenterPositions(previousBadge.lines);
         setBadge((prev) => ({
           ...prev,
           backgroundColor: previousBadge.backgroundColor,
+          lines: centeredLines,
         }));
 
-        // Update the badge in multipleBadges array (use the updated reference)
         if (updatedMultipleBadges[lastAction.badgeIndex]) {
           updatedMultipleBadges[lastAction.badgeIndex] = {
             ...updatedMultipleBadges[lastAction.badgeIndex],
             backgroundColor: previousBadge.backgroundColor,
+            lines: previousBadge.lines,
           };
           setMultipleBadges(updatedMultipleBadges);
         }
 
-        // Sync badge1Data if editing the first badge
         if (lastAction.badgeIndex === 0) {
           setBadge1Data(updatedMultipleBadges[0]);
         }
