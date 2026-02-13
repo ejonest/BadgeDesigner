@@ -75,7 +75,7 @@ export const BADGE_CONSTANTS = {
         text: 'Title',
         xNorm: 0.5,
         yNorm: 0.5,  // Use center position - will be recalculated
-        sizeNorm: 0.208,  // 20px for line 2 (20/96 = 0.208)
+        sizeNorm: 17 / 96,  // 17px for line 2 (17/96)
         color: '#000000',
         bold: false,
         italic: false,

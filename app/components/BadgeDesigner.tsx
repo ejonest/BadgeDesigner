@@ -706,6 +706,29 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         }
         break;
       }
+      case "reset-line-formatting": {
+        // Restore the badge to its previous state before the line reset
+        const previousBadge = lastAction.previousBadge;
+        const centeredLines = calculateCenterPositions(previousBadge.lines);
+
+        const restoredBadge = {
+          ...previousBadge,
+          lines: centeredLines,
+          templateId: previousBadge.templateId || universalTemplateId,
+        };
+
+        setBadge(restoredBadge);
+
+        if (updatedMultipleBadges[lastAction.badgeIndex]) {
+          updatedMultipleBadges[lastAction.badgeIndex] = restoredBadge;
+          setMultipleBadges(updatedMultipleBadges);
+        }
+
+        if (lastAction.badgeIndex === 0) {
+          setBadge1Data(restoredBadge);
+        }
+        break;
+      }
       case "reset-all-badges": {
         // Restore all badges to their previous state before reset
         if (lastAction.previousMultipleBadges) {
@@ -1210,23 +1233,32 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     };
   }, [undoHistory.length, handleUndo]); // Re-bind when undo history or handleUndo changes
 
-  // Recalculate initial badge positions when templates load
+  // Recalculate initial badge positions when templates load: apply 25/17 default sizes and shrink-to-fit
   useEffect(() => {
-    if (templates.length > 0 && badge.lines.length > 0) {
-      // Check if this is the initial badge with default positions
-      const hasDefaultPositions = badge.lines.every(
+    if (templates.length === 0) return;
+    setBadge((prevBadge) => {
+      if (prevBadge.lines.length === 0) return prevBadge;
+      const hasDefaultPositions = prevBadge.lines.every(
         (line) => line.yNorm === 0.5,
       );
+      if (!hasDefaultPositions) return prevBadge;
 
-      if (hasDefaultPositions) {
-        console.log("[DEBUG] Recalculating initial badge positions");
-        const centeredLines = calculateCenterPositions(badge.lines);
-        setBadge((prevBadge) => ({
-          ...prevBadge,
-          lines: centeredLines,
-        }));
+      const designBox =
+        templates.find((t) => t.id === prevBadge.templateId)?.designBox ??
+        templates[0]?.designBox;
+      if (!designBox) {
+        const centeredLines = calculateCenterPositions(prevBadge.lines);
+        return { ...prevBadge, lines: centeredLines };
       }
-    }
+
+      const updatedLines = prevBadge.lines.map((line, i) => ({
+        ...line,
+        sizeNorm: getDefaultSizeNorm(i, designBox.height),
+      }));
+      const scaledLines = scaleLinesToFit(updatedLines, designBox);
+      const centeredLines = calculateCenterPositions(scaledLines);
+      return { ...prevBadge, lines: centeredLines };
+    });
   }, [templates.length]); // Only when templates first load
 
   // Initialize badge1Data to sync with multipleBadges[0] on mount
@@ -1877,19 +1909,65 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   };
 
+  // Reset a single line to default font (Roboto, no bold/italic/underline, center, 25pt line 1 / 17pt rest, contrast color). One undo restores full state.
+  const resetLineToDefault = (index: number) => {
+    const designBox = activeTemplate?.designBox || {
+      x: 0,
+      y: 0,
+      width: 288,
+      height: 96,
+    };
+    const bgColor = badge.backgroundColor || "#FFFFFF";
+    const defaultColor = getContrastingTextColor(bgColor);
+    const defaultSizeNorm = getDefaultSizeNorm(index, designBox.height);
+
+    saveToUndoHistory({
+      type: "reset-line-formatting",
+      badgeIndex: selectedBadgeIndex,
+      lineIndex: index,
+    });
+
+    const updatedLines = badge.lines.map((line, i) => {
+      if (i !== index) return line;
+      return {
+        ...line,
+        fontFamily: "Roboto",
+        bold: false,
+        italic: false,
+        underline: false,
+        align: "center" as const,
+        xNorm: 0.5,
+        sizeNorm: defaultSizeNorm,
+        color: defaultColor,
+      };
+    });
+
+    const scaledLines = scaleLinesToFit(updatedLines, designBox);
+    const centeredLines = calculateCenterPositions(scaledLines);
+
+    const updatedBadge = {
+      ...badge,
+      lines: centeredLines,
+    };
+    setBadge(updatedBadge);
+
+    const updatedMultipleBadges = [...multipleBadges];
+    if (updatedMultipleBadges[selectedBadgeIndex]) {
+      updatedMultipleBadges[selectedBadgeIndex] = updatedBadge;
+      setMultipleBadges(updatedMultipleBadges);
+    }
+    if (selectedBadgeIndex === 0) {
+      setBadge1Data(updatedBadge);
+    }
+  };
+
   // Helper function to calculate default sizeNorm for a line based on its index
-  // Line 1: 25px, then shrinks for each additional line
+  // Line 1: 25px, lines 2–4: 17px
   const getDefaultSizeNorm = (
     lineIndex: number,
     designBoxHeight: number = 96,
   ): number => {
-    // Base size for line 1: 25px
-    const baseSizePx = 25;
-    // Shrink factor for each subsequent line (80%, 68%, 60% of base)
-    const shrinkFactors = [1.0, 0.8, 0.68, 0.6];
-    const factor = shrinkFactors[lineIndex] || 0.6;
-    const fontSizePx = baseSizePx * factor;
-    // Convert to sizeNorm (normalized by designBox height)
+    const fontSizePx = lineIndex === 0 ? 25 : 17;
     return fontSizePx / designBoxHeight;
   };
 
@@ -2142,12 +2220,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         console.error("Template not found:", newTemplateId);
         return;
       }
+      const designBox = newTemplate.designBox;
+      const initialLinesWithSizes = INITIAL_BADGE.lines.map((line, index) => ({
+        ...line,
+        sizeNorm: getDefaultSizeNorm(index, designBox.height),
+      }));
+      const scaledLines = scaleLinesToFit(initialLinesWithSizes, designBox);
+      const centeredLines = calculateCenterPositions(scaledLines);
       const newBadge: Badge = {
         ...INITIAL_BADGE,
         templateId: newTemplateId,
         backgroundColor: INITIAL_BADGE.backgroundColor ?? "#FFFFFF",
         backing: INITIAL_BADGE.backing ?? "pin",
-        lines: INITIAL_BADGE.lines.map((line) => ({ ...line })),
+        lines: centeredLines,
       };
       setUniversalTemplateId(newTemplateId);
       setMultipleBadges([newBadge]);
@@ -3890,6 +3975,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   }}
                   onApplyFormattingToAll={applyFormattingToAllLines}
                   hasMultipleBadges={multipleBadges.length > 1}
+                  onResetLineToDefault={resetLineToDefault}
                 />
               </div>
             </div>

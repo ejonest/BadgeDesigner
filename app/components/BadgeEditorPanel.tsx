@@ -7,6 +7,7 @@ import { autoScaleFontSize } from "../utils/textMeasurement";
 import { FONT_COLORS } from "../constants/colors";
 import { FONT_FAMILIES } from "../constants/fonts";
 import { loadTemplateById } from "../utils/templates";
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
 // Helper functions for normalized font size conversion
 function sizeNormToPx(sizeNorm: number, designBoxHeight: number): number {
@@ -219,6 +220,7 @@ export interface BadgeEditorPanelProps {
   onOpenTextColorModal?: (lineIndex: number) => void;
   onApplyFormattingToAll?: (lineIndex: number) => void;
   hasMultipleBadges?: boolean;
+  onResetLineToDefault?: (lineIndex: number) => void;
 }
 
 export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
@@ -236,6 +238,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   onOpenTextColorModal,
   onApplyFormattingToAll,
   hasMultipleBadges = false,
+  onResetLineToDefault,
 }) => {
   // Get the current template's designBox for font size calculations
   const [designBox, setDesignBox] = React.useState({
@@ -602,16 +605,29 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 </button>
               </div>
             )}
-            {showRemove && badge.lines.length > 1 && (
-              <button
-                className="absolute top-2 right-2 control-button w-5 h-5 flex items-center justify-center bg-red-100 text-red-700 border-red-300 hover:bg-red-200"
-                onClick={() => onRemoveLine(idx)}
-                disabled={!editable}
-                title="Remove line"
-              >
-                <span style={{ fontSize: 14, color: "#b91c1c" }}>X</span>
-              </button>
-            )}
+            <div className="absolute top-2 right-2 flex items-center gap-1">
+              {onResetLineToDefault && editable && (
+                <button
+                  type="button"
+                  className="control-button flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 rounded"
+                  onClick={() => onResetLineToDefault(idx)}
+                  title="Reset line to default font"
+                >
+                  <ArrowPathIcon className="w-4 h-4 shrink-0" />
+                  <span>Reset default font</span>
+                </button>
+              )}
+              {showRemove && badge.lines.length > 1 && (
+                <button
+                  className="control-button w-5 h-5 flex items-center justify-center bg-red-100 text-red-700 border-red-300 hover:bg-red-200 rounded"
+                  onClick={() => onRemoveLine(idx)}
+                  disabled={!editable}
+                  title="Remove line"
+                >
+                  <span style={{ fontSize: 14, color: "#b91c1c" }}>X</span>
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>
