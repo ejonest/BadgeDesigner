@@ -3,7 +3,7 @@
   Use in the cart item media cell so the badge preview appears to the left of the product title.
   Pass: item (cart item)
 {% endcomment %}
-{%- assign custom_thumb = item.properties._custom_thumbnail | default: item.properties['Custom Thumbnail'] -%}
+{%- assign custom_thumb = item.properties['_Custom Thumbnail'] | default: item.properties._custom_thumbnail | default: item.properties['Custom Thumbnail'] -%}
 {%- if custom_thumb != blank -%}
   {%- assign custom_thumb_url = custom_thumb | strip -%}
   <a href="{{ item.url }}" class="cart-item__link" aria-hidden="true" tabindex="-1"> </a>

@@ -1,35 +1,31 @@
 {% comment %}
   Renders only the badge details to show in cart: 4 text lines (if present), price, attachment option, background color.
   Use for custom badge items so Design ID, Gadget Design ID, Badge Index, Custom Thumbnail URL, etc. are not shown.
-  Pass: item (cart item)
+  Supports both _-prefixed keys (hidden on checkout) and legacy keys. Pass: item (cart item)
 {% endcomment %}
-{%- if item.properties['Custom Badge Design'] != 'Yes' -%}
+{%- assign is_custom_badge = item.properties['_Custom Badge Design'] | default: item.properties['Custom Badge Design'] -%}
+{%- if is_custom_badge != 'Yes' -%}
   {%- comment -%} Not a custom badge; don't output this block (theme can show default options/properties) {%- endcomment -%}
 {%- else -%}
   <div class="badge-cart-details" style="margin-top: 8px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 0.9em;">
-    {%- if item.properties['Badge Text Line 1'] != blank -%}
-      <p style="margin: 2px 0;">{{ item.properties['Badge Text Line 1'] }}</p>
-    {%- endif -%}
-    {%- if item.properties['Badge Text Line 2'] != blank -%}
-      <p style="margin: 2px 0;">{{ item.properties['Badge Text Line 2'] }}</p>
-    {%- endif -%}
-    {%- if item.properties['Badge Text Line 3'] != blank -%}
-      <p style="margin: 2px 0;">{{ item.properties['Badge Text Line 3'] }}</p>
-    {%- endif -%}
-    {%- if item.properties['Badge Text Line 4'] != blank -%}
-      <p style="margin: 2px 0;">{{ item.properties['Badge Text Line 4'] }}</p>
-    {%- endif -%}
-    {%- if item.properties['Price'] != blank -%}
-      <p style="margin: 4px 0 2px 0;"><strong>Price:</strong> {{ item.properties['Price'] }}</p>
-    {%- endif -%}
-    {%- if item.properties['Backing Type'] != blank -%}
-      <p style="margin: 2px 0;"><strong>Attachment:</strong> {{ item.properties['Backing Type'] | capitalize }}</p>
-    {%- endif -%}
-    {%- if item.properties['Background Color'] != blank -%}
+    {%- assign line1 = item.properties['_Badge Text Line 1'] | default: item.properties['Badge Text Line 1'] -%}
+    {%- assign line2 = item.properties['_Badge Text Line 2'] | default: item.properties['Badge Text Line 2'] -%}
+    {%- assign line3 = item.properties['_Badge Text Line 3'] | default: item.properties['Badge Text Line 3'] -%}
+    {%- assign line4 = item.properties['_Badge Text Line 4'] | default: item.properties['Badge Text Line 4'] -%}
+    {%- assign price = item.properties['_Price'] | default: item.properties['Price'] -%}
+    {%- assign backing = item.properties['_Backing Type'] | default: item.properties['Backing Type'] -%}
+    {%- assign bgcolor = item.properties['_Background Color'] | default: item.properties['Background Color'] -%}
+    {%- if line1 != blank -%}<p style="margin: 2px 0;">{{ line1 }}</p>{%- endif -%}
+    {%- if line2 != blank -%}<p style="margin: 2px 0;">{{ line2 }}</p>{%- endif -%}
+    {%- if line3 != blank -%}<p style="margin: 2px 0;">{{ line3 }}</p>{%- endif -%}
+    {%- if line4 != blank -%}<p style="margin: 2px 0;">{{ line4 }}</p>{%- endif -%}
+    {%- if price != blank -%}<p style="margin: 4px 0 2px 0;"><strong>Price:</strong> {{ price }}</p>{%- endif -%}
+    {%- if backing != blank -%}<p style="margin: 2px 0;"><strong>Attachment:</strong> {{ backing | capitalize }}</p>{%- endif -%}
+    {%- if bgcolor != blank -%}
       <p style="margin: 2px 0;">
         <strong>Background:</strong>
-        <span style="display: inline-block; width: 14px; height: 14px; background: {{ item.properties['Background Color'] }}; border: 1px solid #ccc; border-radius: 2px; vertical-align: middle; margin-left: 4px;"></span>
-        {{ item.properties['Background Color'] }}
+        <span style="display: inline-block; width: 14px; height: 14px; background: {{ bgcolor }}; border: 1px solid #ccc; border-radius: 2px; vertical-align: middle; margin-left: 4px;"></span>
+        {{ bgcolor }}
       </p>
     {%- endif -%}
   </div>
