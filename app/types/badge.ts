@@ -69,7 +69,8 @@ export interface UndoAction {
     | "apply-line-formatting"
     | "apply-background-color-to-all"
     | "reset-badge"
-    | "reset-all-badges";
+    | "reset-all-badges"
+    | "reset-line-formatting";
   previousBadge: Badge; // Full badge state before change
   previousMultipleBadges?: Badge[]; // For "apply all" operations
   previousUniversalTemplateId?: string; // For template changes, track the previous universal template ID
