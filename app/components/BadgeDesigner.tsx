@@ -1,5 +1,11 @@
 // app/components/BadgeDesigner.tsx
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import { ArrowPathIcon } from "@heroicons/react/24/solid";
 import {
   ArrowPathIcon as ArrowPathIconOutline,
@@ -23,6 +29,7 @@ import {
   SquaresPlusIcon,
   ArrowPathRoundedSquareIcon,
   CheckCircleIcon,
+  CheckIcon,
   QuestionMarkCircleIcon,
   ArrowUturnLeftIcon,
 } from "@heroicons/react/24/outline";
@@ -750,6 +757,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     if (selectedBadgeIndex === 0) {
       setBadge1Data(updatedBadge);
     }
+
+    if (!guidedFlowCompletedRef.current) {
+      setSectionsOpen({
+        template: false,
+        export: false,
+        background: false,
+        textLines: true,
+      });
+      setSectionsOpened((prev) => ({
+        ...prev,
+        background: true,
+        textLines: true,
+      }));
+      guidedFlowCompletedRef.current = true;
+    }
   };
 
   // Apply background color to all badges
@@ -937,6 +959,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [draftSaveTrigger, setDraftSaveTrigger] = useState(0);
   /** When set, addToCart waits for this promise so draft rows exist before finalize-draft. */
   const draftSaveInProgressRef = useRef<Promise<void> | null>(null);
+  /** Once true, we no longer auto-close/open sections on selection (user has completed first-time guided flow). */
+  const guidedFlowCompletedRef = useRef(false);
   const multipleBadgesRef = useRef<Badge[]>(multipleBadges);
   const badgeRef = useRef<Badge>(badge);
   const selectedBadgeIndexRef = useRef<number>(selectedBadgeIndex);
@@ -1197,8 +1221,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // Set session design id once when we have badges and template (for incremental draft saves)
   useEffect(() => {
-    if (activeTemplate && multipleBadges.length > 0 && !sessionDesignIdRef.current) {
-      sessionDesignIdRef.current = `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    if (
+      activeTemplate &&
+      multipleBadges.length > 0 &&
+      !sessionDesignIdRef.current
+    ) {
+      sessionDesignIdRef.current = `design_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 11)}`;
     }
   }, [activeTemplate, multipleBadges.length]);
 
@@ -1223,7 +1253,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   useEffect(() => {
     if (!stepsComplete || !activeTemplateRef.current) return;
     if (!sessionDesignIdRef.current) {
-      sessionDesignIdRef.current = `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      sessionDesignIdRef.current = `design_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 11)}`;
     }
     const designId = sessionDesignIdRef.current;
 
@@ -1247,10 +1279,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       if (allBadgesForDraft.length === 0) return;
 
       try {
-        const templateId = activeT?.id || allBadgesForDraft[0]?.templateId || "rect-1x3";
+        const templateId =
+          activeT?.id || allBadgesForDraft[0]?.templateId || "rect-1x3";
         const template = await loadTemplateById(templateId);
         if (!template) {
-          console.warn("[BadgeDesigner] Draft save: template not loaded for", templateId);
+          console.warn(
+            "[BadgeDesigner] Draft save: template not loaded for",
+            templateId,
+          );
           return;
         }
 
@@ -1265,7 +1301,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               i,
             }))
             .catch((err) => {
-              console.warn("[BadgeDesigner] Draft save: badge", i, "PNG/SVG failed", err);
+              console.warn(
+                "[BadgeDesigner] Draft save: badge",
+                i,
+                "PNG/SVG failed",
+                err,
+              );
               return { pngBlob: new Blob(), svgBlob: new Blob(), i };
             }),
         );
@@ -1276,7 +1317,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
         const designDataForDraft = {
           badge: allBadgesForDraft[0],
-          multipleBadges: allBadgesForDraft.length > 1 ? allBadgesForDraft.slice(1) : [],
+          multipleBadges:
+            allBadgesForDraft.length > 1 ? allBadgesForDraft.slice(1) : [],
           allBadges: allBadgesForDraft,
           timestamp: new Date().toISOString(),
           shopId: "test-shop",
@@ -1288,21 +1330,48 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         const formData = new FormData();
         formData.append("designId", designId);
         formData.append("designData", JSON.stringify(designDataForDraft));
-        const shopifyCustomerIdFromUrl = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("customerId") : null;
-        if (shopifyCustomerIdFromUrl) formData.append("shopifyCustomerId", shopifyCustomerIdFromUrl);
+        const shopifyCustomerIdFromUrl =
+          typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("customerId")
+            : null;
+        if (shopifyCustomerIdFromUrl)
+          formData.append("shopifyCustomerId", shopifyCustomerIdFromUrl);
         thumbnailPngBlobs.forEach((pngBlob, index) => {
-          if (pngBlob?.size > 0) formData.append(`thumbnail_png_${index}`, pngBlob, `badge-${index}-thumbnail.png`);
+          if (pngBlob?.size > 0)
+            formData.append(
+              `thumbnail_png_${index}`,
+              pngBlob,
+              `badge-${index}-thumbnail.png`,
+            );
         });
         svgBlobs.forEach((svgBlob, index) => {
-          if (svgBlob?.size > 0) formData.append(`svg_${index}`, svgBlob, `badge-${index}-design.svg`);
+          if (svgBlob?.size > 0)
+            formData.append(
+              `svg_${index}`,
+              svgBlob,
+              `badge-${index}-design.svg`,
+            );
         });
 
-        const res = await fetch("/api/save-draft-badges", { method: "POST", body: formData });
+        const res = await fetch("/api/save-draft-badges", {
+          method: "POST",
+          body: formData,
+        });
         if (res.ok) {
           const data = await res.json().catch(() => ({}));
-          if (data.savedCount) console.log("[BadgeDesigner] Draft save OK:", designId, "badges:", data.savedCount);
+          if (data.savedCount)
+            console.log(
+              "[BadgeDesigner] Draft save OK:",
+              designId,
+              "badges:",
+              data.savedCount,
+            );
         } else {
-          console.warn("[BadgeDesigner] Draft save failed:", res.status, await res.text());
+          console.warn(
+            "[BadgeDesigner] Draft save failed:",
+            res.status,
+            await res.text(),
+          );
         }
       } catch (err) {
         console.warn("[BadgeDesigner] Draft save error:", err);
@@ -1317,79 +1386,114 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     async (allBadges: Badge[]) => {
       if (!allBadges?.length || !activeTemplateRef.current) return;
       if (!sessionDesignIdRef.current) {
-        sessionDesignIdRef.current = `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+        sessionDesignIdRef.current = `design_${Date.now()}_${Math.random()
+          .toString(36)
+          .slice(2, 11)}`;
       }
       const designId = sessionDesignIdRef.current;
       const promise = (async () => {
-      const activeT = activeTemplateRef.current;
-      const normalized = getAllBadges(allBadges);
-      if (normalized.length === 0) return;
+        const activeT = activeTemplateRef.current;
+        const normalized = getAllBadges(allBadges);
+        if (normalized.length === 0) return;
 
-      setIsGeneratingDesigns(true);
-      try {
-        const templateId = activeT?.id || normalized[0]?.templateId || "rect-1x3";
-        const template = await loadTemplateById(templateId);
-        if (!template) {
-          console.warn("[BadgeDesigner] runDraftSaveForBadges: template not loaded for", templateId);
-          return;
+        setIsGeneratingDesigns(true);
+        try {
+          const templateId =
+            activeT?.id || normalized[0]?.templateId || "rect-1x3";
+          const template = await loadTemplateById(templateId);
+          if (!template) {
+            console.warn(
+              "[BadgeDesigner] runDraftSaveForBadges: template not loaded for",
+              templateId,
+            );
+            return;
+          }
+          const badgePromises = normalized.map((b, i) =>
+            Promise.all([
+              generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
+              generateSVGAsBlob(b, template),
+            ])
+              .then(([pngBlob, svgBlob]) => ({
+                pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
+                svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
+                i,
+              }))
+              .catch((err) => {
+                console.warn(
+                  "[BadgeDesigner] runDraftSaveForBadges: badge",
+                  i,
+                  "PNG/SVG failed",
+                  err,
+                );
+                return { pngBlob: new Blob(), svgBlob: new Blob(), i };
+              }),
+          );
+          const badgeResults = await Promise.all(badgePromises);
+          badgeResults.sort((a, b) => a.i - b.i);
+          const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
+          const svgBlobs = badgeResults.map((r) => r.svgBlob);
+          const designDataForDraft = {
+            badge: normalized[0],
+            multipleBadges: normalized.length > 1 ? normalized.slice(1) : [],
+            allBadges: normalized,
+            timestamp: new Date().toISOString(),
+            shopId: "test-shop",
+            productId: _productId || "test-product",
+            backgroundColor: normalized[0].backgroundColor,
+            backingType: normalized[0].backing,
+            textLines: normalized[0].lines,
+          };
+          const formData = new FormData();
+          formData.append("designId", designId);
+          formData.append("designData", JSON.stringify(designDataForDraft));
+          const shopifyCustomerIdFromUrl =
+            typeof window !== "undefined"
+              ? new URLSearchParams(window.location.search).get("customerId")
+              : null;
+          if (shopifyCustomerIdFromUrl)
+            formData.append("shopifyCustomerId", shopifyCustomerIdFromUrl);
+          thumbnailPngBlobs.forEach((pngBlob, index) => {
+            if (pngBlob?.size > 0)
+              formData.append(
+                `thumbnail_png_${index}`,
+                pngBlob,
+                `badge-${index}-thumbnail.png`,
+              );
+          });
+          svgBlobs.forEach((svgBlob, index) => {
+            if (svgBlob?.size > 0)
+              formData.append(
+                `svg_${index}`,
+                svgBlob,
+                `badge-${index}-design.svg`,
+              );
+          });
+          const res = await fetch("/api/save-draft-badges", {
+            method: "POST",
+            body: formData,
+          });
+          if (res.ok) {
+            const data = await res.json().catch(() => ({}));
+            if (data.savedCount)
+              console.log(
+                "[BadgeDesigner] runDraftSaveForBadges OK:",
+                designId,
+                "badges:",
+                data.savedCount,
+              );
+          } else {
+            console.warn(
+              "[BadgeDesigner] runDraftSaveForBadges failed:",
+              res.status,
+              await res.text(),
+            );
+          }
+        } catch (err) {
+          console.warn("[BadgeDesigner] runDraftSaveForBadges error:", err);
+        } finally {
+          setIsGeneratingDesigns(false);
+          draftSaveInProgressRef.current = null;
         }
-        const badgePromises = normalized.map((b, i) =>
-          Promise.all([
-            generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
-            generateSVGAsBlob(b, template),
-          ])
-            .then(([pngBlob, svgBlob]) => ({
-              pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
-              svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
-              i,
-            }))
-            .catch((err) => {
-              console.warn("[BadgeDesigner] runDraftSaveForBadges: badge", i, "PNG/SVG failed", err);
-              return { pngBlob: new Blob(), svgBlob: new Blob(), i };
-            }),
-        );
-        const badgeResults = await Promise.all(badgePromises);
-        badgeResults.sort((a, b) => a.i - b.i);
-        const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
-        const svgBlobs = badgeResults.map((r) => r.svgBlob);
-        const designDataForDraft = {
-          badge: normalized[0],
-          multipleBadges: normalized.length > 1 ? normalized.slice(1) : [],
-          allBadges: normalized,
-          timestamp: new Date().toISOString(),
-          shopId: "test-shop",
-          productId: _productId || "test-product",
-          backgroundColor: normalized[0].backgroundColor,
-          backingType: normalized[0].backing,
-          textLines: normalized[0].lines,
-        };
-        const formData = new FormData();
-        formData.append("designId", designId);
-        formData.append("designData", JSON.stringify(designDataForDraft));
-        const shopifyCustomerIdFromUrl =
-          typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("customerId") : null;
-        if (shopifyCustomerIdFromUrl) formData.append("shopifyCustomerId", shopifyCustomerIdFromUrl);
-        thumbnailPngBlobs.forEach((pngBlob, index) => {
-          if (pngBlob?.size > 0)
-            formData.append(`thumbnail_png_${index}`, pngBlob, `badge-${index}-thumbnail.png`);
-        });
-        svgBlobs.forEach((svgBlob, index) => {
-          if (svgBlob?.size > 0) formData.append(`svg_${index}`, svgBlob, `badge-${index}-design.svg`);
-        });
-        const res = await fetch("/api/save-draft-badges", { method: "POST", body: formData });
-        if (res.ok) {
-          const data = await res.json().catch(() => ({}));
-          if (data.savedCount)
-            console.log("[BadgeDesigner] runDraftSaveForBadges OK:", designId, "badges:", data.savedCount);
-        } else {
-          console.warn("[BadgeDesigner] runDraftSaveForBadges failed:", res.status, await res.text());
-        }
-      } catch (err) {
-        console.warn("[BadgeDesigner] runDraftSaveForBadges error:", err);
-      } finally {
-        setIsGeneratingDesigns(false);
-        draftSaveInProgressRef.current = null;
-      }
       })();
       draftSaveInProgressRef.current = promise;
     },
@@ -1991,6 +2095,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       setMultipleBadges([newBadge]);
       setBadge(newBadge);
       setSectionsOpened((prev) => ({ ...prev, template: true }));
+      if (!guidedFlowCompletedRef.current) {
+        setSectionsOpen({
+          template: false,
+          export: false,
+          background: true,
+          textLines: false,
+        });
+        setSectionsOpened((prev) => ({
+          ...prev,
+          template: true,
+          background: true,
+        }));
+      }
       return;
     }
 
@@ -2424,7 +2541,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               sum +
               basePrice +
               (b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0),
-            0
+            0,
           )
           .toFixed(2)
       : "0.00";
@@ -2449,7 +2566,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       }
 
       if (!sessionDesignIdRef.current) {
-        sessionDesignIdRef.current = `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+        sessionDesignIdRef.current = `design_${Date.now()}_${Math.random()
+          .toString(36)
+          .slice(2, 11)}`;
       }
       const designId = sessionDesignIdRef.current;
       const shopifyCustomerIdFromUrl =
@@ -2544,7 +2663,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
                     i,
                   }))
-                  .catch(() => ({ pngBlob: new Blob(), svgBlob: new Blob(), i })),
+                  .catch(() => ({
+                    pngBlob: new Blob(),
+                    svgBlob: new Blob(),
+                    i,
+                  })),
               );
               const [pdfBlob, ...badgeResults] = await Promise.all([
                 pdfPromise,
@@ -2604,7 +2727,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 body: formDataForSupabase,
               });
               if (supabaseResponse.ok) {
-                const supabaseJson = await supabaseResponse.json().catch(() => ({}));
+                const supabaseJson = await supabaseResponse
+                  .json()
+                  .catch(() => ({}));
                 thumbnailUrls = Array.isArray(supabaseJson.thumbnailUrls)
                   ? supabaseJson.thumbnailUrls
                   : [];
@@ -2652,10 +2777,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           backingType === "pin"
             ? variantIdFromUrl("variantIdPin")
             : backingType === "magnetic"
-              ? variantIdFromUrl("variantIdMagnetic")
-              : backingType === "adhesive"
-                ? variantIdFromUrl("variantIdAdhesive")
-                : variantIdFromUrl("variantIdPin");
+            ? variantIdFromUrl("variantIdMagnetic")
+            : backingType === "adhesive"
+            ? variantIdFromUrl("variantIdAdhesive")
+            : variantIdFromUrl("variantIdPin");
         if (fromUrl) return fromUrl;
         switch (backingType) {
           case "pin":
@@ -2675,7 +2800,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         const savedDesign = await gadgetPromise;
         gadgetDesignId = savedDesign?.id;
       } catch (gadgetErr) {
-        console.warn("Gadget save at add-to-cart failed (cart will still add):", gadgetErr);
+        console.warn(
+          "Gadget save at add-to-cart failed (cart will still add):",
+          gadgetErr,
+        );
       }
 
       const cartItems = allBadgesForSupabase.map((b, i) => {
@@ -2982,8 +3110,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           <div className="flex flex-col gap-1 min-w-0">
             <h2 className="text-xl font-bold text-gray-800">
               {multipleBadges.length === 0
-                ? "Pick a template"
-                : `Customize Your Badge ${selectedBadgeIndex + 1}${multipleBadges.length > 1 ? ` of ${totalBadges}` : ""}`}
+                ? "Design Your Badge"
+                : `Customize Your Badge ${selectedBadgeIndex + 1}${
+                    multipleBadges.length > 1 ? ` of ${totalBadges}` : ""
+                  }`}
             </h2>
             {multipleBadges.length > 0 && (
               <span className="text-xl font-bold text-red-600">
@@ -3025,8 +3155,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           {isGeneratingDesigns && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/85 rounded-lg">
               <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-blue-600 mb-2" />
-              <span className="text-gray-700 font-medium">Generating badge designs</span>
-              <span className="text-gray-500 text-sm mt-1">Saving to database…</span>
+              <span className="text-gray-700 font-medium">
+                Generating badge designs
+              </span>
+              <span className="text-gray-500 text-sm mt-1">
+                Saving to database…
+              </span>
             </div>
           )}
           {totalBadges > 1 && canGoPrev && (
@@ -3084,18 +3218,84 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       {/* LEFT COLUMN - Controls */}
       <div className="w-full md:w-1/2 mb-4 md:mb-0 md:pr-3 overflow-y-auto flex-1 min-h-0 md:flex-initial md:min-h-0 md:max-h-[90vh]">
         <div className="section-container mb-4">
-          <div className="hidden md:flex justify-between items-center mb-4">
-            <div className="flex flex-col gap-2">
+          <div className="hidden md:flex justify-between items-center mb-4 gap-4">
+            <div className="flex flex-col gap-2 min-w-0">
               <h2 className="text-xl font-bold text-gray-800">
                 {multipleBadges.length === 0
-                  ? "Pick a template"
-                  : `Customize Your Badge ${selectedBadgeIndex + 1}${multipleBadges.length > 1 ? ` of ${totalBadges}` : ""}`}
+                  ? "Design Your Badge"
+                  : `Customize Your Badge ${selectedBadgeIndex + 1}${
+                      multipleBadges.length > 1 ? ` of ${totalBadges}` : ""
+                    }`}
               </h2>
               {multipleBadges.length > 0 && (
                 <span className="text-xl font-bold text-red-600">
                   {activeTemplate.name}
                 </span>
               )}
+            </div>
+            {/* 3-step progress: dots + labels only (green-600 for completed) */}
+            <div className="flex-shrink-0 flex items-center gap-3">
+              {[
+                {
+                  label: "Template",
+                  done: multipleBadges.length > 0,
+                  current: multipleBadges.length === 0,
+                },
+                {
+                  label: "Background",
+                  done: hasChosenBackgroundColor,
+                  current:
+                    multipleBadges.length > 0 && !hasChosenBackgroundColor,
+                },
+                {
+                  label: "Text",
+                  done: sectionsOpened.textLines,
+                  current:
+                    hasChosenBackgroundColor && !sectionsOpened.textLines,
+                },
+              ].map((step, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && (
+                    <div
+                      className={`w-8 h-0.5 rounded ${
+                        [
+                          multipleBadges.length > 0,
+                          hasChosenBackgroundColor,
+                          sectionsOpened.textLines,
+                        ][i - 1]
+                          ? "bg-green-600"
+                          : "bg-gray-200"
+                      }`}
+                    />
+                  )}
+                  <div className="flex flex-col items-center">
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                        step.done
+                          ? "bg-green-600 text-white"
+                          : step.current
+                          ? "bg-green-600 text-white ring-2 ring-green-300"
+                          : "bg-gray-200"
+                      }`}
+                    >
+                      {step.done ? (
+                        <CheckIcon className="w-3.5 h-3.5 stroke-[2.5]" />
+                      ) : (
+                        <span
+                          className={`text-[10px] font-semibold ${
+                            step.current ? "text-white" : "text-gray-500"
+                          }`}
+                        >
+                          {i + 1}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-600 mt-0.5 whitespace-nowrap">
+                      {step.label}
+                    </span>
+                  </div>
+                </React.Fragment>
+              ))}
             </div>
             {/* <button
               className="px-2 py-1 text-xs border rounded bg-gray-100 hover:bg-gray-200"
@@ -3129,9 +3329,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             >
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-gray-800">
-                  Shape / Template
+                  Step 1: Pick a template
                 </h3>
-                {!sectionsOpen.template && sectionsOpened.template && (
+                {multipleBadges.length > 0 && (
                   <CheckCircleIcon className="w-5 h-5 text-green-600" />
                 )}
               </div>
@@ -3176,7 +3376,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       const thumbnailFilename = getThumbnailFilename(t.id);
                       const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
                       const svgPath = `/templates/${t.id}.svg`;
-                      const isSelected = universalTemplateId === t.id;
+                      const isSelected =
+                        multipleBadges.length > 0 &&
+                        universalTemplateId === t.id;
 
                       return (
                         <div key={t.id} className="relative">
@@ -3310,9 +3512,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               >
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-semibold text-gray-800">
-                    Background Color
+                    Step 2: Pick a background Color
                   </h3>
-                  {!sectionsOpen.background && sectionsOpened.background && (
+                  {hasChosenBackgroundColor && (
                     <CheckCircleIcon className="w-5 h-5 text-green-600" />
                   )}
                 </div>
@@ -3527,9 +3729,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             >
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-gray-800">
-                  Text Lines
+                  Step 3: Edit your text
                 </h3>
-                {!sectionsOpen.textLines && sectionsOpened.textLines && (
+                {sectionsOpened.textLines && (
                   <CheckCircleIcon className="w-5 h-5 text-green-600" />
                 )}
                 {badge.lines.some(
@@ -3811,8 +4013,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               {isAddingToCart
                 ? "Adding to Cart..."
                 : multipleBadges.length === 0
-                  ? "Add to Cart - Pick a template first"
-                  : `Add to Cart - ${prettyPrice}`}
+                ? "Add to Cart - Design your badge first"
+                : `Add to Cart - ${prettyPrice}`}
             </button>
           </div>
 
@@ -4014,13 +4216,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           </div>
         </div>
         <div
-          className={`relative w-full ${multipleBadges.length > 1 ? "flex-1 min-h-0 flex flex-col overflow-hidden" : ""}`}
+          className={`relative w-full ${
+            multipleBadges.length > 1
+              ? "flex-1 min-h-0 flex flex-col overflow-hidden"
+              : ""
+          }`}
         >
           {isGeneratingDesigns && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/85 rounded-lg border-2 border-blue-200">
               <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-blue-600 mb-2" />
-              <span className="text-gray-700 font-medium">Generating badge designs</span>
-              <span className="text-gray-500 text-sm mt-1">Saving to database…</span>
+              <span className="text-gray-700 font-medium">
+                Generating badge designs
+              </span>
+              <span className="text-gray-500 text-sm mt-1">
+                Saving to database…
+              </span>
             </div>
           )}
           {multipleBadges.length === 0 ? (
@@ -4034,178 +4244,181 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             >
               <BadgeSvgRenderer
                 badge={getBadgeForPreview(0, getSavedBadgeFor(0)).badge}
-                templateId={getBadgeForPreview(0, getSavedBadgeFor(0)).templateId}
+                templateId={
+                  getBadgeForPreview(0, getSavedBadgeFor(0)).templateId
+                }
               />
             </div>
           ) : (
             <div className="flex flex-col w-full items-center gap-4 flex-1 min-h-0">
-            {/* Current badge being edited - fixed at top */}
-            <div className="flex flex-col items-center w-full flex-shrink-0">
-              <div className="text-sm font-semibold text-blue-600 mb-0.5">
-                Now editing badge {selectedBadgeIndex + 1}
+              {/* Current badge being edited - fixed at top */}
+              <div className="flex flex-col items-center w-full flex-shrink-0">
+                <div className="text-sm font-semibold text-blue-600 mb-0.5">
+                  Now editing badge {selectedBadgeIndex + 1}
+                </div>
+                <div
+                  className="flex flex-col items-center justify-center w-full h-[260px] border-2 border-blue-400 rounded-lg bg-blue-50/50 py-2"
+                  style={{ overflow: "hidden" }}
+                >
+                  <BadgeSvgRenderer
+                    badge={
+                      getBadgeForPreview(
+                        selectedBadgeIndex,
+                        getSavedBadgeFor(selectedBadgeIndex),
+                      ).badge
+                    }
+                    templateId={
+                      getBadgeForPreview(
+                        selectedBadgeIndex,
+                        getSavedBadgeFor(selectedBadgeIndex),
+                      ).templateId
+                    }
+                    height="100%"
+                  />
+                </div>
               </div>
-              <div
-                className="flex flex-col items-center justify-center w-full h-[260px] border-2 border-blue-400 rounded-lg bg-blue-50/50 py-2"
-                style={{ overflow: "hidden" }}
-              >
-                <BadgeSvgRenderer
-                  badge={
-                    getBadgeForPreview(
-                      selectedBadgeIndex,
-                      getSavedBadgeFor(selectedBadgeIndex),
-                    ).badge
-                  }
-                  templateId={
-                    getBadgeForPreview(
-                      selectedBadgeIndex,
-                      getSavedBadgeFor(selectedBadgeIndex),
-                    ).templateId
-                  }
-                  height="100%"
-                />
-              </div>
-            </div>
 
-            {/* Rest: scrollable list - click Edit to bring that badge to the top */}
-            <div className="flex flex-col gap-4 w-full flex-1 min-h-0 overflow-y-auto">
-              {Array.from({ length: totalBadges }, (_, i) => i)
-                .filter((i) => i !== selectedBadgeIndex)
-                .map((i) => {
-                  const saved = getSavedBadgeFor(i);
-                  const { badge: b, templateId: tid } = getBadgeForPreview(
-                    i,
-                    saved,
-                  );
+              {/* Rest: scrollable list - click Edit to bring that badge to the top */}
+              <div className="flex flex-col gap-4 w-full flex-1 min-h-0 overflow-y-auto">
+                {Array.from({ length: totalBadges }, (_, i) => i)
+                  .filter((i) => i !== selectedBadgeIndex)
+                  .map((i) => {
+                    const saved = getSavedBadgeFor(i);
+                    const { badge: b, templateId: tid } = getBadgeForPreview(
+                      i,
+                      saved,
+                    );
 
-                  // Check if this badge has color similarity issues
-                  const hasColorIssues = b.lines.some(
-                    (l: BadgeLine) =>
-                      l.color &&
-                      areColorsSimilar(l.color, b.backgroundColor, 70),
-                  );
+                    // Check if this badge has color similarity issues
+                    const hasColorIssues = b.lines.some(
+                      (l: BadgeLine) =>
+                        l.color &&
+                        areColorsSimilar(l.color, b.backgroundColor, 70),
+                    );
 
-                  return (
-                    <div
-                      key={i}
-                      className="flex flex-row items-center gap-2 w-full flex-shrink-0"
-                    >
-                      <div className="flex flex-col items-center justify-center mr-2">
-                        <div
-                          className="flex items-center gap-1 mb-2"
-                          style={{ width: 32, justifyContent: "center" }}
-                        >
-                          <span className="text-lg font-bold">{i + 1}.</span>
-                          {hasColorIssues && (
-                            <div
-                              className="relative w-4 h-4 flex items-center justify-center"
-                              title="Some text may not show well. Please check font colors"
-                            >
-                              <svg
-                                className="w-4 h-4 h-full text-red-600"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
+                    return (
+                      <div
+                        key={i}
+                        className="flex flex-row items-center gap-2 w-full flex-shrink-0"
+                      >
+                        <div className="flex flex-col items-center justify-center mr-2">
+                          <div
+                            className="flex items-center gap-1 mb-2"
+                            style={{ width: 32, justifyContent: "center" }}
+                          >
+                            <span className="text-lg font-bold">{i + 1}.</span>
+                            {hasColorIssues && (
+                              <div
+                                className="relative w-4 h-4 flex items-center justify-center"
+                                title="Some text may not show well. Please check font colors"
                               >
-                                <circle
-                                  cx="10"
-                                  cy="10"
-                                  r="9"
-                                  stroke="currentColor"
-                                  strokeWidth="1.5"
-                                  fill="none"
-                                />
-                                <line
-                                  x1="5"
-                                  y1="5"
-                                  x2="15"
-                                  y2="15"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                />
-                              </svg>
-                            </div>
+                                <svg
+                                  className="w-4 h-4 h-full text-red-600"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                >
+                                  <circle
+                                    cx="10"
+                                    cy="10"
+                                    r="9"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    fill="none"
+                                  />
+                                  <line
+                                    x1="5"
+                                    y1="5"
+                                    x2="15"
+                                    y2="15"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                  />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            className="control-button flex items-center justify-center text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              selectBadge(i);
+                            }}
+                          >
+                            Edit
+                          </button>
+                          {multipleBadges.length > 1 && (
+                            <>
+                              <div className="h-2" />
+                              <button
+                                className="control-button p-1 bg-red-100 text-red-700 border-red-300 hover:bg-red-200 flex items-center justify-center"
+                                style={{ width: 28, height: 28 }}
+                                onClick={(e) => {
+                                  e.preventDefault();
+
+                                  // Delete the badge at index i
+                                  const newMultipleBadges =
+                                    multipleBadges.filter(
+                                      (_, idx) => idx !== i,
+                                    );
+
+                                  // Update selectedBadgeIndex appropriately
+                                  let newSelectedIndex = selectedBadgeIndex;
+                                  if (selectedBadgeIndex === i) {
+                                    // If we deleted the currently selected badge, select the first one
+                                    newSelectedIndex = 0;
+                                  } else if (selectedBadgeIndex > i) {
+                                    // If we deleted a badge before the selected one, decrement the index
+                                    newSelectedIndex = selectedBadgeIndex - 1;
+                                  }
+                                  // If selectedBadgeIndex < i, no change needed
+
+                                  setMultipleBadges(newMultipleBadges);
+                                  setSelectedBadgeIndex(newSelectedIndex);
+
+                                  // If we changed the selected index, load that badge
+                                  if (newSelectedIndex !== selectedBadgeIndex) {
+                                    const badgeToLoad =
+                                      newMultipleBadges[newSelectedIndex];
+                                    if (badgeToLoad) {
+                                      const centeredLines =
+                                        calculateCenterPositions(
+                                          badgeToLoad.lines,
+                                        );
+                                      setBadge({
+                                        ...badgeToLoad,
+                                        lines: centeredLines,
+                                        templateId: universalTemplateId,
+                                      });
+                                      // Sync badge1Data if it's the first badge
+                                      if (newSelectedIndex === 0) {
+                                        setBadge1Data(badgeToLoad);
+                                      }
+                                    }
+                                  }
+                                }}
+                              >
+                                <XMarkIcon className="w-4 h-4" />
+                              </button>
+                            </>
                           )}
                         </div>
-                        <button
-                          className="control-button flex items-center justify-center text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200"
+                        <div
+                          className="flex flex-col items-center w-full h-[200px] cursor-pointer hover:opacity-90 transition-opacity"
+                          style={{ overflow: "visible" }}
                           onClick={(e) => {
                             e.preventDefault();
                             selectBadge(i);
                           }}
+                          title="Click to edit this badge"
                         >
-                          Edit
-                        </button>
-                        {multipleBadges.length > 1 && (
-                          <>
-                            <div className="h-2" />
-                            <button
-                              className="control-button p-1 bg-red-100 text-red-700 border-red-300 hover:bg-red-200 flex items-center justify-center"
-                              style={{ width: 28, height: 28 }}
-                              onClick={(e) => {
-                                e.preventDefault();
-
-                                // Delete the badge at index i
-                                const newMultipleBadges = multipleBadges.filter(
-                                  (_, idx) => idx !== i,
-                                );
-
-                                // Update selectedBadgeIndex appropriately
-                                let newSelectedIndex = selectedBadgeIndex;
-                                if (selectedBadgeIndex === i) {
-                                  // If we deleted the currently selected badge, select the first one
-                                  newSelectedIndex = 0;
-                                } else if (selectedBadgeIndex > i) {
-                                  // If we deleted a badge before the selected one, decrement the index
-                                  newSelectedIndex = selectedBadgeIndex - 1;
-                                }
-                                // If selectedBadgeIndex < i, no change needed
-
-                                setMultipleBadges(newMultipleBadges);
-                                setSelectedBadgeIndex(newSelectedIndex);
-
-                                // If we changed the selected index, load that badge
-                                if (newSelectedIndex !== selectedBadgeIndex) {
-                                  const badgeToLoad =
-                                    newMultipleBadges[newSelectedIndex];
-                                  if (badgeToLoad) {
-                                    const centeredLines =
-                                      calculateCenterPositions(
-                                        badgeToLoad.lines,
-                                      );
-                                    setBadge({
-                                      ...badgeToLoad,
-                                      lines: centeredLines,
-                                      templateId: universalTemplateId,
-                                    });
-                                    // Sync badge1Data if it's the first badge
-                                    if (newSelectedIndex === 0) {
-                                      setBadge1Data(badgeToLoad);
-                                    }
-                                  }
-                                }
-                              }}
-                            >
-                              <XMarkIcon className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
+                          <BadgeSvgRenderer badge={b} templateId={tid} />
+                        </div>
                       </div>
-                      <div
-                        className="flex flex-col items-center w-full h-[200px] cursor-pointer hover:opacity-90 transition-opacity"
-                        style={{ overflow: "visible" }}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          selectBadge(i);
-                        }}
-                        title="Click to edit this badge"
-                      >
-                        <BadgeSvgRenderer badge={b} templateId={tid} />
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+              </div>
             </div>
-          </div>
           )}
         </div>
       </div>
@@ -4476,7 +4689,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     const thumbnailFilename = getThumbnailFilename(t.id);
                     const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
                     const svgPath = `/templates/${t.id}.svg`;
-                    const isSelected = universalTemplateId === t.id;
+                    const isSelected =
+                      multipleBadges.length > 0 && universalTemplateId === t.id;
 
                     return (
                       <div key={t.id} className="relative">
@@ -5258,11 +5472,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               </span>
               <br />
               <span className="font-mono bg-gray-100 p-1 rounded inline-block mb-1">
-                John Doe,Manager,Blue
+                John Doe,Manager,Corporate
               </span>
               <br />
               <span className="font-mono bg-gray-100 p-1 rounded inline-block mb-1">
-                Jane Smith,Developer,Red
+                Jane Smith,Developer,1st Division
               </span>
             </div>
             <div className="mb-2">
@@ -5368,7 +5582,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   e.preventDefault();
                   setPendingCsvAction("override");
                   setShowCsvWarningModal(false);
-                  parseCsv(csvText, true, (newBadges) => runDraftSaveForBadges(newBadges));
+                  parseCsv(csvText, true, (newBadges) =>
+                    runDraftSaveForBadges(newBadges),
+                  );
                   if (!csvError) {
                     setCsvText("");
                     setCsvPreview([]);
@@ -5389,7 +5605,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   e.preventDefault();
                   setPendingCsvAction("add");
                   setShowCsvWarningModal(false);
-                  parseCsv(csvText, false, (newBadges) => runDraftSaveForBadges(newBadges));
+                  parseCsv(csvText, false, (newBadges) =>
+                    runDraftSaveForBadges(newBadges),
+                  );
                   if (!csvError) {
                     setCsvText("");
                     setCsvPreview([]);
