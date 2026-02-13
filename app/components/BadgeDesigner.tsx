@@ -899,6 +899,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [selectedBadgeIndex, setSelectedBadgeIndex] = useState<number>(0); // 0 = first badge (multipleBadges[0]), 1+ = additional badges
   const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Keep for backward compatibility, synced with multipleBadges[0]
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isGeneratingDesigns, setIsGeneratingDesigns] = useState(false);
   // Undo history state
   const [undoHistory, setUndoHistory] = useState<UndoAction[]>([]);
   const MAX_UNDO_HISTORY = 50; // Limit undo history to prevent memory issues
@@ -1207,9 +1208,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       (prev.background && !sectionsOpen.background) ||
       (prev.textLines && !sectionsOpen.textLines) ||
       (prev.export && !sectionsOpen.export);
+    const didOpenExport = !prev.export && sectionsOpen.export;
     prevSectionsOpenRef.current = sectionsOpen;
     if (didClose) setDraftSaveTrigger((t) => t + 1);
-  }, [sectionsOpen]);
+    if (didOpenExport && stepsComplete) setDraftSaveTrigger((t) => t + 1);
+  }, [sectionsOpen, stepsComplete]);
 
   // Debounced draft save: only when stepsComplete, triggered by draftSaveTrigger (section close / apply-to-all / selectBadge)
   const DRAFT_SAVE_DEBOUNCE_MS = 800;
@@ -1241,6 +1244,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const allBadgesForDraft = getAllBadges(finalized);
       if (allBadgesForDraft.length === 0) return;
 
+      setIsGeneratingDesigns(true);
       try {
         const templateId = activeT?.id || allBadgesForDraft[0]?.templateId || "rect-1x3";
         const template = await loadTemplateById(templateId);
@@ -1301,6 +1305,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         }
       } catch (err) {
         console.warn("[BadgeDesigner] Draft save error:", err);
+      } finally {
+        setIsGeneratingDesigns(false);
       }
     }, DRAFT_SAVE_DEBOUNCE_MS);
 
@@ -3680,6 +3686,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           </div>
 
           {/* Save / Add to cart */}
+          {isGeneratingDesigns && (
+            <div className="flex items-center gap-2 mt-2 mb-1 text-gray-600 text-sm">
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600" />
+              <span>Generating badge designs</span>
+            </div>
+          )}
           <div className="flex justify-end mt-2 mb-4 gap-2">
             <button
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
