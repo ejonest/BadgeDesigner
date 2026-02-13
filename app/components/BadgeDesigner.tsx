@@ -99,6 +99,10 @@ const badgeWidth = BADGE_CONSTANTS.BADGE_WIDTH;
 /** Scale for thumbnail PNGs (cart/upload). Lower = smaller file and faster; 0.5 for speed, revert to 0.75 if too soft. */
 const THUMBNAIL_PNG_SCALE = 0.5;
 
+/** localStorage key prefix and version for badge designer draft cache (reload persistence). */
+const BADGE_DESIGNER_CACHE_PREFIX = "badge-designer-draft";
+const CACHE_VERSION = 1;
+
 /** Mobile preview (top of screen): tweak these to adjust the box and badge size. */
 const MOBILE_PREVIEW = {
   /** Vertical padding of the surrounding box (rem). Smaller = tighter top/bottom margins. */
@@ -1042,6 +1046,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const draftSaveInProgressRef = useRef<Promise<void> | null>(null);
   /** Once true, we no longer auto-close/open sections on selection (user has completed first-time guided flow). */
   const guidedFlowCompletedRef = useRef(false);
+  /** True after we have restored from localStorage cache once (prevents re-restore on later effect runs). */
+  const restoredFromCacheRef = useRef(false);
   const multipleBadgesRef = useRef<Badge[]>(multipleBadges);
   const badgeRef = useRef<Badge>(badge);
   const selectedBadgeIndexRef = useRef<number>(selectedBadgeIndex);
@@ -1188,6 +1194,113 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       }
     })();
   }, [templateRefreshKey]);
+
+  // Restore badge designer state from localStorage cache (once, after templates are loaded)
+  useEffect(() => {
+    if (templates.length === 0 || restoredFromCacheRef.current) return;
+    const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${_productId ?? "default"}`;
+    const raw = localStorage.getItem(cacheKey);
+    if (!raw) return;
+    let payload: {
+      version?: number;
+      multipleBadges?: Badge[];
+      universalTemplateId?: string;
+      selectedBadgeIndex?: number;
+      hasChosenBackgroundColor?: boolean;
+      designId?: string | null;
+    };
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    if (payload.version !== CACHE_VERSION) return;
+    if (
+      !Array.isArray(payload.multipleBadges) ||
+      payload.multipleBadges.length === 0
+    )
+      return;
+    if (
+      !payload.universalTemplateId ||
+      !templates.some((t) => t.id === payload.universalTemplateId)
+    )
+      return;
+    restoredFromCacheRef.current = true;
+    const safeIndex = Math.min(
+      payload.selectedBadgeIndex ?? 0,
+      payload.multipleBadges.length - 1,
+    );
+    setMultipleBadges(payload.multipleBadges);
+    setUniversalTemplateId(payload.universalTemplateId!);
+    setSelectedBadgeIndex(safeIndex);
+    setHasChosenBackgroundColor(payload.hasChosenBackgroundColor ?? false);
+    setBadge(payload.multipleBadges[safeIndex]);
+    if (payload.designId != null) {
+      sessionDesignIdRef.current = payload.designId;
+    }
+    setBadge1Data(payload.multipleBadges[0] ?? null);
+  }, [templates, _shop, _productId]);
+
+  // Debounced save of badge designer state to localStorage cache
+  useEffect(() => {
+    if (multipleBadges.length === 0) return;
+    const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${_productId ?? "default"}`;
+    const timeoutId = window.setTimeout(() => {
+      const payload = {
+        version: CACHE_VERSION,
+        timestamp: Date.now(),
+        multipleBadges,
+        universalTemplateId,
+        selectedBadgeIndex,
+        hasChosenBackgroundColor,
+        designId: sessionDesignIdRef.current,
+      };
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(payload));
+      } catch {
+        // ignore quota or other storage errors
+      }
+    }, 600);
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    multipleBadges,
+    universalTemplateId,
+    selectedBadgeIndex,
+    hasChosenBackgroundColor,
+    _shop,
+    _productId,
+  ]);
+
+  // beforeunload: save current state to cache so last edit before reload is not lost
+  useEffect(() => {
+    const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${_productId ?? "default"}`;
+    const handler = () => {
+      if (multipleBadges.length === 0) return;
+      const payload = {
+        version: CACHE_VERSION,
+        timestamp: Date.now(),
+        multipleBadges,
+        universalTemplateId,
+        selectedBadgeIndex,
+        hasChosenBackgroundColor,
+        designId: sessionDesignIdRef.current,
+      };
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(payload));
+      } catch {
+        // ignore quota or other storage errors
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [
+    multipleBadges,
+    universalTemplateId,
+    selectedBadgeIndex,
+    hasChosenBackgroundColor,
+    _shop,
+    _productId,
+  ]);
 
   // Add keyboard shortcut to refresh templates (Ctrl+R or Cmd+R, but prevent page reload)
   useEffect(() => {
@@ -2976,6 +3089,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       });
 
       const result = await api.addToCartMultiple(cartItems);
+      if (result.success) {
+        try {
+          const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${_productId ?? "default"}`;
+          localStorage.removeItem(cacheKey);
+        } catch {
+          // ignore
+        }
+      }
       if (!result.success) {
         alert("Failed to add badge(s) to cart. Please try again.");
       }
