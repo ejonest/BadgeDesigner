@@ -4688,6 +4688,73 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         </div>
       </div>
 
+      {/* MOBILE: Step progress bar as fixed footer at bottom, full width */}
+      <div className="flex-shrink-0 md:hidden w-full border-t border-gray-200 bg-gray-100 px-4 py-3">
+        <div className="flex items-center justify-center gap-4 w-full">
+          {[
+            {
+              label: "Template",
+              done: multipleBadges.length > 0,
+              current: multipleBadges.length === 0,
+            },
+            {
+              label: "Background",
+              done: hasChosenBackgroundColor,
+              current:
+                multipleBadges.length > 0 && !hasChosenBackgroundColor,
+            },
+            {
+              label: "Text",
+              done: sectionsOpened.textLines,
+              current:
+                hasChosenBackgroundColor && !sectionsOpened.textLines,
+            },
+          ].map((step, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && (
+                <div
+                  className={`flex-1 min-w-4 h-0.5 rounded ${
+                    [
+                      multipleBadges.length > 0,
+                      hasChosenBackgroundColor,
+                      sectionsOpened.textLines,
+                    ][i - 1]
+                      ? "bg-green-600"
+                      : "bg-gray-200"
+                  }`}
+                />
+              )}
+              <div className="flex flex-col items-center flex-shrink-0">
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                    step.done
+                      ? "bg-green-600 text-white"
+                      : step.current
+                      ? "bg-green-600 text-white ring-2 ring-green-300"
+                      : "bg-gray-200"
+                  }`}
+                >
+                  {step.done ? (
+                    <CheckIcon className="w-4 h-4 stroke-[2.5]" />
+                  ) : (
+                    <span
+                      className={`text-xs font-semibold ${
+                        step.current ? "text-white" : "text-gray-500"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs text-gray-600 mt-1 whitespace-nowrap">
+                  {step.label}
+                </span>
+              </div>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
       {/* Badge grid picker modal (mobile + desktop) */}
       {showBadgeGridModal && (
         <div
