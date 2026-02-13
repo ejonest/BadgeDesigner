@@ -1,0 +1,17 @@
+# Checkout UI extension: badge order summary (thumbnail + limited details)
+# Add this extension to a Shopify app and deploy to customize checkout order summary.
+# See docs/CHECKOUT_DISPLAY_SETUP.md for setup.
+
+api_version = "2024-10"
+
+[[extensions]]
+name = "Badge checkout summary"
+handle = "checkout-badge-summary"
+type = "ui_extension"
+
+[[extensions.targeting]]
+module = "./src/CheckoutBadgeSummary.jsx"
+target = "purchase.checkout.cart-line-item.render-after"
+
+[extensions.capabilities]
+network_access = true

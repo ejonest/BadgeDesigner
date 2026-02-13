@@ -3066,21 +3066,23 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         const backingP =
           b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0;
         const itemTotalPrice = (basePrice + backingP).toFixed(2);
+        // Use underscore prefix so these are hidden from default checkout display.
+        // Cart theme and checkout extension read these and show thumbnail + limited details only.
         const properties: Record<string, string> = {
-          "Custom Badge Design": "Yes",
-          "Badge Text Line 1": b.lines[0]?.text || "",
-          "Badge Text Line 2": b.lines[1]?.text || "",
-          "Badge Text Line 3": b.lines[2]?.text || "",
-          "Badge Text Line 4": b.lines[3]?.text || "",
-          "Background Color": b.backgroundColor,
-          "Font Family": b.lines[0]?.fontFamily || "Arial",
-          "Backing Type": b.backing,
-          "Design ID": designIdForSupabase,
-          Price: `$${itemTotalPrice}`,
-          "Badge Index": String(i),
-          "Custom Thumbnail": thumbnailUrls[i] ?? "",
+          "_Custom Badge Design": "Yes",
+          "_Badge Text Line 1": b.lines[0]?.text || "",
+          "_Badge Text Line 2": b.lines[1]?.text || "",
+          "_Badge Text Line 3": b.lines[2]?.text || "",
+          "_Badge Text Line 4": b.lines[3]?.text || "",
+          "_Background Color": b.backgroundColor,
+          "_Font Family": b.lines[0]?.fontFamily || "Arial",
+          "_Backing Type": b.backing,
+          "_Design ID": designIdForSupabase,
+          "_Price": `$${itemTotalPrice}`,
+          "_Badge Index": String(i),
+          "_Custom Thumbnail": thumbnailUrls[i] ?? "",
         };
-        if (gadgetDesignId) properties["Gadget Design ID"] = gadgetDesignId;
+        if (gadgetDesignId) properties["_Gadget Design ID"] = gadgetDesignId;
         return {
           variantId: getVariantId(b.backing),
           quantity: 1,
@@ -3088,15 +3090,29 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         };
       });
 
-      const result = await api.addToCartMultiple(cartItems);
-      if (result.success) {
-        try {
-          const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${_productId ?? "default"}`;
-          localStorage.removeItem(cacheKey);
-        } catch {
-          // ignore
-        }
+      // Clear cache and reset designer state before adding to cart so that:
+      // - On single-item we redirect; cache is already cleared so when user returns they start fresh.
+      // - On multi-item the UI resets immediately so the designer shows "start new".
+      const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${_productId ?? "default"}`;
+      try {
+        localStorage.removeItem(cacheKey);
+      } catch {
+        // ignore
       }
+      const freshBadge: Badge = {
+        ...INITIAL_BADGE,
+        lines: INITIAL_BADGE.lines.map((line) => ({ ...line })),
+      };
+      setMultipleBadges([]);
+      setBadge(freshBadge);
+      setSelectedBadgeIndex(0);
+      setUniversalTemplateId("rect-1x3");
+      setHasChosenBackgroundColor(false);
+      sessionDesignIdRef.current = null;
+      setBadge1Data(null);
+      setUndoHistory([]);
+
+      const result = await api.addToCartMultiple(cartItems);
       if (!result.success) {
         alert("Failed to add badge(s) to cart. Please try again.");
       }
