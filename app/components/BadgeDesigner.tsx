@@ -53,7 +53,7 @@ import {
   generateFullBadgeImage,
   generateThumbnailFromFullImage,
 } from "../utils/badgeThumbnail";
-import { getCurrentShop } from "../utils/shopAuth";
+import { getCurrentShop, type ShopAuthData } from "../utils/shopAuth";
 import { createApi } from "../utils/api";
 
 import { loadTemplates, loadTemplateById } from "../utils/templates";
@@ -112,6 +112,17 @@ const MOBILE_PREVIEW = {
   /** Height of the badge in vh (the "1" in 3:1). Bigger = larger badge. Width is 3× this to keep 3:1. */
   badgeHeightVh: 20,
 } as const;
+
+/** Payload stored when proof modal is open; used by onProofConfirm to complete add-to-cart. */
+interface ProofPendingPayload {
+  pdfBlob: Blob;
+  designId: string;
+  designIdForSupabase: string;
+  allBadgesForSupabase: Badge[];
+  shopData: ShopAuthData;
+  gadgetPromise: Promise<{ id?: string } | undefined>;
+  shopifyCustomerIdFromUrl: string | null;
+}
 
 // Helper functions for multi-badge exports
 const getAllBadges = (multipleBadges: Badge[]): Badge[] => {
@@ -1000,6 +1011,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   >(null);
   const [showSupabaseColorWarning, setShowSupabaseColorWarning] =
     useState(false);
+  // Proof modal: show after generating PDF; user must acknowledge before add-to-cart completes
+  const [showProofModal, setShowProofModal] = useState(false);
+  const [proofAcknowledged, setProofAcknowledged] = useState(false);
+  const [proofPdfObjectUrl, setProofPdfObjectUrl] = useState<string | null>(
+    null,
+  );
   const [csvText, setCsvText] = useState("");
   const [csvPreview, setCsvPreview] = useState<string[][]>([]);
   const [csvError, setCsvError] = useState("");
@@ -1044,6 +1061,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [draftSaveTrigger, setDraftSaveTrigger] = useState(0);
   /** When set, addToCart waits for this promise so draft rows exist before finalize-draft. */
   const draftSaveInProgressRef = useRef<Promise<void> | null>(null);
+  /** Set when proof modal is open; holds data needed to complete add-to-cart on confirm. */
+  const proofPendingAddToCartRef = useRef<ProofPendingPayload | null>(null);
   /** Once true, we no longer auto-close/open sections on selection (user has completed first-time guided flow). */
   const guidedFlowCompletedRef = useRef(false);
   /** True after we have restored from localStorage cache once (prevents re-restore on later effect runs). */
@@ -2868,19 +2887,64 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       };
       const gadgetPromise = api.saveBadgeDesign(minimalDesignData, shopData);
 
+      // Phase 1: Generate PDF only and show proof modal; add-to-cart completes in onProofConfirm
+      const pdfBlob = await generatePDFAsBlob(
+        allBadgesForSupabase[0],
+        allBadgesForSupabase.length > 1
+          ? allBadgesForSupabase.slice(1)
+          : undefined,
+      );
+      proofPendingAddToCartRef.current = {
+        pdfBlob,
+        designId,
+        designIdForSupabase,
+        allBadgesForSupabase,
+        shopData,
+        gadgetPromise,
+        shopifyCustomerIdFromUrl,
+      };
+      const objectUrl = URL.createObjectURL(pdfBlob);
+      setProofPdfObjectUrl(objectUrl);
+      setProofAcknowledged(false);
+      setShowProofModal(true);
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
+      alert("Failed to add badge to cart. Please try again.");
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const closeProofModal = useCallback(() => {
+    if (proofPdfObjectUrl) {
+      URL.revokeObjectURL(proofPdfObjectUrl);
+      setProofPdfObjectUrl(null);
+    }
+    proofPendingAddToCartRef.current = null;
+    setProofAcknowledged(false);
+    setShowProofModal(false);
+  }, [proofPdfObjectUrl]);
+
+  const onProofConfirm = async () => {
+    if (!proofAcknowledged) return;
+    const pending = proofPendingAddToCartRef.current;
+    if (!pending) return;
+    const {
+      pdfBlob,
+      designIdForSupabase,
+      allBadgesForSupabase,
+      shopData,
+      gadgetPromise,
+      shopifyCustomerIdFromUrl,
+    } = pending;
+    setIsAddingToCart(true);
+    try {
       let thumbnailUrls: string[] = [];
       let pdfUrlForCart: string | undefined;
       try {
-        // Try finalize-draft first (PDF only); use draft rows from incremental saves when present
-        const pdfBlobForFinalize = await generatePDFAsBlob(
-          allBadgesForSupabase[0],
-          allBadgesForSupabase.length > 1
-            ? allBadgesForSupabase.slice(1)
-            : undefined,
-        );
         const formDataFinalize = new FormData();
         formDataFinalize.append("designId", designIdForSupabase);
-        formDataFinalize.append("pdf", pdfBlobForFinalize, "badge-design.pdf");
+        formDataFinalize.append("pdf", pdfBlob, "badge-design.pdf");
         const finalizeRes = await fetch("/api/finalize-draft", {
           method: "POST",
           body: formDataFinalize,
@@ -2896,7 +2960,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           thumbnailUrls = finalizeJson.thumbnailUrls;
           pdfUrlForCart = finalizeJson.pdfUrl;
         } else {
-          // Fallback: no draft rows (e.g. add-to-cart before first debounced save) — full generate + send-to-supabase
           try {
             const templateToUse = activeTemplate;
             const templateId =
@@ -2905,103 +2968,94 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               "rect-1x3";
             const template = await loadTemplateById(templateId);
             if (template && allBadgesForSupabase.length > 0) {
-              const pdfPromise = generatePDFAsBlob(
-                allBadgesForSupabase[0],
+            const badgePromises = allBadgesForSupabase.map((b, i) =>
+              Promise.all([
+                generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
+                generateSVGAsBlob(b, template),
+              ])
+                .then(([pngBlob, svgBlob]) => ({
+                  pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
+                  svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
+                  i,
+                }))
+                .catch(() => ({
+                  pngBlob: new Blob(),
+                  svgBlob: new Blob(),
+                  i,
+                })),
+            );
+            const badgeResults = await Promise.all(badgePromises);
+            badgeResults.sort((a, b) => a.i - b.i);
+            const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
+            const svgBlobs = badgeResults.map((r) => r.svgBlob);
+            const designDataForSupabase = {
+              badge: allBadgesForSupabase[0],
+              multipleBadges:
                 allBadgesForSupabase.length > 1
                   ? allBadgesForSupabase.slice(1)
-                  : undefined,
-              );
-              const badgePromises = allBadgesForSupabase.map((b, i) =>
-                Promise.all([
-                  generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
-                  generateSVGAsBlob(b, template),
-                ])
-                  .then(([pngBlob, svgBlob]) => ({
-                    pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
-                    svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
-                    i,
-                  }))
-                  .catch(() => ({
-                    pngBlob: new Blob(),
-                    svgBlob: new Blob(),
-                    i,
-                  })),
-              );
-              const [pdfBlob, ...badgeResults] = await Promise.all([
-                pdfPromise,
-                ...badgePromises,
-              ]);
-              badgeResults.sort((a, b) => a.i - b.i);
-              const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
-              const svgBlobs = badgeResults.map((r) => r.svgBlob);
-              const designDataForSupabase = {
-                badge: allBadgesForSupabase[0],
-                multipleBadges:
-                  allBadgesForSupabase.length > 1
-                    ? allBadgesForSupabase.slice(1)
-                    : [],
-                allBadges: allBadgesForSupabase,
-                timestamp: new Date().toISOString(),
-                shopId: shopData.shopId || "test-shop",
-                productId: _productId || "test-product",
-                backgroundColor: allBadgesForSupabase[0].backgroundColor,
-                backingType: allBadgesForSupabase[0].backing,
-                textLines: allBadgesForSupabase[0].lines,
-              };
-              const formDataForSupabase = new FormData();
-              formDataForSupabase.append("designId", designIdForSupabase);
+                  : [],
+              allBadges: allBadgesForSupabase,
+              timestamp: new Date().toISOString(),
+              shopId: shopData.shopId || "test-shop",
+              productId: _productId || "test-product",
+              backgroundColor: allBadgesForSupabase[0].backgroundColor,
+              backingType: allBadgesForSupabase[0].backing,
+              textLines: allBadgesForSupabase[0].lines,
+            };
+            const formDataForSupabase = new FormData();
+            formDataForSupabase.append("designId", designIdForSupabase);
+            formDataForSupabase.append(
+              "designData",
+              JSON.stringify(designDataForSupabase),
+            );
+            formDataForSupabase.append("storageOnly", "true");
+            if (shopifyCustomerIdFromUrl) {
               formDataForSupabase.append(
-                "designData",
-                JSON.stringify(designDataForSupabase),
+                "shopifyCustomerId",
+                shopifyCustomerIdFromUrl,
               );
-              formDataForSupabase.append("storageOnly", "true");
-              if (shopifyCustomerIdFromUrl) {
+            }
+            formDataForSupabase.append("pdf", pdfBlob, "badge-design.pdf");
+            thumbnailPngBlobs.forEach((pngBlob, index) => {
+              if (pngBlob && pngBlob.size > 0) {
                 formDataForSupabase.append(
-                  "shopifyCustomerId",
-                  shopifyCustomerIdFromUrl,
+                  `thumbnail_png_${index}`,
+                  pngBlob,
+                  `badge-${index}-thumbnail.png`,
                 );
               }
-              formDataForSupabase.append("pdf", pdfBlob, "badge-design.pdf");
-              thumbnailPngBlobs.forEach((pngBlob, index) => {
-                if (pngBlob && pngBlob.size > 0) {
-                  formDataForSupabase.append(
-                    `thumbnail_png_${index}`,
-                    pngBlob,
-                    `badge-${index}-thumbnail.png`,
-                  );
-                }
-              });
-              svgBlobs.forEach((svgBlob, index) => {
-                if (svgBlob && svgBlob.size > 0) {
-                  formDataForSupabase.append(
-                    `svg_${index}`,
-                    svgBlob,
-                    `badge-${index}-design.svg`,
-                  );
-                }
-              });
-              const supabaseResponse = await fetch("/api/send-to-supabase", {
-                method: "POST",
-                body: formDataForSupabase,
-              });
-              if (supabaseResponse.ok) {
-                const supabaseJson = await supabaseResponse
-                  .json()
-                  .catch(() => ({}));
-                thumbnailUrls = Array.isArray(supabaseJson.thumbnailUrls)
-                  ? supabaseJson.thumbnailUrls
-                  : [];
-                pdfUrlForCart = supabaseJson.pdfUrl;
-              } else {
-                const errData = await supabaseResponse.json().catch(() => ({}));
-                console.warn(
-                  "Supabase proof upload failed (cart will still add):",
-                  errData.message || supabaseResponse.statusText,
-                );
-                alert(
-                  "Proof upload failed; your design will still be added to cart. Support may follow up for the proof.",
+            });
+            svgBlobs.forEach((svgBlob, index) => {
+              if (svgBlob && svgBlob.size > 0) {
+                formDataForSupabase.append(
+                  `svg_${index}`,
+                  svgBlob,
+                  `badge-${index}-design.svg`,
                 );
               }
+            });
+            const supabaseResponse = await fetch("/api/send-to-supabase", {
+              method: "POST",
+              body: formDataForSupabase,
+            });
+            if (supabaseResponse.ok) {
+              const supabaseJson = await supabaseResponse
+                .json()
+                .catch(() => ({}));
+              thumbnailUrls = Array.isArray(supabaseJson.thumbnailUrls)
+                ? supabaseJson.thumbnailUrls
+                : [];
+              pdfUrlForCart = supabaseJson.pdfUrl;
+            } else {
+              const errData = await supabaseResponse.json().catch(() => ({}));
+              console.warn(
+                "Supabase proof upload failed (cart will still add):",
+                errData.message || supabaseResponse.statusText,
+              );
+              alert(
+                "Proof upload failed; your design will still be added to cart. Support may follow up for the proof.",
+              );
+            }
             }
           } catch (fallbackErr) {
             console.warn(
@@ -3023,8 +3077,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         );
       }
 
-      // Always add to cart and notify parent so the cart can open (even if thumbnailUrls are empty)
-
+      const basePrice = 9.99;
       const urlParams =
         typeof window !== "undefined"
           ? new URLSearchParams(window.location.search)
@@ -3053,7 +3106,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         }
       };
 
-      // Await Gadget promise (started in parallel above); use id for cart line properties when present
       let gadgetDesignId: string | undefined;
       try {
         const savedDesign = await gadgetPromise;
@@ -3104,8 +3156,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       if (!result.success) {
         alert("Failed to add badge(s) to cart. Please try again.");
       }
+      closeProofModal();
     } catch (error) {
-      console.error("Failed to add to cart:", error);
+      console.error("Failed to complete add to cart:", error);
       alert("Failed to add badge to cart. Please try again.");
     } finally {
       setIsAddingToCart(false);
@@ -6040,6 +6093,92 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Proof Modal - review PDF and acknowledge before adding to cart */}
+      {showProofModal && proofPdfObjectUrl && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
+          onClick={closeProofModal}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Review your proof"
+        >
+          <div
+            className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-bold text-gray-800">
+                Review your proof
+              </h3>
+              <button
+                type="button"
+                className="p-2 text-gray-500 hover:text-gray-700"
+                onClick={closeProofModal}
+                aria-label="Close"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex flex-col flex-1 min-h-0 overflow-hidden p-4 gap-4">
+              <div className="flex-1 min-h-[300px] rounded border border-gray-200 bg-gray-50 overflow-hidden">
+                <iframe
+                  title="Badge design proof (PDF)"
+                  src={proofPdfObjectUrl}
+                  className="w-full h-full min-h-[300px]"
+                />
+              </div>
+              <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <h4 className="font-semibold text-gray-800 mb-2">
+                  Proof approval
+                </h4>
+                <p className="text-sm text-gray-600 mb-3">
+                  Please review the proof above and confirm that all text,
+                  spelling, and design details are correct. By adding to cart you
+                  acknowledge that custom-printed items cannot be returned or
+                  refunded due to customer error (e.g. typos or design choices).
+                  We only accept returns or replacements for manufacturing
+                  defects.
+                </p>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={proofAcknowledged}
+                    onChange={(e) => setProofAcknowledged(e.target.checked)}
+                    className="mt-1 rounded border-gray-300"
+                  />
+                  <span className="text-sm text-gray-700">
+                    I have reviewed the proof and accept the terms above.
+                  </span>
+                </label>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded shadow border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                  onClick={closeProofModal}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={`px-4 py-2 rounded shadow text-white ${
+                    proofAcknowledged && !isAddingToCart
+                      ? "bg-blue-600 hover:bg-blue-700"
+                      : "bg-gray-400 cursor-not-allowed"
+                  }`}
+                  disabled={!proofAcknowledged || isAddingToCart}
+                  onClick={onProofConfirm}
+                >
+                  {isAddingToCart
+                    ? "Adding to Cart..."
+                    : "Confirm and Add to Cart"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
