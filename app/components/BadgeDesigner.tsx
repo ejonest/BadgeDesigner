@@ -1722,6 +1722,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     [_productId],
   );
 
+  const closeProofModal = useCallback(() => {
+    setProofPdfObjectUrl((url) => {
+      if (url) URL.revokeObjectURL(url);
+      return null;
+    });
+    proofPendingAddToCartRef.current = null;
+    setProofAcknowledged(false);
+    setShowProofModal(false);
+  }, []);
+
   const touchStartX = React.useRef<number>(0);
 
   // Show loading state if template isn't ready yet
@@ -2914,16 +2924,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       setIsAddingToCart(false);
     }
   };
-
-  const closeProofModal = useCallback(() => {
-    if (proofPdfObjectUrl) {
-      URL.revokeObjectURL(proofPdfObjectUrl);
-      setProofPdfObjectUrl(null);
-    }
-    proofPendingAddToCartRef.current = null;
-    setProofAcknowledged(false);
-    setShowProofModal(false);
-  }, [proofPdfObjectUrl]);
 
   const onProofConfirm = async () => {
     if (!proofAcknowledged) return;
