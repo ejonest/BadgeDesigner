@@ -102,8 +102,6 @@ export const generatePDFNew = async (
 
     // Simple layout: two horizontal rectangles side by side
     const margin = 30;
-    const maxImageWidth = 300; // Maximum display width
-    const maxImageHeight = 150; // Maximum display height
 
     let y = PAGE_HEIGHT - TOP_MARGIN;
 
@@ -113,11 +111,20 @@ export const generatePDFNew = async (
       const badge = allBadges[idx];
       console.log(`Processing Badge ${idx + 1}`);
 
-      // Estimate section height BEFORE rendering
+      // Load the correct template for this badge (needed for section height and image dimensions)
+      const template = await loadTemplateById(badge.templateId || "rect-1x3");
+      console.log(
+        `Loaded template for badge ${idx + 1}:`,
+        template.id,
+        `(${template.widthPx}x${template.heightPx})`
+      );
+      const imageHeightPt = pxToPt(template.heightPx);
+
+      // Estimate section height BEFORE rendering (use template dimensions in points)
       const estimatedTotalRows = badge.lines.length * 4;
       const estimatedTableHeight = estimatedTotalRows * 16;
       const estimatedContentHeight = Math.max(
-        maxImageHeight,
+        imageHeightPt,
         estimatedTableHeight
       );
 
@@ -143,14 +150,6 @@ export const generatePDFNew = async (
       // NOW lock section top
       const sectionTopY = y;
 
-      // Load the correct template for this badge
-      const template = await loadTemplateById(badge.templateId || "rect-1x3");
-      console.log(
-        `Loaded template for badge ${idx + 1}:`,
-        template.id,
-        `(${template.widthPx}x${template.heightPx})`
-      );
-
       // Generate high-resolution image
       console.log("Generating badge image...");
       const imageDataUrl = await generateFullBadgeImage(badge);
@@ -168,21 +167,15 @@ export const generatePDFNew = async (
         height: pdfImage.height,
       });
 
-      // Calculate proper dimensions preserving aspect ratio
-      const templateAspectRatio = template.widthPx / template.heightPx;
-      let imageWidth = maxImageWidth;
-      let imageHeight = maxImageWidth / templateAspectRatio;
-
-      // If height exceeds max, scale down based on height
-      if (imageHeight > maxImageHeight) {
-        imageHeight = maxImageHeight;
-        imageWidth = maxImageHeight * templateAspectRatio;
-      }
+      // Use exact same sizing as SVG: template dimensions in PDF points (72pt = 1 inch, 96px = 1 inch → px * 0.75 = pt).
+      // This ensures the PDF proof matches the SVG measurements with no stretching.
+      const imageWidth = pxToPt(template.widthPx);
+      const imageHeight = pxToPt(template.heightPx);
 
       console.log(`Calculated dimensions for badge ${idx + 1}:`, {
         width: imageWidth,
         height: imageHeight,
-        aspectRatio: templateAspectRatio,
+        templatePx: `${template.widthPx}x${template.heightPx}`,
       });
 
       // Calculate table position based on actual image width
@@ -416,8 +409,6 @@ export const generatePDFAsBlob = async (
 
     // Simple layout: two horizontal rectangles side by side
     const margin = 30;
-    const maxImageWidth = 300; // Maximum display width
-    const maxImageHeight = 150; // Maximum display height
 
     let y = PAGE_HEIGHT - TOP_MARGIN;
 
@@ -427,11 +418,20 @@ export const generatePDFAsBlob = async (
       const badge = allBadges[idx];
       console.log(`Processing Badge ${idx + 1}`);
 
-      // Estimate section height BEFORE rendering
+      // Load the correct template for this badge (needed for section height and image dimensions)
+      const template = await loadTemplateById(badge.templateId || "rect-1x3");
+      console.log(
+        `Loaded template for badge ${idx + 1}:`,
+        template.id,
+        `(${template.widthPx}x${template.heightPx})`
+      );
+      const imageHeightPt = pxToPt(template.heightPx);
+
+      // Estimate section height BEFORE rendering (use template dimensions in points)
       const estimatedTotalRows = badge.lines.length * 4;
       const estimatedTableHeight = estimatedTotalRows * 16;
       const estimatedContentHeight = Math.max(
-        maxImageHeight,
+        imageHeightPt,
         estimatedTableHeight
       );
 
@@ -457,14 +457,6 @@ export const generatePDFAsBlob = async (
       // NOW lock section top
       const sectionTopY = y;
 
-      // Load the correct template for this badge
-      const template = await loadTemplateById(badge.templateId || "rect-1x3");
-      console.log(
-        `Loaded template for badge ${idx + 1}:`,
-        template.id,
-        `(${template.widthPx}x${template.heightPx})`
-      );
-
       // Generate high-resolution image
       console.log("Generating badge image...");
       const imageDataUrl = await generateFullBadgeImage(badge);
@@ -482,21 +474,15 @@ export const generatePDFAsBlob = async (
         height: pdfImage.height,
       });
 
-      // Calculate proper dimensions preserving aspect ratio
-      const templateAspectRatio = template.widthPx / template.heightPx;
-      let imageWidth = maxImageWidth;
-      let imageHeight = maxImageWidth / templateAspectRatio;
-
-      // If height exceeds max, scale down based on height
-      if (imageHeight > maxImageHeight) {
-        imageHeight = maxImageHeight;
-        imageWidth = maxImageHeight * templateAspectRatio;
-      }
+      // Use exact same sizing as SVG: template dimensions in PDF points (72pt = 1 inch, 96px = 1 inch → px * 0.75 = pt).
+      // This ensures the PDF proof matches the SVG measurements with no stretching.
+      const imageWidth = pxToPt(template.widthPx);
+      const imageHeight = pxToPt(template.heightPx);
 
       console.log(`Calculated dimensions for badge ${idx + 1}:`, {
         width: imageWidth,
         height: imageHeight,
-        aspectRatio: templateAspectRatio,
+        templatePx: `${template.widthPx}x${template.heightPx}`,
       });
 
       // Calculate table position based on actual image width
