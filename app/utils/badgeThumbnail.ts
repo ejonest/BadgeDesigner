@@ -134,6 +134,12 @@ export async function generateFullBadgeImage(badge: Badge): Promise<string> {
     // Generate SVG using font-embedding version for consistent font rendering
     const svgString = await renderBadgeToSvgStringWithFonts(badge, template, { showOutline: false });
     
+    // Match SVG viewBox dimensions exactly (same as renderSvg: standardViewBox + PADDING_PX*2)
+    // so rasterization has the same aspect ratio as the SVG and no stretching occurs.
+    const PADDING_PX = 24; // must match renderSvg.ts
+    const viewBoxW = template.standardViewBoxWidth + PADDING_PX * 2;
+    const viewBoxH = template.standardViewBoxHeight + PADDING_PX * 2;
+
     // Convert SVG to high-resolution PNG
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -150,16 +156,16 @@ export async function generateFullBadgeImage(badge: Badge): Promise<string> {
             return;
           }
 
-          // Set high-resolution canvas dimensions (3x for crisp text)
+          // Use same aspect ratio as SVG viewBox (no stretching)
           const scale = 3;
-          canvas.width = template.widthPx * scale;
-          canvas.height = template.heightPx * scale;
+          canvas.width = viewBoxW * scale;
+          canvas.height = viewBoxH * scale;
 
           // Enable high-quality rendering
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = 'high';
 
-          // Draw the SVG scaled to high resolution
+          // Draw the SVG to match viewBox dimensions exactly
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
           // Convert to PNG data URL
