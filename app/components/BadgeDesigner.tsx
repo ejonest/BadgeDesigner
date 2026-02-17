@@ -103,6 +103,9 @@ const THUMBNAIL_PNG_SCALE = 0.5;
 const BADGE_DESIGNER_CACHE_PREFIX = "badge-designer-draft";
 const CACHE_VERSION = 1;
 
+/** Set to true to show the Export Options section (SVG, PNG, TIFF, CDR, PDF, etc.). */
+const SHOW_EXPORT_OPTIONS = false;
+
 /** Mobile preview (top of screen): tweak these to adjust the box and badge size. */
 const MOBILE_PREVIEW = {
   /** Vertical padding of the surrounding box (rem). Smaller = tighter top/bottom margins. */
@@ -3478,9 +3481,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             <h2 className="text-xl font-bold text-gray-800">
               {multipleBadges.length === 0
                 ? "Design Your Badge"
-                : `Customize Your Badge ${selectedBadgeIndex + 1}${
-                    multipleBadges.length > 1 ? ` of ${totalBadges}` : ""
-                  }`}
+                : `Customize Your Badge ${selectedBadgeIndex + 1} of ${totalBadges}`}
             </h2>
             {multipleBadges.length > 0 && (
               <span className="text-xl font-bold text-red-600">
@@ -3590,9 +3591,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               <h2 className="text-xl font-bold text-gray-800">
                 {multipleBadges.length === 0
                   ? "Design Your Badge"
-                  : `Customize Your Badge ${selectedBadgeIndex + 1}${
-                      multipleBadges.length > 1 ? ` of ${totalBadges}` : ""
-                    }`}
+                  : `Customize Your Badge ${selectedBadgeIndex + 1} of ${totalBadges}`}
               </h2>
               {multipleBadges.length > 0 && (
                 <span className="text-xl font-bold text-red-600">
@@ -4398,7 +4397,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </button>
           </div>
 
-          {/* Export Options */}
+          {/* Export Options (visibility controlled by SHOW_EXPORT_OPTIONS) */}
+          {SHOW_EXPORT_OPTIONS && (
           <div className="mb-4">
             <button
               ref={exportSectionRef}
@@ -4611,6 +4611,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               </button>
             </div>
           </div>
+          )}
         </div>
       </div>
 
