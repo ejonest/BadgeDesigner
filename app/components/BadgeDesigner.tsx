@@ -1067,6 +1067,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const guidedFlowCompletedRef = useRef(false);
   /** True after we have restored from localStorage cache once (prevents re-restore on later effect runs). */
   const restoredFromCacheRef = useRef(false);
+  /** When true, debounced cache save will skip one write (set after add-to-cart success so we don't write old state back). */
+  const skipCacheSaveRef = useRef(false);
   const multipleBadgesRef = useRef<Badge[]>(multipleBadges);
   const badgeRef = useRef<Badge>(badge);
   const selectedBadgeIndexRef = useRef<number>(selectedBadgeIndex);
@@ -1260,11 +1262,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     setBadge1Data(payload.multipleBadges[0] ?? null);
   }, [templates, _shop, _productId]);
 
-  // Debounced save of badge designer state to localStorage cache
+  // Debounced save of badge designer state to localStorage cache (always run effect so hook count is stable)
   useEffect(() => {
-    if (multipleBadges.length === 0) return;
     const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${_productId ?? "default"}`;
     const timeoutId = window.setTimeout(() => {
+      if (multipleBadges.length === 0) return;
+      if (skipCacheSaveRef.current) {
+        skipCacheSaveRef.current = false;
+        return;
+      }
       const payload = {
         version: CACHE_VERSION,
         timestamp: Date.now(),
@@ -1295,6 +1301,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${_productId ?? "default"}`;
     const handler = () => {
       if (multipleBadges.length === 0) return;
+      if (skipCacheSaveRef.current) return;
       const payload = {
         version: CACHE_VERSION,
         timestamp: Date.now(),
@@ -1723,18 +1730,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   );
 
   const touchStartX = React.useRef<number>(0);
-
-  // Show loading state if template isn't ready yet
-  if (!activeTemplate) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading templates...</p>
-        </div>
-      </div>
-    );
-  }
 
   // UNIVERSAL TEMPLATE: No need to recalculate on template change since all badges use same template
 
@@ -3152,33 +3147,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         } catch {
           // ignore
         }
-        // Reset designer state so the next session is a fresh design (and debounced save won't write old state back)
-        const defaultBadge: Badge = {
-          ...INITIAL_BADGE,
-          lines: INITIAL_BADGE.lines.map((line) => ({ ...line })),
-        };
-        setMultipleBadges([]);
-        setBadge(defaultBadge);
-        setSelectedBadgeIndex(0);
-        setHasChosenBackgroundColor(false);
-        setSectionsOpened({
-          template: false,
-          export: false,
-          background: false,
-          textLines: false,
-        });
-        setSectionsOpen({
-          template: true,
-          export: false,
-          background: false,
-          textLines: false,
-        });
-        setUniversalTemplateId("rect-1x3");
-        setBadge1Data(null);
-        sessionDesignIdRef.current = null;
-        guidedFlowCompletedRef.current = false;
-        restoredFromCacheRef.current = true;
-        setUndoHistory([]);
+        // Prevent any pending debounced save from writing old state back to cache
+        skipCacheSaveRef.current = true;
       }
       if (!result.success) {
         alert("Failed to add badge(s) to cart. Please try again.");
