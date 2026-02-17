@@ -1722,16 +1722,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     [_productId],
   );
 
-  const closeProofModal = useCallback(() => {
-    setProofPdfObjectUrl((url) => {
-      if (url) URL.revokeObjectURL(url);
-      return null;
-    });
-    proofPendingAddToCartRef.current = null;
-    setProofAcknowledged(false);
-    setShowProofModal(false);
-  }, []);
-
   const touchStartX = React.useRef<number>(0);
 
   // Show loading state if template isn't ready yet
@@ -2925,6 +2915,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   };
 
+  const closeProofModal = useCallback(() => {
+    if (proofPdfObjectUrl) {
+      URL.revokeObjectURL(proofPdfObjectUrl);
+      setProofPdfObjectUrl(null);
+    }
+    proofPendingAddToCartRef.current = null;
+    setProofAcknowledged(false);
+    setShowProofModal(false);
+  }, [proofPdfObjectUrl]);
+
   const onProofConfirm = async () => {
     if (!proofAcknowledged) return;
     const pending = proofPendingAddToCartRef.current;
@@ -3152,6 +3152,33 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         } catch {
           // ignore
         }
+        // Reset designer state so the next session is a fresh design (and debounced save won't write old state back)
+        const defaultBadge: Badge = {
+          ...INITIAL_BADGE,
+          lines: INITIAL_BADGE.lines.map((line) => ({ ...line })),
+        };
+        setMultipleBadges([]);
+        setBadge(defaultBadge);
+        setSelectedBadgeIndex(0);
+        setHasChosenBackgroundColor(false);
+        setSectionsOpened({
+          template: false,
+          export: false,
+          background: false,
+          textLines: false,
+        });
+        setSectionsOpen({
+          template: true,
+          export: false,
+          background: false,
+          textLines: false,
+        });
+        setUniversalTemplateId("rect-1x3");
+        setBadge1Data(null);
+        sessionDesignIdRef.current = null;
+        guidedFlowCompletedRef.current = false;
+        restoredFromCacheRef.current = true;
+        setUndoHistory([]);
       }
       if (!result.success) {
         alert("Failed to add badge(s) to cart. Please try again.");
