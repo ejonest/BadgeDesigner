@@ -696,6 +696,32 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         }
         break;
       }
+      case "apply-backing-to-all": {
+        // Restore all badges' backing types (except the parent badge that was the source)
+        if (lastAction.previousMultipleBadges) {
+          const restoredBadges = lastAction.previousMultipleBadges.map(
+            (prevBadge, badgeIdx) => {
+              if (badgeIdx === lastAction.badgeIndex) {
+                return (
+                  updatedMultipleBadges[badgeIdx] || multipleBadges[badgeIdx]
+                );
+              }
+              const currentBadge =
+                updatedMultipleBadges[badgeIdx] || multipleBadges[badgeIdx];
+              if (!currentBadge) return currentBadge;
+              return {
+                ...currentBadge,
+                backing: prevBadge.backing,
+              };
+            },
+          );
+          setMultipleBadges(restoredBadges);
+          if (restoredBadges[0]) {
+            setBadge1Data(restoredBadges[0]);
+          }
+        }
+        break;
+      }
       case "reset-badge": {
         // Restore the badge to its previous state before reset
         const previousBadge = lastAction.previousBadge;
@@ -898,6 +924,29 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     console.log(
       `[COLOR TRACKING] Background color ${currentBackgroundColor} applied to all badges`,
     );
+    runDraftSaveForBadges(updatedMultipleBadges);
+  };
+
+  // Apply backing type to all badges
+  const applyBackingToAll = () => {
+    saveToUndoHistory({
+      type: "apply-backing-to-all",
+      badgeIndex: selectedBadgeIndex,
+    });
+
+    const currentBacking = badge.backing;
+
+    setBadge({ ...badge, backing: currentBacking });
+
+    const updatedMultipleBadges = multipleBadges.map((b: Badge) => ({
+      ...b,
+      backing: currentBacking,
+    }));
+    setMultipleBadges(updatedMultipleBadges);
+
+    if (updatedMultipleBadges[0]) {
+      setBadge1Data(updatedMultipleBadges[0]);
+    }
     runDraftSaveForBadges(updatedMultipleBadges);
   };
 
@@ -4304,6 +4353,18 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 </label>
               ))}
             </div>
+            {multipleBadges.length > 1 && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={applyBackingToAll}
+                  className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
+                  title="Apply backing type to all badges"
+                >
+                  Apply backing type to all badges
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Save / Add to cart */}

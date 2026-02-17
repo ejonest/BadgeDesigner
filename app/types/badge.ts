@@ -68,6 +68,7 @@ export interface UndoAction {
     | "apply-all-formatting"
     | "apply-line-formatting"
     | "apply-background-color-to-all"
+    | "apply-backing-to-all"
     | "reset-badge"
     | "reset-all-badges"
     | "reset-line-formatting";
