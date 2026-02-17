@@ -2869,6 +2869,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const gadgetPromise = api.saveBadgeDesign(minimalDesignData, shopData);
 
       let thumbnailUrls: string[] = [];
+      let pdfUrlForCart: string | undefined;
       try {
         // Try finalize-draft first (PDF only); use draft rows from incremental saves when present
         const pdfBlobForFinalize = await generatePDFAsBlob(
@@ -2893,6 +2894,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
         if (usedFinalize) {
           thumbnailUrls = finalizeJson.thumbnailUrls;
+          pdfUrlForCart = finalizeJson.pdfUrl;
         } else {
           // Fallback: no draft rows (e.g. add-to-cart before first debounced save) — full generate + send-to-supabase
           try {
@@ -2989,6 +2991,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 thumbnailUrls = Array.isArray(supabaseJson.thumbnailUrls)
                   ? supabaseJson.thumbnailUrls
                   : [];
+                pdfUrlForCart = supabaseJson.pdfUrl;
               } else {
                 const errData = await supabaseResponse.json().catch(() => ({}));
                 console.warn(
@@ -3081,6 +3084,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           "Custom Thumbnail": thumbnailUrls[i] ?? "",
         };
         if (gadgetDesignId) properties["Gadget Design ID"] = gadgetDesignId;
+        if (pdfUrlForCart) properties["Proof PDF URL"] = pdfUrlForCart;
         return {
           variantId: getVariantId(b.backing),
           quantity: 1,

@@ -69,6 +69,7 @@ export async function action({ request }: ActionFunctionArgs) {
       success: true,
       thumbnailUrls,
       fullImageUrls,
+      pdfUrl,
       updatedCount,
     });
   } catch (err) {

@@ -224,6 +224,7 @@ export async function action({ request }: ActionFunctionArgs) {
         },
         thumbnailUrls: badgeOrderItems.map((i) => i.thumbnail_url || ""),
         fullImageUrls: badgeOrderItems.map((i) => i.full_image_url || ""),
+        pdfUrl: pdfUrl || undefined,
         savedDraftCount: savedCount,
         message: hasAnyUploads
           ? "Proof files uploaded and draft order items saved; order will be linked when paid"
@@ -302,6 +303,7 @@ export async function action({ request }: ActionFunctionArgs) {
         thumbnails: hasThumbnail,
         fullImages: hasFullImage,
       },
+      pdfUrl: pdfUrl || undefined,
       message: hasAnyUploads
         ? `Badge design uploaded successfully to Supabase (${badgeCount} badge${
             badgeCount !== 1 ? "s" : ""
