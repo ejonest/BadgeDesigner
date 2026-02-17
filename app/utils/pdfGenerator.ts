@@ -118,9 +118,13 @@ export const generatePDFNew = async (
         template.id,
         `(${template.widthPx}x${template.heightPx})`
       );
-      const imageHeightPt = pxToPt(template.heightPx);
+      // Use SVG viewBox dimensions (same as renderSvg + badgeThumbnail) so PDF matches SVG exactly
+      const SVG_VIEWBOX_PADDING_PX = 24 * 2; // PADDING_PX*2 from renderSvg
+      const svgViewBoxW = template.standardViewBoxWidth + SVG_VIEWBOX_PADDING_PX;
+      const svgViewBoxH = template.standardViewBoxHeight + SVG_VIEWBOX_PADDING_PX;
+      const imageHeightPt = pxToPt(svgViewBoxH);
 
-      // Estimate section height BEFORE rendering (use template dimensions in points)
+      // Estimate section height BEFORE rendering (use SVG viewBox height in points)
       const estimatedTotalRows = badge.lines.length * 4;
       const estimatedTableHeight = estimatedTotalRows * 16;
       const estimatedContentHeight = Math.max(
@@ -167,15 +171,15 @@ export const generatePDFNew = async (
         height: pdfImage.height,
       });
 
-      // Use exact same sizing as SVG: template dimensions in PDF points (72pt = 1 inch, 96px = 1 inch → px * 0.75 = pt).
-      // This ensures the PDF proof matches the SVG measurements with no stretching.
-      const imageWidth = pxToPt(template.widthPx);
-      const imageHeight = pxToPt(template.heightPx);
+      // Use exact same sizing as SVG: viewBox dimensions in PDF points (matches rasterized PNG).
+      // 72pt = 1 inch, 96px = 1 inch → px * 0.75 = pt.
+      const imageWidth = pxToPt(svgViewBoxW);
+      const imageHeight = pxToPt(svgViewBoxH);
 
       console.log(`Calculated dimensions for badge ${idx + 1}:`, {
         width: imageWidth,
         height: imageHeight,
-        templatePx: `${template.widthPx}x${template.heightPx}`,
+        svgViewBoxPx: `${svgViewBoxW}x${svgViewBoxH}`,
       });
 
       // Calculate table position based on actual image width
@@ -425,9 +429,13 @@ export const generatePDFAsBlob = async (
         template.id,
         `(${template.widthPx}x${template.heightPx})`
       );
-      const imageHeightPt = pxToPt(template.heightPx);
+      // Use SVG viewBox dimensions (same as renderSvg + badgeThumbnail) so PDF matches SVG exactly
+      const SVG_VIEWBOX_PADDING_PX = 24 * 2; // PADDING_PX*2 from renderSvg
+      const svgViewBoxW = template.standardViewBoxWidth + SVG_VIEWBOX_PADDING_PX;
+      const svgViewBoxH = template.standardViewBoxHeight + SVG_VIEWBOX_PADDING_PX;
+      const imageHeightPt = pxToPt(svgViewBoxH);
 
-      // Estimate section height BEFORE rendering (use template dimensions in points)
+      // Estimate section height BEFORE rendering (use SVG viewBox height in points)
       const estimatedTotalRows = badge.lines.length * 4;
       const estimatedTableHeight = estimatedTotalRows * 16;
       const estimatedContentHeight = Math.max(
@@ -474,15 +482,15 @@ export const generatePDFAsBlob = async (
         height: pdfImage.height,
       });
 
-      // Use exact same sizing as SVG: template dimensions in PDF points (72pt = 1 inch, 96px = 1 inch → px * 0.75 = pt).
-      // This ensures the PDF proof matches the SVG measurements with no stretching.
-      const imageWidth = pxToPt(template.widthPx);
-      const imageHeight = pxToPt(template.heightPx);
+      // Use exact same sizing as SVG: viewBox dimensions in PDF points (matches rasterized PNG).
+      // 72pt = 1 inch, 96px = 1 inch → px * 0.75 = pt.
+      const imageWidth = pxToPt(svgViewBoxW);
+      const imageHeight = pxToPt(svgViewBoxH);
 
       console.log(`Calculated dimensions for badge ${idx + 1}:`, {
         width: imageWidth,
         height: imageHeight,
-        templatePx: `${template.widthPx}x${template.heightPx}`,
+        svgViewBoxPx: `${svgViewBoxW}x${svgViewBoxH}`,
       });
 
       // Calculate table position based on actual image width
