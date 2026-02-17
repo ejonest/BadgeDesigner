@@ -4450,6 +4450,50 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               >
                 PDF
               </button>
+              <button
+                type="button"
+                className="px-2 py-1 text-xs border border-amber-400 rounded bg-amber-50 text-amber-800 hover:bg-amber-100"
+                onClick={() => {
+                  const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${_productId ?? "default"}`;
+                  const message =
+                    "This will clear all saved design data and reset to a single default badge. You will need to start over. Continue?";
+                  if (!window.confirm(message)) return;
+                  try {
+                    localStorage.removeItem(cacheKey);
+                  } catch {
+                    // ignore
+                  }
+                  const defaultBadge: Badge = {
+                    ...INITIAL_BADGE,
+                    lines: INITIAL_BADGE.lines.map((line) => ({ ...line })),
+                  };
+                  setMultipleBadges([]);
+                  setBadge(defaultBadge);
+                  setSelectedBadgeIndex(0);
+                  setHasChosenBackgroundColor(false);
+                  setSectionsOpened({
+                    template: false,
+                    export: false,
+                    background: false,
+                    textLines: false,
+                  });
+                  setSectionsOpen({
+                    template: true,
+                    export: false,
+                    background: false,
+                    textLines: false,
+                  });
+                  setUniversalTemplateId("rect-1x3");
+                  setBadge1Data(null);
+                  sessionDesignIdRef.current = null;
+                  guidedFlowCompletedRef.current = false;
+                  restoredFromCacheRef.current = true;
+                  setUndoHistory([]);
+                }}
+                title="Clear localStorage cache and reset to initial state (no steps completed)"
+              >
+                Clear cache & reset (dev)
+              </button>
             </div>
           </div>
         </div>
