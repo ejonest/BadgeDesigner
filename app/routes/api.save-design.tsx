@@ -77,10 +77,20 @@ export async function action({ request }: ActionFunctionArgs) {
     })
   } catch (error) {
     console.error('[BadgeDesigner] api.save-design error:', error)
+    let details = 'Unknown error'
+    if (error instanceof Error) {
+      details = error.message
+    } else if (error && typeof error === 'object') {
+      const o = error as Record<string, unknown>
+      if (typeof o.message === 'string') details = o.message
+      else if (typeof o.details === 'string') details = o.details
+      else if (typeof o.error_description === 'string') details = o.error_description
+      else details = JSON.stringify(o)
+    }
     return json(
       {
         error: 'Failed to save design',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details,
       },
       { status: 500 }
     )
