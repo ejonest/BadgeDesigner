@@ -2841,45 +2841,29 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         return;
       }
 
-      // CRITICAL: Finalize all badge states before saving
-      // Auto-save current badge state first
-      let finalizedBadge1 = badge;
-      let finalizedMultipleBadges = [...multipleBadges];
-
+      // CRITICAL: Finalize all badge states before saving.
+      // multipleBadges is the full list (index 0 = first badge). Build one list with current badge at selectedBadgeIndex.
+      const currentFinalized = {
+        ...badge,
+        templateId: universalTemplateId,
+        backgroundColor: badge.backgroundColor || "#FFFFFF",
+      };
       if (selectedBadgeIndex === 0) {
-        // Finalize Badge 1
-        finalizedBadge1 = {
-          ...badge,
-          templateId: universalTemplateId,
-          backgroundColor: badge.backgroundColor || "#FFFFFF",
-        };
-        setBadge1Data(finalizedBadge1);
+        setBadge1Data(currentFinalized);
       } else {
-        // Finalize current CSV badge
-        finalizedBadge1 = badge1Data || {
-          ...badge,
-          templateId: universalTemplateId,
-          backgroundColor: badge.backgroundColor || "#FFFFFF",
-        };
         const updatedMultiple = [...multipleBadges];
-        updatedMultiple[selectedBadgeIndex - 1] = {
-          ...badge,
-          templateId: universalTemplateId,
-          backgroundColor: badge.backgroundColor || "#FFFFFF",
-        };
-        finalizedMultipleBadges = updatedMultiple;
+        updatedMultiple[selectedBadgeIndex] = currentFinalized;
         setMultipleBadges(updatedMultiple);
       }
-
-      // Ensure all badges have consistent state
-      const allFinalizedBadges = [
-        finalizedBadge1,
-        ...finalizedMultipleBadges,
-      ].map((b) => ({
-        ...b,
-        templateId: b.templateId || universalTemplateId,
-        backgroundColor: b.backgroundColor || "#FFFFFF",
-      }));
+      const allFinalizedBadges = multipleBadges.map((b, i) =>
+        i === selectedBadgeIndex
+          ? currentFinalized
+          : {
+              ...b,
+              templateId: b.templateId || universalTemplateId,
+              backgroundColor: b.backgroundColor || "#FFFFFF",
+            },
+      );
 
       console.log(
         `[FINALIZE] Saving ${allFinalizedBadges.length} badges with finalized states`,
