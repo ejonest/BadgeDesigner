@@ -15,7 +15,7 @@ export const BADGE_CONSTANTS = {
   DEFAULT_FONT,
   DEFAULT_COLOR: '#000000',
   DEFAULT_BACKGROUND: '#FFFFFF',
-  DEFAULT_BACKING: 'pin',
+  DEFAULT_BACKING: 'magnetic',
 
   // Alignment options
   ALIGNMENT_OPTIONS: {
@@ -24,10 +24,10 @@ export const BADGE_CONSTANTS = {
     RIGHT: 'right'
   } as const,
 
-  // Backing options
+  // Backing options (order: magnet, pin, adhesive; magnet default)
   BACKING_OPTIONS: [
-    { value: 'pin', label: 'Pin (Included)' },
     { value: 'magnetic', label: 'Magnetic (+$2.00)' },
+    { value: 'pin', label: 'Pin (Included)' },
     { value: 'adhesive', label: 'Adhesive (+$1.00)' }
   ] as const,
 
@@ -84,6 +84,6 @@ export const BADGE_CONSTANTS = {
       }
     ],
     backgroundColor: '#FFFFFF',
-    backing: 'pin'
+    backing: 'magnetic'
   }
 } as const; 

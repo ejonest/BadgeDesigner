@@ -139,7 +139,7 @@ export const migrateLegacyBadge = (badge: any): Badge => {
     templateId: badge.templateId || 'rect-1x3',
     lines: badge.lines || [],
     backgroundColor: badge.backgroundColor || '#FFFFFF', // CRITICAL: Ensure backgroundColor exists
-    backing: badge.backing || 'pin',
+    backing: badge.backing || 'magnetic',
     ...badge
   };
 

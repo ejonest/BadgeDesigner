@@ -39,7 +39,7 @@ export const validateBadgeData = (badge: Badge): Badge => {
     templateId: badge.templateId || 'rect-1x3',
     lines: badge.lines || [],
     backgroundColor: badge.backgroundColor || '#FFFFFF',
-    backing: badge.backing || 'pin',
+    backing: badge.backing || 'magnetic',
     ...badge
   };
 

@@ -12,7 +12,9 @@
     "routeIdToServerBundleId": {
       "routes/api.link-order-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.supabase-update-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-draft-badges": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.finalize-draft": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.test-endpoints": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.badge-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.gadget-health": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -61,10 +63,28 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.save-draft-badges": {
+        "file": "app/routes/api.save-draft-badges.tsx",
+        "id": "routes/api.save-draft-badges",
+        "path": "api/save-draft-badges",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.send-to-supabase": {
         "file": "app/routes/api.send-to-supabase.tsx",
         "id": "routes/api.send-to-supabase",
         "path": "api/send-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.finalize-draft": {
+        "file": "app/routes/api.finalize-draft.tsx",
+        "id": "routes/api.finalize-draft",
+        "path": "api/finalize-draft",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -303,10 +323,22 @@
         "path": "api/supabase-update-badge",
         "parentId": "root"
       },
+      "routes/api.save-draft-badges": {
+        "file": "routes/api.save-draft-badges.tsx",
+        "id": "routes/api.save-draft-badges",
+        "path": "api/save-draft-badges",
+        "parentId": "root"
+      },
       "routes/api.send-to-supabase": {
         "file": "routes/api.send-to-supabase.tsx",
         "id": "routes/api.send-to-supabase",
         "path": "api/send-to-supabase",
+        "parentId": "root"
+      },
+      "routes/api.finalize-draft": {
+        "file": "routes/api.finalize-draft.tsx",
+        "id": "routes/api.finalize-draft",
+        "path": "api/finalize-draft",
         "parentId": "root"
       },
       "routes/api.test-endpoints": {
