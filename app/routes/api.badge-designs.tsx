@@ -34,7 +34,7 @@ export const action: ActionFunction = async ({ request }) => {
       status: "saved" as const,
       designData: designData.badge || designData,
       backgroundColor: designData.badge?.backgroundColor || "#FFFFFF",
-      backingType: designData.badge?.backing || "pin",
+      backingType: designData.badge?.backing || "magnetic",
       basePrice: "9.99",
       backingPrice: "0",
       totalPrice: "9.99",

@@ -839,6 +839,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         export: false,
         background: false,
         textLines: true,
+        backing: false,
       });
       setSectionsOpened((prev) => ({
         ...prev,
@@ -893,6 +894,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         export: false,
         background: false,
         textLines: true,
+        backing: false,
       });
       setSectionsOpened((prev) => ({ ...prev, background: true, textLines: true }));
       guidedFlowCompletedRef.current = true;
@@ -1088,6 +1090,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     export: false,
     background: false,
     textLines: false,
+    backing: false,
   });
   // Track which sections have been opened at least once
   const [sectionsOpened, setSectionsOpened] = useState({
@@ -1095,16 +1098,34 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     export: false,
     background: false,
     textLines: false,
+    backing: false,
   });
   const stepsComplete =
     multipleBadges.length > 0 &&
     hasChosenBackgroundColor &&
-    sectionsOpened.textLines;
+    sectionsOpened.textLines &&
+    sectionsOpened.backing;
+
+  /** Returns message like "Please complete steps (1)" or "Please complete steps (1-3)" for step-guard alerts. */
+  const getIncompleteStepsMessage = (forStep: 2 | 3 | 4): string | null => {
+    const s1 = multipleBadges.length > 0;
+    const s2 = hasChosenBackgroundColor;
+    const s3 = sectionsOpened.textLines;
+    const incomplete: number[] = [];
+    if (forStep >= 2 && !s1) incomplete.push(1);
+    if (forStep >= 3 && !s2) incomplete.push(2);
+    if (forStep >= 4 && !s3) incomplete.push(3);
+    if (incomplete.length === 0) return null;
+    if (incomplete.length === 1) return `Please complete steps (${incomplete[0]})`;
+    return `Please complete steps (${incomplete[0]}-${incomplete[incomplete.length - 1]})`;
+  };
+
   // Refs for section headers to enable scroll-into-view
   const templateSectionRef = useRef<HTMLButtonElement | null>(null);
   const exportSectionRef = useRef<HTMLButtonElement | null>(null);
   const backgroundSectionRef = useRef<HTMLButtonElement | null>(null);
   const textLinesSectionRef = useRef<HTMLButtonElement | null>(null);
+  const backingSectionRef = useRef<HTMLButtonElement | null>(null);
 
   /** Stable design id for this session; used for incremental draft saves and add-to-cart. */
   const sessionDesignIdRef = useRef<string | null>(null);
@@ -1191,7 +1212,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const wasBelowOpen =
         prevOpenSectionRef.current === "export" ||
         prevOpenSectionRef.current === "background" ||
-        prevOpenSectionRef.current === "textLines";
+        prevOpenSectionRef.current === "textLines" ||
+        prevOpenSectionRef.current === "backing";
       scrollSectionIntoView(
         templateSectionRef.current,
         wasBelowOpen ? 150 : 350,
@@ -1241,6 +1263,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       prevOpenSectionRef.current = "textLines";
     }
   }, [sectionsOpen.textLines]);
+
+  useEffect(() => {
+    if (sectionsOpen.backing && backingSectionRef.current) {
+      const wasAboveOpen =
+        prevOpenSectionRef.current === "template" ||
+        prevOpenSectionRef.current === "export" ||
+        prevOpenSectionRef.current === "background" ||
+        prevOpenSectionRef.current === "textLines";
+      const delay = wasAboveOpen ? 350 : 150;
+      scrollSectionIntoView(backingSectionRef.current, delay);
+      prevOpenSectionRef.current = "backing";
+    }
+  }, [sectionsOpen.backing]);
 
   // Load templates - refresh when templateRefreshKey changes
   useEffect(() => {
@@ -1312,6 +1347,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       sessionDesignIdRef.current = payload.designId;
     }
     setBadge1Data(payload.multipleBadges[0] ?? null);
+    // Restore steps 3 and 4 as completed so roadmap and Add to Cart stay valid after refresh
+    setSectionsOpened((prev) => ({ ...prev, textLines: true, backing: true }));
   }, [templates, _shop, _productId]);
 
   // Debounced save of badge designer state to localStorage cache (always run effect so hook count is stable)
@@ -1520,12 +1557,25 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       (prev.template && !sectionsOpen.template) ||
       (prev.background && !sectionsOpen.background) ||
       (prev.textLines && !sectionsOpen.textLines) ||
+      (prev.backing && !sectionsOpen.backing) ||
       (prev.export && !sectionsOpen.export);
+    const didCloseText = prev.textLines && !sectionsOpen.textLines;
     const didOpenExport = !prev.export && sectionsOpen.export;
     prevSectionsOpenRef.current = sectionsOpen;
     if (didClose) setDraftSaveTrigger((t) => t + 1);
     if (didOpenExport && stepsComplete) setDraftSaveTrigger((t) => t + 1);
-  }, [sectionsOpen, stepsComplete]);
+    // Open Step 4 (backing) the first time user closes Step 3 (text)
+    if (didCloseText && !sectionsOpened.backing) {
+      setSectionsOpened((p) => ({ ...p, backing: true }));
+      setSectionsOpen({
+        template: false,
+        export: false,
+        background: false,
+        textLines: false,
+        backing: true,
+      });
+    }
+  }, [sectionsOpen, sectionsOpened.backing, stepsComplete]);
 
   // Debounced draft save: only when stepsComplete, triggered by draftSaveTrigger (section close / apply-to-all / selectBadge)
   const DRAFT_SAVE_DEBOUNCE_MS = 800;
@@ -2233,7 +2283,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       templateId: badge.templateId || fallbackId,
       lines: centeredLines,
       backgroundColor: "#FFFFFF",
-      backing: badge.backing || "pin", // Preserve backing if it exists
+      backing: badge.backing || "magnetic", // Preserve backing if it exists
     };
 
     setBadge(resetBadgeData);
@@ -2270,7 +2320,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         templateId: badgeToReset.templateId || fallbackId,
         lines: centeredLines,
         backgroundColor: "#FFFFFF",
-        backing: badgeToReset.backing || "pin",
+        backing: badgeToReset.backing || "magnetic",
       };
     });
 
@@ -2289,7 +2339,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       templateId: badge.templateId || fallbackId,
       lines: centeredLines,
       backgroundColor: "#FFFFFF",
-      backing: badge.backing || "pin",
+      backing: badge.backing || "magnetic",
     };
     setBadge(resetBadgeData);
   };
@@ -2410,7 +2460,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         ...INITIAL_BADGE,
         templateId: newTemplateId,
         backgroundColor: INITIAL_BADGE.backgroundColor ?? "#FFFFFF",
-        backing: INITIAL_BADGE.backing ?? "pin",
+        backing: INITIAL_BADGE.backing ?? "magnetic",
         lines: centeredLines,
       };
       setUniversalTemplateId(newTemplateId);
@@ -2423,6 +2473,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           export: false,
           background: true,
           textLines: false,
+          backing: false,
         });
         setSectionsOpened((prev) => ({
           ...prev,
@@ -3586,21 +3637,27 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       {/* LEFT COLUMN - Controls */}
       <div className="w-full md:w-1/2 mb-4 md:mb-0 md:pr-3 overflow-y-auto flex-1 min-h-0 md:flex-initial md:min-h-0 md:max-h-[90vh]">
         <div className="section-container mb-4">
-          <div className="hidden md:flex justify-between items-center mb-4 gap-4">
-            <div className="flex flex-col gap-2 min-w-0">
-              <h2 className="text-xl font-bold text-gray-800">
+          <div className="hidden md:flex md:items-center md:gap-3 md:min-w-0 mb-3">
+            {/* Left: title line 1 + line 2 (when badges exist) */}
+            <div className="flex flex-col gap-0.5 min-w-0 flex-shrink-0">
+              <h2 className="text-xl font-bold text-gray-800 leading-tight whitespace-nowrap">
                 {multipleBadges.length === 0
                   ? "Design Your Badge"
-                  : `Customize Your Badge ${selectedBadgeIndex + 1} of ${totalBadges}`}
+                  : "Customize Your Badge"}
               </h2>
               {multipleBadges.length > 0 && (
-                <span className="text-xl font-bold text-red-600">
-                  {activeTemplate.name}
-                </span>
+                <>
+                  <span className="text-xl font-bold text-gray-800 leading-tight">
+                    {selectedBadgeIndex + 1} of {totalBadges}
+                  </span>
+                  <span className="text-xl font-bold text-red-600 leading-tight">
+                    {activeTemplate.name}
+                  </span>
+                </>
               )}
             </div>
-            {/* 3-step progress: dots + labels only (green-600 for completed) */}
-            <div className="flex-shrink-0 flex items-center gap-3">
+            {/* Right: steps roadmap, vertically centered between line 1 and line 2 */}
+            <div className="flex-1 min-w-0 flex items-center justify-end">
               {[
                 {
                   label: "Template",
@@ -3619,24 +3676,31 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   current:
                     hasChosenBackgroundColor && !sectionsOpened.textLines,
                 },
+                {
+                  label: "Backing",
+                  done: sectionsOpened.backing,
+                  current:
+                    sectionsOpened.textLines && !sectionsOpened.backing,
+                },
               ].map((step, i) => (
                 <React.Fragment key={i}>
                   {i > 0 && (
                     <div
-                      className={`w-8 h-0.5 rounded ${
+                      className={`flex-1 min-w-2 h-0.5 rounded ${
                         [
                           multipleBadges.length > 0,
                           hasChosenBackgroundColor,
                           sectionsOpened.textLines,
+                          sectionsOpened.backing,
                         ][i - 1]
                           ? "bg-green-600"
                           : "bg-gray-200"
                       }`}
                     />
                   )}
-                  <div className="flex flex-col items-center">
+                  <div className="flex flex-col items-center flex-shrink-0">
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                      className={`w-5 h-5 rounded-full flex items-center justify-center ${
                         step.done
                           ? "bg-green-600 text-white"
                           : step.current
@@ -3645,10 +3709,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       }`}
                     >
                       {step.done ? (
-                        <CheckIcon className="w-3.5 h-3.5 stroke-[2.5]" />
+                        <CheckIcon className="w-3 h-3 stroke-[2.5]" />
                       ) : (
                         <span
-                          className={`text-[10px] font-semibold ${
+                          className={`text-[9px] font-semibold ${
                             step.current ? "text-white" : "text-gray-500"
                           }`}
                         >
@@ -3656,14 +3720,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-gray-600 mt-0.5 whitespace-nowrap">
+                    <span className="text-[10px] text-gray-600 mt-0.5 whitespace-nowrap leading-tight">
                       {step.label}
                     </span>
                   </div>
                 </React.Fragment>
               ))}
             </div>
-            {/* <button
+          </div>
+          {/* <button
               className="px-2 py-1 text-xs border rounded bg-gray-100 hover:bg-gray-200"
               onClick={() => {
                 console.log("[BadgeDesigner] Refreshing templates...");
@@ -3673,7 +3738,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             >
               Refresh
             </button> */}
-          </div>
 
           {/* Template Selector - Image Swatches */}
           <div className="mb-4">
@@ -3687,6 +3751,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   export: false,
                   background: false,
                   textLines: false,
+                  backing: false,
                 });
                 // Mark as opened when user interacts with the section
                 setSectionsOpened((prev) => ({ ...prev, template: true }));
@@ -3861,8 +3926,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 ref={backgroundSectionRef}
                 type="button"
                 onClick={() => {
-                  if (multipleBadges.length === 0) {
-                    alert("Select a template first.");
+                  const msg = getIncompleteStepsMessage(2);
+                  if (msg) {
+                    alert(msg);
                     return;
                   }
                   const willBeOpen = !sectionsOpen.background;
@@ -3871,6 +3937,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     export: false,
                     background: willBeOpen,
                     textLines: false,
+                    backing: false,
                   });
                   setSectionsOpened((prev) => ({ ...prev, background: true }));
                 }}
@@ -4078,8 +4145,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               ref={textLinesSectionRef}
               type="button"
               onClick={() => {
-                if (!hasChosenBackgroundColor) {
-                  alert("Select a background color first.");
+                const msg = getIncompleteStepsMessage(3);
+                if (msg) {
+                  alert(msg);
                   return;
                 }
                 const willBeOpen = !sectionsOpen.textLines;
@@ -4088,6 +4156,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   export: false,
                   background: false,
                   textLines: willBeOpen,
+                  backing: false,
                 });
                 setSectionsOpened((prev) => ({ ...prev, textLines: true }));
               }}
@@ -4204,7 +4273,118 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Step 4: Backing Type */}
+          <div className="mb-4">
+            <button
+              ref={backingSectionRef}
+              type="button"
+              onClick={() => {
+                const msg = getIncompleteStepsMessage(4);
+                if (msg) {
+                  alert(msg);
+                  return;
+                }
+                const willBeOpen = !sectionsOpen.backing;
+                setSectionsOpen({
+                  template: false,
+                  export: false,
+                  background: false,
+                  textLines: false,
+                  backing: willBeOpen,
+                });
+                setSectionsOpened((prev) => ({ ...prev, backing: true }));
+              }}
+              className="flex items-center justify-between w-full mb-2 text-left"
+            >
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Step 4: Choose backing type
+                </h3>
+                {sectionsOpened.backing && (
+                  <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                )}
+              </div>
+              {sectionsOpen.backing ? (
+                <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+              ) : (
+                <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
+            <div
+              className={`transition-all duration-300 overflow-hidden ${
+                sectionsOpen.backing
+                  ? "max-h-[200px] opacity-100"
+                  : "max-h-0 opacity-0"
+              }`}
+            >
+              <div className="mb-2">
+                <label htmlFor="backing-select" className="sr-only">
+                  Backing type
+                </label>
+                <select
+                  id="backing-select"
+                  value={badge.backing}
+                  onChange={(e) => {
+                    const value = e.target.value as
+                      | "pin"
+                      | "magnetic"
+                      | "adhesive";
+                    setBadge({ ...badge, backing: value });
+                    const updatedMultipleBadges = [...multipleBadges];
+                    if (updatedMultipleBadges[selectedBadgeIndex]) {
+                      updatedMultipleBadges[selectedBadgeIndex] = {
+                        ...updatedMultipleBadges[selectedBadgeIndex],
+                        backing: value,
+                      };
+                      setMultipleBadges(updatedMultipleBadges);
+                    }
+                    if (selectedBadgeIndex === 0) {
+                      setBadge1Data(updatedMultipleBadges[0] ?? null);
+                    }
+                  }}
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-800 bg-white"
+                >
+                  {BADGE_CONSTANTS.BACKING_OPTIONS.map((option) => {
+                    const prices = BADGE_CONSTANTS.BACKING_PRICES;
+                    const currentPrice = prices[badge.backing] ?? 0;
+                    const optionPrice = prices[option.value as keyof typeof prices] ?? 0;
+                    const delta = optionPrice - currentPrice;
+                    const names: Record<string, string> = {
+                      magnetic: "Magnetic",
+                      pin: "Pin",
+                      adhesive: "Adhesive",
+                    };
+                    const name = names[option.value] ?? option.value;
+                    const label =
+                      delta === 0
+                        ? name
+                        : delta > 0
+                          ? `${name} (+$${delta.toFixed(2)})`
+                          : `${name} (-$${Math.abs(delta).toFixed(2)})`;
+                    return (
+                      <option key={option.value} value={option.value}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              {multipleBadges.length > 1 && (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={applyBackingToAll}
+                    className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
+                    title="Apply backing type to all badges"
+                  >
+                    Apply backing type to all badges
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Actions - below all steps */}
           <div className="flex justify-end items-start gap-1.5 md:gap-3 mb-4 flex-wrap">
             <div className="flex flex-col items-center gap-1">
               <button
@@ -4319,53 +4499,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </div>
           </div>
 
-          {/* Backing Options */}
-          <div className="mb-4">
-            <h3 className="font-semibold text-gray-700 mb-2">Backing Type</h3>
-            <div className="flex gap-3">
-              {[
-                { value: "pin", label: "Pin (Included)" },
-                { value: "magnetic", label: "Magnetic (+$2.00)" },
-                { value: "adhesive", label: "Adhesive (+$1.00)" },
-              ].map((option) => (
-                <label
-                  key={option.value}
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <input
-                    type="radio"
-                    name="backing"
-                    value={option.value}
-                    checked={badge.backing === option.value}
-                    onChange={(e) =>
-                      setBadge({
-                        ...badge,
-                        backing: e.target.value as
-                          | "pin"
-                          | "magnetic"
-                          | "adhesive",
-                      })
-                    }
-                    className="text-blue-600"
-                  />
-                  <span className="text-sm">{option.label}</span>
-                </label>
-              ))}
-            </div>
-            {multipleBadges.length > 1 && (
-              <div className="mt-2">
-                <button
-                  type="button"
-                  onClick={applyBackingToAll}
-                  className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
-                  title="Apply backing type to all badges"
-                >
-                  Apply backing type to all badges
-                </button>
-              </div>
-            )}
-          </div>
-
           {/* Save / Add to cart */}
           <div className="flex justify-end mt-2 mb-4 gap-2">
             <button
@@ -4379,20 +4512,24 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </button>
             <button
               className={`px-4 py-2 rounded shadow ${
-                isAddingToCart || multipleBadges.length === 0
+                isAddingToCart || isGeneratingDesigns || !stepsComplete
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700"
               } text-white`}
               onClick={(e) => {
                 e.preventDefault();
-                if (!isAddingToCart && multipleBadges.length > 0) addToCart();
+                if (!isAddingToCart && !isGeneratingDesigns && stepsComplete) addToCart();
               }}
-              disabled={isAddingToCart || multipleBadges.length === 0}
+              disabled={isAddingToCart || isGeneratingDesigns || !stepsComplete}
             >
               {isAddingToCart
                 ? "Adding to Cart..."
-                : multipleBadges.length === 0
-                ? "Add to Cart - Design your badge first"
+                : isGeneratingDesigns
+                ? "Generating..."
+                : !stepsComplete
+                ? multipleBadges.length === 0
+                  ? "Add to Cart - Design your badge first"
+                  : "Add to Cart - Complete all steps"
                 : `Add to Cart - ${prettyPrice}`}
             </button>
           </div>
@@ -4410,6 +4547,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   export: willBeOpen,
                   background: false,
                   textLines: false,
+                  backing: false,
                 });
               }}
               className="flex items-center justify-between w-full mb-2 text-left"
@@ -4591,12 +4729,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     export: false,
                     background: false,
                     textLines: false,
+                    backing: false,
                   });
                   setSectionsOpen({
                     template: true,
                     export: false,
                     background: false,
                     textLines: false,
+                    backing: false,
                   });
                   setUniversalTemplateId("rect-1x3");
                   setBadge1Data(null);
@@ -4869,6 +5009,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               current:
                 hasChosenBackgroundColor && !sectionsOpened.textLines,
             },
+            {
+              label: "Backing",
+              done: sectionsOpened.backing,
+              current:
+                sectionsOpened.textLines && !sectionsOpened.backing,
+            },
           ].map((step, i) => (
             <React.Fragment key={i}>
               {i > 0 && (
@@ -4878,6 +5024,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       multipleBadges.length > 0,
                       hasChosenBackgroundColor,
                       sectionsOpened.textLines,
+                      sectionsOpened.backing,
                     ][i - 1]
                       ? "bg-green-600"
                       : "bg-gray-200"
@@ -6089,15 +6236,22 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             >
               &times;
             </button>
-            <h3 className="text-lg font-bold mb-4">Existing Badges Found</h3>
+            <h3 className="text-lg font-bold mb-2">Existing Badges Found</h3>
             <p className="mb-4 text-sm text-gray-700">
               You currently have {multipleBadges.length} existing badge
-              {multipleBadges.length !== 1 ? "s" : ""}. How would you like to
-              proceed?
+              {multipleBadges.length !== 1 ? "s" : ""}. Choose how to add your
+              new badges:
             </p>
-            <div className="flex flex-col gap-3">
+            <p className="mb-3 text-xs text-gray-600">
+              <strong>Override Current</strong> replaces all existing badges with
+              the new ones from your CSV.
+              <br />
+              <strong>Add to Current</strong> keeps your existing badges and
+              appends the new ones.
+            </p>
+            <div className="flex gap-3 mb-4">
               <button
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded font-medium"
                 onClick={(e) => {
                   e.preventDefault();
                   setPendingCsvAction("override");
@@ -6114,13 +6268,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   setPendingCsvAction(null);
                 }}
               >
-                Override Existing Badges
-                <span className="block text-xs mt-1 opacity-90">
-                  (Replace all existing badges with new ones)
-                </span>
+                Override Current
               </button>
               <button
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded font-medium"
                 onClick={(e) => {
                   e.preventDefault();
                   setPendingCsvAction("add");
@@ -6137,22 +6288,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   setPendingCsvAction(null);
                 }}
               >
-                Add to Existing Badges
-                <span className="block text-xs mt-1 opacity-90">
-                  (Keep existing badges and add new ones)
-                </span>
-              </button>
-              <button
-                className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setShowCsvWarningModal(false);
-                  setPendingCsvAction(null);
-                }}
-              >
-                Cancel
+                Add to Current
               </button>
             </div>
+            <button
+              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded text-sm"
+              onClick={(e) => {
+                e.preventDefault();
+                setShowCsvWarningModal(false);
+                setPendingCsvAction(null);
+              }}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

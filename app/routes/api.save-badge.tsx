@@ -70,7 +70,7 @@ export const action: ActionFunction = async ({ request }) => {
       status: "saved" as const,
       designData: JSON.stringify(fullDesignDataForStorage),
       backgroundColor: badgeDesignData.backgroundColor || "#FFFFFF",
-      backingType: badgeDesignData.backing || "pin",
+      backingType: badgeDesignData.backing || "magnetic",
       basePrice: "9.99",
       backingPrice: "0",
       totalPrice: "9.99",
