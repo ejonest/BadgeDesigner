@@ -68,11 +68,18 @@ If you prefer not to use a snippet, paste the **whole block** (container + ifram
     if (data.action === 'design-saved') {
       console.log('Design saved:', data.payload);
     }
+    // When user clicks Save Design but isn't logged in, redirect to store login and return to this page
+    if (data.action === 'redirect-to-login') {
+      var returnTo = window.location.pathname + window.location.search;
+      window.location.href = '/account/login?return_to=' + encodeURIComponent(returnTo);
+    }
   });
 </script>
 ```
 
 **Important:** Replace `https://badgedesigner.vercel.app` with your actual Vercel app URL if different. The `event.origin` check must match that URL.
+
+**redirect-to-login:** If the user clicks **Save Design** without being logged in, the iframe sends `redirect-to-login`. The snippet above redirects the storefront to `/account/login?return_to=...` so the user can sign in and land back on the product page; the iframe then loads with `customerId` and Save Design works.
 
 **customerId:** The iframe `src` includes `{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}` so that when a customer is logged in (Customer Accounts enabled in Settings → Customer accounts), the designer can **Save Design** to Supabase and offer **Load previous design?** on the next visit. Without `customerId`, Save Design will prompt the user to sign in.
 

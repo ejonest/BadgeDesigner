@@ -2825,7 +2825,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const saveBadge = async () => {
     try {
       if (!_customerId?.trim()) {
-        alert("Sign in to save your design. When embedded in your store, log in so we can save and load your designs.");
+        // Ask parent (e.g. Shopify theme) to redirect to login so user can sign in and return with customerId
+        api.sendToParent({
+          action: "redirect-to-login",
+          payload: { reason: "save-design" },
+        });
+        alert(
+          "Sign in to save your design. You’ll be redirected to log in, then return here to save.",
+        );
         return;
       }
       const shopData = getCurrentShop(_shop);
