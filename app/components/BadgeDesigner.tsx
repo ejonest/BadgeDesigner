@@ -2821,18 +2821,56 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   };
 
+  // Load Design: if not logged in, prompt login; if logged in, check for saved design and show modal or message
+  const onLoadDesignClick = async () => {
+    if (!_customerId?.trim()) {
+      const goToLogin = confirm(
+        "Log in to load a previous design. This page will open the login screen; after you log in you'll return here and can load your design.\n\nGo to login now?",
+      );
+      if (goToLogin) {
+        api.sendToParent({
+          action: "redirect-to-login",
+          payload: { reason: "load-design" },
+        });
+      }
+      return;
+    }
+    const shopData = getCurrentShop(_shop);
+    if (!shopData) {
+      alert("Shop information not found. Please reload the page.");
+      return;
+    }
+    try {
+      const result = await api.getSavedDesign(shopData.shopId, _customerId.trim());
+      if (result.saved && result.design?.design_data) {
+        setSavedDesignForLoad({
+          design_id: result.design.design_id,
+          design_data: result.design.design_data,
+          updated_at: result.design.updated_at,
+        });
+        setShowLoadPreviousModal(true);
+      } else {
+        alert("No saved design found. Save your design first, then you can load it here.");
+      }
+    } catch (err) {
+      console.warn("Load design check failed:", err);
+      alert("Could not check for saved design. Please try again.");
+    }
+  };
+
   // Save design - FINALIZES and locks all badge states (Supabase only, one set per user)
   const saveBadge = async () => {
     try {
       if (!_customerId?.trim()) {
-        // Ask parent (e.g. Shopify theme) to redirect to login so user can sign in and return with customerId
-        api.sendToParent({
-          action: "redirect-to-login",
-          payload: { reason: "save-design" },
-        });
-        alert(
-          "Sign in to save your design. You’ll be redirected to log in, then return here to save.",
+        const goToLogin = confirm(
+          "Sign in to save your design. This page will open the login screen; after you log in you'll return here and can save.\n\nGo to login now?",
         );
+        if (goToLogin) {
+          api.sendToParent({
+            action: "redirect-to-login",
+            payload: { reason: "save-design" },
+          });
+        }
         return;
       }
       const shopData = getCurrentShop(_shop);
@@ -4571,6 +4609,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               }}
             >
               Save Design
+            </button>
+            <button
+              type="button"
+              title="Log in to load a previous design"
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded shadow"
+              onClick={(e) => {
+                e.preventDefault();
+                onLoadDesignClick();
+              }}
+            >
+              Load Design
             </button>
             <button
               className={`px-4 py-2 rounded shadow ${
