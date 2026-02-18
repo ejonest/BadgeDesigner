@@ -95,7 +95,8 @@ export function createApi(gadgetApiUrl?: string, gadgetApiKey?: string) {
       });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `Save failed: ${response.status}`);
+        const msg = err.details || err.error || `Save failed: ${response.status}`;
+        throw new Error(msg);
       }
       const result = await response.json();
       return {

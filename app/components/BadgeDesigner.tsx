@@ -2941,7 +2941,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       });
     } catch (error) {
       console.error("Failed to save badge:", error);
-      alert("Failed to save badge design. Please try again.");
+      const message =
+        error instanceof Error ? error.message : "Failed to save badge design. Please try again.";
+      alert(message);
     }
   };
 
