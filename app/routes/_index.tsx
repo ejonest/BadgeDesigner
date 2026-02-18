@@ -15,6 +15,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   const url = new URL(request.url);
   const productId = url.searchParams.get("product");
   const shop = url.searchParams.get("shop");
+  const customerId = url.searchParams.get("customerId") ?? url.searchParams.get("customer_id");
   
   // Add headers for iframe embedding
   const headers = new Headers();
@@ -25,6 +26,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   return json({ 
     productId, 
     shop, 
+    customerId: customerId ?? null,
     timestamp: Date.now(),
     GADGET_API_URL: process.env.GADGET_API_URL || 'https://all-quality-badge-designer--development.gadget.app',
     GADGET_API_KEY: process.env.GADGET_API_KEY,
@@ -32,13 +34,14 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 export default function Index() {
-  const { productId, shop, GADGET_API_URL, GADGET_API_KEY } = useLoaderData<typeof loader>();
+  const { productId, shop, customerId, GADGET_API_URL, GADGET_API_KEY } = useLoaderData<typeof loader>();
 
   return (
     <div className="min-h-screen bg-gray-50">
       <BadgeDesigner 
         productId={productId} 
         shop={shop} 
+        customerId={customerId}
         gadgetApiUrl={GADGET_API_URL}
         gadgetApiKey={GADGET_API_KEY}
       />

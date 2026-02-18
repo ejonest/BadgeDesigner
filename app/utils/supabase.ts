@@ -374,6 +374,49 @@ export async function getCustomerDesigns(customerId: string) {
   return data
 }
 
+/** Get the latest saved design for a user in a shop (one set per user). Used for "Load previous design?". */
+export async function getLatestSavedDesign(userId: string, shopId: string) {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('badge_designs')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('shop_id', shopId)
+    .eq('status', 'saved')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    console.error('getLatestSavedDesign error:', error)
+    throw error
+  }
+
+  return data
+}
+
+/** Delete existing saved designs for a user in a shop so only one set is kept (replace previous on save). */
+export async function deleteSavedDesignsForUser(userId: string, shopId: string) {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+  }
+
+  const { error } = await supabaseAdmin
+    .from('badge_designs')
+    .delete()
+    .eq('user_id', userId)
+    .eq('shop_id', shopId)
+    .eq('status', 'saved')
+
+  if (error) {
+    console.error('deleteSavedDesignsForUser error:', error)
+    throw error
+  }
+}
+
 // Badge order items interface - matches actual table schema
 export interface BadgeOrderItem {
   id?: string

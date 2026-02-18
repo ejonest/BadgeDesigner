@@ -74,6 +74,8 @@ If you prefer not to use a snippet, paste the **whole block** (container + ifram
 
 **Important:** Replace `https://badgedesigner.vercel.app` with your actual Vercel app URL if different. The `event.origin` check must match that URL.
 
+**customerId:** The iframe `src` includes `{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}` so that when a customer is logged in (Customer Accounts enabled in Settings → Customer accounts), the designer can **Save Design** to Supabase and offer **Load previous design?** on the next visit. Without `customerId`, Save Design will prompt the user to sign in.
+
 **Add to cart and Gadget:** At add-to-cart the designer sends minimal design data (line text, background color, backing type, design id) to Gadget so Gadget has the design for order-paid. It also sends `add-to-cart-multiple` (or redirects for a single item) so the **parent frame** adds items to the Shopify cart. If the designer is embedded in a **Gadget app page** (not the Shopify theme), the Gadget page must handle the `add-to-cart-multiple` message (e.g. redirect to the store’s `/cart/add` or call the store’s Cart API) so the cart is populated.
 
 ---
