@@ -86,6 +86,37 @@ export function createApi(gadgetApiUrl?: string, gadgetApiKey?: string) {
     }
   },
 
+    /** Save design to Supabase only (one set per user). Requires userId in designData or shopData. */
+    async saveDesignToSupabase(designData: any, shopData?: any): Promise<BadgeDesignData> {
+      const response = await fetch('/api/save-design', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ designData, shopData }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Save failed: ${response.status}`);
+      }
+      const result = await response.json();
+      return {
+        id: result.id,
+        designId: result.designId,
+        designData,
+        message: result.message,
+      };
+    },
+
+    /** Get latest saved design for user/shop from Supabase (for "Load previous design?"). */
+    async getSavedDesign(shopId: string, userId: string): Promise<{ saved: boolean; design: { design_id: string; design_data: any; updated_at?: string } | null }> {
+      const params = new URLSearchParams({ shop: shopId, userId });
+      const response = await fetch(`/api/saved-design?${params}`);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Load failed: ${response.status}`);
+      }
+      return response.json();
+    },
+
     // Get badge design by ID (with fallback)
   async getBadgeDesign(id: string): Promise<BadgeDesignData> {
     try {

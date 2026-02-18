@@ -46,7 +46,7 @@
 ```html
 <div style="width: 100%; min-height: 800px;">
   <iframe 
-    src="https://YOUR-VERCEL-URL.vercel.app/?product={{ product.id }}&shop={{ shop.permanent_domain }}"
+    src="https://YOUR-VERCEL-URL.vercel.app/?product={{ product.id }}&shop={{ shop.permanent_domain }}{% if customer %}&customerId={{ customer.id }}{% endif %}"
     width="100%" 
     height="800px" 
     frameborder="0"
@@ -56,6 +56,11 @@
 ```
 
 Replace `YOUR-VERCEL-URL.vercel.app` with your actual Vercel URL.
+
+**customerId (optional but recommended):** When the store has Customer Accounts enabled and the visitor is logged in, include `&customerId={{ customer.id }}` in the iframe URL. This enables:
+- **Save Design** – users can save their current badge set (one set per user; saving again replaces the previous).
+- **Load previous design** – on the next visit, they are asked whether to load their saved design.
+Without `customerId`, the Save Design button will ask users to sign in.
 
 ### Option B: Using a Shopify App (For Production)
 
@@ -103,6 +108,17 @@ To proceed with the full integration (Step 2: Gadget webhook integration), I'll 
 3. **Gadget Setup** (if using Gadget for webhooks):
    - Confirm if you want to use Gadget webhooks (recommended)
    - Or if you prefer direct Shopify API polling
+
+## Save Design and Load Previous (Supabase)
+
+- **Save Design** stores the current badge set in Supabase with status `saved`, keyed by Shopify customer id and shop. Only one saved set is kept per user per shop; saving again replaces the previous.
+- **Load previous design:** When a logged-in customer opens the designer and a saved design exists, they see a modal: “Load previous design?” with **Load** / **Start fresh**.
+- **Requirement:** The iframe URL must include `customerId` when the customer is logged in (e.g. `&customerId={{ customer.id }}` in Liquid). See the embed snippet in [docs/IFRAME_AND_GADGET_SETUP.md](docs/IFRAME_AND_GADGET_SETUP.md) for a full example that already passes `customerId`.
+
+## Customer Accounts and Promotional Emails
+
+- **Customer Accounts:** In **Shopify Admin → Settings → Customer accounts**, set to **Optional** (or **Required**) so customers can log in on the storefront. The theme or app that embeds the badge designer must then pass the logged-in customer’s id in the iframe URL as `customerId` so Save Design and Load previous work.
+- **Promotional emails** (e.g. cart abandonment, drafts, sales): Configure these in **Shopify Admin** under **Marketing** and **Notifications**, or via third-party apps. Shopify’s flows use the customer’s email and consent. To tie opt-in to “saving a design,” use Shopify’s standard checkout/account marketing consent or Customer Account settings; document the desired behavior for your marketing/ops team.
 
 ## Next Steps After Setup
 

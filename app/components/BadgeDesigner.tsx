@@ -87,6 +87,7 @@ const INITIAL_BADGE = BADGE_CONSTANTS.INITIAL_BADGE;
 interface BadgeDesignerProps {
   productId?: string | null;
   shop?: string | null;
+  customerId?: string | null;
   gadgetApiUrl?: string;
   gadgetApiKey?: string;
 }
@@ -233,6 +234,7 @@ function remapLinesForNewDesignBox(
 const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   productId: _productId,
   shop: _shop,
+  customerId: _customerId,
   gadgetApiUrl,
   gadgetApiKey,
 }) => {
@@ -1071,6 +1073,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [proofPdfObjectUrl, setProofPdfObjectUrl] = useState<string | null>(
     null,
   );
+  // Load previous design (Supabase): when user has a saved set, offer to load it
+  const [showLoadPreviousModal, setShowLoadPreviousModal] = useState(false);
+  const [savedDesignForLoad, setSavedDesignForLoad] = useState<{
+    design_id: string;
+    design_data: any;
+    updated_at?: string;
+  } | null>(null);
   const [csvText, setCsvText] = useState("");
   const [csvPreview, setCsvPreview] = useState<string[][]>([]);
   const [csvError, setCsvError] = useState("");
@@ -1140,6 +1149,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const guidedFlowCompletedRef = useRef(false);
   /** True after we have restored from localStorage cache once (prevents re-restore on later effect runs). */
   const restoredFromCacheRef = useRef(false);
+  /** True after we have asked to load previous design this session (don't show modal again until next visit). */
+  const loadPreviousAskedRef = useRef(false);
   /** When true, debounced cache save will skip one write (set after add-to-cart success so we don't write old state back). */
   const skipCacheSaveRef = useRef(false);
   const multipleBadgesRef = useRef<Badge[]>(multipleBadges);
@@ -1350,6 +1361,27 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     // Restore steps 3 and 4 as completed so roadmap and Add to Cart stay valid after refresh
     setSectionsOpened((prev) => ({ ...prev, textLines: true, backing: true }));
   }, [templates, _shop, _productId]);
+
+  // Fetch saved design for "Load previous?" when user is logged in (customerId + shop)
+  useEffect(() => {
+    if (!_customerId?.trim() || !_shop?.trim() || loadPreviousAskedRef.current) return;
+    loadPreviousAskedRef.current = true;
+    (async () => {
+      try {
+        const result = await api.getSavedDesign(_shop, _customerId);
+        if (result.saved && result.design?.design_data) {
+          setSavedDesignForLoad({
+            design_id: result.design.design_id,
+            design_data: result.design.design_data,
+            updated_at: result.design.updated_at,
+          });
+          setShowLoadPreviousModal(true);
+        }
+      } catch (err) {
+        console.warn('[BadgeDesigner] Failed to fetch saved design:', err);
+      }
+    })();
+  }, [_customerId, _shop]);
 
   // Debounced save of badge designer state to localStorage cache (always run effect so hook count is stable)
   useEffect(() => {
@@ -2789,9 +2821,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   };
 
-  // Save design - FINALIZES and locks all badge states
+  // Save design - FINALIZES and locks all badge states (Supabase only, one set per user)
   const saveBadge = async () => {
     try {
+      if (!_customerId?.trim()) {
+        alert("Sign in to save your design. When embedded in your store, log in so we can save and load your designs.");
+        return;
+      }
       const shopData = getCurrentShop(_shop);
       if (!shopData) {
         alert("Shop information not found. Please reload the page.");
@@ -2859,6 +2895,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const totalPrice = basePrice + backingPrice;
 
       const badgeDesignData = {
+        userId: _customerId.trim(),
         shopId: shopData.shopId,
         productId: _productId,
         designId: `design_${Date.now()}_${Math.random()
@@ -2880,12 +2917,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         textLines: allFinalizedBadges[0].lines,
       };
 
-      const savedDesign = await api.saveBadgeDesign(badgeDesignData, shopData);
+      const shopDataWithCustomer = { ...shopData, customerId: _customerId.trim() };
+      const savedDesign = await api.saveDesignToSupabase(badgeDesignData, shopDataWithCustomer);
       // eslint-disable-next-line no-alert
       alert(
-        `Badge design saved and finalized! Design ID: ${
-          savedDesign.id || "Unknown"
-        }`,
+        savedDesign.message ?? `Badge design saved! Design ID: ${savedDesign.designId ?? savedDesign.id ?? "Unknown"}`,
       );
 
       api.sendToParent({
@@ -3022,6 +3058,39 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     setProofAcknowledged(false);
     setShowProofModal(false);
   }, [proofPdfObjectUrl]);
+
+  const onLoadPreviousDesign = useCallback(() => {
+    const design = savedDesignForLoad?.design_data;
+    if (!design) {
+      setShowLoadPreviousModal(false);
+      setSavedDesignForLoad(null);
+      return;
+    }
+    const rawBadges = design.allBadges ?? (design.badge ? [design.badge, ...(design.multipleBadges ?? [])] : []);
+    if (!Array.isArray(rawBadges) || rawBadges.length === 0) {
+      setShowLoadPreviousModal(false);
+      setSavedDesignForLoad(null);
+      return;
+    }
+    const restoredBadges = migrateBadgeArray(rawBadges);
+    setMultipleBadges(restoredBadges);
+    setBadge(restoredBadges[0]);
+    setBadge1Data(restoredBadges[0] ?? null);
+    setSelectedBadgeIndex(0);
+    setUniversalTemplateId(restoredBadges[0]?.templateId ?? "rect-1x3");
+    setHasChosenBackgroundColor(true);
+    setSectionsOpened((prev) => ({ ...prev, textLines: true, backing: true }));
+    if (savedDesignForLoad?.design_id) {
+      sessionDesignIdRef.current = savedDesignForLoad.design_id;
+    }
+    setShowLoadPreviousModal(false);
+    setSavedDesignForLoad(null);
+  }, [savedDesignForLoad]);
+
+  const onStartFreshDesign = useCallback(() => {
+    setShowLoadPreviousModal(false);
+    setSavedDesignForLoad(null);
+  }, []);
 
   const onProofConfirm = async () => {
     if (!proofAcknowledged) return;
@@ -6301,6 +6370,45 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Load previous design modal - offer to restore saved design from Supabase */}
+      {showLoadPreviousModal && savedDesignForLoad && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
+          onClick={onStartFreshDesign}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Load previous design"
+        >
+          <div
+            className="bg-white rounded-lg shadow-lg w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-gray-800 mb-2">
+              Load previous design?
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              You have a previously saved design. Would you like to load it and continue editing?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                className="px-4 py-2 rounded shadow border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                onClick={onStartFreshDesign}
+              >
+                Start fresh
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 rounded shadow bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={onLoadPreviousDesign}
+              >
+                Load
+              </button>
+            </div>
           </div>
         </div>
       )}
