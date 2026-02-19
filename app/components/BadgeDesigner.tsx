@@ -6583,15 +6583,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               </div>
               <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                 <h4 className="font-semibold text-gray-800 mb-2">
-                  Proof approval
+                  Almost there — just double-check your proof
                 </h4>
+                <p className="text-sm text-gray-600 mb-2">
+                  Please take a moment to review the proof above and confirm
+                  that all text, spelling, and design details look correct. We
+                  print exactly what we receive, so please check for any typos
+                  or spelling mistakes before you add to cart.
+                </p>
                 <p className="text-sm text-gray-600 mb-3">
-                  Please review the proof above and confirm that all text,
-                  spelling, and design details are correct. By adding to cart
-                  you acknowledge that custom-printed items cannot be returned
-                  or refunded due to customer error (e.g. typos or design
-                  choices). We only accept returns or replacements for
-                  manufacturing defects.
+                  By adding to cart you acknowledge that custom-printed items
+                  cannot be returned or refunded due to customer error (e.g.
+                  typos or design choices). We only accept returns or
+                  replacements for manufacturing defects.
                 </p>
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input
@@ -6601,7 +6605,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     className="mt-1 rounded border-gray-300"
                   />
                   <span className="text-sm text-gray-700">
-                    I have reviewed the proof and accept the terms above.
+                    Yes, all checked and good to go
                   </span>
                 </label>
               </div>
