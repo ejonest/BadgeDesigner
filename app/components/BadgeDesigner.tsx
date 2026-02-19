@@ -1121,14 +1121,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     textLines: false,
     backing: false,
   });
-  /** Step 3 is "complete" only when user has changed at least one line from the default (not "Your Name", "Title", or "Line Text"). */
+  /** Step 3 is "complete" only when user has changed every line from the default (not "Your Name", "Title", or "Line Text"). */
   const getStep3DefaultText = (lineIndex: number) =>
     lineIndex === 0 ? "Your Name" : lineIndex === 1 ? "Title" : "Line Text";
-  const hasStep3TextEntered = badge.lines.some(
-    (l, i) =>
-      (l.text || "").trim() !== "" &&
-      (l.text || "").trim() !== getStep3DefaultText(i),
-  );
+  const hasStep3TextEntered =
+    badge.lines.length > 0 &&
+    badge.lines.every(
+      (l, i) =>
+        (l.text || "").trim() !== "" &&
+        (l.text || "").trim() !== getStep3DefaultText(i),
+    );
   const stepsComplete =
     multipleBadges.length > 0 &&
     hasChosenBackgroundColor &&
