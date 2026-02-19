@@ -862,11 +862,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     setHasChosenBackgroundColor(true);
     const contrastingText = getContrastingTextColor(colorValue);
     const SIMILAR_THRESHOLD = 70;
-    const normalizedBg = (colorValue.trim().startsWith("#") ? colorValue.trim() : `#${colorValue.trim()}`).toUpperCase();
+    const normalizedBg = (
+      colorValue.trim().startsWith("#")
+        ? colorValue.trim()
+        : `#${colorValue.trim()}`
+    ).toUpperCase();
 
     const updatedLines = badge.lines.map((line) => {
       if (!line.color) return line;
-      const normalizedLine = (line.color.trim().startsWith("#") ? line.color.trim() : `#${line.color.trim()}`).toUpperCase();
+      const normalizedLine = (
+        line.color.trim().startsWith("#")
+          ? line.color.trim()
+          : `#${line.color.trim()}`
+      ).toUpperCase();
       if (areColorsSimilar(normalizedBg, normalizedLine, SIMILAR_THRESHOLD)) {
         return { ...line, color: contrastingText };
       }
@@ -898,7 +906,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         textLines: true,
         backing: false,
       });
-      setSectionsOpened((prev) => ({ ...prev, background: true, textLines: true }));
+      setSectionsOpened((prev) => ({
+        ...prev,
+        background: true,
+        textLines: true,
+      }));
       guidedFlowCompletedRef.current = true;
     }
   };
@@ -1115,18 +1127,23 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     sectionsOpened.textLines &&
     sectionsOpened.backing;
 
-  /** Returns message like "Please complete steps (1)" or "Please complete steps (1-3)" for step-guard alerts. */
+  /** Returns message like "Please complete steps (1)" or "Please complete steps (1-4)" for step-guard alerts. Step 4 = backing type. */
   const getIncompleteStepsMessage = (forStep: 2 | 3 | 4): string | null => {
     const s1 = multipleBadges.length > 0;
     const s2 = hasChosenBackgroundColor;
     const s3 = sectionsOpened.textLines;
+    const s4 = sectionsOpened.backing;
     const incomplete: number[] = [];
     if (forStep >= 2 && !s1) incomplete.push(1);
     if (forStep >= 3 && !s2) incomplete.push(2);
     if (forStep >= 4 && !s3) incomplete.push(3);
+    if (forStep >= 4 && !s4) incomplete.push(4);
     if (incomplete.length === 0) return null;
-    if (incomplete.length === 1) return `Please complete steps (${incomplete[0]})`;
-    return `Please complete steps (${incomplete[0]}-${incomplete[incomplete.length - 1]})`;
+    if (incomplete.length === 1)
+      return `Please complete steps (${incomplete[0]})`;
+    return `Please complete steps (${incomplete[0]}-${
+      incomplete[incomplete.length - 1]
+    })`;
   };
 
   // Refs for section headers to enable scroll-into-view
@@ -1317,7 +1334,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   // Restore badge designer state from localStorage cache (once, after templates are loaded)
   useEffect(() => {
     if (templates.length === 0 || restoredFromCacheRef.current) return;
-    const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${_productId ?? "default"}`;
+    const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${
+      _productId ?? "default"
+    }`;
     const raw = localStorage.getItem(cacheKey);
     if (!raw) return;
     let payload: {
@@ -1364,7 +1383,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // Fetch saved design for "Load previous?" when user is logged in (customerId + shop)
   useEffect(() => {
-    if (!_customerId?.trim() || !_shop?.trim() || loadPreviousAskedRef.current) return;
+    if (!_customerId?.trim() || !_shop?.trim() || loadPreviousAskedRef.current)
+      return;
     loadPreviousAskedRef.current = true;
     (async () => {
       try {
@@ -1378,14 +1398,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           setShowLoadPreviousModal(true);
         }
       } catch (err) {
-        console.warn('[BadgeDesigner] Failed to fetch saved design:', err);
+        console.warn("[BadgeDesigner] Failed to fetch saved design:", err);
       }
     })();
   }, [_customerId, _shop]);
 
   // Debounced save of badge designer state to localStorage cache (always run effect so hook count is stable)
   useEffect(() => {
-    const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${_productId ?? "default"}`;
+    const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${
+      _productId ?? "default"
+    }`;
     const timeoutId = window.setTimeout(() => {
       if (multipleBadges.length === 0) return;
       if (skipCacheSaveRef.current) {
@@ -1419,7 +1441,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // beforeunload: save current state to cache so last edit before reload is not lost
   useEffect(() => {
-    const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${_productId ?? "default"}`;
+    const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${
+      _productId ?? "default"
+    }`;
     const handler = () => {
       if (multipleBadges.length === 0) return;
       if (skipCacheSaveRef.current) return;
@@ -2841,7 +2865,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       return;
     }
     try {
-      const result = await api.getSavedDesign(shopData.shopId, _customerId.trim());
+      const result = await api.getSavedDesign(
+        shopData.shopId,
+        _customerId.trim(),
+      );
       if (result.saved && result.design?.design_data) {
         setSavedDesignForLoad({
           design_id: result.design.design_id,
@@ -2850,7 +2877,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         });
         setShowLoadPreviousModal(true);
       } else {
-        alert("No saved design found. Save your design first, then you can load it here.");
+        alert(
+          "No saved design found. Save your design first, then you can load it here.",
+        );
       }
     } catch (err) {
       console.warn("Load design check failed:", err);
@@ -2946,11 +2975,20 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         textLines: allFinalizedBadges[0].lines,
       };
 
-      const shopDataWithCustomer = { ...shopData, customerId: _customerId.trim() };
-      const savedDesign = await api.saveDesignToSupabase(badgeDesignData, shopDataWithCustomer);
+      const shopDataWithCustomer = {
+        ...shopData,
+        customerId: _customerId.trim(),
+      };
+      const savedDesign = await api.saveDesignToSupabase(
+        badgeDesignData,
+        shopDataWithCustomer,
+      );
       // eslint-disable-next-line no-alert
       alert(
-        savedDesign.message ?? `Badge design saved! Design ID: ${savedDesign.designId ?? savedDesign.id ?? "Unknown"}`,
+        savedDesign.message ??
+          `Badge design saved! Design ID: ${
+            savedDesign.designId ?? savedDesign.id ?? "Unknown"
+          }`,
       );
 
       api.sendToParent({
@@ -2964,7 +3002,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     } catch (error) {
       console.error("Failed to save badge:", error);
       const message =
-        error instanceof Error ? error.message : "Failed to save badge design. Please try again.";
+        error instanceof Error
+          ? error.message
+          : "Failed to save badge design. Please try again.";
       alert(message);
     }
   };
@@ -3097,7 +3137,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       setSavedDesignForLoad(null);
       return;
     }
-    const rawBadges = design.allBadges ?? (design.badge ? [design.badge, ...(design.multipleBadges ?? [])] : []);
+    const rawBadges =
+      design.allBadges ??
+      (design.badge ? [design.badge, ...(design.multipleBadges ?? [])] : []);
     if (!Array.isArray(rawBadges) || rawBadges.length === 0) {
       setShowLoadPreviousModal(false);
       setSavedDesignForLoad(null);
@@ -3166,94 +3208,94 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               "rect-1x3";
             const template = await loadTemplateById(templateId);
             if (template && allBadgesForSupabase.length > 0) {
-            const badgePromises = allBadgesForSupabase.map((b, i) =>
-              Promise.all([
-                generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
-                generateSVGAsBlob(b, template),
-              ])
-                .then(([pngBlob, svgBlob]) => ({
-                  pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
-                  svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
-                  i,
-                }))
-                .catch(() => ({
-                  pngBlob: new Blob(),
-                  svgBlob: new Blob(),
-                  i,
-                })),
-            );
-            const badgeResults = await Promise.all(badgePromises);
-            badgeResults.sort((a, b) => a.i - b.i);
-            const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
-            const svgBlobs = badgeResults.map((r) => r.svgBlob);
-            const designDataForSupabase = {
-              badge: allBadgesForSupabase[0],
-              multipleBadges:
-                allBadgesForSupabase.length > 1
-                  ? allBadgesForSupabase.slice(1)
-                  : [],
-              allBadges: allBadgesForSupabase,
-              timestamp: new Date().toISOString(),
-              shopId: shopData.shopId || "test-shop",
-              productId: _productId || "test-product",
-              backgroundColor: allBadgesForSupabase[0].backgroundColor,
-              backingType: allBadgesForSupabase[0].backing,
-              textLines: allBadgesForSupabase[0].lines,
-            };
-            const formDataForSupabase = new FormData();
-            formDataForSupabase.append("designId", designIdForSupabase);
-            formDataForSupabase.append(
-              "designData",
-              JSON.stringify(designDataForSupabase),
-            );
-            formDataForSupabase.append("storageOnly", "true");
-            if (shopifyCustomerIdFromUrl) {
+              const badgePromises = allBadgesForSupabase.map((b, i) =>
+                Promise.all([
+                  generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
+                  generateSVGAsBlob(b, template),
+                ])
+                  .then(([pngBlob, svgBlob]) => ({
+                    pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
+                    svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
+                    i,
+                  }))
+                  .catch(() => ({
+                    pngBlob: new Blob(),
+                    svgBlob: new Blob(),
+                    i,
+                  })),
+              );
+              const badgeResults = await Promise.all(badgePromises);
+              badgeResults.sort((a, b) => a.i - b.i);
+              const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
+              const svgBlobs = badgeResults.map((r) => r.svgBlob);
+              const designDataForSupabase = {
+                badge: allBadgesForSupabase[0],
+                multipleBadges:
+                  allBadgesForSupabase.length > 1
+                    ? allBadgesForSupabase.slice(1)
+                    : [],
+                allBadges: allBadgesForSupabase,
+                timestamp: new Date().toISOString(),
+                shopId: shopData.shopId || "test-shop",
+                productId: _productId || "test-product",
+                backgroundColor: allBadgesForSupabase[0].backgroundColor,
+                backingType: allBadgesForSupabase[0].backing,
+                textLines: allBadgesForSupabase[0].lines,
+              };
+              const formDataForSupabase = new FormData();
+              formDataForSupabase.append("designId", designIdForSupabase);
               formDataForSupabase.append(
-                "shopifyCustomerId",
-                shopifyCustomerIdFromUrl,
+                "designData",
+                JSON.stringify(designDataForSupabase),
               );
-            }
-            formDataForSupabase.append("pdf", pdfBlob, "badge-design.pdf");
-            thumbnailPngBlobs.forEach((pngBlob, index) => {
-              if (pngBlob && pngBlob.size > 0) {
+              formDataForSupabase.append("storageOnly", "true");
+              if (shopifyCustomerIdFromUrl) {
                 formDataForSupabase.append(
-                  `thumbnail_png_${index}`,
-                  pngBlob,
-                  `badge-${index}-thumbnail.png`,
+                  "shopifyCustomerId",
+                  shopifyCustomerIdFromUrl,
                 );
               }
-            });
-            svgBlobs.forEach((svgBlob, index) => {
-              if (svgBlob && svgBlob.size > 0) {
-                formDataForSupabase.append(
-                  `svg_${index}`,
-                  svgBlob,
-                  `badge-${index}-design.svg`,
+              formDataForSupabase.append("pdf", pdfBlob, "badge-design.pdf");
+              thumbnailPngBlobs.forEach((pngBlob, index) => {
+                if (pngBlob && pngBlob.size > 0) {
+                  formDataForSupabase.append(
+                    `thumbnail_png_${index}`,
+                    pngBlob,
+                    `badge-${index}-thumbnail.png`,
+                  );
+                }
+              });
+              svgBlobs.forEach((svgBlob, index) => {
+                if (svgBlob && svgBlob.size > 0) {
+                  formDataForSupabase.append(
+                    `svg_${index}`,
+                    svgBlob,
+                    `badge-${index}-design.svg`,
+                  );
+                }
+              });
+              const supabaseResponse = await fetch("/api/send-to-supabase", {
+                method: "POST",
+                body: formDataForSupabase,
+              });
+              if (supabaseResponse.ok) {
+                const supabaseJson = await supabaseResponse
+                  .json()
+                  .catch(() => ({}));
+                thumbnailUrls = Array.isArray(supabaseJson.thumbnailUrls)
+                  ? supabaseJson.thumbnailUrls
+                  : [];
+                pdfUrlForCart = supabaseJson.pdfUrl;
+              } else {
+                const errData = await supabaseResponse.json().catch(() => ({}));
+                console.warn(
+                  "Supabase proof upload failed (cart will still add):",
+                  errData.message || supabaseResponse.statusText,
+                );
+                alert(
+                  "Proof upload failed; your design will still be added to cart. Support may follow up for the proof.",
                 );
               }
-            });
-            const supabaseResponse = await fetch("/api/send-to-supabase", {
-              method: "POST",
-              body: formDataForSupabase,
-            });
-            if (supabaseResponse.ok) {
-              const supabaseJson = await supabaseResponse
-                .json()
-                .catch(() => ({}));
-              thumbnailUrls = Array.isArray(supabaseJson.thumbnailUrls)
-                ? supabaseJson.thumbnailUrls
-                : [];
-              pdfUrlForCart = supabaseJson.pdfUrl;
-            } else {
-              const errData = await supabaseResponse.json().catch(() => ({}));
-              console.warn(
-                "Supabase proof upload failed (cart will still add):",
-                errData.message || supabaseResponse.statusText,
-              );
-              alert(
-                "Proof upload failed; your design will still be added to cart. Support may follow up for the proof.",
-              );
-            }
             }
           } catch (fallbackErr) {
             console.warn(
@@ -3345,7 +3387,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const result = await api.addToCartMultiple(cartItems);
       if (result.success) {
         try {
-          const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${_productId ?? "default"}`;
+          const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${
+            _shop ?? "default"
+          }-${_productId ?? "default"}`;
           localStorage.removeItem(cacheKey);
         } catch {
           // ignore
@@ -3632,7 +3676,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             <h2 className="text-xl font-bold text-gray-800">
               {multipleBadges.length === 0
                 ? "Design Your Badge"
-                : `Customize Your Badge ${selectedBadgeIndex + 1} of ${totalBadges}`}
+                : `Customize Your Badge ${
+                    selectedBadgeIndex + 1
+                  } of ${totalBadges}`}
             </h2>
             {multipleBadges.length > 0 && (
               <span className="text-xl font-bold text-red-600">
@@ -3779,8 +3825,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 {
                   label: "Backing",
                   done: sectionsOpened.backing,
-                  current:
-                    sectionsOpened.textLines && !sectionsOpened.backing,
+                  current: sectionsOpened.textLines && !sectionsOpened.backing,
                 },
               ].map((step, i) => (
                 <React.Fragment key={i}>
@@ -4447,7 +4492,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   {BADGE_CONSTANTS.BACKING_OPTIONS.map((option) => {
                     const prices = BADGE_CONSTANTS.BACKING_PRICES;
                     const currentPrice = prices[badge.backing] ?? 0;
-                    const optionPrice = prices[option.value as keyof typeof prices] ?? 0;
+                    const optionPrice =
+                      prices[option.value as keyof typeof prices] ?? 0;
                     const delta = optionPrice - currentPrice;
                     const names: Record<string, string> = {
                       magnetic: "Magnetic",
@@ -4459,8 +4505,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       delta === 0
                         ? name
                         : delta > 0
-                          ? `${name} (+$${delta.toFixed(2)})`
-                          : `${name} (-$${Math.abs(delta).toFixed(2)})`;
+                        ? `${name} (+$${delta.toFixed(2)})`
+                        : `${name} (-$${Math.abs(delta).toFixed(2)})`;
                     return (
                       <option key={option.value} value={option.value}>
                         {label}
@@ -4602,7 +4648,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           {/* Save / Add to cart */}
           <div className="flex justify-end mt-2 mb-4 gap-2">
             <button
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
+              className="bg-white text-[#283238] px-4 py-2 rounded shadow"
               onClick={(e) => {
                 e.preventDefault();
                 saveBadge();
@@ -4613,7 +4659,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             <button
               type="button"
               title="Log in to load a previous design"
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded shadow"
+              className="bg-white text-[#283238] px-4 py-2 rounded shadow"
               onClick={(e) => {
                 e.preventDefault();
                 onLoadDesignClick();
@@ -4629,239 +4675,249 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               } text-white`}
               onClick={(e) => {
                 e.preventDefault();
-                if (!isAddingToCart && !isGeneratingDesigns && stepsComplete) addToCart();
+                if (isAddingToCart || isGeneratingDesigns) return;
+                if (!stepsComplete) {
+                  const msg = getIncompleteStepsMessage(4);
+                  alert(
+                    msg
+                      ? `${msg} and finalize your design before adding to the cart.`
+                      : "Please complete your design before adding to the cart.",
+                  );
+                  return;
+                }
+                addToCart();
               }}
-              disabled={isAddingToCart || isGeneratingDesigns || !stepsComplete}
+              disabled={isAddingToCart || isGeneratingDesigns}
             >
               {isAddingToCart
                 ? "Adding to Cart..."
                 : isGeneratingDesigns
                 ? "Generating..."
-                : !stepsComplete
-                ? multipleBadges.length === 0
-                  ? "Add to Cart - Design your badge first"
-                  : "Add to Cart - Complete all steps"
-                : `Add to Cart - ${prettyPrice}`}
+                : stepsComplete
+                ? `Add to Cart - ${prettyPrice}`
+                : "Add to Cart"}
             </button>
           </div>
 
           {/* Export Options (visibility controlled by SHOW_EXPORT_OPTIONS) */}
           {SHOW_EXPORT_OPTIONS && (
-          <div className="mb-4">
-            <button
-              ref={exportSectionRef}
-              type="button"
-              onClick={() => {
-                const willBeOpen = !sectionsOpen.export;
-                setSectionsOpen({
-                  template: false,
-                  export: willBeOpen,
-                  background: false,
-                  textLines: false,
-                  backing: false,
-                });
-              }}
-              className="flex items-center justify-between w-full mb-2 text-left"
-            >
-              <h3 className="text-lg font-semibold text-gray-800">
-                Export Options
-              </h3>
-              {sectionsOpen.export ? (
-                <ChevronUpIcon className="w-5 h-5 text-gray-600" />
-              ) : (
-                <ChevronDownIcon className="w-5 h-5 text-gray-600" />
-              )}
-            </button>
-            <div
-              className={`mt-4 flex flex-wrap gap-1 transition-all duration-300 overflow-hidden ${
-                sectionsOpen.export
-                  ? "max-h-[500px] opacity-100"
-                  : "max-h-0 opacity-0"
-              }`}
-            >
+            <div className="mb-4">
               <button
-                className="px-2 py-1 text-xs border rounded"
-                onClick={async () => {
-                  if (multipleBadges.length > 1) {
-                    const allBadges = getAllBadges(multipleBadges);
-                    const allTemplates = getAllTemplates(
-                      multipleBadges,
-                      templates,
-                    );
-                    downloadMultipleSVGs(allBadges, allTemplates, "badge");
-                  } else {
-                    const badgeToExport = badge1Data || badge;
-                    await downloadSVG(
-                      {
-                        ...badgeToExport,
-                        id: badgeToExport.id || "badge",
-                        templateId:
-                          badgeToExport.templateId || universalTemplateId,
-                      },
-                      activeTemplate,
-                      "badge.svg",
-                    );
-                  }
+                ref={exportSectionRef}
+                type="button"
+                onClick={() => {
+                  const willBeOpen = !sectionsOpen.export;
+                  setSectionsOpen({
+                    template: false,
+                    export: willBeOpen,
+                    background: false,
+                    textLines: false,
+                    backing: false,
+                  });
                 }}
+                className="flex items-center justify-between w-full mb-2 text-left"
               >
-                SVG
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Export Options
+                </h3>
+                {sectionsOpen.export ? (
+                  <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+                ) : (
+                  <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+                )}
               </button>
-              <button
-                className="px-2 py-1 text-xs border rounded"
-                onClick={async () => {
-                  if (multipleBadges.length > 1) {
-                    const allBadges = getAllBadges(multipleBadges);
-                    const allTemplates = getAllTemplates(
-                      multipleBadges,
-                      templates,
-                    );
-                    downloadMultiplePNGs(allBadges, allTemplates, "badge");
-                  } else {
-                    const badgeToExport = badge1Data || badge;
-                    await downloadPNG(
-                      {
-                        ...badgeToExport,
-                        id: badgeToExport.id || "badge",
-                        templateId:
-                          badgeToExport.templateId || universalTemplateId,
-                      },
-                      activeTemplate,
-                      "badge.png",
-                      2,
-                    );
-                  }
-                }}
+              <div
+                className={`mt-4 flex flex-wrap gap-1 transition-all duration-300 overflow-hidden ${
+                  sectionsOpen.export
+                    ? "max-h-[500px] opacity-100"
+                    : "max-h-0 opacity-0"
+                }`}
               >
-                PNG
-              </button>
-              <button
-                className="px-2 py-1 text-xs border rounded"
-                onClick={async () => {
-                  if (multipleBadges.length > 1) {
-                    const allBadges = getAllBadges(multipleBadges);
-                    const allTemplates = getAllTemplates(
-                      multipleBadges,
-                      templates,
-                    );
-                    downloadMultipleTIFFs(allBadges, allTemplates, "badge");
-                  } else {
-                    const badgeToExport = badge1Data || badge;
-                    await downloadTIFF(
-                      {
-                        ...badgeToExport,
-                        id: badgeToExport.id || "badge",
-                        templateId:
-                          badgeToExport.templateId || universalTemplateId,
-                      },
-                      activeTemplate,
-                      "badge.tiff",
-                      4,
-                    );
-                  }
-                }}
-              >
-                TIFF
-              </button>
-              <button
-                className="px-2 py-1 text-xs border rounded"
-                onClick={async () => {
-                  if (multipleBadges.length > 1) {
-                    const allBadges = getAllBadges(multipleBadges);
-                    const allTemplates = getAllTemplates(
-                      multipleBadges,
-                      templates,
-                    );
-                    downloadMultipleCDRs(allBadges, allTemplates, "badge");
-                  } else {
-                    const badgeToExport = badge1Data || badge;
-                    await downloadCDR(
-                      {
-                        ...badgeToExport,
-                        id: badgeToExport.id || "badge",
-                        templateId:
-                          badgeToExport.templateId || universalTemplateId,
-                      },
-                      activeTemplate,
-                      "badge.cdr",
-                    );
-                  }
-                }}
-              >
-                CDR (Artwork)
-              </button>
-              <button
-                className="px-2 py-1 text-xs border rounded"
-                onClick={async () => {
-                  try {
+                <button
+                  className="px-2 py-1 text-xs border rounded"
+                  onClick={async () => {
                     if (multipleBadges.length > 1) {
                       const allBadges = getAllBadges(multipleBadges);
-                      // generatePDF takes first badge as badgeData, rest as multipleBadges array
-                      await generatePDF(allBadges[0], allBadges.slice(1));
+                      const allTemplates = getAllTemplates(
+                        multipleBadges,
+                        templates,
+                      );
+                      downloadMultipleSVGs(allBadges, allTemplates, "badge");
                     } else {
                       const badgeToExport = badge1Data || badge;
-                      await generatePDF({
-                        ...badgeToExport,
-                        id: badgeToExport.id || "badge",
-                        templateId:
-                          badgeToExport.templateId || universalTemplateId,
-                      });
+                      await downloadSVG(
+                        {
+                          ...badgeToExport,
+                          id: badgeToExport.id || "badge",
+                          templateId:
+                            badgeToExport.templateId || universalTemplateId,
+                        },
+                        activeTemplate,
+                        "badge.svg",
+                      );
                     }
-                  } catch (error) {
-                    console.error("Error generating PDF:", error);
-                    alert("Error generating PDF. Please try again.");
-                  }
-                }}
-              >
-                PDF
-              </button>
-              <button
-                type="button"
-                className="px-2 py-1 text-xs border border-amber-400 rounded bg-amber-50 text-amber-800 hover:bg-amber-100"
-                onClick={() => {
-                  const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${_productId ?? "default"}`;
-                  const message =
-                    "This will clear all saved design data and reset to a single default badge. You will need to start over. Continue?";
-                  if (!window.confirm(message)) return;
-                  try {
-                    localStorage.removeItem(cacheKey);
-                  } catch {
-                    // ignore
-                  }
-                  const defaultBadge: Badge = {
-                    ...INITIAL_BADGE,
-                    lines: INITIAL_BADGE.lines.map((line) => ({ ...line })),
-                  };
-                  setMultipleBadges([]);
-                  setBadge(defaultBadge);
-                  setSelectedBadgeIndex(0);
-                  setHasChosenBackgroundColor(false);
-                  setSectionsOpened({
-                    template: false,
-                    export: false,
-                    background: false,
-                    textLines: false,
-                    backing: false,
-                  });
-                  setSectionsOpen({
-                    template: true,
-                    export: false,
-                    background: false,
-                    textLines: false,
-                    backing: false,
-                  });
-                  setUniversalTemplateId("rect-1x3");
-                  setBadge1Data(null);
-                  sessionDesignIdRef.current = null;
-                  guidedFlowCompletedRef.current = false;
-                  restoredFromCacheRef.current = true;
-                  setUndoHistory([]);
-                }}
-                title="Clear localStorage cache and reset to initial state (no steps completed)"
-              >
-                Clear cache & reset (dev)
-              </button>
+                  }}
+                >
+                  SVG
+                </button>
+                <button
+                  className="px-2 py-1 text-xs border rounded"
+                  onClick={async () => {
+                    if (multipleBadges.length > 1) {
+                      const allBadges = getAllBadges(multipleBadges);
+                      const allTemplates = getAllTemplates(
+                        multipleBadges,
+                        templates,
+                      );
+                      downloadMultiplePNGs(allBadges, allTemplates, "badge");
+                    } else {
+                      const badgeToExport = badge1Data || badge;
+                      await downloadPNG(
+                        {
+                          ...badgeToExport,
+                          id: badgeToExport.id || "badge",
+                          templateId:
+                            badgeToExport.templateId || universalTemplateId,
+                        },
+                        activeTemplate,
+                        "badge.png",
+                        2,
+                      );
+                    }
+                  }}
+                >
+                  PNG
+                </button>
+                <button
+                  className="px-2 py-1 text-xs border rounded"
+                  onClick={async () => {
+                    if (multipleBadges.length > 1) {
+                      const allBadges = getAllBadges(multipleBadges);
+                      const allTemplates = getAllTemplates(
+                        multipleBadges,
+                        templates,
+                      );
+                      downloadMultipleTIFFs(allBadges, allTemplates, "badge");
+                    } else {
+                      const badgeToExport = badge1Data || badge;
+                      await downloadTIFF(
+                        {
+                          ...badgeToExport,
+                          id: badgeToExport.id || "badge",
+                          templateId:
+                            badgeToExport.templateId || universalTemplateId,
+                        },
+                        activeTemplate,
+                        "badge.tiff",
+                        4,
+                      );
+                    }
+                  }}
+                >
+                  TIFF
+                </button>
+                <button
+                  className="px-2 py-1 text-xs border rounded"
+                  onClick={async () => {
+                    if (multipleBadges.length > 1) {
+                      const allBadges = getAllBadges(multipleBadges);
+                      const allTemplates = getAllTemplates(
+                        multipleBadges,
+                        templates,
+                      );
+                      downloadMultipleCDRs(allBadges, allTemplates, "badge");
+                    } else {
+                      const badgeToExport = badge1Data || badge;
+                      await downloadCDR(
+                        {
+                          ...badgeToExport,
+                          id: badgeToExport.id || "badge",
+                          templateId:
+                            badgeToExport.templateId || universalTemplateId,
+                        },
+                        activeTemplate,
+                        "badge.cdr",
+                      );
+                    }
+                  }}
+                >
+                  CDR (Artwork)
+                </button>
+                <button
+                  className="px-2 py-1 text-xs border rounded"
+                  onClick={async () => {
+                    try {
+                      if (multipleBadges.length > 1) {
+                        const allBadges = getAllBadges(multipleBadges);
+                        // generatePDF takes first badge as badgeData, rest as multipleBadges array
+                        await generatePDF(allBadges[0], allBadges.slice(1));
+                      } else {
+                        const badgeToExport = badge1Data || badge;
+                        await generatePDF({
+                          ...badgeToExport,
+                          id: badgeToExport.id || "badge",
+                          templateId:
+                            badgeToExport.templateId || universalTemplateId,
+                        });
+                      }
+                    } catch (error) {
+                      console.error("Error generating PDF:", error);
+                      alert("Error generating PDF. Please try again.");
+                    }
+                  }}
+                >
+                  PDF
+                </button>
+                <button
+                  type="button"
+                  className="px-2 py-1 text-xs border border-amber-400 rounded bg-amber-50 text-amber-800 hover:bg-amber-100"
+                  onClick={() => {
+                    const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${
+                      _shop ?? "default"
+                    }-${_productId ?? "default"}`;
+                    const message =
+                      "This will clear all saved design data and reset to a single default badge. You will need to start over. Continue?";
+                    if (!window.confirm(message)) return;
+                    try {
+                      localStorage.removeItem(cacheKey);
+                    } catch {
+                      // ignore
+                    }
+                    const defaultBadge: Badge = {
+                      ...INITIAL_BADGE,
+                      lines: INITIAL_BADGE.lines.map((line) => ({ ...line })),
+                    };
+                    setMultipleBadges([]);
+                    setBadge(defaultBadge);
+                    setSelectedBadgeIndex(0);
+                    setHasChosenBackgroundColor(false);
+                    setSectionsOpened({
+                      template: false,
+                      export: false,
+                      background: false,
+                      textLines: false,
+                      backing: false,
+                    });
+                    setSectionsOpen({
+                      template: true,
+                      export: false,
+                      background: false,
+                      textLines: false,
+                      backing: false,
+                    });
+                    setUniversalTemplateId("rect-1x3");
+                    setBadge1Data(null);
+                    sessionDesignIdRef.current = null;
+                    guidedFlowCompletedRef.current = false;
+                    restoredFromCacheRef.current = true;
+                    setUndoHistory([]);
+                  }}
+                  title="Clear localStorage cache and reset to initial state (no steps completed)"
+                >
+                  Clear cache & reset (dev)
+                </button>
+              </div>
             </div>
-          </div>
           )}
         </div>
       </div>
@@ -5111,20 +5167,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             {
               label: "Background",
               done: hasChosenBackgroundColor,
-              current:
-                multipleBadges.length > 0 && !hasChosenBackgroundColor,
+              current: multipleBadges.length > 0 && !hasChosenBackgroundColor,
             },
             {
               label: "Text",
               done: sectionsOpened.textLines,
-              current:
-                hasChosenBackgroundColor && !sectionsOpened.textLines,
+              current: hasChosenBackgroundColor && !sectionsOpened.textLines,
             },
             {
               label: "Backing",
               done: sectionsOpened.backing,
-              current:
-                sectionsOpened.textLines && !sectionsOpened.backing,
+              current: sectionsOpened.textLines && !sectionsOpened.backing,
             },
           ].map((step, i) => (
             <React.Fragment key={i}>
@@ -6091,26 +6144,58 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               </button>
             </div>
             <p className="text-gray-700 mb-2">
-              This background is similar to some of your text colors. The following will be updated so text stays readable:
+              This background is similar to some of your text colors. The
+              following will be updated so text stays readable:
             </p>
-            {pendingBackgroundColor && (() => {
-              const SIMILAR_THRESHOLD = 70;
-              const normalizedBg = (pendingBackgroundColor.trim().startsWith("#") ? pendingBackgroundColor.trim() : `#${pendingBackgroundColor.trim()}`).toUpperCase();
-              const contrastingHex = getContrastingTextColor(pendingBackgroundColor);
-              const contrastingName = contrastingHex === "#FFFFFF" ? "white" : "black";
-              const indices: number[] = [];
-              badge.lines.forEach((line, i) => {
-                if (!line.color) return;
-                const normalizedLine = (line.color.trim().startsWith("#") ? line.color.trim() : `#${line.color.trim()}`).toUpperCase();
-                if (areColorsSimilar(normalizedBg, normalizedLine, SIMILAR_THRESHOLD)) indices.push(i + 1);
-              });
-              const lineLabel = indices.length === 1 ? `Line ${indices[0]}` : indices.map((n) => `Line ${n}`).join(", ");
-              return (
-                <p className="text-gray-700 mb-6 font-medium">
-                  {lineLabel} → <span style={{ color: contrastingHex === "#FFFFFF" ? "#6b7280" : "#111827" }}>{contrastingName}</span> text
-                </p>
-              );
-            })()}
+            {pendingBackgroundColor &&
+              (() => {
+                const SIMILAR_THRESHOLD = 70;
+                const normalizedBg = (
+                  pendingBackgroundColor.trim().startsWith("#")
+                    ? pendingBackgroundColor.trim()
+                    : `#${pendingBackgroundColor.trim()}`
+                ).toUpperCase();
+                const contrastingHex = getContrastingTextColor(
+                  pendingBackgroundColor,
+                );
+                const contrastingName =
+                  contrastingHex === "#FFFFFF" ? "white" : "black";
+                const indices: number[] = [];
+                badge.lines.forEach((line, i) => {
+                  if (!line.color) return;
+                  const normalizedLine = (
+                    line.color.trim().startsWith("#")
+                      ? line.color.trim()
+                      : `#${line.color.trim()}`
+                  ).toUpperCase();
+                  if (
+                    areColorsSimilar(
+                      normalizedBg,
+                      normalizedLine,
+                      SIMILAR_THRESHOLD,
+                    )
+                  )
+                    indices.push(i + 1);
+                });
+                const lineLabel =
+                  indices.length === 1
+                    ? `Line ${indices[0]}`
+                    : indices.map((n) => `Line ${n}`).join(", ");
+                return (
+                  <p className="text-gray-700 mb-6 font-medium">
+                    {lineLabel} →{" "}
+                    <span
+                      style={{
+                        color:
+                          contrastingHex === "#FFFFFF" ? "#6b7280" : "#111827",
+                      }}
+                    >
+                      {contrastingName}
+                    </span>{" "}
+                    text
+                  </p>
+                );
+              })()}
             <div className="flex gap-3 justify-end">
               <button
                 type="button"
@@ -6127,7 +6212,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded hover:bg-blue-600 transition-colors"
                 onClick={() => {
                   if (pendingBackgroundColor) {
-                    applyBackgroundColorWithContrastUpdate(pendingBackgroundColor);
+                    applyBackgroundColorWithContrastUpdate(
+                      pendingBackgroundColor,
+                    );
                   }
                   setShowBackgroundColorWarning(false);
                   setPendingBackgroundColor(null);
@@ -6270,7 +6357,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             {csvPreview.length > 0 && (
               <div className="mb-2">
                 <div className="font-semibold mb-1">
-                  Preview ({csvPreview.length} row{csvPreview.length === 1 ? "" : "s"})
+                  Preview ({csvPreview.length} row
+                  {csvPreview.length === 1 ? "" : "s"})
                 </div>
                 {/* Scrollable container: show ~10 rows worth of height, max 40vh so it shrinks on short screens */}
                 <div
@@ -6285,7 +6373,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       {csvPreview.map((row, i) => (
                         <tr key={i} className="border-t border-gray-200">
                           {row.map((cell, j) => (
-                            <td key={j} className="border border-gray-200 px-2 py-1">
+                            <td
+                              key={j}
+                              className="border border-gray-200 px-2 py-1"
+                            >
                               {cell}
                             </td>
                           ))}
@@ -6354,8 +6445,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               new badges:
             </p>
             <p className="mb-3 text-xs text-gray-600">
-              <strong>Override Current</strong> replaces all existing badges with
-              the new ones from your CSV.
+              <strong>Override Current</strong> replaces all existing badges
+              with the new ones from your CSV.
               <br />
               <strong>Add to Current</strong> keeps your existing badges and
               appends the new ones.
@@ -6433,7 +6524,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               Load previous design?
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              You have a previously saved design. Would you like to load it and continue editing?
+              You have a previously saved design. Would you like to load it and
+              continue editing?
             </p>
             <div className="flex justify-end gap-2">
               <button
@@ -6495,11 +6587,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 </h4>
                 <p className="text-sm text-gray-600 mb-3">
                   Please review the proof above and confirm that all text,
-                  spelling, and design details are correct. By adding to cart you
-                  acknowledge that custom-printed items cannot be returned or
-                  refunded due to customer error (e.g. typos or design choices).
-                  We only accept returns or replacements for manufacturing
-                  defects.
+                  spelling, and design details are correct. By adding to cart
+                  you acknowledge that custom-printed items cannot be returned
+                  or refunded due to customer error (e.g. typos or design
+                  choices). We only accept returns or replacements for
+                  manufacturing defects.
                 </p>
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input
@@ -6569,8 +6661,46 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             </div>
             <div className="overflow-y-auto flex-1 p-4">
               <div className="space-y-4">
+                {/* Save Design */}
+                <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+                  <div className="flex-shrink-0 flex items-center justify-center bg-white text-[#283238] border border-gray-200 rounded shadow px-2 py-1.5 text-xs font-medium whitespace-nowrap">
+                    Save Design
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-800 mb-1">
+                      Save Design
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Saves your current badge design so you can come back to it
+                      later. You must be logged in to save. We keep one saved
+                      design per account; saving again replaces your previous
+                      one. After saving, you can load it on this or another
+                      device when logged in.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Load Design */}
+                <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+                  <div className="flex-shrink-0 flex items-center justify-center bg-white text-[#283238] border border-gray-200 rounded shadow px-2 py-1.5 text-xs font-medium whitespace-nowrap">
+                    Load Design
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-800 mb-1">
+                      Load Design
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Opens a previously saved design so you can continue
+                      editing. You must be logged in. If you have a saved
+                      design, you’ll be asked whether to load it or start fresh.
+                      Handy for switching devices or returning to a design
+                      later.
+                    </p>
+                  </div>
+                </div>
+
                 {/* Undo */}
-                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
                   <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
                     <ArrowUturnLeftIcon className="w-6 h-6" />
                   </div>
@@ -6588,7 +6718,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 </div>
 
                 {/* Reset This Badge */}
-                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
                   <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
                     <ArrowPathRoundedSquareIcon className="w-6 h-6" />
                   </div>
@@ -6606,7 +6736,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
                 {/* Reset All Badges */}
                 {multipleBadges.length > 1 && (
-                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                  <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
                     <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
                       <ArrowPathIconOutline className="w-6 h-6" />
                     </div>
@@ -6624,7 +6754,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
                 {/* Apply Format to All Badges */}
                 {multipleBadges.length > 1 && (
-                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                  <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
                     <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
                       <Square2StackIcon className="w-6 h-6" />
                     </div>
@@ -6642,7 +6772,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 )}
 
                 {/* Create Multiple Badges */}
-                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
                   <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
                     <SquaresPlusIcon className="w-6 h-6" />
                   </div>
@@ -6660,7 +6790,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 </div>
 
                 {/* Grid View */}
-                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
                   <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
                     <Squares2X2Icon className="w-6 h-6" />
                   </div>
@@ -6682,7 +6812,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 <h4 className="font-semibold text-gray-800 mb-3">
                   How to Design Your Badge
                 </h4>
-                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
+                <ol className="list-decimal list-outside pl-6 space-y-2 text-sm text-gray-700">
                   <li className="mb-2">
                     <strong>Pick a badge design</strong> that fits your business
                     - Choose from various shapes and sizes in the template
@@ -6694,13 +6824,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     that represents your brand or event.
                   </li>
                   <li className="mb-2">
-                    <strong>Add your text</strong> - Enter names, titles, or any
-                    information you want on the badge. You can add up to 4 lines
-                    of text.
+                    <strong>Add your text and modify to fit</strong> - Enter
+                    names, titles, or any information you want on the badge. You
+                    can add up to 4 lines of text. Adjust font sizes, colors,
+                    alignment, and styles to make your badge look perfect.
                   </li>
                   <li className="mb-2">
-                    <strong>Modify to fit</strong> - Adjust font sizes, colors,
-                    alignment, and styles to make your badge look perfect.
+                    <strong>Select a backing type</strong> - Choose how your
+                    badge will be worn: magnetic, adhesive, or pin backing.
                   </li>
                 </ol>
                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
