@@ -4924,13 +4924,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
       {/* RIGHT COLUMN - Badge preview (Desktop only). Current badge at top; rest in scrollable area. */}
       <div
-        className={`hidden md:flex md:w-1/2 md:pl-3 flex-col items-center min-h-0 ${
+        className={`hidden md:flex md:w-1/2 md:pl-3 flex-col items-center min-h-0 pt-3 ${
           multipleBadges.length > 1 ? "md:h-[90vh]" : ""
         }`}
       >
-        <div className="relative flex items-center justify-center w-full mb-4 flex-shrink-0">
+        <div className="relative flex items-center justify-center w-full mb-4 flex-shrink-0 min-h-[5.5rem]">
           <h2 className="text-xl font-bold text-center">Badge Preview</h2>
-          <div className="absolute right-0 flex flex-col items-center gap-1">
+          <div className="absolute right-0 top-0 flex flex-col items-center gap-1">
             <button
               type="button"
               className="w-14 h-14 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
