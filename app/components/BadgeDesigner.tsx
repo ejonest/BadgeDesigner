@@ -6533,7 +6533,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 className="px-4 py-2 rounded shadow border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                 onClick={onStartFreshDesign}
               >
-                Start fresh
+                No thanks
               </button>
               <button
                 type="button"

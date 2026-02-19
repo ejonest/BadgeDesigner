@@ -112,7 +112,7 @@ To proceed with the full integration (Step 2: Gadget webhook integration), I'll 
 ## Save Design and Load Previous (Supabase)
 
 - **Save Design** stores the current badge set in Supabase with status `saved`, keyed by Shopify customer id and shop. Only one saved set is kept per user per shop; saving again replaces the previous.
-- **Load previous design:** When a logged-in customer opens the designer and a saved design exists, they see a modal: “Load previous design?” with **Load** / **Start fresh**.
+- **Load previous design:** When a logged-in customer opens the designer and a saved design exists, they see a modal: “Load previous design?” with **Load** / **No thanks**.
 - **Requirement:** The iframe URL must include `customerId` when the customer is logged in (e.g. `&customerId={{ customer.id }}` in Liquid). See the embed snippet in [docs/IFRAME_AND_GADGET_SETUP.md](docs/IFRAME_AND_GADGET_SETUP.md) for a full example that already passes `customerId`.
 
 ## Customer Accounts and Promotional Emails
