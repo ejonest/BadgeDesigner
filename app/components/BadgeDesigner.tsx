@@ -1121,22 +1121,30 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     textLines: false,
     backing: false,
   });
+  /** Step 3 is "complete" only when user has changed at least one line from the default (not "Your Name", "Title", or "Line Text"). */
+  const getStep3DefaultText = (lineIndex: number) =>
+    lineIndex === 0 ? "Your Name" : lineIndex === 1 ? "Title" : "Line Text";
+  const hasStep3TextEntered = badge.lines.some(
+    (l, i) =>
+      (l.text || "").trim() !== "" &&
+      (l.text || "").trim() !== getStep3DefaultText(i),
+  );
   const stepsComplete =
     multipleBadges.length > 0 &&
     hasChosenBackgroundColor &&
-    sectionsOpened.textLines &&
+    hasStep3TextEntered &&
     sectionsOpened.backing;
 
-  /** Returns message like "Please complete steps (1)" or "Please complete steps (1-4)" for step-guard alerts. Step 4 = backing type. */
+  /** Returns message like "Please complete steps (1)" or "Please complete steps (1-4)" for step-guard alerts. Step 4 = backing type. When opening step N, pass forStep = N so only steps 1..N-1 are required (e.g. pass 3 when opening step 4). */
   const getIncompleteStepsMessage = (forStep: 2 | 3 | 4): string | null => {
     const s1 = multipleBadges.length > 0;
     const s2 = hasChosenBackgroundColor;
-    const s3 = sectionsOpened.textLines;
+    const s3 = hasStep3TextEntered;
     const s4 = sectionsOpened.backing;
     const incomplete: number[] = [];
     if (forStep >= 2 && !s1) incomplete.push(1);
     if (forStep >= 3 && !s2) incomplete.push(2);
-    if (forStep >= 4 && !s3) incomplete.push(3);
+    if (forStep >= 3 && !s3) incomplete.push(3);
     if (forStep >= 4 && !s4) incomplete.push(4);
     if (incomplete.length === 0) return null;
     if (incomplete.length === 1)
@@ -1377,8 +1385,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       sessionDesignIdRef.current = payload.designId;
     }
     setBadge1Data(payload.multipleBadges[0] ?? null);
-    // Restore steps 3 and 4 as completed so roadmap and Add to Cart stay valid after refresh
-    setSectionsOpened((prev) => ({ ...prev, textLines: true, backing: true }));
+    // Do not mark steps 3 or 4 as opened; user must open step 4 (and step 3 counts complete only when they have non-default text) in this session
   }, [templates, _shop, _productId]);
 
   // Fetch saved design for "Load previous?" when user is logged in (customerId + shop)
@@ -1620,8 +1627,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     prevSectionsOpenRef.current = sectionsOpen;
     if (didClose) setDraftSaveTrigger((t) => t + 1);
     if (didOpenExport && stepsComplete) setDraftSaveTrigger((t) => t + 1);
-    // Open Step 4 (backing) the first time user closes Step 3 (text)
-    if (didCloseText && !sectionsOpened.backing) {
+    // Open Step 4 (backing) when user closes Step 3 (text) and has completed step 3 (entered text)
+    if (didCloseText && !sectionsOpened.backing && hasStep3TextEntered) {
       setSectionsOpened((p) => ({ ...p, backing: true }));
       setSectionsOpen({
         template: false,
@@ -1631,7 +1638,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         backing: true,
       });
     }
-  }, [sectionsOpen, sectionsOpened.backing, stepsComplete]);
+  }, [sectionsOpen, sectionsOpened.backing, stepsComplete, hasStep3TextEntered]);
 
   // Debounced draft save: only when stepsComplete, triggered by draftSaveTrigger (section close / apply-to-all / selectBadge)
   const DRAFT_SAVE_DEBOUNCE_MS = 800;
@@ -3818,14 +3825,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 },
                 {
                   label: "Text",
-                  done: sectionsOpened.textLines,
+                  done: hasStep3TextEntered,
                   current:
-                    hasChosenBackgroundColor && !sectionsOpened.textLines,
+                    hasChosenBackgroundColor && !hasStep3TextEntered,
                 },
                 {
                   label: "Backing",
                   done: sectionsOpened.backing,
-                  current: sectionsOpened.textLines && !sectionsOpened.backing,
+                  current: hasStep3TextEntered && !sectionsOpened.backing,
                 },
               ].map((step, i) => (
                 <React.Fragment key={i}>
@@ -3835,7 +3842,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                         [
                           multipleBadges.length > 0,
                           hasChosenBackgroundColor,
-                          sectionsOpened.textLines,
+                          hasStep3TextEntered,
                           sectionsOpened.backing,
                         ][i - 1]
                           ? "bg-green-600"
@@ -4290,7 +4297,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               ref={textLinesSectionRef}
               type="button"
               onClick={() => {
-                const msg = getIncompleteStepsMessage(3);
+                const msg = getIncompleteStepsMessage(2);
                 if (msg) {
                   alert(msg);
                   return;
@@ -4311,7 +4318,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 <h3 className="text-lg font-semibold text-gray-800">
                   Step 3: Edit your text
                 </h3>
-                {sectionsOpened.textLines && (
+                {hasStep3TextEntered && (
                   <CheckCircleIcon className="w-5 h-5 text-green-600" />
                 )}
                 {badge.lines.some(
@@ -4424,7 +4431,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               ref={backingSectionRef}
               type="button"
               onClick={() => {
-                const msg = getIncompleteStepsMessage(4);
+                const msg = getIncompleteStepsMessage(3);
                 if (msg) {
                   alert(msg);
                   return;
@@ -5171,13 +5178,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             },
             {
               label: "Text",
-              done: sectionsOpened.textLines,
-              current: hasChosenBackgroundColor && !sectionsOpened.textLines,
+              done: hasStep3TextEntered,
+              current: hasChosenBackgroundColor && !hasStep3TextEntered,
             },
             {
               label: "Backing",
               done: sectionsOpened.backing,
-              current: sectionsOpened.textLines && !sectionsOpened.backing,
+              current: hasStep3TextEntered && !sectionsOpened.backing,
             },
           ].map((step, i) => (
             <React.Fragment key={i}>
@@ -5187,7 +5194,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     [
                       multipleBadges.length > 0,
                       hasChosenBackgroundColor,
-                      sectionsOpened.textLines,
+                      hasStep3TextEntered,
                       sectionsOpened.backing,
                     ][i - 1]
                       ? "bg-green-600"

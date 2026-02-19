@@ -68,10 +68,11 @@ If you prefer not to use a snippet, paste the **whole block** (container + ifram
     if (data.action === 'design-saved') {
       console.log('Design saved:', data.payload);
     }
-    // When user clicks Save Design but isn't logged in, redirect to store login and return to this page
+    // When user clicks Save Design (or Load Design) but isn't logged in, redirect to store login and return to this page
     if (data.action === 'redirect-to-login') {
       var returnTo = window.location.pathname + window.location.search;
-      window.location.href = '/account/login?return_to=' + encodeURIComponent(returnTo);
+      // New Customer Accounts (Shopify): use /customer_authentication/login with return_to (relative URL)
+      window.location.href = '/customer_authentication/login?return_to=' + encodeURIComponent(returnTo);
     }
   });
 </script>
@@ -79,7 +80,9 @@ If you prefer not to use a snippet, paste the **whole block** (container + ifram
 
 **Important:** Replace `https://badgedesigner.vercel.app` with your actual Vercel app URL if different. The `event.origin` check must match that URL.
 
-**redirect-to-login:** If the user clicks **Save Design** without being logged in, the iframe sends `redirect-to-login`. The snippet above redirects the storefront to `/account/login?return_to=...` so the user can sign in and land back on the product page; the iframe then loads with `customerId` and Save Design works.
+**redirect-to-login:** If the user clicks **Save Design** or **Load Design** without being logged in, the iframe sends `redirect-to-login`. The snippet above redirects to Shopify’s sign-in using **New Customer Accounts**: `/customer_authentication/login?return_to=...` so the user lands back on the product page after login. The `return_to` value must be a relative URL (e.g. `/products/your-badge-product`). If your store still uses **Classic** customer accounts, use `/account/login?return_to=...` instead.
+
+**Alternative (Liquid):** To use Shopify’s route so the login URL stays correct across locales and future changes, output the login URL in your snippet and use it in the handler, e.g. add before the script: `{% assign login_url = routes.storefront_login_url | default: '/customer_authentication/login' %}` and in the script set `var loginBase = {{ login_url | json }};` then `window.location.href = loginBase + (loginBase.indexOf('?') >= 0 ? '&' : '?') + 'return_to=' + encodeURIComponent(returnTo);`
 
 **customerId:** The iframe `src` includes `{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}` so that when a customer is logged in (Customer Accounts enabled in Settings → Customer accounts), the designer can **Save Design** to Supabase and offer **Load previous design?** on the next visit. Without `customerId`, Save Design will prompt the user to sign in.
 

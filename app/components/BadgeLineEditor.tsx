@@ -39,8 +39,15 @@ export const BadgeLineEditor: React.FC<BadgeLineEditorProps> = ({
           <label className="block text-sm font-medium text-gray-700">Text</label>
           <input
             type="text"
-            value={line.text}
+            value={(() => {
+              const defaultText =
+                index === 0 ? "Your Name" : index === 1 ? "Title" : "Line Text";
+              const isEmptyOrDefault =
+                !(line.text ?? "").trim() || line.text === defaultText;
+              return isEmptyOrDefault ? "" : line.text;
+            })()}
             onChange={(e) => onUpdate(index, { text: e.target.value })}
+            placeholder={`Insert line ${index + 1} text here`}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
         </div>
