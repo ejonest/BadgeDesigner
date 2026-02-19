@@ -435,9 +435,17 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
               type="text"
               className="border rounded px-3 py-2 text-base w-full min-w-[120px]"
               style={{ backgroundColor: "#fff" }}
-              value={line.text}
+              value={
+                (() => {
+                  const defaultText =
+                    idx === 0 ? "Your Name" : idx === 1 ? "Title" : "Line Text";
+                  const isEmptyOrDefault =
+                    !(line.text ?? "").trim() || line.text === defaultText;
+                  return isEmptyOrDefault ? "" : line.text;
+                })()
+              }
               onChange={(e) => onLineChange(idx, { text: e.target.value })}
-              placeholder={`Line ${idx + 1}`}
+              placeholder={`Insert line ${idx + 1} text here`}
               disabled={!editable}
             />
             <div className="flex flex-col sm:flex-row gap-2 items-center mt-2 min-w-0">

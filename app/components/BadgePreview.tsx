@@ -33,26 +33,36 @@ export const BadgePreview: React.FC<BadgePreviewProps> = ({
           gap: '0.25rem'
         }}
       >
-        {badge.lines.map((line: BadgeLine, idx: number) => (
-          <span
-            key={idx}
-            className="whitespace-nowrap"
-            style={{
-              fontSize: line.size,
-              color: line.color,
-              fontWeight: line.bold ? 'bold' : 'normal',
-              fontStyle: line.italic ? 'italic' : 'normal',
-              textDecoration: line.underline ? 'underline' : 'none',
-              fontFamily: line.fontFamily,
-              lineHeight: BADGE_CONSTANTS.LINE_HEIGHT_MULTIPLIER,
-              textShadow: '0 1px 2px rgba(0,0,0,0.1)',
-              width: '100%',
-              textAlign: line.alignment || 'center'
-            }}
-          >
-            {line.text}
-          </span>
-        ))}
+        {badge.lines.map((line: BadgeLine, idx: number) => {
+          const defaultText =
+            idx === 0 ? "Your Name" : idx === 1 ? "Title" : "Line Text";
+          const isEmptyOrDefault =
+            !(line.text ?? "").trim() || line.text === defaultText;
+          const displayText = isEmptyOrDefault
+            ? `Insert line ${idx + 1} text here`
+            : line.text;
+          const isPlaceholder = isEmptyOrDefault;
+          return (
+            <span
+              key={idx}
+              className="whitespace-nowrap"
+              style={{
+                fontSize: line.size,
+                color: isPlaceholder ? "#9ca3af" : line.color,
+                fontWeight: line.bold ? "bold" : "normal",
+                fontStyle: isPlaceholder || line.italic ? "italic" : "normal",
+                textDecoration: line.underline ? "underline" : "none",
+                fontFamily: line.fontFamily,
+                lineHeight: BADGE_CONSTANTS.LINE_HEIGHT_MULTIPLIER,
+                textShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                width: "100%",
+                textAlign: line.alignment || "center",
+              }}
+            >
+              {displayText}
+            </span>
+          );
+        })}
       </div>
     </div>
   );
