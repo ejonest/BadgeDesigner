@@ -1082,6 +1082,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   // Proof modal: show after generating PDF; user must acknowledge before add-to-cart completes
   const [showProofModal, setShowProofModal] = useState(false);
   const [proofAcknowledged, setProofAcknowledged] = useState(false);
+  const [proofAddDuplicates, setProofAddDuplicates] = useState(false);
   const [proofPdfObjectUrl, setProofPdfObjectUrl] = useState<string | null>(
     null,
   );
@@ -3120,6 +3121,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const objectUrl = URL.createObjectURL(pdfBlob);
       setProofPdfObjectUrl(objectUrl);
       setProofAcknowledged(false);
+      setProofAddDuplicates(false);
       setShowProofModal(true);
     } catch (error) {
       console.error("Failed to add to cart:", error);
@@ -3136,6 +3138,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
     proofPendingAddToCartRef.current = null;
     setProofAcknowledged(false);
+    setProofAddDuplicates(false);
     setShowProofModal(false);
   }, [proofPdfObjectUrl]);
 
@@ -3186,38 +3189,68 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       gadgetPromise,
       shopifyCustomerIdFromUrl,
     } = pending;
+    const urlParams =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search)
+        : null;
+    const variantIdFromUrl = (key: string) =>
+      urlParams?.get(key)?.trim() || null;
+    const getDuplicateVariantIdEarly = (backingType: string): string | null => {
+      const fromUrl =
+        backingType === "pin"
+          ? variantIdFromUrl("variantIdPinDuplicate")
+          : backingType === "magnetic"
+            ? variantIdFromUrl("variantIdMagneticDuplicate")
+            : backingType === "adhesive"
+              ? variantIdFromUrl("variantIdAdhesiveDuplicate")
+              : variantIdFromUrl("variantIdPinDuplicate");
+      return fromUrl || null;
+    };
+    const addDuplicates =
+      !!proofAddDuplicates &&
+      allBadgesForSupabase.length >= 1 &&
+      allBadgesForSupabase.length <= 5 &&
+      !!getDuplicateVariantIdEarly(allBadgesForSupabase[0].backing);
+    const badgesForSupabase = addDuplicates
+      ? [...allBadgesForSupabase, ...allBadgesForSupabase]
+      : allBadgesForSupabase;
+
     setIsAddingToCart(true);
     try {
       let thumbnailUrls: string[] = [];
       let pdfUrlForCart: string | undefined;
+      let usedFinalize = false;
       try {
-        const formDataFinalize = new FormData();
-        formDataFinalize.append("designId", designIdForSupabase);
-        formDataFinalize.append("pdf", pdfBlob, "badge-design.pdf");
-        const finalizeRes = await fetch("/api/finalize-draft", {
-          method: "POST",
-          body: formDataFinalize,
-        });
-        const finalizeJson = await finalizeRes.json().catch(() => ({}));
-        const usedFinalize =
-          finalizeRes.ok &&
-          !finalizeJson.draftNotFound &&
-          Array.isArray(finalizeJson.thumbnailUrls) &&
-          finalizeJson.thumbnailUrls.length >= allBadgesForSupabase.length;
+        if (!addDuplicates) {
+          const formDataFinalize = new FormData();
+          formDataFinalize.append("designId", designIdForSupabase);
+          formDataFinalize.append("pdf", pdfBlob, "badge-design.pdf");
+          const finalizeRes = await fetch("/api/finalize-draft", {
+            method: "POST",
+            body: formDataFinalize,
+          });
+          const finalizeJson = await finalizeRes.json().catch(() => ({}));
+          usedFinalize =
+            finalizeRes.ok &&
+            !finalizeJson.draftNotFound &&
+            Array.isArray(finalizeJson.thumbnailUrls) &&
+            finalizeJson.thumbnailUrls.length >= allBadgesForSupabase.length;
 
-        if (usedFinalize) {
-          thumbnailUrls = finalizeJson.thumbnailUrls;
-          pdfUrlForCart = finalizeJson.pdfUrl;
-        } else {
+          if (usedFinalize) {
+            thumbnailUrls = finalizeJson.thumbnailUrls;
+            pdfUrlForCart = finalizeJson.pdfUrl;
+          }
+        }
+        if (!usedFinalize) {
           try {
             const templateToUse = activeTemplate;
             const templateId =
               templateToUse?.id ||
-              allBadgesForSupabase[0]?.templateId ||
+              badgesForSupabase[0]?.templateId ||
               "rect-1x3";
             const template = await loadTemplateById(templateId);
-            if (template && allBadgesForSupabase.length > 0) {
-              const badgePromises = allBadgesForSupabase.map((b, i) =>
+            if (template && badgesForSupabase.length > 0) {
+              const badgePromises = badgesForSupabase.map((b, i) =>
                 Promise.all([
                   generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
                   generateSVGAsBlob(b, template),
@@ -3238,18 +3271,18 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
               const svgBlobs = badgeResults.map((r) => r.svgBlob);
               const designDataForSupabase = {
-                badge: allBadgesForSupabase[0],
+                badge: badgesForSupabase[0],
                 multipleBadges:
-                  allBadgesForSupabase.length > 1
-                    ? allBadgesForSupabase.slice(1)
+                  badgesForSupabase.length > 1
+                    ? badgesForSupabase.slice(1)
                     : [],
-                allBadges: allBadgesForSupabase,
+                allBadges: badgesForSupabase,
                 timestamp: new Date().toISOString(),
                 shopId: shopData.shopId || "test-shop",
                 productId: _productId || "test-product",
-                backgroundColor: allBadgesForSupabase[0].backgroundColor,
-                backingType: allBadgesForSupabase[0].backing,
-                textLines: allBadgesForSupabase[0].lines,
+                backgroundColor: badgesForSupabase[0].backgroundColor,
+                backingType: badgesForSupabase[0].backing,
+                textLines: badgesForSupabase[0].lines,
               };
               const formDataForSupabase = new FormData();
               formDataForSupabase.append("designId", designIdForSupabase);
@@ -3354,6 +3387,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             return "47037830299903";
         }
       };
+      const getDuplicateVariantId = (backingType: string): string | null => {
+        const fromUrl =
+          backingType === "pin"
+            ? variantIdFromUrl("variantIdPinDuplicate")
+            : backingType === "magnetic"
+            ? variantIdFromUrl("variantIdMagneticDuplicate")
+            : backingType === "adhesive"
+            ? variantIdFromUrl("variantIdAdhesiveDuplicate")
+            : variantIdFromUrl("variantIdPinDuplicate");
+        return fromUrl || null;
+      };
 
       let gadgetDesignId: string | undefined;
       try {
@@ -3366,7 +3410,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         );
       }
 
-      const cartItems = allBadgesForSupabase.map((b, i) => {
+      const cartItems = badgesForSupabase.map((b, i) => {
+        const isDuplicate =
+          addDuplicates && i >= allBadgesForSupabase.length;
+        const variantId = isDuplicate
+          ? (getDuplicateVariantId(b.backing) ?? getVariantId(b.backing))
+          : getVariantId(b.backing);
         const backingP =
           b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0;
         const itemTotalPrice = (basePrice + backingP).toFixed(2);
@@ -3386,8 +3435,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         };
         if (gadgetDesignId) properties["Gadget Design ID"] = gadgetDesignId;
         if (pdfUrlForCart) properties["Proof PDF URL"] = pdfUrlForCart;
+        if (isDuplicate) properties["Duplicate Set"] = "Yes";
         return {
-          variantId: getVariantId(b.backing),
+          variantId,
           quantity: 1,
           properties,
         };
@@ -6617,6 +6667,37 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     Yes, all checked and good to go
                   </span>
                 </label>
+                {(() => {
+                  const pending = proofPendingAddToCartRef.current;
+                  const badgeCount = pending?.allBadgesForSupabase?.length ?? 0;
+                  const hasDuplicateVariants =
+                    typeof window !== "undefined" &&
+                    !!new URLSearchParams(window.location.search).get(
+                      "variantIdPinDuplicate",
+                    );
+                  const showUpsell =
+                    badgeCount >= 1 &&
+                    badgeCount <= 5 &&
+                    hasDuplicateVariants;
+                  if (!showUpsell) return null;
+                  const upsellDiscount = badgeCount * 2;
+                  return (
+                    <label className="flex items-start gap-2 cursor-pointer mt-3 pt-3 border-t border-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={proofAddDuplicates}
+                        onChange={(e) =>
+                          setProofAddDuplicates(e.target.checked)
+                        }
+                        className="mt-1 rounded border-gray-300"
+                      />
+                      <span className="text-sm text-gray-700">
+                        Add a duplicate set for ${upsellDiscount} off? ($2 off
+                        each duplicate badge)
+                      </span>
+                    </label>
+                  );
+                })()}
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button

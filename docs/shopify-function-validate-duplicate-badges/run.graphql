@@ -1,0 +1,17 @@
+query CartValidationsGenerateRunInput {
+  cart {
+    lines {
+      id
+      quantity
+      designId: attribute(key: "Design ID") {
+        value
+      }
+      duplicateSet: attribute(key: "Duplicate Set") {
+        value
+      }
+    }
+  }
+  buyerJourney {
+    step
+  }
+}
