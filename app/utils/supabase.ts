@@ -833,6 +833,21 @@ export async function updateDraftPdfUrlAndReturnRows(
   return { thumbnailUrls, fullImageUrls, updatedCount: rows.length }
 }
 
+/** Update pdf_url for all badge_order_items with the given design_id (any status). Used after order-slip PDF regeneration. */
+export async function updatePdfUrlByDesignId(designId: string, pdfUrl: string): Promise<void> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+  }
+  const { error } = await supabaseAdmin
+    .from('badge_order_items')
+    .update({ pdf_url: pdfUrl, updated_at: getPacificTimestamp() })
+    .eq('design_id', designId)
+  if (error) {
+    console.error('updatePdfUrlByDesignId error:', error)
+    throw error
+  }
+}
+
 /** Set status for all badge_order_items with the given design_id (e.g. 'in_cart' when user adds to cart). */
 export async function updateBadgeOrderItemsStatusByDesignId(designId: string, status: string) {
   if (!supabaseAdmin) {
@@ -915,6 +930,23 @@ export async function updateBadgeOrderItemsByDesignIds(
     throw error
   }
   return { data, error: null }
+}
+
+/** Get all badge_order_items for a design_id (for order-slip PDF generation). */
+export async function getBadgeOrderItemsByDesignId(designId: string): Promise<BadgeOrderItem[]> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+  }
+  const { data, error } = await supabaseAdmin
+    .from('badge_order_items')
+    .select('*')
+    .eq('design_id', designId)
+    .order('badge_id', { ascending: true })
+  if (error) {
+    console.error('getBadgeOrderItemsByDesignId error:', error)
+    throw error
+  }
+  return (data ?? []) as BadgeOrderItem[]
 }
 
 /** Update draft badge_order_items with order info by design_id + badge_id (single-table flow). */

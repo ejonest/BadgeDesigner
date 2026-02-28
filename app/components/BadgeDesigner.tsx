@@ -3209,11 +3209,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     const addDuplicates =
       !!proofAddDuplicates &&
       allBadgesForSupabase.length >= 1 &&
-      allBadgesForSupabase.length <= 5 &&
-      !!getDuplicateVariantIdEarly(allBadgesForSupabase[0].backing);
+      allBadgesForSupabase.length <= 5;
     const badgesForSupabase = addDuplicates
       ? [...allBadgesForSupabase, ...allBadgesForSupabase]
       : allBadgesForSupabase;
+
+    let pdfBlobToUse = pdfBlob;
+    if (addDuplicates) {
+      pdfBlobToUse = await generatePDFAsBlob(
+        allBadgesForSupabase[0],
+        allBadgesForSupabase.length > 1 ? allBadgesForSupabase.slice(1) : undefined,
+        allBadgesForSupabase.map(() => 2),
+      );
+    }
 
     setIsAddingToCart(true);
     try {
@@ -3297,7 +3305,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   shopifyCustomerIdFromUrl,
                 );
               }
-              formDataForSupabase.append("pdf", pdfBlob, "badge-design.pdf");
+              formDataForSupabase.append("pdf", pdfBlobToUse, "badge-design.pdf");
               thumbnailPngBlobs.forEach((pngBlob, index) => {
                 if (pngBlob && pngBlob.size > 0) {
                   formDataForSupabase.append(
@@ -3410,38 +3418,63 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         );
       }
 
-      const cartItems = badgesForSupabase.map((b, i) => {
-        const isDuplicate =
-          addDuplicates && i >= allBadgesForSupabase.length;
-        const variantId = isDuplicate
-          ? (getDuplicateVariantId(b.backing) ?? getVariantId(b.backing))
-          : getVariantId(b.backing);
-        const backingP =
-          b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0;
-        const itemTotalPrice = (basePrice + backingP).toFixed(2);
-        const properties: Record<string, string> = {
-          "Custom Badge Design": "Yes",
-          "Badge Text Line 1": b.lines[0]?.text || "",
-          "Badge Text Line 2": b.lines[1]?.text || "",
-          "Badge Text Line 3": b.lines[2]?.text || "",
-          "Badge Text Line 4": b.lines[3]?.text || "",
-          "Background Color": b.backgroundColor,
-          "Font Family": b.lines[0]?.fontFamily || "Arial",
-          "Backing Type": b.backing,
-          "Design ID": designIdForSupabase,
-          Price: `$${itemTotalPrice}`,
-          "Badge Index": String(i),
-          "Custom Thumbnail": thumbnailUrls[i] ?? "",
-        };
-        if (gadgetDesignId) properties["Gadget Design ID"] = gadgetDesignId;
-        if (pdfUrlForCart) properties["Proof PDF URL"] = pdfUrlForCart;
-        if (isDuplicate) properties["Duplicate Set"] = "Yes";
-        return {
-          variantId,
-          quantity: 1,
-          properties,
-        };
-      });
+      const cartItems = addDuplicates
+        ? allBadgesForSupabase.map((b, i) => {
+            const variantId = getVariantId(b.backing);
+            const backingP =
+              b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0;
+            const itemTotalPrice = (basePrice + backingP).toFixed(2);
+            const n = allBadgesForSupabase.length;
+            const properties: Record<string, string> = {
+              "Custom Badge Design": "Yes",
+              "Badge Text Line 1": b.lines[0]?.text || "",
+              "Badge Text Line 2": b.lines[1]?.text || "",
+              "Badge Text Line 3": b.lines[2]?.text || "",
+              "Badge Text Line 4": b.lines[3]?.text || "",
+              "Background Color": b.backgroundColor,
+              "Font Family": b.lines[0]?.fontFamily || "Arial",
+              "Backing Type": b.backing,
+              "Design ID": designIdForSupabase,
+              Price: `$${itemTotalPrice}`,
+              "Badge Index": String(i),
+              "Custom Thumbnail": thumbnailUrls[i] ?? "",
+              "Badge count": String(n),
+            };
+            if (gadgetDesignId) properties["Gadget Design ID"] = gadgetDesignId;
+            if (pdfUrlForCart) properties["Proof PDF URL"] = pdfUrlForCart;
+            return {
+              variantId,
+              quantity: 2,
+              properties,
+            };
+          })
+        : badgesForSupabase.map((b, i) => {
+            const variantId = getVariantId(b.backing);
+            const backingP =
+              b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0;
+            const itemTotalPrice = (basePrice + backingP).toFixed(2);
+            const properties: Record<string, string> = {
+              "Custom Badge Design": "Yes",
+              "Badge Text Line 1": b.lines[0]?.text || "",
+              "Badge Text Line 2": b.lines[1]?.text || "",
+              "Badge Text Line 3": b.lines[2]?.text || "",
+              "Badge Text Line 4": b.lines[3]?.text || "",
+              "Background Color": b.backgroundColor,
+              "Font Family": b.lines[0]?.fontFamily || "Arial",
+              "Backing Type": b.backing,
+              "Design ID": designIdForSupabase,
+              Price: `$${itemTotalPrice}`,
+              "Badge Index": String(i),
+              "Custom Thumbnail": thumbnailUrls[i] ?? "",
+            };
+            if (gadgetDesignId) properties["Gadget Design ID"] = gadgetDesignId;
+            if (pdfUrlForCart) properties["Proof PDF URL"] = pdfUrlForCart;
+            return {
+              variantId,
+              quantity: 1,
+              properties,
+            };
+          });
 
       const result = await api.addToCartMultiple(cartItems);
       if (result.success) {
@@ -6670,15 +6703,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 {(() => {
                   const pending = proofPendingAddToCartRef.current;
                   const badgeCount = pending?.allBadgesForSupabase?.length ?? 0;
-                  const hasDuplicateVariants =
-                    typeof window !== "undefined" &&
-                    !!new URLSearchParams(window.location.search).get(
-                      "variantIdPinDuplicate",
-                    );
-                  const showUpsell =
-                    badgeCount >= 1 &&
-                    badgeCount <= 5 &&
-                    hasDuplicateVariants;
+                  const showUpsell = badgeCount >= 1 && badgeCount <= 5;
                   if (!showUpsell) return null;
                   const upsellDiscount = badgeCount * 2;
                   return (
