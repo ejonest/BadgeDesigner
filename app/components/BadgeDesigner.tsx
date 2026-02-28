@@ -3207,9 +3207,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       return fromUrl || null;
     };
     const addDuplicates =
-      !!proofAddDuplicates &&
-      allBadgesForSupabase.length >= 1 &&
-      allBadgesForSupabase.length <= 5;
+      !!proofAddDuplicates && allBadgesForSupabase.length >= 1;
     const badgesForSupabase = addDuplicates
       ? [...allBadgesForSupabase, ...allBadgesForSupabase]
       : allBadgesForSupabase;
@@ -6703,7 +6701,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 {(() => {
                   const pending = proofPendingAddToCartRef.current;
                   const badgeCount = pending?.allBadgesForSupabase?.length ?? 0;
-                  const showUpsell = badgeCount >= 1 && badgeCount <= 5;
+                  const showUpsell = badgeCount >= 1;
                   if (!showUpsell) return null;
                   const upsellDiscount = badgeCount * 2;
                   return (
