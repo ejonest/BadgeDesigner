@@ -68,10 +68,17 @@ async function getLineItemsWithDesignData(order, api, logger) {
     const badgeIndex = badgeIndexRaw !== undefined && badgeIndexRaw !== null && badgeIndexRaw !== ""
       ? parseInt(String(badgeIndexRaw).trim(), 10)
       : undefined;
+    const quantity = item.quantity != null && item.quantity >= 1 ? item.quantity : 1;
+    const badgeCountRaw = props["Badge count"];
+    const badgeCount = badgeCountRaw !== undefined && badgeCountRaw !== null && badgeCountRaw !== ""
+      ? parseInt(String(badgeCountRaw).trim(), 10)
+      : undefined;
     const entry = {
       designId: designId || gadgetDesignId,
       gadgetDesignId: gadgetDesignId || undefined,
       badgeIndex: Number.isNaN(badgeIndex) ? undefined : badgeIndex,
+      quantity,
+      badgeCount: Number.isNaN(badgeCount) ? undefined : badgeCount,
     };
 
     if (api && (api.badgeDesign || api.BadgeDesign)) {

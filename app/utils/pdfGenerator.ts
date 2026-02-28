@@ -397,11 +397,13 @@ export const generatePDFWithLayoutEngine = async (
 
 /**
  * Generate PDF as a Blob (for upload, not download)
- * Uses the same logic as generatePDFNew but returns a Blob instead of downloading
+ * Uses the same logic as generatePDFNew but returns a Blob instead of downloading.
+ * quantities: optional array, one per badge; default 1 for each. Shown as "Quantity" row in table (order slip).
  */
 export const generatePDFAsBlob = async (
   badgeData: Badge,
-  multipleBadges?: Badge[]
+  multipleBadges?: Badge[],
+  quantities?: number[]
 ): Promise<Blob> => {
   console.log("GENERATING PDF AS BLOB");
   try {
@@ -417,9 +419,14 @@ export const generatePDFAsBlob = async (
     let y = PAGE_HEIGHT - TOP_MARGIN;
 
     const allBadges = [badgeData, ...(multipleBadges || [])];
+    const getQuantity = (i: number) =>
+      quantities && quantities[i] !== undefined && quantities[i] >= 1
+        ? quantities[i]
+        : 1;
 
     for (let idx = 0; idx < allBadges.length; idx++) {
       const badge = allBadges[idx];
+      const quantity = getQuantity(idx);
       console.log(`Processing Badge ${idx + 1}`);
 
       // Load the correct template for this badge (needed for section height and image dimensions)
@@ -435,8 +442,8 @@ export const generatePDFAsBlob = async (
       const svgViewBoxH = template.standardViewBoxHeight + SVG_VIEWBOX_PADDING_PX;
       const imageHeightPt = pxToPt(svgViewBoxH);
 
-      // Estimate section height BEFORE rendering (use SVG viewBox height in points)
-      const estimatedTotalRows = badge.lines.length * 4;
+      // Estimate section height BEFORE rendering (use SVG viewBox height in points); +1 for Quantity row
+      const estimatedTotalRows = badge.lines.length * 4 + 1;
       const estimatedTableHeight = estimatedTotalRows * 16;
       const estimatedContentHeight = Math.max(
         imageHeightPt,
@@ -626,7 +633,26 @@ export const generatePDFAsBlob = async (
         });
         rowIdx++;
       });
-      const totalRows = 1 + badge.lines.length * 4; // Background + 4 rows per text line
+      // Quantity row (order slip)
+      const quantityRowY = tableY - (rowIdx + 1) * rowHeight;
+      page.drawRectangle({
+        x: tableX,
+        y: quantityRowY,
+        width: tableWidth,
+        height: rowHeight,
+        color: rowIdx % 2 === 0 ? rgb(1, 1, 1) : rgb(0.95, 0.95, 0.95),
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 0.5,
+      });
+      page.drawText(`Quantity: ${quantity}`, {
+        x: tableX + 5,
+        y: quantityRowY + 4,
+        size: 8,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      rowIdx++;
+      const totalRows = 1 + badge.lines.length * 4 + 1; // Background + 4 rows per text line + Quantity
       const tableHeight = totalRows * rowHeight;
       const contentHeight = Math.max(imageHeight, tableHeight);
       const contentBottomY = imageTopY - contentHeight;

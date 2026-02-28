@@ -1,5 +1,11 @@
 import { json, type ActionFunctionArgs } from "@remix-run/node";
-import { updateDraftBadgeOrderItemsWithOrderInfo } from "~/utils/supabase";
+import {
+  updateDraftBadgeOrderItemsWithOrderInfo,
+  getBadgeOrderItemsByDesignId,
+  uploadToBadgePdfsBucket,
+  updatePdfUrlByDesignId,
+} from "~/utils/supabase";
+import { generateOrderSlipPdf } from "~/utils/orderSlipPdf";
 
 function getSecretFromRequest(request: Request): string | null {
   const authHeader = request.headers.get("Authorization");
@@ -63,6 +69,8 @@ export async function action({ request }: ActionFunctionArgs) {
           gadgetDesignId?: string;
           designData?: unknown;
           badgeIndex?: number | string;
+          quantity?: number;
+          badgeCount?: number | string;
         }>
       | undefined;
 
@@ -113,7 +121,7 @@ export async function action({ request }: ActionFunctionArgs) {
         continue;
       }
       const rawIndex = item.badgeIndex;
-      const badgeIndex =
+      let badgeIndex =
         typeof rawIndex === "number"
           ? rawIndex
           : typeof rawIndex === "string"
@@ -123,9 +131,22 @@ export async function action({ request }: ActionFunctionArgs) {
         console.warn(
           "link-order: invalid badgeIndex for designId " + designId + ", using 0",
         );
-        updateLineItems.push({ designId, badgeIndex: 0 });
-      } else {
-        updateLineItems.push({ designId, badgeIndex });
+        badgeIndex = 0;
+      }
+      const quantity =
+        typeof item.quantity === "number" && item.quantity >= 1
+          ? item.quantity
+          : 1;
+      const badgeCountRaw = item.badgeCount;
+      const badgeCount =
+        typeof badgeCountRaw === "number"
+          ? badgeCountRaw
+          : typeof badgeCountRaw === "string"
+            ? parseInt(String(badgeCountRaw).trim(), 10)
+            : 0;
+      updateLineItems.push({ designId, badgeIndex });
+      if (quantity === 2 && badgeCount > 0 && badgeIndex < badgeCount) {
+        updateLineItems.push({ designId, badgeIndex: badgeIndex + badgeCount });
       }
     }
 
@@ -152,6 +173,37 @@ export async function action({ request }: ActionFunctionArgs) {
       shopifyOrderId: body.shopifyOrderId,
       updateLineItems: updateLineItems.map((u) => `${u.designId}/badge-${u.badgeIndex}`),
     });
+
+    // Regenerate order-slip PDF with final quantities (one PDF per design_id)
+    const designIds = [...new Set(lineItems.map((i) => (i.designId ?? i.gadgetDesignId)?.trim()).filter(Boolean))] as string[];
+    for (const designId of designIds) {
+      try {
+        const rows = await getBadgeOrderItemsByDesignId(designId);
+        const designLineItems = lineItems.filter(
+          (i) => (i.designId ?? i.gadgetDesignId)?.trim() === designId
+        );
+        const orderSlipItems = designLineItems
+          .map((i) => {
+            const badgeIndex = typeof i.badgeIndex === "number" ? i.badgeIndex : parseInt(String(i.badgeIndex ?? 0).trim(), 10);
+            const quantity = typeof i.quantity === "number" && i.quantity >= 1 ? i.quantity : 1;
+            const row = rows.find((r) => r.badge_id === `badge-${badgeIndex}`);
+            return row ? { item: row, quantity } : null;
+          })
+          .filter((x): x is NonNullable<typeof x> => x != null);
+        if (orderSlipItems.length === 0) continue;
+        const pdfBytes = await generateOrderSlipPdf(orderSlipItems);
+        const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
+        const pdfUrl = await uploadToBadgePdfsBucket(
+          pdfBlob,
+          `${designId}/badge-design.pdf`,
+          "application/pdf"
+        );
+        await updatePdfUrlByDesignId(designId, pdfUrl);
+        console.log("[BadgeDesigner] link-order: order-slip PDF updated for design", designId);
+      } catch (slipErr) {
+        console.warn("[BadgeDesigner] link-order: order-slip PDF generation failed for design", designId, slipErr);
+      }
+    }
 
     return json({
       success: true,
