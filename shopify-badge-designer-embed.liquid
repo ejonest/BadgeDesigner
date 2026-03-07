@@ -8,8 +8,12 @@
 {% comment %} Only show iframe on the custom badge product; hide on every other product page {% endcomment %}
 {% if product and product.handle == 'custom-1x3-badge' %}
 
-{% comment %} Replace with your Vercel URL (e.g. https://badgedesigner.vercel.app) {% endcomment %}
-{% assign badge_designer_url = 'https://badgedesigner.vercel.app' %}
+{% comment %}
+  Replace with your actual Vercel app URL. Must match exactly where the iframe loads from.
+  If you use a new Vercel link (e.g. new project or new deployment URL), update this so the
+  parent accepts postMessages from the iframe (redirect-to-login, add-to-cart, etc.).
+{% endcomment %}
+{% assign badge_designer_url = 'https://all-quality-design-tool.vercel.app' %}
 
 {% comment %} Pass variant IDs so the app adds the correct store variants to cart (order: Pin, Magnetic, Adhesive). Use first variant as fallback if product has fewer than 3 variants. {% endcomment %}
 {% assign v0 = product.variants[0] %}
@@ -38,14 +42,21 @@
 </div>
 
 <script>
-  // Listen for messages from the badge designer iframe
+  // Listen for messages from the badge designer iframe.
+  // IMPORTANT: badge_designer_url above must match your iframe's origin exactly (e.g. new Vercel URL).
   window.addEventListener('message', function(event) {
-    // Verify origin (replace with your Vercel URL)
     if (event.origin !== '{{ badge_designer_url }}') {
       return;
     }
     
     const data = event.data;
+    
+    // Save design / Load design without being logged in: redirect to store login, then return to this page
+    if (data.action === 'redirect-to-login') {
+      var returnTo = window.location.pathname + window.location.search;
+      window.location.href = '/customer_authentication/login?return_to=' + encodeURIComponent(returnTo);
+      return;
+    }
     
     // Handle add-to-cart messages (single item - iframe redirects; log only)
     if (data.action === 'add-to-cart') {

@@ -1,4 +1,4 @@
-import { json, type ActionFunctionArgs } from "@remix-run/node";
+import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
 import {
   updateDraftBadgeOrderItemsWithOrderInfo,
   getBadgeOrderItemsByDesignId,
@@ -17,6 +17,14 @@ function getSecretFromRequest(request: Request): string | null {
     return xHeader.trim() || null;
   }
   return null;
+}
+
+/** GET/HEAD: return 405 so Remix doesn't throw when something pings this URL. */
+export async function loader({ request }: LoaderFunctionArgs) {
+  return json(
+    { error: "Method not allowed", message: "Use POST to link an order to Supabase" },
+    { status: 405 }
+  );
 }
 
 export async function action({ request }: ActionFunctionArgs) {

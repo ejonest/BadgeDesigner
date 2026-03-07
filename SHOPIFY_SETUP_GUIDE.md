@@ -120,6 +120,21 @@ To proceed with the full integration (Step 2: Gadget webhook integration), I'll 
 - **Customer Accounts:** In **Shopify Admin → Settings → Customer accounts**, set to **Optional** (or **Required**) so customers can log in on the storefront. The theme or app that embeds the badge designer must then pass the logged-in customer’s id in the iframe URL as `customerId` so Save Design and Load previous work.
 - **Promotional emails** (e.g. cart abandonment, drafts, sales): Configure these in **Shopify Admin** under **Marketing** and **Notifications**, or via third-party apps. Shopify’s flows use the customer’s email and consent. To tie opt-in to “saving a design,” use Shopify’s standard checkout/account marketing consent or Customer Account settings; document the desired behavior for your marketing/ops team.
 
+## Troubleshooting: Save design / Add to cart popup but no redirect or cart update
+
+If you see the confirmation popup when clicking **Save Design** or **Add to cart** but nothing happens (no redirect to sign-in, cart not updated):
+
+1. **New Vercel URL**  
+   The theme snippet only accepts postMessages when the iframe’s origin matches `badge_designer_url`. If you use a **new Vercel link** (new project or new deployment URL), update the snippet so it uses that URL:
+   - In your theme: open the snippet that contains the badge designer embed (e.g. `shopify-badge-designer-embed.liquid` or your copy).
+   - Set `badge_designer_url` to your **exact** Vercel app URL (e.g. `https://your-app-xyz.vercel.app`), with no trailing slash.
+   - Save and re-publish the theme. The iframe `src` and the `event.origin` check in the script must both use this same URL.
+
+2. **redirect-to-login**  
+   The snippet must handle the `redirect-to-login` action so that when the user clicks Save design without being logged in, the store redirects to the login page. Ensure your embed script includes that handler (see `shopify-badge-designer-embed.liquid` or [docs/IFRAME_AND_GADGET_SETUP.md](docs/IFRAME_AND_GADGET_SETUP.md)).
+
+Changing **Gadget credentials** or the other store’s config does not affect this behavior; the redirect and add-to-cart flow is between the iframe (your Vercel app) and the **Shopify store page** that embeds it.
+
 ## Next Steps After Setup
 
 Once you have the iframe working, we'll proceed with:
