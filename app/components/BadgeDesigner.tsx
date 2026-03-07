@@ -1092,6 +1092,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     design_id: string;
     design_data: any;
     updated_at?: string;
+    backing_type?: string;
   } | null>(null);
   const [csvText, setCsvText] = useState("");
   const [csvPreview, setCsvPreview] = useState<string[][]>([]);
@@ -1404,6 +1405,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             design_id: result.design.design_id,
             design_data: result.design.design_data,
             updated_at: result.design.updated_at,
+            backing_type: result.design.backing_type,
           });
           setShowLoadPreviousModal(true);
         }
@@ -2884,6 +2886,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           design_id: result.design.design_id,
           design_data: result.design.design_data,
           updated_at: result.design.updated_at,
+          backing_type: result.design.backing_type,
         });
         setShowLoadPreviousModal(true);
       } else {
@@ -3157,7 +3160,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       setSavedDesignForLoad(null);
       return;
     }
-    const restoredBadges = migrateBadgeArray(rawBadges);
+    let restoredBadges = migrateBadgeArray(rawBadges);
+    const backingFallback = savedDesignForLoad?.backing_type;
+    if (backingFallback) {
+      restoredBadges = restoredBadges.map((b) => ({
+        ...b,
+        backing: (b.backing || backingFallback) as "pin" | "magnetic" | "adhesive",
+      }));
+    }
     setMultipleBadges(restoredBadges);
     setBadge(restoredBadges[0]);
     setBadge1Data(restoredBadges[0] ?? null);
