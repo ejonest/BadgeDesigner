@@ -3206,20 +3206,20 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               : variantIdFromUrl("variantIdPinDuplicate");
       return fromUrl || null;
     };
-    const addDuplicates =
-      !!proofAddDuplicates && allBadgesForSupabase.length >= 1;
+    // Duplicate set / discount flow disabled for now; re-enable when per-line discount or two-product approach is in place
+    const addDuplicates = false; // was: !!proofAddDuplicates && allBadgesForSupabase.length >= 1
     const badgesForSupabase = addDuplicates
       ? [...allBadgesForSupabase, ...allBadgesForSupabase]
       : allBadgesForSupabase;
 
     let pdfBlobToUse = pdfBlob;
-    if (addDuplicates) {
-      pdfBlobToUse = await generatePDFAsBlob(
-        allBadgesForSupabase[0],
-        allBadgesForSupabase.length > 1 ? allBadgesForSupabase.slice(1) : undefined,
-        allBadgesForSupabase.map(() => 2),
-      );
-    }
+    // if (addDuplicates) {
+    //   pdfBlobToUse = await generatePDFAsBlob(
+    //     allBadgesForSupabase[0],
+    //     allBadgesForSupabase.length > 1 ? allBadgesForSupabase.slice(1) : undefined,
+    //     allBadgesForSupabase.map(() => 2),
+    //   );
+    // }
 
     setIsAddingToCart(true);
     try {
@@ -6698,6 +6698,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     Yes, all checked and good to go
                   </span>
                 </label>
+                {/* DUPLICATE SET UPSELL - commented out for now; re-enable when discount/per-line is ready (e.g. Plus + Functions or two-product approach)
                 {(() => {
                   const pending = proofPendingAddToCartRef.current;
                   const badgeCount = pending?.allBadgesForSupabase?.length ?? 0;
@@ -6721,6 +6722,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     </label>
                   );
                 })()}
+                */}
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button
