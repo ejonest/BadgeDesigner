@@ -27,7 +27,7 @@
  */
 
 const LINK_ORDER_URL =
-  process.env.VERCEL_LINK_ORDER_URL || "https://badgedesigner.vercel.app/api/link-order-to-supabase";
+  process.env.VERCEL_LINK_ORDER_URL || "https://all-quality-design-tool.vercel.app/api/link-order-to-supabase";
 // VERCEL_LINK_ORDER_URL must be set in Gadget to your actual Vercel deployment URL
 const LINK_ORDER_SECRET = process.env.LINK_ORDER_SECRET;
 
