@@ -425,6 +425,7 @@ export interface BadgeOrderItem {
   design_id: string // TEXT - links to main order design_id
   badge_id?: string // TEXT - unique ID for this specific badge
   background_color?: string // Format: "ColorName #hexcode" or "#hexcode"
+  backing_type?: string // pin | magnetic | adhesive
   // Line 1 properties
   line_1_text?: string
   line_1_font?: string
@@ -557,6 +558,7 @@ export function convertBadgeToOrderItem(
     shopify_order_id: options?.shopify_order_id,
     shopify_order_number: options?.shopify_order_number,
     background_color: formatColor(badge.backgroundColor),
+    backing_type: badge.backing ?? undefined,
     // Line 1 (index 0)
     line_1_text: lines[0]?.text,
     line_1_font: lines[0]?.fontFamily,
@@ -614,6 +616,7 @@ export async function saveBadgeOrderItem(item: BadgeOrderItem) {
       shopify_order_id: item.shopify_order_id,
       shopify_order_number: item.shopify_order_number,
       background_color: item.background_color,
+      backing_type: item.backing_type,
       line_1_text: item.line_1_text,
       line_1_font: item.line_1_font,
       line_1_font_size: item.line_1_font_size,
@@ -677,6 +680,7 @@ export async function saveBadgeOrderItems(items: BadgeOrderItem[]) {
     shopify_order_id: item.shopify_order_id,
     shopify_order_number: item.shopify_order_number,
     background_color: item.background_color,
+    backing_type: item.backing_type,
     line_1_text: item.line_1_text,
     line_1_font: item.line_1_font,
     line_1_font_size: item.line_1_font_size,
@@ -739,6 +743,7 @@ function badgeOrderItemToRow(item: BadgeOrderItem) {
     shopify_order_id: item.shopify_order_id,
     shopify_order_number: item.shopify_order_number,
     background_color: item.background_color,
+    backing_type: item.backing_type,
     line_1_text: item.line_1_text,
     line_1_font: item.line_1_font,
     line_1_font_size: item.line_1_font_size,
