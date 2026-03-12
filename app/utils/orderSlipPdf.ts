@@ -1,26 +1,46 @@
 /**
  * Server-side order-slip PDF generator.
- * Builds a PDF from Supabase badge_order_items + order quantities (e.g. after checkout).
- * Uses thumbnail_url from each row; no DOM/canvas required.
+ * Matches the add-to-cart proof PDF layout exactly (same as pdfGenerator.generatePDFAsBlob):
+ * one section per badge with image on left, table on right (4 rows per line: Line, Font, Color, Alignment + Quantity),
+ * then Background text below. Uses order quantities and only includes badges that are in the order (removed items excluded).
  */
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import type { BadgeOrderItem } from "./supabase";
+import { getColorInfo } from "~/constants/colors";
 
+// Match pdfGenerator.ts layout constants exactly
 const PAGE_HEIGHT = 841.89;
 const PAGE_WIDTH = 595.28;
+const TOP_MARGIN = 40;
+const BOTTOM_MARGIN = 40;
+const HEADER_HEIGHT = 18;
+const HEADER_GAP = 6;
+const IMAGE_BOTTOM_GAP = 6;
+const BACKGROUND_TEXT_HEIGHT = 12;
+const SECTION_BOTTOM_PADDING = 14;
 const MARGIN = 30;
 const ROW_HEIGHT = 16;
-const HEADER_HEIGHT = 18;
-const IMAGE_MAX_HEIGHT_PT = 120;
+
+// Default badge image area (rect-1x3 style: viewBox 336×144 px → pt)
+const DEFAULT_IMAGE_WIDTH_PT = (288 + 48) * 0.75;
+const DEFAULT_IMAGE_HEIGHT_PT = (96 + 48) * 0.75;
 
 export interface OrderSlipItem {
   item: BadgeOrderItem;
   quantity: number;
 }
 
-/**
- * Fetch image bytes from URL (thumbnail). Returns PNG bytes or null if fetch fails.
- */
+function extractHexFromColorField(value: string | undefined): string {
+  if (!value || typeof value !== "string") return "#000000";
+  const trimmed = value.trim();
+  const hashIdx = trimmed.indexOf("#");
+  if (hashIdx >= 0) {
+    const hex = trimmed.slice(hashIdx);
+    return hex.length >= 4 ? hex : "#000000";
+  }
+  return trimmed.startsWith("rgb") ? "#000000" : `#${trimmed}`;
+}
+
 async function fetchImageBytes(url: string): Promise<Uint8Array | null> {
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
@@ -33,65 +53,79 @@ async function fetchImageBytes(url: string): Promise<Uint8Array | null> {
 }
 
 /**
- * Generate order-slip PDF as Uint8Array from order line items (with quantities).
- * One section per entry: thumbnail from item.thumbnail_url + table (Line 1–4, Quantity).
+ * Build line rows for one badge from BadgeOrderItem (up to 4 lines, 4 table rows each: Line, Font, Color, Alignment).
  */
-export async function generateOrderSlipPdf(
-  items: OrderSlipItem[]
-): Promise<Uint8Array> {
+function getLineRows(item: BadgeOrderItem): Array<{ text: string; font: string; color: string; alignment: string }> {
+  const rows: Array<{ text: string; font: string; color: string; alignment: string }> = [];
+  for (let i = 1; i <= 4; i++) {
+    const text = (item as Record<string, unknown>)[`line_${i}_text`] as string | undefined;
+    if (text == null && rows.length === 0) continue;
+    const font = (item as Record<string, unknown>)[`line_${i}_font`] as string | undefined;
+    const color = (item as Record<string, unknown>)[`line_${i}_color`] as string | undefined;
+    const alignment = (item as Record<string, unknown>)[`line_${i}_alignment`] as string | undefined;
+    rows.push({
+      text: text != null ? String(text).trim() : "",
+      font: font != null ? String(font) : "Roboto",
+      color: color != null ? String(color) : "#000000",
+      alignment: alignment != null ? String(alignment) : "Center",
+    });
+  }
+  return rows;
+}
+
+/**
+ * Generate order-slip PDF matching the add-to-cart proof layout.
+ * Only items in the order are included (removed-from-cart badges are omitted). Quantities come from the order.
+ */
+export async function generateOrderSlipPdf(items: OrderSlipItem[]): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  let y = PAGE_HEIGHT - 40;
+  let y = PAGE_HEIGHT - TOP_MARGIN;
 
   for (let idx = 0; idx < items.length; idx++) {
     const { item, quantity } = items[idx];
-    const sectionTopY = y;
-
-    const lines = [
-      item.line_1_text,
-      item.line_2_text,
-      item.line_3_text,
-      item.line_4_text,
-    ].filter((t) => t != null && String(t).trim() !== "");
-    const tableRows = lines.length + 1; // +1 for Quantity
-    const tableHeight = tableRows * ROW_HEIGHT;
+    const lineRows = getLineRows(item);
+    const lineCount = lineRows.length || 1;
+    const estimatedTotalRows = lineCount * 4 + 1; // 4 rows per line + Quantity
+    const estimatedTableHeight = estimatedTotalRows * ROW_HEIGHT;
+    const imageWidthPt = DEFAULT_IMAGE_WIDTH_PT;
+    const imageHeightPt = DEFAULT_IMAGE_HEIGHT_PT;
+    const estimatedContentHeight = Math.max(imageHeightPt, estimatedTableHeight);
     const estimatedSectionHeight =
-      HEADER_HEIGHT + 12 + Math.max(IMAGE_MAX_HEIGHT_PT, tableHeight) + 20;
+      HEADER_HEIGHT +
+      HEADER_GAP +
+      estimatedContentHeight +
+      IMAGE_BOTTOM_GAP +
+      BACKGROUND_TEXT_HEIGHT +
+      SECTION_BOTTOM_PADDING;
 
-    if (y - estimatedSectionHeight < 40) {
+    if (y - estimatedSectionHeight < BOTTOM_MARGIN) {
       page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-      y = PAGE_HEIGHT - 40;
+      y = PAGE_HEIGHT - TOP_MARGIN;
     }
 
-    page.drawText(`Badge ${idx + 1}`, {
-      x: MARGIN,
-      y: y - HEADER_HEIGHT,
-      size: 12,
-      font: fontBold,
-      color: rgb(0, 0, 0),
-    });
-    y -= HEADER_HEIGHT + 12;
+    const sectionTopY = y;
 
-    let imageHeightPt = 0;
-    const tableX = MARGIN + 200;
-    const tableWidth = PAGE_WIDTH - MARGIN - tableX - MARGIN;
-
-    if (item.thumbnail_url) {
-      const imgBytes = await fetchImageBytes(item.thumbnail_url);
+    // Image: prefer full_image_url (same as proof), fallback thumbnail_url
+    const imageUrl = item.full_image_url || item.thumbnail_url;
+    let imageWidth = imageWidthPt;
+    let imageHeight = imageHeightPt;
+    if (imageUrl) {
+      const imgBytes = await fetchImageBytes(imageUrl);
       if (imgBytes && imgBytes.length > 0) {
         try {
           const pdfImage = await pdfDoc.embedPng(imgBytes);
           const aspect = pdfImage.height / pdfImage.width;
-          const w = Math.min(180, pdfImage.width * 0.75);
-          const h = Math.min(IMAGE_MAX_HEIGHT_PT, w * aspect);
-          imageHeightPt = h;
+          imageHeight = Math.min(imageHeightPt, imageWidthPt * aspect);
+          imageWidth = Math.min(imageWidthPt, imageHeight / aspect);
+          const imageTopY = sectionTopY - HEADER_HEIGHT - HEADER_GAP;
           page.drawImage(pdfImage, {
             x: MARGIN,
-            y: y - h,
-            width: w,
-            height: h,
+            y: imageTopY - imageHeight,
+            width: imageWidth,
+            height: imageHeight,
           });
         } catch {
           // ignore embed errors
@@ -99,9 +133,30 @@ export async function generateOrderSlipPdf(
       }
     }
 
-    let tableY = y;
+    const tableX = MARGIN + imageWidthPt + 20;
+    const tableWidth = PAGE_WIDTH - tableX - MARGIN;
+    let tableY = sectionTopY - HEADER_HEIGHT - HEADER_GAP;
+
+    page.drawText(`Badge ${idx + 1}`, {
+      x: MARGIN,
+      y: sectionTopY - HEADER_HEIGHT,
+      size: 12,
+      font: fontBold,
+      color: rgb(0, 0, 0),
+    });
+
     let rowIdx = 0;
-    lines.forEach((text, lineIdx) => {
+    const lines =
+      lineRows.length > 0 ? lineRows : [{ text: "", font: "Roboto", color: "#000000", alignment: "Center" }];
+    for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+      const line = lines[lineIdx];
+      const cleanText = (line.text ?? "").replace(/^"|"$/g, "").trim();
+      const fontName = line.font ?? "Roboto";
+      const textColor = extractHexFromColorField(line.color);
+      const colorInfo = getColorInfo(textColor.startsWith("#") ? textColor : `#${textColor}`);
+      const styleText = "Normal";
+      const alignText = line.alignment ?? "Center";
+
       const rowY = tableY - (rowIdx + 1) * ROW_HEIGHT;
       page.drawRectangle({
         x: tableX,
@@ -112,7 +167,7 @@ export async function generateOrderSlipPdf(
         borderColor: rgb(0, 0, 0),
         borderWidth: 0.5,
       });
-      page.drawText(`Line ${lineIdx + 1}: "${String(text).trim()}"`, {
+      page.drawText(`Line ${lineIdx + 1}: "${cleanText}"`, {
         x: tableX + 5,
         y: rowY + 4,
         size: 8,
@@ -120,7 +175,65 @@ export async function generateOrderSlipPdf(
         color: rgb(0, 0, 0),
       });
       rowIdx++;
-    });
+
+      const fontRowY = tableY - (rowIdx + 1) * ROW_HEIGHT;
+      page.drawRectangle({
+        x: tableX,
+        y: fontRowY,
+        width: tableWidth,
+        height: ROW_HEIGHT,
+        color: rowIdx % 2 === 0 ? rgb(1, 1, 1) : rgb(0.95, 0.95, 0.95),
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 0.5,
+      });
+      page.drawText(`Font: ${fontName} 12pt (${styleText})`, {
+        x: tableX + 5,
+        y: fontRowY + 4,
+        size: 8,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      rowIdx++;
+
+      const colorRowY = tableY - (rowIdx + 1) * ROW_HEIGHT;
+      page.drawRectangle({
+        x: tableX,
+        y: colorRowY,
+        width: tableWidth,
+        height: ROW_HEIGHT,
+        color: rowIdx % 2 === 0 ? rgb(1, 1, 1) : rgb(0.95, 0.95, 0.95),
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 0.5,
+      });
+      page.drawText(`Color: ${colorInfo.hex}`, {
+        x: tableX + 5,
+        y: colorRowY + 4,
+        size: 8,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      rowIdx++;
+
+      const alignRowY = tableY - (rowIdx + 1) * ROW_HEIGHT;
+      page.drawRectangle({
+        x: tableX,
+        y: alignRowY,
+        width: tableWidth,
+        height: ROW_HEIGHT,
+        color: rowIdx % 2 === 0 ? rgb(1, 1, 1) : rgb(0.95, 0.95, 0.95),
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 0.5,
+      });
+      page.drawText(`Alignment: ${alignText}`, {
+        x: tableX + 5,
+        y: alignRowY + 4,
+        size: 8,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      rowIdx++;
+    }
+
     const quantityRowY = tableY - (rowIdx + 1) * ROW_HEIGHT;
     page.drawRectangle({
       x: tableX,
@@ -138,9 +251,30 @@ export async function generateOrderSlipPdf(
       font,
       color: rgb(0, 0, 0),
     });
+    rowIdx++;
 
+    const tableHeight = rowIdx * ROW_HEIGHT;
     const contentHeight = Math.max(imageHeightPt, tableHeight);
-    y = sectionTopY - HEADER_HEIGHT - 12 - contentHeight - 20;
+    const contentBottomY = tableY - contentHeight;
+    const bgHex = extractHexFromColorField(item.background_color);
+    const bgColorInfo = getColorInfo(bgHex.startsWith("#") ? bgHex : `#${bgHex}`);
+
+    page.drawText(`Background: ${bgColorInfo.name} (${bgColorInfo.hex})`, {
+      x: MARGIN,
+      y: contentBottomY - IMAGE_BOTTOM_GAP - BACKGROUND_TEXT_HEIGHT,
+      size: 9,
+      font,
+      color: rgb(0, 0, 0),
+    });
+
+    const sectionHeight =
+      HEADER_HEIGHT +
+      HEADER_GAP +
+      contentHeight +
+      IMAGE_BOTTOM_GAP +
+      BACKGROUND_TEXT_HEIGHT +
+      SECTION_BOTTOM_PADDING;
+    y -= sectionHeight;
   }
 
   return new Uint8Array(await pdfDoc.save());
