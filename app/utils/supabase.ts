@@ -423,6 +423,24 @@ export async function downloadFromBadgeImagesBucket(
   return new Uint8Array(buf);
 }
 
+/**
+ * Download file bytes from the badge-pdfs bucket by path (no URL parsing).
+ * Use for link-order in-place PDF edit (load existing add-to-cart PDF).
+ */
+export async function downloadFromBadgePdfsBucket(
+  designId: string,
+  fileName: string,
+): Promise<Uint8Array | null> {
+  if (!supabaseAdmin) return null;
+  const path = `${designId}/${fileName}`;
+  const { data, error } = await supabaseAdmin.storage
+    .from("badge-pdfs")
+    .download(path);
+  if (error || !data) return null;
+  const buf = await data.arrayBuffer();
+  return new Uint8Array(buf);
+}
+
 // Database helper functions
 export async function saveBadgeDesign(design: BadgeDesign) {
   if (!supabaseAdmin) {
