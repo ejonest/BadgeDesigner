@@ -89,7 +89,7 @@ export async function action({ request }: ActionFunctionArgs) {
       firstItem: lineItems[0],
     });
 
-    const updateLineItems: Array<{ designId: string; badgeIndex: number }> = [];
+    const updateLineItems: Array<{ designId: string; badgeIndex: number; quantity: number }> = [];
     for (const item of lineItems) {
       const designId = (item.designId ?? item.gadgetDesignId)?.trim();
       if (!designId) {
@@ -116,17 +116,7 @@ export async function action({ request }: ActionFunctionArgs) {
         typeof item.quantity === "number" && item.quantity >= 1
           ? item.quantity
           : 1;
-      const badgeCountRaw = item.badgeCount;
-      const badgeCount =
-        typeof badgeCountRaw === "number"
-          ? badgeCountRaw
-          : typeof badgeCountRaw === "string"
-            ? parseInt(String(badgeCountRaw).trim(), 10)
-            : 0;
-      updateLineItems.push({ designId, badgeIndex });
-      if (quantity === 2 && badgeCount > 0 && badgeIndex < badgeCount) {
-        updateLineItems.push({ designId, badgeIndex: badgeIndex + badgeCount });
-      }
+      updateLineItems.push({ designId, badgeIndex, quantity });
     }
 
     if (updateLineItems.length === 0) {
@@ -149,8 +139,8 @@ export async function action({ request }: ActionFunctionArgs) {
     const updatedCount = Array.isArray(updated) ? updated.length : 0;
     console.log("[BadgeDesigner] link-order-to-supabase result", {
       updatedCount,
-      shopifyOrderId: body.shopifyOrderId,
-      updateLineItems: updateLineItems.map((u) => `${u.designId}/badge-${u.badgeIndex}`),
+      shopifyOrderId: orderIdTrimmed,
+      updateLineItems: updateLineItems.map((u) => `${u.designId}/badge-${u.badgeIndex}(qty=${u.quantity})`),
     });
 
     // Regenerate order-slip PDF with final quantities (one PDF per design_id)
