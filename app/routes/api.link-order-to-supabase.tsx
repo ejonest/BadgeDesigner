@@ -209,11 +209,13 @@ export async function action({ request }: ActionFunctionArgs) {
         };
         const pdfBytes = await generateOrderSlipPdf(orderSlipItems, getImageBytes);
         const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
-        const pdfUrl = await uploadToBadgePdfsBucket(
+        const uploadedUrl = await uploadToBadgePdfsBucket(
           pdfBlob,
           `${designId}/badge-design.pdf`,
           "application/pdf",
         );
+        const pdfUrl =
+          uploadedUrl + (uploadedUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
         await updatePdfUrlByDesignId(designId, pdfUrl);
         console.log(
           "[BadgeDesigner] link-order: order-slip PDF updated for design",
