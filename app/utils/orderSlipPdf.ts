@@ -52,6 +52,8 @@ async function fetchImageBytes(url: string): Promise<Uint8Array | null> {
   }
 }
 
+export type GetImageBytes = (url: string) => Promise<Uint8Array | null>;
+
 /**
  * Build line rows for one badge from BadgeOrderItem (up to 4 lines, 4 table rows each: Line, Font, Color, Alignment).
  */
@@ -76,8 +78,13 @@ function getLineRows(item: BadgeOrderItem): Array<{ text: string; font: string; 
 /**
  * Generate order-slip PDF matching the add-to-cart proof layout.
  * Only items in the order are included (removed-from-cart badges are omitted). Quantities come from the order.
+ * Pass getImageBytes (e.g. Supabase admin download) so images load when the bucket is private or fetch fails.
  */
-export async function generateOrderSlipPdf(items: OrderSlipItem[]): Promise<Uint8Array> {
+export async function generateOrderSlipPdf(
+  items: OrderSlipItem[],
+  getImageBytes?: GetImageBytes,
+): Promise<Uint8Array> {
+  const loadImage = getImageBytes ?? fetchImageBytes;
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -113,7 +120,7 @@ export async function generateOrderSlipPdf(items: OrderSlipItem[]): Promise<Uint
     let imageWidth = imageWidthPt;
     let imageHeight = imageHeightPt;
     if (imageUrl) {
-      const imgBytes = await fetchImageBytes(imageUrl);
+      const imgBytes = await loadImage(imageUrl);
       if (imgBytes && imgBytes.length > 0) {
         try {
           const pdfImage = await pdfDoc.embedPng(imgBytes);
