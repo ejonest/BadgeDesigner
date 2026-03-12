@@ -407,12 +407,17 @@ export const generatePDFAsBlob = async (
 ): Promise<Blob> => {
   console.log("GENERATING PDF AS BLOB");
   try {
-    // Create new PDF document; one page per badge so link-order can edit in place (remove pages, update quantities).
+    // Create new PDF document
     const pdfDoc = await PDFDocument.create();
+    let page = pdfDoc.addPage([595.28, 841.89]); // A4
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
+    // Simple layout: two horizontal rectangles side by side
     const margin = 30;
+
+    let y = PAGE_HEIGHT - TOP_MARGIN;
+
     const allBadges = [badgeData, ...(multipleBadges || [])];
     const getQuantity = (i: number) =>
       quantities && quantities[i] !== undefined && quantities[i] >= 1
@@ -420,10 +425,6 @@ export const generatePDFAsBlob = async (
         : 1;
 
     for (let idx = 0; idx < allBadges.length; idx++) {
-      // One page per badge: page index = badge index for in-place edit at checkout.
-      const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-      let y = PAGE_HEIGHT - TOP_MARGIN;
-
       const badge = allBadges[idx];
       const quantity = getQuantity(idx);
       console.log(`Processing Badge ${idx + 1}`);
@@ -441,6 +442,34 @@ export const generatePDFAsBlob = async (
       const svgViewBoxH = template.standardViewBoxHeight + SVG_VIEWBOX_PADDING_PX;
       const imageHeightPt = pxToPt(svgViewBoxH);
 
+      // Estimate section height BEFORE rendering (use SVG viewBox height in points); +1 for Quantity row
+      const estimatedTotalRows = badge.lines.length * 4 + 1;
+      const estimatedTableHeight = estimatedTotalRows * 16;
+      const estimatedContentHeight = Math.max(
+        imageHeightPt,
+        estimatedTableHeight
+      );
+
+      const estimatedSectionHeight =
+        HEADER_HEIGHT +
+        HEADER_GAP +
+        estimatedContentHeight +
+        IMAGE_BOTTOM_GAP +
+        BACKGROUND_TEXT_HEIGHT +
+        SECTION_BOTTOM_PADDING;
+
+      // Page break check
+      if (y - estimatedSectionHeight < BOTTOM_MARGIN) {
+        page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+        y = PAGE_HEIGHT - TOP_MARGIN;
+      }
+      // Page break check
+      if (y - estimatedSectionHeight < BOTTOM_MARGIN) {
+        page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+        y = PAGE_HEIGHT - TOP_MARGIN;
+      }
+
+      // NOW lock section top
       const sectionTopY = y;
 
       // Generate high-resolution image

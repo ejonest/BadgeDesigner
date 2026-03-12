@@ -54,7 +54,7 @@ export async function action({ request }: ActionFunctionArgs) {
     // Upload PDF (contains all badges in one file) - ONLY to badge-pdfs bucket
     if (pdfFile && pdfFile.size > 0) {
       try {
-        const pdfFileName = `${designId}/badge-design.pdf`;
+        const pdfFileName = `${designId}/badge-design_proof.pdf`;
         pdfUrl = await uploadToBadgePdfsBucket(
           pdfFile,
           pdfFileName,
@@ -86,7 +86,7 @@ export async function action({ request }: ActionFunctionArgs) {
     for (let badgeIndex = 0; badgeIndex < allBadges.length; badgeIndex++) {
       const badge = allBadges[badgeIndex];
 
-      // Get thumbnail PNG file (low quality) and SVG file (high quality) for this badge
+      // Get thumbnail PNG file (high-quality, same as proof) and SVG file for this badge
       const thumbnailPngFile = formData.get(
         `thumbnail_png_${badgeIndex}`,
       ) as File;
@@ -95,7 +95,7 @@ export async function action({ request }: ActionFunctionArgs) {
       let badgeThumbnailUrl = "";
       let badgeFullImageUrl = "";
 
-      // Upload low-quality PNG for thumbnail - ONLY to badge-images bucket
+      // Upload high-quality PNG (same as proof) for thumbnail - ONLY to badge-images bucket
       if (thumbnailPngFile && thumbnailPngFile.size > 0) {
         try {
           const thumbnailFileName = `${designId}/badge-${badgeIndex}-thumbnail.png`;
