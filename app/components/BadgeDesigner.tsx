@@ -3241,6 +3241,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           const formDataFinalize = new FormData();
           formDataFinalize.append("designId", designIdForSupabase);
           formDataFinalize.append("pdf", pdfBlob, "badge-design.pdf");
+          const currentBacking = badgesForSupabase[0]?.backing;
+          if (currentBacking) {
+            formDataFinalize.append("backingType", currentBacking);
+          }
           const finalizeRes = await fetch("/api/finalize-draft", {
             method: "POST",
             body: formDataFinalize,

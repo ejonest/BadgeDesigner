@@ -6,6 +6,7 @@ import {
   updatePdfUrlByDesignId,
 } from "~/utils/supabase";
 import { generateOrderSlipPdf } from "~/utils/orderSlipPdf";
+import { parseOr400, linkOrderBodySchema } from "~/utils/validation";
 
 function getSecretFromRequest(request: Request): string | null {
   const authHeader = request.headers.get("Authorization");
@@ -67,40 +68,10 @@ export async function action({ request }: ActionFunctionArgs) {
   );
 
   try {
-    const body = await request.json();
-    const shopifyOrderId = body.shopifyOrderId as string | undefined;
-    const shopifyOrderNumber = body.shopifyOrderNumber as string | undefined;
-    const shopifyCustomerId = body.shopifyCustomerId as string | undefined;
-    const lineItems = body.lineItems as
-      | Array<{
-          designId?: string;
-          gadgetDesignId?: string;
-          designData?: unknown;
-          badgeIndex?: number | string;
-          quantity?: number;
-          badgeCount?: number | string;
-        }>
-      | undefined;
-
-    if (
-      !shopifyOrderId ||
-      typeof shopifyOrderId !== "string" ||
-      !shopifyOrderId.trim()
-    ) {
-      return json(
-        { error: "Bad request", message: "shopifyOrderId is required" },
-        { status: 400 },
-      );
-    }
-    if (!Array.isArray(lineItems) || lineItems.length === 0) {
-      return json(
-        {
-          error: "Bad request",
-          message: "lineItems must be a non-empty array",
-        },
-        { status: 400 },
-      );
-    }
+    const body = await request.json().catch(() => null);
+    const parsed = parseOr400(linkOrderBodySchema, body, "Invalid request body");
+    if (!parsed.ok) return parsed.response;
+    const { shopifyOrderId, shopifyOrderNumber, shopifyCustomerId, lineItems } = parsed.data;
 
     const orderIdTrimmed = shopifyOrderId.trim();
     const orderNumberTrimmed =

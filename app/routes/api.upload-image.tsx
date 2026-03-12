@@ -1,6 +1,7 @@
 import type { ActionFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Client } from '@gadget-client/allqualitybadges';
+import { parseOr400, uploadImageBodySchema } from '~/utils/validation';
 
 export const action: ActionFunction = async ({ request }) => {
   if (request.method !== "POST") {
@@ -8,8 +9,10 @@ export const action: ActionFunction = async ({ request }) => {
   }
 
   try {
-    const body = await request.json();
-    const { imageData, filename, contentType, metadata } = body;
+    const body = await request.json().catch(() => null);
+    const parsed = parseOr400(uploadImageBodySchema, body, 'Invalid request body');
+    if (!parsed.ok) return parsed.response;
+    const { imageData, filename, contentType, metadata } = parsed.data;
 
     console.log('Received image upload request:', { 
       hasImageData: !!imageData, 
