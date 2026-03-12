@@ -393,7 +393,9 @@ export async function downloadBytesFromStorageUrl(
   if (!supabaseAdmin) return null;
   const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
   if (!match) return null;
-  const [, bucket, path] = match;
+  const [, bucket, pathWithQuery] = match;
+  const path = pathWithQuery.split("?")[0].trim();
+  if (!path) return null;
   const decodedPath = decodeURIComponent(path);
   const { data, error } = await supabaseAdmin.storage
     .from(bucket)

@@ -122,8 +122,17 @@ export async function generateOrderSlipPdf(
     if (imageUrl) {
       const imgBytes = await loadImage(imageUrl);
       if (imgBytes && imgBytes.length > 0) {
+        let pdfImage: Awaited<ReturnType<PDFDocument["embedPng"]>> | null = null;
         try {
-          const pdfImage = await pdfDoc.embedPng(imgBytes);
+          pdfImage = await pdfDoc.embedPng(imgBytes);
+        } catch {
+          try {
+            pdfImage = await pdfDoc.embedJpg(imgBytes);
+          } catch {
+            // skip image if neither PNG nor JPEG
+          }
+        }
+        if (pdfImage) {
           const aspect = pdfImage.height / pdfImage.width;
           imageHeight = Math.min(imageHeightPt, imageWidthPt * aspect);
           imageWidth = Math.min(imageWidthPt, imageHeight / aspect);
@@ -134,8 +143,6 @@ export async function generateOrderSlipPdf(
             width: imageWidth,
             height: imageHeight,
           });
-        } catch {
-          // ignore embed errors
         }
       }
     }
