@@ -57,18 +57,20 @@ async function fetchImageBytes(url: string): Promise<Uint8Array | null> {
 export type GetImageBytes = (url: string) => Promise<Uint8Array | null>;
 
 /**
- * Build line rows for one badge from BadgeOrderItem (up to 4 lines, 4 table rows each: Line, Font, Color, Alignment).
+ * Build line rows for one badge from BadgeOrderItem (up to 4 lines).
+ * Only includes lines that have non-empty text, matching the client PDF behavior.
  */
 function getLineRows(item: BadgeOrderItem): Array<{ text: string; font: string; color: string; alignment: string }> {
   const rows: Array<{ text: string; font: string; color: string; alignment: string }> = [];
   for (let i = 1; i <= 4; i++) {
     const text = (item as Record<string, unknown>)[`line_${i}_text`] as string | undefined;
-    if (text == null && rows.length === 0) continue;
+    const trimmed = (text ?? "").trim();
+    if (trimmed === "") continue;
     const font = (item as Record<string, unknown>)[`line_${i}_font`] as string | undefined;
     const color = (item as Record<string, unknown>)[`line_${i}_color`] as string | undefined;
     const alignment = (item as Record<string, unknown>)[`line_${i}_alignment`] as string | undefined;
     rows.push({
-      text: text != null ? String(text).trim() : "",
+      text: trimmed,
       font: font != null ? String(font) : "Roboto",
       color: color != null ? String(color) : "#000000",
       alignment: alignment != null ? String(alignment) : "Center",

@@ -33,7 +33,7 @@ export async function action({ request }: ActionFunctionArgs) {
     }
     const backingType = (formData.get("backingType") as string)?.trim() || undefined;
 
-    const pdfFileName = `${designId}/badge-design.pdf`;
+    const pdfFileName = `${designId}/badge-design_proof.pdf`;
     let pdfUrl: string;
     try {
       pdfUrl = await uploadToBadgePdfsBucket(

@@ -3,25 +3,16 @@ import {
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from "@remix-run/node";
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import {
   updateDraftBadgeOrderItemsWithOrderInfo,
   getBadgeOrderItemsByDesignId,
   uploadToBadgePdfsBucket,
   updatePdfUrlByDesignId,
-  downloadFromBadgePdfsBucket,
+  downloadBytesFromStorageUrl,
+  downloadFromBadgeImagesBucket,
 } from "~/utils/supabase";
+import { generateOrderSlipPdf } from "~/utils/orderSlipPdf";
 import { parseOr400, linkOrderBodySchema } from "~/utils/validation";
-
-/** Count lines with non-empty text (matches client: only lines with text get rows). */
-function getLineCount(row: Record<string, unknown>): number {
-  let count = 0;
-  for (let i = 1; i <= 4; i++) {
-    const t = String(row[`line_${i}_text`] ?? "").trim();
-    if (t !== "") count++;
-  }
-  return count;
-}
 
 function getSecretFromRequest(request: Request): string | null {
   const authHeader = request.headers.get("Authorization");
@@ -174,7 +165,7 @@ export async function action({ request }: ActionFunctionArgs) {
       ),
     });
 
-    // Edit existing add-to-cart PDF in place: remove pages for removed badges, update quantities (layout constants match pdfGenerator.ts)
+    // Regenerate order-slip PDF with final quantities (one PDF per design_id)
     const designIds = [
       ...new Set(
         lineItems
@@ -182,51 +173,13 @@ export async function action({ request }: ActionFunctionArgs) {
           .filter(Boolean),
       ),
     ] as string[];
-    const PAGE_HEIGHT = 841.89;
-    const TOP_MARGIN = 40;
-    const HEADER_HEIGHT = 18;
-    const HEADER_GAP = 6;
-    const ROW_HEIGHT = 16;
-    const MARGIN = 30;
-    const IMAGE_WIDTH_PT = 252; // rect-1x3 default (288+48)*0.75
-    const PAGE_WIDTH = 595.28;
-
     for (const designId of designIds) {
       try {
-        const pdfBytes = await downloadFromBadgePdfsBucket(
-          designId,
-          "badge-design.pdf",
-        );
-        if (!pdfBytes || pdfBytes.length === 0) {
-          console.warn(
-            "[BadgeDesigner] link-order: no existing PDF for design",
-            designId,
-          );
-          continue;
-        }
-        const pdfDoc = await PDFDocument.load(pdfBytes);
-        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-        const pageCount = pdfDoc.getPageCount();
-
         const rows = await getBadgeOrderItemsByDesignId(designId);
         const designLineItems = lineItems.filter(
           (i) => (i.designId ?? i.gadgetDesignId)?.trim() === designId,
         );
-        const orderBadgeIndices = designLineItems.map((i) => {
-          const raw = i.badgeIndex;
-          return typeof raw === "number"
-            ? raw
-            : parseInt(String(raw ?? 0).trim(), 10);
-        });
-        const orderSet = new Set(orderBadgeIndices);
-
-        for (let i = pageCount - 1; i >= 0; i--) {
-          if (!orderSet.has(i)) {
-            pdfDoc.removePage(i);
-          }
-        }
-
-        const orderItems = designLineItems
+        const orderSlipItems = designLineItems
           .map((i) => {
             const badgeIndex =
               typeof i.badgeIndex === "number"
@@ -237,57 +190,52 @@ export async function action({ request }: ActionFunctionArgs) {
                 ? i.quantity
                 : 1;
             const row = rows.find((r) => r.badge_id === `badge-${badgeIndex}`);
-            return row ? { quantity, lineCount: getLineCount(row) } : null;
+            return row ? { item: row, quantity } : null;
           })
           .filter((x): x is NonNullable<typeof x> => x != null);
-
-        const tableX = MARGIN + IMAGE_WIDTH_PT + 20;
-        const tableWidth = PAGE_WIDTH - tableX - MARGIN;
-        const tableY =
-          PAGE_HEIGHT - TOP_MARGIN - HEADER_HEIGHT - HEADER_GAP;
-
-        for (let p = 0; p < pdfDoc.getPageCount(); p++) {
-          const item = orderItems[p];
-          if (!item) continue;
-          const { quantity, lineCount } = item;
-          const quantityRowY = tableY - (lineCount * 4 + 1) * ROW_HEIGHT;
-          const page = pdfDoc.getPage(p);
-          page.drawRectangle({
-            x: tableX,
-            y: quantityRowY,
-            width: tableWidth,
-            height: ROW_HEIGHT,
-            color: rgb(1, 1, 1),
-          });
-          page.drawText(`Quantity: ${quantity}`, {
-            x: tableX + 5,
-            y: quantityRowY + 4,
-            size: 8,
-            font,
-            color: rgb(0, 0, 0),
-          });
+        if (orderSlipItems.length === 0) continue;
+        // Pre-fill PNG thumbnail bytes by storage path so the PDF generator doesn't depend on URL parsing.
+        for (const slipItem of orderSlipItems) {
+          const badgeId = slipItem.item.badge_id ?? "";
+          const badgeIndex =
+            parseInt(badgeId.replace(/^badge-/, ""), 10) || 0;
+          slipItem.imageBytes =
+            (await downloadFromBadgeImagesBucket(
+              designId,
+              `badge-${badgeIndex}-thumbnail.png`,
+            )) ?? undefined;
         }
-
-        const newPdfBytes = await pdfDoc.save();
-        const pdfBlob = new Blob([newPdfBytes], { type: "application/pdf" });
+        const getImageBytes = async (url: string): Promise<Uint8Array | null> => {
+          if (url.includes("/storage/v1/object/public/")) {
+            const bytes = await downloadBytesFromStorageUrl(url);
+            if (bytes) return bytes;
+          }
+          try {
+            const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+            if (!res.ok) return null;
+            const buf = await res.arrayBuffer();
+            return new Uint8Array(buf);
+          } catch {
+            return null;
+          }
+        };
+        const pdfBytes = await generateOrderSlipPdf(orderSlipItems, getImageBytes);
+        const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
         const uploadedUrl = await uploadToBadgePdfsBucket(
           pdfBlob,
           `${designId}/badge-design.pdf`,
           "application/pdf",
         );
         const pdfUrl =
-          uploadedUrl +
-          (uploadedUrl.includes("?") ? "&" : "?") +
-          "v=" +
-          Date.now();
+          uploadedUrl + (uploadedUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
         await updatePdfUrlByDesignId(designId, pdfUrl);
         console.log(
-          "[BadgeDesigner] link-order: PDF updated in place for design",
+          "[BadgeDesigner] link-order: order-slip PDF updated for design",
           designId,
         );
       } catch (slipErr) {
         console.warn(
-          "[BadgeDesigner] link-order: PDF in-place edit failed for design",
+          "[BadgeDesigner] link-order: order-slip PDF generation failed for design",
           designId,
           slipErr,
         );

@@ -79,7 +79,6 @@ import {
   downloadMultipleCDRs,
   downloadMultipleTIFFs,
   generateSVGAsBlob,
-  generatePNGAsBlob,
 } from "../utils/export";
 
 const INITIAL_BADGE = BADGE_CONSTANTS.INITIAL_BADGE;
@@ -97,8 +96,18 @@ const fontColors = FONT_COLORS;
 const maxLines = BADGE_CONSTANTS.MAX_LINES;
 const badgeWidth = BADGE_CONSTANTS.BADGE_WIDTH;
 
-/** Scale for thumbnail PNGs (cart/upload). Lower = smaller file and faster; 0.5 for speed, revert to 0.75 if too soft. */
-const THUMBNAIL_PNG_SCALE = 0.5;
+/** Convert a data URL (e.g. from generateFullBadgeImage) to a Blob for upload. */
+function dataURLToBlob(dataUrl: string): Blob {
+  const parts = dataUrl.split(",");
+  const base64 = parts[1];
+  if (!base64) return new Blob();
+  const mimeMatch = parts[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : "image/png";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
 
 /** localStorage key prefix and version for badge designer draft cache (reload persistence). */
 const BADGE_DESIGNER_CACHE_PREFIX = "badge-designer-draft";
@@ -1691,7 +1700,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
         const badgePromises = allBadgesForDraft.map((b, i) =>
           Promise.all([
-            generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
+            generateFullBadgeImage(b).then(dataURLToBlob),
             generateSVGAsBlob(b, template),
           ])
             .then(([pngBlob, svgBlob]) => ({
@@ -1809,7 +1818,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           }
           const badgePromises = normalized.map((b, i) =>
             Promise.all([
-              generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
+              generateFullBadgeImage(b).then(dataURLToBlob),
               generateSVGAsBlob(b, template),
             ])
               .then(([pngBlob, svgBlob]) => ({
@@ -2737,7 +2746,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       );
       const badgePromises = allBadges.map((badge, i) =>
         Promise.all([
-          generatePNGAsBlob(badge, template, THUMBNAIL_PNG_SCALE),
+          generateFullBadgeImage(badge).then(dataURLToBlob),
           generateSVGAsBlob(badge, template),
         ])
           .then(([pngBlob, svgBlob]) => ({
@@ -2784,8 +2793,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       if (shopifyCustomerId) {
         formData.append("shopifyCustomerId", shopifyCustomerId);
       }
-      formData.append("pdf", pdfBlob, "badge-design.pdf");
-      // Append each thumbnail PNG blob with index (low quality for thumbnails)
+      formData.append("pdf", pdfBlob, "badge-design_proof.pdf");
+      // Append each high-quality PNG (same as proof) with index
       thumbnailPngBlobs.forEach((pngBlob, index) => {
         if (pngBlob && pngBlob.size > 0) {
           formData.append(
@@ -3240,7 +3249,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         if (!addDuplicates) {
           const formDataFinalize = new FormData();
           formDataFinalize.append("designId", designIdForSupabase);
-          formDataFinalize.append("pdf", pdfBlob, "badge-design.pdf");
+          formDataFinalize.append("pdf", pdfBlob, "badge-design_proof.pdf");
           const currentBacking = badgesForSupabase[0]?.backing;
           if (currentBacking) {
             formDataFinalize.append("backingType", currentBacking);
@@ -3272,7 +3281,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             if (template && badgesForSupabase.length > 0) {
               const badgePromises = badgesForSupabase.map((b, i) =>
                 Promise.all([
-                  generatePNGAsBlob(b, template, THUMBNAIL_PNG_SCALE),
+                  generateFullBadgeImage(b).then(dataURLToBlob),
                   generateSVGAsBlob(b, template),
                 ])
                   .then(([pngBlob, svgBlob]) => ({
@@ -3317,7 +3326,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   shopifyCustomerIdFromUrl,
                 );
               }
-              formDataForSupabase.append("pdf", pdfBlobToUse, "badge-design.pdf");
+              formDataForSupabase.append("pdf", pdfBlobToUse, "badge-design_proof.pdf");
               thumbnailPngBlobs.forEach((pngBlob, index) => {
                 if (pngBlob && pngBlob.size > 0) {
                   formDataForSupabase.append(
