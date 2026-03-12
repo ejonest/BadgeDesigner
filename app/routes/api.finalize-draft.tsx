@@ -6,9 +6,10 @@ import {
 } from "~/utils/supabase";
 
 /**
- * Finalize draft: upload PDF and set pdf_url on existing draft rows for this design_id.
+ * Finalize draft: upload PDF and set pdf_url (and optional backingType) on existing draft rows for this design_id, then set status to in_cart.
  * Returns thumbnailUrls (and fullImageUrls) for building cart items.
  * If no draft rows exist, returns draftNotFound: true so the client can fall back to full flow.
+ * Pass backingType so last-minute backing changes (e.g. pin → adhesive) are written to Supabase; otherwise only Gadget would have the update.
  */
 export async function action({ request }: ActionFunctionArgs) {
   if (request.method !== "POST") {
@@ -30,6 +31,7 @@ export async function action({ request }: ActionFunctionArgs) {
         { status: 400 },
       );
     }
+    const backingType = (formData.get("backingType") as string)?.trim() || undefined;
 
     const pdfFileName = `${designId}/badge-design.pdf`;
     let pdfUrl: string;
@@ -48,7 +50,7 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     const { thumbnailUrls, fullImageUrls, updatedCount } =
-      await updateDraftPdfUrlAndReturnRows(designId, pdfUrl);
+      await updateDraftPdfUrlAndReturnRows(designId, pdfUrl, { backingType });
 
     if (updatedCount === 0) {
       return json({

@@ -1,6 +1,7 @@
 import type { LoaderFunctionArgs } from '@remix-run/node'
 import { json } from '@remix-run/node'
 import { getLatestSavedDesign } from '~/utils/supabase'
+import { parseOr400, savedDesignQuerySchema } from '~/utils/validation'
 
 /**
  * GET /api/saved-design?shop=...&userId=...
@@ -9,15 +10,10 @@ import { getLatestSavedDesign } from '~/utils/supabase'
  */
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url)
-  const shopId = url.searchParams.get('shop')
-  const userId = url.searchParams.get('userId')
-
-  if (!userId || !shopId) {
-    return json(
-      { error: 'userId and shop are required' },
-      { status: 400 }
-    )
-  }
+  const query = { shop: url.searchParams.get('shop') ?? '', userId: url.searchParams.get('userId') ?? '' }
+  const parsed = parseOr400(savedDesignQuerySchema, query, 'shop and userId are required')
+  if (!parsed.ok) return parsed.response
+  const { shop: shopId, userId } = parsed.data
 
   try {
     const design = await getLatestSavedDesign(userId, shopId)

@@ -1,4 +1,5 @@
 import { json, type ActionFunctionArgs } from '@remix-run/node';
+import { parseOr400, addToCartBodySchema } from '~/utils/validation';
 
 export async function action({ request }: ActionFunctionArgs) {
   if (request.method !== 'POST') {
@@ -6,7 +7,10 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   try {
-    const { badgeData } = await request.json();
+    const body = await request.json().catch(() => null);
+    const parsed = parseOr400(addToCartBodySchema, body, 'Invalid request body');
+    if (!parsed.ok) return parsed.response;
+    const { badgeData } = parsed.data;
     
     console.log('Badge data received for cart:', badgeData);
     console.log('Badge text lines:', {

@@ -1,156 +1,182 @@
-import { createClient } from '@supabase/supabase-js'
-import type { Badge } from '~/types/badge'
-import { 
-  BACKGROUND_COLORS, 
-  EXTENDED_BACKGROUND_COLORS, 
-  SMART_PALETTE_COLORS, 
-  FONT_COLORS
-} from '~/constants/colors'
+import { createClient } from "@supabase/supabase-js";
+import type { Badge } from "~/types/badge";
+import {
+  BACKGROUND_COLORS,
+  EXTENDED_BACKGROUND_COLORS,
+  SMART_PALETTE_COLORS,
+  FONT_COLORS,
+} from "~/constants/colors";
 
 // Helper function to get current timestamp in PST/PDT (America/Los_Angeles timezone)
 // Returns ISO string formatted for PostgreSQL timestamp with time zone
 function getPacificTimestamp(): string {
-  const now = new Date()
-  
+  const now = new Date();
+
   // Get Pacific time components
-  const pacificParts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Los_Angeles',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  }).formatToParts(now)
-  
-  const year = pacificParts.find(p => p.type === 'year')?.value || ''
-  const month = pacificParts.find(p => p.type === 'month')?.value || ''
-  const day = pacificParts.find(p => p.type === 'day')?.value || ''
-  const hour = pacificParts.find(p => p.type === 'hour')?.value || ''
-  const minute = pacificParts.find(p => p.type === 'minute')?.value || ''
-  const second = pacificParts.find(p => p.type === 'second')?.value || ''
-  
+  const pacificParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+
+  const year = pacificParts.find((p) => p.type === "year")?.value || "";
+  const month = pacificParts.find((p) => p.type === "month")?.value || "";
+  const day = pacificParts.find((p) => p.type === "day")?.value || "";
+  const hour = pacificParts.find((p) => p.type === "hour")?.value || "";
+  const minute = pacificParts.find((p) => p.type === "minute")?.value || "";
+  const second = pacificParts.find((p) => p.type === "second")?.value || "";
+
   // Calculate timezone offset by comparing UTC and Pacific times
   // Create two formatters to get the same moment in both timezones
-  const utcFormatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'UTC',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  })
-  
-  const utcParts = utcFormatter.formatToParts(now)
-  const utcYear = parseInt(utcParts.find(p => p.type === 'year')?.value || '0')
-  const utcMonth = parseInt(utcParts.find(p => p.type === 'month')?.value || '0') - 1
-  const utcDay = parseInt(utcParts.find(p => p.type === 'day')?.value || '0')
-  const utcHour = parseInt(utcParts.find(p => p.type === 'hour')?.value || '0')
-  const utcMinute = parseInt(utcParts.find(p => p.type === 'minute')?.value || '0')
-  const utcSecond = parseInt(utcParts.find(p => p.type === 'second')?.value || '0')
-  
-  const pacificYear = parseInt(year)
-  const pacificMonth = parseInt(month) - 1
-  const pacificDay = parseInt(day)
-  const pacificHour = parseInt(hour)
-  const pacificMinute = parseInt(minute)
-  const pacificSecond = parseInt(second)
-  
+  const utcFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  const utcParts = utcFormatter.formatToParts(now);
+  const utcYear = parseInt(
+    utcParts.find((p) => p.type === "year")?.value || "0",
+  );
+  const utcMonth =
+    parseInt(utcParts.find((p) => p.type === "month")?.value || "0") - 1;
+  const utcDay = parseInt(utcParts.find((p) => p.type === "day")?.value || "0");
+  const utcHour = parseInt(
+    utcParts.find((p) => p.type === "hour")?.value || "0",
+  );
+  const utcMinute = parseInt(
+    utcParts.find((p) => p.type === "minute")?.value || "0",
+  );
+  const utcSecond = parseInt(
+    utcParts.find((p) => p.type === "second")?.value || "0",
+  );
+
+  const pacificYear = parseInt(year);
+  const pacificMonth = parseInt(month) - 1;
+  const pacificDay = parseInt(day);
+  const pacificHour = parseInt(hour);
+  const pacificMinute = parseInt(minute);
+  const pacificSecond = parseInt(second);
+
   // Create Date objects in UTC representing both times
-  const utcDate = new Date(Date.UTC(utcYear, utcMonth, utcDay, utcHour, utcMinute, utcSecond))
-  const pacificAsUtc = new Date(Date.UTC(pacificYear, pacificMonth, pacificDay, pacificHour, pacificMinute, pacificSecond))
-  
+  const utcDate = new Date(
+    Date.UTC(utcYear, utcMonth, utcDay, utcHour, utcMinute, utcSecond),
+  );
+  const pacificAsUtc = new Date(
+    Date.UTC(
+      pacificYear,
+      pacificMonth,
+      pacificDay,
+      pacificHour,
+      pacificMinute,
+      pacificSecond,
+    ),
+  );
+
   // Calculate offset in hours (Pacific is behind UTC)
-  const offsetMs = pacificAsUtc.getTime() - utcDate.getTime()
-  const offsetHours = Math.round(offsetMs / (1000 * 60 * 60))
-  
+  const offsetMs = pacificAsUtc.getTime() - utcDate.getTime();
+  const offsetHours = Math.round(offsetMs / (1000 * 60 * 60));
+
   // Format offset (Pacific is UTC-8 (PST) or UTC-7 (PDT))
-  const offsetSign = offsetHours <= 0 ? '-' : '+'
-  const offsetHoursAbs = Math.abs(offsetHours)
-  const offsetString = `${offsetSign}${offsetHoursAbs.toString().padStart(2, '0')}:00`
-  
+  const offsetSign = offsetHours <= 0 ? "-" : "+";
+  const offsetHoursAbs = Math.abs(offsetHours);
+  const offsetString = `${offsetSign}${offsetHoursAbs
+    .toString()
+    .padStart(2, "0")}:00`;
+
   // Return ISO format: YYYY-MM-DDTHH:MM:SS+/-HH:MM
-  return `${year}-${month}-${day}T${hour}:${minute}:${second}${offsetString}`
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}${offsetString}`;
 }
 
 // Supabase configuration from environment variables
-const supabaseUrl = process.env.SUPABASE_URL
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
   console.warn(
-    'Supabase environment variables are not set. Please configure SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY in your .env file.'
-  )
+    "Supabase environment variables are not set. Please configure SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+  );
 }
 
 // Client-side Supabase client (for browser)
 // Only create if we have the required keys
-export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null
+export const supabase =
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : null;
 
 // Server-side Supabase client (for API routes)
 // Only create if we have the required keys
-export const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
-  ? createClient(supabaseUrl, supabaseServiceRoleKey)
-  : null
+export const supabaseAdmin =
+  supabaseUrl && supabaseServiceRoleKey
+    ? createClient(supabaseUrl, supabaseServiceRoleKey)
+    : null;
 
 // Types for badge designs
 export interface BadgeDesign {
-  id?: string
-  design_id: string
-  product_id: string
-  shop_id: string
-  user_id?: string
-  background_color?: string
-  backing_price?: number
-  backing_type?: string
-  base_price?: number
-  total_price?: number
-  design_data?: any
-  text_lines?: any
-  thumbnail_url?: string
-  full_image_url?: string
-  status?: 'draft' | 'saved' | 'ordered' | 'archived'
-  created_at?: string
-  updated_at?: string
+  id?: string;
+  design_id: string;
+  product_id: string;
+  shop_id: string;
+  user_id?: string;
+  background_color?: string;
+  backing_price?: number;
+  backing_type?: string;
+  base_price?: number;
+  total_price?: number;
+  design_data?: any;
+  text_lines?: any;
+  thumbnail_url?: string;
+  full_image_url?: string;
+  status?: "draft" | "saved" | "ordered" | "archived";
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Upload helper function
 export async function uploadToSupabase(
-  file: File, 
-  designId: string, 
-  type: 'thumbnail' | 'full'
+  file: File,
+  designId: string,
+  type: "thumbnail" | "full",
 ): Promise<string> {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
 
-  const fileName = `${designId}-${type}.png`
-  const filePath = `${designId}/${fileName}`
-  
+  const fileName = `${designId}-${type}.png`;
+  const filePath = `${designId}/${fileName}`;
+
   const { data, error } = await supabaseAdmin.storage
-    .from('badge-images')
+    .from("badge-images")
     .upload(filePath, file, {
-      contentType: 'image/png',
-      upsert: true
-    })
-    
+      contentType: "image/png",
+      upsert: true,
+    });
+
   if (error) {
-    console.error('Upload error:', error)
-    throw error
+    console.error("Upload error:", error);
+    throw error;
   }
-  
+
   // Get public URL
-  const { data: { publicUrl } } = supabaseAdmin.storage
-    .from('badge-images')
-    .getPublicUrl(filePath)
-    
-  return publicUrl
+  const {
+    data: { publicUrl },
+  } = supabaseAdmin.storage.from("badge-images").getPublicUrl(filePath);
+
+  return publicUrl;
 }
 
 // Upload from a base64 data URL (e.g. from canvas toDataURL) to badge-images and return public URL.
@@ -158,381 +184,441 @@ export async function uploadToSupabase(
 export async function uploadDataUrlToBadgeImagesBucket(
   dataUrl: string,
   designId: string,
-  fileNameSuffix: string
+  fileNameSuffix: string,
 ): Promise<string> {
-  if (!dataUrl || !dataUrl.startsWith('data:image/')) {
-    throw new Error('uploadDataUrlToBadgeImagesBucket expects a data URL starting with data:image/')
+  if (!dataUrl || !dataUrl.startsWith("data:image/")) {
+    throw new Error(
+      "uploadDataUrlToBadgeImagesBucket expects a data URL starting with data:image/",
+    );
   }
-  const base64Marker = ';base64,'
-  const base64Index = dataUrl.indexOf(base64Marker)
+  const base64Marker = ";base64,";
+  const base64Index = dataUrl.indexOf(base64Marker);
   if (base64Index === -1) {
-    throw new Error('Invalid image data URL format: missing ;base64,')
+    throw new Error("Invalid image data URL format: missing ;base64,");
   }
-  const contentType = dataUrl.slice(5, base64Index)
-  const rawBase64 = dataUrl.slice(base64Index + base64Marker.length)
-  const base64 = rawBase64.replace(/\s/g, '')
+  const contentType = dataUrl.slice(5, base64Index);
+  const rawBase64 = dataUrl.slice(base64Index + base64Marker.length);
+  const base64 = rawBase64.replace(/\s/g, "");
   if (!base64.length) {
-    throw new Error('Invalid image data URL: empty base64 payload')
+    throw new Error("Invalid image data URL: empty base64 payload");
   }
-  const buffer = Buffer.from(base64, 'base64')
-  const ext = contentType === 'image/svg+xml' ? 'svg' : 'png'
-  const fileName = `${designId}/gadget-update-${fileNameSuffix}.${ext}`
-  const blob = new Blob([buffer], { type: contentType })
-  return uploadToBadgeImagesBucket(blob, fileName, contentType)
+  const buffer = Buffer.from(base64, "base64");
+  const ext = contentType === "image/svg+xml" ? "svg" : "png";
+  const fileName = `${designId}/gadget-update-${fileNameSuffix}.${ext}`;
+  const blob = new Blob([buffer], { type: contentType });
+  return uploadToBadgeImagesBucket(blob, fileName, contentType);
 }
 
 // In Node, FormData File/Blob can be stream-backed; convert to Buffer so Supabase gets exact bytes.
 async function toUploadBuffer(file: File | Blob): Promise<Buffer> {
-  const ab = await file.arrayBuffer()
-  return Buffer.from(ab)
+  const ab = await file.arrayBuffer();
+  return Buffer.from(ab);
 }
 
 // Upload to badge-images bucket - ONLY accepts image files (PNG, etc.)
 export async function uploadToBadgeImagesBucket(
   file: File | Blob,
   fileName: string,
-  contentType: string
+  contentType: string,
 ): Promise<string> {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
 
   // Validate that only image files (including SVG) are uploaded to this bucket
-  const isImage = contentType.startsWith('image/') || contentType === 'image/svg+xml'
-  const hasImageExtension = fileName.match(/\.(png|jpg|jpeg|gif|webp|svg)$/i)
+  const isImage =
+    contentType.startsWith("image/") || contentType === "image/svg+xml";
+  const hasImageExtension = fileName.match(/\.(png|jpg|jpeg|gif|webp|svg)$/i);
   if (!isImage && !hasImageExtension) {
-    throw new Error(`Invalid file type for badge-images bucket. Only image files (including SVG) are allowed. Received: ${contentType}`)
+    throw new Error(
+      `Invalid file type for badge-images bucket. Only image files (including SVG) are allowed. Received: ${contentType}`,
+    );
   }
 
   // First, check if the bucket exists
-  const { data: buckets, error: bucketsError } = await supabaseAdmin.storage.listBuckets()
-  
+  const { data: buckets, error: bucketsError } =
+    await supabaseAdmin.storage.listBuckets();
+
   if (bucketsError) {
-    console.error('Error listing buckets:', bucketsError)
-    throw new Error(`Failed to access Supabase storage: ${bucketsError.message}`)
-  }
-  
-  const badgeImagesBucket = buckets?.find(bucket => bucket.name === 'badge-images')
-  if (!badgeImagesBucket) {
-    throw new Error('badge-images bucket does not exist. Please create it in your Supabase dashboard under Storage.')
+    console.error("Error listing buckets:", bucketsError);
+    throw new Error(
+      `Failed to access Supabase storage: ${bucketsError.message}`,
+    );
   }
 
-  const filePath = fileName
-  const body = await toUploadBuffer(file)
-  console.log(`Uploading image to badge-images bucket: ${filePath} (${contentType}, ${body.length} bytes)`)
-  
+  const badgeImagesBucket = buckets?.find(
+    (bucket) => bucket.name === "badge-images",
+  );
+  if (!badgeImagesBucket) {
+    throw new Error(
+      "badge-images bucket does not exist. Please create it in your Supabase dashboard under Storage.",
+    );
+  }
+
+  const filePath = fileName;
+  const body = await toUploadBuffer(file);
+  console.log(
+    `Uploading image to badge-images bucket: ${filePath} (${contentType}, ${body.length} bytes)`,
+  );
+
   const { data, error } = await supabaseAdmin.storage
-    .from('badge-images')
+    .from("badge-images")
     .upload(filePath, body, {
       contentType,
-      upsert: true
-    })
-    
+      upsert: true,
+    });
+
   if (error) {
-    console.error('Upload error details:', {
+    console.error("Upload error details:", {
       message: error.message,
       statusCode: error.statusCode,
       error: error.error,
-      fileName: filePath
-    })
-    throw new Error(`Failed to upload file to badge-images bucket: ${error.message}`)
+      fileName: filePath,
+    });
+    throw new Error(
+      `Failed to upload file to badge-images bucket: ${error.message}`,
+    );
   }
-  
+
   // Get public URL
-  const { data: { publicUrl } } = supabaseAdmin.storage
-    .from('badge-images')
-    .getPublicUrl(filePath)
-  
-  console.log(`Image uploaded successfully to badge-images: ${publicUrl}`)
-    
-  return publicUrl
+  const {
+    data: { publicUrl },
+  } = supabaseAdmin.storage.from("badge-images").getPublicUrl(filePath);
+
+  console.log(`Image uploaded successfully to badge-images: ${publicUrl}`);
+
+  return publicUrl;
 }
 
 // Upload to badge-pdfs bucket - ONLY accepts PDF files
 export async function uploadToBadgePdfsBucket(
   file: File | Blob,
   fileName: string,
-  contentType: string
+  contentType: string,
 ): Promise<string> {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
 
   // Validate that only PDF files are uploaded to this bucket
-  if (contentType !== 'application/pdf' && !fileName.toLowerCase().endsWith('.pdf')) {
-    throw new Error(`Invalid file type for badge-pdfs bucket. Only PDF files are allowed. Received: ${contentType}`)
+  if (
+    contentType !== "application/pdf" &&
+    !fileName.toLowerCase().endsWith(".pdf")
+  ) {
+    throw new Error(
+      `Invalid file type for badge-pdfs bucket. Only PDF files are allowed. Received: ${contentType}`,
+    );
   }
 
   // First, check if the bucket exists
-  const { data: buckets, error: bucketsError } = await supabaseAdmin.storage.listBuckets()
-  
+  const { data: buckets, error: bucketsError } =
+    await supabaseAdmin.storage.listBuckets();
+
   if (bucketsError) {
-    console.error('Error listing buckets:', bucketsError)
-    throw new Error(`Failed to access Supabase storage: ${bucketsError.message}`)
-  }
-  
-  const badgePdfsBucket = buckets?.find(bucket => bucket.name === 'badge-pdfs')
-  if (!badgePdfsBucket) {
-    throw new Error('badge-pdfs bucket does not exist. Please create it in your Supabase dashboard under Storage.')
+    console.error("Error listing buckets:", bucketsError);
+    throw new Error(
+      `Failed to access Supabase storage: ${bucketsError.message}`,
+    );
   }
 
-  const filePath = fileName
-  const body = await toUploadBuffer(file)
-  console.log(`Uploading PDF to badge-pdfs bucket: ${filePath} (${contentType}, ${body.length} bytes)`)
-  
+  const badgePdfsBucket = buckets?.find(
+    (bucket) => bucket.name === "badge-pdfs",
+  );
+  if (!badgePdfsBucket) {
+    throw new Error(
+      "badge-pdfs bucket does not exist. Please create it in your Supabase dashboard under Storage.",
+    );
+  }
+
+  const filePath = fileName;
+  const body = await toUploadBuffer(file);
+  console.log(
+    `Uploading PDF to badge-pdfs bucket: ${filePath} (${contentType}, ${body.length} bytes)`,
+  );
+
   const { data, error } = await supabaseAdmin.storage
-    .from('badge-pdfs')
+    .from("badge-pdfs")
     .upload(filePath, body, {
-      contentType: 'application/pdf', // Force PDF content type
-      upsert: true
-    })
-    
+      contentType: "application/pdf", // Force PDF content type
+      upsert: true,
+    });
+
   if (error) {
-    console.error('Upload error details:', {
+    console.error("Upload error details:", {
       message: error.message,
       statusCode: error.statusCode,
       error: error.error,
-      fileName: filePath
-    })
-    throw new Error(`Failed to upload file to badge-pdfs bucket: ${error.message}`)
+      fileName: filePath,
+    });
+    throw new Error(
+      `Failed to upload file to badge-pdfs bucket: ${error.message}`,
+    );
   }
-  
+
   // Get public URL
-  const { data: { publicUrl } } = supabaseAdmin.storage
-    .from('badge-pdfs')
-    .getPublicUrl(filePath)
-  
-  console.log(`PDF uploaded successfully to badge-pdfs: ${publicUrl}`)
-    
-  return publicUrl
+  const {
+    data: { publicUrl },
+  } = supabaseAdmin.storage.from("badge-pdfs").getPublicUrl(filePath);
+
+  console.log(`PDF uploaded successfully to badge-pdfs: ${publicUrl}`);
+
+  return publicUrl;
 }
 
 // Get public URL for a file in Supabase storage (no upload). Use same bucket names and path conventions as uploads.
 export function getStoragePublicUrl(bucket: string, path: string): string {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
-  const { data: { publicUrl } } = supabaseAdmin.storage.from(bucket).getPublicUrl(path)
-  return publicUrl
+  const {
+    data: { publicUrl },
+  } = supabaseAdmin.storage.from(bucket).getPublicUrl(path);
+  return publicUrl;
 }
 
 // Database helper functions
 export async function saveBadgeDesign(design: BadgeDesign) {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
 
   const { data, error } = await supabaseAdmin
-    .from('badge_designs')
+    .from("badge_designs")
     .upsert(design)
     .select()
-    .single()
-    
+    .single();
+
   if (error) {
-    console.error('Save error:', error)
-    throw error
+    console.error("Save error:", error);
+    throw error;
   }
-  
-  return data
+
+  return data;
 }
 
 export async function getBadgeDesign(designId: string) {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
 
   const { data, error } = await supabaseAdmin
-    .from('badge_designs')
-    .select('*')
-    .eq('design_id', designId)
-    .single()
-    
+    .from("badge_designs")
+    .select("*")
+    .eq("design_id", designId)
+    .single();
+
   if (error) {
-    console.error('Get error:', error)
-    throw error
+    console.error("Get error:", error);
+    throw error;
   }
-  
-  return data
+
+  return data;
 }
 
 export async function getCustomerDesigns(customerId: string) {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
 
   const { data, error } = await supabaseAdmin
-    .from('badge_designs')
-    .select('*')
-    .eq('user_id', customerId)
-    .order('created_at', { ascending: false })
-    
+    .from("badge_designs")
+    .select("*")
+    .eq("user_id", customerId)
+    .order("created_at", { ascending: false });
+
   if (error) {
-    console.error('Get customer designs error:', error)
-    throw error
+    console.error("Get customer designs error:", error);
+    throw error;
   }
-  
-  return data
+
+  return data;
 }
 
 /** Get the latest saved design for a user in a shop (one set per user). Used for "Load previous design?". */
 export async function getLatestSavedDesign(userId: string, shopId: string) {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
 
   const { data, error } = await supabaseAdmin
-    .from('badge_designs')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('shop_id', shopId)
-    .eq('status', 'saved')
-    .order('updated_at', { ascending: false })
+    .from("badge_designs")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("shop_id", shopId)
+    .eq("status", "saved")
+    .order("updated_at", { ascending: false })
     .limit(1)
-    .maybeSingle()
+    .maybeSingle();
 
   if (error) {
-    console.error('getLatestSavedDesign error:', error)
-    throw error
+    console.error("getLatestSavedDesign error:", error);
+    throw error;
   }
 
-  return data
+  return data;
 }
 
 /** Delete existing saved designs for a user in a shop so only one set is kept (replace previous on save). */
-export async function deleteSavedDesignsForUser(userId: string, shopId: string) {
+export async function deleteSavedDesignsForUser(
+  userId: string,
+  shopId: string,
+) {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
 
   const { error } = await supabaseAdmin
-    .from('badge_designs')
+    .from("badge_designs")
     .delete()
-    .eq('user_id', userId)
-    .eq('shop_id', shopId)
-    .eq('status', 'saved')
+    .eq("user_id", userId)
+    .eq("shop_id", shopId)
+    .eq("status", "saved");
 
   if (error) {
-    console.error('deleteSavedDesignsForUser error:', error)
-    throw error
+    console.error("deleteSavedDesignsForUser error:", error);
+    throw error;
   }
 }
 
 // Badge order items interface - matches actual table schema
 export interface BadgeOrderItem {
-  id?: string
-  shopify_order_id?: string // TEXT - Shopify order ID
-  shopify_order_number?: string // TEXT - human-readable order number (e.g. #1001)
-  design_id: string // TEXT - links to main order design_id
-  badge_id?: string // TEXT - unique ID for this specific badge
-  background_color?: string // Format: "ColorName #hexcode" or "#hexcode"
-  backing_type?: string // pin | magnetic | adhesive
+  id?: string;
+  shopify_order_id?: string; // TEXT - Shopify order ID
+  shopify_order_number?: string; // TEXT - human-readable order number (e.g. #1001)
+  design_id: string; // TEXT - links to main order design_id
+  badge_id?: string; // TEXT - unique ID for this specific badge
+  background_color?: string; // Format: "ColorName #hexcode" or "#hexcode"
+  backing_type?: string; // pin | magnetic | adhesive
   // Line 1 properties
-  line_1_text?: string
-  line_1_font?: string
-  line_1_font_size?: number
-  line_1_bold?: boolean
-  line_1_underline?: boolean
-  line_1_italicize?: boolean
-  line_1_color?: string
-  line_1_alignment?: string
+  line_1_text?: string;
+  line_1_font?: string;
+  line_1_font_size?: number;
+  line_1_bold?: boolean;
+  line_1_underline?: boolean;
+  line_1_italicize?: boolean;
+  line_1_color?: string;
+  line_1_alignment?: string;
   // Line 2 properties
-  line_2_text?: string
-  line_2_font?: string
-  line_2_font_size?: number
-  line_2_bold?: boolean
-  line_2_underline?: boolean
-  line_2_italicize?: boolean
-  line_2_color?: string
-  line_2_alignment?: string
+  line_2_text?: string;
+  line_2_font?: string;
+  line_2_font_size?: number;
+  line_2_bold?: boolean;
+  line_2_underline?: boolean;
+  line_2_italicize?: boolean;
+  line_2_color?: string;
+  line_2_alignment?: string;
   // Line 3 properties
-  line_3_text?: string
-  line_3_font?: string
-  line_3_font_size?: number
-  line_3_bold?: boolean
-  line_3_underline?: boolean
-  line_3_italicize?: boolean
-  line_3_color?: string
-  line_3_alignment?: string
+  line_3_text?: string;
+  line_3_font?: string;
+  line_3_font_size?: number;
+  line_3_bold?: boolean;
+  line_3_underline?: boolean;
+  line_3_italicize?: boolean;
+  line_3_color?: string;
+  line_3_alignment?: string;
   // Line 4 properties
-  line_4_text?: string
-  line_4_font?: string
-  line_4_font_size?: number
-  line_4_bold?: boolean
-  line_4_underline?: boolean
-  line_4_italicize?: boolean
-  line_4_color?: string
-  line_4_alignment?: string
-  thumbnail_url?: string
-  full_image_url?: string
-  pdf_url?: string
-  shopify_customer_id?: string
-  status?: 'draft' | 'in_cart' | 'order_placed' | 'fulfilled'
-  created_at?: string
-  updated_at?: string
+  line_4_text?: string;
+  line_4_font?: string;
+  line_4_font_size?: number;
+  line_4_bold?: boolean;
+  line_4_underline?: boolean;
+  line_4_italicize?: boolean;
+  line_4_color?: string;
+  line_4_alignment?: string;
+  thumbnail_url?: string;
+  full_image_url?: string;
+  pdf_url?: string;
+  shopify_customer_id?: string;
+  status?: "draft" | "in_cart" | "order_placed" | "fulfilled";
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Helper function to get color name from hex code
 // Checks all color arrays from colors.ts, returns "User Specified" if not found
 function getColorName(hex: string | undefined): string {
-  if (!hex) return ''
-  
+  if (!hex) return "";
+
   // Normalize hex code (ensure it has # and is uppercase)
-  const normalizedHex = hex.startsWith('#') ? hex.toUpperCase() : `#${hex.toUpperCase()}`
-  
+  const normalizedHex = hex.startsWith("#")
+    ? hex.toUpperCase()
+    : `#${hex.toUpperCase()}`;
+
   // Check all color arrays from colors.ts
   // Combine all color arrays into a single search
   const allColorArrays = [
     ...BACKGROUND_COLORS,
     ...EXTENDED_BACKGROUND_COLORS,
     ...SMART_PALETTE_COLORS,
-    ...FONT_COLORS
-  ]
-  
+    ...FONT_COLORS,
+  ];
+
   // Find matching color
-  const color = allColorArrays.find(c => c.value.toUpperCase() === normalizedHex)
-  
+  const color = allColorArrays.find(
+    (c) => c.value.toUpperCase() === normalizedHex,
+  );
+
   if (color) {
-    return color.name
+    return color.name;
   }
-  
+
   // If no match found, return "User Specified"
-  return 'User Specified'
+  return "User Specified";
 }
 
 // Helper function to format color as "ColorName #hexcode" or "User Specified #hexcode"
 function formatColor(hex: string | undefined): string | undefined {
-  if (!hex) return undefined
-  
+  if (!hex) return undefined;
+
   // Ensure hex has # prefix
-  const hexWithHash = hex.startsWith('#') ? hex : `#${hex}`
-  const colorName = getColorName(hex)
-  
+  const hexWithHash = hex.startsWith("#") ? hex : `#${hex}`;
+  const colorName = getColorName(hex);
+
   // Always include the name (either the actual name or "User Specified")
-  return `${colorName} ${hexWithHash}`
+  return `${colorName} ${hexWithHash}`;
 }
 
 // Helper function to calculate fontSize from sizeNorm
 // Uses templateId to determine designBox height (96px for 1x3, 144px for 1.5x3)
-function calculateFontSize(line: { sizeNorm?: number; fontSize?: number }, templateId?: string): number | undefined {
+function calculateFontSize(
+  line: { sizeNorm?: number; fontSize?: number },
+  templateId?: string,
+): number | undefined {
   // If fontSize is already set, use it
   if (line.fontSize !== undefined) {
-    return Math.round(line.fontSize)
+    return Math.round(line.fontSize);
   }
-  
+
   // Otherwise calculate from sizeNorm
   if (line.sizeNorm !== undefined) {
     // Determine designBox height from templateId
     // 1x3 badges are typically 96px tall, 1.5x3 badges are 144px tall
-    let designBoxHeight = 96 // default for 1x3
-    if (templateId && templateId.includes('1.5')) {
-      designBoxHeight = 144
+    let designBoxHeight = 96; // default for 1x3
+    if (templateId && templateId.includes("1.5")) {
+      designBoxHeight = 144;
     }
-    
-    const fontSize = line.sizeNorm * designBoxHeight
-    return Math.round(fontSize)
+
+    const fontSize = line.sizeNorm * designBoxHeight;
+    return Math.round(fontSize);
   }
-  
-  return undefined
+
+  return undefined;
 }
 
 // Helper function to convert Badge object to BadgeOrderItem format
@@ -541,16 +627,16 @@ export function convertBadgeToOrderItem(
   designId: string,
   badgeIndex: number,
   options?: {
-    shopify_order_id?: string
-    shopify_order_number?: string
-    thumbnail_url?: string
-    full_image_url?: string
-    pdf_url?: string
-    shopify_customer_id?: string
-  }
+    shopify_order_id?: string;
+    shopify_order_number?: string;
+    thumbnail_url?: string;
+    full_image_url?: string;
+    pdf_url?: string;
+    shopify_customer_id?: string;
+  },
 ): BadgeOrderItem {
-  const lines = badge.lines || []
-  
+  const lines = badge.lines || [];
+
   // Use badge-0, badge-1, ... so link-order (which uses Badge Index 0,1,... from cart) can match
   return {
     design_id: designId,
@@ -599,17 +685,19 @@ export function convertBadgeToOrderItem(
     full_image_url: options?.full_image_url,
     pdf_url: options?.pdf_url,
     shopify_customer_id: options?.shopify_customer_id,
-  }
+  };
 }
 
 // Save badge order item
 export async function saveBadgeOrderItem(item: BadgeOrderItem) {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
 
   const { data, error } = await supabaseAdmin
-    .from('badge_order_items')
+    .from("badge_order_items")
     .insert({
       design_id: item.design_id,
       badge_id: item.badge_id,
@@ -653,28 +741,30 @@ export async function saveBadgeOrderItem(item: BadgeOrderItem) {
       full_image_url: item.full_image_url,
       pdf_url: item.pdf_url,
       shopify_customer_id: item.shopify_customer_id,
-      status: item.status ?? 'draft',
+      status: item.status ?? "draft",
       created_at: item.created_at || getPacificTimestamp(),
-      updated_at: getPacificTimestamp()
+      updated_at: getPacificTimestamp(),
     })
     .select()
-    .single()
-    
+    .single();
+
   if (error) {
-    console.error('Save badge order item error:', error)
-    throw error
+    console.error("Save badge order item error:", error);
+    throw error;
   }
-  
-  return data
+
+  return data;
 }
 
 // Save multiple badge order items (one per badge)
 export async function saveBadgeOrderItems(items: BadgeOrderItem[]) {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
 
-  const itemsToInsert = items.map(item => ({
+  const itemsToInsert = items.map((item) => ({
     design_id: item.design_id,
     badge_id: item.badge_id,
     shopify_order_id: item.shopify_order_id,
@@ -717,22 +807,22 @@ export async function saveBadgeOrderItems(items: BadgeOrderItem[]) {
     full_image_url: item.full_image_url,
     pdf_url: item.pdf_url,
     shopify_customer_id: item.shopify_customer_id,
-    status: item.status ?? 'draft',
+    status: item.status ?? "draft",
     created_at: item.created_at || getPacificTimestamp(),
-    updated_at: getPacificTimestamp()
-  }))
+    updated_at: getPacificTimestamp(),
+  }));
 
   const { data, error } = await supabaseAdmin
-    .from('badge_order_items')
+    .from("badge_order_items")
     .insert(itemsToInsert)
-    .select()
-    
+    .select();
+
   if (error) {
-    console.error('Save badge order items error:', error)
-    throw error
+    console.error("Save badge order items error:", error);
+    throw error;
   }
-  
-  return data
+
+  return data;
 }
 
 /** Map BadgeOrderItem to row payload (shared by insert and upsert). */
@@ -780,129 +870,172 @@ function badgeOrderItemToRow(item: BadgeOrderItem) {
     full_image_url: item.full_image_url,
     pdf_url: item.pdf_url,
     shopify_customer_id: item.shopify_customer_id,
-    status: item.status ?? 'draft',
-    updated_at: getPacificTimestamp()
-  }
+    status: item.status ?? "draft",
+    updated_at: getPacificTimestamp(),
+  };
 }
 
 /** Upsert badge order items by (design_id, badge_id). Used for incremental draft saves. */
 export async function upsertBadgeOrderItems(items: BadgeOrderItem[]) {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
-  if (!items.length) return []
-  const rows = items.map(item => ({
+  if (!items.length) return [];
+  const rows = items.map((item) => ({
     ...badgeOrderItemToRow(item),
-    created_at: item.created_at || getPacificTimestamp()
-  }))
+    created_at: item.created_at || getPacificTimestamp(),
+  }));
   const { data, error } = await supabaseAdmin
-    .from('badge_order_items')
-    .upsert(rows, { onConflict: 'design_id,badge_id', ignoreDuplicates: false })
-    .select()
+    .from("badge_order_items")
+    .upsert(rows, { onConflict: "design_id,badge_id", ignoreDuplicates: false })
+    .select();
   if (error) {
-    console.error('upsertBadgeOrderItems error:', error)
-    throw error
+    console.error("upsertBadgeOrderItems error:", error);
+    throw error;
   }
-  return data ?? []
+  return data ?? [];
 }
 
-/** Update draft rows for design_id with pdf_url and return rows (for thumbnailUrls). Returns empty if no rows updated. */
+/** Update draft rows for design_id with pdf_url (and optionally backing_type) and return rows (for thumbnailUrls). Returns empty if no rows updated. */
 export async function updateDraftPdfUrlAndReturnRows(
   designId: string,
   pdfUrl: string,
-): Promise<{ thumbnailUrls: string[]; fullImageUrls: string[]; updatedCount: number }> {
+  options?: { backingType?: string },
+): Promise<{
+  thumbnailUrls: string[];
+  fullImageUrls: string[];
+  updatedCount: number;
+}> {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
+  }
+  const updatePayload: Record<string, unknown> = {
+    pdf_url: pdfUrl,
+    updated_at: getPacificTimestamp(),
+  };
+  if (options?.backingType != null && options.backingType !== "") {
+    updatePayload.backing_type = options.backingType;
   }
   const { data: updated, error: updateError } = await supabaseAdmin
-    .from('badge_order_items')
-    .update({
-      pdf_url: pdfUrl,
-      updated_at: getPacificTimestamp(),
-    })
-    .eq('design_id', designId)
-    .eq('status', 'draft')
-    .select('badge_id, thumbnail_url, full_image_url')
+    .from("badge_order_items")
+    .update(updatePayload)
+    .eq("design_id", designId)
+    .eq("status", "draft")
+    .select("badge_id, thumbnail_url, full_image_url");
   if (updateError) {
-    console.error('updateDraftPdfUrlAndReturnRows error:', updateError)
-    throw updateError
+    console.error("updateDraftPdfUrlAndReturnRows error:", updateError);
+    throw updateError;
   }
-  const rows = (updated ?? []) as Array<{ badge_id: string | null; thumbnail_url: string | null; full_image_url: string | null }>
+  const rows = (updated ?? []) as Array<{
+    badge_id: string | null;
+    thumbnail_url: string | null;
+    full_image_url: string | null;
+  }>;
   rows.sort((a, b) => {
-    const aIdx = a.badge_id ? parseInt(a.badge_id.replace('badge-', ''), 10) : 0
-    const bIdx = b.badge_id ? parseInt(b.badge_id.replace('badge-', ''), 10) : 0
-    return aIdx - bIdx
-  })
-  const thumbnailUrls = rows.map((r) => r.thumbnail_url ?? '')
-  const fullImageUrls = rows.map((r) => r.full_image_url ?? '')
-  return { thumbnailUrls, fullImageUrls, updatedCount: rows.length }
+    const aIdx = a.badge_id
+      ? parseInt(a.badge_id.replace("badge-", ""), 10)
+      : 0;
+    const bIdx = b.badge_id
+      ? parseInt(b.badge_id.replace("badge-", ""), 10)
+      : 0;
+    return aIdx - bIdx;
+  });
+  const thumbnailUrls = rows.map((r) => r.thumbnail_url ?? "");
+  const fullImageUrls = rows.map((r) => r.full_image_url ?? "");
+  return { thumbnailUrls, fullImageUrls, updatedCount: rows.length };
 }
 
 /** Update pdf_url for all badge_order_items with the given design_id (any status). Used after order-slip PDF regeneration. */
-export async function updatePdfUrlByDesignId(designId: string, pdfUrl: string): Promise<void> {
+export async function updatePdfUrlByDesignId(
+  designId: string,
+  pdfUrl: string,
+): Promise<void> {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
   const { error } = await supabaseAdmin
-    .from('badge_order_items')
+    .from("badge_order_items")
     .update({ pdf_url: pdfUrl, updated_at: getPacificTimestamp() })
-    .eq('design_id', designId)
+    .eq("design_id", designId);
   if (error) {
-    console.error('updatePdfUrlByDesignId error:', error)
-    throw error
+    console.error("updatePdfUrlByDesignId error:", error);
+    throw error;
   }
 }
 
 /** Set status for all badge_order_items with the given design_id (e.g. 'in_cart' when user adds to cart). */
-export async function updateBadgeOrderItemsStatusByDesignId(designId: string, status: string) {
+export async function updateBadgeOrderItemsStatusByDesignId(
+  designId: string,
+  status: string,
+) {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
   const { error } = await supabaseAdmin
-    .from('badge_order_items')
+    .from("badge_order_items")
     .update({ status, updated_at: getPacificTimestamp() })
-    .eq('design_id', designId)
+    .eq("design_id", designId);
   if (error) {
-    console.error('updateBadgeOrderItemsStatusByDesignId error:', error)
-    throw error
+    console.error("updateBadgeOrderItemsStatusByDesignId error:", error);
+    throw error;
   }
 }
 
 /** Delete all badge_order_items for the given design_id (any status). Use before replace-insert in send-to-supabase fallback. */
 export async function deleteBadgeOrderItemsByDesignId(designId: string) {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
   const { error } = await supabaseAdmin
-    .from('badge_order_items')
+    .from("badge_order_items")
     .delete()
-    .eq('design_id', designId)
+    .eq("design_id", designId);
   if (error) {
-    console.error('deleteBadgeOrderItemsByDesignId error:', error)
-    throw error
+    console.error("deleteBadgeOrderItemsByDesignId error:", error);
+    throw error;
   }
 }
 
 /** Delete draft rows for design_id whose badge_id is not in keepBadgeIds. */
-export async function deleteDraftBadgeOrderItemsExcept(designId: string, keepBadgeIds: string[]) {
+export async function deleteDraftBadgeOrderItemsExcept(
+  designId: string,
+  keepBadgeIds: string[],
+) {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
   const { data: rows } = await supabaseAdmin
-    .from('badge_order_items')
-    .select('id, badge_id')
-    .eq('design_id', designId)
-    .eq('status', 'draft')
-  if (!rows?.length) return
-  const toDelete = rows.filter((r: { badge_id: string | null }) => r.badge_id && !keepBadgeIds.includes(r.badge_id)).map((r: { id: string }) => r.id)
-  if (!toDelete.length) return
+    .from("badge_order_items")
+    .select("id, badge_id")
+    .eq("design_id", designId)
+    .eq("status", "draft");
+  if (!rows?.length) return;
+  const toDelete = rows
+    .filter(
+      (r: { badge_id: string | null }) =>
+        r.badge_id && !keepBadgeIds.includes(r.badge_id),
+    )
+    .map((r: { id: string }) => r.id);
+  if (!toDelete.length) return;
   const { error } = await supabaseAdmin
-    .from('badge_order_items')
+    .from("badge_order_items")
     .delete()
-    .in('id', toDelete)
+    .in("id", toDelete);
   if (error) {
-    console.error('deleteDraftBadgeOrderItemsExcept error:', error)
-    throw error
+    console.error("deleteDraftBadgeOrderItemsExcept error:", error);
+    throw error;
   }
 }
 
@@ -910,87 +1043,98 @@ export async function deleteDraftBadgeOrderItemsExcept(designId: string, keepBad
 export async function updateBadgeOrderItemsByDesignIds(
   designIds: string[],
   shopifyOrderId: string,
-  shopifyOrderNumber?: string | null
+  shopifyOrderNumber?: string | null,
 ) {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
   if (!designIds.length) {
-    return { data: [], error: null }
+    return { data: [], error: null };
   }
   const payload: Record<string, unknown> = {
     shopify_order_id: shopifyOrderId,
-    updated_at: getPacificTimestamp()
-  }
-  if (shopifyOrderNumber != null && shopifyOrderNumber !== '') {
-    payload.shopify_order_number = shopifyOrderNumber
+    updated_at: getPacificTimestamp(),
+  };
+  if (shopifyOrderNumber != null && shopifyOrderNumber !== "") {
+    payload.shopify_order_number = shopifyOrderNumber;
   }
   const { data, error } = await supabaseAdmin
-    .from('badge_order_items')
+    .from("badge_order_items")
     .update(payload)
-    .in('design_id', designIds)
-    .select()
+    .in("design_id", designIds)
+    .select();
   if (error) {
-    console.error('Update badge order items by design_ids error:', error)
-    throw error
+    console.error("Update badge order items by design_ids error:", error);
+    throw error;
   }
-  return { data, error: null }
+  return { data, error: null };
 }
 
 /** Get all badge_order_items for a design_id (for order-slip PDF generation). */
-export async function getBadgeOrderItemsByDesignId(designId: string): Promise<BadgeOrderItem[]> {
+export async function getBadgeOrderItemsByDesignId(
+  designId: string,
+): Promise<BadgeOrderItem[]> {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
   const { data, error } = await supabaseAdmin
-    .from('badge_order_items')
-    .select('*')
-    .eq('design_id', designId)
-    .order('badge_id', { ascending: true })
+    .from("badge_order_items")
+    .select("*")
+    .eq("design_id", designId)
+    .order("badge_id", { ascending: true });
   if (error) {
-    console.error('getBadgeOrderItemsByDesignId error:', error)
-    throw error
+    console.error("getBadgeOrderItemsByDesignId error:", error);
+    throw error;
   }
-  return (data ?? []) as BadgeOrderItem[]
+  return (data ?? []) as BadgeOrderItem[];
 }
 
 /** Update draft badge_order_items with order info by design_id + badge_id (single-table flow). */
 export async function updateDraftBadgeOrderItemsWithOrderInfo(params: {
-  lineItems: Array<{ designId: string; badgeIndex: number }>
-  shopifyOrderId: string
-  shopifyOrderNumber?: string | null
-  shopifyCustomerId?: string | null
+  lineItems: Array<{ designId: string; badgeIndex: number }>;
+  shopifyOrderId: string;
+  shopifyOrderNumber?: string | null;
+  shopifyCustomerId?: string | null;
 }) {
   if (!supabaseAdmin) {
-    throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.')
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
   }
-  const { lineItems, shopifyOrderId, shopifyOrderNumber, shopifyCustomerId } = params
-  if (!lineItems.length) return { data: [], error: null }
+  const { lineItems, shopifyOrderId, shopifyOrderNumber, shopifyCustomerId } =
+    params;
+  if (!lineItems.length) return { data: [], error: null };
 
   const payload: Record<string, unknown> = {
     shopify_order_id: shopifyOrderId,
-    status: 'order_placed',
-    updated_at: getPacificTimestamp()
-  }
-  if (shopifyOrderNumber != null && shopifyOrderNumber !== '') payload.shopify_order_number = shopifyOrderNumber
-  if (shopifyCustomerId != null && shopifyCustomerId !== '') payload.shopify_customer_id = shopifyCustomerId
+    status: "order_placed",
+    updated_at: getPacificTimestamp(),
+  };
+  if (shopifyOrderNumber != null && shopifyOrderNumber !== "")
+    payload.shopify_order_number = shopifyOrderNumber;
+  if (shopifyCustomerId != null && shopifyCustomerId !== "")
+    payload.shopify_customer_id = shopifyCustomerId;
 
-  const results: unknown[] = []
+  const results: unknown[] = [];
   for (const { designId, badgeIndex } of lineItems) {
-    const badgeId = `badge-${badgeIndex}`
+    const badgeId = `badge-${badgeIndex}`;
     const { data, error } = await supabaseAdmin
-      .from('badge_order_items')
+      .from("badge_order_items")
       .update(payload)
-      .eq('design_id', designId)
-      .eq('badge_id', badgeId)
-      .in('status', ['draft', 'in_cart'])
+      .eq("design_id", designId)
+      .eq("badge_id", badgeId)
+      .in("status", ["draft", "in_cart"])
       .select()
-      .maybeSingle()
+      .maybeSingle();
     if (error) {
-      console.error('updateDraftBadgeOrderItemsWithOrderInfo error:', error)
-      throw error
+      console.error("updateDraftBadgeOrderItemsWithOrderInfo error:", error);
+      throw error;
     }
-    if (data) results.push(data)
+    if (data) results.push(data);
   }
-  return { data: results, error: null }
+  return { data: results, error: null };
 }

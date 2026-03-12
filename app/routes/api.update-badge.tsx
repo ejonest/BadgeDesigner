@@ -1,5 +1,6 @@
 import { json, type ActionFunctionArgs } from '@remix-run/node';
 import { uploadDataUrlToBadgeImagesBucket } from '~/utils/supabase';
+import { parseOr400, updateBadgeBodySchema } from '~/utils/validation';
 
 const DATA_URL_PREFIX = 'data:image/';
 
@@ -13,12 +14,11 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   try {
-    const { id, updateData } = await request.json();
-    console.log('Update badge request:', { id, updateData: updateData ? { fullImageUrl: updateData.fullImageUrl?.slice(0, 50), thumbnailUrl: updateData.thumbnailUrl?.slice(0, 50) } : updateData });
-
-    if (!id) {
-      return json({ error: 'Badge design ID is required' }, { status: 400 });
-    }
+    const body = await request.json().catch(() => null);
+    const parsed = parseOr400(updateBadgeBodySchema, body, 'Invalid request body');
+    if (!parsed.ok) return parsed.response;
+    const { id, updateData } = parsed.data;
+    console.log('Update badge request:', { id, updateData: updateData ? { fullImageUrl: (updateData as Record<string, unknown>)?.fullImageUrl ? String((updateData as Record<string, unknown>).fullImageUrl).slice(0, 50) : undefined, thumbnailUrl: (updateData as Record<string, unknown>)?.thumbnailUrl ? String((updateData as Record<string, unknown>).thumbnailUrl).slice(0, 50) : undefined } : updateData });
 
     const GADGET_API_URL = process.env.GADGET_API_URL || 'https://all-quality-badge-designer--development.gadget.app';
     const GADGET_API_KEY = process.env.GADGET_API_KEY;

@@ -2,6 +2,7 @@ import type { ActionFunctionArgs } from '@remix-run/node'
 import { json } from '@remix-run/node'
 import { saveBadgeDesign, deleteSavedDesignsForUser } from '~/utils/supabase'
 import type { BadgeDesign } from '~/utils/supabase'
+import { parseOr400, saveDesignBodySchema } from '~/utils/validation'
 
 /**
  * Save Design (Supabase only): one saved set per user per shop.
@@ -14,11 +15,13 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   try {
-    const body = await request.json()
-    const { designData, shopData } = body
+    const body = await request.json().catch(() => null)
+    const parsed = parseOr400(saveDesignBodySchema, body, "Invalid request body")
+    if (!parsed.ok) return parsed.response
+    const { designData = {}, shopData = {} } = parsed.data as { designData?: Record<string, unknown>; shopData?: Record<string, unknown>; userId?: string }
 
-    const userId = designData?.userId ?? shopData?.customerId ?? body.userId
-    const shopId = designData?.shopId ?? shopData?.shopId
+    const userId = (designData?.userId ?? shopData?.customerId ?? (parsed.data as { userId?: string }).userId) as string | undefined
+    const shopId = (designData?.shopId ?? shopData?.shopId) as string | undefined
     const productId = designData?.productId
 
     if (!userId || typeof userId !== 'string' || !userId.trim()) {
