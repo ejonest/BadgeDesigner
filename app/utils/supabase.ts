@@ -382,6 +382,27 @@ export function getStoragePublicUrl(bucket: string, path: string): string {
   return publicUrl;
 }
 
+/**
+ * Download file bytes from a Supabase storage URL using the admin client.
+ * Use this server-side when fetch(publicUrl) fails (e.g. private bucket).
+ * URL format: .../storage/v1/object/public/<bucket>/<path>
+ */
+export async function downloadBytesFromStorageUrl(
+  url: string,
+): Promise<Uint8Array | null> {
+  if (!supabaseAdmin) return null;
+  const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+  if (!match) return null;
+  const [, bucket, path] = match;
+  const decodedPath = decodeURIComponent(path);
+  const { data, error } = await supabaseAdmin.storage
+    .from(bucket)
+    .download(decodedPath);
+  if (error || !data) return null;
+  const buf = await data.arrayBuffer();
+  return new Uint8Array(buf);
+}
+
 // Database helper functions
 export async function saveBadgeDesign(design: BadgeDesign) {
   if (!supabaseAdmin) {

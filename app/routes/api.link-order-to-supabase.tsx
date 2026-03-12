@@ -1,9 +1,14 @@
-import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
+import {
+  json,
+  type ActionFunctionArgs,
+  type LoaderFunctionArgs,
+} from "@remix-run/node";
 import {
   updateDraftBadgeOrderItemsWithOrderInfo,
   getBadgeOrderItemsByDesignId,
   uploadToBadgePdfsBucket,
   updatePdfUrlByDesignId,
+  downloadBytesFromStorageUrl,
 } from "~/utils/supabase";
 import { generateOrderSlipPdf } from "~/utils/orderSlipPdf";
 import { parseOr400, linkOrderBodySchema } from "~/utils/validation";
@@ -23,8 +28,11 @@ function getSecretFromRequest(request: Request): string | null {
 /** GET/HEAD: return 405 so Remix doesn't throw when something pings this URL. */
 export async function loader({ request }: LoaderFunctionArgs) {
   return json(
-    { error: "Method not allowed", message: "Use POST to link an order to Supabase" },
-    { status: 405 }
+    {
+      error: "Method not allowed",
+      message: "Use POST to link an order to Supabase",
+    },
+    { status: 405 },
   );
 }
 
@@ -69,9 +77,14 @@ export async function action({ request }: ActionFunctionArgs) {
 
   try {
     const body = await request.json().catch(() => null);
-    const parsed = parseOr400(linkOrderBodySchema, body, "Invalid request body");
+    const parsed = parseOr400(
+      linkOrderBodySchema,
+      body,
+      "Invalid request body",
+    );
     if (!parsed.ok) return parsed.response;
-    const { shopifyOrderId, shopifyOrderNumber, shopifyCustomerId, lineItems } = parsed.data;
+    const { shopifyOrderId, shopifyOrderNumber, shopifyCustomerId, lineItems } =
+      parsed.data;
 
     const orderIdTrimmed = shopifyOrderId.trim();
     const orderNumberTrimmed =
@@ -89,7 +102,11 @@ export async function action({ request }: ActionFunctionArgs) {
       firstItem: lineItems[0],
     });
 
-    const updateLineItems: Array<{ designId: string; badgeIndex: number; quantity: number }> = [];
+    const updateLineItems: Array<{
+      designId: string;
+      badgeIndex: number;
+      quantity: number;
+    }> = [];
     for (const item of lineItems) {
       const designId = (item.designId ?? item.gadgetDesignId)?.trim();
       if (!designId) {
@@ -104,11 +121,13 @@ export async function action({ request }: ActionFunctionArgs) {
         typeof rawIndex === "number"
           ? rawIndex
           : typeof rawIndex === "string"
-            ? parseInt(String(rawIndex).trim(), 10)
-            : 0;
+          ? parseInt(String(rawIndex).trim(), 10)
+          : 0;
       if (Number.isNaN(badgeIndex) || badgeIndex < 0) {
         console.warn(
-          "link-order: invalid badgeIndex for designId " + designId + ", using 0",
+          "link-order: invalid badgeIndex for designId " +
+            designId +
+            ", using 0",
         );
         badgeIndex = 0;
       }
@@ -140,37 +159,72 @@ export async function action({ request }: ActionFunctionArgs) {
     console.log("[BadgeDesigner] link-order-to-supabase result", {
       updatedCount,
       shopifyOrderId: orderIdTrimmed,
-      updateLineItems: updateLineItems.map((u) => `${u.designId}/badge-${u.badgeIndex}(qty=${u.quantity})`),
+      updateLineItems: updateLineItems.map(
+        (u) => `${u.designId}/badge-${u.badgeIndex}(qty=${u.quantity})`,
+      ),
     });
 
     // Regenerate order-slip PDF with final quantities (one PDF per design_id)
-    const designIds = [...new Set(lineItems.map((i) => (i.designId ?? i.gadgetDesignId)?.trim()).filter(Boolean))] as string[];
+    const designIds = [
+      ...new Set(
+        lineItems
+          .map((i) => (i.designId ?? i.gadgetDesignId)?.trim())
+          .filter(Boolean),
+      ),
+    ] as string[];
     for (const designId of designIds) {
       try {
         const rows = await getBadgeOrderItemsByDesignId(designId);
         const designLineItems = lineItems.filter(
-          (i) => (i.designId ?? i.gadgetDesignId)?.trim() === designId
+          (i) => (i.designId ?? i.gadgetDesignId)?.trim() === designId,
         );
         const orderSlipItems = designLineItems
           .map((i) => {
-            const badgeIndex = typeof i.badgeIndex === "number" ? i.badgeIndex : parseInt(String(i.badgeIndex ?? 0).trim(), 10);
-            const quantity = typeof i.quantity === "number" && i.quantity >= 1 ? i.quantity : 1;
+            const badgeIndex =
+              typeof i.badgeIndex === "number"
+                ? i.badgeIndex
+                : parseInt(String(i.badgeIndex ?? 0).trim(), 10);
+            const quantity =
+              typeof i.quantity === "number" && i.quantity >= 1
+                ? i.quantity
+                : 1;
             const row = rows.find((r) => r.badge_id === `badge-${badgeIndex}`);
             return row ? { item: row, quantity } : null;
           })
           .filter((x): x is NonNullable<typeof x> => x != null);
         if (orderSlipItems.length === 0) continue;
-        const pdfBytes = await generateOrderSlipPdf(orderSlipItems);
+        const getImageBytes = async (url: string): Promise<Uint8Array | null> => {
+          if (url.includes("/storage/v1/object/public/")) {
+            const bytes = await downloadBytesFromStorageUrl(url);
+            if (bytes) return bytes;
+          }
+          try {
+            const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+            if (!res.ok) return null;
+            const buf = await res.arrayBuffer();
+            return new Uint8Array(buf);
+          } catch {
+            return null;
+          }
+        };
+        const pdfBytes = await generateOrderSlipPdf(orderSlipItems, getImageBytes);
         const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
         const pdfUrl = await uploadToBadgePdfsBucket(
           pdfBlob,
           `${designId}/badge-design.pdf`,
-          "application/pdf"
+          "application/pdf",
         );
         await updatePdfUrlByDesignId(designId, pdfUrl);
-        console.log("[BadgeDesigner] link-order: order-slip PDF updated for design", designId);
+        console.log(
+          "[BadgeDesigner] link-order: order-slip PDF updated for design",
+          designId,
+        );
       } catch (slipErr) {
-        console.warn("[BadgeDesigner] link-order: order-slip PDF generation failed for design", designId, slipErr);
+        console.warn(
+          "[BadgeDesigner] link-order: order-slip PDF generation failed for design",
+          designId,
+          slipErr,
+        );
       }
     }
 
