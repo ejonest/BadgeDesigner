@@ -545,6 +545,8 @@ export interface BadgeOrderItem {
   full_image_url?: string;
   pdf_url?: string;
   shopify_customer_id?: string;
+  /** Number of units; 1 at add-to-cart, updated from order line at checkout. Used for badges, signs, stamps, etc. */
+  quantity?: number;
   status?: "draft" | "in_cart" | "order_placed" | "fulfilled";
   created_at?: string;
   updated_at?: string;
@@ -633,6 +635,8 @@ export function convertBadgeToOrderItem(
     full_image_url?: string;
     pdf_url?: string;
     shopify_customer_id?: string;
+    /** Default 1; set from cart/order when known. */
+    quantity?: number;
   },
 ): BadgeOrderItem {
   const lines = badge.lines || [];
@@ -685,6 +689,7 @@ export function convertBadgeToOrderItem(
     full_image_url: options?.full_image_url,
     pdf_url: options?.pdf_url,
     shopify_customer_id: options?.shopify_customer_id,
+    quantity: options?.quantity ?? 1,
   };
 }
 
@@ -742,6 +747,7 @@ export async function saveBadgeOrderItem(item: BadgeOrderItem) {
       pdf_url: item.pdf_url,
       shopify_customer_id: item.shopify_customer_id,
       status: item.status ?? "draft",
+      quantity: item.quantity ?? 1,
       created_at: item.created_at || getPacificTimestamp(),
       updated_at: getPacificTimestamp(),
     })
@@ -769,6 +775,7 @@ export async function saveBadgeOrderItems(items: BadgeOrderItem[]) {
     badge_id: item.badge_id,
     shopify_order_id: item.shopify_order_id,
     shopify_order_number: item.shopify_order_number,
+    quantity: item.quantity ?? 1,
     background_color: item.background_color,
     backing_type: item.backing_type,
     line_1_text: item.line_1_text,
@@ -807,6 +814,7 @@ export async function saveBadgeOrderItems(items: BadgeOrderItem[]) {
     full_image_url: item.full_image_url,
     pdf_url: item.pdf_url,
     shopify_customer_id: item.shopify_customer_id,
+    quantity: item.quantity ?? 1,
     status: item.status ?? "draft",
     created_at: item.created_at || getPacificTimestamp(),
     updated_at: getPacificTimestamp(),
@@ -832,6 +840,7 @@ function badgeOrderItemToRow(item: BadgeOrderItem) {
     badge_id: item.badge_id,
     shopify_order_id: item.shopify_order_id,
     shopify_order_number: item.shopify_order_number,
+    quantity: item.quantity ?? 1,
     background_color: item.background_color,
     backing_type: item.backing_type,
     line_1_text: item.line_1_text,
@@ -1093,9 +1102,9 @@ export async function getBadgeOrderItemsByDesignId(
   return (data ?? []) as BadgeOrderItem[];
 }
 
-/** Update draft badge_order_items with order info by design_id + badge_id (single-table flow). */
+/** Update draft badge_order_items with order info by design_id + badge_id (single-table flow). Sets quantity from order line (for checkout quantity changes). */
 export async function updateDraftBadgeOrderItemsWithOrderInfo(params: {
-  lineItems: Array<{ designId: string; badgeIndex: number }>;
+  lineItems: Array<{ designId: string; badgeIndex: number; quantity?: number }>;
   shopifyOrderId: string;
   shopifyOrderNumber?: string | null;
   shopifyCustomerId?: string | null;
@@ -1109,19 +1118,20 @@ export async function updateDraftBadgeOrderItemsWithOrderInfo(params: {
     params;
   if (!lineItems.length) return { data: [], error: null };
 
-  const payload: Record<string, unknown> = {
+  const basePayload: Record<string, unknown> = {
     shopify_order_id: shopifyOrderId,
     status: "order_placed",
     updated_at: getPacificTimestamp(),
   };
   if (shopifyOrderNumber != null && shopifyOrderNumber !== "")
-    payload.shopify_order_number = shopifyOrderNumber;
+    basePayload.shopify_order_number = shopifyOrderNumber;
   if (shopifyCustomerId != null && shopifyCustomerId !== "")
-    payload.shopify_customer_id = shopifyCustomerId;
+    basePayload.shopify_customer_id = shopifyCustomerId;
 
   const results: unknown[] = [];
-  for (const { designId, badgeIndex } of lineItems) {
+  for (const { designId, badgeIndex, quantity } of lineItems) {
     const badgeId = `badge-${badgeIndex}`;
+    const payload = { ...basePayload, quantity: quantity != null && quantity >= 1 ? quantity : 1 };
     const { data, error } = await supabaseAdmin
       .from("badge_order_items")
       .update(payload)
