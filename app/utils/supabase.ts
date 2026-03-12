@@ -405,6 +405,24 @@ export async function downloadBytesFromStorageUrl(
   return new Uint8Array(buf);
 }
 
+/**
+ * Download file bytes from the badge-images bucket by path (no URL parsing).
+ * Use for link-order PDF so we always get PNG thumbnails reliably.
+ */
+export async function downloadFromBadgeImagesBucket(
+  designId: string,
+  fileName: string,
+): Promise<Uint8Array | null> {
+  if (!supabaseAdmin) return null;
+  const path = `${designId}/${fileName}`;
+  const { data, error } = await supabaseAdmin.storage
+    .from("badge-images")
+    .download(path);
+  if (error || !data) return null;
+  const buf = await data.arrayBuffer();
+  return new Uint8Array(buf);
+}
+
 // Database helper functions
 export async function saveBadgeDesign(design: BadgeDesign) {
   if (!supabaseAdmin) {

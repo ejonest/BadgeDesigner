@@ -28,6 +28,8 @@ const DEFAULT_IMAGE_HEIGHT_PT = (96 + 48) * 0.75;
 export interface OrderSlipItem {
   item: BadgeOrderItem;
   quantity: number;
+  /** When set, use these PNG bytes for the badge image (avoids URL parsing; filled by link-order route). */
+  imageBytes?: Uint8Array;
 }
 
 function extractHexFromColorField(value: string | undefined): string {
@@ -115,35 +117,34 @@ export async function generateOrderSlipPdf(
 
     const sectionTopY = y;
 
-    // Image: prefer full_image_url (same as proof), fallback thumbnail_url
-    const imageUrl = item.full_image_url || item.thumbnail_url;
+    // Image: use pre-filled imageBytes (PNG) when present; otherwise load by URL (thumbnail_url is PNG; full_image_url is SVG and cannot be embedded).
+    const imageUrl = item.thumbnail_url || item.full_image_url;
     let imageWidth = imageWidthPt;
     let imageHeight = imageHeightPt;
-    if (imageUrl) {
-      const imgBytes = await loadImage(imageUrl);
-      if (imgBytes && imgBytes.length > 0) {
-        let pdfImage: Awaited<ReturnType<PDFDocument["embedPng"]>> | null = null;
+    const imgBytes =
+      items[idx].imageBytes ?? (imageUrl ? await loadImage(imageUrl) : null);
+    if (imgBytes && imgBytes.length > 0) {
+      let pdfImage: Awaited<ReturnType<PDFDocument["embedPng"]>> | null = null;
+      try {
+        pdfImage = await pdfDoc.embedPng(imgBytes);
+      } catch {
         try {
-          pdfImage = await pdfDoc.embedPng(imgBytes);
+          pdfImage = await pdfDoc.embedJpg(imgBytes);
         } catch {
-          try {
-            pdfImage = await pdfDoc.embedJpg(imgBytes);
-          } catch {
-            // skip image if neither PNG nor JPEG
-          }
+          // skip image if neither PNG nor JPEG
         }
-        if (pdfImage) {
-          const aspect = pdfImage.height / pdfImage.width;
-          imageHeight = Math.min(imageHeightPt, imageWidthPt * aspect);
-          imageWidth = Math.min(imageWidthPt, imageHeight / aspect);
-          const imageTopY = sectionTopY - HEADER_HEIGHT - HEADER_GAP;
-          page.drawImage(pdfImage, {
-            x: MARGIN,
-            y: imageTopY - imageHeight,
-            width: imageWidth,
-            height: imageHeight,
-          });
-        }
+      }
+      if (pdfImage) {
+        const aspect = pdfImage.height / pdfImage.width;
+        imageHeight = Math.min(imageHeightPt, imageWidthPt * aspect);
+        imageWidth = Math.min(imageWidthPt, imageHeight / aspect);
+        const imageTopY = sectionTopY - HEADER_HEIGHT - HEADER_GAP;
+        page.drawImage(pdfImage, {
+          x: MARGIN,
+          y: imageTopY - imageHeight,
+          width: imageWidth,
+          height: imageHeight,
+        });
       }
     }
 

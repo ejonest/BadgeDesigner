@@ -9,6 +9,7 @@ import {
   uploadToBadgePdfsBucket,
   updatePdfUrlByDesignId,
   downloadBytesFromStorageUrl,
+  downloadFromBadgeImagesBucket,
 } from "~/utils/supabase";
 import { generateOrderSlipPdf } from "~/utils/orderSlipPdf";
 import { parseOr400, linkOrderBodySchema } from "~/utils/validation";
@@ -193,6 +194,17 @@ export async function action({ request }: ActionFunctionArgs) {
           })
           .filter((x): x is NonNullable<typeof x> => x != null);
         if (orderSlipItems.length === 0) continue;
+        // Pre-fill PNG thumbnail bytes by storage path so the PDF generator doesn't depend on URL parsing.
+        for (const slipItem of orderSlipItems) {
+          const badgeId = slipItem.item.badge_id ?? "";
+          const badgeIndex =
+            parseInt(badgeId.replace(/^badge-/, ""), 10) || 0;
+          slipItem.imageBytes =
+            (await downloadFromBadgeImagesBucket(
+              designId,
+              `badge-${badgeIndex}-thumbnail.png`,
+            )) ?? undefined;
+        }
         const getImageBytes = async (url: string): Promise<Uint8Array | null> => {
           if (url.includes("/storage/v1/object/public/")) {
             const bytes = await downloadBytesFromStorageUrl(url);
