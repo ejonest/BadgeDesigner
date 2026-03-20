@@ -35,6 +35,8 @@ export interface Badge {
   templateId?: string;
   lines: BadgeLine[];
   backgroundColor: string;
+  /** Sign designer only: color for trim and decorative overlay (default #FFFFFF when template has overlay). */
+  borderColor?: string;
   backing: 'pin' | 'magnetic' | 'adhesive';
   backgroundImage?: BadgeImage;
   logo?: BadgeImage;
@@ -69,6 +71,7 @@ export interface UndoAction {
     | "apply-line-formatting"
     | "apply-background-color-to-all"
     | "apply-backing-to-all"
+    | "apply-border-to-all"
     | "reset-badge"
     | "reset-all-badges"
     | "reset-line-formatting";

@@ -108,7 +108,7 @@ export function createApi(gadgetApiUrl?: string, gadgetApiKey?: string) {
     },
 
     /** Get latest saved design for user/shop from Supabase (for "Load previous design?"). */
-    async getSavedDesign(shopId: string, userId: string): Promise<{ saved: boolean; design: { design_id: string; design_data: any; updated_at?: string } | null }> {
+    async getSavedDesign(shopId: string, userId: string): Promise<{ saved: boolean; design: { design_id: string; design_data: any; updated_at?: string; backing_type?: string } | null }> {
       const params = new URLSearchParams({ shop: shopId, userId });
       const response = await fetch(`/api/saved-design?${params}`);
       if (!response.ok) {

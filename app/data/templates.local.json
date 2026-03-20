@@ -6,7 +6,7 @@
       "name": "Round 1.5 x 3\"",
       "widthInches": 3.0,
       "heightInches": 1.5,
-      "svgFile": "/templates/round-1.5x3.svg",
+      "svgFile": "/templates/badge/round-1.5x3.svg",
       "safeInsetPx": 6
     },
     {
@@ -14,7 +14,7 @@
       "name": "Round 1 x 3\"",
       "widthInches": 3.0,
       "heightInches": 1.0,
-      "svgFile": "/templates/round-1x3.svg",
+      "svgFile": "/templates/badge/round-1x3.svg",
       "safeInsetPx": 6
     },
     {
@@ -22,7 +22,7 @@
       "name": "Square 1.5 x 3\"",
       "widthInches": 3.0,
       "heightInches": 1.5,
-      "svgFile": "/templates/square-1_5x3.svg",
+      "svgFile": "/templates/badge/square-1_5x3.svg",
       "safeInsetPx": 6
     },
     {
@@ -30,7 +30,7 @@
       "name": "Square 1 x 3\"",
       "widthInches": 3.0,
       "heightInches": 1.0,
-      "svgFile": "/templates/square-1x3.svg",
+      "svgFile": "/templates/badge/square-1x3.svg",
       "safeInsetPx": 6
     },
     {
@@ -38,7 +38,7 @@
       "name": "House 1.5 x 3\"",
       "widthInches": 3.0,
       "heightInches": 1.5,
-      "svgFile": "/templates/house-1.5x3.svg",
+      "svgFile": "/templates/badge/house-1.5x3.svg",
       "safeInsetPx": 24
     },
     {
@@ -46,7 +46,7 @@
       "name": "Designer 1 x 3\"",
       "widthInches": 3.0,
       "heightInches": 1.0,
-      "svgFile": "/templates/designer-1x3.svg",
+      "svgFile": "/templates/badge/designer-1x3.svg",
       "safeInsetPx": 0
     },
     {
@@ -54,7 +54,7 @@
       "name": "Fancy 1.5 x 3\"",
       "widthInches": 3.0,
       "heightInches": 1.5,
-      "svgFile": "/templates/fancy-1_5x3.svg",
+      "svgFile": "/templates/badge/fancy-1_5x3.svg",
       "safeInsetPx": 0
     },
     {
@@ -62,7 +62,7 @@
       "name": "Oval 1.5 x 3\"",
       "widthInches": 3.0,
       "heightInches": 1.5,
-      "svgFile": "/templates/oval-1_5x3.svg",
+      "svgFile": "/templates/badge/oval-1_5x3.svg",
       "safeInsetPx": 15
     }
   ]
