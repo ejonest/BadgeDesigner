@@ -1,5 +1,6 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { Badge } from "../types/badge";
+import type { DesignerVariant } from "~/constants/designerVariants";
 import { getColorInfo } from "../constants/colors";
 import { generateBadgeTiff, generateFullBadgeImage } from "./badgeThumbnail";
 import { loadTemplateById } from "./templates";
@@ -90,7 +91,9 @@ const pxToPtRounded = (px: number) => Math.round(pxToPt(px));
 
 export const generatePDFNew = async (
   badgeData: Badge,
-  multipleBadges?: Badge[]
+  multipleBadges?: Badge[],
+  designLabel: string = "Badge",
+  variant: DesignerVariant = "badge"
 ): Promise<void> => {
   console.log("NEW SIMPLE PDF GENERATOR");
   try {
@@ -109,12 +112,15 @@ export const generatePDFNew = async (
 
     for (let idx = 0; idx < allBadges.length; idx++) {
       const badge = allBadges[idx];
-      console.log(`Processing Badge ${idx + 1}`);
+      console.log(`Processing ${designLabel} ${idx + 1}`);
 
       // Load the correct template for this badge (needed for section height and image dimensions)
-      const template = await loadTemplateById(badge.templateId || "rect-1x3");
+      const template = await loadTemplateById(
+        badge.templateId || (variant === "sign" ? "circle-4x4" : "rect-1x3"),
+        variant
+      );
       console.log(
-        `Loaded template for badge ${idx + 1}:`,
+        `Loaded template for ${designLabel.toLowerCase()} ${idx + 1}:`,
         template.id,
         `(${template.widthPx}x${template.heightPx})`
       );
@@ -155,8 +161,8 @@ export const generatePDFNew = async (
       const sectionTopY = y;
 
       // Generate high-resolution image
-      console.log("Generating badge image...");
-      const imageDataUrl = await generateFullBadgeImage(badge);
+      console.log(`Generating ${designLabel.toLowerCase()} image...`);
+      const imageDataUrl = await generateFullBadgeImage(badge, variant);
       console.log("Image generated successfully");
 
       // Convert to Uint8Array and embed
@@ -186,7 +192,7 @@ export const generatePDFNew = async (
       const tableX = margin + imageWidth + 20;
       const tableWidth = 595.28 - tableX - margin;
 
-      page.drawText(`Badge ${idx + 1}`, {
+      page.drawText(`${designLabel} ${idx + 1}`, {
         x: margin,
         y: sectionTopY - HEADER_HEIGHT,
         size: 12,
@@ -345,7 +351,7 @@ export const generatePDFNew = async (
         SECTION_BOTTOM_PADDING;
       y -= sectionHeight;
 
-      console.log(`Badge ${idx + 1} completed, new Y:`, y);
+      console.log(`${designLabel} ${idx + 1} completed, new Y:`, y);
     }
 
     // Save & download
@@ -362,7 +368,7 @@ export const generatePDFNew = async (
 
     const link = document.createElement("a");
     link.href = url;
-    link.download = "badge-design.pdf";
+    link.download = `${designLabel.toLowerCase()}-design.pdf`;
     link.style.display = "none";
     document.body.appendChild(link);
     link.click();
@@ -387,12 +393,13 @@ export const handleDownloadPDF = (): void => {
  */
 export const generatePDFWithLayoutEngine = async (
   badgeData: Badge,
-  multipleBadges?: Badge[]
+  multipleBadges?: Badge[],
+  designLabel: string = "Badge",
+  variant: DesignerVariant = "badge"
 ): Promise<void> => {
   console.log("LAYOUT ENGINE PDF GENERATION - v1.0");
 
-  // For now, just call the original PDF generator
-  await generatePDFNew(badgeData, multipleBadges);
+  await generatePDFNew(badgeData, multipleBadges, designLabel, variant);
 };
 
 /**
@@ -403,7 +410,9 @@ export const generatePDFWithLayoutEngine = async (
 export const generatePDFAsBlob = async (
   badgeData: Badge,
   multipleBadges?: Badge[],
-  quantities?: number[]
+  quantities?: number[],
+  designLabel: string = "Badge",
+  variant: DesignerVariant = "badge"
 ): Promise<Blob> => {
   console.log("GENERATING PDF AS BLOB");
   try {
@@ -427,12 +436,15 @@ export const generatePDFAsBlob = async (
     for (let idx = 0; idx < allBadges.length; idx++) {
       const badge = allBadges[idx];
       const quantity = getQuantity(idx);
-      console.log(`Processing Badge ${idx + 1}`);
+      console.log(`Processing ${designLabel} ${idx + 1}`);
 
-      // Load the correct template for this badge (needed for section height and image dimensions)
-      const template = await loadTemplateById(badge.templateId || "rect-1x3");
+      // Load the correct template (variant so sign templates load from sign config)
+      const template = await loadTemplateById(
+        badge.templateId || (variant === "sign" ? "circle-4x4" : "rect-1x3"),
+        variant
+      );
       console.log(
-        `Loaded template for badge ${idx + 1}:`,
+        `Loaded template for ${designLabel.toLowerCase()} ${idx + 1}:`,
         template.id,
         `(${template.widthPx}x${template.heightPx})`
       );
@@ -473,8 +485,8 @@ export const generatePDFAsBlob = async (
       const sectionTopY = y;
 
       // Generate high-resolution image
-      console.log("Generating badge image...");
-      const imageDataUrl = await generateFullBadgeImage(badge);
+      console.log(`Generating ${designLabel.toLowerCase()} image...`);
+      const imageDataUrl = await generateFullBadgeImage(badge, variant);
       console.log("Image generated successfully");
 
       // Convert to Uint8Array and embed
@@ -494,7 +506,7 @@ export const generatePDFAsBlob = async (
       const imageWidth = pxToPt(svgViewBoxW);
       const imageHeight = pxToPt(svgViewBoxH);
 
-      console.log(`Calculated dimensions for badge ${idx + 1}:`, {
+      console.log(`Calculated dimensions for ${designLabel.toLowerCase()} ${idx + 1}:`, {
         width: imageWidth,
         height: imageHeight,
         svgViewBoxPx: `${svgViewBoxW}x${svgViewBoxH}`,
@@ -504,7 +516,7 @@ export const generatePDFAsBlob = async (
       const tableX = margin + imageWidth + 20;
       const tableWidth = 595.28 - tableX - margin;
 
-      page.drawText(`Badge ${idx + 1}`, {
+      page.drawText(`${designLabel} ${idx + 1}`, {
         x: margin,
         y: sectionTopY - HEADER_HEIGHT,
         size: 12,
@@ -672,7 +684,7 @@ export const generatePDFAsBlob = async (
         color: rgb(0, 0, 0),
       });
 
-      // Move to next badge
+      // Move to next item
       const sectionHeight =
         HEADER_HEIGHT +
         HEADER_GAP +
@@ -682,7 +694,7 @@ export const generatePDFAsBlob = async (
         SECTION_BOTTOM_PADDING;
       y -= sectionHeight;
 
-      console.log(`Badge ${idx + 1} completed, new Y:`, y);
+      console.log(`${designLabel} ${idx + 1} completed, new Y:`, y);
     }
 
     // Save & return as blob

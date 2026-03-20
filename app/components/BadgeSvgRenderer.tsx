@@ -2,17 +2,20 @@ import * as React from "react";
 import { loadTemplateById } from "~/utils/templates";
 import { renderBadgeToSvgStringWithFonts } from "~/utils/renderSvg";
 import type { LoadedTemplate } from "~/utils/templates";
+import type { DesignerVariant } from "~/constants/designerVariants";
 
 type Props = {
   badge: any;
   templateId: string;
+  /** Pass "sign" when rendering sign designer so the correct template set is loaded. */
+  variant?: DesignerVariant;
   actualSize?: boolean;
   className?: string;
   /** When set, overrides the default 280px wrapper height. Use "100%" to fill the parent. */
   height?: number | "100%";
 };
 
-export default function BadgeSvgRenderer({ badge, templateId, actualSize = false, className, height }: Props) {
+export default function BadgeSvgRenderer({ badge, templateId, variant = "badge", actualSize = false, className, height }: Props) {
   const [svg, setSvg] = React.useState<string>("");
   const [renderKey, setRenderKey] = React.useState(0);
 
@@ -22,7 +25,7 @@ export default function BadgeSvgRenderer({ badge, templateId, actualSize = false
     setRenderKey(prev => prev + 1);
     (async () => {
       try {
-        const template = await loadTemplateById(templateId);
+        const template = await loadTemplateById(templateId, variant);
         if (!template) {
           console.error('Template not found:', templateId);
           return;
@@ -39,7 +42,7 @@ export default function BadgeSvgRenderer({ badge, templateId, actualSize = false
       }
     })();
     return () => { on = false; };
-  }, [badge, templateId, actualSize]);
+  }, [badge, templateId, variant, actualSize]);
 
   return (
     <div

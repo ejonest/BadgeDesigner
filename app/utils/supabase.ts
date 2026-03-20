@@ -855,7 +855,6 @@ export async function saveBadgeOrderItems(items: BadgeOrderItem[]) {
     full_image_url: item.full_image_url,
     pdf_url: item.pdf_url,
     shopify_customer_id: item.shopify_customer_id,
-    quantity: item.quantity ?? 1,
     status: item.status ?? "draft",
     created_at: item.created_at || getPacificTimestamp(),
     updated_at: getPacificTimestamp(),

@@ -1,4 +1,5 @@
 import { Badge, BadgeLine } from '../types/badge';
+import type { DesignerVariant } from '~/constants/designerVariants';
 import { renderBadgeToSvgString, renderBadgeToSvgStringWithFonts } from './renderSvg';
 import { loadTemplateById, type LoadedTemplate } from './templates';
 // import UTIF encoder
@@ -123,13 +124,13 @@ export async function generateBadgeThumbnail(
  * @param badge The badge design data
  * @returns Promise<string> Base64 encoded image data URL
  */
-export async function generateFullBadgeImage(badge: Badge): Promise<string> {
+export async function generateFullBadgeImage(badge: Badge, variant: DesignerVariant = 'badge'): Promise<string> {
   try {
     // Use the unified renderer for consistency
     console.log('Generating full badge image using unified renderer...');
     
-    // Load the template
-    const template = await loadTemplateById(badge.templateId || 'rect-1x3');
+    // Load the template (variant so sign templates load from sign config)
+    const template = await loadTemplateById(badge.templateId || (variant === 'sign' ? 'circle-4x4' : 'rect-1x3'), variant);
     
     // Generate SVG using font-embedding version for consistent font rendering
     const svgString = await renderBadgeToSvgStringWithFonts(badge, template, { showOutline: false });

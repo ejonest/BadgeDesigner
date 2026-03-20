@@ -20,12 +20,15 @@
       "routes/api.gadget-health": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.supabase-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/test-badge-shapes": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.update-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.upload-image": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.add-to-cart": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/deployment-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.test-save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/sign-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/working-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/export.tiff": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/iframe-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -135,6 +138,15 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.saved-design": {
+        "file": "app/routes/api.saved-design.tsx",
+        "id": "routes/api.saved-design",
+        "path": "api/saved-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.update-badge": {
         "file": "app/routes/api.update-badge.tsx",
         "id": "routes/api.update-badge",
@@ -162,6 +174,15 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.save-design": {
+        "file": "app/routes/api.save-design.tsx",
+        "id": "routes/api.save-design",
+        "path": "api/save-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/deployment-test": {
         "file": "app/routes/deployment-test.tsx",
         "id": "routes/deployment-test",
@@ -184,6 +205,15 @@
         "file": "app/routes/api.test-save.tsx",
         "id": "routes/api.test-save",
         "path": "api/test-save",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/sign-designer": {
+        "file": "app/routes/sign-designer.tsx",
+        "id": "routes/sign-designer",
+        "path": "sign-designer",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -371,6 +401,12 @@
         "path": "test-badge-shapes",
         "parentId": "root"
       },
+      "routes/api.saved-design": {
+        "file": "routes/api.saved-design.tsx",
+        "id": "routes/api.saved-design",
+        "path": "api/saved-design",
+        "parentId": "root"
+      },
       "routes/api.update-badge": {
         "file": "routes/api.update-badge.tsx",
         "id": "routes/api.update-badge",
@@ -389,6 +425,12 @@
         "path": "api/add-to-cart",
         "parentId": "root"
       },
+      "routes/api.save-design": {
+        "file": "routes/api.save-design.tsx",
+        "id": "routes/api.save-design",
+        "path": "api/save-design",
+        "parentId": "root"
+      },
       "routes/deployment-test": {
         "file": "routes/deployment-test.tsx",
         "id": "routes/deployment-test",
@@ -405,6 +447,12 @@
         "file": "routes/api.test-save.tsx",
         "id": "routes/api.test-save",
         "path": "api/test-save",
+        "parentId": "root"
+      },
+      "routes/sign-designer": {
+        "file": "routes/sign-designer.tsx",
+        "id": "routes/sign-designer",
+        "path": "sign-designer",
         "parentId": "root"
       },
       "routes/working-test": {

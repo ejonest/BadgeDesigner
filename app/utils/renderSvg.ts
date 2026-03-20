@@ -4,7 +4,15 @@ import type { Badge, BadgeImage } from "../types/badge";
 import { loadFont } from "./fontLoader";
 import { BADGE_CONSTANTS } from "../constants/badge";
 
-type RenderOpts = { showOutline?: boolean };
+type RenderOpts = {
+  /**
+   * When true (e.g. BadgeSvgRenderer previews), shape outline uses a dark stroke (#111) so light borders/circles stay visible.
+   * Omit/false for exports — outline follows `badge.borderColor` / template defaults.
+   */
+  showOutline?: boolean;
+  /** Optional outline stroke width (e.g. "3" for template picker thumbnails). Default "1.25". */
+  outlineStrokeWidth?: string;
+};
 
 const esc = (s: string) =>
   (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -494,9 +502,10 @@ export function renderBadgeToSvgString(
 ): string {
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
   const PADDING_PX = 24;
-  // Use standardized viewBox for consistent display (shows relative sizes between 1×3 and 1.5×3)
-  const W = template.standardViewBoxWidth + PADDING_PX * 2;
-  const H = template.standardViewBoxHeight + PADDING_PX * 2;
+  // ViewBox must match content coordinates: innerElement/designBox are in template.widthPx × template.heightPx space.
+  // Using widthPx/heightPx lets large signs fit fully; SVG then scales to container (preview) with width/height="100%".
+  const W = template.widthPx + PADDING_PX * 2;
+  const H = template.heightPx + PADDING_PX * 2;
   const designBox = template.designBox;
 
   const clipId = `badge-clip-${
@@ -618,12 +627,33 @@ export function renderBadgeToSvgString(
   // Text is already positioned within bounds, but keep clipPath as safety net
   const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
 
-  // Outline for border (no fill, stroke only)
-  // Note: Outline and Inner paths are now coextensive (same coordinates)
-  // The outline overlays exactly on top of the inner path to create a border effect
+  // Outline for border (no fill, stroke only). On-screen preview (showOutline) uses a dark stroke so circles
+  // and light border colors stay visible in small panes; exports omit showOutline and keep border/trim colors.
+  const outlineColor =
+    opts.showOutline === true
+      ? "#111111"
+      : badge.borderColor ??
+        (template.overlayElement ? "#FFFFFF" : "#111");
+  const outlineWidth = opts.outlineStrokeWidth ?? "1.25";
   const outline = template.outlineElement
-    ? prepareElementForOutline(template.outlineElement, "none", "#111", "1.25")
-    : prepareElementForOutline(template.innerElement, "none", "#111", "1.25");
+    ? prepareElementForOutline(template.outlineElement, "none", outlineColor, outlineWidth)
+    : prepareElementForOutline(template.innerElement, "none", outlineColor, outlineWidth);
+
+  // Overlay layer (sign Designer trim/swirls): render only when present, with border color
+  const borderColorForOverlay = badge.borderColor ?? "#FFFFFF";
+  const overlayLayer =
+    template.overlayElement?.replace(
+      /<path\s+/g,
+      `<path fill="${borderColorForOverlay}" fill-rule="evenodd" stroke="none" `
+    ) ?? "";
+
+  if (template.overlayElement && template.id.startsWith("classic-framed-")) {
+    console.log("[renderSvg] Classic Framed render:", {
+      templateId: template.id,
+      innerGetsBackgroundColor: badge.backgroundColor ?? "#FFFFFF",
+      overlayGetsBorderColor: borderColorForOverlay,
+    });
+  }
 
   const svgOpen = `
 <svg xmlns="http://www.w3.org/2000/svg"
@@ -653,7 +683,7 @@ export function renderBadgeToSvgString(
   <g transform="translate(${PADDING_PX}, ${PADDING_PX})">
     <!-- Background: inner path filled with color (defines editable area) -->
     ${innerPathWithFill}
-    
+    ${overlayLayer}
     <!-- Background image (if present) -->
     ${bgImageLayer}
     
@@ -677,9 +707,9 @@ export async function renderBadgeToSvgStringWithFonts(
 ): Promise<string> {
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
   const PADDING_PX = 24;
-  // Use standardized viewBox for consistent display (shows relative sizes between 1×3 and 1.5×3)
-  const W = template.standardViewBoxWidth + PADDING_PX * 2;
-  const H = template.standardViewBoxHeight + PADDING_PX * 2;
+  // ViewBox must match content coordinates (widthPx × heightPx) so full design fits; preview scales via width/height="100%".
+  const W = template.widthPx + PADDING_PX * 2;
+  const H = template.heightPx + PADDING_PX * 2;
   const designBox = template.designBox;
 
   // Collect all unique font families used in the badge
@@ -850,12 +880,33 @@ export async function renderBadgeToSvgStringWithFonts(
   // Text is already positioned within bounds, but keep clipPath as safety net
   const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
 
-  // Outline for border (no fill, stroke only)
-  // Note: Outline and Inner paths are now coextensive (same coordinates)
-  // The outline overlays exactly on top of the inner path to create a border effect
+  // Outline for border (no fill, stroke only). On-screen preview (showOutline) uses a dark stroke so circles
+  // and light border colors stay visible in small panes; exports omit showOutline and keep border/trim colors.
+  const outlineColor =
+    opts.showOutline === true
+      ? "#111111"
+      : badge.borderColor ??
+        (template.overlayElement ? "#FFFFFF" : "#111");
+  const outlineWidth = opts.outlineStrokeWidth ?? "1.25";
   const outline = template.outlineElement
-    ? prepareElementForOutline(template.outlineElement, "none", "#111", "1.25")
-    : prepareElementForOutline(template.innerElement, "none", "#111", "1.25");
+    ? prepareElementForOutline(template.outlineElement, "none", outlineColor, outlineWidth)
+    : prepareElementForOutline(template.innerElement, "none", outlineColor, outlineWidth);
+
+  // Overlay layer (sign Designer trim/swirls): render only when present, with border color
+  const borderColorForOverlay = badge.borderColor ?? "#FFFFFF";
+  const overlayLayer =
+    template.overlayElement?.replace(
+      /<path\s+/g,
+      `<path fill="${borderColorForOverlay}" fill-rule="evenodd" stroke="none" `
+    ) ?? "";
+
+  if (template.overlayElement && template.id.startsWith("classic-framed-")) {
+    console.log("[renderSvg] Classic Framed render:", {
+      templateId: template.id,
+      innerGetsBackgroundColor: badge.backgroundColor ?? "#FFFFFF",
+      overlayGetsBorderColor: borderColorForOverlay,
+    });
+  }
 
   const svgOpen = `
 <svg xmlns="http://www.w3.org/2000/svg"
@@ -885,7 +936,7 @@ export async function renderBadgeToSvgStringWithFonts(
   <g transform="translate(${PADDING_PX}, ${PADDING_PX})">
     <!-- Background: inner path filled with color (defines editable area) -->
     ${innerPathWithFill}
-    
+    ${overlayLayer}
     <!-- Background image (if present) -->
     ${bgImageLayer}
     

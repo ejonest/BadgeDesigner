@@ -7,6 +7,7 @@ import { autoScaleFontSize } from "../utils/textMeasurement";
 import { FONT_COLORS } from "../constants/colors";
 import { FONT_FAMILIES } from "../constants/fonts";
 import { loadTemplateById } from "../utils/templates";
+import type { DesignerVariant } from "../constants/designerVariants";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
 // Helper functions for normalized font size conversion
@@ -221,6 +222,8 @@ export interface BadgeEditorPanelProps {
   onApplyFormattingToAll?: (lineIndex: number) => void;
   hasMultipleBadges?: boolean;
   onResetLineToDefault?: (lineIndex: number) => void;
+  /** Pass "sign" in Sign Designer so designBox / font-size math uses sign templates (ids like circle-6x6). */
+  variant?: DesignerVariant;
 }
 
 export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
@@ -239,6 +242,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   onApplyFormattingToAll,
   hasMultipleBadges = false,
   onResetLineToDefault,
+  variant = "badge",
 }) => {
   // Get the current template's designBox for font size calculations
   const [designBox, setDesignBox] = React.useState({
@@ -250,11 +254,11 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
 
   React.useEffect(() => {
     if (badge.templateId) {
-      loadTemplateById(badge.templateId).then((template) => {
+      loadTemplateById(badge.templateId, variant).then((template) => {
         setDesignBox(template.designBox);
       });
     }
-  }, [badge.templateId]);
+  }, [badge.templateId, variant]);
 
   const justifyMap = {
     left: "flex-start",

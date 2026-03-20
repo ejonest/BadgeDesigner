@@ -1,0 +1,149 @@
+{
+  "version": 2,
+  "templates": [
+    {
+      "id": "circle-10x10",
+      "name": "Circle 10 x 10\"",
+      "widthInches": 10,
+      "heightInches": 10,
+      "svgFile": "/templates/sign/Circle 10x10.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "circle-4x4",
+      "name": "Circle 4 x 4\"",
+      "widthInches": 4,
+      "heightInches": 4,
+      "svgFile": "/templates/sign/Circle 4x4.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "circle-6x6",
+      "name": "Circle 6 x 6\"",
+      "widthInches": 6,
+      "heightInches": 6,
+      "svgFile": "/templates/sign/Circle 6x6.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "circle-8x8",
+      "name": "Circle 8 x 8\"",
+      "widthInches": 8,
+      "heightInches": 8,
+      "svgFile": "/templates/sign/Circle 8x8.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "classic-framed-4x6",
+      "name": "Classic framed 4 x 6\"",
+      "widthInches": 6,
+      "heightInches": 4,
+      "svgFile": "/templates/sign/Classic-Framed 4x6.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "classic-framed-5x7",
+      "name": "Classic framed 5 x 7\"",
+      "widthInches": 7,
+      "heightInches": 5,
+      "svgFile": "/templates/sign/Classic-Framed 5x7.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "classic-framed-6x8",
+      "name": "Classic framed 6 x 8\"",
+      "widthInches": 8,
+      "heightInches": 6,
+      "svgFile": "/templates/sign/Classic-Framed 6x8.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "classic-framed-7x10",
+      "name": "Classic framed 7 x 10\"",
+      "widthInches": 10,
+      "heightInches": 7,
+      "svgFile": "/templates/sign/Classic-Framed 7x10.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "designer-4_25x11",
+      "name": "Designer 4.25 x 11\"",
+      "widthInches": 11,
+      "heightInches": 4.25,
+      "svgFile": "/templates/sign/Designer 4.25 x 11.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "designer-2_8x7",
+      "name": "Designer 2.8 x 7\"",
+      "widthInches": 7,
+      "heightInches": 2.8,
+      "svgFile": "/templates/sign/Designer 2.8x7.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "designer-2x5",
+      "name": "Designer 2 x 5\"",
+      "widthInches": 5,
+      "heightInches": 2,
+      "svgFile": "/templates/sign/Designer 2x5.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "designer-4x9",
+      "name": "Designer 4 x 9\"",
+      "widthInches": 9,
+      "heightInches": 3.5,
+      "svgFile": "/templates/sign/Designer 4x9.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "fancy-6x3",
+      "name": "Fancy 6 x 3\"",
+      "widthInches": 6,
+      "heightInches": 3,
+      "svgFile": "/templates/sign/fancy 6x3.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "fancy-7x3_5",
+      "name": "Fancy 7 x 3.5\"",
+      "widthInches": 7,
+      "heightInches": 3.5,
+      "svgFile": "/templates/sign/fancy 7x3.5.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "fancy-9x4_5",
+      "name": "Fancy 9 x 4.5\"",
+      "widthInches": 9,
+      "heightInches": 4.5,
+      "svgFile": "/templates/sign/fancy 9x4.5.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "basic-2_5x7",
+      "name": "Basic 2.5 x 7\"",
+      "widthInches": 7,
+      "heightInches": 2.5,
+      "svgFile": "/templates/sign/Basic 2.5x7.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "basic-2x6",
+      "name": "Basic 2 x 6\"",
+      "widthInches": 6,
+      "heightInches": 2,
+      "svgFile": "/templates/sign/Basic 2x6.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "basic-3x9",
+      "name": "Basic 3 x 9\"",
+      "widthInches": 9,
+      "heightInches": 3,
+      "svgFile": "/templates/sign/Basic 3x9.svg",
+      "safeInsetPx": 6
+    }
+  ]
+}
