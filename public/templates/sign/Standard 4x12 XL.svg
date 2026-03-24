@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW 2026 -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="12in" height="4in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 12000 4000"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .str0 {stroke:#282828;stroke-width:20.83;stroke-miterlimit:22.9256}
+    .fil0 {fill:#282828}
+    .fil1 {fill:#FEFEFE}
+   ]]>
+  </style>
+ </defs>
+ <g id="Raster">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <path id="Standard_x0020_" class="fil0 str0" d="M500 0l11000 0c275,0 500,225 500,500l0 3000c0,275 -225,500 -500,500l-11000 0c-275,0 -500,-225 -500,-500l0 -3000c0,-275 225,-500 500,-500z"/>
+  <path id="Border" class="fil1" d="M500 200l11000 0c165.2,0 300,134.8 300,300l0 3000c0,165.2 -134.8,300 -300,300l-11000 0c-165.2,0 -300,-134.8 -300,-300l0 -3000c0,-165.2 134.8,-300 300,-300zm0 100c-110,0 -200,90 -200,200l0 3000c0,110 90,200 200,200l11000 0c110,0 200,-90 200,-200l0 -3000c0,-110 -90,-200 -200,-200l-11000 0z"/>
+ </g>
+</svg>

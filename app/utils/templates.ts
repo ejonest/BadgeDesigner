@@ -7,6 +7,8 @@
  */
 
 import type { DesignerVariant } from "~/constants/designerVariants";
+import type { DesignerSizeKey } from "~/data/designerMotifs";
+import { templateIdToDesignerSizeKey } from "~/data/designerMotifs";
 import templatesJson from "../data/templates.local.json";
 import signTemplatesJson from "../data/sign-templates.local.json";
 
@@ -33,6 +35,8 @@ export type LoadedTemplate = {
   outlineElement?: string; // OPTIONAL (visible preview stroke) - full HTML element
   /** Sign Designer templates only: decorative overlay paths (trim/swirls). Rendered with border color at runtime. */
   overlayElement?: string;
+  /** Set for `designer-*` base templates so render can merge motif paths from `designerMotifs`. */
+  designerSizeKey?: DesignerSizeKey;
   designBox: { x: number; y: number; width: number; height: number };
   // Standardized viewBox dimensions (preserves aspect ratio for circles/signs)
   standardViewBoxWidth: number;
@@ -72,6 +76,33 @@ function decodeSvgBuffer(buffer: ArrayBuffer): string {
     return new TextDecoder("utf-8").decode(buffer.slice(3));
   }
   return new TextDecoder("utf-8").decode(buffer);
+}
+
+/** Normalize path `d` for stable comparison (DOM vs regex extraction, whitespace). */
+function normalizePathD(d: string | null | undefined): string {
+  if (!d) return "";
+  return d.replace(/\s+/g, " ").trim();
+}
+
+function pathDataEqual(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
+  return normalizePathD(a) === normalizePathD(b);
+}
+
+/** Union of two layout rectangles (user space). */
+function mergeLayoutBounds(
+  a: { x: number; y: number; width: number; height: number } | null,
+  b: { x: number; y: number; width: number; height: number } | null,
+): { x: number; y: number; width: number; height: number } | null {
+  if (!a) return b;
+  if (!b) return a;
+  const minX = Math.min(a.x, b.x);
+  const minY = Math.min(a.y, b.y);
+  const maxX = Math.max(a.x + a.width, b.x + b.width);
+  const maxY = Math.max(a.y + a.height, b.y + b.height);
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
 // NO CACHE - Load fresh from SVG files every time
@@ -417,40 +448,29 @@ function pathToOutlineElement(pathData: string, id: string): string {
   return `<path id="${id}" d="${pathData}" fill="none" stroke="#222" stroke-width="1.25"/>`;
 }
 
-/**
- * Extracts trim + decorative overlay paths from sign Designer SVGs: Border path (trim) and Design/Top Design paths (fancy bits).
- * All are drawn with border color at render time. Excludes the outer dark path (excludePathD).
- */
-function extractDesignerOverlayElements(
+/** Border trim path only (sign Designer); scroll/motif paths come from `getDesignerMotifPaths` at render time. */
+function extractDesignerBorderOverlayOnly(
   svgContent: string,
   transform: string,
-  outerPathD: string
+  outerPathD: string,
 ): string {
   if (typeof DOMParser === "undefined") return "";
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(svgContent, "image/svg+xml");
     const paths = doc.querySelectorAll("path");
-    const parts: string[] = [];
     for (let i = 0; i < paths.length; i++) {
       const path = paths[i];
-      const id = path.getAttribute("id") || "";
+      const id = (path.getAttribute("id") || "").trim();
       const d = path.getAttribute("d");
-      if (!d) continue;
-      if (id === "Inner") continue;
-      if (d === outerPathD) continue; // exclude outer dark shape (background)
-      const isBorder = id === "Border";
-      const isDesign = id === "Design" || id.startsWith("Design_");
-      const isTopDesign = id.includes("Top");
-      if (!isBorder && !isDesign && !isTopDesign) continue;
-      parts.push(`<path d="${d.replace(/"/g, "&quot;")}"/>`);
+      if (id !== "Border" || !d) continue;
+      if (pathDataEqual(d, outerPathD)) continue;
+      return `<g transform="${transform}"><path d="${d.replace(/"/g, "&quot;")}"/></g>`;
     }
-    if (parts.length === 0) return "";
-    return `<g transform="${transform}">${parts.join("")}</g>`;
   } catch (e) {
-    console.warn("[templates] extractDesignerOverlayElements failed:", e);
-    return "";
+    console.warn("[templates] extractDesignerBorderOverlayOnly failed:", e);
   }
+  return "";
 }
 
 /**
@@ -552,14 +572,14 @@ function calculatePathBounds(
     rawBounds = parsePathBounds(pathData);
   }
 
-  // Scale from viewBox coordinates to pixel coordinates
+  // Scale from layout viewBox to pixels (subtract origin — paths use file user space, not cropped origin).
   if (viewBox && viewBox.width > 0 && viewBox.height > 0) {
     const scaleX = targetWidthPx / viewBox.width;
     const scaleY = targetHeightPx / viewBox.height;
 
     return {
-      x: rawBounds.x * scaleX,
-      y: rawBounds.y * scaleY,
+      x: (rawBounds.x - viewBox.x) * scaleX,
+      y: (rawBounds.y - viewBox.y) * scaleY,
       width: rawBounds.width * scaleX,
       height: rawBounds.height * scaleY,
     };
@@ -630,6 +650,134 @@ function parsePathBounds(pathData: string): {
 
   // Ultimate fallback
   return { x: 0, y: 0, width: 288, height: 96 };
+}
+
+function unionBoundsFromPathData(
+  paths: string[],
+): { x: number; y: number; width: number; height: number } | null {
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
+  for (const d of paths) {
+    const b = parsePathBounds(d);
+    if (!isFinite(b.x) || b.width < 2 || b.height < 2) continue;
+    minX = Math.min(minX, b.x);
+    minY = Math.min(minY, b.y);
+    maxX = Math.max(maxX, b.x + b.width);
+    maxY = Math.max(maxY, b.y + b.height);
+  }
+  if (!isFinite(minX)) return null;
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+function unionBoundsFromAllSvgPaths(
+  svgContent: string,
+): { x: number; y: number; width: number; height: number } | null {
+  if (typeof DOMParser === "undefined") return null;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgContent, "image/svg+xml");
+    const paths = doc.querySelectorAll("path");
+    const ds: string[] = [];
+    for (let i = 0; i < paths.length; i++) {
+      const d = paths[i].getAttribute("d");
+      if (d) ds.push(d);
+    }
+    return unionBoundsFromPathData(ds);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Widen or heighten a crop box (centered) so its aspect ratio matches the physical sign
+ * (widthInches / heightInches). Otherwise scale(scaleX, scaleY) squashes artwork when the
+ * union-of-paths bbox is taller or wider than the real sign.
+ */
+function expandViewBoxToOutputAspect(
+  box: { x: number; y: number; width: number; height: number },
+  widthInches: number,
+  heightInches: number,
+): { x: number; y: number; width: number; height: number } {
+  if (!(box.height > 0) || !(heightInches > 0)) return box;
+  const targetAspect = widthInches / heightInches;
+  const currentAspect = box.width / box.height;
+  if (Math.abs(currentAspect - targetAspect) < 0.012) return box;
+
+  let { x, y, width, height } = box;
+  if (currentAspect > targetAspect) {
+    const newH = width / targetAspect;
+    const dh = newH - height;
+    y -= dh / 2;
+    height = newH;
+  } else {
+    const newW = height * targetAspect;
+    const dw = newW - width;
+    x -= dw / 2;
+    width = newW;
+  }
+  return { x, y, width, height };
+}
+
+/**
+ * Themed Designer SVGs from Corel often use a letter-size viewBox (e.g. 8500×11000) with the
+ * sign artwork centered. Scaling that full box shrinks the sign in previews.
+ * Crop to the union of *all* path bounds so scrolls/paws (not just outer+Border) stay in frame.
+ */
+function tightDesignerViewBoxIfCanvasMismatch(
+  templateId: string,
+  rawViewBox: { x: number; y: number; width: number; height: number },
+  svgContent: string,
+  outerPathD: string,
+  borderPathD: string,
+  widthInches: number,
+  heightInches: number,
+): { x: number; y: number; width: number; height: number } | null {
+  if (
+    !/^designer-(coffee-bean|golf|house|money|paws|recycle)-/.test(templateId)
+  ) {
+    return null;
+  }
+  // Corel/unwrap sometimes leaves a *cropped* viewBox with non-zero x/y (paths still in absolute
+  // user space). Using that rect as layout works in theory (translate -x,-y), but the same
+  // themed art at 4×9 uses viewBox 0 0 … and goes through the union crop below. Skipping the crop
+  // for 2×5 / 2.8×7 only produced blank previews while large sizes looked fine — so whenever the
+  // file viewBox origin is offset, always derive layout from path unions like we do for aspect
+  // mismatches and letter canvases.
+  const viewBoxHasOffsetOrigin =
+    Math.abs(rawViewBox.x) > 0.5 || Math.abs(rawViewBox.y) > 0.5;
+  // Exports that already match the physical sign aspect and are not letter-page canvases
+  // should use the file viewBox as-is (avoids bad crops when parsePathBounds underestimates paths).
+  const fileAspect = rawViewBox.width / rawViewBox.height;
+  const outAspect = widthInches / heightInches;
+  const maxDim = Math.max(rawViewBox.width, rawViewBox.height);
+  const looksLetterCanvas = rawViewBox.width >= 7500 && rawViewBox.height >= 9500;
+  if (
+    !viewBoxHasOffsetOrigin &&
+    !looksLetterCanvas &&
+    maxDim < 12000 &&
+    Math.abs(fileAspect - outAspect) < 0.12
+  ) {
+    return null;
+  }
+  const uAll = unionBoundsFromAllSvgPaths(svgContent);
+  const uCore = unionBoundsFromPathData([outerPathD, borderPathD]);
+  // Always merge: naive path bounds can make uAll smaller than uCore; using only uAll then crops wrong and previews go blank.
+  const u = mergeLayoutBounds(uAll, uCore);
+  if (!u || u.width <= 0 || u.height <= 0) return null;
+  const pad = Math.max(u.width, u.height) * 0.04;
+  let tight = {
+    x: u.x - pad,
+    y: u.y - pad,
+    width: u.width + 2 * pad,
+    height: u.height + 2 * pad,
+  };
+  tight = expandViewBoxToOutputAspect(tight, widthInches, heightInches);
+  const fullArea = rawViewBox.width * rawViewBox.height;
+  const tightArea = tight.width * tight.height;
+  if (!viewBoxHasOffsetOrigin && tightArea >= fullArea * 0.52) return null;
+  return tight;
 }
 
 /**
@@ -729,7 +877,7 @@ async function loadOne(
     outlinePath &&
     borderPath &&
     outerPath &&
-    outlinePath === borderPath;
+    pathDataEqual(outlinePath, borderPath);
 
   // Classic Framed: identify by structure so we always get the right layers (single contour = full background, compound "zm" = trim)
   const classicFramedByStructure = extractClassicFramedPathsByStructure(svgContent);
@@ -831,6 +979,20 @@ async function loadOne(
   const widthPx = Math.round(c.widthInches * DPI);
   const heightPx = Math.round(c.heightInches * DPI);
 
+  let layoutViewBox = viewBox;
+  if (viewBox && isSignDesignerWithBorder && outerPath && borderPath) {
+    const tight = tightDesignerViewBoxIfCanvasMismatch(
+      c.id,
+      viewBox,
+      svgContent,
+      outerPath,
+      borderPath,
+      c.widthInches,
+      c.heightInches,
+    );
+    if (tight) layoutViewBox = tight;
+  }
+
   // Calculate designBox: for sign Designer/Classic Framed/Fancy use trim path so text stays inside the trim; else use inner path
   const trimPath =
     isSignClassicFramed ? trimPathClassic! : isSignFancy ? trimPathFancy! : null;
@@ -842,7 +1004,7 @@ async function loadOne(
         : innerPath;
   const innerPathBounds = calculatePathBounds(
     pathForDesignBox,
-    viewBox,
+    layoutViewBox,
     widthPx,
     heightPx
   );
@@ -868,10 +1030,10 @@ async function loadOne(
   let outlineElement: string | undefined;
 
   let overlayElement: string | undefined;
-  if (viewBox && viewBox.width > 0 && viewBox.height > 0) {
-    const scaleX = widthPx / viewBox.width;
-    const scaleY = heightPx / viewBox.height;
-    const transform = `scale(${scaleX}, ${scaleY})`;
+  if (layoutViewBox && layoutViewBox.width > 0 && layoutViewBox.height > 0) {
+    const scaleX = widthPx / layoutViewBox.width;
+    const scaleY = heightPx / layoutViewBox.height;
+    const transform = `translate(${-layoutViewBox.x}, ${-layoutViewBox.y}) scale(${scaleX}, ${scaleY})`;
 
     innerElement = `<g transform="${transform}">${pathToElement(
       innerPath,
@@ -883,13 +1045,15 @@ async function loadOne(
         outerPath,
         "Outline"
       )}</g>`;
-      overlayElement = extractDesignerOverlayElements(
+      overlayElement = extractDesignerBorderOverlayOnly(
         svgContent,
         transform,
-        outerPath
+        outerPath,
       );
       if (overlayElement) {
-        console.log(`[templates] Sign Designer "${c.id}": extracted overlay paths (trim + fancy bits)`);
+        console.log(
+          `[templates] Sign Designer "${c.id}": overlay = Border only; motifs merged at render`,
+        );
       }
     } else if ((isSignClassicFramed || isSignFancy) && (isSignClassicFramed ? classicFramedBackgroundPath : outerPath) && trimPath) {
       const outlinePathForFramed = isSignClassicFramed ? classicFramedBackgroundPath : outerPath;
@@ -933,6 +1097,8 @@ async function loadOne(
     standardViewBoxHeight: STANDARD_VIEWBOX_HEIGHT,
   });
 
+  const designerSizeKey = templateIdToDesignerSizeKey(c.id);
+
   const t: LoadedTemplate = {
     id: c.id,
     name: c.name,
@@ -942,6 +1108,7 @@ async function loadOne(
     innerElement,
     outlineElement,
     overlayElement,
+    designerSizeKey,
     designBox,
     standardViewBoxWidth: STANDARD_VIEWBOX_WIDTH,
     standardViewBoxHeight: STANDARD_VIEWBOX_HEIGHT,

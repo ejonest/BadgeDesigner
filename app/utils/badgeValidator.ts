@@ -1,23 +1,25 @@
 // Badge Validation Utility for Stage 2 Refactor
 import type { Badge, BadgeLine } from '../types/badge';
+import { migrateLegacyDesignerTemplateId } from './designerTemplateMigration';
 import type { LoadedTemplate } from './templates';
 
 export const validateBadgeTemplate = (
   badge: Badge, 
   templates: LoadedTemplate[]
 ): Badge => {
+  const migrated = migrateLegacyDesignerTemplateId(badge);
   // Ensure templateId exists and is valid
-  const validTemplate = templates.find(t => t.id === badge.templateId);
+  const validTemplate = templates.find(t => t.id === migrated.templateId);
   if (!validTemplate) {
-    console.warn(`Invalid templateId ${badge.templateId}, falling back to rect-1x3`);
+    console.warn(`Invalid templateId ${migrated.templateId}, falling back to rect-1x3`);
     return {
-      ...badge,
+      ...migrated,
       templateId: 'rect-1x3'
     };
   }
   
   // Validate line positions are within template bounds
-  const validatedLines = badge.lines.map(line => ({
+  const validatedLines = migrated.lines.map(line => ({
     ...line,
     xNorm: Math.max(0, Math.min(1, line.xNorm)),
     yNorm: Math.max(0, Math.min(1, line.yNorm)),
@@ -25,26 +27,28 @@ export const validateBadgeTemplate = (
   }));
   
   return {
-    ...badge,
+    ...migrated,
     lines: validatedLines,
     // Ensure backgroundColor is preserved
-    backgroundColor: badge.backgroundColor || '#FFFFFF'
+    backgroundColor: migrated.backgroundColor || '#FFFFFF'
   };
 };
 
 export const validateBadgeData = (badge: Badge): Badge => {
+  const migrated = migrateLegacyDesignerTemplateId(badge);
   // Ensure required fields exist
   const validatedBadge: Badge = {
-    id: badge.id || `badge-${Date.now()}`,
-    templateId: badge.templateId || 'rect-1x3',
-    lines: badge.lines || [],
-    backgroundColor: badge.backgroundColor || '#FFFFFF',
-    backing: badge.backing || 'magnetic',
-    ...badge
+    ...migrated,
+    id: migrated.id || `badge-${Date.now()}`,
+    templateId: migrated.templateId || 'rect-1x3',
+    lines: migrated.lines || [],
+    backgroundColor: migrated.backgroundColor || '#FFFFFF',
+    backing: migrated.backing || 'magnetic',
   };
 
   // Validate each line has required fields
   const validatedLines = validatedBadge.lines.map((line, index) => ({
+    ...line,
     id: line.id || `line-${index + 1}`,
     text: line.text || '',
     xNorm: typeof line.xNorm === 'number' ? line.xNorm : 0.5,
@@ -55,7 +59,6 @@ export const validateBadgeData = (badge: Badge): Badge => {
     italic: typeof line.italic === 'boolean' ? line.italic : false,
     fontFamily: line.fontFamily || 'Arial',
     align: line.align || 'center',
-    ...line
   }));
 
   return {

@@ -144,6 +144,222 @@
       "heightInches": 3,
       "svgFile": "/templates/sign/Basic 3x9.svg",
       "safeInsetPx": 6
+    },
+    {
+      "id": "square-4x4-small",
+      "name": "Square 4 x 4\"",
+      "widthInches": 4,
+      "heightInches": 4,
+      "svgFile": "/templates/sign/Square 4x4 small.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "square-6x6-medium",
+      "name": "Square 6 x 6\"",
+      "widthInches": 6,
+      "heightInches": 6,
+      "svgFile": "/templates/sign/Square 6x6 medium.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "square-8x8-large",
+      "name": "Square 8 x 8\"",
+      "widthInches": 8,
+      "heightInches": 8,
+      "svgFile": "/templates/sign/Square 8x8 large.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "square-10x10-xl",
+      "name": "Square 10 x 10\"",
+      "widthInches": 10,
+      "heightInches": 10,
+      "svgFile": "/templates/sign/Square 10x10 xl.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "standard-2x6-small",
+      "name": "Standard 2 x 6\"",
+      "widthInches": 6,
+      "heightInches": 2,
+      "svgFile": "/templates/sign/Standard 2x6 small.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "standard-2_75x7-medium",
+      "name": "Standard 2.75 x 7\"",
+      "widthInches": 7,
+      "heightInches": 2.75,
+      "svgFile": "/templates/sign/Standard 2.75x7 medium.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "standard-3x9-large",
+      "name": "Standard 3 x 9\"",
+      "widthInches": 9,
+      "heightInches": 3,
+      "svgFile": "/templates/sign/Standard 3x9 large.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "standard-4x12-xl",
+      "name": "Standard 4 x 12\"",
+      "widthInches": 12,
+      "heightInches": 4,
+      "svgFile": "/templates/sign/Standard 4x12 XL.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "oval-2x5-small",
+      "name": "Oval 2 x 5\"",
+      "widthInches": 5,
+      "heightInches": 2,
+      "svgFile": "/templates/sign/Oval 2x5 small.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "oval-2_8x7-medium",
+      "name": "Oval 2.8 x 7\"",
+      "widthInches": 7,
+      "heightInches": 2.8,
+      "svgFile": "/templates/sign/oval 2.8 x 7 medium.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "oval-3_6x9-large",
+      "name": "Oval 3.6 x 9\"",
+      "widthInches": 9,
+      "heightInches": 3.6,
+      "svgFile": "/templates/sign/oval 3.6x9 large.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "oval-4x10-xl",
+      "name": "Oval 4 x 10\"",
+      "widthInches": 10,
+      "heightInches": 4,
+      "svgFile": "/templates/sign/Oval 4x10 XL.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "portrait-6x8",
+      "name": "Portrait 6 x 8\"",
+      "widthInches": 6,
+      "heightInches": 8,
+      "svgFile": "/templates/sign/Portrait 6x8.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "portrait-7x10",
+      "name": "Portrait 7 x 10\"",
+      "widthInches": 7,
+      "heightInches": 10,
+      "svgFile": "/templates/sign/Portrait 7x10.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "portrait-round-4x6",
+      "name": "Portrait round 4 x 6\"",
+      "widthInches": 4,
+      "heightInches": 6,
+      "svgFile": "/templates/sign/Portrait Round 4x6.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "portrait-round-5x7",
+      "name": "Portrait round 5 x 7\"",
+      "widthInches": 5,
+      "heightInches": 7,
+      "svgFile": "/templates/sign/Portrait Round 5x7.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "victorian-3x6-small",
+      "name": "Victorian 3 x 6\"",
+      "widthInches": 5.9,
+      "heightInches": 2.9,
+      "svgFile": "/templates/sign/VIctorian 3x6 small.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "victorian-4x8-medium",
+      "name": "Victorian 4 x 8\"",
+      "widthInches": 7.9,
+      "heightInches": 3.9,
+      "svgFile": "/templates/sign/Victorian 4x8 medium.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "victorian-5x10-large",
+      "name": "Victorian 5 x 10\"",
+      "widthInches": 9.95,
+      "heightInches": 4.95,
+      "svgFile": "/templates/sign/Victorian 5x10 large.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "notched-6x3_5-small",
+      "name": "Notched 6 x 3.5\"",
+      "widthInches": 6,
+      "heightInches": 3.5,
+      "svgFile": "/templates/sign/notched 6x3.5 - small.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "notched-7x4_25-medium",
+      "name": "Notched 7 x 4.25\"",
+      "widthInches": 7,
+      "heightInches": 4.25,
+      "svgFile": "/templates/sign/notched 7 x 4.25 - medium.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "notched-9x5-large",
+      "name": "Notched 9 x 5\"",
+      "widthInches": 9,
+      "heightInches": 5,
+      "svgFile": "/templates/sign/notched 9x5 - large.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "frontier-elegant-7x3-small",
+      "name": "Frontier elegant 7 x 3\"",
+      "widthInches": 7,
+      "heightInches": 3,
+      "svgFile": "/templates/sign/Frontier-Elegant-(7x3)-Small.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "frontier-elegant-8x3_5-medium",
+      "name": "Frontier elegant 8 x 3.5\"",
+      "widthInches": 8,
+      "heightInches": 3.5,
+      "svgFile": "/templates/sign/Frontier-Elegant-(8x3.5)-Medium.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "frontier-elegant-10x4_5-large",
+      "name": "Frontier elegant 10 x 4.5\"",
+      "widthInches": 10,
+      "heightInches": 4.5,
+      "svgFile": "/templates/sign/Frontier-Elegant-(10x4.5)-Large.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "frontier-elegant-11x5_5-xlarge",
+      "name": "Frontier elegant 11 x 5.5\"",
+      "widthInches": 11,
+      "heightInches": 5.5,
+      "svgFile": "/templates/sign/Frontier-Elegant-(11x5.5)-XLarge.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "pill-7_9x2_9",
+      "name": "Pill 7.9 x 2.9\"",
+      "widthInches": 7.9,
+      "heightInches": 2.9,
+      "svgFile": "/templates/sign/Pill.svg",
+      "safeInsetPx": 6
     }
   ]
 }

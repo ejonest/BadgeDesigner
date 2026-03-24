@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW 2026 -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="7in" height="10in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 7000 10000"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .fil1 {fill:#FEFEFE}
+    .fil0 {fill:#282828;fill-rule:nonzero}
+   ]]>
+  </style>
+ </defs>
+ <g id="Layer_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <path id="Portrait" class="fil0" d="M-0.01 9357.5l0 -8714.99c0,-353.37 269.84,-642.5 599.67,-642.5l5800.67 0c329.81,0 599.67,289.13 599.67,642.5l0 8714.99c0,353.39 -269.86,642.5 -599.67,642.5l-5800.67 0c-329.83,0 -599.67,-289.11 -599.67,-642.5z"/>
+  <path id="Border" class="fil1" d="M281.32 9357.5c0,178.12 131.43,350 318.33,350l5800.67 0c186.91,0 318.33,-171.88 318.33,-350l0 -8714.99c0,-178.12 -131.43,-350 -318.33,-350l-5800.67 0c-186.91,0 -318.33,171.88 -318.33,350l0 8714.99zm-125 0l0 -8714.99c0,-261.25 199.5,-475 443.33,-475l5800.67 0c243.83,0 443.33,213.75 443.33,475l0 8714.99c0,261.25 -199.5,475 -443.33,475l-5800.67 0c-243.83,0 -443.33,-213.75 -443.33,-475z"/>
+ </g>
+</svg>
