@@ -1,5 +1,6 @@
 import type { Badge } from "~/types/badge";
 import type { DesignerMotifId } from "~/data/designerMotifs";
+import { composeSignBorderMigrations } from "./signBorderMigration";
 
 /** Legacy sign template ids → base designer id + motif (pre–motif-library). */
 const LEGACY_DESIGNER_TEMPLATE_MAP: Record<
@@ -32,14 +33,14 @@ const LEGACY_DESIGNER_TEMPLATE_MAP: Record<
  */
 export function migrateLegacyDesignerTemplateId(badge: Badge): Badge {
   const tid = badge.templateId;
-  if (!tid) return badge;
+  if (!tid) return composeSignBorderMigrations(badge);
   const hit = LEGACY_DESIGNER_TEMPLATE_MAP[tid];
-  if (!hit) return badge;
-  return {
+  if (!hit) return composeSignBorderMigrations(badge);
+  return composeSignBorderMigrations({
     ...badge,
     templateId: hit.templateId,
     designerMotif: badge.designerMotif ?? hit.designerMotif,
-  };
+  });
 }
 
 export function migrateLegacyDesignerTemplateIdsOnBadges(

@@ -38,6 +38,8 @@ export type LoadedTemplate = {
   /** Set for `designer-*` base templates so render can merge motif paths from `designerMotifs`. */
   designerSizeKey?: DesignerSizeKey;
   designBox: { x: number; y: number; width: number; height: number };
+  /** Bounds from inner plate path only — use when sign trim overlay is off (full text area). */
+  designBoxInnerPlate: { x: number; y: number; width: number; height: number };
   // Standardized viewBox dimensions (preserves aspect ratio for circles/signs)
   standardViewBoxWidth: number;
   standardViewBoxHeight: number;
@@ -394,6 +396,48 @@ function extractClassicFramedPathsByStructure(svgContent: string): {
     console.warn("[templates] extractClassicFramedPathsByStructure failed:", e);
     return { backgroundPath: null, trimPath: null };
   }
+}
+
+/**
+ * First `<path>` in document order whose `d` is a single contour (no `zm` compound) and is not the trim ring.
+ * Square / Standard / Oval / Portrait / Victorian / Notched / Pill use this for the outer plate when paired with `id="Border"`.
+ */
+function extractFirstSimplePlatePath(
+  svgContent: string,
+  trimPath: string,
+): string | null {
+  if (typeof DOMParser === "undefined") return null;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgContent, "image/svg+xml");
+    const paths = doc.querySelectorAll("path");
+    for (let i = 0; i < paths.length; i++) {
+      const d = paths[i].getAttribute("d");
+      if (!d || d.includes("zm") || pathDataEqual(d, trimPath)) continue;
+      return d;
+    }
+  } catch (e) {
+    console.warn("[templates] extractFirstSimplePlatePath failed:", e);
+  }
+  return null;
+}
+
+/**
+ * Sign templates with outer plate + `path#Border` compound ring (`zm`): plate = background fill, Border = border-color overlay.
+ */
+function extractSignInsetTrimPlateAndBorder(svgContent: string): {
+  platePath: string;
+  trimPath: string;
+} | null {
+  const trimPath = extractPathFromSvg(svgContent, "Border");
+  if (!trimPath || !trimPath.includes("zm")) return null;
+
+  let platePath = extractFirstPolygonFromSvg(svgContent);
+  if (!platePath) {
+    platePath = extractFirstSimplePlatePath(svgContent, trimPath);
+  }
+  if (!platePath || pathDataEqual(platePath, trimPath)) return null;
+  return { platePath, trimPath };
 }
 
 /**
@@ -925,6 +969,15 @@ async function loadOne(
     outerPath &&
     trimPathFancy;
 
+  const signInsetTrim =
+    variant === "sign" &&
+    !isSignDesignerWithBorder &&
+    !isSignClassicFramed &&
+    !isSignFancy
+      ? extractSignInsetTrimPlateAndBorder(svgContent)
+      : null;
+  const isSignInsetTrim = !!signInsetTrim;
+
   if (isSignDesignerWithBorder) {
     innerPath = outerPath; // background = outer dark shape; trim + fancy bits = border color (in overlay)
     console.log(
@@ -939,6 +992,11 @@ async function loadOne(
     innerPath = outerPath;
     console.log(
       `[templates] Sign Fancy "${c.id}": using path 0 for background, path 2 for trim (border color)`
+    );
+  } else if (isSignInsetTrim) {
+    innerPath = signInsetTrim.platePath;
+    console.log(
+      `[templates] Sign inset trim "${c.id}": plate path for background, id=Border for trim (border color)`
     );
   }
 
@@ -995,7 +1053,13 @@ async function loadOne(
 
   // Calculate designBox: for sign Designer/Classic Framed/Fancy use trim path so text stays inside the trim; else use inner path
   const trimPath =
-    isSignClassicFramed ? trimPathClassic! : isSignFancy ? trimPathFancy! : null;
+    isSignClassicFramed
+      ? trimPathClassic!
+      : isSignFancy
+        ? trimPathFancy!
+        : isSignInsetTrim
+          ? signInsetTrim!.trimPath
+          : null;
   const pathForDesignBox =
     isSignDesignerWithBorder && borderPath
       ? borderPath
@@ -1004,6 +1068,13 @@ async function loadOne(
         : innerPath;
   const innerPathBounds = calculatePathBounds(
     pathForDesignBox,
+    layoutViewBox,
+    widthPx,
+    heightPx
+  );
+
+  const innerPlateBoundsRaw = calculatePathBounds(
+    innerPath,
     layoutViewBox,
     widthPx,
     heightPx
@@ -1019,6 +1090,13 @@ async function loadOne(
     y: innerPathBounds.y + inset,
     width: innerPathBounds.width - inset * 2,
     height: innerPathBounds.height - inset * 2,
+  };
+
+  const designBoxInnerPlate = {
+    x: innerPlateBoundsRaw.x + inset,
+    y: innerPlateBoundsRaw.y + inset,
+    width: innerPlateBoundsRaw.width - inset * 2,
+    height: innerPlateBoundsRaw.height - inset * 2,
   };
 
   console.log(`[templates] Inner path bounds for "${c.id}":`, innerPathBounds);
@@ -1055,8 +1133,20 @@ async function loadOne(
           `[templates] Sign Designer "${c.id}": overlay = Border only; motifs merged at render`,
         );
       }
-    } else if ((isSignClassicFramed || isSignFancy) && (isSignClassicFramed ? classicFramedBackgroundPath : outerPath) && trimPath) {
-      const outlinePathForFramed = isSignClassicFramed ? classicFramedBackgroundPath : outerPath;
+    } else if (
+      (isSignClassicFramed || isSignFancy || isSignInsetTrim) &&
+      (isSignClassicFramed
+        ? classicFramedBackgroundPath
+        : isSignFancy
+          ? outerPath
+          : signInsetTrim!.platePath) &&
+      trimPath
+    ) {
+      const outlinePathForFramed = isSignClassicFramed
+        ? classicFramedBackgroundPath
+        : isSignFancy
+          ? outerPath
+          : signInsetTrim!.platePath;
       outlineElement = `<g transform="${transform}">${pathToOutlineElement(
         outlinePathForFramed!,
         "Outline"
@@ -1110,6 +1200,7 @@ async function loadOne(
     overlayElement,
     designerSizeKey,
     designBox,
+    designBoxInnerPlate,
     standardViewBoxWidth: STANDARD_VIEWBOX_WIDTH,
     standardViewBoxHeight: STANDARD_VIEWBOX_HEIGHT,
     svgFile: c.svgFile,

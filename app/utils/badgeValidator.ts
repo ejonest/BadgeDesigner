@@ -30,7 +30,7 @@ export const validateBadgeTemplate = (
     ...migrated,
     lines: validatedLines,
     // Ensure backgroundColor is preserved
-    backgroundColor: migrated.backgroundColor || '#FFFFFF'
+    backgroundColor: migrated.backgroundColor || '#FFFFFF',
   };
 };
 

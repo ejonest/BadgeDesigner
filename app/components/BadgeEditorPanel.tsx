@@ -7,6 +7,7 @@ import { autoScaleFontSize } from "../utils/textMeasurement";
 import { FONT_COLORS } from "../constants/colors";
 import { FONT_FAMILIES } from "../constants/fonts";
 import { loadTemplateById } from "../utils/templates";
+import { getEffectiveDesignBox } from "../utils/renderSvg";
 import type { DesignerVariant } from "../constants/designerVariants";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
@@ -255,10 +256,16 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   React.useEffect(() => {
     if (badge.templateId) {
       loadTemplateById(badge.templateId, variant).then((template) => {
-        setDesignBox(template.designBox);
+        setDesignBox(getEffectiveDesignBox(template, badge));
       });
     }
-  }, [badge.templateId, variant]);
+  }, [
+    badge.templateId,
+    badge.signBorderOptionId,
+    badge.signBorderEnabled,
+    badge.signBorderStyleId,
+    variant,
+  ]);
 
   const justifyMap = {
     left: "flex-start",
