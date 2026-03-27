@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW 2026 -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="7in" height="4.25in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 7000 4250"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .str0 {stroke:#282828;stroke-width:20.83;stroke-miterlimit:2.61313}
+    .fil0 {fill:#282828}
+    .fil1 {fill:#FEFEFE}
+   ]]>
+  </style>
+ </defs>
+ <g id="Layer_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <path id="Notched" class="fil0 str0" d="M601.88 4250l5796.25 0c0,-331.03 270.84,-601.88 601.87,-601.88l0 -3046.24c-331.03,0 -601.87,-270.85 -601.87,-601.88l-5796.25 0c0,331.03 -270.85,601.88 -601.88,601.88l0 3046.24c331.03,0 601.88,270.85 601.88,601.88z"/>
+  <path id="Border" class="fil1" d="M776.51 4050l5446.99 0c72.78,-281.39 295.12,-503.72 576.5,-576.51l0 -2696.98c-281.39,-72.79 -503.72,-295.12 -576.5,-576.51l-5446.99 0c-72.79,281.39 -295.12,503.72 -576.51,576.51l0 2696.98c281.39,72.79 503.72,295.12 576.51,576.51zm-81.77 100l5610.53 0c44.16,-306.57 288.16,-550.57 594.73,-594.74l0 -2860.53c-306.57,-44.16 -550.57,-288.16 -594.73,-594.74l-5610.53 0c-44.16,306.57 -288.16,550.57 -594.74,594.74l0 2860.53c306.57,44.16 550.57,288.16 594.74,594.74z"/>
+ </g>
+</svg>

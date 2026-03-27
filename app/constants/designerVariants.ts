@@ -98,7 +98,7 @@ export function getDesignerVariantConfig(
   return DESIGNER_VARIANT_CONFIG[variant];
 }
 
-/** Sign only: template types (Circle, Classic framed, Designer, Fancy) and their size variants for step 2. */
+/** Sign only: template types (Circle, Classic framed, Designer themes, Fancy) and their size variants for step 2. */
 export interface SignTemplateSizeOption {
   templateId: string;
   label: string;
@@ -116,6 +116,7 @@ export interface SignTemplateType {
   hasBorderTrim?: boolean;
 }
 
+/** Main Step 1 grid: four shapes only; more variants live in ALL_SIGN_TEMPLATE_TYPES / "more templates". */
 export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "circle",
@@ -143,7 +144,7 @@ export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
     ],
   },
   {
-    id: "designer",
+    id: "designer-heart",
     name: "Designer",
     sizes: [
       { templateId: "designer-2x5", label: "Small", sizeText: '2×5"' },
@@ -167,7 +168,7 @@ export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   },
 ];
 
-/** Sign only: all template types (best sellers + rest). Use in "more templates" modal; main grid uses SIGN_TEMPLATE_TYPES only. */
+/** Sign only: all template types (best sellers + rest). Main grid uses SIGN_TEMPLATE_TYPES only (4 cards). */
 export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   ...SIGN_TEMPLATE_TYPES,
   {
@@ -180,6 +181,147 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
       { templateId: "basic-3x9", label: "Large", sizeText: '3×9"' },
     ],
   },
+  {
+    id: "square",
+    name: "Square",
+    sizes: [
+      { templateId: "square-4x4-small", label: "Small", sizeText: '4×4"' },
+      { templateId: "square-6x6-medium", label: "Medium", sizeText: '6×6"' },
+      { templateId: "square-8x8-large", label: "Large", sizeText: '8×8"' },
+      {
+        templateId: "square-10x10-xl",
+        label: "Extra large",
+        sizeText: '10×10"',
+      },
+    ],
+  },
+  {
+    id: "standard",
+    name: "Standard",
+    sizes: [
+      { templateId: "standard-2x6-small", label: "Small", sizeText: '2×6"' },
+      {
+        templateId: "standard-2_75x7-medium",
+        label: "Medium",
+        sizeText: '2.75×7"',
+      },
+      { templateId: "standard-3x9-large", label: "Large", sizeText: '3×9"' },
+      {
+        templateId: "standard-4x12-xl",
+        label: "Extra large",
+        sizeText: '4×12"',
+      },
+    ],
+  },
+  {
+    id: "oval",
+    name: "Oval",
+    sizes: [
+      { templateId: "oval-2x5-small", label: "Small", sizeText: '2×5"' },
+      {
+        templateId: "oval-2_8x7-medium",
+        label: "Medium",
+        sizeText: '2.8×7"',
+      },
+      { templateId: "oval-3_6x9-large", label: "Large", sizeText: '3.6×9"' },
+      { templateId: "oval-4x10-xl", label: "Extra large", sizeText: '4×10"' },
+    ],
+  },
+  {
+    id: "portrait",
+    name: "Portrait",
+    sizes: [
+      { templateId: "portrait-6x8", label: "Small", sizeText: '6×8"' },
+      { templateId: "portrait-7x10", label: "Large", sizeText: '7×10"' },
+    ],
+  },
+  {
+    id: "portrait-round",
+    name: "Portrait round",
+    sizes: [
+      {
+        templateId: "portrait-round-4x6",
+        label: "Small",
+        sizeText: '4×6"',
+      },
+      {
+        templateId: "portrait-round-5x7",
+        label: "Large",
+        sizeText: '5×7"',
+      },
+    ],
+  },
+  {
+    id: "victorian",
+    name: "Victorian",
+    sizes: [
+      { templateId: "victorian-3x6-small", label: "Small", sizeText: '3×6"' },
+      {
+        templateId: "victorian-4x8-medium",
+        label: "Medium",
+        sizeText: '4×8"',
+      },
+      {
+        templateId: "victorian-5x10-large",
+        label: "Large",
+        sizeText: '5×10"',
+      },
+    ],
+  },
+  {
+    id: "notched",
+    name: "Notched",
+    sizes: [
+      {
+        templateId: "notched-6x3_5-small",
+        label: "Small",
+        sizeText: '6×3.5"',
+      },
+      {
+        templateId: "notched-7x4_25-medium",
+        label: "Medium",
+        sizeText: '7×4.25"',
+      },
+      { templateId: "notched-9x5-large", label: "Large", sizeText: '9×5"' },
+    ],
+  },
+  {
+    id: "frontier-elegant",
+    name: "Frontier elegant",
+    sizes: [
+      {
+        templateId: "frontier-elegant-7x3-small",
+        label: "Small",
+        sizeText: '7×3"',
+      },
+      {
+        templateId: "frontier-elegant-8x3_5-medium",
+        label: "Medium",
+        sizeText: '8×3.5"',
+      },
+      {
+        templateId: "frontier-elegant-10x4_5-large",
+        label: "Large",
+        sizeText: '10×4.5"',
+      },
+      {
+        templateId: "frontier-elegant-11x5_5-xlarge",
+        label: "Extra large",
+        sizeText: '11×5.5"',
+      },
+    ],
+  },
+  {
+    id: "pill",
+    name: "Pill",
+    sizes: [
+      {
+        templateId: "pill-7_9x2_9",
+        label: "One size",
+        sizeText: '7.9×2.9"',
+      },
+    ],
+  },
 ];
 
 /** Sign: whether the selected template family shows the border color step (false for Circle, Basic, etc.). */
@@ -189,4 +331,20 @@ export function signTemplateTypeShowsBorderStep(
   if (!typeId) return true;
   const t = ALL_SIGN_TEMPLATE_TYPES.find((x) => x.id === typeId);
   return t?.hasBorderTrim !== false;
+}
+
+/** Map universal template id → sign shape row + size (for sync / restore). */
+export function findSignTypeAndSizeForUniversalTemplate(
+  templateId: string,
+): { typeId: string; sizeTemplateId: string } | null {
+  for (const type of ALL_SIGN_TEMPLATE_TYPES) {
+    const hit = type.sizes.find((s) => s.templateId === templateId);
+    if (hit) {
+      return {
+        typeId: type.id,
+        sizeTemplateId: hit.templateId,
+      };
+    }
+  }
+  return null;
 }

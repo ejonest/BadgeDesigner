@@ -1,5 +1,6 @@
 // Badge Migration Utility for Stage 3 Refactor
 import type { Badge, BadgeLine } from '../types/badge';
+import { migrateLegacyDesignerTemplateId } from './designerTemplateMigration';
 import type { LoadedTemplate } from './templates';
 
 export const migrateBadgeToTemplate = (
@@ -145,6 +146,7 @@ export const migrateLegacyBadge = (badge: any): Badge => {
 
   // Validate and migrate lines
   migratedBadge.lines = migratedBadge.lines.map((line, index) => ({
+    ...line,
     id: line.id || `line-${index + 1}`,
     text: line.text || '',
     xNorm: typeof line.xNorm === 'number' ? line.xNorm : 0.5,
@@ -155,11 +157,10 @@ export const migrateLegacyBadge = (badge: any): Badge => {
     italic: typeof line.italic === 'boolean' ? line.italic : false,
     fontFamily: line.fontFamily || 'Arial',
     align: line.align || 'center',
-    ...line
   }));
 
   console.log(`[MIGRATION] Migrated badge with backgroundColor: ${migratedBadge.backgroundColor}`);
-  return migratedBadge;
+  return migrateLegacyDesignerTemplateId(migratedBadge);
 };
 
 /**

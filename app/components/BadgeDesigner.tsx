@@ -56,6 +56,7 @@ import {
   SIGN_TEMPLATE_TYPES,
   ALL_SIGN_TEMPLATE_TYPES,
   signTemplateTypeShowsBorderStep,
+  findSignTypeAndSizeForUniversalTemplate,
 } from "../constants/designerVariants";
 import {
   generateFullBadgeImage,
@@ -70,11 +71,25 @@ import {
   getTemplateConfigsForVariant,
 } from "../utils/templates";
 import type { LoadedTemplate } from "../utils/templates";
-import { renderBadgeToSvgString } from "../utils/renderSvg";
+import {
+  renderBadgeToSvgString,
+  getEffectiveDesignBox,
+} from "../utils/renderSvg";
+import {
+  getSignBorderStepChipOptions,
+  SIGN_BORDER_OPTION_NONE,
+  signTemplateBorderFamilyKey,
+} from "../data/signBorderTrims";
 import {
   validateBadgeTemplate,
   validateBadgeData,
 } from "../utils/badgeValidator";
+import {
+  migrateLegacyDesignerUniversalTemplateId,
+  migrateLegacyDesignerTemplateIdsOnBadges,
+  migrateLegacyDesignerTemplateId,
+} from "../utils/designerTemplateMigration";
+import { DESIGNER_MOTIF_UI_OPTIONS } from "../data/designerMotifs";
 import {
   migrateBadgeToTemplate,
   checkTemplateCompatibility,
@@ -275,10 +290,10 @@ function DesktopPreviewDimensionFrame({
     return `${s}"`;
   };
   const tick = "bg-gray-600";
-  const tw = compact ? "text-[8px]" : "text-[10px]";
+  const tw = compact ? "text-xs" : "text-base md:text-base";
   const tickW = compact ? "w-1.5" : "w-2";
   const tickH = compact ? "h-1.5" : "h-2";
-  const sideW = compact ? "w-4" : "w-5";
+  const sideW = compact ? "w-5" : "w-7";
 
   return (
     <div className="w-full flex flex-col items-stretch min-w-0">
@@ -294,10 +309,10 @@ function DesktopPreviewDimensionFrame({
         >
           <div className={`${tickW} h-px ${tick}`} />
           <div
-            className={`flex-1 w-px ${tick} min-h-[20px] relative flex items-center justify-center my-0.5`}
+            className={`flex-1 w-px ${tick} min-h-[28px] relative flex items-center justify-center my-0.5`}
           >
             <span
-              className={`absolute ${tw} font-semibold text-gray-700 bg-blue-50/95 px-1 rounded border border-gray-300 whitespace-nowrap`}
+              className={`absolute ${tw} font-semibold text-gray-700 bg-blue-50/95 px-1.5 py-0.5 rounded border border-gray-300 whitespace-nowrap`}
               style={{ transform: "rotate(-90deg)" }}
             >
               {fmtIn(heightPx)}
@@ -317,7 +332,7 @@ function DesktopPreviewDimensionFrame({
             className={`flex-1 h-px ${tick} relative flex items-center justify-center min-w-[1.5rem]`}
           >
             <span
-              className={`absolute ${tw} font-semibold text-gray-700 bg-blue-50/95 px-1 rounded border border-gray-300 whitespace-nowrap`}
+              className={`absolute ${tw} font-semibold text-gray-700 bg-blue-50/95 px-1.5 py-0.5 rounded border border-gray-300 whitespace-nowrap`}
             >
               {fmtIn(widthPx)}
             </span>
@@ -682,6 +697,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         // Restore universal template ID (this is the key fix)
         if (lastAction.previousUniversalTemplateId) {
           setUniversalTemplateId(lastAction.previousUniversalTemplateId);
+        }
+
+        if (
+          variant === "sign" &&
+          config.hasSizeStep &&
+          lastAction.previousUniversalTemplateId
+        ) {
+          const eff = migrateLegacyDesignerUniversalTemplateId(
+            lastAction.previousUniversalTemplateId,
+          );
+          const m = findSignTypeAndSizeForUniversalTemplate(eff);
+          if (m) {
+            setSelectedSignTemplateType(m.typeId);
+            setSelectedSignSizeTemplateId(m.sizeTemplateId);
+          }
         }
 
         // Sync badge1Data if editing the first badge
@@ -1140,7 +1170,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     runDraftSaveForBadges(updatedMultipleBadges);
   };
 
-  /** Sign designer: copy current border color (or per-badge background when "No border") to every badge. */
+  /** Sign designer: copy frame on/off, style, motif, and border color to every badge. */
   const applyBorderToAll = () => {
     if (
       variant !== "sign" ||
@@ -1155,14 +1185,23 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       badgeIndex: selectedBadgeIndex,
     });
 
-    const useNoBorder = noBorder;
+    const usePlateOnly =
+      badge.signBorderOptionId === undefined ||
+      badge.signBorderOptionId === SIGN_BORDER_OPTION_NONE;
     const solidBorderColor = badge.borderColor ?? "#FFFFFF";
 
     const updatedMultipleBadges = multipleBadges.map((b: Badge) => {
-      const nextBorder = useNoBorder
+      const nextBorder = usePlateOnly
         ? b.backgroundColor ?? "#FFFFFF"
         : solidBorderColor;
-      return { ...b, borderColor: nextBorder };
+      return {
+        ...b,
+        borderColor: nextBorder,
+        designerMotif: badge.designerMotif ?? b.designerMotif,
+        signBorderEnabled: badge.signBorderEnabled,
+        signBorderStyleId: badge.signBorderStyleId ?? b.signBorderStyleId,
+        signBorderOptionId: badge.signBorderOptionId,
+      };
     });
     setMultipleBadges(updatedMultipleBadges);
 
@@ -1270,6 +1309,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       | "magnetic"
       | "adhesive",
     lines: paddedLines.map((line) => ({ ...line })),
+    ...(config.templatesKey === "sign"
+      ? {
+          signBorderStyleId: "default",
+        }
+      : {}),
   };
   const [multipleBadges, setMultipleBadges] = useState<Badge[]>([]);
   const [badge, setBadge] = useState<Badge>({
@@ -1297,7 +1341,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [selectedSignSizeTemplateId, setSelectedSignSizeTemplateId] = useState<
     string | null
   >(null);
-
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [showCsvWarningModal, setShowCsvWarningModal] = useState(false);
   const [pendingCsvAction, setPendingCsvAction] = useState<
@@ -1373,25 +1416,27 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     backing: false,
     border: false,
   });
-  /** When true, border color matches background (no visible border). Only for sign designer. */
-  const [noBorder, setNoBorder] = useState(false);
-  /** Sign designer: user must choose a border color or "No border" before text / cart (not auto-complete on load). */
-  const [signBorderConfigured, setSignBorderConfigured] = useState(false);
   /** True when the selected sign template family has a border trim (Circle/Basic omit the border step). */
   const signBorderStepRequired =
     variant === "sign" &&
     config.hasBorder &&
     signTemplateTypeShowsBorderStep(selectedSignTemplateType);
-  /** Step 3 is "complete" only when user has changed every line from the default (not "Your Name", "Title", or "Line Text"). */
+  /** Sign: framed trim + motif (not "No border" and user has chosen an option). */
+  const signBorderFramed =
+    badge.signBorderOptionId !== undefined &&
+    badge.signBorderOptionId !== SIGN_BORDER_OPTION_NONE;
+  /** Sign: border step complete once user picks any option (including No border). */
+  const signBorderConfigured =
+    !signBorderStepRequired || badge.signBorderOptionId !== undefined;
+  /** Step 3 text: line 1 must be customized (non-empty and not placeholder). Extra lines may stay template defaults ("Title", "Line Text") or empty — typical for single-line badges, CSV, and duplicates. */
   const getStep3DefaultText = (lineIndex: number) =>
     lineIndex === 0 ? "Your Name" : lineIndex === 1 ? "Title" : "Line Text";
   const hasStep3TextEntered =
     badge.lines.length > 0 &&
-    badge.lines.every(
-      (l, i) =>
-        (l.text || "").trim() !== "" &&
-        (l.text || "").trim() !== getStep3DefaultText(i),
-    );
+    (() => {
+      const t0 = (badge.lines[0]?.text || "").trim();
+      return t0 !== "" && t0 !== getStep3DefaultText(0);
+    })();
   const stepsComplete =
     multipleBadges.length > 0 &&
     hasChosenBackgroundColor &&
@@ -1467,6 +1512,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const proofPendingAddToCartRef = useRef<ProofPendingPayload | null>(null);
   /** Once true, we no longer auto-close/open sections on selection (user has completed first-time guided flow). */
   const guidedFlowCompletedRef = useRef(false);
+  /** First template pick auto-opens the next step (sign: size, badge: background); later picks do not move sections. */
+  const templateGuidedAutoAdvanceDoneRef = useRef(false);
+  /** First sign size pick auto-opens backgrounds; later picks do not move sections. */
+  const signSizeGuidedAutoAdvanceDoneRef = useRef(false);
   /** True after we have restored from localStorage cache once (prevents re-restore on later effect runs). */
   const restoredFromCacheRef = useRef(false);
   /** True after we have asked to load previous design this session (don't show modal again until next visit). */
@@ -1481,6 +1530,31 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   badgeRef.current = badge;
   selectedBadgeIndexRef.current = selectedBadgeIndex;
   universalTemplateIdRef.current = universalTemplateId;
+
+  /** Keep `multipleBadges[selectedBadgeIndex]` in sync with live `badge` so duplicate/export/grid never see stale line text. */
+  const persistCurrentBadgeToSlot = (next: Badge) => {
+    const tid = universalTemplateIdRef.current;
+    const idx = selectedBadgeIndexRef.current;
+    setMultipleBadges((prev) => {
+      if (prev.length === 0) return prev;
+      const copy = [...prev];
+      if (copy[idx]) {
+        copy[idx] = {
+          ...next,
+          templateId: tid,
+          backgroundColor: next.backgroundColor || "#FFFFFF",
+        };
+      }
+      return copy;
+    });
+    if (idx === 0) {
+      setBadge1Data({
+        ...next,
+        templateId: tid,
+        backgroundColor: next.backgroundColor || "#FFFFFF",
+      });
+    }
+  };
 
   // Helper function to scroll a section into view within its scrollable container
   const scrollSectionIntoView = (
@@ -1616,21 +1690,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   }, [sectionsOpen.border]);
 
-  // When "No border" is checked, keep border color in sync with background so trim is invisible
-  useEffect(() => {
-    if (
-      noBorder &&
-      variant === "sign" &&
-      signTemplateTypeShowsBorderStep(selectedSignTemplateType) &&
-      (badge.borderColor ?? "#FFFFFF") !== (badge.backgroundColor ?? "#FFFFFF")
-    ) {
-      setBadge((prev) => ({
-        ...prev,
-        borderColor: prev.backgroundColor ?? "#FFFFFF",
-      }));
-    }
-  }, [noBorder, badge.backgroundColor, variant, selectedSignTemplateType]);
-
   // Load templates - refresh when templateRefreshKey changes
   useEffect(() => {
     setTemplateLoadError(null);
@@ -1663,14 +1722,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     })();
   }, [templateRefreshKey, config.templatesKey]);
 
-  // Build template picker thumbnails: white background, dark outline (consistent for all templates).
-  // Sign viewBoxes are large in px — a thicker stroke reads clearly when scaled into small grid cells (esp. circles).
+  // Build template picker thumbnails: plate + outline only (no trim/motifs). Users add frame, color, and
+  // Designer motifs in the border step. Sign viewBoxes are large in px — thicker stroke for small grid cells.
   useEffect(() => {
     if (templates.length === 0) return;
     const previewBadge: Badge = {
       templateId: "",
       backgroundColor: "#FFFFFF",
       borderColor: "#000000",
+      signBorderOptionId: SIGN_BORDER_OPTION_NONE,
+      signBorderEnabled: false,
+      signBorderStyleId: "default",
       lines: [],
       backing: "pin",
     };
@@ -1688,11 +1750,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               outlineStrokeWidth: templateThumbOutlineWidth,
             },
           );
-          const dataUrl =
-            "data:image/svg+xml;base64," +
-            btoa(unescape(encodeURIComponent(svg)));
+          let dataUrl: string;
+          try {
+            dataUrl =
+              "data:image/svg+xml;base64," +
+              btoa(unescape(encodeURIComponent(svg)));
+          } catch {
+            dataUrl =
+              "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+          }
           next[t.id] = dataUrl;
-        } catch {
+        } catch (e) {
+          console.error(
+            `[BadgeDesigner] Template thumbnail failed for ${t.id}:`,
+            e,
+          );
           delete next[t.id];
         }
       }
@@ -1715,6 +1787,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       selectedBadgeIndex?: number;
       hasChosenBackgroundColor?: boolean;
       designId?: string | null;
+      selectedSignTemplateType?: string | null;
+      selectedSignSizeTemplateId?: string | null;
     };
     try {
       payload = JSON.parse(raw);
@@ -1727,27 +1801,75 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       payload.multipleBadges.length === 0
     )
       return;
+    const migratedUniversal = migrateLegacyDesignerUniversalTemplateId(
+      payload.universalTemplateId!,
+    );
+    const migratedBadges = migrateLegacyDesignerTemplateIdsOnBadges(
+      payload.multipleBadges,
+    );
     if (
-      !payload.universalTemplateId ||
-      !templates.some((t) => t.id === payload.universalTemplateId)
+      !migratedUniversal ||
+      !templates.some((t) => t.id === migratedUniversal)
     )
       return;
     restoredFromCacheRef.current = true;
     const safeIndex = Math.min(
       payload.selectedBadgeIndex ?? 0,
-      payload.multipleBadges.length - 1,
+      migratedBadges.length - 1,
     );
-    setMultipleBadges(payload.multipleBadges);
-    setUniversalTemplateId(payload.universalTemplateId!);
+    setMultipleBadges(migratedBadges);
+    setUniversalTemplateId(migratedUniversal);
     setSelectedBadgeIndex(safeIndex);
     setHasChosenBackgroundColor(payload.hasChosenBackgroundColor ?? false);
-    setBadge(payload.multipleBadges[safeIndex]);
+    setBadge(migratedBadges[safeIndex] ?? migratedBadges[0]);
     if (payload.designId != null) {
       sessionDesignIdRef.current = payload.designId;
     }
-    setBadge1Data(payload.multipleBadges[0] ?? null);
+    setBadge1Data(migratedBadges[0] ?? null);
+    templateGuidedAutoAdvanceDoneRef.current = true;
+    signSizeGuidedAutoAdvanceDoneRef.current = true;
+    if (config.templatesKey === "sign") {
+      if (
+        payload.selectedSignTemplateType !== undefined ||
+        payload.selectedSignSizeTemplateId !== undefined
+      ) {
+        setSelectedSignTemplateType(
+          payload.selectedSignTemplateType ?? null,
+        );
+        setSelectedSignSizeTemplateId(
+          payload.selectedSignSizeTemplateId ?? null,
+        );
+      } else {
+        const m = findSignTypeAndSizeForUniversalTemplate(migratedUniversal);
+        if (m) {
+          setSelectedSignTemplateType(m.typeId);
+          setSelectedSignSizeTemplateId(m.sizeTemplateId);
+        }
+      }
+    }
     // Do not mark steps 3 or 4 as opened; user must open step 4 (and step 3 counts complete only when they have non-default text) in this session
-  }, [templates, _shop, _productId]);
+  }, [templates, _shop, _productId, config.templatesKey]);
+
+  // Sign: migrate legacy themed Designer template ids off storage/API.
+  useEffect(() => {
+    if (variant !== "sign" || templates.length === 0) return;
+    const eff = migrateLegacyDesignerUniversalTemplateId(universalTemplateId);
+    if (eff === universalTemplateId) return;
+    if (!templates.some((t) => t.id === eff)) return;
+    setUniversalTemplateId(eff);
+    setMultipleBadges((p) => migrateLegacyDesignerTemplateIdsOnBadges(p));
+    setBadge((b) => migrateLegacyDesignerTemplateId(b));
+  }, [variant, templates, universalTemplateId]);
+
+  // Sign: keep template type aligned with universalTemplateId (preview uses first size as placeholder).
+  // Size selection is explicit in Step 2 — do not infer selectedSignSizeTemplateId from universal here.
+  useEffect(() => {
+    if (variant !== "sign" || multipleBadges.length === 0) return;
+    const eff = migrateLegacyDesignerUniversalTemplateId(universalTemplateId);
+    const m = findSignTypeAndSizeForUniversalTemplate(eff);
+    if (!m) return;
+    setSelectedSignTemplateType(m.typeId);
+  }, [variant, universalTemplateId, multipleBadges.length]);
 
   // Fetch saved design for "Load previous?" when user is logged in (customerId + shop)
   useEffect(() => {
@@ -1791,6 +1913,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         selectedBadgeIndex,
         hasChosenBackgroundColor,
         designId: sessionDesignIdRef.current,
+        ...(variant === "sign"
+          ? {
+              selectedSignTemplateType,
+              selectedSignSizeTemplateId,
+            }
+          : {}),
       };
       try {
         localStorage.setItem(cacheKey, JSON.stringify(payload));
@@ -1804,6 +1932,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     universalTemplateId,
     selectedBadgeIndex,
     hasChosenBackgroundColor,
+    selectedSignTemplateType,
+    selectedSignSizeTemplateId,
+    variant,
     _shop,
     _productId,
   ]);
@@ -1824,6 +1955,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         selectedBadgeIndex,
         hasChosenBackgroundColor,
         designId: sessionDesignIdRef.current,
+        ...(variant === "sign"
+          ? {
+              selectedSignTemplateType,
+              selectedSignSizeTemplateId,
+            }
+          : {}),
       };
       try {
         localStorage.setItem(cacheKey, JSON.stringify(payload));
@@ -1838,6 +1975,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     universalTemplateId,
     selectedBadgeIndex,
     hasChosenBackgroundColor,
+    selectedSignTemplateType,
+    selectedSignSizeTemplateId,
+    variant,
     _shop,
     _productId,
   ]);
@@ -1901,7 +2041,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const matched =
         templates.find((t) => t.id === prevBadge.templateId) ??
         templates.find((t) => t.id === universalTemplateId);
-      const designBox = matched?.designBox;
+      const designBox = matched
+        ? getEffectiveDesignBox(matched, prevBadge)
+        : null;
       if (!designBox) {
         return prevBadge;
       }
@@ -1916,7 +2058,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     });
     // universalTemplateId: resolve the correct LoadedTemplate when prevBadge.templateId is briefly out of sync
     // eslint-disable-next-line react-hooks/exhaustive-deps -- getDefaultSizeNorm/scaleLinesToFit/calculateCenterPositions are stable enough; listing them would retrigger every render
-  }, [templates.length, universalTemplateId]);
+  }, [
+    templates.length,
+    universalTemplateId,
+    badge.signBorderOptionId,
+    badge.signBorderStyleId,
+  ]);
 
   // Initialize badge1Data to sync with multipleBadges[0] on mount
   useEffect(() => {
@@ -1965,6 +2112,18 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
     return template;
   }, [templates, universalTemplateId]);
+
+  const effectiveDesignBox = useMemo(() => {
+    if (!activeTemplate) {
+      return { x: 0, y: 0, width: 288, height: 96 };
+    }
+    return getEffectiveDesignBox(activeTemplate, badge);
+  }, [
+    activeTemplate,
+    badge.signBorderOptionId,
+    badge.signBorderStyleId,
+    badge.templateId,
+  ]);
 
   // Main preview (top): template aspect ratio, always shrink to fit container width so no horizontal scroll.
   const previewBoxStyle = useMemo(() => {
@@ -2357,7 +2516,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     lines: BadgeLine[],
     designBoxOverride?: { height: number; width: number } | null,
   ): BadgeLine[] => {
-    const box = designBoxOverride ?? activeTemplate?.designBox;
+    const box = designBoxOverride ?? effectiveDesignBox;
     if (!box) return lines;
 
     const designBoxHeight = box.height;
@@ -2462,12 +2621,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       });
     }
 
-    const designBox = activeTemplate?.designBox || {
-      x: 0,
-      y: 0,
-      width: 288,
-      height: 96,
-    };
+    const designBox = effectiveDesignBox;
     // Account for 0.1" (9.6px) inset on each side for text clipping
     const INSET_INCHES = 0.1;
     const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
@@ -2572,19 +2726,18 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     // Apply center-based positioning
     const centeredLines = calculateCenterPositions(newLines);
 
-    setBadge({ ...badge, lines: centeredLines });
+    const nextBadge = { ...badge, lines: centeredLines };
+    setBadge(nextBadge);
+    persistCurrentBadgeToSlot(nextBadge);
   };
 
   const addLine = () => {
     if (badge.lines.length < maxLines) {
       // Get the current template's designBox for positioning new lines
       const currentTemplate = templates.find((t) => t.id === badge.templateId);
-      const designBox = currentTemplate?.designBox || {
-        x: 0,
-        y: 0,
-        width: 288,
-        height: 96,
-      };
+      const designBox = currentTemplate
+        ? getEffectiveDesignBox(currentTemplate, badge)
+        : effectiveDesignBox;
 
       const newLineIndex = badge.lines.length;
       const newSizeNorm = getDefaultSizeNorm(newLineIndex, designBox.height);
@@ -2612,10 +2765,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       // Apply center-based positioning to all lines
       const centeredLines = calculateCenterPositions(scaledLines);
 
-      setBadge({
+      const nextBadge = {
         ...badge,
         lines: centeredLines,
-      });
+      };
+      setBadge(nextBadge);
+      persistCurrentBadgeToSlot(nextBadge);
     }
   };
 
@@ -2627,7 +2782,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       // Apply center-based positioning to remaining lines
       const centeredLines = calculateCenterPositions(newLines);
 
-      setBadge({
+      const nextBadge = {
         ...badge,
         lines: centeredLines.map((l) => ({
           ...l,
@@ -2636,18 +2791,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               ? l.align
               : "center",
         })),
-      });
+      };
+      setBadge(nextBadge);
+      persistCurrentBadgeToSlot(nextBadge);
     }
   };
 
   // Reset a single line to default font (Roboto, no bold/italic/underline, center, 25pt line 1 / 17pt rest, contrast color). One undo restores full state.
   const resetLineToDefault = (index: number) => {
-    const designBox = activeTemplate?.designBox || {
-      x: 0,
-      y: 0,
-      width: 288,
-      height: 96,
-    };
+    const designBox = effectiveDesignBox;
     const bgColor = badge.backgroundColor || "#FFFFFF";
     const defaultColor = getContrastingTextColor(bgColor);
     const defaultSizeNorm = getDefaultSizeNorm(index, designBox.height);
@@ -2754,7 +2906,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     const currentTemplate = templates.find(
       (t) => t.id === badgeToReset.templateId,
     );
-    const designBoxHeight = currentTemplate?.designBox?.height || 96;
+    const designBoxHeight = currentTemplate
+      ? getEffectiveDesignBox(currentTemplate, badgeToReset).height
+      : 96;
 
     return badgeToReset.lines.map(
       (line, index) =>
@@ -2795,6 +2949,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       lines: centeredLines,
       backgroundColor: "#FFFFFF",
       backing: badge.backing || "magnetic", // Preserve backing if it exists
+      ...(variant === "sign"
+        ? {
+            signBorderStyleId: "default",
+            signBorderOptionId: undefined,
+            signBorderEnabled: undefined,
+          }
+        : {}),
     };
 
     setBadge(resetBadgeData);
@@ -2811,14 +2972,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       setBadge1Data(resetBadgeData);
     }
 
-    if (variant === "sign" && config.hasBorder) {
-      setSignBorderConfigured(
-        signTemplateTypeShowsBorderStep(selectedSignTemplateType)
-          ? false
-          : true,
-      );
-      setNoBorder(false);
-    }
   };
 
   const resetAllBadges = () => {
@@ -2841,6 +2994,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         lines: centeredLines,
         backgroundColor: "#FFFFFF",
         backing: badgeToReset.backing || "magnetic",
+        ...(variant === "sign"
+          ? {
+              signBorderStyleId: "default",
+              signBorderOptionId: undefined,
+              signBorderEnabled: undefined,
+            }
+          : {}),
       };
     });
 
@@ -2860,17 +3020,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       lines: centeredLines,
       backgroundColor: "#FFFFFF",
       backing: badge.backing || "magnetic",
+      ...(variant === "sign"
+        ? {
+            signBorderStyleId: "default",
+            signBorderOptionId: undefined,
+            signBorderEnabled: undefined,
+          }
+        : {}),
     };
     setBadge(resetBadgeData);
-
-    if (variant === "sign" && config.hasBorder) {
-      setSignBorderConfigured(
-        signTemplateTypeShowsBorderStep(selectedSignTemplateType)
-          ? false
-          : true,
-      );
-      setNoBorder(false);
-    }
   };
 
   // CLEAN ARCHITECTURE: Auto-save on switch (no manual save button)
@@ -2952,8 +3110,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     setSelectedBadgeIndex(index);
     if (index !== selectedBadgeIndex) setDraftSaveTrigger((t) => t + 1);
 
-    // Load the selected badge from multipleBadges array
-    const selectedBadge = multipleBadges[index];
+    // Load from the array we just wrote (stale closure on `multipleBadges` would skip the save we just applied)
+    const selectedBadge = newMultipleBadges[index];
     if (selectedBadge) {
       console.log(
         `[UNIVERSAL] Loading badge ${index + 1} for editing:`,
@@ -3004,14 +3162,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     if (variant === "sign") {
       setSelectedSignTemplateType(null);
       setSelectedSignSizeTemplateId(null);
-      setSignBorderConfigured(false);
-      setNoBorder(false);
       setSignSize("medium");
       setSignBorderId("");
     }
     setBadge1Data(null);
     sessionDesignIdRef.current = null;
     guidedFlowCompletedRef.current = false;
+    templateGuidedAutoAdvanceDoneRef.current = false;
+    signSizeGuidedAutoAdvanceDoneRef.current = false;
     setUndoHistory([]);
   };
 
@@ -3053,7 +3211,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   /** Insert a full copy of the badge at `index` immediately after it; select the new copy. */
   const duplicateBadgeAtIndex = (index: number) => {
     if (index < 0 || index >= multipleBadges.length) return;
-    const source = multipleBadges[index];
+    const source =
+      index === selectedBadgeIndex ? badge : multipleBadges[index];
     const dup = JSON.parse(JSON.stringify(source)) as Badge;
     dup.id = `badge-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     dup.lines = (dup.lines || []).map((line, lineIdx) => ({
@@ -3111,7 +3270,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         console.error("Template not found:", newTemplateId);
         return;
       }
-      const designBox = newTemplate.designBox;
+      const protoForBox: Badge = {
+        ...INITIAL_BADGE,
+        templateId: newTemplateId,
+        backgroundColor: INITIAL_BADGE.backgroundColor ?? "#FFFFFF",
+        backing: INITIAL_BADGE.backing ?? "magnetic",
+        lines: [...INITIAL_BADGE.lines],
+        ...(variant === "sign"
+          ? {
+              signBorderStyleId: "default",
+              signBorderOptionId: undefined,
+              signBorderEnabled: undefined,
+            }
+          : {}),
+      };
+      const designBox = getEffectiveDesignBox(newTemplate, protoForBox);
       const initialLinesWithSizes = INITIAL_BADGE.lines.map((line, index) => ({
         ...line,
         sizeNorm: getDefaultSizeNorm(index, designBox.height),
@@ -3150,20 +3323,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         backgroundColor: INITIAL_BADGE.backgroundColor ?? "#FFFFFF",
         backing: INITIAL_BADGE.backing ?? "magnetic",
         lines: centeredLines,
+        ...(variant === "sign"
+          ? {
+              signBorderStyleId: "default",
+              signBorderOptionId: undefined,
+              signBorderEnabled: undefined,
+            }
+          : {}),
       };
       setUniversalTemplateId(newTemplateId);
       setMultipleBadges([newBadge]);
       setBadge(newBadge);
-      if (variant === "sign" && config.hasBorder) {
-        setSignBorderConfigured(
-          signTemplateTypeShowsBorderStep(selectedSignTemplateType)
-            ? false
-            : true,
-        );
-        setNoBorder(false);
-      }
       setSectionsOpened((prev) => ({ ...prev, template: true }));
-      if (!guidedFlowCompletedRef.current) {
+      if (!templateGuidedAutoAdvanceDoneRef.current) {
         if (config.hasSizeStep) {
           setSectionsOpen({
             template: false,
@@ -3195,6 +3367,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             background: true,
           }));
         }
+        templateGuidedAutoAdvanceDoneRef.current = true;
       }
       return;
     }
@@ -3210,11 +3383,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     // This ensures we get the correct old template dimensions
     const oldTemplateId = badge.templateId || universalTemplateId;
     const oldTemplate = await loadTemplateById(oldTemplateId, variant);
-    const oldDesignBox = oldTemplate?.designBox ||
-      activeTemplate?.designBox || {
-        height: 96,
-        width: 288,
-      };
+    const oldDesignBox = oldTemplate
+      ? getEffectiveDesignBox(oldTemplate, badge)
+      : {
+          height: 96,
+          width: 288,
+        };
 
     setUniversalTemplateId(newTemplateId);
 
@@ -3225,16 +3399,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       return;
     }
 
-    const newDesignBox = newTemplate.designBox;
-
     // Account for 0.1" (9.6px) inset on each side for text clipping
     const INSET_INCHES = 0.1;
     const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
-    const maxTextWidth = newDesignBox.width - INSET_PX * 2 - 4; // Subtract inset and margin
 
     /** Shrink each line's sizeNorm only if its text is wider than the template text area. */
-    const shrinkLinesToFitMaxWidth = (lines: BadgeLine[]): BadgeLine[] => {
-      const newDesignBoxHeight = newDesignBox.height;
+    const shrinkLinesToFitMaxWidth = (
+      lines: BadgeLine[],
+      box: { width: number; height: number },
+    ): BadgeLine[] => {
+      const maxTextWidth = box.width - INSET_PX * 2 - 4;
+      const newDesignBoxHeight = box.height;
       return lines.map((line) => {
         let fontSize = (line.sizeNorm ?? 0.15) * newDesignBoxHeight;
         let newSizeNorm = line.sizeNorm ?? 0.15;
@@ -3274,19 +3449,23 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     };
 
     /** Signs: always use 25px / 17px targets for lines (in design-box space), then shrink to fit height and width. */
-    const applySignTemplateLineSizes = (lines: BadgeLine[]): BadgeLine[] => {
+    const applySignTemplateLineSizes = (
+      lines: BadgeLine[],
+      box: { width: number; height: number },
+    ): BadgeLine[] => {
       let next = lines.map((line, lineIndex) => ({
         ...line,
-        sizeNorm: getDefaultSizeNorm(lineIndex, newDesignBox.height),
+        sizeNorm: getDefaultSizeNorm(lineIndex, box.height),
       }));
-      next = scaleLinesToFit(next, newDesignBox);
-      return shrinkLinesToFitMaxWidth(next);
+      next = scaleLinesToFit(next, box);
+      return shrinkLinesToFitMaxWidth(next, box);
     };
 
     // Auto-scale function to ensure text fits within new template boundaries
     // Preserves font sizes in pixels (points) when switching templates, only shrinking if needed to fit
     const autoScaleLinesForNewTemplate = (
       lines: BadgeLine[],
+      newBox: { width: number; height: number },
       badgeOldTemplateId?: string,
     ): BadgeLine[] => {
       // Get the old designBox for this specific badge if provided, otherwise use the default oldDesignBox
@@ -3297,8 +3476,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         badgeOldDesignBox = oldDesignBox;
       }
 
+      const maxTextWidth = newBox.width - INSET_PX * 2 - 4;
+
       return lines.map((line, lineIndex) => {
-        const newDesignBoxHeight = newDesignBox.height;
+        const newDesignBoxHeight = newBox.height;
 
         // Calculate current pixel size from old template
         // This preserves the actual font size in pixels/points across template changes
@@ -3350,25 +3531,52 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       });
     };
 
+    const clearSignBorderOnTemplateChange =
+      variant === "sign" &&
+      signTemplateBorderFamilyKey(badge.templateId || oldTemplateId) !==
+        signTemplateBorderFamilyKey(newTemplateId);
+
     // Update current badge with auto-scaled text (signs: reset to 25/17 defaults then fit; badges: preserve px)
     setBadge((prev) => {
+      const proto = { ...prev, templateId: newTemplateId };
+      const box = getEffectiveDesignBox(newTemplate, proto);
       const scaledLines =
         variant === "sign"
-          ? applySignTemplateLineSizes(prev.lines)
-          : autoScaleLinesForNewTemplate(prev.lines, prev.templateId);
+          ? applySignTemplateLineSizes(prev.lines, box)
+          : autoScaleLinesForNewTemplate(prev.lines, box, prev.templateId);
       const centeredLines = calculateCenterPositions(scaledLines);
-      return { ...prev, templateId: newTemplateId, lines: centeredLines };
+      return {
+        ...proto,
+        lines: centeredLines,
+        ...(clearSignBorderOnTemplateChange
+          ? {
+              signBorderOptionId: undefined,
+              signBorderEnabled: undefined,
+            }
+          : {}),
+      };
     });
 
     // Update all badges in multipleBadges with auto-scaled text
     setMultipleBadges((prev) => {
       const updated = prev.map((b) => {
+        const proto = { ...b, templateId: newTemplateId };
+        const box = getEffectiveDesignBox(newTemplate, proto);
         const scaledLines =
           variant === "sign"
-            ? applySignTemplateLineSizes(b.lines)
-            : autoScaleLinesForNewTemplate(b.lines, b.templateId);
+            ? applySignTemplateLineSizes(b.lines, box)
+            : autoScaleLinesForNewTemplate(b.lines, box, b.templateId);
         const centeredLines = calculateCenterPositions(scaledLines);
-        return { ...b, templateId: newTemplateId, lines: centeredLines };
+        return {
+          ...proto,
+          lines: centeredLines,
+          ...(clearSignBorderOnTemplateChange
+            ? {
+                signBorderOptionId: undefined,
+                signBorderEnabled: undefined,
+              }
+            : {}),
+        };
       });
 
       // Sync badge1Data with the first badge
@@ -3883,15 +4091,27 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     setBadge(restoredBadges[0]);
     setBadge1Data(restoredBadges[0] ?? null);
     setSelectedBadgeIndex(0);
-    setUniversalTemplateId(restoredBadges[0]?.templateId ?? "rect-1x3");
+    const restoredTid = restoredBadges[0]?.templateId ?? "rect-1x3";
+    setUniversalTemplateId(restoredTid);
     setHasChosenBackgroundColor(true);
+    templateGuidedAutoAdvanceDoneRef.current = true;
+    signSizeGuidedAutoAdvanceDoneRef.current = true;
+    guidedFlowCompletedRef.current = true;
+    if (variant === "sign" && config.hasSizeStep) {
+      const eff = migrateLegacyDesignerUniversalTemplateId(restoredTid);
+      const m = findSignTypeAndSizeForUniversalTemplate(eff);
+      if (m) {
+        setSelectedSignTemplateType(m.typeId);
+        setSelectedSignSizeTemplateId(m.sizeTemplateId);
+      }
+    }
     setSectionsOpened((prev) => ({ ...prev, textLines: true, backing: true }));
     if (savedDesignForLoad?.design_id) {
       sessionDesignIdRef.current = savedDesignForLoad.design_id;
     }
     setShowLoadPreviousModal(false);
     setSavedDesignForLoad(null);
-  }, [savedDesignForLoad]);
+  }, [savedDesignForLoad, variant, config.hasSizeStep]);
 
   const onStartFreshDesign = useCallback(() => {
     setShowLoadPreviousModal(false);
@@ -4325,7 +4545,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             backgroundColor: badge.backgroundColor || "#FFFFFF",
             lines: row.map((cell: any, i: number) => {
               // Get designBox height for size calculation
-              const designBoxHeight = activeTemplate?.designBox?.height || 96;
+              const designBoxHeight = effectiveDesignBox.height || 96;
 
               // If this line index exists in the first badge, use its formatting
               // Otherwise, use default formatting (black, 17pt for line 3+)
@@ -4963,7 +5183,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       );
                     };
 
-                    // Sign: 4 template types only (Circle, Classic framed, Designer, Fancy); no sizes in titles; keep "more templates" for future options
+                    // Sign: primary shape grid (Circle, Classic framed, Designer themes, Fancy); more shapes in "more templates"
                     if (variant === "sign") {
                       const handleSignTypeSelect = (
                         type: (typeof SIGN_TEMPLATE_TYPES)[0],
@@ -4972,24 +5192,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                         setSelectedSignTemplateType(type.id);
                         setUniversalTemplateId(firstSizeId);
                         setSelectedSignSizeTemplateId(null);
-                        if (config.hasBorder) {
-                          setSignBorderConfigured(
-                            signTemplateTypeShowsBorderStep(type.id)
-                              ? false
-                              : true,
-                          );
-                          setNoBorder(false);
+                        if (!templateGuidedAutoAdvanceDoneRef.current) {
+                          setSectionsOpen({
+                            template: false,
+                            size: true,
+                            export: false,
+                            background: false,
+                            textLines: false,
+                            backing: false,
+                            border: false,
+                          });
+                          setSectionsOpened((prev) => ({ ...prev, size: true }));
+                          templateGuidedAutoAdvanceDoneRef.current = true;
                         }
-                        setSectionsOpen({
-                          template: false,
-                          size: true,
-                          export: false,
-                          background: false,
-                          textLines: false,
-                          backing: false,
-                          border: false,
-                        });
-                        setSectionsOpened((prev) => ({ ...prev, size: true }));
                         handleUniversalTemplateChange(firstSizeId);
                       };
                       return (
@@ -5173,6 +5388,22 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                           sizeOpt.label.toLowerCase().replace(/\s+/g, "-"),
                         );
                         handleUniversalTemplateChange(sizeOpt.templateId);
+                        if (!signSizeGuidedAutoAdvanceDoneRef.current) {
+                          setSectionsOpen({
+                            template: false,
+                            size: false,
+                            export: false,
+                            background: true,
+                            textLines: false,
+                            backing: false,
+                            border: false,
+                          });
+                          setSectionsOpened((prev) => ({
+                            ...prev,
+                            background: true,
+                          }));
+                          signSizeGuidedAutoAdvanceDoneRef.current = true;
+                        }
                       }}
                       className={`px-3 py-2 rounded border text-sm font-medium transition-colors ${
                         selectedSignSizeTemplateId === sizeOpt.templateId
@@ -5456,36 +5687,73 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               <div
                 className={`transition-all duration-300 overflow-hidden ${
                   sectionsOpen.border
-                    ? "max-h-[400px] opacity-100"
+                    ? "max-h-[520px] opacity-100"
                     : "max-h-0 opacity-0"
                 }`}
               >
                 <div className="mb-3">
-                  <label className="flex items-center gap-2 cursor-pointer mb-2">
-                    <input
-                      type="checkbox"
-                      checked={noBorder}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setNoBorder(checked);
-                        setSignBorderConfigured(true);
-                        if (checked) {
-                          setBadge((prev) => ({
-                            ...prev,
-                            borderColor: prev.backgroundColor ?? "#FFFFFF",
-                          }));
-                        }
-                      }}
-                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm font-medium text-gray-800">
-                      No border
-                    </span>
-                  </label>
-                  {!noBorder && (
+                  <p className="text-xs text-gray-600 mb-3">
+                    Template previews show the plate shape only. Choose a border type
+                    below (including &quot;No border&quot;). With a frame, pick trim
+                    color and — on Designer — a center motif.
+                  </p>
+                  <p className="text-sm text-gray-700 mb-2">Border type</p>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {getSignBorderStepChipOptions(universalTemplateId).map(
+                      (opt) => {
+                        const active = badge.signBorderOptionId === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              const isNone = opt.id === SIGN_BORDER_OPTION_NONE;
+                              const next: Badge = {
+                                ...badge,
+                                signBorderOptionId: opt.id,
+                                signBorderEnabled: !isNone,
+                                signBorderStyleId: isNone
+                                  ? (badge.signBorderStyleId ?? "default")
+                                  : opt.id,
+                                ...(!isNone
+                                  ? {
+                                      borderColor:
+                                        badge.borderColor ?? "#FFFFFF",
+                                    }
+                                  : {}),
+                              };
+                              setBadge(next);
+                              const ub = [...multipleBadges];
+                              if (ub[selectedBadgeIndex]) {
+                                ub[selectedBadgeIndex] = next;
+                              }
+                              setMultipleBadges(ub);
+                              if (selectedBadgeIndex === 0) {
+                                setBadge1Data(next);
+                              }
+                            }}
+                            className={`px-2.5 py-1.5 rounded border text-xs font-medium transition-colors ${
+                              active
+                                ? "border-blue-600 bg-blue-50 text-blue-800"
+                                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      },
+                    )}
+                  </div>
+                  {badge.signBorderOptionId === undefined && (
+                    <p className="text-xs text-amber-700 mb-3">
+                      Select a border type to finish this step.
+                    </p>
+                  )}
+                  {signBorderFramed && (
                     <>
                       <p className="text-sm text-gray-700 mb-2">
-                        Border color (trim and decorative elements)
+                        Color for frame and trim (and Designer center motif when
+                        shown)
                       </p>
                       <div className="flex items-start gap-3 ml-1.5 mt-1.5">
                         <div className="flex flex-col gap-2">
@@ -5556,7 +5824,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                         ...badge,
                                         borderColor: c.value,
                                       });
-                                      setSignBorderConfigured(true);
                                     }
                                   }}
                                 />
@@ -5602,11 +5869,53 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                           </span>
                         </div>
                       </div>
+                      {selectedSignTemplateType === "designer-heart" &&
+                        universalTemplateId.startsWith("designer-") && (
+                          <div className="mt-4 w-full">
+                            <p className="text-sm text-gray-700 mb-2">
+                              Center motif
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {DESIGNER_MOTIF_UI_OPTIONS.map((opt) => {
+                                const active =
+                                  (badge.designerMotif ?? "heart") === opt.id;
+                                return (
+                                  <button
+                                    key={opt.id}
+                                    type="button"
+                                    onClick={() => {
+                                      const next = {
+                                        ...badge,
+                                        designerMotif: opt.id,
+                                      };
+                                      setBadge(next);
+                                      const ub = [...multipleBadges];
+                                      if (ub[selectedBadgeIndex]) {
+                                        ub[selectedBadgeIndex] = next;
+                                      }
+                                      setMultipleBadges(ub);
+                                      if (selectedBadgeIndex === 0) {
+                                        setBadge1Data(next);
+                                      }
+                                    }}
+                                    className={`px-2.5 py-1.5 rounded border text-xs font-medium transition-colors ${
+                                      active
+                                        ? "border-blue-600 bg-blue-50 text-blue-800"
+                                        : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                                    }`}
+                                  >
+                                    {opt.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                     </>
                   )}
-                  {noBorder && (
+                  {badge.signBorderOptionId === SIGN_BORDER_OPTION_NONE && (
                     <p className="text-xs text-gray-500">
-                      Border matches background (trim hidden)
+                      No frame or decorations; text uses the full plate area.
                     </p>
                   )}
                   {multipleBadges.length > 1 && (
@@ -5616,9 +5925,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                         onClick={applyBorderToAll}
                         className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors whitespace-nowrap"
                         title={
-                          noBorder
-                            ? `Set border to match each ${config.labelProduct.toLowerCase()}'s background on all ${config.labelProductPlural.toLowerCase()}`
-                            : `Apply this border color to all ${config.labelProductPlural.toLowerCase()}`
+                          !signBorderFramed
+                            ? `No frame on all; border color follows each ${config.labelProduct.toLowerCase()}'s background`
+                            : `Apply frame style, motif (Designer), and border color to all ${config.labelProductPlural.toLowerCase()}`
                         }
                       >
                         Apply border to all{" "}
@@ -5635,7 +5944,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                         type="button"
                         onClick={() => {
                           setSignBorderId(opt.value);
-                          setSignBorderConfigured(true);
                         }}
                         className={`px-3 py-2 rounded border text-sm ${
                           signBorderId === opt.value
@@ -6411,12 +6719,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                           if (variant === "sign") {
                             setSelectedSignTemplateType(null);
                             setSelectedSignSizeTemplateId(null);
-                            setSignBorderConfigured(false);
-                            setNoBorder(false);
                           }
                           setBadge1Data(null);
                           sessionDesignIdRef.current = null;
                           guidedFlowCompletedRef.current = false;
+                          templateGuidedAutoAdvanceDoneRef.current = false;
+                          signSizeGuidedAutoAdvanceDoneRef.current = false;
                           restoredFromCacheRef.current = true;
                           setUndoHistory([]);
                         }}
@@ -7082,7 +7390,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   Loading templates...
                 </div>
               ) : variant === "sign" ? (
-                /* Sign: same 4 type cards as main view; on select close modal and open size step */
+                /* Sign: same shape cards as main view; on select close modal and open size step */
                 (() => {
                   const signConfigs = getTemplateConfigsForVariant("sign");
                   const handleSignTypeSelectInModal = (
@@ -7093,22 +7401,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     setSelectedSignTemplateType(type.id);
                     setUniversalTemplateId(firstSizeId);
                     setSelectedSignSizeTemplateId(null);
-                    if (config.hasBorder) {
-                      setSignBorderConfigured(
-                        signTemplateTypeShowsBorderStep(type.id) ? false : true,
-                      );
-                      setNoBorder(false);
+                    if (!templateGuidedAutoAdvanceDoneRef.current) {
+                      setSectionsOpen({
+                        template: false,
+                        size: true,
+                        export: false,
+                        background: false,
+                        textLines: false,
+                        backing: false,
+                        border: false,
+                      });
+                      setSectionsOpened((prev) => ({ ...prev, size: true }));
+                      templateGuidedAutoAdvanceDoneRef.current = true;
                     }
-                    setSectionsOpen({
-                      template: false,
-                      size: true,
-                      export: false,
-                      background: false,
-                      textLines: false,
-                      backing: false,
-                      border: false,
-                    });
-                    setSectionsOpened((prev) => ({ ...prev, size: true }));
                     handleUniversalTemplateChange(firstSizeId);
                   };
                   return (
@@ -7672,7 +7977,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     title={c.name}
                     onClick={() => {
                       setBadge({ ...badge, borderColor: c.value });
-                      if (variant === "sign") setSignBorderConfigured(true);
                       setShowBorderColorModal(false);
                       setCustomBorderColorInput("");
                     }}
@@ -7729,7 +8033,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 const handleApplyBorderCustomColor = () => {
                   if (previewColor) {
                     setBadge({ ...badge, borderColor: previewColor });
-                    if (variant === "sign") setSignBorderConfigured(true);
                     setShowBorderColorModal(false);
                     setCustomBorderColorInput("");
                   }
@@ -8375,9 +8678,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 onClick={(e) => {
                   e.preventDefault();
                   if (csvText.trim() && !csvError) {
-                    // Always show warning modal since we always have at least 1 badge (the default)
-                    // This allows user to choose to override or add to existing badges
-                    setShowCsvWarningModal(true);
+                    if (multipleBadges.length === 0) {
+                      parseCsv(csvText, true, (newBadges) =>
+                        runDraftSaveForBadges(newBadges),
+                      );
+                      if (!csvError) {
+                        setCsvText("");
+                        setCsvPreview([]);
+                        setCsvError("");
+                        setShowCsvModal(false);
+                      }
+                    } else {
+                      setShowCsvWarningModal(true);
+                    }
                   }
                 }}
                 disabled={!!csvError || !csvText.trim()}

@@ -33,10 +33,31 @@ export interface BadgeImage {
 export interface Badge {
   id?: string;
   templateId?: string;
+  /** Sign Designer only: center/top scroll motif when using base `designer-*` templates. */
+  designerMotif?:
+    | "heart"
+    | "coffee"
+    | "golf"
+    | "house"
+    | "money"
+    | "paws"
+    | "recycle";
   lines: BadgeLine[];
   backgroundColor: string;
   /** Sign designer only: color for trim and decorative overlay (default #FFFFFF when template has overlay). */
   borderColor?: string;
+  /**
+   * Sign only: when true, render trim overlay (and Designer border + motif). When false, plate only.
+   * Kept in sync with `signBorderOptionId` when that is set; used for legacy payloads.
+   */
+  signBorderEnabled?: boolean;
+  /** Sign only: trim art variant when a framed option is selected (`default` until more styles ship). */
+  signBorderStyleId?: string;
+  /**
+   * Sign only: explicit border step choice. `undefined` = user has not chosen yet (step incomplete).
+   * `"none"` = plate only; any other id = framed trim (matches `signBorderStyleId` for v1).
+   */
+  signBorderOptionId?: string;
   backing: 'pin' | 'magnetic' | 'adhesive';
   backgroundImage?: BadgeImage;
   logo?: BadgeImage;

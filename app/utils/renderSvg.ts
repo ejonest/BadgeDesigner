@@ -1,6 +1,15 @@
 // app/utils/renderSvg.ts
 import type { LoadedTemplate } from "~/utils/templates";
 import type { Badge, BadgeImage } from "../types/badge";
+import {
+  getDesignerMotifPaths,
+  isDesignerMotifId,
+  type DesignerMotifId,
+} from "~/data/designerMotifs";
+import {
+  getSignTrimOverlayFragment,
+  SIGN_BORDER_OPTION_NONE,
+} from "~/data/signBorderTrims";
 import { loadFont } from "./fontLoader";
 import { BADGE_CONSTANTS } from "../constants/badge";
 
@@ -16,6 +25,147 @@ type RenderOpts = {
 
 const esc = (s: string) =>
   (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const DEFAULT_PLATE_BG = "#FFFFFF";
+const DEFAULT_BORDER = "#FFFFFF";
+
+/** Normalize #RGB / #RRGGBB to uppercase #RRGGBB, or null if not a hex color. */
+function tryNormalizeHex(input: string | undefined | null): string | null {
+  let s = (input ?? "").trim();
+  if (!s) return null;
+  if (s[0] !== "#") s = `#${s}`;
+  const m = s.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+  if (!m) return null;
+  let h = m[1];
+  if (h.length === 3) {
+    h = `${h[0]}${h[0]}${h[1]}${h[1]}${h[2]}${h[2]}`;
+  }
+  return `#${h.toUpperCase()}`;
+}
+
+function relativeLuminance(hex: string): number {
+  const n = tryNormalizeHex(hex);
+  if (!n) return 1;
+  const r = parseInt(n.slice(1, 3), 16) / 255;
+  const g = parseInt(n.slice(3, 5), 16) / 255;
+  const b = parseInt(n.slice(5, 7), 16) / 255;
+  const lin = (c: number) =>
+    c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  const R = lin(r);
+  const G = lin(g);
+  const B = lin(b);
+  return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+}
+
+function isLightPlateColor(hex: string | undefined): boolean {
+  const n = tryNormalizeHex(hex) ?? tryNormalizeHex(DEFAULT_PLATE_BG)!;
+  return relativeLuminance(n) > 0.45;
+}
+
+/**
+ * Sign Designer overlay + outline use border color; default white-on-white hides trim/art.
+ * When border matches plate background (after hex normalize), use Corel-like dark/light trim.
+ */
+function resolveTrimColors(
+  backgroundColor: string | undefined,
+  borderColor: string | undefined,
+  hasOverlay: boolean,
+): { overlayFill: string; outlineStroke: string } {
+  const bgRaw = backgroundColor?.trim() || DEFAULT_PLATE_BG;
+  const borderRaw = borderColor?.trim() || DEFAULT_BORDER;
+  if (!hasOverlay) {
+    return {
+      overlayFill: borderRaw,
+      outlineStroke: borderColor ?? "#111",
+    };
+  }
+  const bgHex = tryNormalizeHex(bgRaw);
+  const brHex = tryNormalizeHex(borderRaw);
+  const sameHex = bgHex && brHex && bgHex === brHex;
+  const sameFallback =
+    !bgHex || !brHex
+      ? bgRaw.toLowerCase() === borderRaw.toLowerCase()
+      : sameHex;
+  if (!sameFallback) {
+    return { overlayFill: borderRaw, outlineStroke: borderRaw };
+  }
+  const trim = isLightPlateColor(bgRaw) ? "#282828" : "#FEFEFE";
+  return { overlayFill: trim, outlineStroke: trim };
+}
+
+function applySignOverlayPathFills(
+  fragment: string,
+  fillColor: string,
+): string {
+  if (!fragment) return "";
+  return fragment.replace(
+    /<path\s+/g,
+    `<path fill="${fillColor}" fill-rule="evenodd" stroke="none" `,
+  );
+}
+
+/** True when trim/border/motif overlay should paint (template must ship overlay markup). */
+export function resolveSignBorderOverlayActive(
+  badge: Badge,
+  template: LoadedTemplate,
+): boolean {
+  if (!template.overlayElement?.trim()) return false;
+  const opt = badge.signBorderOptionId;
+  if (opt === SIGN_BORDER_OPTION_NONE) return false;
+  if (opt !== undefined && opt !== SIGN_BORDER_OPTION_NONE) return true;
+  // No explicit option yet: respect legacy `signBorderEnabled` only
+  if (badge.signBorderEnabled === false) return false;
+  if (badge.signBorderEnabled === true) return true;
+  return false;
+}
+
+export function getEffectiveDesignBox(
+  template: LoadedTemplate,
+  badge: Badge,
+): { x: number; y: number; width: number; height: number } {
+  if (resolveSignBorderOverlayActive(badge, template)) {
+    return template.designBox;
+  }
+  return template.designBoxInnerPlate ?? template.designBox;
+}
+
+function resolveSignOverlayMarkup(
+  template: LoadedTemplate,
+  badge: Badge,
+): string {
+  const styleId =
+    badge.signBorderOptionId != null &&
+    badge.signBorderOptionId !== SIGN_BORDER_OPTION_NONE
+      ? badge.signBorderOptionId
+      : badge.signBorderStyleId ?? "default";
+  const fromRegistry = getSignTrimOverlayFragment(template.id, styleId);
+  if (fromRegistry?.trim()) return fromRegistry.trim();
+  return template.overlayElement?.trim() ?? "";
+}
+
+/** Border-only overlay + motif library paths for sign Designer templates. */
+function buildSignDesignerOverlayLayer(
+  template: LoadedTemplate,
+  badge: Badge,
+  fillColor: string,
+  borderMarkup?: string | null,
+): string {
+  const borderBase =
+    (borderMarkup?.trim() || template.overlayElement)?.trim() ?? "";
+  if (!borderBase) return "";
+  if (!template.designerSizeKey) {
+    return applySignOverlayPathFills(borderBase, fillColor);
+  }
+  let motifId: DesignerMotifId = "heart";
+  if (isDesignerMotifId(badge.designerMotif)) {
+    motifId = badge.designerMotif;
+  }
+  const motifFrag = getDesignerMotifPaths(template.designerSizeKey, motifId);
+  const borderLayer = applySignOverlayPathFills(borderBase, fillColor);
+  const motifLayer = applySignOverlayPathFills(motifFrag, fillColor);
+  if (!motifLayer) return borderLayer;
+  return borderLayer.replace(/<\/g>\s*$/i, `${motifLayer}</g>`);
+}
 
 type AnyLine = {
   id?: string;
@@ -506,7 +656,10 @@ export function renderBadgeToSvgString(
   // Using widthPx/heightPx lets large signs fit fully; SVG then scales to container (preview) with width/height="100%".
   const W = template.widthPx + PADDING_PX * 2;
   const H = template.heightPx + PADDING_PX * 2;
-  const designBox = template.designBox;
+  const designBox = getEffectiveDesignBox(template, badge);
+  const overlayActive = resolveSignBorderOverlayActive(badge, template);
+  const overlayMarkup = resolveSignOverlayMarkup(template, badge);
+  const paintOverlay = overlayActive && Boolean(overlayMarkup);
 
   const clipId = `badge-clip-${
     badge.id || Math.random().toString(36).substring(7)
@@ -627,27 +780,54 @@ export function renderBadgeToSvgString(
   // Text is already positioned within bounds, but keep clipPath as safety net
   const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
 
+  const trimColors = resolveTrimColors(
+    badge.backgroundColor,
+    badge.borderColor,
+    paintOverlay,
+  );
+
   // Outline for border (no fill, stroke only). On-screen preview (showOutline) uses a dark stroke so circles
   // and light border colors stay visible in small panes; exports omit showOutline and keep border/trim colors.
   const outlineColor =
     opts.showOutline === true
       ? "#111111"
-      : badge.borderColor ??
-        (template.overlayElement ? "#FFFFFF" : "#111");
+      : paintOverlay
+      ? trimColors.outlineStroke
+      : badge.borderColor ?? "#111";
   const outlineWidth = opts.outlineStrokeWidth ?? "1.25";
   const outline = template.outlineElement
-    ? prepareElementForOutline(template.outlineElement, "none", outlineColor, outlineWidth)
-    : prepareElementForOutline(template.innerElement, "none", outlineColor, outlineWidth);
+    ? prepareElementForOutline(
+        template.outlineElement,
+        "none",
+        outlineColor,
+        outlineWidth,
+      )
+    : prepareElementForOutline(
+        template.innerElement,
+        "none",
+        outlineColor,
+        outlineWidth,
+      );
 
   // Overlay layer (sign Designer trim/swirls): render only when present, with border color
-  const borderColorForOverlay = badge.borderColor ?? "#FFFFFF";
-  const overlayLayer =
-    template.overlayElement?.replace(
-      /<path\s+/g,
-      `<path fill="${borderColorForOverlay}" fill-rule="evenodd" stroke="none" `
-    ) ?? "";
+  const borderColorForOverlay = paintOverlay
+    ? trimColors.overlayFill
+    : badge.borderColor ?? "#FFFFFF";
+  const overlayLayer = paintOverlay
+    ? template.designerSizeKey
+      ? buildSignDesignerOverlayLayer(
+          template,
+          badge,
+          borderColorForOverlay,
+          overlayMarkup,
+        )
+      : overlayMarkup.replace(
+          /<path\s+/g,
+          `<path fill="${borderColorForOverlay}" fill-rule="evenodd" stroke="none" `,
+        )
+    : "";
 
-  if (template.overlayElement && template.id.startsWith("classic-framed-")) {
+  if (paintOverlay && template.id.startsWith("classic-framed-")) {
     console.log("[renderSvg] Classic Framed render:", {
       templateId: template.id,
       innerGetsBackgroundColor: badge.backgroundColor ?? "#FFFFFF",
@@ -710,7 +890,10 @@ export async function renderBadgeToSvgStringWithFonts(
   // ViewBox must match content coordinates (widthPx × heightPx) so full design fits; preview scales via width/height="100%".
   const W = template.widthPx + PADDING_PX * 2;
   const H = template.heightPx + PADDING_PX * 2;
-  const designBox = template.designBox;
+  const designBox = getEffectiveDesignBox(template, badge);
+  const overlayActive = resolveSignBorderOverlayActive(badge, template);
+  const overlayMarkup = resolveSignOverlayMarkup(template, badge);
+  const paintOverlay = overlayActive && Boolean(overlayMarkup);
 
   // Collect all unique font families used in the badge
   const fontFamilies = new Set<string>();
@@ -880,27 +1063,54 @@ export async function renderBadgeToSvgStringWithFonts(
   // Text is already positioned within bounds, but keep clipPath as safety net
   const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
 
+  const trimColors = resolveTrimColors(
+    badge.backgroundColor,
+    badge.borderColor,
+    paintOverlay,
+  );
+
   // Outline for border (no fill, stroke only). On-screen preview (showOutline) uses a dark stroke so circles
   // and light border colors stay visible in small panes; exports omit showOutline and keep border/trim colors.
   const outlineColor =
     opts.showOutline === true
       ? "#111111"
-      : badge.borderColor ??
-        (template.overlayElement ? "#FFFFFF" : "#111");
+      : paintOverlay
+      ? trimColors.outlineStroke
+      : badge.borderColor ?? "#111";
   const outlineWidth = opts.outlineStrokeWidth ?? "1.25";
   const outline = template.outlineElement
-    ? prepareElementForOutline(template.outlineElement, "none", outlineColor, outlineWidth)
-    : prepareElementForOutline(template.innerElement, "none", outlineColor, outlineWidth);
+    ? prepareElementForOutline(
+        template.outlineElement,
+        "none",
+        outlineColor,
+        outlineWidth,
+      )
+    : prepareElementForOutline(
+        template.innerElement,
+        "none",
+        outlineColor,
+        outlineWidth,
+      );
 
   // Overlay layer (sign Designer trim/swirls): render only when present, with border color
-  const borderColorForOverlay = badge.borderColor ?? "#FFFFFF";
-  const overlayLayer =
-    template.overlayElement?.replace(
-      /<path\s+/g,
-      `<path fill="${borderColorForOverlay}" fill-rule="evenodd" stroke="none" `
-    ) ?? "";
+  const borderColorForOverlay = paintOverlay
+    ? trimColors.overlayFill
+    : badge.borderColor ?? "#FFFFFF";
+  const overlayLayer = paintOverlay
+    ? template.designerSizeKey
+      ? buildSignDesignerOverlayLayer(
+          template,
+          badge,
+          borderColorForOverlay,
+          overlayMarkup,
+        )
+      : overlayMarkup.replace(
+          /<path\s+/g,
+          `<path fill="${borderColorForOverlay}" fill-rule="evenodd" stroke="none" `,
+        )
+    : "";
 
-  if (template.overlayElement && template.id.startsWith("classic-framed-")) {
+  if (paintOverlay && template.id.startsWith("classic-framed-")) {
     console.log("[renderSvg] Classic Framed render:", {
       templateId: template.id,
       innerGetsBackgroundColor: badge.backgroundColor ?? "#FFFFFF",
