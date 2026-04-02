@@ -2,6 +2,7 @@ import type { MetaFunction, LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import BadgeDesigner from "~/components/BadgeDesigner";
+import { getDesignerConfig, resolveGadgetUrl } from "~/config/designers";
 
 export const meta: MetaFunction = () => {
   return [
@@ -22,16 +23,15 @@ export const loader: LoaderFunction = async ({ request }) => {
   headers.set("Content-Security-Policy", "frame-ancestors *");
   headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
 
+  const signCfg = getDesignerConfig("sign");
   return json(
     {
       productId,
       shop,
       customerId: customerId ?? null,
       timestamp: Date.now(),
-      GADGET_API_URL:
-        process.env.GADGET_API_URL ||
-        "https://all-quality-badge-designer--development.gadget.app",
-      GADGET_API_KEY: process.env.GADGET_API_KEY,
+      GADGET_API_URL: resolveGadgetUrl(signCfg),
+      GADGET_API_KEY: undefined,
     },
     { headers }
   );

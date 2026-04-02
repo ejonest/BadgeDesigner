@@ -9,12 +9,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return json(
     {
       error: "Method not allowed",
-      message: "Use POST to link an order to Supabase",
+      message: "Use POST to link sign order to Supabase",
     },
     { status: 405 },
   );
 }
 
 export async function action({ request }: ActionFunctionArgs) {
-  return runLinkPaidOrderToSupabase("badge", request);
+  return runLinkPaidOrderToSupabase("sign", request);
 }

@@ -1,8 +1,6 @@
 import type { ActionFunction } from "@remix-run/node";
 import { runSaveToGadget } from "~/lib/designers/httpHandlers";
 
-// Note: If Vercel logs show Gadget Supabase sync errors for badge_designs, fix in Gadget.
-
 export const action: ActionFunction = async ({ request }) => {
-  return runSaveToGadget("badge", request);
+  return runSaveToGadget("sign", request);
 };
