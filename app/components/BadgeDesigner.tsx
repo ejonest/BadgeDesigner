@@ -3894,11 +3894,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
       const basePrice = 9.99;
       const backingPrice =
-        badge.backing === "magnetic"
-          ? 2.0
-          : badge.backing === "adhesive"
-          ? 1.0
-          : 0;
+        variant === "sign"
+          ? 0
+          : badge.backing === "magnetic"
+            ? 2.0
+            : badge.backing === "adhesive"
+              ? 1.0
+              : 0;
       const totalPrice = basePrice + backingPrice;
 
       const badgeDesignData = {
@@ -3917,7 +3919,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           timestamp: new Date().toISOString(),
         },
         backgroundColor: allFinalizedBadges[0].backgroundColor,
-        backingType: allFinalizedBadges[0].backing,
+        ...(variant !== "sign"
+          ? { backingType: allFinalizedBadges[0].backing }
+          : {}),
         basePrice,
         backingPrice,
         totalPrice,
@@ -3961,7 +3965,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   // Add to cart
   const basePrice = 9.99;
   const backingPrice =
-    badge.backing === "magnetic" ? 2 : badge.backing === "adhesive" ? 1 : 0;
+    variant === "sign"
+      ? 0
+      : badge.backing === "magnetic"
+        ? 2
+        : badge.backing === "adhesive"
+          ? 1
+          : 0;
   const totalPriceAllBadges =
     multipleBadges.length > 0
       ? multipleBadges
@@ -3969,7 +3979,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             (sum, b) =>
               sum +
               basePrice +
-              (b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0),
+              (variant === "sign"
+                ? 0
+                : b.backing === "magnetic"
+                  ? 2
+                  : b.backing === "adhesive"
+                    ? 1
+                    : 0),
             0,
           )
           .toFixed(2)
@@ -4191,13 +4207,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       let pdfUrlForCart: string | undefined;
       let usedFinalize = false;
       try {
-        if (!addDuplicates) {
+        // Badge-only: uploads to badge PDFs bucket and reads badge_order_items. Signs always use designer send-to-supabase below.
+        if (!addDuplicates && variant !== "sign") {
           const formDataFinalize = new FormData();
           formDataFinalize.append("designId", designIdForSupabase);
           formDataFinalize.append(
             "pdf",
             pdfBlob,
-            `${variant === "sign" ? "sign" : "badge"}-design_proof.pdf`,
+            "badge-design_proof.pdf",
           );
           const currentBacking = badgesForSupabase[0]?.backing;
           if (currentBacking) {
@@ -4221,28 +4238,37 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         }
         if (!usedFinalize) {
           try {
-            const templateToUse = activeTemplate;
-            const templateId =
-              templateToUse?.id ||
-              badgesForSupabase[0]?.templateId ||
-              "rect-1x3";
-            const template = await loadTemplateById(templateId, variant);
-            if (template && badgesForSupabase.length > 0) {
+            if (badgesForSupabase.length > 0) {
               const badgePromises = badgesForSupabase.map((b, i) =>
-                Promise.all([
-                  generateFullBadgeImage(b, variant).then(dataURLToBlob),
-                  generateSVGAsBlob(b, template),
-                ])
-                  .then(([pngBlob, svgBlob]) => ({
-                    pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
-                    svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
-                    i,
-                  }))
-                  .catch(() => ({
-                    pngBlob: new Blob(),
-                    svgBlob: new Blob(),
-                    i,
-                  })),
+                (async () => {
+                  const templateIdForBadge =
+                    b.templateId ||
+                    activeTemplate?.id ||
+                    (variant === "sign" ? "circle-4x4" : "rect-1x3");
+                  const tmpl = await loadTemplateById(templateIdForBadge, variant);
+                  if (!tmpl) {
+                    console.warn(
+                      "[BadgeDesigner] proof upload: template missing",
+                      templateIdForBadge,
+                    );
+                    return { pngBlob: new Blob(), svgBlob: new Blob(), i };
+                  }
+                  try {
+                    const [pngBlob, svgBlob] = await Promise.all([
+                      generateFullBadgeImage(b, variant).then(dataURLToBlob),
+                      generateSVGAsBlob(b, tmpl),
+                    ]);
+                    return {
+                      pngBlob:
+                        pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
+                      svgBlob:
+                        svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
+                      i,
+                    };
+                  } catch {
+                    return { pngBlob: new Blob(), svgBlob: new Blob(), i };
+                  }
+                })(),
               );
               const badgeResults = await Promise.all(badgePromises);
               badgeResults.sort((a, b) => a.i - b.i);
@@ -4259,7 +4285,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 shopId: shopData.shopId || "test-shop",
                 productId: _productId || "test-product",
                 backgroundColor: badgesForSupabase[0].backgroundColor,
-                backingType: badgesForSupabase[0].backing,
+                ...(variant !== "sign"
+                  ? { backingType: badgesForSupabase[0].backing }
+                  : {}),
                 textLines: badgesForSupabase[0].lines,
               };
               const formDataForSupabase = new FormData();
@@ -4345,6 +4373,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         );
       }
 
+      if (variant === "sign") {
+        const cb = Date.now();
+        thumbnailUrls = thumbnailUrls.map((u) => {
+          if (!u || u.startsWith("blob:")) return u;
+          return `${u}${u.includes("?") ? "&" : "?"}cb=${cb}`;
+        });
+      }
+
       const basePrice = 9.99;
       const urlParams =
         typeof window !== "undefined"
@@ -4352,6 +4388,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           : null;
       const variantIdFromUrl = (key: string) =>
         urlParams?.get(key)?.trim() || null;
+      const getSignCartVariantId = (): string =>
+        variantIdFromUrl("variantIdSign") ||
+        variantIdFromUrl("variantIdPin") ||
+        "47037830299903";
+      const isSignDesigner = variant === "sign";
       const getVariantId = (backingType: string) => {
         const fromUrl =
           backingType === "pin"
@@ -4398,9 +4439,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
       const cartItems = addDuplicates
         ? allBadgesForSupabase.map((b, i) => {
-            const variantId = getVariantId(b.backing);
-            const backingP =
-              b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0;
+            const variantId = isSignDesigner
+              ? getSignCartVariantId()
+              : getVariantId(b.backing);
+            const backingP = isSignDesigner
+              ? 0
+              : b.backing === "magnetic"
+                ? 2
+                : b.backing === "adhesive"
+                  ? 1
+                  : 0;
             const itemTotalPrice = (basePrice + backingP).toFixed(2);
             const n = allBadgesForSupabase.length;
             const lineIndexStr = String(i);
@@ -4418,7 +4466,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               "Badge Text Line 4": b.lines[3]?.text || "",
               "Background Color": b.backgroundColor,
               "Font Family": b.lines[0]?.fontFamily || "Arial",
-              "Backing Type": b.backing,
+              ...(isSignDesigner ? {} : { "Backing Type": b.backing }),
               "Design ID": designIdForSupabase,
               Price: `$${itemTotalPrice}`,
               ...indexProps,
@@ -4434,9 +4482,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             };
           })
         : badgesForSupabase.map((b, i) => {
-            const variantId = getVariantId(b.backing);
-            const backingP =
-              b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0;
+            const variantId = isSignDesigner
+              ? getSignCartVariantId()
+              : getVariantId(b.backing);
+            const backingP = isSignDesigner
+              ? 0
+              : b.backing === "magnetic"
+                ? 2
+                : b.backing === "adhesive"
+                  ? 1
+                  : 0;
             const itemTotalPrice = (basePrice + backingP).toFixed(2);
             const lineIndexStrSingle = String(i);
             const indexPropsSingle: Record<string, string> = {
@@ -4453,7 +4508,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               "Badge Text Line 4": b.lines[3]?.text || "",
               "Background Color": b.backgroundColor,
               "Font Family": b.lines[0]?.fontFamily || "Arial",
-              "Backing Type": b.backing,
+              ...(isSignDesigner ? {} : { "Backing Type": b.backing }),
               "Design ID": designIdForSupabase,
               Price: `$${itemTotalPrice}`,
               ...indexPropsSingle,
