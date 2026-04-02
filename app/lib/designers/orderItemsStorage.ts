@@ -92,7 +92,12 @@ export async function uploadImageToDesignerBucket(
   const body = await toUploadBuffer(file);
   const { error } = await supabaseAdmin.storage
     .from(def.imageBucket)
-    .upload(fileName, body, { contentType, upsert: true });
+    .upload(fileName, body, {
+      contentType,
+      upsert: true,
+      // Short TTL so CDN/browser revalidate after upsert to the same path (draft updates).
+      cacheControl: "60",
+    });
   if (error) {
     throw new Error(
       `Failed to upload to ${def.imageBucket}: ${error.message}`,
