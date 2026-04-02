@@ -4460,6 +4460,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             }
             const properties: Record<string, string> = {
               "Custom Badge Design": "Yes",
+              Designer: isSignDesigner ? "sign" : "badge",
               "Badge Text Line 1": b.lines[0]?.text || "",
               "Badge Text Line 2": b.lines[1]?.text || "",
               "Badge Text Line 3": b.lines[2]?.text || "",
@@ -4468,7 +4469,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               "Font Family": b.lines[0]?.fontFamily || "Arial",
               ...(isSignDesigner ? {} : { "Backing Type": b.backing }),
               "Design ID": designIdForSupabase,
-              Price: `$${itemTotalPrice}`,
+              ...(isSignDesigner ? {} : { Price: `$${itemTotalPrice}` }),
               ...indexProps,
               "Custom Thumbnail": thumbnailUrls[i] ?? "",
               "Badge count": String(n),
@@ -4502,6 +4503,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             }
             const properties: Record<string, string> = {
               "Custom Badge Design": "Yes",
+              Designer: isSignDesigner ? "sign" : "badge",
               "Badge Text Line 1": b.lines[0]?.text || "",
               "Badge Text Line 2": b.lines[1]?.text || "",
               "Badge Text Line 3": b.lines[2]?.text || "",
@@ -4510,7 +4512,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               "Font Family": b.lines[0]?.fontFamily || "Arial",
               ...(isSignDesigner ? {} : { "Backing Type": b.backing }),
               "Design ID": designIdForSupabase,
-              Price: `$${itemTotalPrice}`,
+              ...(isSignDesigner ? {} : { Price: `$${itemTotalPrice}` }),
               ...indexPropsSingle,
               "Custom Thumbnail": thumbnailUrls[i] ?? "",
             };

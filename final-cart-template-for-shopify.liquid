@@ -253,7 +253,7 @@
                           {%- for property in item.properties -%}
                             {%- assign property_first_char = property.first | slice: 0 -%}
                             {%- assign hide_property = false -%}
-                            {%- if property.first == 'Custom Badge Design' or property.first == 'Custom Thumbnail' or property.first == '_custom_thumbnail' or property.first == 'Design ID' or property.first == 'Gadget Design ID' or property.first == 'Full Design Data' or property.first == 'Price' or property.first == 'Background Color' or property.first == 'Font Family' or property.first == 'Backing Type' -%}
+                            {%- if property.first == 'Custom Badge Design' or property.first == 'Custom Thumbnail' or property.first == '_custom_thumbnail' or property.first == 'Design ID' or property.first == 'Gadget Design ID' or property.first == 'Full Design Data' or property.first == 'Price' or property.first == 'Background Color' or property.first == 'Font Family' or property.first == 'Backing Type' or property.first == 'Designer' -%}
                               {%- assign hide_property = true -%}
                             {%- endif -%}
                             {%- if property.first contains 'Badge Text Line' -%}
