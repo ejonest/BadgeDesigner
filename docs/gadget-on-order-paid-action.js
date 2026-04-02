@@ -1,16 +1,21 @@
 /**
- * Gadget action: on_order_paid
+ * Gadget action: on_order_paid (BADGE → Supabase badge_order_items)
  *
- * PURPOSE: After Shopify checkout, this action sends the order + badge design data from Gadget
- * to your Vercel API, which inserts rows into the Supabase badge_order_items table (filling in
- * all fields: shopify_order_id, design_id, line_1_text, thumbnail_url, pdf_url, etc.).
+ * PURPOSE: After Shopify checkout, POSTs to Vercel so draft rows get shopify_order_id, status, etc.
+ *
+ * SIGN STORES: You MUST point Gadget at the sign API, not this default:
+ *   VERCEL_LINK_ORDER_URL = https://YOUR_VERCEL_DOMAIN/api/link-order-sign-to-supabase
+ * Otherwise checkout never updates sign_order_items (only badge_order_items).
+ * Use the same LINK_ORDER_SECRET as Vercel (LINK_ORDER_SECRET_SIGN falls back to LINK_ORDER_SECRET).
+ *
+ * MIXED badge + sign in one Shopify: use docs/gadget-on-order-paid-action-unified.js instead.
  *
  * SETUP:
  * 1. In Gadget: create a new Global Action, paste this file's code, name it e.g. "onOrderPaid".
  * 2. Triggers: add trigger → Shopify webhooks → orders/paid (recommended) or orders/create.
  * 3. Environment variables (Gadget Settings → Environment variables):
- *    - LINK_ORDER_SECRET = same secret as in Vercel (LINK_ORDER_SECRET)
- *    - VERCEL_LINK_ORDER_URL = https://YOUR_VERCEL_DOMAIN/api/link-order-to-supabase
+ *    - LINK_ORDER_SECRET = same secret as in Vercel (LINK_ORDER_SECRET or LINK_ORDER_SECRET_SIGN for sign-only)
+ *    - VERCEL_LINK_ORDER_URL = https://YOUR_VERCEL_DOMAIN/api/link-order-to-supabase  (or …/api/link-order-sign-to-supabase for signs)
  * 4. Vercel: set LINK_ORDER_SECRET (and SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY for the API).
  *
  * FLOW: Order paid → webhook fires → this action runs → reads line item properties "Design ID"
@@ -18,12 +23,13 @@
  * Vercel with shopifyOrderId, shopifyOrderNumber, shopifyCustomerId, lineItems (each with
  * designId, gadgetDesignId, designData). Vercel inserts into Supabase badge_order_items.
  *
- * TROUBLESHOOTING (badge_order_items not updated after checkout):
+ * TROUBLESHOOTING (rows not updated after checkout):
+ * - Sign shop but URL still …/link-order-to-supabase → wrong table; use link-order-sign-to-supabase.
  * - Confirm the Global Action exists and is triggered by orders/paid (or orders/create).
  * - Confirm Gadget env vars LINK_ORDER_SECRET and VERCEL_LINK_ORDER_URL are set.
- * - Confirm cart line items have "Design ID" and "Badge Index" (add-to-cart sets these). Optional: "Gadget Design ID".
+ * - Confirm cart line items have "Design ID" and "Badge Index" or "Sign Index" (designer sets both for signs).
  * - In Gadget logs, check for "on_order_paid: linked order to Supabase" and updatedCount > 0, or errors (e.g. fetch failed, 401).
- * - If updatedCount is 0: Vercel received the request but no draft rows matched. Ensure draft rows in Supabase use design_id = same as "Design ID" and badge_id = badge-0, badge-1, ... (0-based). New inserts use badge-0, badge-1; old rows with badge-1, badge-2 will not match.
+ * - If updatedCount is 0: Vercel received the request but no draft rows matched. Ensure design_id matches "Design ID" and line id is badge-0 / sign-0 (0-based).
  */
 
 const LINK_ORDER_URL =
@@ -64,7 +70,8 @@ async function getLineItemsWithDesignData(order, api, logger) {
     const idToUse = designId || gadgetDesignId;
     if (!idToUse) continue;
 
-    const badgeIndexRaw = props["Badge Index"];
+    const badgeIndexRaw =
+      props["Badge Index"] ?? props["Sign Index"];
     const badgeIndex = badgeIndexRaw !== undefined && badgeIndexRaw !== null && badgeIndexRaw !== ""
       ? parseInt(String(badgeIndexRaw).trim(), 10)
       : undefined;
