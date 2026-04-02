@@ -23,9 +23,6 @@
     {%- if item.properties['Price'] != blank -%}
       <p style="margin: 4px 0 2px 0;"><strong>Price:</strong> {{ item.properties['Price'] }}</p>
     {%- endif -%}
-    {%- if item.properties['Backing Type'] != blank -%}
-      <p style="margin: 2px 0;"><strong>Attachment:</strong> {{ item.properties['Backing Type'] | capitalize }}</p>
-    {%- endif -%}
     {%- if item.properties['Background Color'] != blank -%}
       <p style="margin: 2px 0;">
         <strong>Background:</strong>
