@@ -2293,7 +2293,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
         const badgePromises = allBadgesForDraft.map((b, i) =>
           Promise.all([
-            generateFullBadgeImage(b).then(dataURLToBlob),
+            generateFullBadgeImage(b, variant).then(dataURLToBlob),
             generateSVGAsBlob(b, template),
           ])
             .then(([pngBlob, svgBlob]) => ({
@@ -2380,7 +2380,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }, DRAFT_SAVE_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [draftSaveTrigger, stepsComplete, _productId, designerApiPaths.saveDraft]);
+  }, [
+    draftSaveTrigger,
+    stepsComplete,
+    _productId,
+    designerApiPaths.saveDraft,
+    variant,
+  ]);
 
   /** Run draft save immediately for the given badges (e.g. after CSV override/add). Shows generating spinner over badges. */
   const runDraftSaveForBadges = useCallback(
@@ -2411,7 +2417,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           }
           const badgePromises = normalized.map((b, i) =>
             Promise.all([
-              generateFullBadgeImage(b).then(dataURLToBlob),
+              generateFullBadgeImage(b, variant).then(dataURLToBlob),
               generateSVGAsBlob(b, template),
             ])
               .then(([pngBlob, svgBlob]) => ({
@@ -2498,7 +2504,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       })();
       draftSaveInProgressRef.current = promise;
     },
-    [_productId, designerApiPaths.saveDraft],
+    [_productId, designerApiPaths.saveDraft, variant],
   );
 
   const touchStartX = React.useRef<number>(0);
