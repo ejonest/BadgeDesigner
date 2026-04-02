@@ -9,7 +9,7 @@ import {
 
 // Helper function to get current timestamp in PST/PDT (America/Los_Angeles timezone)
 // Returns ISO string formatted for PostgreSQL timestamp with time zone
-function getPacificTimestamp(): string {
+export function getPacificTimestamp(): string {
   const now = new Date();
 
   // Get Pacific time components
@@ -678,14 +678,17 @@ export function convertBadgeToOrderItem(
     shopify_customer_id?: string;
     /** Default 1; set from cart/order when known. */
     quantity?: number;
+    /** Row/file prefix: badge-0 vs sign-0 (default badge). */
+    lineIdPrefix?: string;
   },
 ): BadgeOrderItem {
   const lines = badge.lines || [];
+  const prefix = options?.lineIdPrefix ?? "badge";
 
-  // Use badge-0, badge-1, ... so link-order (which uses Badge Index 0,1,... from cart) can match
+  // Use badge-0, badge-1, ... so link-order (which uses line index from cart) can match
   return {
     design_id: designId,
-    badge_id: `badge-${badgeIndex}`,
+    badge_id: `${prefix}-${badgeIndex}`,
     shopify_order_id: options?.shopify_order_id,
     shopify_order_number: options?.shopify_order_number,
     background_color: formatColor(badge.backgroundColor),

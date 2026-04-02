@@ -10,7 +10,9 @@
       }
     },
     "routeIdToServerBundleId": {
+      "routes/api.link-order-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.send-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.supabase-update-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-badges": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -27,6 +29,7 @@
       "routes/api.save-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/deployment-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-sign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.test-save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/sign-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/working-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -48,10 +51,28 @@
         "file": "app/root.tsx",
         "config": {}
       },
+      "routes/api.link-order-sign-to-supabase": {
+        "file": "app/routes/api.link-order-sign-to-supabase.tsx",
+        "id": "routes/api.link-order-sign-to-supabase",
+        "path": "api/link-order-sign-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.link-order-to-supabase": {
         "file": "app/routes/api.link-order-to-supabase.tsx",
         "id": "routes/api.link-order-to-supabase",
         "path": "api/link-order-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.send-sign-to-supabase": {
+        "file": "app/routes/api.send-sign-to-supabase.tsx",
+        "id": "routes/api.send-sign-to-supabase",
+        "path": "api/send-sign-to-supabase",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -201,6 +222,15 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.save-sign": {
+        "file": "app/routes/api.save-sign.tsx",
+        "id": "routes/api.save-sign",
+        "path": "api/save-sign",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.test-save": {
         "file": "app/routes/api.test-save.tsx",
         "id": "routes/api.test-save",
@@ -341,10 +371,22 @@
         "id": "root",
         "file": "root.tsx"
       },
+      "routes/api.link-order-sign-to-supabase": {
+        "file": "routes/api.link-order-sign-to-supabase.tsx",
+        "id": "routes/api.link-order-sign-to-supabase",
+        "path": "api/link-order-sign-to-supabase",
+        "parentId": "root"
+      },
       "routes/api.link-order-to-supabase": {
         "file": "routes/api.link-order-to-supabase.tsx",
         "id": "routes/api.link-order-to-supabase",
         "path": "api/link-order-to-supabase",
+        "parentId": "root"
+      },
+      "routes/api.send-sign-to-supabase": {
+        "file": "routes/api.send-sign-to-supabase.tsx",
+        "id": "routes/api.send-sign-to-supabase",
+        "path": "api/send-sign-to-supabase",
         "parentId": "root"
       },
       "routes/api.supabase-update-badge": {
@@ -441,6 +483,12 @@
         "file": "routes/api.save-badge.tsx",
         "id": "routes/api.save-badge",
         "path": "api/save-badge",
+        "parentId": "root"
+      },
+      "routes/api.save-sign": {
+        "file": "routes/api.save-sign.tsx",
+        "id": "routes/api.save-sign",
+        "path": "api/save-sign",
         "parentId": "root"
       },
       "routes/api.test-save": {

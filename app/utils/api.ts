@@ -1,4 +1,8 @@
 import { Client } from '@gadget-client/allqualitybadges';
+import {
+  getDesignerApiPaths,
+  type DesignerId,
+} from '~/config/designers';
 
 function normalizeEnvString(val: any): string | undefined {
   return typeof val === "string" && val.trim() !== "" ? val : undefined;
@@ -25,9 +29,20 @@ export interface ShopifyProduct {
   }>;
 }
 
+export interface CreateApiOptions {
+  /** Routes save/send calls to the matching designer (badge vs sign). */
+  designerId?: DesignerId;
+}
+
 // Create a function that returns the API with proper configuration
-export function createApi(gadgetApiUrl?: string, gadgetApiKey?: string) {
-  // API configuration
+export function createApi(
+  gadgetApiUrl?: string,
+  gadgetApiKey?: string,
+  options?: CreateApiOptions,
+) {
+  const designerId = options?.designerId ?? "badge";
+  const designerPaths = getDesignerApiPaths(designerId);
+  // API configuration (Gadget client / logging)
   const GADGET_APP_URL = 'https://all-quality-badge-designer--development.gadget.app';
   const GADGET_API_URL = normalizeEnvString(gadgetApiUrl) || GADGET_APP_URL;
   const GADGET_API_KEY = normalizeEnvString(gadgetApiKey);
@@ -54,7 +69,7 @@ export function createApi(gadgetApiUrl?: string, gadgetApiKey?: string) {
     async saveBadgeDesign(designData: any, shopData?: any): Promise<BadgeDesignData> {
       try {
         // Use server-side API route instead of client-side Gadget client
-        const response = await fetch('/api/save-badge', {
+        const response = await fetch(designerPaths.save, {
         method: 'POST',
           headers: {
             'Content-Type': 'application/json',

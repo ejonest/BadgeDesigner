@@ -64,6 +64,10 @@ import {
 } from "../utils/badgeThumbnail";
 import { getCurrentShop, type ShopAuthData } from "../utils/shopAuth";
 import { createApi } from "../utils/api";
+import {
+  getDesignerApiPaths,
+  getDesignerConfig,
+} from "../config/designers";
 
 import {
   loadTemplates,
@@ -358,6 +362,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   gadgetApiKey,
 }) => {
   const variant = variantProp ?? "badge";
+  const designerId = variant === "sign" ? "sign" : "badge";
+  const designerConfig = useMemo(
+    () => getDesignerConfig(designerId),
+    [designerId],
+  );
+  const designerApiPaths = useMemo(
+    () => getDesignerApiPaths(designerId),
+    [designerId],
+  );
   const config = getDesignerVariantConfig(variant);
   const maxLines = config.maxLines;
 
@@ -1284,7 +1297,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   };
 
   // API
-  const api = createApi(gadgetApiUrl, gadgetApiKey);
+  const api = createApi(gadgetApiUrl, gadgetApiKey, { designerId });
 
   // State: start with no badge; user must pick a template first
   const defaultTemplateId =
@@ -2341,7 +2354,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             );
         });
 
-        const res = await fetch("/api/save-draft-badges", {
+        const res = await fetch(designerApiPaths.saveDraft, {
           method: "POST",
           body: formData,
         });
@@ -2367,7 +2380,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }, DRAFT_SAVE_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [draftSaveTrigger, stepsComplete, _productId]);
+  }, [draftSaveTrigger, stepsComplete, _productId, designerApiPaths.saveDraft]);
 
   /** Run draft save immediately for the given badges (e.g. after CSV override/add). Shows generating spinner over badges. */
   const runDraftSaveForBadges = useCallback(
@@ -2456,7 +2469,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 `badge-${index}-design.svg`,
               );
           });
-          const res = await fetch("/api/save-draft-badges", {
+          const res = await fetch(designerApiPaths.saveDraft, {
             method: "POST",
             body: formData,
           });
@@ -2485,7 +2498,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       })();
       draftSaveInProgressRef.current = promise;
     },
-    [_productId],
+    [_productId, designerApiPaths.saveDraft],
   );
 
   const touchStartX = React.useRef<number>(0);
@@ -3698,7 +3711,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       }
       formData.append("pdf", pdfBlob, proofPdfFilename);
       // Append each high-quality PNG (same as proof) with index
-      const thumbBase = variant === "sign" ? "sign" : "badge";
+      const thumbBase = designerConfig.lineIdPrefix;
       thumbnailPngBlobs.forEach((pngBlob, index) => {
         if (pngBlob && pngBlob.size > 0) {
           formData.append(
@@ -3711,11 +3724,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       // Append each SVG blob with index (high quality for full images)
       svgBlobs.forEach((svgBlob, index) => {
         if (svgBlob && svgBlob.size > 0) {
-          formData.append(`svg_${index}`, svgBlob, `badge-${index}-design.svg`);
+          formData.append(
+            `svg_${index}`,
+            svgBlob,
+            `${thumbBase}-${index}-design.svg`,
+          );
         }
       });
 
-      const response = await fetch("/api/send-to-supabase", {
+      const response = await fetch(designerApiPaths.sendToSupabase, {
         method: "POST",
         body: formData,
       });
@@ -4252,9 +4269,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   shopifyCustomerIdFromUrl,
                 );
               }
-              const designProofFilename = `${
-                variant === "sign" ? "sign" : "badge"
-              }-design_proof.pdf`;
+              const designProofFilename = `${designerConfig.lineIdPrefix}-design_proof.pdf`;
               formDataForSupabase.append(
                 "pdf",
                 pdfBlobToUse,
@@ -4265,9 +4280,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   formDataForSupabase.append(
                     `thumbnail_png_${index}`,
                     pngBlob,
-                    `${
-                      variant === "sign" ? "sign" : "badge"
-                    }-${index}-thumbnail.png`,
+                    `${designerConfig.lineIdPrefix}-${index}-thumbnail.png`,
                   );
                 }
               });
@@ -4276,14 +4289,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   formDataForSupabase.append(
                     `svg_${index}`,
                     svgBlob,
-                    `badge-${index}-design.svg`,
+                    `${designerConfig.lineIdPrefix}-${index}-design.svg`,
                   );
                 }
               });
-              const supabaseResponse = await fetch("/api/send-to-supabase", {
-                method: "POST",
-                body: formDataForSupabase,
-              });
+              const supabaseResponse = await fetch(
+                designerApiPaths.sendToSupabase,
+                {
+                  method: "POST",
+                  body: formDataForSupabase,
+                },
+              );
               if (supabaseResponse.ok) {
                 const supabaseJson = await supabaseResponse
                   .json()
@@ -4381,6 +4397,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0;
             const itemTotalPrice = (basePrice + backingP).toFixed(2);
             const n = allBadgesForSupabase.length;
+            const lineIndexStr = String(i);
+            const indexProps: Record<string, string> = {
+              [designerConfig.cartIndexPropertyPrimary]: lineIndexStr,
+            };
+            for (const k of designerConfig.cartIndexPropertyFallbacks) {
+              indexProps[k] = lineIndexStr;
+            }
             const properties: Record<string, string> = {
               "Custom Badge Design": "Yes",
               "Badge Text Line 1": b.lines[0]?.text || "",
@@ -4392,7 +4415,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               "Backing Type": b.backing,
               "Design ID": designIdForSupabase,
               Price: `$${itemTotalPrice}`,
-              "Badge Index": String(i),
+              ...indexProps,
               "Custom Thumbnail": thumbnailUrls[i] ?? "",
               "Badge count": String(n),
             };
@@ -4409,6 +4432,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             const backingP =
               b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0;
             const itemTotalPrice = (basePrice + backingP).toFixed(2);
+            const lineIndexStrSingle = String(i);
+            const indexPropsSingle: Record<string, string> = {
+              [designerConfig.cartIndexPropertyPrimary]: lineIndexStrSingle,
+            };
+            for (const k of designerConfig.cartIndexPropertyFallbacks) {
+              indexPropsSingle[k] = lineIndexStrSingle;
+            }
             const properties: Record<string, string> = {
               "Custom Badge Design": "Yes",
               "Badge Text Line 1": b.lines[0]?.text || "",
@@ -4420,7 +4450,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               "Backing Type": b.backing,
               "Design ID": designIdForSupabase,
               Price: `$${itemTotalPrice}`,
-              "Badge Index": String(i),
+              ...indexPropsSingle,
               "Custom Thumbnail": thumbnailUrls[i] ?? "",
             };
             if (gadgetDesignId) properties["Gadget Design ID"] = gadgetDesignId;
