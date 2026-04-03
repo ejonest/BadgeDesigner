@@ -8,9 +8,9 @@ import {
 } from "~/config/designers";
 import {
   deleteDesignerOrderItemsByDesignId,
-  deleteDraftDesignerOrderItemsExcept,
   downloadFromDesignerImageBucket,
   getDesignerOrderItemsByDesignId,
+  saveDraftDesignerOrderItemsMerge,
   saveDesignerOrderItems,
   updateDesignerOrderItemsStatusByDesignId,
   updateDesignerPdfUrlByDesignId,
@@ -132,8 +132,7 @@ export async function runSaveDraftDesigner(
       orderItems.push(item);
     }
 
-    await deleteDraftDesignerOrderItemsExcept(def, designId, []);
-    await saveDesignerOrderItems(def, orderItems);
+    await saveDraftDesignerOrderItemsMerge(def, designId, orderItems);
 
     const thumbnailUrls = orderItems.map((i) => i.thumbnail_url || "");
     console.log(
@@ -554,7 +553,11 @@ export async function runLinkPaidOrderToSupabase(
     }> = [];
 
     for (const item of lineItems) {
-      const designId = (item.designId ?? item.gadgetDesignId)?.trim();
+      const rawId = item.designId ?? item.gadgetDesignId;
+      const designId =
+        rawId == null || rawId === ""
+          ? ""
+          : String(rawId).trim();
       if (!designId) continue;
 
       let idx =
@@ -583,6 +586,15 @@ export async function runLinkPaidOrderToSupabase(
       );
     }
 
+    console.log(
+      `${LOG_PREFIX} link-order (${designerId}) shopifyOrderId=${orderIdTrimmed} lines=${updateLineItems
+        .map(
+          (u) =>
+            `${u.designId}[${def.lineIdPrefix}-${u.badgeIndex}]`,
+        )
+        .join(", ")}`,
+    );
+
     const { data: updated } = await updateDraftDesignerOrderItemsWithOrderInfo(
       def,
       {
@@ -594,10 +606,24 @@ export async function runLinkPaidOrderToSupabase(
     );
     const updatedCount = Array.isArray(updated) ? updated.length : 0;
 
+    if (updatedCount === 0) {
+      console.warn(
+        `${LOG_PREFIX} link-order (${designerId}) updatedCount=0 — no Supabase rows matched. Compare design_id + ${def.lineIdPrefix}-N + status in_cart|draft to cart line properties (Design ID, Sign/Badge Index).`,
+      );
+    } else {
+      console.log(
+        `${LOG_PREFIX} link-order (${designerId}) updatedCount=${updatedCount}`,
+      );
+    }
+
     const designIds = [
       ...new Set(
         lineItems
-          .map((i) => (i.designId ?? i.gadgetDesignId)?.trim())
+          .map((i) => {
+            const v = i.designId ?? i.gadgetDesignId;
+            if (v == null || v === "") return "";
+            return String(v).trim();
+          })
           .filter(Boolean),
       ),
     ] as string[];
@@ -605,9 +631,11 @@ export async function runLinkPaidOrderToSupabase(
     for (const designId of designIds) {
       try {
         const rows = await getDesignerOrderItemsByDesignId(def, designId);
-        const designLineItems = lineItems.filter(
-          (i) => (i.designId ?? i.gadgetDesignId)?.trim() === designId,
-        );
+        const designLineItems = lineItems.filter((i) => {
+          const v = i.designId ?? i.gadgetDesignId;
+          const id = v == null || v === "" ? "" : String(v).trim();
+          return id === designId;
+        });
         const orderSlipItems = designLineItems
           .map((i) => {
             const badgeIndex =

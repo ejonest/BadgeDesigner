@@ -10,6 +10,9 @@
  *
  * MIXED badge + sign in one Shopify: use docs/gadget-on-order-paid-action-unified.js instead.
  *
+ * Gadget framework v1.7+: add the Shopify trigger in the TRIGGERS panel (do not hand-paste old webhooks arrays).
+ * Sign app setup: docs/GADGET_1.7_SIGN_ORDER_WEBHOOK.md
+ *
  * SETUP:
  * 1. In Gadget: create a new Global Action, paste this file's code, name it e.g. "onOrderPaid".
  * 2. Triggers: add trigger → Shopify webhooks → orders/paid (recommended) or orders/create.
