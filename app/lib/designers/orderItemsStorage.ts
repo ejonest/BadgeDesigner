@@ -168,13 +168,91 @@ export async function saveDesignerOrderItems(
   }));
   const { data, error } = await supabaseAdmin
     .from(def.orderItemsTable)
-    .insert(itemsToInsert)
+    .upsert(itemsToInsert, {
+      onConflict: def.upsertOnConflict,
+      ignoreDuplicates: false,
+    })
     .select();
   if (error) {
     console.error("saveDesignerOrderItems error:", error);
     throw error;
   }
   return data;
+}
+
+/**
+ * Draft autosave: merge into existing rows so we do not violate (design_id, line) uniqueness
+ * after the customer has added to cart (status in_cart). Inserts only when no row exists.
+ * Preserves status and Shopify order fields when status is in_cart or order_placed.
+ */
+export async function saveDraftDesignerOrderItemsMerge(
+  def: DesignerDefinition,
+  designId: string,
+  items: BadgeOrderItem[],
+) {
+  if (!supabaseAdmin) {
+    throw new Error("Supabase is not configured.");
+  }
+  const keepLineIds = items.map((_, i) => `${def.lineIdPrefix}-${i}`);
+  await deleteDraftDesignerOrderItemsExcept(def, designId, keepLineIds);
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const lineKey = `${def.lineIdPrefix}-${i}`;
+    const full = rowPayload(item, def);
+    const { data: existing, error: selErr } = await supabaseAdmin
+      .from(def.orderItemsTable)
+      .select("id, status")
+      .eq("design_id", designId)
+      .eq(def.lineIdColumn, lineKey)
+      .maybeSingle();
+    if (selErr) throw selErr;
+
+    if (existing) {
+      const terminal =
+        existing.status === "in_cart" || existing.status === "order_placed";
+      let updateBody: Record<string, unknown>;
+      if (terminal) {
+        const {
+          status: _st,
+          shopify_order_id: _so,
+          shopify_order_number: _sn,
+          shopify_customer_id: _sc,
+          ...restSafe
+        } = full;
+        updateBody = {
+          ...restSafe,
+          updated_at: getPacificTimestamp(),
+        };
+      } else {
+        updateBody = {
+          ...full,
+          updated_at: getPacificTimestamp(),
+        };
+      }
+      const cleaned = Object.fromEntries(
+        Object.entries(updateBody).filter(([, v]) => v !== undefined),
+      );
+      const { error: upErr } = await supabaseAdmin
+        .from(def.orderItemsTable)
+        .update(cleaned)
+        .eq("id", existing.id);
+      if (upErr) throw upErr;
+    } else {
+      const insertPayload = {
+        ...full,
+        created_at: item.created_at || getPacificTimestamp(),
+        updated_at: getPacificTimestamp(),
+      };
+      const cleanedInsert = Object.fromEntries(
+        Object.entries(insertPayload).filter(([, v]) => v !== undefined),
+      );
+      const { error: insErr } = await supabaseAdmin
+        .from(def.orderItemsTable)
+        .insert(cleanedInsert);
+      if (insErr) throw insErr;
+    }
+  }
 }
 
 export async function deleteDesignerOrderItemsByDesignId(
@@ -315,10 +393,15 @@ export async function updateDraftDesignerOrderItemsWithOrderInfo(
       .eq("design_id", designId)
       .eq(def.lineIdColumn, lineKey)
       .in("status", ["draft", "in_cart"])
-      .select()
-      .maybeSingle();
+      .select();
     if (error) throw error;
-    if (data) results.push(data);
+    if (data?.length) {
+      for (const row of data) results.push(row);
+    } else {
+      console.warn(
+        `[order-items] link-order: no row updated for table=${def.orderItemsTable} design_id=${designId} ${def.lineIdColumn}=${lineKey} (need status draft or in_cart)`,
+      );
+    }
   }
   return { data: results, error: null };
 }

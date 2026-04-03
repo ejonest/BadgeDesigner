@@ -72,16 +72,26 @@ export const uploadImageBodySchema = z
   })
   .strict();
 
+/** Coerce Shopify/Gadget JSON (numbers, etc.) to trimmed strings for IDs. */
+const linkOrderStringId = z.preprocess((v) => {
+  if (v == null || v === "") return undefined;
+  const s = String(v).trim();
+  return s === "" ? undefined : s;
+}, z.string().min(1).optional());
+
 /** POST /api/link-order-to-supabase – body */
 export const linkOrderBodySchema = z
   .object({
-    shopifyOrderId: z.string().min(1, "shopifyOrderId is required"),
-    shopifyOrderNumber: z.string().optional(),
-    shopifyCustomerId: z.string().optional(),
+    shopifyOrderId: z.preprocess(
+      (v) => (v == null ? "" : String(v).trim()),
+      z.string().min(1, "shopifyOrderId is required"),
+    ),
+    shopifyOrderNumber: linkOrderStringId,
+    shopifyCustomerId: linkOrderStringId,
     lineItems: z.array(
       z.object({
-        designId: z.string().optional(),
-        gadgetDesignId: z.string().optional(),
+        designId: linkOrderStringId,
+        gadgetDesignId: linkOrderStringId,
         designData: z.unknown().optional(),
         badgeIndex: z.union([z.number(), z.string()]).optional(),
         quantity: z.number().optional(),
