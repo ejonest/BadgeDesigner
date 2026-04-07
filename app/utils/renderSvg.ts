@@ -15,12 +15,17 @@ import { BADGE_CONSTANTS } from "../constants/badge";
 
 type RenderOpts = {
   /**
-   * When true (e.g. BadgeSvgRenderer previews), shape outline uses a dark stroke (#111) so light borders/circles stay visible.
+   * When true (e.g. BadgeSvgRenderer previews, template picker), shape outline uses black (#000) so thumbnails stay visible.
    * Omit/false for exports — outline follows `badge.borderColor` / template defaults.
    */
   showOutline?: boolean;
   /** Optional outline stroke width (e.g. "3" for template picker thumbnails). Default "1.25". */
   outlineStrokeWidth?: string;
+  /**
+   * When true with showOutline, outline paths use vector-effect="non-scaling-stroke" so stroke stays ~constant
+   * device pixels when the plate is scaled from large sign viewBoxes (Classic framed, Portrait, etc.).
+   */
+  outlineNonScalingStroke?: boolean;
 };
 
 const esc = (s: string) =>
@@ -606,7 +611,11 @@ function prepareElementForOutline(
   fill: string,
   stroke: string,
   strokeWidth: string,
+  nonScalingStroke?: boolean,
 ): string {
+  const vectorEffectAttr = nonScalingStroke
+    ? ` vector-effect="non-scaling-stroke"`
+    : "";
   if (typeof window !== "undefined" && "DOMParser" in window) {
     const parser = new DOMParser();
     // Wrap element in a temporary container for parsing
@@ -620,28 +629,39 @@ function prepareElementForOutline(
         "[id='Inner'], [id='inner'], path, rect, ellipse, circle, polygon, polyline",
       )
       .forEach((el) => {
+        el.removeAttribute("class");
+        el.removeAttribute("style");
         el.removeAttribute("fill");
         el.removeAttribute("stroke");
         el.removeAttribute("stroke-width");
         el.setAttribute("fill", fill);
         el.setAttribute("stroke", stroke);
         el.setAttribute("stroke-width", strokeWidth);
+        if (nonScalingStroke) {
+          el.setAttribute("vector-effect", "non-scaling-stroke");
+        } else {
+          el.removeAttribute("vector-effect");
+        }
       });
 
     // Extract the inner element back out
     const svgEl = doc.documentElement;
-    const output = svgEl.innerHTML;
-    console.log("[prepareElementForOutline] Output:", output);
-    return output;
+    return svgEl.innerHTML;
   }
 
   // Fallback for SSR: use regex (less robust but works)
-  let cleaned = element.replace(/\s+fill\s*=\s*["'][^"']*["']/gi, "");
+  let cleaned = element.replace(/\s+class\s*=\s*["'][^"']*["']/gi, "");
+  cleaned = cleaned.replace(/\s+style\s*=\s*["'][^"']*["']/gi, "");
+  cleaned = cleaned.replace(/\s+fill\s*=\s*["'][^"']*["']/gi, "");
   cleaned = cleaned.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, "");
   cleaned = cleaned.replace(/\s+stroke-width\s*=\s*["'][^"']*["']/gi, "");
+  cleaned = cleaned.replace(
+    /\s+vector-effect\s*=\s*["'][^"']*["']/gi,
+    "",
+  );
   return cleaned.replace(
     /\/?>$/,
-    ` fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/>`,
+    ` fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"${vectorEffectAttr}/>`,
   );
 }
 
@@ -786,27 +806,30 @@ export function renderBadgeToSvgString(
     paintOverlay,
   );
 
-  // Outline for border (no fill, stroke only). On-screen preview (showOutline) uses a dark stroke so circles
-  // and light border colors stay visible in small panes; exports omit showOutline and keep border/trim colors.
+  // Outline for border (no fill, stroke only). On-screen preview (showOutline) uses true black so template
+  // picker thumbnails match; exports omit showOutline and keep border/trim colors.
   const outlineColor =
     opts.showOutline === true
-      ? "#111111"
+      ? "#000000"
       : paintOverlay
       ? trimColors.outlineStroke
       : badge.borderColor ?? "#111";
   const outlineWidth = opts.outlineStrokeWidth ?? "1.25";
+  const outlineNonScaling = opts.outlineNonScalingStroke === true;
   const outline = template.outlineElement
     ? prepareElementForOutline(
         template.outlineElement,
         "none",
         outlineColor,
         outlineWidth,
+        outlineNonScaling,
       )
     : prepareElementForOutline(
         template.innerElement,
         "none",
         outlineColor,
         outlineWidth,
+        outlineNonScaling,
       );
 
   // Overlay layer (sign Designer trim/swirls): render only when present, with border color
@@ -1069,27 +1092,30 @@ export async function renderBadgeToSvgStringWithFonts(
     paintOverlay,
   );
 
-  // Outline for border (no fill, stroke only). On-screen preview (showOutline) uses a dark stroke so circles
-  // and light border colors stay visible in small panes; exports omit showOutline and keep border/trim colors.
+  // Outline for border (no fill, stroke only). On-screen preview (showOutline) uses true black so template
+  // picker thumbnails match; exports omit showOutline and keep border/trim colors.
   const outlineColor =
     opts.showOutline === true
-      ? "#111111"
+      ? "#000000"
       : paintOverlay
       ? trimColors.outlineStroke
       : badge.borderColor ?? "#111";
   const outlineWidth = opts.outlineStrokeWidth ?? "1.25";
+  const outlineNonScaling = opts.outlineNonScalingStroke === true;
   const outline = template.outlineElement
     ? prepareElementForOutline(
         template.outlineElement,
         "none",
         outlineColor,
         outlineWidth,
+        outlineNonScaling,
       )
     : prepareElementForOutline(
         template.innerElement,
         "none",
         outlineColor,
         outlineWidth,
+        outlineNonScaling,
       );
 
   // Overlay layer (sign Designer trim/swirls): render only when present, with border color

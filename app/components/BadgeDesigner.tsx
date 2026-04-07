@@ -59,15 +59,16 @@ import {
   findSignTypeAndSizeForUniversalTemplate,
 } from "../constants/designerVariants";
 import {
+  buildPaddedInitialLines,
+  getAddMultipleDesignerCopy,
+} from "../constants/signDesignerText";
+import {
   generateFullBadgeImage,
   generateThumbnailFromFullImage,
 } from "../utils/badgeThumbnail";
 import { getCurrentShop, type ShopAuthData } from "../utils/shopAuth";
 import { createApi } from "../utils/api";
-import {
-  getDesignerApiPaths,
-  getDesignerConfig,
-} from "../config/designers";
+import { getDesignerApiPaths, getDesignerConfig } from "../config/designers";
 
 import {
   loadTemplates,
@@ -155,6 +156,16 @@ const MOBILE_PREVIEW = {
   badgeMarginXRem: 1.25,
   /** Height of the badge in vh (the "1" in 3:1). Bigger = larger badge. Width is 3× this to keep 3:1. */
   badgeHeightVh: 20,
+} as const;
+
+/**
+ * Typography for badge + sign designers (template cards and multi-preview label).
+ * - `templateNameFontPx`: title bar on each template card (main grid + “more templates” modal).
+ * - `nowEditingFontRem`: “Now editing …” above the current preview (desktop, 2+ items).
+ */
+const DESIGNER_UI_TYPOGRAPHY = {
+  templateNameFontPx: 11,
+  nowEditingFontRem: 1,
 } as const;
 
 /** Payload stored when proof modal is open; used by onProofConfirm to complete add-to-cart. */
@@ -373,6 +384,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   );
   const config = getDesignerVariantConfig(variant);
   const maxLines = config.maxLines;
+  const addMultipleCopy = getAddMultipleDesignerCopy(variant, maxLines);
 
   // Color similarity utility functions
   const hexToRgb = (hex: string): [number, number, number] => {
@@ -1305,14 +1317,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       ? SIGN_TEMPLATE_TYPES[0].sizes[0].templateId
       : "rect-1x3";
   const defaultLineShape = INITIAL_BADGE.lines[0];
-  const paddedLines = Array.from({ length: config.maxLines }, (_, i) =>
-    i < INITIAL_BADGE.lines.length
-      ? { ...INITIAL_BADGE.lines[i] }
-      : {
-          ...defaultLineShape,
-          id: `line-${i + 1}`,
-          text: "",
-        },
+  const paddedLines = buildPaddedInitialLines(
+    variant,
+    config.maxLines,
+    INITIAL_BADGE.lines,
+    defaultLineShape,
   );
   const initialDefaultBadge: Badge = {
     ...INITIAL_BADGE,
@@ -1346,7 +1355,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [templateRefreshKey, setTemplateRefreshKey] = useState(0); // Force template refresh
   const [signSize, setSignSize] = useState<string>("medium");
   const [signBorderId, setSignBorderId] = useState<string>("");
-  /** Sign only: which template type (Circle, Classic framed, etc.) is selected; null until user picks one. */
+  /** Sign only: which template type (Classic framed, Standard, etc.) is selected; null until user picks one. */
   const [selectedSignTemplateType, setSelectedSignTemplateType] = useState<
     string | null
   >(null);
@@ -1749,8 +1758,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       lines: [],
       backing: "pin",
     };
-    const templateThumbOutlineWidth =
-      config.templatesKey === "sign" ? "22" : "8";
+    // Sign plate paths use large Corel viewBoxes; stroke width in user units scales to ~1px in the picker.
+    // Non-scaling stroke keeps ~constant device pixels so Classic framed / Portrait outlines stay visible.
+    const signTemplateThumbRenderOpts = {
+      showOutline: true as const,
+      outlineStrokeWidth: "1.5",
+      outlineNonScalingStroke: true as const,
+    };
+    const badgeTemplateThumbRenderOpts = {
+      showOutline: true as const,
+      outlineStrokeWidth: "8",
+    };
+    const templateThumbRenderOpts =
+      config.templatesKey === "sign"
+        ? signTemplateThumbRenderOpts
+        : badgeTemplateThumbRenderOpts;
     setTemplatePreviewDataUrls((prev) => {
       const next = { ...prev };
       for (const t of templates) {
@@ -1758,10 +1780,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           const svg = renderBadgeToSvgString(
             { ...previewBadge, templateId: t.id },
             t,
-            {
-              showOutline: true,
-              outlineStrokeWidth: templateThumbOutlineWidth,
-            },
+            templateThumbRenderOpts,
           );
           let dataUrl: string;
           try {
@@ -1846,9 +1865,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         payload.selectedSignTemplateType !== undefined ||
         payload.selectedSignSizeTemplateId !== undefined
       ) {
-        setSelectedSignTemplateType(
-          payload.selectedSignTemplateType ?? null,
-        );
+        setSelectedSignTemplateType(payload.selectedSignTemplateType ?? null);
         setSelectedSignSizeTemplateId(
           payload.selectedSignSizeTemplateId ?? null,
         );
@@ -2990,7 +3007,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     if (selectedBadgeIndex === 0) {
       setBadge1Data(resetBadgeData);
     }
-
   };
 
   const resetAllBadges = () => {
@@ -3230,8 +3246,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   /** Insert a full copy of the badge at `index` immediately after it; select the new copy. */
   const duplicateBadgeAtIndex = (index: number) => {
     if (index < 0 || index >= multipleBadges.length) return;
-    const source =
-      index === selectedBadgeIndex ? badge : multipleBadges[index];
+    const source = index === selectedBadgeIndex ? badge : multipleBadges[index];
     const dup = JSON.parse(JSON.stringify(source)) as Badge;
     dup.id = `badge-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     dup.lines = (dup.lines || []).map((line, lineIdx) => ({
@@ -3294,7 +3309,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         templateId: newTemplateId,
         backgroundColor: INITIAL_BADGE.backgroundColor ?? "#FFFFFF",
         backing: INITIAL_BADGE.backing ?? "magnetic",
-        lines: [...INITIAL_BADGE.lines],
+        lines:
+          variant === "sign"
+            ? buildPaddedInitialLines(
+                variant,
+                config.maxLines,
+                INITIAL_BADGE.lines,
+                defaultLineShape,
+              )
+            : [...INITIAL_BADGE.lines],
         ...(variant === "sign"
           ? {
               signBorderStyleId: "default",
@@ -3897,10 +3920,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         variant === "sign"
           ? 0
           : badge.backing === "magnetic"
-            ? 2.0
-            : badge.backing === "adhesive"
-              ? 1.0
-              : 0;
+          ? 2.0
+          : badge.backing === "adhesive"
+          ? 1.0
+          : 0;
       const totalPrice = basePrice + backingPrice;
 
       const badgeDesignData = {
@@ -3968,10 +3991,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     variant === "sign"
       ? 0
       : badge.backing === "magnetic"
-        ? 2
-        : badge.backing === "adhesive"
-          ? 1
-          : 0;
+      ? 2
+      : badge.backing === "adhesive"
+      ? 1
+      : 0;
   const totalPriceAllBadges =
     multipleBadges.length > 0
       ? multipleBadges
@@ -3982,10 +4005,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               (variant === "sign"
                 ? 0
                 : b.backing === "magnetic"
-                  ? 2
-                  : b.backing === "adhesive"
-                    ? 1
-                    : 0),
+                ? 2
+                : b.backing === "adhesive"
+                ? 1
+                : 0),
             0,
           )
           .toFixed(2)
@@ -4211,11 +4234,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         if (!addDuplicates && variant !== "sign") {
           const formDataFinalize = new FormData();
           formDataFinalize.append("designId", designIdForSupabase);
-          formDataFinalize.append(
-            "pdf",
-            pdfBlob,
-            "badge-design_proof.pdf",
-          );
+          formDataFinalize.append("pdf", pdfBlob, "badge-design_proof.pdf");
           const currentBacking = badgesForSupabase[0]?.backing;
           if (currentBacking) {
             formDataFinalize.append("backingType", currentBacking);
@@ -4245,7 +4264,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     b.templateId ||
                     activeTemplate?.id ||
                     (variant === "sign" ? "circle-4x4" : "rect-1x3");
-                  const tmpl = await loadTemplateById(templateIdForBadge, variant);
+                  const tmpl = await loadTemplateById(
+                    templateIdForBadge,
+                    variant,
+                  );
                   if (!tmpl) {
                     console.warn(
                       "[BadgeDesigner] proof upload: template missing",
@@ -4445,10 +4467,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             const backingP = isSignDesigner
               ? 0
               : b.backing === "magnetic"
-                ? 2
-                : b.backing === "adhesive"
-                  ? 1
-                  : 0;
+              ? 2
+              : b.backing === "adhesive"
+              ? 1
+              : 0;
             const itemTotalPrice = (basePrice + backingP).toFixed(2);
             const n = allBadgesForSupabase.length;
             const lineIndexStr = String(i);
@@ -4489,10 +4511,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             const backingP = isSignDesigner
               ? 0
               : b.backing === "magnetic"
-                ? 2
-                : b.backing === "adhesive"
-                  ? 1
-                  : 0;
+              ? 2
+              : b.backing === "adhesive"
+              ? 1
+              : 0;
             const itemTotalPrice = (basePrice + backingP).toFixed(2);
             const lineIndexStrSingle = String(i);
             const indexPropsSingle: Record<string, string> = {
@@ -4571,7 +4593,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
       if (invalidRows.length > 0) {
         setCsvError(
-          `Each badge can have a maximum of ${maxLines} lines of text. ` +
+          `Each ${config.labelProduct.toLowerCase()} can have a maximum of ${maxLines} lines of text. ` +
             `Row${invalidRows.length > 1 ? "s" : ""} ${invalidRows.join(
               ", ",
             )} ` +
@@ -4615,7 +4637,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
       if (invalidRows.length > 0) {
         setCsvError(
-          `Each badge can have a maximum of ${maxLines} lines of text. ` +
+          `Each ${config.labelProduct.toLowerCase()} can have a maximum of ${maxLines} lines of text. ` +
             `Row${invalidRows.length > 1 ? "s" : ""} ${invalidRows.join(
               ", ",
             )} ` +
@@ -5223,11 +5245,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                             title={t.name}
                           >
                             <div
-                              className={`text-[8px] text-center py-1 flex-shrink-0 ${
+                              className={`text-center py-1 flex-shrink-0 leading-tight ${
                                 isSelected
                                   ? "bg-blue-600 text-white"
                                   : "bg-gray-200 text-gray-700"
                               }`}
+                              style={{
+                                fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
+                              }}
                             >
                               {t.name}
                             </div>
@@ -5276,7 +5301,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       );
                     };
 
-                    // Sign: primary shape grid (Circle, Classic framed, Designer themes, Fancy); more shapes in "more templates"
+                    // Sign: primary shape grid (Classic framed, Standard, Fancy, Designer); more in "more templates"
                     if (variant === "sign") {
                       const handleSignTypeSelect = (
                         type: (typeof SIGN_TEMPLATE_TYPES)[0],
@@ -5295,7 +5320,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                             backing: false,
                             border: false,
                           });
-                          setSectionsOpened((prev) => ({ ...prev, size: true }));
+                          setSectionsOpened((prev) => ({
+                            ...prev,
+                            size: true,
+                          }));
                           templateGuidedAutoAdvanceDoneRef.current = true;
                         }
                         handleUniversalTemplateChange(firstSizeId);
@@ -5335,11 +5363,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                     title={type.name}
                                   >
                                     <div
-                                      className={`text-[8px] text-center py-1 flex-shrink-0 ${
+                                      className={`text-center py-1 flex-shrink-0 leading-tight ${
                                         isSelected
                                           ? "bg-blue-600 text-white"
                                           : "bg-gray-200 text-gray-700"
                                       }`}
+                                      style={{
+                                        fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
+                                      }}
                                     >
                                       {type.name}
                                     </div>
@@ -5367,7 +5398,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                           }}
                                         />
                                       ) : (
-                                        <span className="text-gray-400 text-xs">
+                                        <span
+                                          className="text-gray-400 text-center px-1"
+                                          style={{
+                                            fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
+                                          }}
+                                        >
                                           {type.name}
                                         </span>
                                       )}
@@ -5786,9 +5822,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               >
                 <div className="mb-3">
                   <p className="text-xs text-gray-600 mb-3">
-                    Template previews show the plate shape only. Choose a border type
-                    below (including &quot;No border&quot;). With a frame, pick trim
-                    color and — on Designer — a center motif.
+                    Template previews show the plate shape only. Choose a border
+                    type below (including &quot;No border&quot;). With a frame,
+                    pick trim color and — on Designer — a center motif.
                   </p>
                   <p className="text-sm text-gray-700 mb-2">Border type</p>
                   <div className="flex flex-wrap gap-2 mb-3">
@@ -5806,7 +5842,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                 signBorderOptionId: opt.id,
                                 signBorderEnabled: !isNone,
                                 signBorderStyleId: isNone
-                                  ? (badge.signBorderStyleId ?? "default")
+                                  ? badge.signBorderStyleId ?? "default"
                                   : opt.id,
                                 ...(!isNone
                                   ? {
@@ -6942,7 +6978,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             <div className="flex flex-col w-full items-center gap-4 flex-1 min-h-0">
               {/* Current badge being edited - fixed at top */}
               <div className="flex flex-col items-center w-full flex-shrink-0">
-                <div className="text-sm font-semibold text-blue-600 mb-0.5">
+                <div
+                  className="font-semibold text-blue-600 mb-1"
+                  style={{
+                    fontSize: `${DESIGNER_UI_TYPOGRAPHY.nowEditingFontRem}rem`,
+                  }}
+                >
                   Now editing {config.labelProduct.toLowerCase()}{" "}
                   {selectedBadgeIndex + 1}
                 </div>
@@ -7549,11 +7590,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                               title={type.name}
                             >
                               <div
-                                className={`text-[8px] text-center py-1 flex-shrink-0 ${
+                                className={`text-center py-1 flex-shrink-0 leading-tight ${
                                   isSelected
                                     ? "bg-blue-600 text-white"
                                     : "bg-gray-200 text-gray-700"
                                 }`}
+                                style={{
+                                  fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
+                                }}
                               >
                                 {type.name}
                               </div>
@@ -7581,7 +7625,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                     }}
                                   />
                                 ) : (
-                                  <span className="text-gray-400 text-xs">
+                                  <span
+                                    className="text-gray-400 text-center px-1"
+                                    style={{
+                                      fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
+                                    }}
+                                  >
                                     {type.name}
                                   </span>
                                 )}
@@ -7680,11 +7729,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                           title={t.name}
                         >
                           <div
-                            className={`text-[8px] text-center py-1 flex-shrink-0 ${
+                            className={`text-center py-1 flex-shrink-0 leading-tight ${
                               isSelected
                                 ? "bg-blue-600 text-white"
                                 : "bg-gray-200 text-gray-700"
                             }`}
+                            style={{
+                              fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
+                            }}
                           >
                             {t.name}
                           </div>
@@ -8670,30 +8722,26 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               Add or Create Multiple {config.labelProductPlural}
             </h3>
             <p className="mb-2 text-sm text-gray-700">
-              1. You can <strong>upload a CSV</strong> file or{" "}
-              <strong>paste CSV</strong> data below.
-              <br></br>
-              2. <strong>Each row</strong> should represent a{" "}
-              {config.labelProduct.toLowerCase()}.<br></br>
-              3. <strong>Add a comma (,)</strong> to indicate a new line.
-              <br></br>
-              4. Add up to <strong>4 lines</strong>.<br></br>
-              5. Add as many rows as you want.
+              {addMultipleCopy.csvModalSteps.map((step, idx) => (
+                <span key={idx}>
+                  {idx > 0 ? <br /> : null}
+                  {step}
+                </span>
+              ))}
             </p>
             <div className="mb-2 text-sm">
               <b>Example:</b>
               <br />
-              <span className="font-mono bg-gray-100 p-1 rounded inline-block mb-1">
-                Names,Title,Company
-              </span>
-              <br />
-              <span className="font-mono bg-gray-100 p-1 rounded inline-block mb-1">
-                John Doe,Manager,Corporate
-              </span>
-              <br />
-              <span className="font-mono bg-gray-100 p-1 rounded inline-block mb-1">
-                Jane Smith,Developer,1st Division
-              </span>
+              {addMultipleCopy.csvExampleRows.map((row, idx) => (
+                <React.Fragment key={idx}>
+                  <span className="font-mono bg-gray-100 p-1 rounded inline-block mb-1">
+                    {row}
+                  </span>
+                  {idx < addMultipleCopy.csvExampleRows.length - 1 ? (
+                    <br />
+                  ) : null}
+                </React.Fragment>
+              ))}
             </div>
             <div className="mb-2">
               <input
@@ -8706,7 +8754,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             <textarea
               className="w-full border rounded p-2 mb-2 text-sm text-gray-900 bg-white"
               rows={4}
-              placeholder="Paste CSV data here..."
+              placeholder={addMultipleCopy.csvTextareaPlaceholder}
               value={csvText}
               onChange={(e) => {
                 setCsvText(e.target.value);
@@ -8810,18 +8858,25 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             >
               &times;
             </button>
-            <h3 className="text-lg font-bold mb-2">Existing Badges Found</h3>
+            <h3 className="text-lg font-bold mb-2">
+              Existing {config.labelProductPlural} Found
+            </h3>
             <p className="mb-4 text-sm text-gray-700">
-              You currently have {multipleBadges.length} existing badge
-              {multipleBadges.length !== 1 ? "s" : ""}. Choose how to add your
-              new badges:
+              You currently have {multipleBadges.length} existing{" "}
+              {multipleBadges.length !== 1
+                ? config.labelProductPlural.toLowerCase()
+                : config.labelProduct.toLowerCase()}
+              . Choose how to add your new{" "}
+              {config.labelProductPlural.toLowerCase()}:
             </p>
             <p className="mb-3 text-xs text-gray-600">
-              <strong>Override Current</strong> replaces all existing badges
-              with the new ones from your CSV.
+              <strong>Override Current</strong> replaces all existing{" "}
+              {config.labelProductPlural.toLowerCase()} with the new ones from
+              your CSV.
               <br />
-              <strong>Add to Current</strong> keeps your existing badges and
-              appends the new ones.
+              <strong>Add to Current</strong> keeps your existing{" "}
+              {config.labelProductPlural.toLowerCase()} and appends the new
+              ones.
             </p>
             <div className="flex gap-3 mb-4">
               <button
@@ -9187,12 +9242,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       Add Multiple {config.labelProductPlural}
                     </h4>
                     <p className="text-sm text-gray-600">
-                      You can upload a comma-separated CSV with up to {maxLines}{" "}
-                      entries per row, with each row becoming its own{" "}
-                      {config.labelProduct.toLowerCase()}. Don't have a file?
-                      Use the dialog box to add{" "}
-                      {config.labelProductPlural.toLowerCase()} directly in the
-                      same format.
+                      {addMultipleCopy.addMultipleHelpParagraph}
                     </p>
                   </div>
                 </div>

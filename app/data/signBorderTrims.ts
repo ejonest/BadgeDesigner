@@ -17,7 +17,6 @@ const TRIM_OVERLAY_PREFIXES = [
   "square-",
   "standard-",
   "oval-",
-  "portrait-round-",
   "portrait-",
   "victorian-",
   "notched-",
@@ -43,7 +42,6 @@ export function signTemplateBorderFamilyKey(
   if (templateId.startsWith("square-")) return "square";
   if (templateId.startsWith("standard-")) return "standard";
   if (templateId.startsWith("oval-")) return "oval";
-  if (templateId.startsWith("portrait-round-")) return "portrait-round";
   if (templateId.startsWith("portrait-")) return "portrait";
   if (templateId.startsWith("victorian-")) return "victorian";
   if (templateId.startsWith("notched-")) return "notched";

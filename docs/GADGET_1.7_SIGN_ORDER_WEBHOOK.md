@@ -14,7 +14,7 @@ This matches [Gadget’s docs: Shopify webhooks within global actions](https://d
 3. In the right sidebar, open the **TRIGGERS** panel.
 4. Click **`+`**.
 5. Choose **Shopify** (Shopify data / webhook trigger — the same type badge uses).
-6. Select topic **`orders/paid`** (same as badge). If your dev store never fires `orders/paid`, add **`orders/create`** as well until you see the action run in logs.
+6. Select topic **`orders/paid`** (same as badge). **Important:** Many checkouts only show **`orders/create`** / **`orders/updated`** in Gadget logs — **`orders/paid` may not fire** for your store or API version. If your action never runs, add **`orders/create`** as a **second** Shopify trigger on the **same** global action (or put both topics on one subscription in `shopify.app.toml` per Gadget docs). Your `tempFailed.txt`-style logs showed `webhookTopic: orders/create` but no `orders/paid`; that alone explains “Supabase never updates.”
 7. **Save** the action. In **v1.7+**, Gadget updates **`shopify.app.toml`** with a `[[webhooks.subscriptions]]` entry and links the action via a **`triggerKey`** — let the editor manage that; don’t duplicate old `options.triggers.shopify.webhooks` arrays from pre-1.7 samples.
 
 ## 2. Confirm Shopify connection & scopes

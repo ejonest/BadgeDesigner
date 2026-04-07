@@ -98,7 +98,7 @@ export function getDesignerVariantConfig(
   return DESIGNER_VARIANT_CONFIG[variant];
 }
 
-/** Sign only: template types (Circle, Classic framed, Designer themes, Fancy) and their size variants for step 2. */
+/** Sign only: template types (Classic framed, Standard, Fancy, Designer, etc.) and their size variants for step 2. */
 export interface SignTemplateSizeOption {
   templateId: string;
   label: string;
@@ -119,17 +119,6 @@ export interface SignTemplateType {
 /** Main Step 1 grid: four shapes only; more variants live in ALL_SIGN_TEMPLATE_TYPES / "more templates". */
 export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
-    id: "circle",
-    name: "Circle",
-    hasBorderTrim: false,
-    sizes: [
-      { templateId: "circle-4x4", label: "Small", sizeText: '4×4"' },
-      { templateId: "circle-6x6", label: "Medium", sizeText: '6×6"' },
-      { templateId: "circle-8x8", label: "Large", sizeText: '8×8"' },
-      { templateId: "circle-10x10", label: "Extra large", sizeText: '10×10"' },
-    ],
-  },
-  {
     id: "classic-framed",
     name: "Classic framed",
     sizes: [
@@ -140,58 +129,6 @@ export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
         templateId: "classic-framed-7x10",
         label: "Extra large",
         sizeText: '7×10"',
-      },
-    ],
-  },
-  {
-    id: "designer-heart",
-    name: "Designer",
-    sizes: [
-      { templateId: "designer-2x5", label: "Small", sizeText: '2×5"' },
-      { templateId: "designer-2_8x7", label: "Medium", sizeText: '2.8×7"' },
-      { templateId: "designer-4x9", label: "Large", sizeText: '4×9"' },
-      {
-        templateId: "designer-4_25x11",
-        label: "Extra large",
-        sizeText: '4.25×11"',
-      },
-    ],
-  },
-  {
-    id: "fancy",
-    name: "Fancy",
-    sizes: [
-      { templateId: "fancy-6x3", label: "Small", sizeText: '6×3"' },
-      { templateId: "fancy-7x3_5", label: "Medium", sizeText: '7×3.5"' },
-      { templateId: "fancy-9x4_5", label: "Large", sizeText: '9×4.5"' },
-    ],
-  },
-];
-
-/** Sign only: all template types (best sellers + rest). Main grid uses SIGN_TEMPLATE_TYPES only (4 cards). */
-export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
-  ...SIGN_TEMPLATE_TYPES,
-  {
-    id: "basic",
-    name: "Basic",
-    hasBorderTrim: false,
-    sizes: [
-      { templateId: "basic-2x6", label: "Small", sizeText: '2×6"' },
-      { templateId: "basic-2_5x7", label: "Medium", sizeText: '2.5×7"' },
-      { templateId: "basic-3x9", label: "Large", sizeText: '3×9"' },
-    ],
-  },
-  {
-    id: "square",
-    name: "Square",
-    sizes: [
-      { templateId: "square-4x4-small", label: "Small", sizeText: '4×4"' },
-      { templateId: "square-6x6-medium", label: "Medium", sizeText: '6×6"' },
-      { templateId: "square-8x8-large", label: "Large", sizeText: '8×8"' },
-      {
-        templateId: "square-10x10-xl",
-        label: "Extra large",
-        sizeText: '10×10"',
       },
     ],
   },
@@ -214,6 +151,69 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
     ],
   },
   {
+    id: "fancy",
+    name: "Fancy",
+    sizes: [
+      { templateId: "fancy-6x3", label: "Small", sizeText: '6×3"' },
+      { templateId: "fancy-7x3_5", label: "Medium", sizeText: '7×3.5"' },
+      { templateId: "fancy-9x4_5", label: "Large", sizeText: '9×4.5"' },
+    ],
+  },
+  {
+    id: "designer-heart",
+    name: "Designer",
+    sizes: [
+      { templateId: "designer-2x5", label: "Small", sizeText: '2×5"' },
+      { templateId: "designer-2_8x7", label: "Medium", sizeText: '2.8×7"' },
+      { templateId: "designer-4x9", label: "Large", sizeText: '4×9"' },
+      {
+        templateId: "designer-4_25x11",
+        label: "Extra large",
+        sizeText: '4.25×11"',
+      },
+    ],
+  },
+];
+
+/** Sign only: all template types (main four + Basic + more). Main grid uses SIGN_TEMPLATE_TYPES only (4 cards). */
+export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
+  ...SIGN_TEMPLATE_TYPES,
+  {
+    id: "basic",
+    name: "Basic",
+    hasBorderTrim: false,
+    sizes: [
+      { templateId: "basic-2x6", label: "Small", sizeText: '2×6"' },
+      { templateId: "basic-2_5x7", label: "Medium", sizeText: '2.5×7"' },
+      { templateId: "basic-3x9", label: "Large", sizeText: '3×9"' },
+    ],
+  },
+  {
+    id: "circle",
+    name: "Circle",
+    hasBorderTrim: false,
+    sizes: [
+      { templateId: "circle-4x4", label: "Small", sizeText: '4×4"' },
+      { templateId: "circle-6x6", label: "Medium", sizeText: '6×6"' },
+      { templateId: "circle-8x8", label: "Large", sizeText: '8×8"' },
+      { templateId: "circle-10x10", label: "Extra large", sizeText: '10×10"' },
+    ],
+  },
+  {
+    id: "square",
+    name: "Square",
+    sizes: [
+      { templateId: "square-4x4-small", label: "Small", sizeText: '4×4"' },
+      { templateId: "square-6x6-medium", label: "Medium", sizeText: '6×6"' },
+      { templateId: "square-8x8-large", label: "Large", sizeText: '8×8"' },
+      {
+        templateId: "square-10x10-xl",
+        label: "Extra large",
+        sizeText: '10×10"',
+      },
+    ],
+  },
+  {
     id: "oval",
     name: "Oval",
     sizes: [
@@ -231,14 +231,6 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
     id: "portrait",
     name: "Portrait",
     sizes: [
-      { templateId: "portrait-6x8", label: "Small", sizeText: '6×8"' },
-      { templateId: "portrait-7x10", label: "Large", sizeText: '7×10"' },
-    ],
-  },
-  {
-    id: "portrait-round",
-    name: "Portrait round",
-    sizes: [
       {
         templateId: "portrait-round-4x6",
         label: "Small",
@@ -246,8 +238,14 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
       },
       {
         templateId: "portrait-round-5x7",
-        label: "Large",
+        label: "Medium",
         sizeText: '5×7"',
+      },
+      { templateId: "portrait-6x8", label: "Large", sizeText: '6×8"' },
+      {
+        templateId: "portrait-7x10",
+        label: "Extra large",
+        sizeText: '7×10"',
       },
     ],
   },

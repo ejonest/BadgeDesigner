@@ -489,7 +489,7 @@ function pathToElement(
  */
 function pathToOutlineElement(pathData: string, id: string): string {
   // Explicitly set fill="none" to prevent any fill from showing
-  return `<path id="${id}" d="${pathData}" fill="none" stroke="#222" stroke-width="1.25"/>`;
+  return `<path id="${id}" d="${pathData}" fill="none" stroke="#000000" stroke-width="1.25"/>`;
 }
 
 /** Border trim path only (sign Designer); scroll/motif paths come from `getDesignerMotifPaths` at render time. */

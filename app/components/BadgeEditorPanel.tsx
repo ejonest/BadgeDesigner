@@ -8,7 +8,10 @@ import { FONT_COLORS } from "../constants/colors";
 import { FONT_FAMILIES } from "../constants/fonts";
 import { loadTemplateById } from "../utils/templates";
 import { getEffectiveDesignBox } from "../utils/renderSvg";
-import type { DesignerVariant } from "../constants/designerVariants";
+import {
+  type DesignerVariant,
+  getDesignerVariantConfig,
+} from "../constants/designerVariants";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
 // Helper functions for normalized font size conversion
@@ -245,6 +248,9 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   onResetLineToDefault,
   variant = "badge",
 }) => {
+  const { labelProductPlural } = getDesignerVariantConfig(variant);
+  const allItemsLabel = labelProductPlural.toLowerCase();
+
   // Get the current template's designBox for font size calculations
   const [designBox, setDesignBox] = React.useState({
     x: 0,
@@ -618,9 +624,9 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
                   onClick={() => onApplyFormattingToAll(idx)}
                   disabled={!editable}
-                  title={`Apply line ${idx + 1} format to all badges`}
+                  title={`Apply line ${idx + 1} format to all ${allItemsLabel}`}
                 >
-                  Apply line {idx + 1} format to all badges
+                  Apply line {idx + 1} format to all {allItemsLabel}
                 </button>
               </div>
             )}
