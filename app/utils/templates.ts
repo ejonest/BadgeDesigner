@@ -11,6 +11,11 @@ import type { DesignerSizeKey } from "~/data/designerMotifs";
 import { templateIdToDesignerSizeKey } from "~/data/designerMotifs";
 import templatesJson from "../data/templates.local.json";
 import signTemplatesJson from "../data/sign-templates.local.json";
+import type {
+  ResolvedSignTextLayout,
+  SignTextLayoutConfigJson,
+} from "~/utils/signTextLayout";
+import { resolveSignTextLayout } from "~/utils/signTextLayout";
 
 const DPI = 96;
 const toPx = (inches: number) => Math.round(inches * DPI);
@@ -22,6 +27,8 @@ export type TemplateConfig = {
   heightInches: number;
   svgFile: string;
   safeInsetPx?: number;
+  /** Sign only: optional text region / per-line width weights (see signTextLayout.ts). */
+  textLayout?: SignTextLayoutConfigJson;
 };
 
 export type LoadedTemplate = {
@@ -45,6 +52,8 @@ export type LoadedTemplate = {
   standardViewBoxHeight: number;
   /** Original SVG path for preview thumbnails (e.g. /templates/sign/Circle 10x10.svg). Use encodeURI when using as img src. */
   svgFile?: string;
+  /** Sign only: resolved text region, clip rect, and per-line width fractions. */
+  signTextLayout?: ResolvedSignTextLayout;
 };
 
 type TemplatesFile = { version: number; templates: TemplateConfig[] };
@@ -54,7 +63,7 @@ const signCfg = (signTemplatesJson as TemplatesFile).templates || [];
 
 /** Returns template configs for the picker and loading. */
 export function getTemplateConfigsForVariant(
-  variant: DesignerVariant
+  variant: DesignerVariant,
 ): TemplateConfig[] {
   return variant === "sign" ? [...signCfg] : [...badgeCfg];
 }
@@ -74,7 +83,12 @@ function decodeSvgBuffer(buffer: ArrayBuffer): string {
   if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
     return new TextDecoder("utf-16be").decode(buffer.slice(2));
   }
-  if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+  if (
+    bytes.length >= 3 &&
+    bytes[0] === 0xef &&
+    bytes[1] === 0xbb &&
+    bytes[2] === 0xbf
+  ) {
     return new TextDecoder("utf-8").decode(buffer.slice(3));
   }
   return new TextDecoder("utf-8").decode(buffer);
@@ -155,7 +169,7 @@ function extractFirstPolygonFromSvg(svgContent: string): string | null {
     }
   }
   const match = svgContent.match(
-    /<polygon[^>]*\bpoints\s*=\s*["']([^"']+)["']/i
+    /<polygon[^>]*\bpoints\s*=\s*["']([^"']+)["']/i,
   );
   if (match && match[1]) return polygonToPathData(match[1]);
   return null;
@@ -211,14 +225,14 @@ function extractPathFromSvg(svgContent: string, pathId: string): string | null {
     // id="inner" d="..."
     new RegExp(
       `<path[^>]*id=["']${pathId.toLowerCase()}["'][^>]*d=["']([^"']+)["']`,
-      "i"
+      "i",
     ),
     // d="..." id="Inner"
     new RegExp(`<path[^>]*d=["']([^"']+)["'][^>]*id=["']${pathId}["']`, "i"),
     // d="..." id="inner"
     new RegExp(
       `<path[^>]*d=["']([^"']+)["'][^>]*id=["']${pathId.toLowerCase()}["']`,
-      "i"
+      "i",
     ),
   ];
 
@@ -234,22 +248,22 @@ function extractPathFromSvg(svgContent: string, pathId: string): string | null {
     // id="Inner" points="..."
     new RegExp(
       `<polygon[^>]*id=["']${pathId}["'][^>]*points=["']([^"']+)["']`,
-      "i"
+      "i",
     ),
     // id="inner" points="..."
     new RegExp(
       `<polygon[^>]*id=["']${pathId.toLowerCase()}["'][^>]*points=["']([^"']+)["']`,
-      "i"
+      "i",
     ),
     // points="..." id="Inner"
     new RegExp(
       `<polygon[^>]*points=["']([^"']+)["'][^>]*id=["']${pathId}["']`,
-      "i"
+      "i",
     ),
     // points="..." id="inner"
     new RegExp(
       `<polygon[^>]*points=["']([^"']+)["'][^>]*id=["']${pathId.toLowerCase()}["']`,
-      "i"
+      "i",
     ),
   ];
 
@@ -267,7 +281,9 @@ function extractPathFromSvg(svgContent: string, pathId: string): string | null {
  * Converts circle (cx, cy, r) to SVG path d string.
  */
 function circleToPathD(cx: number, cy: number, r: number): string {
-  return `M ${cx - r},${cy} A ${r},${r} 0 0 1 ${cx + r},${cy} A ${r},${r} 0 0 1 ${cx - r},${cy}`;
+  return `M ${cx - r},${cy} A ${r},${r} 0 0 1 ${
+    cx + r
+  },${cy} A ${r},${r} 0 0 1 ${cx - r},${cy}`;
 }
 
 /**
@@ -277,9 +293,11 @@ function ellipseToPathD(
   cx: number,
   cy: number,
   rx: number,
-  ry: number
+  ry: number,
 ): string {
-  return `M ${cx - rx},${cy} A ${rx},${ry} 0 0 1 ${cx + rx},${cy} A ${rx},${ry} 0 0 1 ${cx - rx},${cy}`;
+  return `M ${cx - rx},${cy} A ${rx},${ry} 0 0 1 ${
+    cx + rx
+  },${cy} A ${rx},${ry} 0 0 1 ${cx - rx},${cy}`;
 }
 
 /**
@@ -305,7 +323,14 @@ function extractCircleOrEllipseFromSvg(svgContent: string): string | null {
         const cy = parseFloat(ellipse.getAttribute("cy") ?? "0");
         const rx = parseFloat(ellipse.getAttribute("rx") ?? "0");
         const ry = parseFloat(ellipse.getAttribute("ry") ?? "0");
-        if (!isNaN(cx) && !isNaN(cy) && !isNaN(rx) && !isNaN(ry) && rx > 0 && ry > 0) {
+        if (
+          !isNaN(cx) &&
+          !isNaN(cy) &&
+          !isNaN(rx) &&
+          !isNaN(ry) &&
+          rx > 0 &&
+          ry > 0
+        ) {
           return ellipseToPathD(cx, cy, rx, ry);
         }
       }
@@ -315,22 +340,24 @@ function extractCircleOrEllipseFromSvg(svgContent: string): string | null {
   }
   // Regex fallback for circle (attribute order can vary)
   const circleCxCyR = svgContent.match(
-    /<circle[^>]*\bcx\s*=\s*["']([^"']+)["'][^>]*\bcy\s*=\s*["']([^"']+)["'][^>]*\br\s*=\s*["']([^"']+)["']/i
+    /<circle[^>]*\bcx\s*=\s*["']([^"']+)["'][^>]*\bcy\s*=\s*["']([^"']+)["'][^>]*\br\s*=\s*["']([^"']+)["']/i,
   );
   if (circleCxCyR) {
     const cx = parseFloat(circleCxCyR[1]);
     const cy = parseFloat(circleCxCyR[2]);
     const r = parseFloat(circleCxCyR[3]);
-    if (!isNaN(cx) && !isNaN(cy) && !isNaN(r) && r > 0) return circleToPathD(cx, cy, r);
+    if (!isNaN(cx) && !isNaN(cy) && !isNaN(r) && r > 0)
+      return circleToPathD(cx, cy, r);
   }
   const circleRCxCy = svgContent.match(
-    /<circle[^>]*\br\s*=\s*["']([^"']+)["'][^>]*\bcx\s*=\s*["']([^"']+)["'][^>]*\bcy\s*=\s*["']([^"']+)["']/i
+    /<circle[^>]*\br\s*=\s*["']([^"']+)["'][^>]*\bcx\s*=\s*["']([^"']+)["'][^>]*\bcy\s*=\s*["']([^"']+)["']/i,
   );
   if (circleRCxCy) {
     const r = parseFloat(circleRCxCy[1]);
     const cx = parseFloat(circleRCxCy[2]);
     const cy = parseFloat(circleRCxCy[3]);
-    if (!isNaN(cx) && !isNaN(cy) && !isNaN(r) && r > 0) return circleToPathD(cx, cy, r);
+    if (!isNaN(cx) && !isNaN(cy) && !isNaN(r) && r > 0)
+      return circleToPathD(cx, cy, r);
   }
   return null;
 }
@@ -341,7 +368,7 @@ function extractCircleOrEllipseFromSvg(svgContent: string): string | null {
  */
 function extractPathByClassFromSvg(
   svgContent: string,
-  classToken: string
+  classToken: string,
 ): string | null {
   if (typeof DOMParser === "undefined") return null;
   try {
@@ -361,6 +388,69 @@ function extractPathByClassFromSvg(
     console.warn("[templates] extractPathByClass failed:", e);
   }
   return null;
+}
+
+/** Corel sign exports: dark plate `fil0`, light trim `fil1` (border color at runtime). */
+function isSignFil0Fil1TrimTemplateId(templateId: string): boolean {
+  return /^(arrow|door-hanger|headstone-basic|vintage|western-elegant)-/.test(
+    templateId,
+  );
+}
+
+/** First dark plate: path class fil0, else polygon class fil0 (e.g. Arrow). */
+function extractFil0PlatePathFromSvg(svgContent: string): string | null {
+  const fromPath = extractPathByClassFromSvg(svgContent, "fil0");
+  if (fromPath) return fromPath;
+  if (typeof DOMParser !== "undefined") {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svgContent, "image/svg+xml");
+      const polys = doc.querySelectorAll("polygon");
+      for (let i = 0; i < polys.length; i++) {
+        const cls = (polys[i].getAttribute("class") ?? "").toLowerCase();
+        if (cls.includes("fil0")) {
+          const pts = polys[i].getAttribute("points");
+          if (pts) return polygonToPathData(pts);
+        }
+      }
+    } catch (e) {
+      console.warn("[templates] extractFil0Plate polygon failed:", e);
+    }
+  }
+  const m1 = svgContent.match(
+    /<polygon[^>]*\bclass\s*=\s*["'][^"']*fil0[^"']*["'][^>]*\bpoints\s*=\s*["']([^"']+)["']/i,
+  );
+  if (m1?.[1]) return polygonToPathData(m1[1]);
+  const m2 = svgContent.match(
+    /<polygon[^>]*\bpoints\s*=\s*["']([^"']+)["'][^>]*\bfil0\b/i,
+  );
+  if (m2?.[1]) return polygonToPathData(m2[1]);
+  return null;
+}
+
+/** All `<path class="…fil1…">` `d` values (door hanger: body ring + knob hole ring). */
+function extractAllPathsByClassFromSvg(
+  svgContent: string,
+  classToken: string,
+): string[] {
+  const out: string[] = [];
+  if (typeof DOMParser === "undefined") return out;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgContent, "image/svg+xml");
+    const paths = doc.querySelectorAll("path");
+    const token = classToken.toLowerCase();
+    for (let i = 0; i < paths.length; i++) {
+      const cls = (paths[i].getAttribute("class") ?? "").toLowerCase();
+      if (cls.includes(token)) {
+        const d = paths[i].getAttribute("d");
+        if (d) out.push(d);
+      }
+    }
+  } catch (e) {
+    console.warn("[templates] extractAllPathsByClass failed:", e);
+  }
+  return out;
 }
 
 /**
@@ -443,7 +533,10 @@ function extractSignInsetTrimPlateAndBorder(svgContent: string): {
 /**
  * Extracts the n-th path's "d" attribute from SVG (0-based). Used as fallback when no Inner/Design/circle.
  */
-function extractNthPathFromSvg(svgContent: string, index: number): string | null {
+function extractNthPathFromSvg(
+  svgContent: string,
+  index: number,
+): string | null {
   if (typeof DOMParser !== "undefined") {
     try {
       const parser = new DOMParser();
@@ -476,7 +569,7 @@ function extractNthPathFromSvg(svgContent: string, index: number): string | null
 function pathToElement(
   pathData: string,
   id: string,
-  fill: string = "#000"
+  fill: string = "#000",
 ): string {
   // Explicitly set stroke to none to prevent any stroke from showing
   return `<path id="${id}" d="${pathData}" fill="${fill}" stroke="none"/>`;
@@ -509,7 +602,10 @@ function extractDesignerBorderOverlayOnly(
       const d = path.getAttribute("d");
       if (id !== "Border" || !d) continue;
       if (pathDataEqual(d, outerPathD)) continue;
-      return `<g transform="${transform}"><path d="${d.replace(/"/g, "&quot;")}"/></g>`;
+      return `<g transform="${transform}"><path d="${d.replace(
+        /"/g,
+        "&quot;",
+      )}"/></g>`;
     }
   } catch (e) {
     console.warn("[templates] extractDesignerBorderOverlayOnly failed:", e);
@@ -522,7 +618,7 @@ function extractDesignerBorderOverlayOnly(
  * Returns { x, y, width, height } or null if not found.
  */
 function extractViewBox(
-  svgContent: string
+  svgContent: string,
 ): { x: number; y: number; width: number; height: number } | null {
   // Try DOM parsing first
   if (typeof DOMParser !== "undefined") {
@@ -547,7 +643,7 @@ function extractViewBox(
     } catch (e) {
       console.warn(
         "[templates] DOM parsing failed for viewBox, falling back to regex:",
-        e
+        e,
       );
     }
   }
@@ -572,7 +668,7 @@ function calculatePathBounds(
   pathData: string,
   viewBox: { x: number; y: number; width: number; height: number } | null,
   targetWidthPx: number,
-  targetHeightPx: number
+  targetHeightPx: number,
 ): { x: number; y: number; width: number; height: number } {
   let rawBounds: { x: number; y: number; width: number; height: number };
 
@@ -584,12 +680,12 @@ function calculatePathBounds(
       if (viewBox) {
         svg.setAttribute(
           "viewBox",
-          `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`
+          `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`,
         );
       }
       const path = document.createElementNS(
         "http://www.w3.org/2000/svg",
-        "path"
+        "path",
       );
       path.setAttribute("d", pathData);
       svg.appendChild(path);
@@ -607,7 +703,7 @@ function calculatePathBounds(
     } catch (e) {
       console.warn(
         "[templates] Failed to calculate path bounds using SVG API:",
-        e
+        e,
       );
       rawBounds = parsePathBounds(pathData);
     }
@@ -796,7 +892,8 @@ function tightDesignerViewBoxIfCanvasMismatch(
   const fileAspect = rawViewBox.width / rawViewBox.height;
   const outAspect = widthInches / heightInches;
   const maxDim = Math.max(rawViewBox.width, rawViewBox.height);
-  const looksLetterCanvas = rawViewBox.width >= 7500 && rawViewBox.height >= 9500;
+  const looksLetterCanvas =
+    rawViewBox.width >= 7500 && rawViewBox.height >= 9500;
   if (
     !viewBoxHasOffsetOrigin &&
     !looksLetterCanvas &&
@@ -831,10 +928,10 @@ function tightDesignerViewBoxIfCanvasMismatch(
  */
 async function loadOne(
   c: TemplateConfig,
-  variant: DesignerVariant = "badge"
+  variant: DesignerVariant = "badge",
 ): Promise<LoadedTemplate> {
   console.log(
-    `[templates] Loading template "${c.id}" from SVG file: ${c.svgFile}`
+    `[templates] Loading template "${c.id}" from SVG file: ${c.svgFile}`,
   );
 
   // Fetch the SVG file directly with aggressive cache-busting to force fresh loads
@@ -860,7 +957,7 @@ async function loadOne(
   });
   if (!response.ok) {
     throw new Error(
-      `[templates] Failed to fetch SVG file "${c.svgFile}": ${response.status} ${response.statusText}`
+      `[templates] Failed to fetch SVG file "${c.svgFile}": ${response.status} ${response.statusText}`,
     );
   }
 
@@ -868,7 +965,7 @@ async function loadOne(
   const buf = await response.arrayBuffer();
   const svgContent = decodeSvgBuffer(buf);
   console.log(
-    `[templates] ✓ Fetched SVG file for "${c.id}" (${svgContent.length} chars)`
+    `[templates] ✓ Fetched SVG file for "${c.id}" (${svgContent.length} chars)`,
   );
 
   // If we got HTML (e.g. SPA fallback or 404 page), fail with a clear message
@@ -876,21 +973,27 @@ async function loadOne(
   if (trimmed.startsWith("<!") || trimmed.startsWith("<html")) {
     const preview = trimmed.substring(0, 80).replace(/\s+/g, " ");
     throw new Error(
-      `Server returned HTML instead of SVG (check static serving of ${c.svgFile}). Preview: ${preview}...`
+      `Server returned HTML instead of SVG (check static serving of ${c.svgFile}). Preview: ${preview}...`,
     );
   }
-  const head = (svgContent.substring(0, 500).replace(/\s+/g, " ") || "").toLowerCase();
-  if (!head.includes("<svg") && !head.includes("<circle") && !head.includes("<?xml")) {
+  const head = (
+    svgContent.substring(0, 500).replace(/\s+/g, " ") || ""
+  ).toLowerCase();
+  if (
+    !head.includes("<svg") &&
+    !head.includes("<circle") &&
+    !head.includes("<?xml")
+  ) {
     const preview = trimmed.substring(0, 80).replace(/\s+/g, " ");
     throw new Error(
-      `Response does not look like SVG for ${c.svgFile}. Preview: ${preview}...`
+      `Response does not look like SVG for ${c.svgFile}. Preview: ${preview}...`,
     );
   }
 
   // Log first 200 chars of SVG content to verify we're getting the right file
   console.log(
     `[templates] SVG content preview for "${c.id}":`,
-    svgContent.substring(0, 200)
+    svgContent.substring(0, 200),
   );
 
   // Extract viewBox from SVG to understand the coordinate system
@@ -906,7 +1009,7 @@ async function loadOne(
     extractNthPathFromSvg(svgContent, 1) ||
     extractNthPathFromSvg(svgContent, 0) ||
     extractFirstPolygonFromSvg(svgContent);
-  const outlinePath =
+  let outlinePath =
     extractPathFromSvg(svgContent, "Outline") ||
     extractPathFromSvg(svgContent, "Border") ||
     extractFirstPolygonFromSvg(svgContent); // Basic templates: use same polygon as outline
@@ -924,7 +1027,8 @@ async function loadOne(
     pathDataEqual(outlinePath, borderPath);
 
   // Classic Framed: identify by structure so we always get the right layers (single contour = full background, compound "zm" = trim)
-  const classicFramedByStructure = extractClassicFramedPathsByStructure(svgContent);
+  const classicFramedByStructure =
+    extractClassicFramedPathsByStructure(svgContent);
   const classicFramedBackgroundPath =
     classicFramedByStructure.backgroundPath ||
     extractPathByClassFromSvg(svgContent, "fil0") ||
@@ -940,23 +1044,46 @@ async function loadOne(
     classicFramedBackgroundPath &&
     trimPathClassic;
 
+  const fil0PlateSignTrim = extractFil0PlatePathFromSvg(svgContent);
+  const fil1TrimPathsAll = extractAllPathsByClassFromSvg(svgContent, "fil1");
+  const isSignFil0Fil1TrimLayout =
+    variant === "sign" &&
+    isSignFil0Fil1TrimTemplateId(c.id) &&
+    Boolean(fil0PlateSignTrim) &&
+    fil1TrimPathsAll.length > 0;
+
   // Debug: why does only 7x10 render correctly? Log extraction source and path fingerprints.
   if (variant === "sign" && c.id.startsWith("classic-framed-")) {
-    const srcBg =
-      classicFramedByStructure.backgroundPath ? "structure" : extractPathByClassFromSvg(svgContent, "fil0") ? "fil0" : "nth(0)";
-    const srcTrim =
-      classicFramedByStructure.trimPath ? "structure" : extractPathByClassFromSvg(svgContent, "fil1") ? "fil1" : "nth(1)";
+    const srcBg = classicFramedByStructure.backgroundPath
+      ? "structure"
+      : extractPathByClassFromSvg(svgContent, "fil0")
+      ? "fil0"
+      : "nth(0)";
+    const srcTrim = classicFramedByStructure.trimPath
+      ? "structure"
+      : extractPathByClassFromSvg(svgContent, "fil1")
+      ? "fil1"
+      : "nth(1)";
     const bgHasZm = classicFramedBackgroundPath?.includes("zm") ?? false;
     const trimHasZm = trimPathClassic?.includes("zm") ?? false;
     console.log(`[templates] Classic Framed "${c.id}" DEBUG:`, {
       hasDOMParser: typeof DOMParser !== "undefined",
-      structureBackground: classicFramedByStructure.backgroundPath ? `${classicFramedByStructure.backgroundPath.length} chars` : null,
-      structureTrim: classicFramedByStructure.trimPath ? `${classicFramedByStructure.trimPath.length} chars` : null,
+      structureBackground: classicFramedByStructure.backgroundPath
+        ? `${classicFramedByStructure.backgroundPath.length} chars`
+        : null,
+      structureTrim: classicFramedByStructure.trimPath
+        ? `${classicFramedByStructure.trimPath.length} chars`
+        : null,
       sourceBackground: srcBg,
       sourceTrim: srcTrim,
       backgroundPathHasZm: bgHasZm,
       trimPathHasZm: trimHasZm,
-      pathSwap: bgHasZm && !trimHasZm ? "SWAPPED (bg has zm, trim does not)" : !bgHasZm && trimHasZm ? "OK" : "UNEXPECTED",
+      pathSwap:
+        bgHasZm && !trimHasZm
+          ? "SWAPPED (bg has zm, trim does not)"
+          : !bgHasZm && trimHasZm
+          ? "OK"
+          : "UNEXPECTED",
       backgroundStart: classicFramedBackgroundPath?.substring(0, 60),
       trimStart: trimPathClassic?.substring(0, 60),
       svgContentLength: svgContent.length,
@@ -973,7 +1100,8 @@ async function loadOne(
     variant === "sign" &&
     !isSignDesignerWithBorder &&
     !isSignClassicFramed &&
-    !isSignFancy
+    !isSignFancy &&
+    !isSignFil0Fil1TrimLayout
       ? extractSignInsetTrimPlateAndBorder(svgContent)
       : null;
   const isSignInsetTrim = !!signInsetTrim;
@@ -981,55 +1109,60 @@ async function loadOne(
   if (isSignDesignerWithBorder) {
     innerPath = outerPath; // background = outer dark shape; trim + fancy bits = border color (in overlay)
     console.log(
-      `[templates] Sign Designer "${c.id}": using outer path for background; Border + Design in overlay`
+      `[templates] Sign Designer "${c.id}": using outer path for background; Border + Design in overlay`,
     );
   } else if (isSignClassicFramed) {
     innerPath = classicFramedBackgroundPath;
     console.log(
-      `[templates] Sign Classic Framed "${c.id}": using fil0 path for background, fil1 path for trim (border color)`
+      `[templates] Sign Classic Framed "${c.id}": using fil0 path for background, fil1 path for trim (border color)`,
+    );
+  } else if (isSignFil0Fil1TrimLayout) {
+    innerPath = fil0PlateSignTrim!;
+    console.log(
+      `[templates] Sign fil0/fil1 "${c.id}": fil0 plate = background fill, fil1 = border trim overlay`,
     );
   } else if (isSignFancy) {
     innerPath = outerPath;
     console.log(
-      `[templates] Sign Fancy "${c.id}": using path 0 for background, path 2 for trim (border color)`
+      `[templates] Sign Fancy "${c.id}": using path 0 for background, path 2 for trim (border color)`,
     );
   } else if (isSignInsetTrim) {
     innerPath = signInsetTrim.platePath;
     console.log(
-      `[templates] Sign inset trim "${c.id}": plate path for background, id=Border for trim (border color)`
+      `[templates] Sign inset trim "${c.id}": plate path for background, id=Border for trim (border color)`,
     );
   }
 
   if (!innerPath) {
     throw new Error(
-      `[templates] Template "${c.id}" missing Inner/Design/circle/path in SVG file`
+      `[templates] Template "${c.id}" missing Inner/Design/circle/path in SVG file`,
     );
   }
 
   console.log(
     `[templates] ✓ Extracted paths for "${c.id}" - Inner: ${innerPath.substring(
       0,
-      100
+      100,
     )}..., Outline: ${
       outlinePath ? outlinePath.substring(0, 100) + "..." : "none"
-    }`
+    }`,
   );
 
   // Verify coextensive paths (Inner and Outline should match when coextensive)
   if (outlinePath && innerPath === outlinePath) {
     console.log(
-      `[templates] ✓ Template "${c.id}" has coextensive Inner and Outline paths`
+      `[templates] ✓ Template "${c.id}" has coextensive Inner and Outline paths`,
     );
   } else if (outlinePath) {
     console.log(
-      `[templates] ⚠ Template "${c.id}" has different Inner and Outline paths`
+      `[templates] ⚠ Template "${c.id}" has different Inner and Outline paths`,
     );
     console.log(
-      `[templates] Inner path length: ${innerPath.length}, Outline path length: ${outlinePath.length}`
+      `[templates] Inner path length: ${innerPath.length}, Outline path length: ${outlinePath.length}`,
     );
     console.log(`[templates] Inner starts with: ${innerPath.substring(0, 50)}`);
     console.log(
-      `[templates] Outline starts with: ${outlinePath.substring(0, 50)}`
+      `[templates] Outline starts with: ${outlinePath.substring(0, 50)}`,
     );
   }
 
@@ -1052,32 +1185,36 @@ async function loadOne(
   }
 
   // Calculate designBox: for sign Designer/Classic Framed/Fancy use trim path so text stays inside the trim; else use inner path
-  const trimPath =
-    isSignClassicFramed
-      ? trimPathClassic!
-      : isSignFancy
-        ? trimPathFancy!
-        : isSignInsetTrim
-          ? signInsetTrim!.trimPath
-          : null;
+  const trimPathFil1ForDesign = isSignFil0Fil1TrimLayout
+    ? fil1TrimPathsAll.find((d) => d.includes("zm")) ?? fil1TrimPathsAll[0]
+    : null;
+  const trimPath = isSignClassicFramed
+    ? trimPathClassic!
+    : isSignFil0Fil1TrimLayout
+    ? trimPathFil1ForDesign!
+    : isSignFancy
+    ? trimPathFancy!
+    : isSignInsetTrim
+    ? signInsetTrim!.trimPath
+    : null;
   const pathForDesignBox =
     isSignDesignerWithBorder && borderPath
       ? borderPath
       : trimPath
-        ? trimPath
-        : innerPath;
+      ? trimPath
+      : innerPath;
   const innerPathBounds = calculatePathBounds(
     pathForDesignBox,
     layoutViewBox,
     widthPx,
-    heightPx
+    heightPx,
   );
 
   const innerPlateBoundsRaw = calculatePathBounds(
     innerPath,
     layoutViewBox,
     widthPx,
-    heightPx
+    heightPx,
   );
 
   // designBox represents the editable area (where text and background color go)
@@ -1116,12 +1253,12 @@ async function loadOne(
     innerElement = `<g transform="${transform}">${pathToElement(
       innerPath,
       "Inner",
-      "#000"
+      "#000",
     )}</g>`;
     if (isSignDesignerWithBorder && outerPath) {
       outlineElement = `<g transform="${transform}">${pathToOutlineElement(
         outerPath,
-        "Outline"
+        "Outline",
       )}</g>`;
       overlayElement = extractDesignerBorderOverlayOnly(
         svgContent,
@@ -1134,32 +1271,42 @@ async function loadOne(
         );
       }
     } else if (
-      (isSignClassicFramed || isSignFancy || isSignInsetTrim) &&
-      (isSignClassicFramed
-        ? classicFramedBackgroundPath
-        : isSignFancy
-          ? outerPath
-          : signInsetTrim!.platePath) &&
-      trimPath
+      isSignClassicFramed ||
+      isSignFil0Fil1TrimLayout ||
+      isSignFancy ||
+      isSignInsetTrim
     ) {
-      const outlinePathForFramed = isSignClassicFramed
+      const outlinePlate = isSignClassicFramed
         ? classicFramedBackgroundPath
+        : isSignFil0Fil1TrimLayout
+        ? fil0PlateSignTrim
         : isSignFancy
-          ? outerPath
-          : signInsetTrim!.platePath;
-      outlineElement = `<g transform="${transform}">${pathToOutlineElement(
-        outlinePathForFramed!,
-        "Outline"
-      )}</g>`;
-      overlayElement = `<g transform="${transform}"><path d="${trimPath.replace(/"/g, "&quot;")}"/></g>`;
-      if (overlayElement) {
-        console.log(`[templates] Sign "${c.id}": overlay = trim path (border color)`);
+        ? outerPath
+        : signInsetTrim!.platePath;
+      const trimDs: string[] = isSignClassicFramed
+        ? [trimPathClassic!]
+        : isSignFil0Fil1TrimLayout
+        ? fil1TrimPathsAll
+        : isSignFancy
+        ? [trimPathFancy!]
+        : [signInsetTrim!.trimPath];
+      if (outlinePlate && trimDs.length > 0) {
+        outlineElement = `<g transform="${transform}">${pathToOutlineElement(
+          outlinePlate,
+          "Outline",
+        )}</g>`;
+        overlayElement = `<g transform="${transform}">${trimDs
+          .map((d) => `<path d="${d.replace(/"/g, "&quot;")}"/>`)
+          .join("")}</g>`;
+        console.log(
+          `[templates] Sign "${c.id}": overlay = trim path(s) (border color), count=${trimDs.length}`,
+        );
       }
     } else {
       outlineElement = outlinePath
         ? `<g transform="${transform}">${pathToOutlineElement(
             outlinePath,
-            "Outline"
+            "Outline",
           )}</g>`
         : undefined;
     }
@@ -1189,6 +1336,11 @@ async function loadOne(
 
   const designerSizeKey = templateIdToDesignerSizeKey(c.id);
 
+  const signTextLayout =
+    variant === "sign"
+      ? resolveSignTextLayout(designBox, c.textLayout)
+      : undefined;
+
   const t: LoadedTemplate = {
     id: c.id,
     name: c.name,
@@ -1204,11 +1356,12 @@ async function loadOne(
     standardViewBoxWidth: STANDARD_VIEWBOX_WIDTH,
     standardViewBoxHeight: STANDARD_VIEWBOX_HEIGHT,
     svgFile: c.svgFile,
+    signTextLayout,
   };
 
   console.log(
     `[templates] ✓ Loaded template "${c.id}": ${widthPx}×${heightPx}px, designBox:`,
-    designBox
+    designBox,
   );
 
   // NO CACHE - return fresh template every time
@@ -1221,7 +1374,7 @@ async function loadOne(
  */
 export async function loadTemplateById(
   id: string,
-  variant: DesignerVariant = "badge"
+  variant: DesignerVariant = "badge",
 ): Promise<LoadedTemplate> {
   const cfgV = getCfgForVariant(variant);
   const found = cfgV.find((t) => t.id === id) || cfgV[0];
@@ -1237,25 +1390,24 @@ export async function loadTemplateById(
  * Individual template failures are caught and logged, but don't stop other templates from loading.
  */
 export async function loadTemplates(
-  variant: DesignerVariant = "badge"
+  variant: DesignerVariant = "badge",
 ): Promise<LoadedTemplate[]> {
   const loaded: LoadedTemplate[] = [];
   const cfgV = getCfgForVariant(variant);
   let firstError: string | null = null;
   console.log(
-    `[templates] loadTemplates variant="${variant}" configs=${cfgV.length}`
+    `[templates] loadTemplates variant="${variant}" configs=${cfgV.length}`,
   );
   for (const config of cfgV) {
     try {
       const template = await loadOne(config, variant);
       loaded.push(template);
     } catch (error) {
-      const msg =
-        error instanceof Error ? error.message : String(error);
+      const msg = error instanceof Error ? error.message : String(error);
       if (!firstError) firstError = `${config.id}: ${msg}`;
       console.error(
         `[templates] Failed to load template "${config.id}":`,
-        error
+        error,
       );
       // Continue loading other templates instead of failing completely
     }
@@ -1275,7 +1427,7 @@ export async function loadTemplates(
  */
 export function clearTemplateCache(): void {
   console.log(
-    "[templates] Cache clear requested (but no cache exists - templates load fresh from SVG files)"
+    "[templates] Cache clear requested (but no cache exists - templates load fresh from SVG files)",
   );
 }
 
@@ -1283,7 +1435,7 @@ export function clearTemplateCache(): void {
  * Lists all available template options.
  */
 export function listTemplateOptions(
-  variant: DesignerVariant = "badge"
+  variant: DesignerVariant = "badge",
 ): { id: string; name: string }[] {
   return getCfgForVariant(variant).map((t) => ({ id: t.id, name: t.name }));
 }
@@ -1294,7 +1446,7 @@ export function listTemplateOptions(
  */
 export async function resolveTemplateForBadge(
   badge: { templateId?: string },
-  templates: LoadedTemplate[]
+  templates: LoadedTemplate[],
 ): Promise<LoadedTemplate> {
   // Priority: badge.templateId → templates[0] → fallback
   if (badge.templateId) {

@@ -320,7 +320,135 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
       },
     ],
   },
+  {
+    id: "arrow",
+    name: "Arrow",
+    sizes: [
+      {
+        templateId: "arrow-24x12",
+        label: "One size",
+        sizeText: '24×12"',
+      },
+    ],
+  },
+  {
+    id: "door-hanger",
+    name: "Door hanger",
+    sizes: [
+      {
+        templateId: "door-hanger-4x8",
+        label: "One size",
+        sizeText: '4×8"',
+      },
+    ],
+  },
+  {
+    id: "headstone-basic",
+    name: "Headstone basic",
+    sizes: [
+      {
+        templateId: "headstone-basic-5x6-small",
+        label: "Small",
+        sizeText: '5×6"',
+      },
+      {
+        templateId: "headstone-basic-6x7-medium",
+        label: "Medium",
+        sizeText: '6×7"',
+      },
+      {
+        templateId: "headstone-basic-7x8-large",
+        label: "Large",
+        sizeText: '7×8"',
+      },
+      {
+        templateId: "headstone-basic-8x9-xlarge",
+        label: "Extra large",
+        sizeText: '8×9"',
+      },
+    ],
+  },
+  {
+    id: "vintage",
+    name: "Vintage",
+    sizes: [
+      {
+        templateId: "vintage-6_5x4_5-small",
+        label: "Small",
+        sizeText: '6.5×4.5"',
+      },
+      {
+        templateId: "vintage-7_5x5_5-medium",
+        label: "Medium",
+        sizeText: '7.5×5.5"',
+      },
+      {
+        templateId: "vintage-8_5x6_5-large",
+        label: "Large",
+        sizeText: '8.5×6.5"',
+      },
+    ],
+  },
+  {
+    id: "western-elegant",
+    name: "Western elegant",
+    sizes: [
+      {
+        templateId: "western-elegant-6_75x4_5-small",
+        label: "Small",
+        sizeText: '6.75×4.5"',
+      },
+      {
+        templateId: "western-elegant-7_75x5_5-medium",
+        label: "Medium",
+        sizeText: '7.75×5.5"',
+      },
+      {
+        templateId: "western-elegant-8_75x6_5-large",
+        label: "Large",
+        sizeText: '8.75×6.5"',
+      },
+      {
+        templateId: "western-elegant-9_75x7_5-xlarge",
+        label: "Extra large",
+        sizeText: '9.75×7.5"',
+      },
+    ],
+  },
 ];
+
+/**
+ * Scale applied in the sign template picker and `BadgeSvgRenderer` when plate art
+ * sits in a large Corel viewBox (lots of empty margin). One value keeps families consistent.
+ */
+export const SIGN_SPARSE_PLATE_UI_SCALE = 1.62;
+
+/** Optional per-id overrides (wins over prefix rules below). */
+export const SIGN_TEMPLATE_UI_CONTENT_SCALE: Readonly<
+  Record<string, number>
+> = {};
+
+const SPARSE_SIGN_TEMPLATE_ID_PREFIXES = [
+  "arrow-",
+  "headstone-basic-",
+  "vintage-",
+  "western-elegant-",
+] as const;
+
+export function getSignTemplateUiContentScale(templateId: string): number {
+  const override = SIGN_TEMPLATE_UI_CONTENT_SCALE[templateId];
+  if (
+    typeof override === "number" &&
+    Number.isFinite(override) &&
+    override > 0
+  ) {
+    return override;
+  }
+  for (const prefix of SPARSE_SIGN_TEMPLATE_ID_PREFIXES) {
+    if (templateId.startsWith(prefix)) return SIGN_SPARSE_PLATE_UI_SCALE;
+  }
+  return 1;
+}
 
 /** Sign: whether the selected template family shows the border color step (false for Circle, Basic, etc.). */
 export function signTemplateTypeShowsBorderStep(

@@ -360,6 +360,119 @@
       "heightInches": 2.9,
       "svgFile": "/templates/sign/Pill.svg",
       "safeInsetPx": 6
+    },
+    {
+      "id": "arrow-24x12",
+      "name": "Arrow 24 x 12\"",
+      "widthInches": 24,
+      "heightInches": 12,
+      "svgFile": "/templates/sign/Arrow.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "door-hanger-4x8",
+      "name": "Door hanger 4 x 8\"",
+      "widthInches": 4,
+      "heightInches": 8,
+      "svgFile": "/templates/sign/Door Hanger.svg",
+      "safeInsetPx": 6,
+      "textLayout": {
+        "region": {
+          "xNorm": 0,
+          "yNorm": 0.4,
+          "widthNorm": 1,
+          "heightNorm": 0.58
+        },
+        "maxWidthFraction": [1, 0.68]
+      }
+    },
+    {
+      "id": "headstone-basic-5x6-small",
+      "name": "Headstone basic 5 x 6\" (small)",
+      "widthInches": 8.5,
+      "heightInches": 11,
+      "svgFile": "/templates/sign/Headstone-Basic-(5x6)-Small.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "headstone-basic-6x7-medium",
+      "name": "Headstone basic 6 x 7\" (medium)",
+      "widthInches": 8.5,
+      "heightInches": 11,
+      "svgFile": "/templates/sign/Headstone-Basic-(6x7)-Medium.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "headstone-basic-7x8-large",
+      "name": "Headstone basic 7 x 8\" (large)",
+      "widthInches": 8.5,
+      "heightInches": 11,
+      "svgFile": "/templates/sign/Headstone-Basic-(7x8)-Large.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "headstone-basic-8x9-xlarge",
+      "name": "Headstone basic 8 x 9\" (extra large)",
+      "widthInches": 8.5,
+      "heightInches": 11,
+      "svgFile": "/templates/sign/Headstone-Basic-(8x9)-XLarge.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "vintage-6_5x4_5-small",
+      "name": "Vintage 6.5 x 4.5\" (small)",
+      "widthInches": 11,
+      "heightInches": 8.5,
+      "svgFile": "/templates/sign/Vintage-(6.5x4.5)-Small.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "vintage-7_5x5_5-medium",
+      "name": "Vintage 7.5 x 5.5\" (medium)",
+      "widthInches": 11,
+      "heightInches": 8.5,
+      "svgFile": "/templates/sign/Vintage-(7.5x5.5)-Medium.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "vintage-8_5x6_5-large",
+      "name": "Vintage 8.5 x 6.5\" (large)",
+      "widthInches": 11,
+      "heightInches": 8.5,
+      "svgFile": "/templates/sign/Vintage-(8.5x6.5)-Large.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "western-elegant-6_75x4_5-small",
+      "name": "Western elegant 6.75 x 4.5\" (small)",
+      "widthInches": 11,
+      "heightInches": 8.5,
+      "svgFile": "/templates/sign/Western-Elegant-(6.75x4.5)-Small.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "western-elegant-7_75x5_5-medium",
+      "name": "Western elegant 7.75 x 5.5\" (medium)",
+      "widthInches": 11,
+      "heightInches": 8.5,
+      "svgFile": "/templates/sign/Western-Elegant-(7.75x5.5)-Medium.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "western-elegant-8_75x6_5-large",
+      "name": "Western elegant 8.75 x 6.5\" (large)",
+      "widthInches": 11,
+      "heightInches": 8.5,
+      "svgFile": "/templates/sign/Western-Elegant-(8.75x6.5)-Large.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "western-elegant-9_75x7_5-xlarge",
+      "name": "Western elegant 9.75 x 7.5\" (extra large)",
+      "widthInches": 11,
+      "heightInches": 8.5,
+      "svgFile": "/templates/sign/Western-Elegant-(9.75x7.5)-XLarge.svg",
+      "safeInsetPx": 6
     }
   ]
 }

@@ -57,6 +57,7 @@ import {
   ALL_SIGN_TEMPLATE_TYPES,
   signTemplateTypeShowsBorderStep,
   findSignTypeAndSizeForUniversalTemplate,
+  getSignTemplateUiContentScale,
 } from "../constants/designerVariants";
 import {
   buildPaddedInitialLines,
@@ -81,6 +82,10 @@ import {
   getEffectiveDesignBox,
 } from "../utils/renderSvg";
 import {
+  syncSignBadgeLinesSizeNorm,
+  syncSignBadgeLinesSizeNormAfterLineReset,
+} from "~/utils/signTextLayout";
+import {
   getSignBorderStepChipOptions,
   SIGN_BORDER_OPTION_NONE,
   signTemplateBorderFamilyKey,
@@ -94,7 +99,10 @@ import {
   migrateLegacyDesignerTemplateIdsOnBadges,
   migrateLegacyDesignerTemplateId,
 } from "../utils/designerTemplateMigration";
-import { DESIGNER_MOTIF_UI_OPTIONS } from "../data/designerMotifs";
+import {
+  DESIGNER_MOTIF_UI_OPTIONS,
+  designerMotifPreviewSvgMarkup,
+} from "../data/designerMotifs";
 import {
   migrateBadgeToTemplate,
   checkTemplateCompatibility,
@@ -115,6 +123,28 @@ import {
 } from "../utils/export";
 
 const INITIAL_BADGE = BADGE_CONSTANTS.INITIAL_BADGE;
+
+/** Sign picker thumbnails: scale sparse plate art; `vector-effect` in data-URL SVG-as-img is unreliable for some templates. */
+function signTemplatePickerImgStyle(
+  templateId: string,
+  forSignVariant: boolean,
+): React.CSSProperties {
+  const base: React.CSSProperties = {
+    maxWidth: "100%",
+    maxHeight: "100%",
+    width: "auto",
+    height: "auto",
+    objectFit: "contain",
+  };
+  if (!forSignVariant) return base;
+  const scale = getSignTemplateUiContentScale(templateId);
+  if (scale === 1) return base;
+  return {
+    ...base,
+    transform: `scale(${scale})`,
+    transformOrigin: "center center",
+  };
+}
 
 interface BadgeDesignerProps {
   variant?: DesignerVariant;
@@ -164,7 +194,7 @@ const MOBILE_PREVIEW = {
  * - `nowEditingFontRem`: “Now editing …” above the current preview (desktop, 2+ items).
  */
 const DESIGNER_UI_TYPOGRAPHY = {
-  templateNameFontPx: 11,
+  templateNameFontPx: 14,
   nowEditingFontRem: 1,
 } as const;
 
@@ -2082,7 +2112,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         ...line,
         sizeNorm: getDefaultSizeNorm(i, designBox.height),
       }));
-      const scaledLines = scaleLinesToFit(updatedLines, designBox);
+      const scaledLines = scaleLinesToFit(
+        updatedLines,
+        designBox,
+        matched?.signTextLayout,
+      );
       const centeredLines = calculateCenterPositions(scaledLines, designBox);
       return { ...prevBadge, lines: centeredLines };
     });
@@ -2658,10 +2692,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
 
     const designBox = effectiveDesignBox;
+    const lineTemplate =
+      templates.find((t) => t.id === badge.templateId) ??
+      templates.find((t) => t.id === universalTemplateId);
+    const signLayout = lineTemplate?.signTextLayout;
     // Account for 0.1" (9.6px) inset on each side for text clipping
     const INSET_INCHES = 0.1;
     const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
-    const maxTextWidth = designBox.width - INSET_PX * 2 - 4; // Subtract inset and margin
+    const maxTextWidthDefault = designBox.width - INSET_PX * 2 - 4;
 
     const newLines = badge.lines.map((l: BadgeLine, i: number) => {
       if (i !== index) {
@@ -2676,13 +2714,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
       let updated = { ...l, ...changes };
 
-      // Auto-scale text if sizeNorm changes or text changes to ensure it fits within badge boundaries
+      // Signs: sizeNorm must match signTextLayout.designBoxHeight (see syncSignBadgeLinesSizeNorm).
+      // Per-line shrink here used effectiveDesignBox.height and skipped height/sibling constraints — run full sync below instead.
+      const useSignSync =
+        variant === "sign" && signLayout && typeof document !== "undefined";
       if (
-        typeof changes.sizeNorm !== "undefined" ||
-        typeof changes.text !== "undefined" ||
-        typeof changes.fontFamily !== "undefined" ||
-        typeof changes.bold !== "undefined" ||
-        typeof changes.italic !== "undefined"
+        !useSignSync &&
+        (typeof changes.sizeNorm !== "undefined" ||
+          typeof changes.text !== "undefined" ||
+          typeof changes.fontFamily !== "undefined" ||
+          typeof changes.bold !== "undefined" ||
+          typeof changes.italic !== "undefined")
       ) {
         const currentSizeNorm = updated.sizeNorm ?? 0.15;
         const designBoxHeight = designBox.height;
@@ -2691,6 +2733,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         const fontFamily = updated.fontFamily || "Arial";
         const bold = updated.bold || false;
         const italic = updated.italic || false;
+
+        const maxTextWidth = maxTextWidthDefault;
 
         // Measure text width and auto-scale down if it exceeds badge width
         if (text) {
@@ -2759,8 +2803,20 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       return updated;
     });
 
+    const fittedLines =
+      variant === "sign" &&
+      signLayout &&
+      typeof document !== "undefined" &&
+      (typeof changes.sizeNorm !== "undefined" ||
+        typeof changes.text !== "undefined" ||
+        typeof changes.fontFamily !== "undefined" ||
+        typeof changes.bold !== "undefined" ||
+        typeof changes.italic !== "undefined")
+        ? syncSignBadgeLinesSizeNorm(newLines, signLayout)
+        : newLines;
+
     // Apply center-based positioning
-    const centeredLines = calculateCenterPositions(newLines);
+    const centeredLines = calculateCenterPositions(fittedLines);
 
     const nextBadge = { ...badge, lines: centeredLines };
     setBadge(nextBadge);
@@ -2796,7 +2852,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       ];
 
       // Scale all lines equally if they don't fit
-      const scaledLines = scaleLinesToFit(newLines, designBox);
+      const scaledLines = scaleLinesToFit(
+        newLines,
+        designBox,
+        currentTemplate?.signTextLayout,
+      );
 
       // Apply center-based positioning to all lines
       const centeredLines = calculateCenterPositions(scaledLines);
@@ -2815,8 +2875,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const newLines = [...badge.lines];
       newLines.splice(index, 1);
 
+      const rmTpl = templates.find((t) => t.id === badge.templateId);
+      const resized =
+        variant === "sign" &&
+        rmTpl?.signTextLayout &&
+        typeof document !== "undefined"
+          ? syncSignBadgeLinesSizeNorm(newLines, rmTpl.signTextLayout)
+          : newLines;
+
       // Apply center-based positioning to remaining lines
-      const centeredLines = calculateCenterPositions(newLines);
+      const centeredLines = calculateCenterPositions(resized);
 
       const nextBadge = {
         ...badge,
@@ -2833,7 +2901,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   };
 
-  // Reset a single line to default font (Roboto, no bold/italic/underline, center, 25pt line 1 / 17pt rest, contrast color). One undo restores full state.
+  // Reset a single line to default font (Roboto, no bold/italic/underline, center, contrast color) and
+  // nominal size (25px / 17px in template space — signs use 25/96 · 17/96 vs design height like initial template load).
+  // Signs then run syncSignBadgeLinesSizeNorm so the result is as large as fits up to that target (same idea as load).
   const resetLineToDefault = (index: number) => {
     const designBox = effectiveDesignBox;
     const bgColor = badge.backgroundColor || "#FFFFFF";
@@ -2856,28 +2926,35 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         underline: false,
         align: "center" as const,
         xNorm: 0.5,
-        sizeNorm: defaultSizeNorm,
         color: defaultColor,
+        sizeNorm: defaultSizeNorm,
       };
     });
 
-    const scaledLines = scaleLinesToFit(updatedLines, designBox);
-    const centeredLines = calculateCenterPositions(scaledLines);
+    const lineTpl =
+      templates.find((t) => t.id === badge.templateId) ??
+      templates.find((t) => t.id === universalTemplateId);
+    const boxForCenter = lineTpl
+      ? getEffectiveDesignBox(lineTpl, badge)
+      : designBox;
+    const scaledLines =
+      variant === "sign" &&
+      lineTpl?.signTextLayout &&
+      typeof document !== "undefined"
+        ? syncSignBadgeLinesSizeNormAfterLineReset(
+            updatedLines,
+            lineTpl.signTextLayout,
+            index,
+          )
+        : scaleLinesToFit(updatedLines, boxForCenter, lineTpl?.signTextLayout);
+    const centeredLines = calculateCenterPositions(scaledLines, boxForCenter);
 
     const updatedBadge = {
       ...badge,
       lines: centeredLines,
     };
     setBadge(updatedBadge);
-
-    const updatedMultipleBadges = [...multipleBadges];
-    if (updatedMultipleBadges[selectedBadgeIndex]) {
-      updatedMultipleBadges[selectedBadgeIndex] = updatedBadge;
-      setMultipleBadges(updatedMultipleBadges);
-    }
-    if (selectedBadgeIndex === 0) {
-      setBadge1Data(updatedBadge);
-    }
+    persistCurrentBadgeToSlot(updatedBadge);
   };
 
   /**
@@ -2902,9 +2979,18 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const scaleLinesToFit = (
     lines: BadgeLine[],
     designBox: { height: number },
+    signTextLayout?: LoadedTemplate["signTextLayout"],
   ): BadgeLine[] => {
     // Use only the passed design box (do not require activeTemplate — it can lag or mismatch during sign template load).
     if (!designBox?.height || designBox.height <= 0) return lines;
+
+    if (
+      variant === "sign" &&
+      signTextLayout &&
+      typeof document !== "undefined"
+    ) {
+      return syncSignBadgeLinesSizeNorm(lines, signTextLayout);
+    }
 
     const designBoxHeight = designBox.height;
     const FIXED_LINE_SPACING = designBoxHeight * 0.07; // 7% of badge height
@@ -3331,8 +3417,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         ...line,
         sizeNorm: getDefaultSizeNorm(index, designBox.height),
       }));
-      let scaledLines = scaleLinesToFit(initialLinesWithSizes, designBox);
-      if (variant === "sign") {
+      let scaledLines = scaleLinesToFit(
+        initialLinesWithSizes,
+        designBox,
+        newTemplate.signTextLayout,
+      );
+      if (variant === "sign" && !newTemplate.signTextLayout) {
         const insetPx = 0.1 * 96;
         const maxW = Math.max(1, designBox.width - insetPx * 2 - 4);
         const dh = designBox.height;
@@ -3499,7 +3589,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         ...line,
         sizeNorm: getDefaultSizeNorm(lineIndex, box.height),
       }));
-      next = scaleLinesToFit(next, box);
+      next = scaleLinesToFit(next, box, newTemplate.signTextLayout);
+      if (newTemplate.signTextLayout && typeof document !== "undefined") {
+        return next;
+      }
       return shrinkLinesToFitMaxWidth(next, box);
     };
 
@@ -5221,11 +5314,18 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                         multipleBadges.length > 0 &&
                         universalTemplateId === t.id;
 
+                      const signThumbScale =
+                        variant === "sign" &&
+                        getSignTemplateUiContentScale(t.id) !== 1;
                       return (
                         <div key={t.id} className="relative">
                           <button
                             type="button"
-                            className={`relative rounded-lg overflow-hidden transition-all w-full border bg-white ${
+                            className={`relative rounded-lg ${
+                              signThumbScale
+                                ? "overflow-visible"
+                                : "overflow-hidden"
+                            } transition-all w-full border bg-white ${
                               isSelected
                                 ? "border-blue-600 ring-2 ring-blue-300 shadow-md"
                                 : "border-gray-300 hover:border-gray-400"
@@ -5257,7 +5357,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                               {t.name}
                             </div>
                             <div
-                              className="flex-1 overflow-hidden flex items-center justify-center"
+                              className={`flex-1 ${
+                                signThumbScale
+                                  ? "overflow-visible"
+                                  : "overflow-hidden"
+                              } flex items-center justify-center`}
                               style={{
                                 minHeight: 0,
                                 width: "100%",
@@ -5270,13 +5374,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                 src={previewSrc}
                                 alt={t.name}
                                 className="object-contain"
-                                style={{
-                                  maxWidth: "100%",
-                                  maxHeight: "100%",
-                                  width: "auto",
-                                  height: "auto",
-                                  objectFit: "contain",
-                                }}
+                                style={signTemplatePickerImgStyle(
+                                  t.id,
+                                  variant === "sign",
+                                )}
                                 onError={(e) => {
                                   const target = e.target as HTMLImageElement;
                                   if (previewSrc === thumbnailPath) {
@@ -5285,11 +5386,29 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                       document.createElement("img");
                                     svgImg.src = svgPath;
                                     svgImg.className = "object-contain";
-                                    svgImg.style.maxWidth = "100%";
-                                    svgImg.style.maxHeight = "100%";
-                                    svgImg.style.width = "auto";
-                                    svgImg.style.height = "auto";
-                                    svgImg.style.objectFit = "contain";
+                                    const st = signTemplatePickerImgStyle(
+                                      t.id,
+                                      variant === "sign",
+                                    );
+                                    svgImg.style.maxWidth =
+                                      String(st.maxWidth ?? "100%");
+                                    svgImg.style.maxHeight =
+                                      String(st.maxHeight ?? "100%");
+                                    svgImg.style.width = String(
+                                      st.width ?? "auto",
+                                    );
+                                    svgImg.style.height = String(
+                                      st.height ?? "auto",
+                                    );
+                                    svgImg.style.objectFit = String(
+                                      st.objectFit ?? "contain",
+                                    );
+                                    if (st.transform)
+                                      svgImg.style.transform = st.transform;
+                                    if (st.transformOrigin != null)
+                                      svgImg.style.transformOrigin = String(
+                                        st.transformOrigin,
+                                      );
                                     svgImg.alt = t.name;
                                     target.parentElement?.appendChild(svgImg);
                                   }
@@ -6008,10 +6127,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                               {DESIGNER_MOTIF_UI_OPTIONS.map((opt) => {
                                 const active =
                                   (badge.designerMotif ?? "heart") === opt.id;
+                                const motifSvg =
+                                  designerMotifPreviewSvgMarkup(opt.id);
                                 return (
                                   <button
                                     key={opt.id}
                                     type="button"
+                                    title={opt.label}
                                     onClick={() => {
                                       const next = {
                                         ...badge,
@@ -6027,13 +6149,37 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                         setBadge1Data(next);
                                       }
                                     }}
-                                    className={`px-2.5 py-1.5 rounded border text-xs font-medium transition-colors ${
-                                      active
-                                        ? "border-blue-600 bg-blue-50 text-blue-800"
-                                        : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                                    }`}
+                                    className="flex flex-col items-center gap-1"
                                   >
-                                    {opt.label}
+                                    <div
+                                      className={`control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center rounded border transition-colors ${
+                                        active
+                                          ? "border-blue-600 bg-blue-50 text-blue-800"
+                                          : "border-gray-400 bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                      }`}
+                                    >
+                                      {motifSvg ? (
+                                        <span
+                                          className="block w-8 h-8 md:w-10 md:h-10 shrink-0 [&>svg]:h-full [&>svg]:w-full [&>svg]:block"
+                                          dangerouslySetInnerHTML={{
+                                            __html: motifSvg,
+                                          }}
+                                        />
+                                      ) : (
+                                        <span className="text-[10px] font-medium px-0.5 text-center leading-tight">
+                                          {opt.label}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div
+                                      className={`text-[8px] text-center leading-tight max-w-[4.5rem] ${
+                                        active
+                                          ? "text-blue-800"
+                                          : "text-gray-600"
+                                      }`}
+                                    >
+                                      {opt.label}
+                                    </div>
                                   </button>
                                 );
                               })}
@@ -7572,11 +7718,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                               : configSvgFile
                             : "");
                         const isSelected = selectedSignTemplateType === type.id;
+                        const modalSignThumbBoost =
+                          getSignTemplateUiContentScale(firstSizeId) !== 1;
                         return (
                           <div key={type.id} className="relative">
                             <button
                               type="button"
-                              className={`relative rounded-lg overflow-hidden transition-all w-full border bg-white ${
+                              className={`relative rounded-lg ${
+                                modalSignThumbBoost
+                                  ? "overflow-visible"
+                                  : "overflow-hidden"
+                              } transition-all w-full border bg-white ${
                                 isSelected
                                   ? "border-blue-600 ring-2 ring-blue-300 shadow-md"
                                   : "border-gray-300 hover:border-gray-400"
@@ -7602,7 +7754,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                 {type.name}
                               </div>
                               <div
-                                className="flex-1 overflow-hidden flex items-center justify-center"
+                                className={`flex-1 ${
+                                  modalSignThumbBoost
+                                    ? "overflow-visible"
+                                    : "overflow-hidden"
+                                } flex items-center justify-center`}
                                 style={{
                                   minHeight: 0,
                                   width: "100%",
@@ -7616,13 +7772,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                     src={previewSrc}
                                     alt={type.name}
                                     className="object-contain"
-                                    style={{
-                                      maxWidth: "100%",
-                                      maxHeight: "100%",
-                                      width: "auto",
-                                      height: "auto",
-                                      objectFit: "contain",
-                                    }}
+                                    style={signTemplatePickerImgStyle(
+                                      firstSizeId,
+                                      true,
+                                    )}
                                   />
                                 ) : (
                                   <span

@@ -1,6 +1,7 @@
 // app/utils/renderSvg.ts
 import type { LoadedTemplate } from "~/utils/templates";
-import type { Badge, BadgeImage } from "../types/badge";
+import type { Badge, BadgeImage, BadgeLine } from "../types/badge";
+import { layoutSignTextLines, measureSignTextPx } from "~/utils/signTextLayout";
 import {
   getDesignerMotifPaths,
   isDesignerMotifId,
@@ -317,6 +318,22 @@ function calculateTextLayout(
   fontStyle: string;
 }> {
   if (lines.length === 0) return [];
+
+  if (template.signTextLayout) {
+    return layoutSignTextLines(
+      lines as BadgeLine[],
+      template.signTextLayout,
+      (args) =>
+        measureSignTextPx(
+          args.text,
+          fontMappings?.get(args.fontFamily) ?? args.fontFamily,
+          args.fontSizePx,
+          args.fontWeight,
+          args.fontStyle,
+        ),
+      esc,
+    );
+  }
 
   const MIN_FONT = BADGE_CONSTANTS.MIN_FONT_SIZE;
   const MAX_FONT = BADGE_CONSTANTS.MAX_FONT_SIZE;
@@ -750,16 +767,17 @@ export function renderBadgeToSvgString(
     }
   }
 
-  // Use rectangle for text clipping with 0.1" (9.6px) inset - simpler and more reliable
-  // This ensures text is constrained within badge boundaries with proper buffer
+  // Text clip: sign templates may use template.signTextLayout.clipRect (e.g. door hanger body)
   const INSET_INCHES = 0.1;
   const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
-  const textClipPath = `<rect x="${designBox.x + INSET_PX}" y="${
-    designBox.y + INSET_PX
-  }" 
-    width="${designBox.width - INSET_PX * 2}" height="${
-    designBox.height - INSET_PX * 2
-  }"/>`;
+  const clipR = template.signTextLayout?.clipRect;
+  const textClipPath = clipR
+    ? `<rect x="${clipR.x}" y="${clipR.y}" width="${clipR.width}" height="${clipR.height}"/>`
+    : `<rect x="${designBox.x + INSET_PX}" y="${
+        designBox.y + INSET_PX
+      }" width="${designBox.width - INSET_PX * 2}" height="${
+        designBox.height - INSET_PX * 2
+      }"/>`;
 
   // Background image (if present)
   const bgImageLayer = badge.backgroundImage
@@ -1038,16 +1056,16 @@ export async function renderBadgeToSvgStringWithFonts(
     }
   }
 
-  // Use rectangle for text clipping with 0.1" (9.6px) inset - simpler and more reliable
-  // This ensures text is constrained within badge boundaries with proper buffer
   const INSET_INCHES = 0.1;
-  const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
-  const textClipPath = `<rect x="${designBox.x + INSET_PX}" y="${
-    designBox.y + INSET_PX
-  }" 
-    width="${designBox.width - INSET_PX * 2}" height="${
-    designBox.height - INSET_PX * 2
-  }"/>`;
+  const INSET_PX = INSET_INCHES * 96;
+  const clipR = template.signTextLayout?.clipRect;
+  const textClipPath = clipR
+    ? `<rect x="${clipR.x}" y="${clipR.y}" width="${clipR.width}" height="${clipR.height}"/>`
+    : `<rect x="${designBox.x + INSET_PX}" y="${
+        designBox.y + INSET_PX
+      }" width="${designBox.width - INSET_PX * 2}" height="${
+        designBox.height - INSET_PX * 2
+      }"/>`;
 
   // Background image (if present) - rendered on top of filled inner path
   const bgImageLayer = badge.backgroundImage

@@ -8,6 +8,7 @@ import { FONT_COLORS } from "../constants/colors";
 import { FONT_FAMILIES } from "../constants/fonts";
 import { loadTemplateById } from "../utils/templates";
 import { getEffectiveDesignBox } from "../utils/renderSvg";
+import { SIGN_TEXT_MIN_FONT_PX } from "~/utils/signTextLayout";
 import {
   type DesignerVariant,
   getDesignerVariantConfig,
@@ -19,20 +20,6 @@ function sizeNormToPx(sizeNorm: number, designBoxHeight: number): number {
   return Math.round(sizeNorm * designBoxHeight);
 }
 
-function sizePxToNorm(sizePx: number, designBoxHeight: number): number {
-  return Math.max(0.05, Math.min(0.5, sizePx / designBoxHeight));
-}
-
-function getMinMaxSizeNorm(designBoxHeight: number): {
-  min: number;
-  max: number;
-} {
-  return {
-    min: sizePxToNorm(BADGE_CONSTANTS.MIN_FONT_SIZE, designBoxHeight),
-    max: sizePxToNorm(BADGE_CONSTANTS.MAX_FONT_SIZE, designBoxHeight),
-  };
-}
-
 // Font Size Control Component - extracted to fix hooks violation
 interface FontSizeControlProps {
   line: BadgeLine;
@@ -40,6 +27,9 @@ interface FontSizeControlProps {
   designBox: { height: number };
   editable: boolean;
   onLineChange: (index: number, changes: Partial<BadgeLine>) => void;
+  /** Absolute px bounds for the numeric control (sign: min 20, high max; badge: 8–72). */
+  minFontPx: number;
+  maxFontPx: number;
 }
 
 const FontSizeControl: React.FC<FontSizeControlProps> = ({
@@ -48,18 +38,23 @@ const FontSizeControl: React.FC<FontSizeControlProps> = ({
   designBox,
   editable,
   onLineChange,
+  minFontPx,
+  maxFontPx,
 }) => {
+  const minSizeNorm = minFontPx / designBox.height;
+  const maxSizeNorm = maxFontPx / designBox.height;
   // Get current size in pixels for display, prefer sizeNorm if available
   const currentSizePx = line.sizeNorm
     ? sizeNormToPx(line.sizeNorm, designBox.height)
     : (line.fontSize || 13);
   const currentSizeNorm =
     line.sizeNorm ??
-    sizePxToNorm(line.fontSize || 13, designBox.height);
-  const { min: minSizeNorm, max: maxSizeNorm } =
-    getMinMaxSizeNorm(designBox.height);
-  const minSizePx = Math.round(minSizeNorm * designBox.height);
-  const maxSizePx = Math.round(maxSizeNorm * designBox.height);
+    Math.max(
+      minSizeNorm,
+      Math.min(maxSizeNorm, (line.fontSize || 13) / designBox.height),
+    );
+  const minSizePx = minFontPx;
+  const maxSizePx = maxFontPx;
 
   // State for editable input
   const [isEditing, setIsEditing] = React.useState(false);
@@ -81,7 +76,10 @@ const FontSizeControl: React.FC<FontSizeControlProps> = ({
   const handleInputBlur = () => {
     const numValue = parseInt(inputValue, 10);
     if (!isNaN(numValue) && numValue >= minSizePx && numValue <= maxSizePx) {
-      const newSizeNorm = sizePxToNorm(numValue, designBox.height);
+      const newSizeNorm = Math.max(
+        minSizeNorm,
+        Math.min(maxSizeNorm, numValue / designBox.height),
+      );
       onLineChange(lineIndex, { sizeNorm: newSizeNorm });
     } else {
       // Reset to current value if invalid
@@ -272,6 +270,15 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
     badge.signBorderStyleId,
     variant,
   ]);
+
+  const fontSizeMinPx =
+    variant === "sign"
+      ? SIGN_TEXT_MIN_FONT_PX
+      : BADGE_CONSTANTS.MIN_FONT_SIZE;
+  const fontSizeMaxPx =
+    variant === "sign"
+      ? Math.max(fontSizeMinPx, Math.ceil(designBox.height * 4))
+      : BADGE_CONSTANTS.MAX_FONT_SIZE;
 
   const justifyMap = {
     left: "flex-start",
@@ -613,6 +620,8 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                       designBox={designBox}
                       editable={editable}
                       onLineChange={onLineChange}
+                      minFontPx={fontSizeMinPx}
+                      maxFontPx={fontSizeMaxPx}
                     />
                   </div>
                 </div>

@@ -14,13 +14,18 @@ function rowPayload(
   item: BadgeOrderItem,
   def: DesignerDefinition,
 ): Record<string, unknown> {
+  const isSignTable = def.orderItemsTable === "sign_order_items";
   const base: Record<string, unknown> = {
     design_id: item.design_id,
     shopify_order_id: item.shopify_order_id,
     shopify_order_number: item.shopify_order_number,
+    shopify_customer_id: item.shopify_customer_id,
+    status: item.status ?? "draft",
     quantity: item.quantity ?? 1,
+    thumbnail_url: item.thumbnail_url,
+    full_image_url: item.full_image_url,
+    pdf_url: item.pdf_url,
     background_color: item.background_color,
-    backing_type: item.backing_type,
     line_1_text: item.line_1_text,
     line_1_font: item.line_1_font,
     line_1_font_size: item.line_1_font_size,
@@ -53,12 +58,28 @@ function rowPayload(
     line_4_italicize: item.line_4_italicize,
     line_4_color: item.line_4_color,
     line_4_alignment: item.line_4_alignment,
-    thumbnail_url: item.thumbnail_url,
-    full_image_url: item.full_image_url,
-    pdf_url: item.pdf_url,
-    shopify_customer_id: item.shopify_customer_id,
-    status: item.status ?? "draft",
   };
+  if (!isSignTable) {
+    base.backing_type = item.backing_type;
+  }
+  if (isSignTable) {
+    base.line_5_text = item.line_5_text;
+    base.line_5_font = item.line_5_font;
+    base.line_5_font_size = item.line_5_font_size;
+    base.line_5_bold = item.line_5_bold;
+    base.line_5_underline = item.line_5_underline;
+    base.line_5_italicize = item.line_5_italicize;
+    base.line_5_color = item.line_5_color;
+    base.line_5_alignment = item.line_5_alignment;
+    base.line_6_text = item.line_6_text;
+    base.line_6_font = item.line_6_font;
+    base.line_6_font_size = item.line_6_font_size;
+    base.line_6_bold = item.line_6_bold;
+    base.line_6_underline = item.line_6_underline;
+    base.line_6_italicize = item.line_6_italicize;
+    base.line_6_color = item.line_6_color;
+    base.line_6_alignment = item.line_6_alignment;
+  }
   base[def.lineIdColumn] = item.badge_id;
   return base;
 }

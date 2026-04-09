@@ -22,6 +22,11 @@ const TRIM_OVERLAY_PREFIXES = [
   "notched-",
   "frontier-elegant-",
   "pill-",
+  "arrow-",
+  "door-hanger-",
+  "headstone-basic-",
+  "vintage-",
+  "western-elegant-",
 ] as const;
 
 export function signTemplateIdHasTrimOverlay(
@@ -47,6 +52,11 @@ export function signTemplateBorderFamilyKey(
   if (templateId.startsWith("notched-")) return "notched";
   if (templateId.startsWith("frontier-elegant-")) return "frontier-elegant";
   if (templateId.startsWith("pill-")) return "pill";
+  if (templateId.startsWith("arrow-")) return "arrow";
+  if (templateId.startsWith("door-hanger-")) return "door-hanger";
+  if (templateId.startsWith("headstone-basic-")) return "headstone-basic";
+  if (templateId.startsWith("vintage-")) return "vintage";
+  if (templateId.startsWith("western-elegant-")) return "western-elegant";
   return templateId.replace(/-[^-]+$/, "") || templateId;
 }
 
