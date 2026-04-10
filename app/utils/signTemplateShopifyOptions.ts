@@ -62,3 +62,21 @@ export function getSignShopifyShapeSizeForTemplateId(
   }
   return null;
 }
+
+/**
+ * `getAllBadges` may leave `templateId` as badge defaults (e.g. rect-1x3). For pricing/cart,
+ * use the badge id only when it maps to a real sign SKU; otherwise use the universal template
+ * from the template/size steps.
+ */
+export function effectiveSignTemplateIdForBadge(
+  badgeTemplateId: string | undefined,
+  universalTemplateId: string,
+): string {
+  if (
+    badgeTemplateId &&
+    getSignShopifyShapeSizeForTemplateId(badgeTemplateId)
+  ) {
+    return badgeTemplateId;
+  }
+  return universalTemplateId;
+}

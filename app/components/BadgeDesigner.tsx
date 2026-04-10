@@ -72,7 +72,10 @@ import { createApi } from "../utils/api";
 import { getDesignerApiPaths, getDesignerConfig } from "../config/designers";
 import type { ShopifyProductJs } from "~/utils/signShopifyCatalog";
 import { resolveSignVariantIdAndPrice } from "~/utils/signShopifyCatalog";
-import { getSignShopifyShapeSizeForTemplateId } from "~/utils/signTemplateShopifyOptions";
+import {
+  effectiveSignTemplateIdForBadge,
+  getSignShopifyShapeSizeForTemplateId,
+} from "~/utils/signTemplateShopifyOptions";
 
 import {
   loadTemplates,
@@ -2261,7 +2264,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     let sum = 0;
     let any = false;
     for (const b of multipleBadges) {
-      const tid = b.templateId || universalTemplateId;
+      const tid = effectiveSignTemplateIdForBadge(
+        b.templateId,
+        universalTemplateId,
+      );
       const opts = getSignShopifyShapeSizeForTemplateId(tid);
       if (!opts) continue;
       const hit = resolveSignVariantIdAndPrice(
@@ -4123,7 +4129,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         backingPrice = 0;
         const product = signShopifyProduct;
         const linePrices = allFinalizedBadges.map((b) => {
-          const tid = b.templateId || universalTemplateId;
+          const tid = effectiveSignTemplateIdForBadge(
+            b.templateId,
+            universalTemplateId,
+          );
           const opts = getSignShopifyShapeSizeForTemplateId(tid);
           if (!opts || !product) return 9.99;
           return (
@@ -4598,7 +4607,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const resolveSignLineVariant = (
         b: Badge,
       ): { variantId: string; linePrice: string } => {
-        const tid = b.templateId || "";
+        const tid = effectiveSignTemplateIdForBadge(
+          b.templateId,
+          universalTemplateId,
+        );
         const opts = getSignShopifyShapeSizeForTemplateId(tid);
         if (opts && signCatalog) {
           const hit = resolveSignVariantIdAndPrice(
