@@ -10,7 +10,8 @@ export interface ShopifyProductJsVariant {
   option1: string | null;
   option2: string | null;
   option3: string | null;
-  price: string;
+  /** Shopify `/products/*.js` usually sends a decimal string ("20.99"); some locales use "20,99". */
+  price: string | number;
   sku?: string | null;
   available?: boolean;
 }
@@ -30,9 +31,47 @@ function normOpt(s: string | null | undefined): string {
     .replace(/\s+/g, " ");
 }
 
-export function parseShopifyMoney(price: string): number {
-  const n = parseFloat(String(price).replace(/[^0-9.-]/g, ""));
-  return Number.isFinite(n) ? n : 0;
+/**
+ * Parse Shopify variant `price` for display/sums. Must not strip commas before deciding decimal
+ * position — e.g. European "20,99" would become "2099" → 2099.00 instead of 20.99.
+ */
+export function parseShopifyMoney(price: string | number): number {
+  if (typeof price === "number") {
+    if (!Number.isFinite(price)) return 0;
+    // JSON sometimes sends minor units (cents) as an integer; dollar amounts are usually floats.
+    if (Number.isInteger(price) && price >= 100) {
+      return price / 100;
+    }
+    return price;
+  }
+
+  const raw = String(price).trim().replace(/\s/g, "");
+  if (!raw) return 0;
+
+  let s = raw;
+  const lastComma = s.lastIndexOf(",");
+  const lastDot = s.lastIndexOf(".");
+  if (lastComma > lastDot) {
+    // Decimal comma, optional thousands dots: 1.234,56
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (lastComma !== -1 && lastDot === -1) {
+    // Only comma: 20,99
+    s = s.replace(",", ".");
+  } else if (lastDot !== -1 && lastComma !== -1) {
+    // US-style thousands: 1,234.56
+    s = s.replace(/,/g, "");
+  }
+
+  const n = parseFloat(s.replace(/[^0-9.-]/g, ""));
+  if (!Number.isFinite(n)) return 0;
+
+  // Plain digit string without decimal sep is sometimes minor units (e.g. "2099" → $20.99).
+  // Require 4+ digits so "100" still means $100, not $1.00.
+  if (!/[.,]/.test(raw) && /^\d{4,}$/.test(raw) && n >= 1000) {
+    return n / 100;
+  }
+
+  return n;
 }
 
 /**
