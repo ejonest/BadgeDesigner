@@ -35,7 +35,10 @@ export function parseShopifyMoney(price: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Match variant by Shape (option1) and Size (option2) per custom-sign CSV import. */
+/**
+ * Match variant by Shape + Size. Tries option1/option2 in both orders (Shopify option order
+ * follows the merchant’s product setup, not always Shape then Size).
+ */
 export function findSignVariantByShapeAndSize(
   product: ShopifyProductJs,
   shape: string,
@@ -44,7 +47,12 @@ export function findSignVariantByShapeAndSize(
   const ns = normOpt(shape);
   const nz = normOpt(size);
   for (const v of product.variants) {
-    if (normOpt(v.option1) === ns && normOpt(v.option2) === nz) {
+    const o1 = normOpt(v.option1);
+    const o2 = normOpt(v.option2);
+    if (
+      (o1 === ns && o2 === nz) ||
+      (o1 === nz && o2 === ns && ns !== nz)
+    ) {
       return v;
     }
   }
