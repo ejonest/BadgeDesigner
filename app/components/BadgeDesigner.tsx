@@ -71,7 +71,10 @@ import { getCurrentShop, type ShopAuthData } from "../utils/shopAuth";
 import { createApi } from "../utils/api";
 import { getDesignerApiPaths, getDesignerConfig } from "../config/designers";
 import type { ShopifyProductJs } from "~/utils/signShopifyCatalog";
-import { resolveSignVariantIdAndPrice } from "~/utils/signShopifyCatalog";
+import {
+  isShopifyProductJsPayload,
+  resolveSignVariantIdAndPrice,
+} from "~/utils/signShopifyCatalog";
 import {
   effectiveSignTemplateIdForBadge,
   getSignShopifyShapeSizeForTemplateId,
@@ -2168,7 +2171,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   }, [multipleBadges[0]?.id]);
 
-  // Sign: load product JSON from Shopify (live prices + variant IDs). Proxied by /api/shopify-product.
+  // Sign: live variant prices + IDs from Shopify product JSON.
+  // - Embedded in Shopify: theme fetches /products/{handle}.js in the storefront (works with
+  //   storefront password — browser has the session) and postMessages SIGN_DESIGNER_SHOPIFY_PRODUCT.
+  // - Standalone / no parent message: /api/shopify-product proxies .js (fails if store is
+  //   password-only for anonymous server requests).
   useEffect(() => {
     if (variant !== "sign") {
       setSignShopifyCatalogStatus("idle");
@@ -2176,6 +2183,28 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       return;
     }
     let cancelled = false;
+    let embeddedErrorTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearEmbeddedErrorTimer = () => {
+      if (embeddedErrorTimer !== null) {
+        clearTimeout(embeddedErrorTimer);
+        embeddedErrorTimer = null;
+      }
+    };
+
+    const onMessage = (event: MessageEvent) => {
+      if (cancelled || event.source !== window.parent) return;
+      const data = event.data;
+      if (!data || typeof data !== "object") return;
+      if ((data as { type?: string }).type !== "SIGN_DESIGNER_SHOPIFY_PRODUCT")
+        return;
+      const payload = (data as { payload?: unknown }).payload;
+      if (!isShopifyProductJsPayload(payload)) return;
+      clearEmbeddedErrorTimer();
+      setSignShopifyProduct(payload);
+      setSignShopifyCatalogStatus("ok");
+    };
+    window.addEventListener("message", onMessage);
+
     const run = async () => {
       setSignShopifyCatalogStatus("loading");
       try {
@@ -2193,7 +2222,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           .replace(/^https?:\/\//, "")
           .split("/")[0];
         if (!shop) {
-          throw new Error("Missing shop (add ?shop= or ?storeUrl= to the embed URL)");
+          throw new Error(
+            "Missing shop (add ?shop= or ?storeUrl= to the embed URL)",
+          );
         }
         const handle =
           urlParams.get("signProductHandle")?.trim() ||
@@ -2208,7 +2239,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           );
         }
         if (cancelled) return;
-        setSignShopifyProduct(data as ShopifyProductJs);
+        if (!isShopifyProductJsPayload(data)) {
+          throw new Error("Shopify product JSON missing variants (password page or wrong handle?)");
+        }
+        clearEmbeddedErrorTimer();
+        setSignShopifyProduct(data);
         setSignShopifyCatalogStatus("ok");
       } catch (e) {
         if (cancelled) return;
@@ -2216,13 +2251,25 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           "[BadgeDesigner] Shopify product fetch failed:",
           e instanceof Error ? e.message : e,
         );
-        setSignShopifyCatalogStatus("error");
-        setSignShopifyProduct(null);
+        const embedded =
+          typeof window !== "undefined" && window.parent !== window;
+        if (embedded) {
+          embeddedErrorTimer = setTimeout(() => {
+            if (cancelled || signShopifyProductRef.current) return;
+            setSignShopifyCatalogStatus("error");
+            setSignShopifyProduct(null);
+          }, 12000);
+        } else {
+          setSignShopifyCatalogStatus("error");
+          setSignShopifyProduct(null);
+        }
       }
     };
     void run();
     return () => {
       cancelled = true;
+      clearEmbeddedErrorTimer();
+      window.removeEventListener("message", onMessage);
     };
   }, [variant]);
 
@@ -5528,10 +5575,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                       t.id,
                                       variant === "sign",
                                     );
-                                    svgImg.style.maxWidth =
-                                      String(st.maxWidth ?? "100%");
-                                    svgImg.style.maxHeight =
-                                      String(st.maxHeight ?? "100%");
+                                    svgImg.style.maxWidth = String(
+                                      st.maxWidth ?? "100%",
+                                    );
+                                    svgImg.style.maxHeight = String(
+                                      st.maxHeight ?? "100%",
+                                    );
                                     svgImg.style.width = String(
                                       st.width ?? "auto",
                                     );
@@ -6265,8 +6314,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                               {DESIGNER_MOTIF_UI_OPTIONS.map((opt) => {
                                 const active =
                                   (badge.designerMotif ?? "heart") === opt.id;
-                                const motifSvg =
-                                  designerMotifPreviewSvgMarkup(opt.id);
+                                const motifSvg = designerMotifPreviewSvgMarkup(
+                                  opt.id,
+                                );
                                 return (
                                   <button
                                     key={opt.id}
