@@ -1,12 +1,51 @@
 {% comment %}
-  Badge Designer Iframe Embed Snippet
-  Add this to your Shopify product page template or as a section.
-  Only renders on the custom badge product (handle: custom-1x3-badge); hidden on all other products.
-  Usage: Copy to theme snippets, then in your product template add: render badge-designer-embed
+  Badge + Sign designer iframe embed
+  - Badge: product handle custom-1x3-badge → loads app root with badge designer (default).
+  - Sign: product handle custom-sign → same app URL with ?variant=sign so Shopify prices + Shape/Size variants work.
+  Alternative: use path /sign-designer on your host instead of ?variant=sign (both set variant to sign).
+
+  Usage: Copy to theme snippets, then in your product template add: {% render 'badge-designer-embed' %}
 {% endcomment %}
 
-{% comment %} Only show iframe on the custom badge product; hide on every other product page {% endcomment %}
-{% if product and product.handle == 'custom-1x3-badge' %}
+{% comment %} Custom sign product (Shape × Size variants, live price from Shopify) {% endcomment %}
+{% if product and product.handle == 'custom-sign' %}
+
+{% assign badge_designer_url = 'https://all-quality-design-tool.vercel.app' %}
+{% assign sign_v0 = product.selected_or_first_available_variant | default: product.variants[0] %}
+<div style="width:100%; min-height:900px;">
+  <iframe
+    id="sign-designer-iframe"
+    src="{{ badge_designer_url }}?variant=sign&shop={{ shop.permanent_domain | url_param_escape }}&storeUrl={{ shop.permanent_domain | url_param_escape }}&product={{ product.id | url_param_escape }}&signProductHandle={{ product.handle | url_param_escape }}&variantIdSign={{ sign_v0.id | url_param_escape }}{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}"
+    style="width:100%; height:900px; border:0;"
+    loading="lazy"
+    allow="clipboard-read; clipboard-write"
+  ></iframe>
+</div>
+
+<script>
+  window.addEventListener('message', function(event) {
+    if (event.origin !== '{{ badge_designer_url }}') return;
+    var data = event.data;
+    if (data.action === 'redirect-to-login') {
+      var returnTo = window.location.pathname + window.location.search;
+      window.location.href = '/customer_authentication/login?return_to=' + encodeURIComponent(returnTo);
+      return;
+    }
+    if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
+      var items = data.payload.items.map(function(item) {
+        return { id: item.variantId, quantity: item.quantity || 1, properties: item.properties || {} };
+      });
+      var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) ? window.Shopify.routes.root : '/';
+      var cartAddUrl = cartRoot.replace(/\/$/, '') + '/cart/add.js';
+      fetch(cartAddUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: items }) })
+        .then(function() { window.location.href = cartRoot.replace(/\/$/, '') + '/cart'; })
+        .catch(function() { window.location.href = cartRoot.replace(/\/$/, '') + '/cart'; });
+    }
+  });
+</script>
+
+{% comment %} Custom badge product (pin / magnetic / adhesive variants) {% endcomment %}
+{% elsif product and product.handle == 'custom-1x3-badge' %}
 
 {% comment %}
   Replace with your actual Vercel app URL. Must match exactly where the iframe loads from.
