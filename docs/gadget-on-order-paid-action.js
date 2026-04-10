@@ -26,6 +26,9 @@
  * Vercel with shopifyOrderId, shopifyOrderNumber, shopifyCustomerId, lineItems (each with
  * designId, gadgetDesignId, designData). Vercel inserts into Supabase badge_order_items.
  *
+ * Sign `sign_order_items` columns are filled by Vercel when the customer saves (including up to 6 text lines); this action
+ * only PATCHes Shopify order fields onto existing draft/in_cart rows. No backing_type on sign items.
+ *
  * TROUBLESHOOTING (rows not updated after checkout):
  * - Sign shop but URL still …/link-order-to-supabase → wrong table; use link-order-sign-to-supabase.
  * - Confirm the Global Action exists and is triggered by orders/paid (or orders/create).

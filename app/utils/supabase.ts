@@ -582,6 +582,23 @@ export interface BadgeOrderItem {
   line_4_italicize?: boolean;
   line_4_color?: string;
   line_4_alignment?: string;
+  // Lines 5–6 (sign_order_items; optional elsewhere)
+  line_5_text?: string;
+  line_5_font?: string;
+  line_5_font_size?: number;
+  line_5_bold?: boolean;
+  line_5_underline?: boolean;
+  line_5_italicize?: boolean;
+  line_5_color?: string;
+  line_5_alignment?: string;
+  line_6_text?: string;
+  line_6_font?: string;
+  line_6_font_size?: number;
+  line_6_bold?: boolean;
+  line_6_underline?: boolean;
+  line_6_italicize?: boolean;
+  line_6_color?: string;
+  line_6_alignment?: string;
   thumbnail_url?: string;
   full_image_url?: string;
   pdf_url?: string;
@@ -729,6 +746,22 @@ export function convertBadgeToOrderItem(
     line_4_italicize: lines[3]?.italic ?? false,
     line_4_color: formatColor(lines[3]?.color),
     line_4_alignment: lines[3]?.align,
+    line_5_text: lines[4]?.text,
+    line_5_font: lines[4]?.fontFamily,
+    line_5_font_size: calculateFontSize(lines[4] || {}, badge.templateId),
+    line_5_bold: lines[4]?.bold ?? false,
+    line_5_underline: lines[4]?.underline ?? false,
+    line_5_italicize: lines[4]?.italic ?? false,
+    line_5_color: formatColor(lines[4]?.color),
+    line_5_alignment: lines[4]?.align,
+    line_6_text: lines[5]?.text,
+    line_6_font: lines[5]?.fontFamily,
+    line_6_font_size: calculateFontSize(lines[5] || {}, badge.templateId),
+    line_6_bold: lines[5]?.bold ?? false,
+    line_6_underline: lines[5]?.underline ?? false,
+    line_6_italicize: lines[5]?.italic ?? false,
+    line_6_color: formatColor(lines[5]?.color),
+    line_6_alignment: lines[5]?.align,
     thumbnail_url: options?.thumbnail_url,
     full_image_url: options?.full_image_url,
     pdf_url: options?.pdf_url,

@@ -2,7 +2,10 @@ import * as React from "react";
 import { loadTemplateById } from "~/utils/templates";
 import { renderBadgeToSvgStringWithFonts } from "~/utils/renderSvg";
 import type { LoadedTemplate } from "~/utils/templates";
-import type { DesignerVariant } from "~/constants/designerVariants";
+import {
+  type DesignerVariant,
+  getSignTemplateUiContentScale,
+} from "~/constants/designerVariants";
 
 type Props = {
   badge: any;
@@ -44,18 +47,47 @@ export default function BadgeSvgRenderer({ badge, templateId, variant = "badge",
     return () => { on = false; };
   }, [badge, templateId, variant, actualSize]);
 
+  const signUiScale =
+    variant === "sign" ? getSignTemplateUiContentScale(templateId) : 1;
+
+  // Sparse-plate sign templates use signUiScale > 1 for legibility. Scaling the outer box
+  // grows past the preview bounds; instead shrink layout by 1/s then scale(s) so the
+  // painted result still fits the same window as other sizes.
+  const scaledInnerStyle: React.CSSProperties =
+    signUiScale !== 1
+      ? {
+          width: `calc(100% / ${signUiScale})`,
+          height: `calc(100% / ${signUiScale})`,
+          transform: `scale(${signUiScale})`,
+          transformOrigin: "center center",
+          flexShrink: 0,
+        }
+      : {
+          width: "100%",
+          height: "100%",
+        };
+
   return (
     <div
       key={`badge-render-${templateId}-${renderKey}`}
-      className={`w-full ${className || ""}`}
-      style={{ 
-        height: height === "100%" ? "100%" : (height ?? 280), 
-        display: "flex", 
-        alignItems: "center", 
+      className={`w-full min-h-0 min-w-0 ${className || ""}`}
+      style={{
+        height: height === "100%" ? "100%" : (height ?? 280),
+        display: "flex",
+        alignItems: "center",
         justifyContent: "center",
-        overflow: "visible"
+        overflow: "hidden",
       }}
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
+    >
+      <div
+        className="flex items-center justify-center min-h-0 min-w-0"
+        style={scaledInnerStyle}
+      >
+        <div
+          className="w-full h-full min-h-0 min-w-0 [&>svg]:h-full [&>svg]:w-full [&>svg]:max-h-full [&>svg]:max-w-full"
+          dangerouslySetInnerHTML={{ __html: svg }}
+        />
+      </div>
+    </div>
   );
 }

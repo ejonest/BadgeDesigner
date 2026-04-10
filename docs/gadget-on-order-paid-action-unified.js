@@ -13,6 +13,9 @@
  *
  * Vercel: set LINK_ORDER_SECRET; for sign route, LINK_ORDER_SECRET_SIGN optional (falls back to LINK_ORDER_SECRET).
  *
+ * Sign rows in Supabase (`sign_order_items`) are created/updated by Vercel save-draft / send-to-supabase (text lines 1–6,
+ * images, pdf, no backing_type). This action only links paid orders (Shopify IDs, quantity) to those drafts.
+ *
  * Trigger: Shopify orders/paid (or orders/create).
  */
 

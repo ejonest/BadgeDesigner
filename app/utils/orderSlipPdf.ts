@@ -1,7 +1,8 @@
 /**
  * Server-side order-slip PDF generator.
  * Matches the add-to-cart proof PDF layout exactly (same as pdfGenerator.generatePDFAsBlob):
- * one section per badge with image on left, table on right (4 rows per line: Line, Font, Color, Alignment + Quantity),
+ * one section per badge with image on left, table on right (4 rows per line: Line, Font, Color, Alignment + Quantity);
+ * up to 6 text lines per item when present (e.g. signs).
  * then Background text below. Uses order quantities and only includes badges that are in the order (removed items excluded).
  */
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
@@ -57,18 +58,19 @@ async function fetchImageBytes(url: string): Promise<Uint8Array | null> {
 export type GetImageBytes = (url: string) => Promise<Uint8Array | null>;
 
 /**
- * Build line rows for one badge from BadgeOrderItem (up to 4 lines).
+ * Build line rows for one badge from BadgeOrderItem (up to 6 lines).
  * Only includes lines that have non-empty text, matching the client PDF behavior.
  */
 function getLineRows(item: BadgeOrderItem): Array<{ text: string; font: string; color: string; alignment: string }> {
   const rows: Array<{ text: string; font: string; color: string; alignment: string }> = [];
-  for (let i = 1; i <= 4; i++) {
-    const text = (item as Record<string, unknown>)[`line_${i}_text`] as string | undefined;
+  const rec = item as unknown as Record<string, unknown>;
+  for (let i = 1; i <= 6; i++) {
+    const text = rec[`line_${i}_text`] as string | undefined;
     const trimmed = (text ?? "").trim();
     if (trimmed === "") continue;
-    const font = (item as Record<string, unknown>)[`line_${i}_font`] as string | undefined;
-    const color = (item as Record<string, unknown>)[`line_${i}_color`] as string | undefined;
-    const alignment = (item as Record<string, unknown>)[`line_${i}_alignment`] as string | undefined;
+    const font = rec[`line_${i}_font`] as string | undefined;
+    const color = rec[`line_${i}_color`] as string | undefined;
+    const alignment = rec[`line_${i}_alignment`] as string | undefined;
     rows.push({
       text: trimmed,
       font: font != null ? String(font) : "Roboto",
