@@ -70,6 +70,9 @@ import {
 import { getCurrentShop, type ShopAuthData } from "../utils/shopAuth";
 import { createApi } from "../utils/api";
 import { getDesignerApiPaths, getDesignerConfig } from "../config/designers";
+import type { ShopifyProductJs } from "~/utils/signShopifyCatalog";
+import { resolveSignVariantIdAndPrice } from "~/utils/signShopifyCatalog";
+import { getSignShopifyShapeSizeForTemplateId } from "~/utils/signTemplateShopifyOptions";
 
 import {
   loadTemplates,
@@ -1442,6 +1445,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Keep for backward compatibility, synced with multipleBadges[0]
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isGeneratingDesigns, setIsGeneratingDesigns] = useState(false);
+  /** Sign: product JSON from Shopify (variant IDs + prices), via `/api/shopify-product`. */
+  const [signShopifyProduct, setSignShopifyProduct] =
+    useState<ShopifyProductJs | null>(null);
+  const [signShopifyCatalogStatus, setSignShopifyCatalogStatus] = useState<
+    "idle" | "loading" | "ok" | "error"
+  >("idle");
+  const signShopifyProductRef = useRef<ShopifyProductJs | null>(null);
   // Undo history state
   const [undoHistory, setUndoHistory] = useState<UndoAction[]>([]);
   const MAX_UNDO_HISTORY = 50; // Limit undo history to prevent memory issues
@@ -1582,6 +1592,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   badgeRef.current = badge;
   selectedBadgeIndexRef.current = selectedBadgeIndex;
   universalTemplateIdRef.current = universalTemplateId;
+  signShopifyProductRef.current = signShopifyProduct;
 
   /** Keep `multipleBadges[selectedBadgeIndex]` in sync with live `badge` so duplicate/export/grid never see stale line text. */
   const persistCurrentBadgeToSlot = (next: Badge) => {
@@ -2154,6 +2165,64 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   }, [multipleBadges[0]?.id]);
 
+  // Sign: load product JSON from Shopify (live prices + variant IDs). Proxied by /api/shopify-product.
+  useEffect(() => {
+    if (variant !== "sign") {
+      setSignShopifyCatalogStatus("idle");
+      setSignShopifyProduct(null);
+      return;
+    }
+    let cancelled = false;
+    const run = async () => {
+      setSignShopifyCatalogStatus("loading");
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const shopRaw =
+          (typeof window !== "undefined" &&
+            (window as unknown as { SHOPIFY_STORE_URL?: string })
+              .SHOPIFY_STORE_URL) ||
+          urlParams.get("storeUrl") ||
+          urlParams.get("shop") ||
+          "";
+        const shop = shopRaw
+          .trim()
+          .toLowerCase()
+          .replace(/^https?:\/\//, "")
+          .split("/")[0];
+        if (!shop) {
+          throw new Error("Missing shop (add ?shop= or ?storeUrl= to the embed URL)");
+        }
+        const handle =
+          urlParams.get("signProductHandle")?.trim() ||
+          urlParams.get("signHandle")?.trim() ||
+          "custom-sign";
+        const qs = new URLSearchParams({ shop, handle });
+        const res = await fetch(`/api/shopify-product?${qs}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(
+            typeof data?.error === "string" ? data.error : `HTTP ${res.status}`,
+          );
+        }
+        if (cancelled) return;
+        setSignShopifyProduct(data as ShopifyProductJs);
+        setSignShopifyCatalogStatus("ok");
+      } catch (e) {
+        if (cancelled) return;
+        console.warn(
+          "[BadgeDesigner] Shopify product fetch failed:",
+          e instanceof Error ? e.message : e,
+        );
+        setSignShopifyCatalogStatus("error");
+        setSignShopifyProduct(null);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [variant]);
+
   // Stage 2: Removed problematic auto-sync - saving is now explicit via "Save Changes" button
 
   // UNIVERSAL TEMPLATE: Get the active template
@@ -2176,6 +2245,37 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
     return template;
   }, [templates, universalTemplateId]);
+
+  const totalPriceAllBadges = useMemo(() => {
+    if (multipleBadges.length === 0) return "0.00";
+    if (variant !== "sign") {
+      const base = 9.99;
+      const sum = multipleBadges.reduce((acc, b) => {
+        const p =
+          b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0;
+        return acc + base + p;
+      }, 0);
+      return sum.toFixed(2);
+    }
+    if (!signShopifyProduct) return "—";
+    let sum = 0;
+    let any = false;
+    for (const b of multipleBadges) {
+      const tid = b.templateId || universalTemplateId;
+      const opts = getSignShopifyShapeSizeForTemplateId(tid);
+      if (!opts) continue;
+      const hit = resolveSignVariantIdAndPrice(
+        signShopifyProduct,
+        opts.shape,
+        opts.size,
+      );
+      if (hit) {
+        sum += hit.price;
+        any = true;
+      }
+    }
+    return any ? sum.toFixed(2) : "—";
+  }, [multipleBadges, variant, signShopifyProduct, universalTemplateId]);
 
   const effectiveDesignBox = useMemo(() => {
     if (!activeTemplate) {
@@ -4008,8 +4108,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         );
       });
 
-      const basePrice = 9.99;
-      const backingPrice =
+      let basePrice = 9.99;
+      let backingPrice =
         variant === "sign"
           ? 0
           : badge.backing === "magnetic"
@@ -4017,7 +4117,23 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           : badge.backing === "adhesive"
           ? 1.0
           : 0;
-      const totalPrice = basePrice + backingPrice;
+      let totalPrice = basePrice + backingPrice;
+
+      if (variant === "sign") {
+        backingPrice = 0;
+        const product = signShopifyProduct;
+        const linePrices = allFinalizedBadges.map((b) => {
+          const tid = b.templateId || universalTemplateId;
+          const opts = getSignShopifyShapeSizeForTemplateId(tid);
+          if (!opts || !product) return 9.99;
+          return (
+            resolveSignVariantIdAndPrice(product, opts.shape, opts.size)
+              ?.price ?? 9.99
+          );
+        });
+        totalPrice = linePrices.reduce((s, p) => s + p, 0);
+        basePrice = linePrices[0] ?? 9.99;
+      }
 
       const badgeDesignData = {
         userId: _customerId.trim(),
@@ -4077,35 +4193,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       alert(message);
     }
   };
-
-  // Add to cart
-  const basePrice = 9.99;
-  const backingPrice =
-    variant === "sign"
-      ? 0
-      : badge.backing === "magnetic"
-      ? 2
-      : badge.backing === "adhesive"
-      ? 1
-      : 0;
-  const totalPriceAllBadges =
-    multipleBadges.length > 0
-      ? multipleBadges
-          .reduce(
-            (sum, b) =>
-              sum +
-              basePrice +
-              (variant === "sign"
-                ? 0
-                : b.backing === "magnetic"
-                ? 2
-                : b.backing === "adhesive"
-                ? 1
-                : 0),
-            0,
-          )
-          .toFixed(2)
-      : "0.00";
 
   const addToCart = async () => {
     if (isAddingToCart) return;
@@ -4496,17 +4583,47 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         });
       }
 
-      const basePrice = 9.99;
       const urlParams =
         typeof window !== "undefined"
           ? new URLSearchParams(window.location.search)
           : null;
       const variantIdFromUrl = (key: string) =>
         urlParams?.get(key)?.trim() || null;
-      const getSignCartVariantId = (): string =>
+      const signCatalog = signShopifyProductRef.current;
+      const fallbackSignVariantId =
         variantIdFromUrl("variantIdSign") ||
         variantIdFromUrl("variantIdPin") ||
         "47037830299903";
+
+      const resolveSignLineVariant = (
+        b: Badge,
+      ): { variantId: string; linePrice: string } => {
+        const tid = b.templateId || "";
+        const opts = getSignShopifyShapeSizeForTemplateId(tid);
+        if (opts && signCatalog) {
+          const hit = resolveSignVariantIdAndPrice(
+            signCatalog,
+            opts.shape,
+            opts.size,
+          );
+          if (hit) {
+            return {
+              variantId: hit.variantId,
+              linePrice: hit.price.toFixed(2),
+            };
+          }
+        }
+        console.warn(
+          "[BadgeDesigner] Sign variant not found for template; using URL fallback",
+          tid,
+          opts,
+        );
+        return {
+          variantId: fallbackSignVariantId,
+          linePrice: "0.00",
+        };
+      };
+
       const isSignDesigner = variant === "sign";
       const getVariantId = (backingType: string) => {
         const fromUrl =
@@ -4554,9 +4671,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
       const cartItems = addDuplicates
         ? allBadgesForSupabase.map((b, i) => {
-            const variantId = isSignDesigner
-              ? getSignCartVariantId()
-              : getVariantId(b.backing);
             const backingP = isSignDesigner
               ? 0
               : b.backing === "magnetic"
@@ -4564,7 +4678,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               : b.backing === "adhesive"
               ? 1
               : 0;
-            const itemTotalPrice = (basePrice + backingP).toFixed(2);
+            const { variantId, linePrice: itemTotalPrice } = isSignDesigner
+              ? resolveSignLineVariant(b)
+              : {
+                  variantId: getVariantId(b.backing),
+                  linePrice: (9.99 + backingP).toFixed(2),
+                };
             const n = allBadgesForSupabase.length;
             const lineIndexStr = String(i);
             const indexProps: Record<string, string> = {
@@ -4584,7 +4703,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               "Font Family": b.lines[0]?.fontFamily || "Arial",
               ...(isSignDesigner ? {} : { "Backing Type": b.backing }),
               "Design ID": designIdForSupabase,
-              ...(isSignDesigner ? {} : { Price: `$${itemTotalPrice}` }),
+              Price: `$${itemTotalPrice}`,
               ...indexProps,
               "Custom Thumbnail": thumbnailUrls[i] ?? "",
               "Badge count": String(n),
@@ -4598,9 +4717,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             };
           })
         : badgesForSupabase.map((b, i) => {
-            const variantId = isSignDesigner
-              ? getSignCartVariantId()
-              : getVariantId(b.backing);
             const backingP = isSignDesigner
               ? 0
               : b.backing === "magnetic"
@@ -4608,7 +4724,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               : b.backing === "adhesive"
               ? 1
               : 0;
-            const itemTotalPrice = (basePrice + backingP).toFixed(2);
+            const { variantId, linePrice: itemTotalPrice } = isSignDesigner
+              ? resolveSignLineVariant(b)
+              : {
+                  variantId: getVariantId(b.backing),
+                  linePrice: (9.99 + backingP).toFixed(2),
+                };
             const lineIndexStrSingle = String(i);
             const indexPropsSingle: Record<string, string> = {
               [designerConfig.cartIndexPropertyPrimary]: lineIndexStrSingle,
@@ -4627,7 +4748,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               "Font Family": b.lines[0]?.fontFamily || "Arial",
               ...(isSignDesigner ? {} : { "Backing Type": b.backing }),
               "Design ID": designIdForSupabase,
-              ...(isSignDesigner ? {} : { Price: `$${itemTotalPrice}` }),
+              Price: `$${itemTotalPrice}`,
               ...indexPropsSingle,
               "Custom Thumbnail": thumbnailUrls[i] ?? "",
             };
@@ -4890,8 +5011,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     reader.readAsText(file);
   }
 
-  // Pricing display (total for all badges)
-  const prettyPrice = `$${totalPriceAllBadges}`;
+  // Pricing display (total for all badges). Sign prices come from Shopify product JSON.
+  const addToCartPriceLabel =
+    variant === "sign" && signShopifyCatalogStatus === "loading"
+      ? "…"
+      : totalPriceAllBadges === "—"
+      ? "—"
+      : `$${totalPriceAllBadges}`;
 
   // Early guard - don't render until we have a concrete template
   if (!activeTemplate) {
@@ -6733,7 +6859,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 : isGeneratingDesigns
                 ? "Generating..."
                 : stepsComplete
-                ? `Add to Cart - ${prettyPrice}`
+                ? `Add to Cart - ${addToCartPriceLabel}`
                 : "Add to Cart"}
             </button>
           </div>
