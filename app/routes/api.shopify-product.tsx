@@ -19,8 +19,7 @@ function normalizeShopHost(raw: string | null): string | null {
  */
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
-  const handle =
-    url.searchParams.get("handle")?.trim() || "custom-sign";
+  const handle = url.searchParams.get("handle")?.trim() || "custom-sign";
   let shop =
     normalizeShopHost(url.searchParams.get("shop")) ||
     normalizeShopHost(process.env.SHOPIFY_STORE_URL ?? null);
@@ -39,7 +38,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
     return json({ error: "Shop not allowed" }, { status: 403 });
   }
 
-  const productUrl = `https://${shop}/products/${encodeURIComponent(handle)}.js`;
+  const productUrl = `https://${shop}/products/${encodeURIComponent(
+    handle,
+  )}.js`;
   try {
     const res = await fetch(productUrl, {
       headers: {

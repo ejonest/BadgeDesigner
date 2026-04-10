@@ -69,3 +69,15 @@ export function resolveSignVariantIdAndPrice(
   if (!v) return null;
   return { variantId: String(v.id), price: parseShopifyMoney(v.price) };
 }
+
+/** Minimal check for JSON from Shopify `/products/{handle}.js` (parent postMessage or API proxy). */
+export function isShopifyProductJsPayload(x: unknown): x is ShopifyProductJs {
+  if (!x || typeof x !== "object") return false;
+  const o = x as Record<string, unknown>;
+  if (!Array.isArray(o.variants) || o.variants.length === 0) return false;
+  return o.variants.every((v) => {
+    if (!v || typeof v !== "object") return false;
+    const id = (v as { id?: unknown }).id;
+    return typeof id === "number";
+  });
+}
