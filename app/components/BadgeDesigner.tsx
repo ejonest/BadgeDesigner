@@ -68,7 +68,7 @@ import {
   generateThumbnailFromFullImage,
 } from "../utils/badgeThumbnail";
 import { getCurrentShop, type ShopAuthData } from "../utils/shopAuth";
-import { createApi } from "../utils/api";
+import { createApi, type DesignLibraryListItem } from "../utils/api";
 import { getDesignerApiPaths, getDesignerConfig } from "../config/designers";
 import type { ShopifyProductJs } from "~/utils/signShopifyCatalog";
 import {
@@ -1347,8 +1347,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     return r > 200 && g < 100 && b < 100;
   };
 
-  // API
-  const api = createApi(gadgetApiUrl, gadgetApiKey, { designerId });
+  // API (stable ref for debounced effects)
+  const api = useMemo(
+    () => createApi(gadgetApiUrl, gadgetApiKey, { designerId }),
+    [gadgetApiUrl, gadgetApiKey, designerId],
+  );
 
   // State: start with no badge; user must pick a template first
   const defaultTemplateId =
@@ -1436,14 +1439,18 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [proofPdfObjectUrl, setProofPdfObjectUrl] = useState<string | null>(
     null,
   );
-  // Load previous design (Supabase): when user has a saved set, offer to load it
-  const [showLoadPreviousModal, setShowLoadPreviousModal] = useState(false);
-  const [savedDesignForLoad, setSavedDesignForLoad] = useState<{
-    design_id: string;
-    design_data: any;
-    updated_at?: string;
-    backing_type?: string;
-  } | null>(null);
+  // Design gallery (Supabase): list autosave + milestones; user picks a row to restore
+  const [showDesignGalleryModal, setShowDesignGalleryModal] = useState(false);
+  const [designGalleryLoading, setDesignGalleryLoading] = useState(false);
+  const [designGalleryError, setDesignGalleryError] = useState<string | null>(
+    null,
+  );
+  const [designGalleryItems, setDesignGalleryItems] = useState<
+    Array<DesignLibraryListItem & { isAutosave: boolean }>
+  >([]);
+  const [galleryDetailLoadingId, setGalleryDetailLoadingId] = useState<
+    string | null
+  >(null);
   const [csvText, setCsvText] = useState("");
   const [csvPreview, setCsvPreview] = useState<string[][]>([]);
   const [csvError, setCsvError] = useState("");
@@ -1587,7 +1594,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   /** True after we have restored from localStorage cache once (prevents re-restore on later effect runs). */
   const restoredFromCacheRef = useRef(false);
   /** True after we have asked to load previous design this session (don't show modal again until next visit). */
-  const loadPreviousAskedRef = useRef(false);
   /** When true, debounced cache save will skip one write (set after add-to-cart success so we don't write old state back). */
   const skipCacheSaveRef = useRef(false);
   const multipleBadgesRef = useRef<Badge[]>(multipleBadges);
@@ -1948,29 +1954,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     setSelectedSignTemplateType(m.typeId);
   }, [variant, universalTemplateId, multipleBadges.length]);
 
-  // Fetch saved design for "Load previous?" when user is logged in (customerId + shop)
-  useEffect(() => {
-    if (!_customerId?.trim() || !_shop?.trim() || loadPreviousAskedRef.current)
-      return;
-    loadPreviousAskedRef.current = true;
-    (async () => {
-      try {
-        const result = await api.getSavedDesign(_shop, _customerId);
-        if (result.saved && result.design?.design_data) {
-          setSavedDesignForLoad({
-            design_id: result.design.design_id,
-            design_data: result.design.design_data,
-            updated_at: result.design.updated_at,
-            backing_type: result.design.backing_type,
-          });
-          setShowLoadPreviousModal(true);
-        }
-      } catch (err) {
-        console.warn("[BadgeDesigner] Failed to fetch saved design:", err);
-      }
-    })();
-  }, [_customerId, _shop]);
-
   // Debounced save of badge designer state to localStorage cache (always run effect so hook count is stable)
   useEffect(() => {
     const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${
@@ -2014,6 +1997,121 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     variant,
     _shop,
     _productId,
+  ]);
+
+  // Cloud autosave (logged-in only): one draft row per user/shop, debounced
+  const cloudAutosaveTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!_customerId?.trim() || !_shop?.trim() || multipleBadges.length === 0) {
+      return;
+    }
+    const shopData = getCurrentShop(_shop);
+    if (!shopData?.shopId) return;
+
+    if (cloudAutosaveTimerRef.current != null) {
+      window.clearTimeout(cloudAutosaveTimerRef.current);
+    }
+    cloudAutosaveTimerRef.current = window.setTimeout(() => {
+      cloudAutosaveTimerRef.current = null;
+      const currentFinalized = {
+        ...badge,
+        templateId: universalTemplateId,
+        backgroundColor: badge.backgroundColor || "#FFFFFF",
+      };
+      const allFinalizedBadges = multipleBadges.map((b, i) =>
+        i === selectedBadgeIndex
+          ? currentFinalized
+          : {
+              ...b,
+              templateId: b.templateId || universalTemplateId,
+              backgroundColor: b.backgroundColor || "#FFFFFF",
+            },
+      );
+      let basePrice = 9.99;
+      let backingPrice =
+        variant === "sign"
+          ? 0
+          : badge.backing === "magnetic"
+            ? 2.0
+            : badge.backing === "adhesive"
+              ? 1.0
+              : 0;
+      let totalPrice = basePrice + backingPrice;
+      if (variant === "sign") {
+        backingPrice = 0;
+        const product = signShopifyProduct;
+        const linePrices = allFinalizedBadges.map((b) => {
+          const tid = effectiveSignTemplateIdForBadge(
+            b.templateId,
+            universalTemplateId,
+          );
+          const opts = getSignShopifyShapeSizeForTemplateId(tid);
+          if (!opts || !product) return 9.99;
+          return (
+            resolveSignVariantIdAndPrice(product, opts.shape, opts.size)
+              ?.price ?? 9.99
+          );
+        });
+        totalPrice = linePrices.reduce((s, p) => s + p, 0);
+        basePrice = linePrices[0] ?? 9.99;
+      }
+      const payload = {
+        userId: _customerId.trim(),
+        shopId: shopData.shopId,
+        productId: _productId,
+        designData: {
+          badge: allFinalizedBadges[0],
+          multipleBadges:
+            allFinalizedBadges.length > 1
+              ? allFinalizedBadges.slice(1)
+              : [],
+          allBadges: allFinalizedBadges,
+          timestamp: new Date().toISOString(),
+          ...(variant === "sign"
+            ? {
+                selectedSignTemplateType,
+                selectedSignSizeTemplateId,
+              }
+            : {}),
+        },
+        backgroundColor: allFinalizedBadges[0].backgroundColor,
+        ...(variant !== "sign"
+          ? { backingType: allFinalizedBadges[0].backing }
+          : {}),
+        basePrice,
+        backingPrice,
+        totalPrice,
+        textLines: allFinalizedBadges[0].lines,
+      };
+      void api
+        .autosaveDesignToSupabase(payload, {
+          ...shopData,
+          customerId: _customerId.trim(),
+        })
+        .catch((err) => {
+          console.warn("[BadgeDesigner] Cloud autosave failed:", err);
+        });
+    }, 2000);
+    return () => {
+      if (cloudAutosaveTimerRef.current != null) {
+        window.clearTimeout(cloudAutosaveTimerRef.current);
+        cloudAutosaveTimerRef.current = null;
+      }
+    };
+  }, [
+    api,
+    _customerId,
+    _shop,
+    _productId,
+    multipleBadges,
+    badge,
+    selectedBadgeIndex,
+    universalTemplateId,
+    variant,
+    hasChosenBackgroundColor,
+    selectedSignTemplateType,
+    selectedSignSizeTemplateId,
+    signShopifyProduct,
   ]);
 
   // beforeunload: save current state to cache so last edit before reload is not lost
@@ -4062,7 +4160,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   };
 
-  // Load Design: if not logged in, prompt login; if logged in, check for saved design and show modal or message
+  // Load Design: open gallery (autosave + milestones); user picks a row to restore
   const onLoadDesignClick = async () => {
     if (!_customerId?.trim()) {
       const goToLogin = confirm(
@@ -4081,27 +4179,26 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       alert("Shop information not found. Please reload the page.");
       return;
     }
+    setShowDesignGalleryModal(true);
+    setDesignGalleryLoading(true);
+    setDesignGalleryError(null);
+    setDesignGalleryItems([]);
     try {
-      const result = await api.getSavedDesign(
+      const lib = await api.getSavedDesignsLibrary(
         shopData.shopId,
         _customerId.trim(),
       );
-      if (result.saved && result.design?.design_data) {
-        setSavedDesignForLoad({
-          design_id: result.design.design_id,
-          design_data: result.design.design_data,
-          updated_at: result.design.updated_at,
-          backing_type: result.design.backing_type,
-        });
-        setShowLoadPreviousModal(true);
-      } else {
-        alert(
-          "No saved design found. Save your design first, then you can load it here.",
+      setDesignGalleryItems(lib.items);
+      if (lib.items.length === 0) {
+        setDesignGalleryError(
+          "No saved designs yet. Your work autosaves here when you are signed in.",
         );
       }
     } catch (err) {
-      console.warn("Load design check failed:", err);
-      alert("Could not check for saved design. Please try again.");
+      console.warn("Load design gallery failed:", err);
+      setDesignGalleryError("Could not load your designs. Please try again.");
+    } finally {
+      setDesignGalleryLoading(false);
     }
   };
 
@@ -4229,6 +4326,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const savedDesign = await api.saveDesignToSupabase(
         badgeDesignData,
         shopDataWithCustomer,
+        { saveKind: "manual" },
       );
       // eslint-disable-next-line no-alert
       alert(
@@ -4365,76 +4463,111 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     setShowProofModal(false);
   }, [proofPdfObjectUrl]);
 
-  const onLoadPreviousDesign = useCallback(() => {
-    const design = savedDesignForLoad?.design_data;
-    if (!design) {
-      setShowLoadPreviousModal(false);
-      setSavedDesignForLoad(null);
-      return;
-    }
-    const rawBadges =
-      design.allBadges ??
-      (design.badge ? [design.badge, ...(design.multipleBadges ?? [])] : []);
-    if (!Array.isArray(rawBadges) || rawBadges.length === 0) {
-      setShowLoadPreviousModal(false);
-      setSavedDesignForLoad(null);
-      return;
-    }
-    let restoredBadges = migrateBadgeArray(rawBadges);
-    const backingFallback = savedDesignForLoad?.backing_type;
-    if (backingFallback) {
-      restoredBadges = restoredBadges.map((b) => ({
-        ...b,
-        backing: (b.backing || backingFallback) as
-          | "pin"
-          | "magnetic"
-          | "adhesive",
-      }));
-    }
-    setMultipleBadges(restoredBadges);
-    setBadge(restoredBadges[0]);
-    setBadge1Data(restoredBadges[0] ?? null);
-    setSelectedBadgeIndex(0);
-    const restoredTid = restoredBadges[0]?.templateId ?? "rect-1x3";
-    setUniversalTemplateId(restoredTid);
-    setHasChosenBackgroundColor(true);
-    templateGuidedAutoAdvanceDoneRef.current = true;
-    signSizeGuidedAutoAdvanceDoneRef.current = true;
-    guidedFlowCompletedRef.current = true;
-    if (variant === "sign" && config.hasSizeStep) {
-      const savedType = (design as { selectedSignTemplateType?: string })
-        .selectedSignTemplateType;
-      const savedSize = (design as { selectedSignSizeTemplateId?: string })
-        .selectedSignSizeTemplateId;
-      const hasSavedSignNav =
-        typeof savedType === "string" &&
-        savedType.trim() &&
-        typeof savedSize === "string" &&
-        savedSize.trim();
-      if (hasSavedSignNav) {
-        setSelectedSignTemplateType(savedType);
-        setSelectedSignSizeTemplateId(savedSize);
-      } else {
-        const eff = migrateLegacyDesignerUniversalTemplateId(restoredTid);
-        const m = findSignTypeAndSizeForUniversalTemplate(eff);
-        if (m) {
-          setSelectedSignTemplateType(m.typeId);
-          setSelectedSignSizeTemplateId(m.sizeTemplateId);
+  const applyRestoredDesign = useCallback(
+    (row: {
+      design_id?: string;
+      design_data: any;
+      backing_type?: string;
+    }) => {
+      const design = row.design_data;
+      if (!design) return;
+      const rawBadges =
+        design.allBadges ??
+        (design.badge ? [design.badge, ...(design.multipleBadges ?? [])] : []);
+      if (!Array.isArray(rawBadges) || rawBadges.length === 0) return;
+      let restoredBadges = migrateBadgeArray(rawBadges);
+      const backingFallback = row.backing_type;
+      if (backingFallback) {
+        restoredBadges = restoredBadges.map((b) => ({
+          ...b,
+          backing: (b.backing || backingFallback) as
+            | "pin"
+            | "magnetic"
+            | "adhesive",
+        }));
+      }
+      setMultipleBadges(restoredBadges);
+      setBadge(restoredBadges[0]);
+      setBadge1Data(restoredBadges[0] ?? null);
+      setSelectedBadgeIndex(0);
+      const restoredTid = restoredBadges[0]?.templateId ?? "rect-1x3";
+      setUniversalTemplateId(restoredTid);
+      setHasChosenBackgroundColor(true);
+      templateGuidedAutoAdvanceDoneRef.current = true;
+      signSizeGuidedAutoAdvanceDoneRef.current = true;
+      guidedFlowCompletedRef.current = true;
+      if (variant === "sign" && config.hasSizeStep) {
+        const savedType = (design as { selectedSignTemplateType?: string })
+          .selectedSignTemplateType;
+        const savedSize = (design as { selectedSignSizeTemplateId?: string })
+          .selectedSignSizeTemplateId;
+        const hasSavedSignNav =
+          typeof savedType === "string" &&
+          savedType.trim() &&
+          typeof savedSize === "string" &&
+          savedSize.trim();
+        if (hasSavedSignNav) {
+          setSelectedSignTemplateType(savedType);
+          setSelectedSignSizeTemplateId(savedSize);
+        } else {
+          const eff = migrateLegacyDesignerUniversalTemplateId(restoredTid);
+          const m = findSignTypeAndSizeForUniversalTemplate(eff);
+          if (m) {
+            setSelectedSignTemplateType(m.typeId);
+            setSelectedSignSizeTemplateId(m.sizeTemplateId);
+          }
         }
       }
-    }
-    setSectionsOpened((prev) => ({ ...prev, textLines: true, backing: true }));
-    if (savedDesignForLoad?.design_id) {
-      sessionDesignIdRef.current = savedDesignForLoad.design_id;
-    }
-    setShowLoadPreviousModal(false);
-    setSavedDesignForLoad(null);
-  }, [savedDesignForLoad, variant, config.hasSizeStep]);
+      setSectionsOpened((prev) => ({ ...prev, textLines: true, backing: true }));
+      if (row.design_id) {
+        sessionDesignIdRef.current = row.design_id;
+      }
+    },
+    [variant, config.hasSizeStep],
+  );
 
-  const onStartFreshDesign = useCallback(() => {
-    setShowLoadPreviousModal(false);
-    setSavedDesignForLoad(null);
+  const closeDesignGalleryModal = useCallback(() => {
+    setShowDesignGalleryModal(false);
+    setDesignGalleryError(null);
+    setDesignGalleryItems([]);
+    setGalleryDetailLoadingId(null);
   }, []);
+
+  const handleGalleryItemClick = useCallback(
+    async (item: DesignLibraryListItem & { isAutosave: boolean }) => {
+      if (!_customerId?.trim()) return;
+      const shopData = getCurrentShop(_shop);
+      if (!shopData) {
+        alert("Shop information not found. Please reload the page.");
+        return;
+      }
+      setGalleryDetailLoadingId(item.design_id);
+      try {
+        const detail = await api.getSavedDesignDetail(
+          shopData.shopId,
+          _customerId.trim(),
+          item.design_id,
+        );
+        if (!detail.found || !detail.design?.design_data) {
+          alert("Could not load that design. It may have been removed.");
+          return;
+        }
+        applyRestoredDesign({
+          design_id: detail.design.design_id,
+          design_data: detail.design.design_data,
+          backing_type: detail.design.backing_type,
+        });
+        closeDesignGalleryModal();
+        skipCacheSaveRef.current = true;
+      } catch (e) {
+        console.warn("[BadgeDesigner] Gallery detail load failed:", e);
+        alert("Could not load that design. Please try again.");
+      } finally {
+        setGalleryDetailLoadingId(null);
+      }
+    },
+    [_customerId, _shop, api, applyRestoredDesign, closeDesignGalleryModal],
+  );
 
   const onProofConfirm = async () => {
     if (!proofAcknowledged) return;
@@ -4839,6 +4972,78 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               properties,
             };
           });
+
+      // Persist cart milestone before add-to-cart: single-item flow redirects the page and can abort in-flight requests.
+      if (_customerId?.trim()) {
+        const cid = _customerId.trim();
+        const allBadges = badgesForSupabase;
+        let basePrice = 9.99;
+        let backingPrice =
+          variant === "sign"
+            ? 0
+            : allBadges[0]?.backing === "magnetic"
+              ? 2.0
+              : allBadges[0]?.backing === "adhesive"
+                ? 1.0
+                : 0;
+        let totalPrice = basePrice + backingPrice;
+        if (variant === "sign") {
+          backingPrice = 0;
+          const product = signShopifyProductRef.current;
+          const linePrices = allBadges.map((b) => {
+            const tid = effectiveSignTemplateIdForBadge(
+              b.templateId,
+              universalTemplateId,
+            );
+            const opts = getSignShopifyShapeSizeForTemplateId(tid);
+            if (!opts || !product) return 9.99;
+            return (
+              resolveSignVariantIdAndPrice(product, opts.shape, opts.size)
+                ?.price ?? 9.99
+            );
+          });
+          totalPrice = linePrices.reduce((s, p) => s + p, 0);
+          basePrice = linePrices[0] ?? 9.99;
+        }
+        const cartMilestonePayload = {
+          userId: cid,
+          shopId: shopData.shopId,
+          productId: _productId,
+          designId: designIdForSupabase,
+          status: "saved",
+          designData: {
+            badge: allBadges[0],
+            multipleBadges:
+              allBadges.length > 1 ? allBadges.slice(1) : [],
+            allBadges,
+            timestamp: new Date().toISOString(),
+            ...(variant === "sign"
+              ? {
+                  selectedSignTemplateType,
+                  selectedSignSizeTemplateId,
+                }
+              : {}),
+          },
+          backgroundColor: allBadges[0].backgroundColor,
+          ...(variant !== "sign"
+            ? { backingType: allBadges[0].backing }
+            : {}),
+          basePrice,
+          backingPrice,
+          totalPrice,
+          textLines: allBadges[0].lines,
+          thumbnailUrl: thumbnailUrls[0] ?? undefined,
+        };
+        try {
+          await api.saveDesignToSupabase(
+            cartMilestonePayload,
+            { ...shopData, customerId: cid },
+            { saveKind: "cart" },
+          );
+        } catch (err) {
+          console.warn("[BadgeDesigner] Cart milestone save failed:", err);
+        }
+      }
 
       const result = await api.addToCartMultiple(cartItems);
       if (result.success) {
@@ -9306,40 +9511,122 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         </div>
       )}
 
-      {/* Load previous design modal - offer to restore saved design from Supabase */}
-      {showLoadPreviousModal && savedDesignForLoad && (
+      {/* Design gallery: autosave + milestones from Supabase */}
+      {showDesignGalleryModal && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
-          onClick={onStartFreshDesign}
+          onClick={closeDesignGalleryModal}
           role="dialog"
           aria-modal="true"
-          aria-label="Load previous design"
+          aria-label="Your saved designs"
         >
           <div
-            className="bg-white rounded-lg shadow-lg w-full max-w-md p-6"
+            className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-bold text-gray-800 mb-2">
-              Load previous design?
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              You have a previously saved design. Would you like to load it and
-              continue editing?
-            </p>
-            <div className="flex justify-end gap-2">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">
+                  Your designs
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Autosave and saved versions for this shop. Select one to
+                  continue editing.
+                </p>
+              </div>
               <button
                 type="button"
-                className="px-4 py-2 rounded shadow border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                onClick={onStartFreshDesign}
+                className="p-2 text-gray-500 hover:text-gray-700 shrink-0"
+                onClick={closeDesignGalleryModal}
+                aria-label="Close"
               >
-                No thanks
+                <XMarkIcon className="w-5 h-5" />
               </button>
+            </div>
+            {designGalleryLoading && (
+              <p className="text-sm text-gray-600 py-8 text-center">
+                Loading…
+              </p>
+            )}
+            {!designGalleryLoading && designGalleryError && (
+              <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded p-3 mb-4">
+                {designGalleryError}
+              </p>
+            )}
+            {!designGalleryLoading && designGalleryItems.length > 0 && (
+              <div className="overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-3 pr-1">
+                {designGalleryItems.map((item) => {
+                  const kindLabel = item.isAutosave
+                    ? "Draft (autosave)"
+                    : item.save_kind === "cart"
+                      ? "Added to cart"
+                      : item.save_kind === "ordered"
+                        ? "Ordered"
+                        : item.save_kind === "manual"
+                          ? "Saved"
+                          : "Saved";
+                  const when =
+                    item.updated_at || item.created_at || "";
+                  const whenStr = when
+                    ? new Date(when).toLocaleString()
+                    : "";
+                  const busy = galleryDetailLoadingId === item.design_id;
+                  return (
+                    <button
+                      key={item.design_id}
+                      type="button"
+                      disabled={busy}
+                      className="text-left border border-gray-200 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50/40 transition-colors disabled:opacity-60"
+                      onClick={() => handleGalleryItemClick(item)}
+                    >
+                      <div className="flex gap-3">
+                        <div className="w-20 h-20 shrink-0 rounded bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
+                          {item.thumbnail_url ? (
+                            <img
+                              src={item.thumbnail_url}
+                              alt=""
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <span className="text-xs text-gray-400 px-1 text-center">
+                              No preview
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                            {kindLabel}
+                          </p>
+                          <p className="text-sm text-gray-800 font-medium truncate mt-0.5">
+                            {item.item_count}{" "}
+                            {item.item_count === 1
+                              ? config.labelProduct.toLowerCase()
+                              : config.labelProductPlural.toLowerCase()}
+                          </p>
+                          {whenStr ? (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {whenStr}
+                            </p>
+                          ) : null}
+                          {busy ? (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Loading…
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div className="flex justify-end mt-4 pt-2 border-t border-gray-100">
               <button
                 type="button"
-                className="px-4 py-2 rounded shadow bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={onLoadPreviousDesign}
+                className="px-4 py-2 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 text-sm"
+                onClick={closeDesignGalleryModal}
               >
-                Load
+                Close
               </button>
             </div>
           </div>

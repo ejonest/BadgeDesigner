@@ -123,6 +123,24 @@ export const supabaseAdmin =
     ? createClient(supabaseUrl, supabaseServiceRoleKey)
     : null;
 
+/** Library row kind: autosave = one updatable row per user/shop; milestones are capped (see prune). */
+export type DesignSaveKind = "autosave" | "manual" | "cart" | "ordered";
+
+export const DESIGN_MILESTONE_SAVE_KINDS: DesignSaveKind[] = [
+  "manual",
+  "cart",
+  "ordered",
+];
+
+export const DESIGN_LIBRARY_MILESTONE_LIMIT = 10;
+
+/** Stable design_id for cloud autosave (one row per user + shop per table). */
+export function stableAutosaveDesignId(userId: string, shopId: string): string {
+  const seg = (s: string) =>
+    s.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 96);
+  return `autosave_${seg(userId)}_${seg(shopId)}`;
+}
+
 // Types for badge designs
 export interface BadgeDesign {
   id?: string;
@@ -140,6 +158,8 @@ export interface BadgeDesign {
   thumbnail_url?: string;
   full_image_url?: string;
   status?: "draft" | "saved" | "ordered" | "archived";
+  /** autosave | manual | cart | ordered — see docs/migration_add_save_kind_to_design_tables.sql */
+  save_kind?: DesignSaveKind | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -487,7 +507,7 @@ export async function getCustomerDesigns(customerId: string) {
   return data;
 }
 
-/** Get the latest saved design for a user in a shop (one set per user). Used for "Load previous design?". */
+/** Latest milestone design for user/shop (excludes autosave). Used by legacy GET /api/saved-design. */
 export async function getLatestSavedDesign(userId: string, shopId: string) {
   if (!supabaseAdmin) {
     throw new Error(
@@ -500,7 +520,7 @@ export async function getLatestSavedDesign(userId: string, shopId: string) {
     .select("*")
     .eq("user_id", userId)
     .eq("shop_id", shopId)
-    .eq("status", "saved")
+    .or("save_kind.eq.manual,save_kind.eq.cart,save_kind.eq.ordered,save_kind.is.null")
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -561,7 +581,7 @@ export async function saveSignDesign(design: SignDesign) {
   return data;
 }
 
-/** Latest saved sign design for a user in a shop (one set per user, same semantics as badges). */
+/** Latest milestone sign design for user/shop (excludes autosave). */
 export async function getLatestSavedSignDesign(userId: string, shopId: string) {
   if (!supabaseAdmin) {
     throw new Error(
@@ -574,7 +594,7 @@ export async function getLatestSavedSignDesign(userId: string, shopId: string) {
     .select("*")
     .eq("user_id", userId)
     .eq("shop_id", shopId)
-    .eq("status", "saved")
+    .or("save_kind.eq.manual,save_kind.eq.cart,save_kind.eq.ordered,save_kind.is.null")
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -608,6 +628,385 @@ export async function deleteSavedSignDesignsForUser(
     console.error("deleteSavedSignDesignsForUser error:", error);
     throw error;
   }
+}
+
+function countBadgesInDesignData(designData: unknown): number {
+  if (!designData || typeof designData !== "object") return 0;
+  const d = designData as Record<string, unknown>;
+  const all = d.allBadges;
+  if (Array.isArray(all)) return all.length;
+  if (d.badge) return 1;
+  return 0;
+}
+
+function milestoneStatusForKind(kind: DesignSaveKind): BadgeDesign["status"] {
+  if (kind === "ordered") return "ordered";
+  return "saved";
+}
+
+/** Keep at most `limit` milestone rows (manual/cart/ordered; legacy null save_kind counts). Autosave row excluded. */
+export async function pruneDesignMilestones(
+  table: "badge_designs" | "sign_designs",
+  userId: string,
+  shopId: string,
+  limit = DESIGN_LIBRARY_MILESTONE_LIMIT,
+) {
+  if (!supabaseAdmin) {
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
+  }
+  const autosaveId = stableAutosaveDesignId(userId, shopId);
+  const { data: rows, error } = await supabaseAdmin
+    .from(table)
+    .select("design_id, created_at, save_kind")
+    .eq("user_id", userId)
+    .eq("shop_id", shopId)
+    .neq("design_id", autosaveId)
+    .or("save_kind.eq.manual,save_kind.eq.cart,save_kind.eq.ordered,save_kind.is.null")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("pruneDesignMilestones select error:", error);
+    throw error;
+  }
+
+  const milestones = (rows ?? []).filter((r) => r.save_kind !== "autosave");
+  if (milestones.length <= limit) return;
+
+  const toRemove = milestones.length - limit;
+  const ids = milestones.slice(0, toRemove).map((r) => r.design_id);
+  if (ids.length === 0) return;
+
+  const { error: delErr } = await supabaseAdmin
+    .from(table)
+    .delete()
+    .in("design_id", ids);
+
+  if (delErr) {
+    console.error("pruneDesignMilestones delete error:", delErr);
+    throw delErr;
+  }
+}
+
+export async function upsertBadgeAutosaveDesign(row: BadgeDesign) {
+  const uid = row.user_id?.trim();
+  const sid = row.shop_id?.trim();
+  if (!uid || !sid) {
+    throw new Error("user_id and shop_id are required for autosave");
+  }
+  const full: BadgeDesign = {
+    ...row,
+    design_id: stableAutosaveDesignId(uid, sid),
+    user_id: uid,
+    shop_id: sid,
+    save_kind: "autosave",
+    status: "draft",
+  };
+  return saveBadgeDesign(full);
+}
+
+export async function upsertSignAutosaveDesign(row: SignDesign) {
+  const uid = row.user_id?.trim();
+  const sid = row.shop_id?.trim();
+  if (!uid || !sid) {
+    throw new Error("user_id and shop_id are required for autosave");
+  }
+  const full: SignDesign = {
+    ...row,
+    design_id: stableAutosaveDesignId(uid, sid),
+    user_id: uid,
+    shop_id: sid,
+    save_kind: "autosave",
+    status: "draft",
+  };
+  return saveSignDesign(full);
+}
+
+/** Insert or update a milestone row, then prune old milestones. */
+export async function saveBadgeDesignMilestone(row: BadgeDesign, saveKind: DesignSaveKind) {
+  if (saveKind === "autosave") {
+    throw new Error("Use upsertBadgeAutosaveDesign for autosave");
+  }
+  const uid = row.user_id?.trim();
+  const sid = row.shop_id?.trim();
+  if (!uid || !sid) {
+    throw new Error("user_id and shop_id are required");
+  }
+  const full: BadgeDesign = {
+    ...row,
+    user_id: uid,
+    shop_id: sid,
+    save_kind: saveKind,
+    status: milestoneStatusForKind(saveKind),
+  };
+  const saved = await saveBadgeDesign(full);
+  await pruneDesignMilestones("badge_designs", uid, sid);
+  return saved;
+}
+
+export async function saveSignDesignMilestone(row: SignDesign, saveKind: DesignSaveKind) {
+  if (saveKind === "autosave") {
+    throw new Error("Use upsertSignAutosaveDesign for autosave");
+  }
+  const uid = row.user_id?.trim();
+  const sid = row.shop_id?.trim();
+  if (!uid || !sid) {
+    throw new Error("user_id and shop_id are required");
+  }
+  const full: SignDesign = {
+    ...row,
+    user_id: uid,
+    shop_id: sid,
+    save_kind: saveKind,
+    status: milestoneStatusForKind(saveKind),
+  };
+  const saved = await saveSignDesign(full);
+  await pruneDesignMilestones("sign_designs", uid, sid);
+  return saved;
+}
+
+export type DesignGalleryListItem = {
+  design_id: string;
+  save_kind: DesignSaveKind | null;
+  thumbnail_url?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  item_count: number;
+};
+
+/** Autosave first (if any), then up to 10 milestones by updated_at desc. */
+export async function listBadgeDesignGallery(
+  userId: string,
+  shopId: string,
+): Promise<{ autosave: DesignGalleryListItem | null; milestones: DesignGalleryListItem[] }> {
+  if (!supabaseAdmin) {
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
+  }
+
+  const { data: autoRow, error: autoErr } = await supabaseAdmin
+    .from("badge_designs")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("shop_id", shopId)
+    .eq("save_kind", "autosave")
+    .maybeSingle();
+
+  if (autoErr) {
+    console.error("listBadgeDesignGallery autosave error:", autoErr);
+    throw autoErr;
+  }
+
+  const { data: mileRows, error: mileErr } = await supabaseAdmin
+    .from("badge_designs")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("shop_id", shopId)
+    .neq("save_kind", "autosave")
+    .or("save_kind.eq.manual,save_kind.eq.cart,save_kind.eq.ordered,save_kind.is.null")
+    .order("updated_at", { ascending: false })
+    .limit(DESIGN_LIBRARY_MILESTONE_LIMIT);
+
+  if (mileErr) {
+    console.error("listBadgeDesignGallery milestones error:", mileErr);
+    throw mileErr;
+  }
+
+  const toItem = (r: BadgeDesign): DesignGalleryListItem => ({
+    design_id: r.design_id,
+    save_kind: (r.save_kind as DesignSaveKind | null) ?? null,
+    thumbnail_url: r.thumbnail_url,
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+    item_count: countBadgesInDesignData(r.design_data),
+  });
+
+  return {
+    autosave: autoRow ? toItem(autoRow as BadgeDesign) : null,
+    milestones: (mileRows ?? []).map((r) => toItem(r as BadgeDesign)),
+  };
+}
+
+export async function listSignDesignGallery(
+  userId: string,
+  shopId: string,
+): Promise<{ autosave: DesignGalleryListItem | null; milestones: DesignGalleryListItem[] }> {
+  if (!supabaseAdmin) {
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
+  }
+
+  const { data: autoRow, error: autoErr } = await supabaseAdmin
+    .from("sign_designs")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("shop_id", shopId)
+    .eq("save_kind", "autosave")
+    .maybeSingle();
+
+  if (autoErr) {
+    console.error("listSignDesignGallery autosave error:", autoErr);
+    throw autoErr;
+  }
+
+  const { data: mileRows, error: mileErr } = await supabaseAdmin
+    .from("sign_designs")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("shop_id", shopId)
+    .neq("save_kind", "autosave")
+    .or("save_kind.eq.manual,save_kind.eq.cart,save_kind.eq.ordered,save_kind.is.null")
+    .order("updated_at", { ascending: false })
+    .limit(DESIGN_LIBRARY_MILESTONE_LIMIT);
+
+  if (mileErr) {
+    console.error("listSignDesignGallery milestones error:", mileErr);
+    throw mileErr;
+  }
+
+  const toItem = (r: SignDesign): DesignGalleryListItem => ({
+    design_id: r.design_id,
+    save_kind: (r.save_kind as DesignSaveKind | null) ?? null,
+    thumbnail_url: r.thumbnail_url,
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+    item_count: countBadgesInDesignData(r.design_data),
+  });
+
+  return {
+    autosave: autoRow ? toItem(autoRow as SignDesign) : null,
+    milestones: (mileRows ?? []).map((r) => toItem(r as SignDesign)),
+  };
+}
+
+export async function getBadgeDesignForUserShop(
+  userId: string,
+  shopId: string,
+  designId: string,
+) {
+  if (!supabaseAdmin) {
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("badge_designs")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("shop_id", shopId)
+    .eq("design_id", designId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("getBadgeDesignForUserShop error:", error);
+    throw error;
+  }
+
+  return data as BadgeDesign | null;
+}
+
+export async function getSignDesignForUserShop(
+  userId: string,
+  shopId: string,
+  designId: string,
+) {
+  if (!supabaseAdmin) {
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("sign_designs")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("shop_id", shopId)
+    .eq("design_id", designId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("getSignDesignForUserShop error:", error);
+    throw error;
+  }
+
+  return data as SignDesign | null;
+}
+
+/**
+ * After order is paid: copy cart milestone row to a new ordered row (new design_id), then prune.
+ */
+export async function insertOrderedDesignSnapshotFromCart(params: {
+  table: "badge_designs" | "sign_designs";
+  cartDesignId: string;
+  shopifyOrderId: string;
+}) {
+  if (!supabaseAdmin) {
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
+  }
+
+  const orderSeg = params.shopifyOrderId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64);
+  const cartSeg = params.cartDesignId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 96);
+  const newId = `ordered_${orderSeg}_${cartSeg}`.slice(0, 240);
+
+  const { data: cartRow, error: findErr } = await supabaseAdmin
+    .from(params.table)
+    .select("*")
+    .eq("design_id", params.cartDesignId)
+    .eq("save_kind", "cart")
+    .maybeSingle();
+
+  if (findErr) {
+    console.error("insertOrderedDesignSnapshotFromCart find error:", findErr);
+    throw findErr;
+  }
+
+  if (!cartRow?.user_id || !cartRow?.shop_id || !cartRow.design_data) {
+    return { skipped: true as const, reason: "no_cart_snapshot" as const };
+  }
+
+  const c = cartRow as BadgeDesign;
+  const dd = c.design_data as Record<string, unknown>;
+  const allBadges = dd?.allBadges as unknown[] | undefined;
+  const firstBadge = Array.isArray(allBadges)
+    ? (allBadges[0] as Record<string, unknown> | undefined)
+    : (dd?.badge as Record<string, unknown> | undefined);
+
+  const row: BadgeDesign = {
+    design_id: newId,
+    product_id: c.product_id ?? "",
+    shop_id: c.shop_id,
+    user_id: c.user_id,
+    background_color:
+      (firstBadge?.backgroundColor as string | undefined) ??
+      c.background_color ??
+      "#FFFFFF",
+    backing_type:
+      (firstBadge?.backing as string | undefined) ?? c.backing_type,
+    backing_price: c.backing_price ?? 0,
+    base_price: c.base_price ?? 9.99,
+    total_price: c.total_price ?? 9.99,
+    design_data: c.design_data,
+    text_lines: c.text_lines ?? firstBadge?.lines,
+    thumbnail_url: c.thumbnail_url,
+    save_kind: "ordered",
+    status: "ordered",
+  };
+
+  if (params.table === "badge_designs") {
+    await saveBadgeDesign(row);
+    await pruneDesignMilestones("badge_designs", c.user_id, c.shop_id);
+  } else {
+    await saveSignDesign(row as SignDesign);
+    await pruneDesignMilestones("sign_designs", c.user_id, c.shop_id);
+  }
+
+  return { skipped: false as const, design_id: newId };
 }
 
 // Badge order items interface - matches actual table schema

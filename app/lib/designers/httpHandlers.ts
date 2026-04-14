@@ -22,6 +22,7 @@ import { generateOrderSlipPdf } from "~/utils/orderSlipPdf";
 import {
   convertBadgeToOrderItem,
   downloadBytesFromStorageUrl,
+  insertOrderedDesignSnapshotFromCart,
 } from "~/utils/supabase";
 import {
   linkOrderBodySchema,
@@ -698,6 +699,30 @@ export async function runLinkPaidOrderToSupabase(
           `${LOG_PREFIX} order-slip PDF failed design ${designId}:`,
           slipErr,
         );
+      }
+    }
+
+    if (designerId === "badge" || designerId === "sign") {
+      const table =
+        designerId === "sign" ? "sign_designs" : "badge_designs";
+      for (const designId of designIds) {
+        try {
+          const snap = await insertOrderedDesignSnapshotFromCart({
+            table,
+            cartDesignId: designId,
+            shopifyOrderId: orderIdTrimmed,
+          });
+          if (snap.skipped && snap.reason === "no_cart_snapshot") {
+            console.log(
+              `${LOG_PREFIX} link-order (${designerId}): no cart library row for design_id=${designId}, skip ordered snapshot`,
+            );
+          }
+        } catch (snapErr) {
+          console.warn(
+            `${LOG_PREFIX} ordered design snapshot failed design ${designId}:`,
+            snapErr,
+          );
+        }
       }
     }
 

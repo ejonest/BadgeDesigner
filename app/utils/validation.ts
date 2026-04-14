@@ -37,12 +37,15 @@ export const saveBadgeBodySchema = z
   })
   .strict();
 
+export const designSaveKindSchema = z.enum(["manual", "cart", "ordered"]);
+
 /** POST /api/save-design – body (required: userId/shopId via designData or shopData) */
 export const saveDesignBodySchema = z
   .object({
     designData: z.record(z.unknown()).optional(),
     shopData: z.record(z.unknown()).optional(),
     userId: z.string().optional(),
+    saveKind: designSaveKindSchema.optional(),
   })
   .strict();
 
@@ -51,6 +54,15 @@ export const savedDesignQuerySchema = z
   .object({
     shop: z.string().min(1, "shop is required"),
     userId: z.string().min(1, "userId is required"),
+  })
+  .strict();
+
+/** GET /api/saved-design-detail – query */
+export const savedDesignDetailQuerySchema = z
+  .object({
+    shop: z.string().min(1, "shop is required"),
+    userId: z.string().min(1, "userId is required"),
+    designId: z.string().min(1, "designId is required"),
   })
   .strict();
 
