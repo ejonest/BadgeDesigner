@@ -4205,6 +4205,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             allFinalizedBadges.length > 1 ? allFinalizedBadges.slice(1) : [],
           allBadges: allFinalizedBadges,
           timestamp: new Date().toISOString(),
+          ...(variant === "sign"
+            ? {
+                selectedSignTemplateType,
+                selectedSignSizeTemplateId,
+              }
+            : {}),
         },
         backgroundColor: allFinalizedBadges[0].backgroundColor,
         ...(variant !== "sign"
@@ -4396,11 +4402,25 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     signSizeGuidedAutoAdvanceDoneRef.current = true;
     guidedFlowCompletedRef.current = true;
     if (variant === "sign" && config.hasSizeStep) {
-      const eff = migrateLegacyDesignerUniversalTemplateId(restoredTid);
-      const m = findSignTypeAndSizeForUniversalTemplate(eff);
-      if (m) {
-        setSelectedSignTemplateType(m.typeId);
-        setSelectedSignSizeTemplateId(m.sizeTemplateId);
+      const savedType = (design as { selectedSignTemplateType?: string })
+        .selectedSignTemplateType;
+      const savedSize = (design as { selectedSignSizeTemplateId?: string })
+        .selectedSignSizeTemplateId;
+      const hasSavedSignNav =
+        typeof savedType === "string" &&
+        savedType.trim() &&
+        typeof savedSize === "string" &&
+        savedSize.trim();
+      if (hasSavedSignNav) {
+        setSelectedSignTemplateType(savedType);
+        setSelectedSignSizeTemplateId(savedSize);
+      } else {
+        const eff = migrateLegacyDesignerUniversalTemplateId(restoredTid);
+        const m = findSignTypeAndSizeForUniversalTemplate(eff);
+        if (m) {
+          setSelectedSignTemplateType(m.typeId);
+          setSelectedSignSizeTemplateId(m.sizeTemplateId);
+        }
       }
     }
     setSectionsOpened((prev) => ({ ...prev, textLines: true, backing: true }));
