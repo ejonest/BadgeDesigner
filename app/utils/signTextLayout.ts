@@ -26,6 +26,9 @@ export type SignTextLayoutConfigJson = {
   maxWidthFraction?: number | number[];
 };
 
+/** Circle in template pixel space (same coords as designBox / contentRect). */
+export type SignPlateCircle = { cx: number; cy: number; r: number };
+
 /** Resolved at load time from designBox + optional JSON */
 export type ResolvedSignTextLayout = {
   /** Inset-applied area where text is measured and positioned */
@@ -37,6 +40,11 @@ export type ResolvedSignTextLayout = {
   /** At least 6 entries; maxWidth = contentRect.width * fraction[lineIndex] */
   maxWidthFractions: number[];
   designBoxHeight: number;
+  /**
+   * Round sign plates: horizontal safe width varies with Y (chord of circle).
+   * Set for `circle-*` templates so layout and clipping match the visible disc.
+   */
+  plateCircle?: SignPlateCircle;
 };
 
 /**
@@ -55,6 +63,51 @@ function clampPositive(n: number, min: number = 1): number {
   return n;
 }
 
+/** SVG markup inside `<clipPath>` for sign text (circle on round plates, else rect). */
+export function buildSignTextClipPathInnerMarkup(
+  signLayout: ResolvedSignTextLayout | undefined,
+  designBox: { x: number; y: number; width: number; height: number },
+  insetPx: number,
+): string {
+  if (signLayout?.plateCircle) {
+    const { cx, cy, r } = signLayout.plateCircle;
+    const rr = Math.max(1, r - insetPx);
+    return `<circle cx="${cx}" cy="${cy}" r="${rr}"/>`;
+  }
+  const clipR = signLayout?.clipRect;
+  if (clipR) {
+    return `<rect x="${clipR.x}" y="${clipR.y}" width="${clipR.width}" height="${clipR.height}"/>`;
+  }
+  return `<rect x="${designBox.x + insetPx}" y="${
+    designBox.y + insetPx
+  }" width="${designBox.width - insetPx * 2}" height="${
+    designBox.height - insetPx * 2
+  }"/>`;
+}
+
+function maxTextWidthForPlateAtY(
+  layout: ResolvedSignTextLayout,
+  anchor: string,
+  y: number,
+): number {
+  const geom = layout.plateCircle;
+  if (!geom) return Number.POSITIVE_INFINITY;
+  const dy = y - geom.cy;
+  if (Math.abs(dy) >= geom.r * 0.999) return 1;
+  const halfChord = Math.sqrt(Math.max(0, geom.r * geom.r - dy * dy));
+  const left = geom.cx - halfChord;
+  const right = geom.cx + halfChord;
+  const pad = SIGN_TEXT_INSET_PX * 1.5;
+  const cr = layout.contentRect;
+  if (anchor === "middle") {
+    return Math.max(1, (right - left) * 0.92 - 2 * pad);
+  }
+  if (anchor === "start") {
+    return Math.max(1, right - cr.x - pad);
+  }
+  return Math.max(1, cr.x + cr.width - left - pad);
+}
+
 /**
  * Build resolved layout from designBox and optional config.
  * When region is omitted, uses full designBox (same footprint as legacy text area).
@@ -62,6 +115,7 @@ function clampPositive(n: number, min: number = 1): number {
 export function resolveSignTextLayout(
   designBox: { x: number; y: number; width: number; height: number },
   config: SignTextLayoutConfigJson | undefined,
+  plateCircle?: SignPlateCircle,
 ): ResolvedSignTextLayout {
   let regionBase = {
     x: designBox.x,
@@ -122,6 +176,7 @@ export function resolveSignTextLayout(
     lineWeights: weights,
     maxWidthFractions: fractions,
     designBoxHeight: designBox.height,
+    ...(plateCircle ? { plateCircle } : {}),
   };
 }
 
@@ -488,6 +543,28 @@ export function layoutSignTextLines(
         break;
       }
       scaleForFinal *= 0.98;
+    }
+  }
+
+  // Round plates: contentRect is a square bbox; usable width at each line is the circle's chord at that Y.
+  if (layout.plateCircle) {
+    for (let iter = 0; iter < 14; iter++) {
+      const probe = finalSizes.map((fs, i) => measureLine(i, fs));
+      const totalH =
+        probe.reduce((s, m) => s + m.height, 0) + (n - 1) * gapPx;
+      let curY = contentRect.y + (contentRect.height - totalH) / 2;
+      let minScale = 1;
+      for (let i = 0; i < n; i++) {
+        const yMid = curY + probe[i].height / 2;
+        const cap = maxTextWidthForPlateAtY(layout, lineMeta[i].anchor, yMid);
+        const w = probe[i].width;
+        if (w > cap + 0.5) minScale = Math.min(minScale, cap / w);
+        curY += probe[i].height + (i < n - 1 ? gapPx : 0);
+      }
+      if (minScale >= 0.997) break;
+      finalSizes = finalSizes.map((fs) =>
+        Math.max(MIN_FONT, Math.floor(fs * minScale)),
+      );
     }
   }
 
