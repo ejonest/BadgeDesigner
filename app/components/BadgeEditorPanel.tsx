@@ -293,7 +293,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
         | "right"
     ];
   return (
-    <div className="w-full max-w-2xl mx-auto flex flex-col gap-6">
+    <div className="w-full max-w-2xl mx-auto flex flex-col gap-4">
       {/* Line formatting boxes */}
       <div className="flex flex-col gap-4">
         {badge.lines.map((line: BadgeLine, idx: number) => (
@@ -666,7 +666,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
         ))}
       </div>
       {/* Action buttons if provided */}
-      <div className="flex flex-row gap-2 justify-end mt-2">
+      <div className="flex flex-row gap-2 justify-end">
         {addLineButton}
         {multiBadgeButton}
         {resetButton}

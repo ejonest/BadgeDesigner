@@ -30,6 +30,7 @@ export const BadgeEditPanel: React.FC<BadgeEditPanelProps> = ({
     <div className="flex items-center justify-between mb-4">
       <h3 className="text-lg font-semibold text-gray-800">Text Lines</h3>
       <button
+        type="button"
         onClick={addLine}
         disabled={badge.lines.length >= maxLines || !editable}
         className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
@@ -50,5 +51,15 @@ export const BadgeEditPanel: React.FC<BadgeEditPanelProps> = ({
       multiBadgeButton={null}
       editable={editable}
     />
+    <div className="flex items-center justify-end">
+      <button
+        type="button"
+        onClick={addLine}
+        disabled={badge.lines.length >= maxLines || !editable}
+        className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+      >
+        Add Line ({badge.lines.length}/{maxLines})
+      </button>
+    </div>
   </div>
 ); 
