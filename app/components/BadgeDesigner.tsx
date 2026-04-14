@@ -4205,6 +4205,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             allFinalizedBadges.length > 1 ? allFinalizedBadges.slice(1) : [],
           allBadges: allFinalizedBadges,
           timestamp: new Date().toISOString(),
+          ...(variant === "sign"
+            ? {
+                selectedSignTemplateType,
+                selectedSignSizeTemplateId,
+              }
+            : {}),
         },
         backgroundColor: allFinalizedBadges[0].backgroundColor,
         ...(variant !== "sign"
@@ -4396,11 +4402,25 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     signSizeGuidedAutoAdvanceDoneRef.current = true;
     guidedFlowCompletedRef.current = true;
     if (variant === "sign" && config.hasSizeStep) {
-      const eff = migrateLegacyDesignerUniversalTemplateId(restoredTid);
-      const m = findSignTypeAndSizeForUniversalTemplate(eff);
-      if (m) {
-        setSelectedSignTemplateType(m.typeId);
-        setSelectedSignSizeTemplateId(m.sizeTemplateId);
+      const savedType = (design as { selectedSignTemplateType?: string })
+        .selectedSignTemplateType;
+      const savedSize = (design as { selectedSignSizeTemplateId?: string })
+        .selectedSignSizeTemplateId;
+      const hasSavedSignNav =
+        typeof savedType === "string" &&
+        savedType.trim() &&
+        typeof savedSize === "string" &&
+        savedSize.trim();
+      if (hasSavedSignNav) {
+        setSelectedSignTemplateType(savedType);
+        setSelectedSignSizeTemplateId(savedSize);
+      } else {
+        const eff = migrateLegacyDesignerUniversalTemplateId(restoredTid);
+        const m = findSignTypeAndSizeForUniversalTemplate(eff);
+        if (m) {
+          setSelectedSignTemplateType(m.typeId);
+          setSelectedSignSizeTemplateId(m.sizeTemplateId);
+        }
       }
     }
     setSectionsOpened((prev) => ({ ...prev, textLines: true, backing: true }));
@@ -6487,6 +6507,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               <div className="w-full">
                 <div className="flex items-center justify-end mb-4">
                   <button
+                    type="button"
                     onClick={addLine}
                     disabled={badge.lines.length >= maxLines}
                     className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
@@ -6562,6 +6583,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   onResetLineToDefault={resetLineToDefault}
                   variant={variant}
                 />
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={addLine}
+                    disabled={badge.lines.length >= maxLines}
+                    className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    Add Line ({badge.lines.length}/{maxLines})
+                  </button>
+                </div>
               </div>
             </div>
           </div>

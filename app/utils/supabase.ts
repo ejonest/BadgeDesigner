@@ -537,6 +537,79 @@ export async function deleteSavedDesignsForUser(
   }
 }
 
+/** Same row shape as {@link BadgeDesign}; stored in `sign_designs` for the sign designer. */
+export type SignDesign = BadgeDesign;
+
+export async function saveSignDesign(design: SignDesign) {
+  if (!supabaseAdmin) {
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("sign_designs")
+    .upsert(design)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Save sign design error:", error);
+    throw error;
+  }
+
+  return data;
+}
+
+/** Latest saved sign design for a user in a shop (one set per user, same semantics as badges). */
+export async function getLatestSavedSignDesign(userId: string, shopId: string) {
+  if (!supabaseAdmin) {
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("sign_designs")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("shop_id", shopId)
+    .eq("status", "saved")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("getLatestSavedSignDesign error:", error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function deleteSavedSignDesignsForUser(
+  userId: string,
+  shopId: string,
+) {
+  if (!supabaseAdmin) {
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
+  }
+
+  const { error } = await supabaseAdmin
+    .from("sign_designs")
+    .delete()
+    .eq("user_id", userId)
+    .eq("shop_id", shopId)
+    .eq("status", "saved");
+
+  if (error) {
+    console.error("deleteSavedSignDesignsForUser error:", error);
+    throw error;
+  }
+}
+
 // Badge order items interface - matches actual table schema
 export interface BadgeOrderItem {
   id?: string;

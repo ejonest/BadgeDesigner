@@ -103,7 +103,9 @@ export function createApi(
 
     /** Save design to Supabase only (one set per user). Requires userId in designData or shopData. */
     async saveDesignToSupabase(designData: any, shopData?: any): Promise<BadgeDesignData> {
-      const response = await fetch('/api/save-design', {
+      const saveUrl =
+        designerId === "sign" ? "/api/save-sign-design" : "/api/save-design";
+      const response = await fetch(saveUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ designData, shopData }),
@@ -125,7 +127,11 @@ export function createApi(
     /** Get latest saved design for user/shop from Supabase (for "Load previous design?"). */
     async getSavedDesign(shopId: string, userId: string): Promise<{ saved: boolean; design: { design_id: string; design_data: any; updated_at?: string; backing_type?: string } | null }> {
       const params = new URLSearchParams({ shop: shopId, userId });
-      const response = await fetch(`/api/saved-design?${params}`);
+      const loadUrl =
+        designerId === "sign"
+          ? `/api/saved-sign-design?${params}`
+          : `/api/saved-design?${params}`;
+      const response = await fetch(loadUrl);
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `Load failed: ${response.status}`);

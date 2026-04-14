@@ -32,7 +32,18 @@ export const MultiBadgeEditModal: React.FC<MultiBadgeEditModalProps> = ({
           </div>
 
           <div className="space-y-8">
-            {badges.map((badge, index) => (
+            {badges.map((badge, index) => {
+              const addLineToThisBadge = () => {
+                const newBadges = [...badges];
+                if (newBadges[index].lines.length < BADGE_CONSTANTS.MAX_LINES) {
+                  newBadges[index] = {
+                    ...newBadges[index],
+                    lines: [...newBadges[index].lines, { ...BADGE_CONSTANTS.DEFAULT_LINE }],
+                  };
+                  onBadgesChange(newBadges);
+                }
+              };
+              return (
               <div key={index} className="border rounded-lg p-6 bg-gray-50">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xl font-semibold text-gray-800">Badge {index + 1}</h3>
@@ -43,16 +54,8 @@ export const MultiBadgeEditModal: React.FC<MultiBadgeEditModalProps> = ({
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold text-gray-800">Text Lines</h3>
                       <button
-                        onClick={() => {
-                          const newBadges = [...badges];
-                          if (newBadges[index].lines.length < BADGE_CONSTANTS.MAX_LINES) {
-                            newBadges[index] = {
-                              ...newBadges[index],
-                              lines: [...newBadges[index].lines, { ...BADGE_CONSTANTS.DEFAULT_LINE }]
-                            };
-                            onBadgesChange(newBadges);
-                          }
-                        }}
+                        type="button"
+                        onClick={addLineToThisBadge}
                         disabled={badge.lines.length >= BADGE_CONSTANTS.MAX_LINES}
                         className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
                       >
@@ -95,6 +98,16 @@ export const MultiBadgeEditModal: React.FC<MultiBadgeEditModalProps> = ({
                       multiBadgeButton={null}
                       editable={true}
                     />
+                    <div className="flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={addLineToThisBadge}
+                        disabled={badge.lines.length >= BADGE_CONSTANTS.MAX_LINES}
+                        className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      >
+                        Add Line ({badge.lines.length}/{BADGE_CONSTANTS.MAX_LINES})
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-center">
@@ -102,7 +115,8 @@ export const MultiBadgeEditModal: React.FC<MultiBadgeEditModalProps> = ({
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-6 flex justify-end">

@@ -1,7 +1,11 @@
 // app/utils/renderSvg.ts
 import type { LoadedTemplate } from "~/utils/templates";
 import type { Badge, BadgeImage, BadgeLine } from "../types/badge";
-import { layoutSignTextLines, measureSignTextPx } from "~/utils/signTextLayout";
+import {
+  buildSignTextClipPathInnerMarkup,
+  layoutSignTextLines,
+  measureSignTextPx,
+} from "~/utils/signTextLayout";
 import {
   getDesignerMotifPaths,
   isDesignerMotifId,
@@ -767,17 +771,13 @@ export function renderBadgeToSvgString(
     }
   }
 
-  // Text clip: sign templates may use template.signTextLayout.clipRect (e.g. door hanger body)
   const INSET_INCHES = 0.1;
   const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
-  const clipR = template.signTextLayout?.clipRect;
-  const textClipPath = clipR
-    ? `<rect x="${clipR.x}" y="${clipR.y}" width="${clipR.width}" height="${clipR.height}"/>`
-    : `<rect x="${designBox.x + INSET_PX}" y="${
-        designBox.y + INSET_PX
-      }" width="${designBox.width - INSET_PX * 2}" height="${
-        designBox.height - INSET_PX * 2
-      }"/>`;
+  const textClipPath = buildSignTextClipPathInnerMarkup(
+    template.signTextLayout,
+    designBox,
+    INSET_PX,
+  );
 
   // Background image (if present)
   const bgImageLayer = badge.backgroundImage
@@ -1058,14 +1058,11 @@ export async function renderBadgeToSvgStringWithFonts(
 
   const INSET_INCHES = 0.1;
   const INSET_PX = INSET_INCHES * 96;
-  const clipR = template.signTextLayout?.clipRect;
-  const textClipPath = clipR
-    ? `<rect x="${clipR.x}" y="${clipR.y}" width="${clipR.width}" height="${clipR.height}"/>`
-    : `<rect x="${designBox.x + INSET_PX}" y="${
-        designBox.y + INSET_PX
-      }" width="${designBox.width - INSET_PX * 2}" height="${
-        designBox.height - INSET_PX * 2
-      }"/>`;
+  const textClipPath = buildSignTextClipPathInnerMarkup(
+    template.signTextLayout,
+    designBox,
+    INSET_PX,
+  );
 
   // Background image (if present) - rendered on top of filled inner path
   const bgImageLayer = badge.backgroundImage

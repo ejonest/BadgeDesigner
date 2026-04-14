@@ -15,7 +15,10 @@ import type {
   ResolvedSignTextLayout,
   SignTextLayoutConfigJson,
 } from "~/utils/signTextLayout";
-import { resolveSignTextLayout } from "~/utils/signTextLayout";
+import {
+  resolveSignTextLayout,
+  type SignPlateCircle,
+} from "~/utils/signTextLayout";
 
 const DPI = 96;
 const toPx = (inches: number) => Math.round(inches * DPI);
@@ -1336,9 +1339,18 @@ async function loadOne(
 
   const designerSizeKey = templateIdToDesignerSizeKey(c.id);
 
+  const plateCircle: SignPlateCircle | undefined =
+    variant === "sign" && /^circle-/i.test(c.id)
+      ? {
+          cx: innerPlateBoundsRaw.x + innerPlateBoundsRaw.width / 2,
+          cy: innerPlateBoundsRaw.y + innerPlateBoundsRaw.height / 2,
+          r: Math.min(innerPlateBoundsRaw.width, innerPlateBoundsRaw.height) / 2,
+        }
+      : undefined;
+
   const signTextLayout =
     variant === "sign"
-      ? resolveSignTextLayout(designBox, c.textLayout)
+      ? resolveSignTextLayout(designBox, c.textLayout, plateCircle)
       : undefined;
 
   const t: LoadedTemplate = {
