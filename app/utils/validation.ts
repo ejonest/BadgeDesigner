@@ -119,3 +119,26 @@ export const addToCartBodySchema = z
     badgeData: z.record(z.unknown()).refine((d) => d != null && typeof d === "object", "badgeData is required"),
   })
   .strict();
+
+/** POST /api/delete-*-design-milestone – body */
+export const deleteDesignMilestoneBodySchema = z
+  .object({
+    shopId: z.string().min(1, "shopId is required"),
+    userId: z.string().min(1, "userId is required"),
+    designId: z.string().min(1, "designId is required"),
+  })
+  .strict();
+
+/** POST /api/library-thumbnail – body (PNG data URL → Supabase badge-images public URL) */
+export const libraryThumbnailBodySchema = z
+  .object({
+    designId: z
+      .string()
+      .min(1, "designId is required")
+      .max(280, "designId too long"),
+    imageData: z
+      .string()
+      .min(1, "imageData is required")
+      .regex(/^data:image\/(png|jpeg|jpg|webp);base64,/, "imageData must be a base64 data URL"),
+  })
+  .strict();

@@ -6,6 +6,10 @@ import {
   SMART_PALETTE_COLORS,
   FONT_COLORS,
 } from "~/constants/colors";
+import { DESIGN_LIBRARY_MILESTONE_LIMIT } from "~/constants/designLibrary";
+import { stableAutosaveDesignId } from "./stableDesignLibraryIds";
+
+export { stableAutosaveDesignId, DESIGN_LIBRARY_MILESTONE_LIMIT };
 
 // Helper function to get current timestamp in PST/PDT (America/Los_Angeles timezone)
 // Returns ISO string formatted for PostgreSQL timestamp with time zone
@@ -132,15 +136,6 @@ export const DESIGN_MILESTONE_SAVE_KINDS: DesignSaveKind[] = [
   "ordered",
 ];
 
-export const DESIGN_LIBRARY_MILESTONE_LIMIT = 10;
-
-/** Stable design_id for cloud autosave (one row per user + shop per table). */
-export function stableAutosaveDesignId(userId: string, shopId: string): string {
-  const seg = (s: string) =>
-    s.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 96);
-  return `autosave_${seg(userId)}_${seg(shopId)}`;
-}
-
 // Types for badge designs
 export interface BadgeDesign {
   id?: string;
@@ -154,7 +149,6 @@ export interface BadgeDesign {
   base_price?: number;
   total_price?: number;
   design_data?: any;
-  text_lines?: any;
   thumbnail_url?: string;
   full_image_url?: string;
   status?: "draft" | "saved" | "ordered" | "archived";
@@ -444,6 +438,12 @@ export async function downloadFromBadgeImagesBucket(
 }
 
 // Database helper functions
+/**
+ * Persist one library row. Uses delete-then-insert on `(user_id, shop_id, design_id)`
+ * so we do not rely on `ON CONFLICT (design_id)` (requires a unique index many DBs
+ * do not have yet). Callers must pass `design_id`, `user_id`, and `shop_id` when
+ * replacing an existing logical design.
+ */
 export async function saveBadgeDesign(design: BadgeDesign) {
   if (!supabaseAdmin) {
     throw new Error(
@@ -451,9 +451,25 @@ export async function saveBadgeDesign(design: BadgeDesign) {
     );
   }
 
+  const uid = design.user_id?.trim();
+  const sid = design.shop_id?.trim();
+  const did = design.design_id?.trim();
+  if (uid && sid && did) {
+    const { error: delErr } = await supabaseAdmin
+      .from("badge_designs")
+      .delete()
+      .eq("user_id", uid)
+      .eq("shop_id", sid)
+      .eq("design_id", did);
+    if (delErr) {
+      console.error("saveBadgeDesign delete-by-design_id error:", delErr);
+      throw delErr;
+    }
+  }
+
   const { data, error } = await supabaseAdmin
     .from("badge_designs")
-    .upsert(design)
+    .insert(design)
     .select()
     .single();
 
@@ -567,9 +583,25 @@ export async function saveSignDesign(design: SignDesign) {
     );
   }
 
+  const uid = design.user_id?.trim();
+  const sid = design.shop_id?.trim();
+  const did = design.design_id?.trim();
+  if (uid && sid && did) {
+    const { error: delErr } = await supabaseAdmin
+      .from("sign_designs")
+      .delete()
+      .eq("user_id", uid)
+      .eq("shop_id", sid)
+      .eq("design_id", did);
+    if (delErr) {
+      console.error("saveSignDesign delete-by-design_id error:", delErr);
+      throw delErr;
+    }
+  }
+
   const { data, error } = await supabaseAdmin
     .from("sign_designs")
-    .upsert(design)
+    .insert(design)
     .select()
     .single();
 
@@ -689,15 +721,59 @@ export async function pruneDesignMilestones(
   }
 }
 
+/**
+ * Remove prior autosave rows for this user+shop before inserting the canonical
+ * autosave row. Postgres/Supabase upsert defaults to the table PK (`id`); if PK
+ * is a UUID, each save inserted a new row even when `design_id` was stable.
+ * Also clears legacy duplicates (e.g. wrong `save_kind`).
+ */
+async function deleteLibraryAutosaveDuplicatesBadge(
+  userId: string,
+  shopId: string,
+  stableDesignId: string,
+) {
+  if (!supabaseAdmin) return;
+  const { error } = await supabaseAdmin
+    .from("badge_designs")
+    .delete()
+    .eq("user_id", userId)
+    .eq("shop_id", shopId)
+    .or(`save_kind.eq.autosave,design_id.eq.${stableDesignId}`);
+  if (error) {
+    console.error("deleteLibraryAutosaveDuplicatesBadge:", error);
+    throw error;
+  }
+}
+
+async function deleteLibraryAutosaveDuplicatesSign(
+  userId: string,
+  shopId: string,
+  stableDesignId: string,
+) {
+  if (!supabaseAdmin) return;
+  const { error } = await supabaseAdmin
+    .from("sign_designs")
+    .delete()
+    .eq("user_id", userId)
+    .eq("shop_id", shopId)
+    .or(`save_kind.eq.autosave,design_id.eq.${stableDesignId}`);
+  if (error) {
+    console.error("deleteLibraryAutosaveDuplicatesSign:", error);
+    throw error;
+  }
+}
+
 export async function upsertBadgeAutosaveDesign(row: BadgeDesign) {
   const uid = row.user_id?.trim();
   const sid = row.shop_id?.trim();
   if (!uid || !sid) {
     throw new Error("user_id and shop_id are required for autosave");
   }
+  const stableId = stableAutosaveDesignId(uid, sid);
+  await deleteLibraryAutosaveDuplicatesBadge(uid, sid, stableId);
   const full: BadgeDesign = {
     ...row,
-    design_id: stableAutosaveDesignId(uid, sid),
+    design_id: stableId,
     user_id: uid,
     shop_id: sid,
     save_kind: "autosave",
@@ -712,9 +788,11 @@ export async function upsertSignAutosaveDesign(row: SignDesign) {
   if (!uid || !sid) {
     throw new Error("user_id and shop_id are required for autosave");
   }
+  const stableId = stableAutosaveDesignId(uid, sid);
+  await deleteLibraryAutosaveDuplicatesSign(uid, sid, stableId);
   const full: SignDesign = {
     ...row,
-    design_id: stableAutosaveDesignId(uid, sid),
+    design_id: stableId,
     user_id: uid,
     shop_id: sid,
     save_kind: "autosave",
@@ -882,6 +960,48 @@ export async function listSignDesignGallery(
   };
 }
 
+/** Remove one milestone row (manual/cart/ordered). Cannot delete the autosave draft row. */
+export async function deleteDesignLibraryMilestone(
+  table: "badge_designs" | "sign_designs",
+  userId: string,
+  shopId: string,
+  designId: string,
+) {
+  if (!supabaseAdmin) {
+    throw new Error(
+      "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
+    );
+  }
+  const uid = userId?.trim();
+  const sid = shopId?.trim();
+  const did = designId?.trim();
+  if (!uid || !sid || !did) {
+    throw new Error("userId, shopId, and designId are required");
+  }
+  const stableId = stableAutosaveDesignId(uid, sid);
+  if (did === stableId) {
+    throw new Error("Cannot delete the autosave draft row");
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from(table)
+    .delete()
+    .eq("user_id", uid)
+    .eq("shop_id", sid)
+    .eq("design_id", did)
+    .select("design_id");
+
+  if (error) {
+    console.error("deleteDesignLibraryMilestone:", error);
+    throw error;
+  }
+  if (!data?.length) {
+    throw new Error(
+      "That design was not found or may have already been removed.",
+    );
+  }
+}
+
 export async function getBadgeDesignForUserShop(
   userId: string,
   shopId: string,
@@ -992,7 +1112,6 @@ export async function insertOrderedDesignSnapshotFromCart(params: {
     base_price: c.base_price ?? 9.99,
     total_price: c.total_price ?? 9.99,
     design_data: c.design_data,
-    text_lines: c.text_lines ?? firstBadge?.lines,
     thumbnail_url: c.thumbnail_url,
     save_kind: "ordered",
     status: "ordered",

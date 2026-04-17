@@ -207,6 +207,31 @@ export function createApi(
       return response.json();
     },
 
+    /** Delete one library milestone (manual/cart/ordered) to free a slot. Not for autosave. */
+    async deleteDesignLibraryMilestone(
+      shopId: string,
+      userId: string,
+      designId: string,
+    ): Promise<void> {
+      const url =
+        designerId === "sign"
+          ? "/api/delete-sign-design-milestone"
+          : "/api/delete-badge-design-milestone";
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shopId, userId, designId }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        const msg =
+          (err as { details?: string }).details ||
+          (err as { error?: string }).error ||
+          `Delete failed: ${response.status}`;
+        throw new Error(msg);
+      }
+    },
+
     /** Full design row for one gallery entry (verify user/shop). */
     async getSavedDesignDetail(
       shopId: string,

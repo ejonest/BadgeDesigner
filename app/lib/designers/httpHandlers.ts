@@ -196,6 +196,16 @@ export async function runSaveToGadget(
       ? designData
       : { ...designData, badge: badgeDesignData };
 
+  const textLinesForGadget =
+    (Array.isArray(designData.textLines) && designData.textLines.length > 0
+      ? designData.textLines
+      : undefined) ??
+    (Array.isArray(designData.allBadges) && designData.allBadges[0]
+      ? (designData.allBadges[0] as { lines?: unknown }).lines
+      : undefined) ??
+    (badgeDesignData as { lines?: unknown }).lines ??
+    [];
+
   const gadgetPayload = {
     shopId: shopData?.shopId || "75389960447",
     productId: designData.productId,
@@ -209,7 +219,7 @@ export async function runSaveToGadget(
     basePrice: "9.99",
     backingPrice: "0",
     totalPrice: "9.99",
-    textLines: JSON.stringify(designData.textLines || []),
+    textLines: JSON.stringify(textLinesForGadget),
   };
 
   const g = def.gadget;

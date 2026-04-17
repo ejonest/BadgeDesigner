@@ -218,10 +218,11 @@ export async function generateBadgeTiff(badge: Badge): Promise<string> {
 }
 
 /**
- * Generates a thumbnail from the full image (proportional scaling)
+ * Generates a thumbnail from the full image: scales to fit inside the target
+ * box while preserving aspect ratio (letterboxing), same idea as CSS object-fit: contain.
  * @param fullImageDataUrl The full-size image data URL
- * @param targetWidth The target thumbnail width
- * @param targetHeight The target thumbnail height
+ * @param targetWidth Output canvas width (bounding box)
+ * @param targetHeight Output canvas height (bounding box)
  * @returns Promise<string> Base64 encoded thumbnail data URL
  */
 export async function generateThumbnailFromFullImage(
@@ -241,11 +242,27 @@ export async function generateThumbnailFromFullImage(
           return;
         }
 
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
+        canvas.width = Math.max(1, Math.round(targetWidth));
+        canvas.height = Math.max(1, Math.round(targetHeight));
 
-        // Draw the full image scaled down to thumbnail size
-        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+        const iw = img.naturalWidth || img.width;
+        const ih = img.naturalHeight || img.height;
+        if (iw <= 0 || ih <= 0) {
+          reject(new Error('Invalid image dimensions for thumbnail'));
+          return;
+        }
+
+        const scale = Math.min(canvas.width / iw, canvas.height / ih);
+        const dw = Math.max(1, Math.round(iw * scale));
+        const dh = Math.max(1, Math.round(ih * scale));
+        const ox = (canvas.width - dw) / 2;
+        const oy = (canvas.height - dh) / 2;
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, ox, oy, dw, dh);
 
         try {
           const thumbnailDataUrl = canvas.toDataURL('image/png', 0.8);

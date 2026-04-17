@@ -111,7 +111,6 @@ export async function action({ request }: ActionFunctionArgs) {
       base_price: (top.basePrice as number | undefined) ?? 9.99,
       total_price: (top.totalPrice as number | undefined) ?? 9.99,
       design_data: fullDesignData,
-      text_lines: (top.textLines as unknown) ?? firstBadge?.lines ?? [],
       status: "saved",
       thumbnail_url: thumb,
     };
