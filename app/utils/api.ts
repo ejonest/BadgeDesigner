@@ -34,6 +34,18 @@ export interface CreateApiOptions {
   designerId?: DesignerId;
 }
 
+export type DesignLibraryMilestoneKind = "manual" | "cart" | "ordered";
+
+export interface DesignLibraryListItem {
+  design_id: string;
+  save_kind: string | null;
+  thumbnail_url?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  item_count: number;
+  isAutosave: boolean;
+}
+
 // Create a function that returns the API with proper configuration
 export function createApi(
   gadgetApiUrl?: string,
@@ -101,14 +113,20 @@ export function createApi(
     }
   },
 
-    /** Save design to Supabase only (one set per user). Requires userId in designData or shopData. */
-    async saveDesignToSupabase(designData: any, shopData?: any): Promise<BadgeDesignData> {
+    /** Save design milestone to Supabase (manual / cart / ordered). Requires userId in designData or shopData. */
+    async saveDesignToSupabase(
+      designData: any,
+      shopData?: any,
+      options?: { saveKind?: DesignLibraryMilestoneKind },
+    ): Promise<BadgeDesignData> {
       const saveUrl =
         designerId === "sign" ? "/api/save-sign-design" : "/api/save-design";
+      const payload: Record<string, unknown> = { designData, shopData };
+      if (options?.saveKind) payload.saveKind = options.saveKind;
       const response = await fetch(saveUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ designData, shopData }),
+        body: JSON.stringify(payload),
       });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
@@ -135,6 +153,123 @@ export function createApi(
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `Load failed: ${response.status}`);
+      }
+      return response.json();
+    },
+
+    /** Debounced cloud autosave (one row per user/shop). */
+    async autosaveDesignToSupabase(
+      designData: any,
+      shopData?: any,
+    ): Promise<{ id?: string; designId?: string }> {
+      const url =
+        designerId === "sign"
+          ? "/api/autosave-sign-design"
+          : "/api/autosave-design";
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ designData, shopData }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        const msg =
+          (err as { details?: string }).details ||
+          (err as { error?: string }).error ||
+          `Autosave failed: ${response.status}`;
+        throw new Error(msg);
+      }
+      const result = await response.json();
+      return { id: result.id, designId: result.designId };
+    },
+
+    /** Design gallery list (autosave first in `items`, then milestones). */
+    async getSavedDesignsLibrary(
+      shopId: string,
+      userId: string,
+    ): Promise<{
+      items: DesignLibraryListItem[];
+      autosave: Omit<DesignLibraryListItem, "isAutosave"> | null;
+      milestones: Omit<DesignLibraryListItem, "isAutosave">[];
+    }> {
+      const params = new URLSearchParams({ shop: shopId, userId });
+      const listUrl =
+        designerId === "sign"
+          ? `/api/saved-sign-designs?${params}`
+          : `/api/saved-designs?${params}`;
+      const response = await fetch(listUrl);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(
+          (err as { error?: string }).error || `List failed: ${response.status}`,
+        );
+      }
+      return response.json();
+    },
+
+    /** Delete one library milestone (manual/cart/ordered) to free a slot. Not for autosave. */
+    async deleteDesignLibraryMilestone(
+      shopId: string,
+      userId: string,
+      designId: string,
+    ): Promise<void> {
+      const url =
+        designerId === "sign"
+          ? "/api/delete-sign-design-milestone"
+          : "/api/delete-badge-design-milestone";
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shopId, userId, designId }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        const msg =
+          (err as { details?: string }).details ||
+          (err as { error?: string }).error ||
+          `Delete failed: ${response.status}`;
+        throw new Error(msg);
+      }
+    },
+
+    /** Full design row for one gallery entry (verify user/shop). */
+    async getSavedDesignDetail(
+      shopId: string,
+      userId: string,
+      designId: string,
+    ): Promise<{
+      found: boolean;
+      design: {
+        design_id: string;
+        design_data: any;
+        updated_at?: string;
+        backing_type?: string;
+        save_kind?: string;
+      } | null;
+    }> {
+      const params = new URLSearchParams({
+        shop: shopId,
+        userId,
+        designId,
+      });
+      const detailUrl =
+        designerId === "sign"
+          ? `/api/saved-sign-design-detail?${params}`
+          : `/api/saved-design-detail?${params}`;
+      const response = await fetch(detailUrl);
+      if (response.status === 404) {
+        const body = await response.json().catch(() => ({}));
+        return {
+          found: !!(body as { found?: boolean }).found,
+          design: null,
+        };
+      }
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(
+          (err as { error?: string }).error ||
+            `Load detail failed: ${response.status}`,
+        );
       }
       return response.json();
     },

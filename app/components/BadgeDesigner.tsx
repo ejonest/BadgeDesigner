@@ -6,6 +6,7 @@ import React, {
   useRef,
   useCallback,
 } from "react";
+import { useSearchParams } from "@remix-run/react";
 import { ArrowPathIcon } from "@heroicons/react/24/solid";
 import {
   ArrowPathIcon as ArrowPathIconOutline,
@@ -27,6 +28,7 @@ import {
   Squares2X2Icon,
   Square2StackIcon,
   SquaresPlusIcon,
+  CloudArrowUpIcon,
   ArrowPathRoundedSquareIcon,
   CheckCircleIcon,
   CheckIcon,
@@ -68,7 +70,13 @@ import {
   generateThumbnailFromFullImage,
 } from "../utils/badgeThumbnail";
 import { getCurrentShop, type ShopAuthData } from "../utils/shopAuth";
-import { createApi } from "../utils/api";
+import { getDesignLibraryDummyAuth } from "../utils/designLibraryDummyAuth";
+import {
+  CLOUD_LIBRARY_LOGIN_HINT_DISMISSED_KEY,
+  DESIGN_LIBRARY_MILESTONE_LIMIT,
+} from "../constants/designLibrary";
+import { stableAutosaveDesignId } from "../utils/stableDesignLibraryIds";
+import { createApi, type DesignLibraryListItem } from "../utils/api";
 import { getDesignerApiPaths, getDesignerConfig } from "../config/designers";
 import type { ShopifyProductJs } from "~/utils/signShopifyCatalog";
 import {
@@ -218,6 +226,15 @@ interface ProofPendingPayload {
   shopifyCustomerIdFromUrl: string | null;
 }
 
+/** Optional snapshot when React refs lag behind (e.g. immediately after apply-to-all). */
+interface CloudAutosaveSnapshotOverride {
+  multipleBadgesOverride: Badge[];
+  badgeOverride: Badge;
+}
+
+const CLOUD_AUTOSAVE_TEXT_IDLE_MS = 3000;
+const CLOUD_AUTOSAVE_NON_TEXT_MS = 2000;
+
 // Helper functions for multi-badge exports
 const getAllBadges = (multipleBadges: Badge[]): Badge[] => {
   // Ensure all badges have IDs and templateIds
@@ -229,6 +246,68 @@ const getAllBadges = (multipleBadges: Badge[]): Badge[] => {
 
   return multipleBadges.map((b, i) => ensureBadgeIds(b, i));
 };
+
+/** Merge live editor state into the full multi-badge list (same as add-to-cart / checkout). */
+function finalizeAllBadgesForDesignLibrarySnapshot(
+  multipleBadges: Badge[],
+  selectedBadgeIndex: number,
+  liveBadge: Badge,
+  universalTemplateId: string,
+): Badge[] {
+  if (multipleBadges.length === 0) return [];
+  const safeIdx = Math.min(
+    Math.max(0, selectedBadgeIndex),
+    multipleBadges.length - 1,
+  );
+  const finalizedSlot = {
+    ...liveBadge,
+    templateId: universalTemplateId,
+    backgroundColor: liveBadge.backgroundColor || "#FFFFFF",
+  };
+  const next = [...multipleBadges];
+  if (next[safeIdx]) next[safeIdx] = finalizedSlot;
+  return getAllBadges(next);
+}
+
+function finalizedLineTextsSignature(
+  multipleBadges: Badge[],
+  selectedBadgeIndex: number,
+  liveBadge: Badge,
+  universalTemplateId: string,
+): string {
+  const f = finalizeAllBadgesForDesignLibrarySnapshot(
+    multipleBadges,
+    selectedBadgeIndex,
+    liveBadge,
+    universalTemplateId,
+  );
+  return f
+    .map((b) => (b.lines ?? []).map((l) => l.text ?? "").join("\x1e"))
+    .join("\x1f");
+}
+
+function finalizedNonTextSignature(
+  multipleBadges: Badge[],
+  selectedBadgeIndex: number,
+  liveBadge: Badge,
+  universalTemplateId: string,
+): string {
+  const f = finalizeAllBadgesForDesignLibrarySnapshot(
+    multipleBadges,
+    selectedBadgeIndex,
+    liveBadge,
+    universalTemplateId,
+  );
+  return JSON.stringify(
+    f.map((b) => ({
+      ...b,
+      lines: (b.lines ?? []).map((l) => {
+        const { text: _text, ...rest } = l;
+        return rest;
+      }),
+    })),
+  );
+}
 
 const getAllTemplates = (
   multipleBadges: Badge[],
@@ -421,6 +500,35 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     () => getDesignerApiPaths(designerId),
     [designerId],
   );
+  const [searchParams] = useSearchParams();
+  const designLibrarySearchKey = searchParams.toString();
+  const designLibraryDummy = useMemo(
+    () =>
+      getDesignLibraryDummyAuth(new URLSearchParams(designLibrarySearchKey)),
+    [designLibrarySearchKey],
+  );
+  const designLibraryUserId = designLibraryDummy.enabled
+    ? designLibraryDummy.userId
+    : _customerId?.trim() ?? "";
+  /** Match save/load: require customer id + resolvable shop (prop or `?shop=` on the iframe URL). */
+  const cloudLibraryEnabled = useMemo(() => {
+    if (designLibraryDummy.enabled) return true;
+    if (!(_customerId ?? "").trim()) return false;
+    if (typeof window === "undefined") {
+      return Boolean((_shop ?? "").trim());
+    }
+    return getCurrentShop(_shop) != null;
+  }, [designLibraryDummy.enabled, _customerId, _shop]);
+  const resolveDesignLibraryShopData = useCallback((): ShopAuthData | null => {
+    if (designLibraryDummy.enabled) {
+      return {
+        shopId: designLibraryDummy.shopId,
+        shopDomain: designLibraryDummy.shopDomain,
+        productId: _productId ?? undefined,
+      };
+    }
+    return getCurrentShop(_shop);
+  }, [designLibraryDummy, _shop, _productId]);
   const config = getDesignerVariantConfig(variant);
   const maxLines = config.maxLines;
   const addMultipleCopy = getAddMultipleDesignerCopy(variant, maxLines);
@@ -1209,6 +1317,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       `[COLOR TRACKING] Background color ${currentBackgroundColor} applied to all badges`,
     );
     runDraftSaveForBadges(updatedMultipleBadges);
+    queueMicrotask(() => {
+      const run = runCloudAutosaveNowRef.current;
+      if (!run) return;
+      const idx = selectedBadgeIndexRef.current;
+      void run({
+        multipleBadgesOverride: updatedMultipleBadges,
+        badgeOverride: updatedMultipleBadges[idx] ?? badgeRef.current,
+      });
+    });
   };
 
   // Apply backing type to all badges
@@ -1232,6 +1349,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       setBadge1Data(updatedMultipleBadges[0]);
     }
     runDraftSaveForBadges(updatedMultipleBadges);
+    queueMicrotask(() => {
+      const run = runCloudAutosaveNowRef.current;
+      if (!run) return;
+      const idx = selectedBadgeIndexRef.current;
+      void run({
+        multipleBadgesOverride: updatedMultipleBadges,
+        badgeOverride: updatedMultipleBadges[idx] ?? badgeRef.current,
+      });
+    });
   };
 
   /** Sign designer: copy frame on/off, style, motif, and border color to every badge. */
@@ -1278,6 +1404,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       setBadge1Data(updatedMultipleBadges[0]);
     }
     runDraftSaveForBadges(updatedMultipleBadges);
+    queueMicrotask(() => {
+      const run = runCloudAutosaveNowRef.current;
+      if (!run) return;
+      const idx = selectedBadgeIndexRef.current;
+      void run({
+        multipleBadgesOverride: updatedMultipleBadges,
+        badgeOverride: updatedMultipleBadges[idx] ?? badgeRef.current,
+      });
+    });
   };
 
   // Apply all formatting (background color + all text formatting) from current badge to all badges
@@ -1340,6 +1475,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       `[FORMATTING] All formatting (background color + text formatting) applied to all badges`,
     );
     runDraftSaveForBadges(updatedMultipleBadges);
+    queueMicrotask(() => {
+      const run = runCloudAutosaveNowRef.current;
+      if (!run) return;
+      const idx = selectedBadgeIndexRef.current;
+      void run({
+        multipleBadgesOverride: updatedMultipleBadges,
+        badgeOverride: updatedMultipleBadges[idx] ?? badgeRef.current,
+      });
+    });
   };
 
   const isRedColor = (color: string): boolean => {
@@ -1347,8 +1491,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     return r > 200 && g < 100 && b < 100;
   };
 
-  // API
-  const api = createApi(gadgetApiUrl, gadgetApiKey, { designerId });
+  // API (stable ref for debounced effects)
+  const api = useMemo(
+    () => createApi(gadgetApiUrl, gadgetApiKey, { designerId }),
+    [gadgetApiUrl, gadgetApiKey, designerId],
+  );
 
   // State: start with no badge; user must pick a template first
   const defaultTemplateId =
@@ -1436,13 +1583,93 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [proofPdfObjectUrl, setProofPdfObjectUrl] = useState<string | null>(
     null,
   );
-  // Load previous design (Supabase): when user has a saved set, offer to load it
-  const [showLoadPreviousModal, setShowLoadPreviousModal] = useState(false);
-  const [savedDesignForLoad, setSavedDesignForLoad] = useState<{
-    design_id: string;
-    design_data: any;
-    updated_at?: string;
-    backing_type?: string;
+  // Design gallery (Supabase): list autosave + milestones; user picks a row to restore
+  const [showDesignGalleryModal, setShowDesignGalleryModal] = useState(false);
+  /** Cloud library draft: shown beside Grid View when signed in + library enabled. */
+  const [cloudAutosaveStatus, setCloudAutosaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const cloudAutosaveStatusResetRef = useRef<number | null>(null);
+  const scheduleCloudAutosaveStatusIdle = useCallback(() => {
+    if (cloudAutosaveStatusResetRef.current != null) {
+      window.clearTimeout(cloudAutosaveStatusResetRef.current);
+    }
+    cloudAutosaveStatusResetRef.current = window.setTimeout(() => {
+      cloudAutosaveStatusResetRef.current = null;
+      setCloudAutosaveStatus("idle");
+    }, 2200);
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (cloudAutosaveStatusResetRef.current != null) {
+        window.clearTimeout(cloudAutosaveStatusResetRef.current);
+      }
+    };
+  }, []);
+  useEffect(() => {
+    if (!cloudLibraryEnabled) setCloudAutosaveStatus("idle");
+  }, [cloudLibraryEnabled]);
+
+  const [showCloudLibraryLoginHint, setShowCloudLibraryLoginHint] =
+    useState(false);
+
+  useEffect(() => {
+    if (designLibraryDummy.enabled) {
+      setShowCloudLibraryLoginHint(false);
+      return;
+    }
+    if ((_customerId ?? "").trim()) {
+      setShowCloudLibraryLoginHint(false);
+      return;
+    }
+    try {
+      if (
+        typeof window !== "undefined" &&
+        window.localStorage.getItem(CLOUD_LIBRARY_LOGIN_HINT_DISMISSED_KEY) ===
+          "1"
+      ) {
+        setShowCloudLibraryLoginHint(false);
+        return;
+      }
+    } catch {
+      /* private mode */
+    }
+    setShowCloudLibraryLoginHint(true);
+  }, [designLibraryDummy.enabled, _customerId]);
+
+  const dismissCloudLibraryLoginHint = useCallback(() => {
+    setShowCloudLibraryLoginHint(false);
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(CLOUD_LIBRARY_LOGIN_HINT_DISMISSED_KEY, "1");
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const [designGalleryLoading, setDesignGalleryLoading] = useState(false);
+  const [designGalleryError, setDesignGalleryError] = useState<string | null>(
+    null,
+  );
+  const [designGalleryItems, setDesignGalleryItems] = useState<
+    Array<DesignLibraryListItem & { isAutosave: boolean }>
+  >([]);
+  const [galleryDetailLoadingId, setGalleryDetailLoadingId] = useState<
+    string | null
+  >(null);
+  /** Full library: pick a milestone to delete before manual save when at the milestone cap. */
+  const [showSaveSlotModal, setShowSaveSlotModal] = useState(false);
+  const [saveSlotMilestones, setSaveSlotMilestones] = useState<
+    Omit<DesignLibraryListItem, "isAutosave">[]
+  >([]);
+  const [saveSlotSelectedDesignId, setSaveSlotSelectedDesignId] = useState<
+    string | null
+  >(null);
+  const [saveSlotBusy, setSaveSlotBusy] = useState(false);
+  const pendingManualSaveContextRef = useRef<{
+    allFinalizedBadges: Badge[];
+    shopData: ShopAuthData;
   } | null>(null);
   const [csvText, setCsvText] = useState("");
   const [csvPreview, setCsvPreview] = useState<string[][]>([]);
@@ -1578,6 +1805,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const draftSaveInProgressRef = useRef<Promise<void> | null>(null);
   /** Set when proof modal is open; holds data needed to complete add-to-cart on confirm. */
   const proofPendingAddToCartRef = useRef<ProofPendingPayload | null>(null);
+  /** True after the user edits line text this session (enables text-idle cloud autosave). */
+  const sessionHadLineTextEditRef = useRef(false);
+  /** Latest cloud autosave runner (apply-to-all runs before `runCloudAutosaveNow` is defined). */
+  const runCloudAutosaveNowRef = useRef<
+    ((o?: CloudAutosaveSnapshotOverride) => Promise<void>) | null
+  >(null);
+  const prevStepsCompleteForCloudRef = useRef(false);
+  const designLibraryUserIdRef = useRef(designLibraryUserId);
+  const cloudLibraryEnabledRef = useRef(cloudLibraryEnabled);
+  const _productIdRef = useRef(_productId);
+  const resolveDesignLibraryShopDataRef = useRef(resolveDesignLibraryShopData);
+  const selectedSignTemplateTypeRef = useRef(selectedSignTemplateType);
+  const selectedSignSizeTemplateIdRef = useRef(selectedSignSizeTemplateId);
   /** Once true, we no longer auto-close/open sections on selection (user has completed first-time guided flow). */
   const guidedFlowCompletedRef = useRef(false);
   /** First template pick auto-opens the next step (sign: size, badge: background); later picks do not move sections. */
@@ -1587,7 +1827,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   /** True after we have restored from localStorage cache once (prevents re-restore on later effect runs). */
   const restoredFromCacheRef = useRef(false);
   /** True after we have asked to load previous design this session (don't show modal again until next visit). */
-  const loadPreviousAskedRef = useRef(false);
   /** When true, debounced cache save will skip one write (set after add-to-cart success so we don't write old state back). */
   const skipCacheSaveRef = useRef(false);
   const multipleBadgesRef = useRef<Badge[]>(multipleBadges);
@@ -1599,6 +1838,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   selectedBadgeIndexRef.current = selectedBadgeIndex;
   universalTemplateIdRef.current = universalTemplateId;
   signShopifyProductRef.current = signShopifyProduct;
+  designLibraryUserIdRef.current = designLibraryUserId;
+  cloudLibraryEnabledRef.current = cloudLibraryEnabled;
+  _productIdRef.current = _productId;
+  resolveDesignLibraryShopDataRef.current = resolveDesignLibraryShopData;
+  selectedSignTemplateTypeRef.current = selectedSignTemplateType;
+  selectedSignSizeTemplateIdRef.current = selectedSignSizeTemplateId;
 
   /** Keep `multipleBadges[selectedBadgeIndex]` in sync with live `badge` so duplicate/export/grid never see stale line text. */
   const persistCurrentBadgeToSlot = (next: Badge) => {
@@ -1948,29 +2193,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     setSelectedSignTemplateType(m.typeId);
   }, [variant, universalTemplateId, multipleBadges.length]);
 
-  // Fetch saved design for "Load previous?" when user is logged in (customerId + shop)
-  useEffect(() => {
-    if (!_customerId?.trim() || !_shop?.trim() || loadPreviousAskedRef.current)
-      return;
-    loadPreviousAskedRef.current = true;
-    (async () => {
-      try {
-        const result = await api.getSavedDesign(_shop, _customerId);
-        if (result.saved && result.design?.design_data) {
-          setSavedDesignForLoad({
-            design_id: result.design.design_id,
-            design_data: result.design.design_data,
-            updated_at: result.design.updated_at,
-            backing_type: result.design.backing_type,
-          });
-          setShowLoadPreviousModal(true);
-        }
-      } catch (err) {
-        console.warn("[BadgeDesigner] Failed to fetch saved design:", err);
-      }
-    })();
-  }, [_customerId, _shop]);
-
   // Debounced save of badge designer state to localStorage cache (always run effect so hook count is stable)
   useEffect(() => {
     const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${
@@ -2015,6 +2237,396 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     _shop,
     _productId,
   ]);
+
+  /** First-line preview PNG → Supabase public URL for design library gallery. */
+  const uploadDesignLibraryThumbnail = useCallback(
+    async (
+      previewBadge: Badge,
+      storageDesignId: string,
+    ): Promise<string | undefined> => {
+      if (typeof window === "undefined") return undefined;
+      try {
+        const full = await generateFullBadgeImage(previewBadge, variant);
+        const thumbData = await generateThumbnailFromFullImage(full, 200, 200);
+        const res = await fetch("/api/library-thumbnail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            designId: storageDesignId,
+            imageData: thumbData,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          console.warn(
+            "[BadgeDesigner] library thumbnail upload:",
+            (err as { error?: string }).error ?? res.status,
+          );
+          return undefined;
+        }
+        const data = (await res.json()) as { thumbnailUrl?: string };
+        return typeof data.thumbnailUrl === "string"
+          ? data.thumbnailUrl
+          : undefined;
+      } catch (e) {
+        console.warn("[BadgeDesigner] library thumbnail failed:", e);
+        return undefined;
+      }
+    },
+    [variant],
+  );
+
+  const closeSaveSlotModal = useCallback(() => {
+    setShowSaveSlotModal(false);
+    setSaveSlotMilestones([]);
+    setSaveSlotSelectedDesignId(null);
+    setSaveSlotBusy(false);
+    pendingManualSaveContextRef.current = null;
+  }, []);
+
+  const completeManualLibrarySave = useCallback(
+    async (shopData: ShopAuthData, allFinalizedBadges: Badge[]) => {
+      const firstFin = allFinalizedBadges[0];
+      if (!firstFin) {
+        throw new Error("No design to save");
+      }
+      const milestoneDesignId = `design_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 11)}`;
+
+      let basePrice = 9.99;
+      let backingPrice =
+        variant === "sign"
+          ? 0
+          : firstFin.backing === "magnetic"
+            ? 2.0
+            : firstFin.backing === "adhesive"
+              ? 1.0
+              : 0;
+      let totalPrice = basePrice + backingPrice;
+      if (variant === "sign") {
+        backingPrice = 0;
+        const product = signShopifyProductRef.current;
+        const linePrices = allFinalizedBadges.map((b) => {
+          const tid = effectiveSignTemplateIdForBadge(
+            b.templateId,
+            universalTemplateId,
+          );
+          const opts = getSignShopifyShapeSizeForTemplateId(tid);
+          if (!opts || !product) return 9.99;
+          return (
+            resolveSignVariantIdAndPrice(product, opts.shape, opts.size)
+              ?.price ?? 9.99
+          );
+        });
+        totalPrice = linePrices.reduce((s, p) => s + p, 0);
+        basePrice = linePrices[0] ?? 9.99;
+      }
+
+      let libraryThumbnailUrl: string | undefined;
+      libraryThumbnailUrl = await uploadDesignLibraryThumbnail(
+        firstFin,
+        milestoneDesignId,
+      );
+
+      const stType = selectedSignTemplateTypeRef.current;
+      const stSize = selectedSignSizeTemplateIdRef.current;
+
+      const badgeDesignData = {
+        userId: designLibraryUserId,
+        shopId: shopData.shopId,
+        productId: _productId,
+        designId: milestoneDesignId,
+        status: "saved",
+        designData: {
+          badge: allFinalizedBadges[0],
+          multipleBadges:
+            allFinalizedBadges.length > 1 ? allFinalizedBadges.slice(1) : [],
+          allBadges: allFinalizedBadges,
+          timestamp: new Date().toISOString(),
+          ...(variant === "sign"
+            ? {
+                selectedSignTemplateType: stType,
+                selectedSignSizeTemplateId: stSize,
+              }
+            : {}),
+        },
+        backgroundColor: allFinalizedBadges[0].backgroundColor,
+        ...(variant !== "sign"
+          ? { backingType: allFinalizedBadges[0].backing }
+          : {}),
+        basePrice,
+        backingPrice,
+        totalPrice,
+        ...(libraryThumbnailUrl ? { thumbnailUrl: libraryThumbnailUrl } : {}),
+      };
+
+      const shopDataWithCustomer = {
+        ...shopData,
+        customerId: designLibraryUserId,
+      };
+      const savedDesign = await api.saveDesignToSupabase(
+        badgeDesignData,
+        shopDataWithCustomer,
+        { saveKind: "manual" },
+      );
+      sessionDesignIdRef.current = milestoneDesignId;
+
+      // eslint-disable-next-line no-alert
+      alert(
+        savedDesign.message ??
+          `Badge design saved! Design ID: ${
+            savedDesign.designId ?? savedDesign.id ?? "Unknown"
+          }`,
+      );
+
+      api.sendToParent({
+        action: "design-saved",
+        payload: {
+          id: savedDesign.id,
+          designData: badgeDesignData,
+          designId: savedDesign.designId,
+        },
+      });
+    },
+    [
+      api,
+      designLibraryUserId,
+      _productId,
+      variant,
+      universalTemplateId,
+      uploadDesignLibraryThumbnail,
+    ],
+  );
+
+  const handleSaveSlotRemoveAndSave = useCallback(async () => {
+    if (!saveSlotSelectedDesignId) {
+      alert("Select a saved design to remove to make room for this save.");
+      return;
+    }
+    const pending = pendingManualSaveContextRef.current;
+    if (!pending) {
+      closeSaveSlotModal();
+      return;
+    }
+    const selected = saveSlotMilestones.find(
+      (m) => m.design_id === saveSlotSelectedDesignId,
+    );
+    const kindLabel =
+      selected?.save_kind === "cart"
+        ? "Added to cart"
+        : selected?.save_kind === "ordered"
+          ? "Ordered"
+          : selected?.save_kind === "manual"
+            ? "Saved"
+            : "Saved";
+    const whenStr =
+      selected?.updated_at || selected?.created_at
+        ? new Date(
+            selected.updated_at || selected.created_at || "",
+          ).toLocaleString()
+        : "";
+    const ok = confirm(
+      `Permanently delete this library entry and save your current design?\n\n${kindLabel}${
+        whenStr ? ` · ${whenStr}` : ""
+      }\n\nThis cannot be undone.`,
+    );
+    if (!ok) return;
+
+    setSaveSlotBusy(true);
+    try {
+      await api.deleteDesignLibraryMilestone(
+        pending.shopData.shopId,
+        designLibraryUserId,
+        saveSlotSelectedDesignId,
+      );
+      await completeManualLibrarySave(
+        pending.shopData,
+        pending.allFinalizedBadges,
+      );
+      closeSaveSlotModal();
+    } catch (e) {
+      const msg =
+        e instanceof Error ? e.message : "Could not remove design or save.";
+      alert(msg);
+    } finally {
+      setSaveSlotBusy(false);
+    }
+  }, [
+    saveSlotSelectedDesignId,
+    saveSlotMilestones,
+    designLibraryUserId,
+    api,
+    completeManualLibrarySave,
+    closeSaveSlotModal,
+  ]);
+
+  const lineTextsSignature = useMemo(
+    () =>
+      finalizedLineTextsSignature(
+        multipleBadges,
+        selectedBadgeIndex,
+        badge,
+        universalTemplateId,
+      ),
+    [multipleBadges, selectedBadgeIndex, badge, universalTemplateId],
+  );
+
+  const nonTextDesignSignature = useMemo(
+    () =>
+      finalizedNonTextSignature(
+        multipleBadges,
+        selectedBadgeIndex,
+        badge,
+        universalTemplateId,
+      ),
+    [multipleBadges, selectedBadgeIndex, badge, universalTemplateId],
+  );
+
+  const runCloudAutosaveNow = useCallback(
+    async (snapshot?: CloudAutosaveSnapshotOverride) => {
+      if (typeof window === "undefined") return;
+      if (!cloudLibraryEnabledRef.current || !designLibraryUserIdRef.current)
+        return;
+      const mb =
+        snapshot?.multipleBadgesOverride ?? multipleBadgesRef.current;
+      if (mb.length === 0) return;
+      const shopData = resolveDesignLibraryShopDataRef.current();
+      if (!shopData?.shopId) return;
+      try {
+        const live = snapshot?.badgeOverride ?? badgeRef.current;
+        const idx = selectedBadgeIndexRef.current;
+        const uni = universalTemplateIdRef.current;
+        const allFinalizedBadges = finalizeAllBadgesForDesignLibrarySnapshot(
+          mb,
+          idx,
+          live,
+          uni,
+        );
+        if (allFinalizedBadges.length === 0 || !allFinalizedBadges[0]) return;
+
+        setCloudAutosaveStatus("saving");
+
+        const first = allFinalizedBadges[0];
+        let basePrice = 9.99;
+        let backingPrice =
+          variant === "sign"
+            ? 0
+            : first.backing === "magnetic"
+              ? 2.0
+              : first.backing === "adhesive"
+                ? 1.0
+                : 0;
+        let totalPrice = basePrice + backingPrice;
+        if (variant === "sign") {
+          backingPrice = 0;
+          const product = signShopifyProductRef.current;
+          const linePrices = allFinalizedBadges.map((b) => {
+            const tid = effectiveSignTemplateIdForBadge(b.templateId, uni);
+            const opts = getSignShopifyShapeSizeForTemplateId(tid);
+            if (!opts || !product) return 9.99;
+            return (
+              resolveSignVariantIdAndPrice(product, opts.shape, opts.size)
+                ?.price ?? 9.99
+            );
+          });
+          totalPrice = linePrices.reduce((s, p) => s + p, 0);
+          basePrice = linePrices[0] ?? 9.99;
+        }
+        const uid = designLibraryUserIdRef.current.trim();
+        const stableId = stableAutosaveDesignId(uid, shopData.shopId);
+        const thumbnailUrl = allFinalizedBadges[0]
+          ? await uploadDesignLibraryThumbnail(allFinalizedBadges[0], stableId)
+          : undefined;
+        const stType = selectedSignTemplateTypeRef.current;
+        const stSize = selectedSignSizeTemplateIdRef.current;
+        const payload = {
+          userId: uid,
+          shopId: shopData.shopId,
+          productId: _productIdRef.current,
+          designData: {
+            badge: allFinalizedBadges[0],
+            multipleBadges:
+              allFinalizedBadges.length > 1
+                ? allFinalizedBadges.slice(1)
+                : [],
+            allBadges: allFinalizedBadges,
+            timestamp: new Date().toISOString(),
+            ...(variant === "sign"
+              ? {
+                  selectedSignTemplateType: stType,
+                  selectedSignSizeTemplateId: stSize,
+                }
+              : {}),
+          },
+          backgroundColor: allFinalizedBadges[0].backgroundColor,
+          ...(variant !== "sign"
+            ? { backingType: allFinalizedBadges[0].backing }
+            : {}),
+          basePrice,
+          backingPrice,
+          totalPrice,
+          ...(thumbnailUrl ? { thumbnailUrl } : {}),
+        };
+        await api.autosaveDesignToSupabase(payload, {
+          ...shopData,
+          customerId: uid,
+        });
+        setCloudAutosaveStatus("saved");
+        scheduleCloudAutosaveStatusIdle();
+      } catch (err) {
+        console.warn("[BadgeDesigner] Cloud autosave failed:", err);
+        setCloudAutosaveStatus("error");
+        scheduleCloudAutosaveStatusIdle();
+      }
+    },
+    [api, uploadDesignLibraryThumbnail, variant, scheduleCloudAutosaveStatusIdle],
+  );
+
+  useEffect(() => {
+    runCloudAutosaveNowRef.current = runCloudAutosaveNow;
+  }, [runCloudAutosaveNow]);
+
+  useEffect(() => {
+    if (!cloudLibraryEnabled || multipleBadges.length === 0) return;
+    if (!sessionHadLineTextEditRef.current) return;
+    const t = window.setTimeout(() => {
+      void runCloudAutosaveNow();
+    }, CLOUD_AUTOSAVE_TEXT_IDLE_MS);
+    return () => window.clearTimeout(t);
+  }, [lineTextsSignature, cloudLibraryEnabled, multipleBadges.length, runCloudAutosaveNow]);
+
+  useEffect(() => {
+    if (
+      !stepsComplete ||
+      !cloudLibraryEnabled ||
+      multipleBadges.length === 0
+    ) {
+      return;
+    }
+    const t = window.setTimeout(() => {
+      void runCloudAutosaveNow();
+    }, CLOUD_AUTOSAVE_NON_TEXT_MS);
+    return () => window.clearTimeout(t);
+  }, [
+    nonTextDesignSignature,
+    stepsComplete,
+    cloudLibraryEnabled,
+    multipleBadges.length,
+    runCloudAutosaveNow,
+  ]);
+
+  useEffect(() => {
+    if (
+      stepsComplete &&
+      !prevStepsCompleteForCloudRef.current &&
+      cloudLibraryEnabled &&
+      multipleBadges.length > 0
+    ) {
+      void runCloudAutosaveNow();
+    }
+    prevStepsCompleteForCloudRef.current = stepsComplete;
+  }, [stepsComplete, cloudLibraryEnabled, multipleBadges.length, runCloudAutosaveNow]);
 
   // beforeunload: save current state to cache so last edit before reload is not lost
   useEffect(() => {
@@ -2530,7 +3142,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           productId: _productId || "test-product",
           backgroundColor: allBadgesForDraft[0].backgroundColor,
           backingType: allBadgesForDraft[0].backing,
-          textLines: allBadgesForDraft[0].lines,
         };
         const formData = new FormData();
         formData.append("designId", designId);
@@ -2652,7 +3263,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             productId: _productId || "test-product",
             backgroundColor: normalized[0].backgroundColor,
             backingType: normalized[0].backing,
-            textLines: normalized[0].lines,
           };
           const formData = new FormData();
           formData.append("designId", designId);
@@ -2829,10 +3439,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     if (updatedMultipleBadges[0]) {
       setBadge1Data(updatedMultipleBadges[0]);
     }
+    queueMicrotask(() => {
+      const run = runCloudAutosaveNowRef.current;
+      if (!run) return;
+      void run({
+        multipleBadgesOverride: updatedMultipleBadges,
+        badgeOverride: { ...badge, lines: currentBadgeLines },
+      });
+    });
   };
 
   // Text updates with auto-scaling to fit badge boundaries
   const updateLine = (index: number, changes: Partial<BadgeLine>) => {
+    if (typeof changes.text !== "undefined") {
+      sessionHadLineTextEditRef.current = true;
+    }
     // Save to undo history before making changes (skip text content changes)
     const changedProperty = Object.keys(changes)[0];
     if (changedProperty && changedProperty !== "text") {
@@ -3969,7 +4590,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         productId: _productId || "test-product",
         backgroundColor: allBadges[0].backgroundColor,
         backingType: allBadges[0].backing,
-        textLines: allBadges[0].lines,
       };
 
       // Get Shopify customer ID (if available)
@@ -4062,9 +4682,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   };
 
-  // Load Design: if not logged in, prompt login; if logged in, check for saved design and show modal or message
+  // Load Design: open gallery (autosave + milestones); user picks a row to restore
   const onLoadDesignClick = async () => {
-    if (!_customerId?.trim()) {
+    if (!designLibraryDummy.enabled && !_customerId?.trim()) {
       const goToLogin = confirm(
         "Log in to load a previous design. This page will open the login screen; after you log in you'll return here and can load your design.\n\nGo to login now?",
       );
@@ -4076,39 +4696,38 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       }
       return;
     }
-    const shopData = getCurrentShop(_shop);
+    const shopData = resolveDesignLibraryShopData();
     if (!shopData) {
       alert("Shop information not found. Please reload the page.");
       return;
     }
+    setShowDesignGalleryModal(true);
+    setDesignGalleryLoading(true);
+    setDesignGalleryError(null);
+    setDesignGalleryItems([]);
     try {
-      const result = await api.getSavedDesign(
+      const lib = await api.getSavedDesignsLibrary(
         shopData.shopId,
-        _customerId.trim(),
+        designLibraryUserId,
       );
-      if (result.saved && result.design?.design_data) {
-        setSavedDesignForLoad({
-          design_id: result.design.design_id,
-          design_data: result.design.design_data,
-          updated_at: result.design.updated_at,
-          backing_type: result.design.backing_type,
-        });
-        setShowLoadPreviousModal(true);
-      } else {
-        alert(
-          "No saved design found. Save your design first, then you can load it here.",
+      setDesignGalleryItems(lib.items);
+      if (lib.items.length === 0) {
+        setDesignGalleryError(
+          "No saved designs yet. Your work autosaves here when you are signed in.",
         );
       }
     } catch (err) {
-      console.warn("Load design check failed:", err);
-      alert("Could not check for saved design. Please try again.");
+      console.warn("Load design gallery failed:", err);
+      setDesignGalleryError("Could not load your designs. Please try again.");
+    } finally {
+      setDesignGalleryLoading(false);
     }
   };
 
   // Save design - FINALIZES and locks all badge states (Supabase only, one set per user)
   const saveBadge = async () => {
     try {
-      if (!_customerId?.trim()) {
+      if (!designLibraryDummy.enabled && !_customerId?.trim()) {
         const goToLogin = confirm(
           "Sign in to save your design. This page will open the login screen; after you log in you'll return here and can save.\n\nGo to login now?",
         );
@@ -4120,35 +4739,57 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         }
         return;
       }
-      const shopData = getCurrentShop(_shop);
+      const shopData = resolveDesignLibraryShopData();
       if (!shopData) {
         alert("Shop information not found. Please reload the page.");
         return;
       }
 
-      // CRITICAL: Finalize all badge states before saving.
-      // multipleBadges is the full list (index 0 = first badge). Build one list with current badge at selectedBadgeIndex.
-      const currentFinalized = {
-        ...badge,
-        templateId: universalTemplateId,
-        backgroundColor: badge.backgroundColor || "#FFFFFF",
-      };
-      if (selectedBadgeIndex === 0) {
-        setBadge1Data(currentFinalized);
-      } else {
-        const updatedMultiple = [...multipleBadges];
-        updatedMultiple[selectedBadgeIndex] = currentFinalized;
-        setMultipleBadges(updatedMultiple);
-      }
-      const allFinalizedBadges = multipleBadges.map((b, i) =>
-        i === selectedBadgeIndex
-          ? currentFinalized
-          : {
-              ...b,
-              templateId: b.templateId || universalTemplateId,
-              backgroundColor: b.backgroundColor || "#FFFFFF",
-            },
+      // Same full-session merge as add-to-cart / autosave: every line/sign in one payload + shared session design id.
+      const allFinalizedBadges = finalizeAllBadgesForDesignLibrarySnapshot(
+        multipleBadges,
+        selectedBadgeIndex,
+        badge,
+        universalTemplateId,
       );
+      setMultipleBadges(allFinalizedBadges);
+      if (allFinalizedBadges[0]) setBadge1Data(allFinalizedBadges[0]);
+      const selSaved = allFinalizedBadges[selectedBadgeIndex];
+      if (selSaved) {
+        setBadge({
+          ...selSaved,
+          lines: calculateCenterPositions(selSaved.lines),
+        });
+      }
+
+      if (allFinalizedBadges.length === 0 || !allFinalizedBadges[0]) {
+        alert("Add or select a design before saving.");
+        return;
+      }
+
+      let milestonesForCap: Omit<DesignLibraryListItem, "isAutosave">[] = [];
+      try {
+        const lib = await api.getSavedDesignsLibrary(
+          shopData.shopId,
+          designLibraryUserId,
+        );
+        milestonesForCap = lib.milestones ?? [];
+      } catch (e) {
+        console.warn(
+          "[BadgeDesigner] Could not load design library for save limit check:",
+          e,
+        );
+      }
+      if (milestonesForCap.length >= DESIGN_LIBRARY_MILESTONE_LIMIT) {
+        pendingManualSaveContextRef.current = {
+          allFinalizedBadges,
+          shopData,
+        };
+        setSaveSlotMilestones(milestonesForCap);
+        setSaveSlotSelectedDesignId(null);
+        setShowSaveSlotModal(true);
+        return;
+      }
 
       console.log(
         `[FINALIZE] Saving ${allFinalizedBadges.length} badges with finalized states`,
@@ -4161,91 +4802,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         );
       });
 
-      let basePrice = 9.99;
-      let backingPrice =
-        variant === "sign"
-          ? 0
-          : badge.backing === "magnetic"
-          ? 2.0
-          : badge.backing === "adhesive"
-          ? 1.0
-          : 0;
-      let totalPrice = basePrice + backingPrice;
-
-      if (variant === "sign") {
-        backingPrice = 0;
-        const product = signShopifyProduct;
-        const linePrices = allFinalizedBadges.map((b) => {
-          const tid = effectiveSignTemplateIdForBadge(
-            b.templateId,
-            universalTemplateId,
-          );
-          const opts = getSignShopifyShapeSizeForTemplateId(tid);
-          if (!opts || !product) return 9.99;
-          return (
-            resolveSignVariantIdAndPrice(product, opts.shape, opts.size)
-              ?.price ?? 9.99
-          );
-        });
-        totalPrice = linePrices.reduce((s, p) => s + p, 0);
-        basePrice = linePrices[0] ?? 9.99;
-      }
-
-      const badgeDesignData = {
-        userId: _customerId.trim(),
-        shopId: shopData.shopId,
-        productId: _productId,
-        designId: `design_${Date.now()}_${Math.random()
-          .toString(36)
-          .slice(2, 11)}`,
-        status: "saved",
-        designData: {
-          badge: allFinalizedBadges[0],
-          multipleBadges:
-            allFinalizedBadges.length > 1 ? allFinalizedBadges.slice(1) : [],
-          allBadges: allFinalizedBadges,
-          timestamp: new Date().toISOString(),
-          ...(variant === "sign"
-            ? {
-                selectedSignTemplateType,
-                selectedSignSizeTemplateId,
-              }
-            : {}),
-        },
-        backgroundColor: allFinalizedBadges[0].backgroundColor,
-        ...(variant !== "sign"
-          ? { backingType: allFinalizedBadges[0].backing }
-          : {}),
-        basePrice,
-        backingPrice,
-        totalPrice,
-        textLines: allFinalizedBadges[0].lines,
-      };
-
-      const shopDataWithCustomer = {
-        ...shopData,
-        customerId: _customerId.trim(),
-      };
-      const savedDesign = await api.saveDesignToSupabase(
-        badgeDesignData,
-        shopDataWithCustomer,
-      );
-      // eslint-disable-next-line no-alert
-      alert(
-        savedDesign.message ??
-          `Badge design saved! Design ID: ${
-            savedDesign.designId ?? savedDesign.id ?? "Unknown"
-          }`,
-      );
-
-      api.sendToParent({
-        action: "design-saved",
-        payload: {
-          id: savedDesign.id,
-          designData: badgeDesignData,
-          designId: savedDesign.designId,
-        },
-      });
+      await completeManualLibrarySave(shopData, allFinalizedBadges);
     } catch (error) {
       console.error("Failed to save badge:", error);
       const message =
@@ -4286,16 +4843,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           ? new URLSearchParams(window.location.search).get("customerId")
           : null;
 
-      const finalizedBadge = {
-        ...badge,
-        templateId: universalTemplateId,
-        backgroundColor: badge.backgroundColor || "#FFFFFF",
-      };
-      const finalizedMultipleBadges = [...multipleBadges];
-      if (finalizedMultipleBadges[selectedBadgeIndex]) {
-        finalizedMultipleBadges[selectedBadgeIndex] = finalizedBadge;
-      }
-      const allBadgesForSupabase = getAllBadges(finalizedMultipleBadges);
+      const allBadgesForSupabase = finalizeAllBadgesForDesignLibrarySnapshot(
+        multipleBadges,
+        selectedBadgeIndex,
+        badge,
+        universalTemplateId,
+      );
+
+      void runCloudAutosaveNow({
+        multipleBadgesOverride: multipleBadges,
+        badgeOverride: badge,
+      });
 
       // Design metadata and files go only to Supabase (no Gadget at add-to-cart). designData is cached in Supabase for link-order when order is paid.
       const designIdForSupabase = designId;
@@ -4365,76 +4923,118 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     setShowProofModal(false);
   }, [proofPdfObjectUrl]);
 
-  const onLoadPreviousDesign = useCallback(() => {
-    const design = savedDesignForLoad?.design_data;
-    if (!design) {
-      setShowLoadPreviousModal(false);
-      setSavedDesignForLoad(null);
-      return;
-    }
-    const rawBadges =
-      design.allBadges ??
-      (design.badge ? [design.badge, ...(design.multipleBadges ?? [])] : []);
-    if (!Array.isArray(rawBadges) || rawBadges.length === 0) {
-      setShowLoadPreviousModal(false);
-      setSavedDesignForLoad(null);
-      return;
-    }
-    let restoredBadges = migrateBadgeArray(rawBadges);
-    const backingFallback = savedDesignForLoad?.backing_type;
-    if (backingFallback) {
-      restoredBadges = restoredBadges.map((b) => ({
-        ...b,
-        backing: (b.backing || backingFallback) as
-          | "pin"
-          | "magnetic"
-          | "adhesive",
-      }));
-    }
-    setMultipleBadges(restoredBadges);
-    setBadge(restoredBadges[0]);
-    setBadge1Data(restoredBadges[0] ?? null);
-    setSelectedBadgeIndex(0);
-    const restoredTid = restoredBadges[0]?.templateId ?? "rect-1x3";
-    setUniversalTemplateId(restoredTid);
-    setHasChosenBackgroundColor(true);
-    templateGuidedAutoAdvanceDoneRef.current = true;
-    signSizeGuidedAutoAdvanceDoneRef.current = true;
-    guidedFlowCompletedRef.current = true;
-    if (variant === "sign" && config.hasSizeStep) {
-      const savedType = (design as { selectedSignTemplateType?: string })
-        .selectedSignTemplateType;
-      const savedSize = (design as { selectedSignSizeTemplateId?: string })
-        .selectedSignSizeTemplateId;
-      const hasSavedSignNav =
-        typeof savedType === "string" &&
-        savedType.trim() &&
-        typeof savedSize === "string" &&
-        savedSize.trim();
-      if (hasSavedSignNav) {
-        setSelectedSignTemplateType(savedType);
-        setSelectedSignSizeTemplateId(savedSize);
-      } else {
-        const eff = migrateLegacyDesignerUniversalTemplateId(restoredTid);
-        const m = findSignTypeAndSizeForUniversalTemplate(eff);
-        if (m) {
-          setSelectedSignTemplateType(m.typeId);
-          setSelectedSignSizeTemplateId(m.sizeTemplateId);
+  const applyRestoredDesign = useCallback(
+    (row: {
+      design_id?: string;
+      design_data: any;
+      backing_type?: string;
+    }) => {
+      const design = row.design_data;
+      if (!design) return;
+      const rawBadges =
+        design.allBadges ??
+        (design.badge ? [design.badge, ...(design.multipleBadges ?? [])] : []);
+      if (!Array.isArray(rawBadges) || rawBadges.length === 0) return;
+      let restoredBadges = migrateBadgeArray(rawBadges);
+      const backingFallback = row.backing_type;
+      if (backingFallback) {
+        restoredBadges = restoredBadges.map((b) => ({
+          ...b,
+          backing: (b.backing || backingFallback) as
+            | "pin"
+            | "magnetic"
+            | "adhesive",
+        }));
+      }
+      setMultipleBadges(restoredBadges);
+      setBadge(restoredBadges[0]);
+      setBadge1Data(restoredBadges[0] ?? null);
+      setSelectedBadgeIndex(0);
+      const restoredTid = restoredBadges[0]?.templateId ?? "rect-1x3";
+      setUniversalTemplateId(restoredTid);
+      setHasChosenBackgroundColor(true);
+      templateGuidedAutoAdvanceDoneRef.current = true;
+      signSizeGuidedAutoAdvanceDoneRef.current = true;
+      guidedFlowCompletedRef.current = true;
+      if (variant === "sign" && config.hasSizeStep) {
+        const savedType = (design as { selectedSignTemplateType?: string })
+          .selectedSignTemplateType;
+        const savedSize = (design as { selectedSignSizeTemplateId?: string })
+          .selectedSignSizeTemplateId;
+        const hasSavedSignNav =
+          typeof savedType === "string" &&
+          savedType.trim() &&
+          typeof savedSize === "string" &&
+          savedSize.trim();
+        if (hasSavedSignNav) {
+          setSelectedSignTemplateType(savedType);
+          setSelectedSignSizeTemplateId(savedSize);
+        } else {
+          const eff = migrateLegacyDesignerUniversalTemplateId(restoredTid);
+          const m = findSignTypeAndSizeForUniversalTemplate(eff);
+          if (m) {
+            setSelectedSignTemplateType(m.typeId);
+            setSelectedSignSizeTemplateId(m.sizeTemplateId);
+          }
         }
       }
-    }
-    setSectionsOpened((prev) => ({ ...prev, textLines: true, backing: true }));
-    if (savedDesignForLoad?.design_id) {
-      sessionDesignIdRef.current = savedDesignForLoad.design_id;
-    }
-    setShowLoadPreviousModal(false);
-    setSavedDesignForLoad(null);
-  }, [savedDesignForLoad, variant, config.hasSizeStep]);
+      setSectionsOpened((prev) => ({ ...prev, textLines: true, backing: true }));
+      if (row.design_id) {
+        sessionDesignIdRef.current = row.design_id;
+      }
+      sessionHadLineTextEditRef.current = false;
+    },
+    [variant, config.hasSizeStep],
+  );
 
-  const onStartFreshDesign = useCallback(() => {
-    setShowLoadPreviousModal(false);
-    setSavedDesignForLoad(null);
+  const closeDesignGalleryModal = useCallback(() => {
+    setShowDesignGalleryModal(false);
+    setDesignGalleryError(null);
+    setDesignGalleryItems([]);
+    setGalleryDetailLoadingId(null);
   }, []);
+
+  const handleGalleryItemClick = useCallback(
+    async (item: DesignLibraryListItem & { isAutosave: boolean }) => {
+      if (!designLibraryUserId) return;
+      const shopData = resolveDesignLibraryShopData();
+      if (!shopData) {
+        alert("Shop information not found. Please reload the page.");
+        return;
+      }
+      setGalleryDetailLoadingId(item.design_id);
+      try {
+        const detail = await api.getSavedDesignDetail(
+          shopData.shopId,
+          designLibraryUserId,
+          item.design_id,
+        );
+        if (!detail.found || !detail.design?.design_data) {
+          alert("Could not load that design. It may have been removed.");
+          return;
+        }
+        applyRestoredDesign({
+          design_id: detail.design.design_id,
+          design_data: detail.design.design_data,
+          backing_type: detail.design.backing_type,
+        });
+        closeDesignGalleryModal();
+        skipCacheSaveRef.current = true;
+      } catch (e) {
+        console.warn("[BadgeDesigner] Gallery detail load failed:", e);
+        alert("Could not load that design. Please try again.");
+      } finally {
+        setGalleryDetailLoadingId(null);
+      }
+    },
+    [
+      designLibraryUserId,
+      resolveDesignLibraryShopData,
+      api,
+      applyRestoredDesign,
+      closeDesignGalleryModal,
+    ],
+  );
 
   const onProofConfirm = async () => {
     if (!proofAcknowledged) return;
@@ -4470,6 +5070,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     const badgesForSupabase = addDuplicates
       ? [...allBadgesForSupabase, ...allBadgesForSupabase]
       : allBadgesForSupabase;
+
+    if (badgesForSupabase.length > 0 && badgesForSupabase[0]) {
+      const proofIdx = Math.min(
+        Math.max(0, selectedBadgeIndex),
+        badgesForSupabase.length - 1,
+      );
+      void runCloudAutosaveNow({
+        multipleBadgesOverride: badgesForSupabase,
+        badgeOverride: badgesForSupabase[proofIdx] ?? badgesForSupabase[0],
+      });
+    }
 
     let pdfBlobToUse = pdfBlob;
     // if (addDuplicates) {
@@ -4566,7 +5177,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 ...(variant !== "sign"
                   ? { backingType: badgesForSupabase[0].backing }
                   : {}),
-                textLines: badgesForSupabase[0].lines,
               };
               const formDataForSupabase = new FormData();
               formDataForSupabase.append("designId", designIdForSupabase);
@@ -4840,6 +5450,77 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             };
           });
 
+      // Persist cart milestone before add-to-cart: single-item flow redirects the page and can abort in-flight requests.
+      if (designLibraryUserId) {
+        const cid = designLibraryUserId;
+        const allBadges = badgesForSupabase;
+        let basePrice = 9.99;
+        let backingPrice =
+          variant === "sign"
+            ? 0
+            : allBadges[0]?.backing === "magnetic"
+              ? 2.0
+              : allBadges[0]?.backing === "adhesive"
+                ? 1.0
+                : 0;
+        let totalPrice = basePrice + backingPrice;
+        if (variant === "sign") {
+          backingPrice = 0;
+          const product = signShopifyProductRef.current;
+          const linePrices = allBadges.map((b) => {
+            const tid = effectiveSignTemplateIdForBadge(
+              b.templateId,
+              universalTemplateId,
+            );
+            const opts = getSignShopifyShapeSizeForTemplateId(tid);
+            if (!opts || !product) return 9.99;
+            return (
+              resolveSignVariantIdAndPrice(product, opts.shape, opts.size)
+                ?.price ?? 9.99
+            );
+          });
+          totalPrice = linePrices.reduce((s, p) => s + p, 0);
+          basePrice = linePrices[0] ?? 9.99;
+        }
+        const cartMilestonePayload = {
+          userId: cid,
+          shopId: shopData.shopId,
+          productId: _productId,
+          designId: designIdForSupabase,
+          status: "saved",
+          designData: {
+            badge: allBadges[0],
+            multipleBadges:
+              allBadges.length > 1 ? allBadges.slice(1) : [],
+            allBadges,
+            timestamp: new Date().toISOString(),
+            ...(variant === "sign"
+              ? {
+                  selectedSignTemplateType,
+                  selectedSignSizeTemplateId,
+                }
+              : {}),
+          },
+          backgroundColor: allBadges[0].backgroundColor,
+          ...(variant !== "sign"
+            ? { backingType: allBadges[0].backing }
+            : {}),
+          basePrice,
+          backingPrice,
+          totalPrice,
+          thumbnailUrl: thumbnailUrls[0] ?? undefined,
+        };
+        try {
+          await api.saveDesignToSupabase(
+            cartMilestonePayload,
+            { ...shopData, customerId: cid },
+            { saveKind: "cart" },
+          );
+        } catch (err) {
+          console.warn("[BadgeDesigner] Cart milestone save failed:", err);
+        }
+      }
+
       const result = await api.addToCartMultiple(cartItems);
       if (result.success) {
         try {
@@ -5098,6 +5779,63 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       ? "—"
       : `$${totalPriceAllBadges}`;
 
+  const cloudLibrarySaveHint = useMemo(() => {
+    if (!cloudLibraryEnabled || multipleBadges.length === 0) return null;
+    const label =
+      cloudAutosaveStatus === "saving"
+        ? "Saving draft to your design library…"
+        : cloudAutosaveStatus === "saved"
+          ? "Draft saved to your design library"
+          : cloudAutosaveStatus === "error"
+            ? "Could not save draft. Check connection and try again."
+            : "Design library autosave is on; draft updates when you finish edits.";
+    return (
+      <div
+        className="flex flex-col items-center justify-center w-11 shrink-0 text-center"
+        title={label}
+        role="status"
+        aria-live="polite"
+        aria-label={label}
+      >
+        {cloudAutosaveStatus === "saving" ? (
+          <>
+            <ArrowPathIconOutline
+              className="h-6 w-6 text-blue-600 animate-spin"
+              aria-hidden
+            />
+            <span className="text-[7px] font-medium text-blue-700 leading-tight mt-0.5">
+              Saving
+            </span>
+          </>
+        ) : cloudAutosaveStatus === "saved" ? (
+          <>
+            <CheckCircleIcon className="h-6 w-6 text-green-600" aria-hidden />
+            <span className="text-[7px] font-medium text-green-700 leading-tight mt-0.5">
+              Saved
+            </span>
+          </>
+        ) : cloudAutosaveStatus === "error" ? (
+          <>
+            <XMarkIcon className="h-6 w-6 text-red-500" aria-hidden />
+            <span className="text-[7px] font-medium text-red-600 leading-tight mt-0.5">
+              Error
+            </span>
+          </>
+        ) : (
+          <>
+            <CloudArrowUpIcon
+              className="h-5 w-5 text-gray-400"
+              aria-hidden
+            />
+            <span className="text-[7px] text-gray-500 leading-tight mt-0.5">
+              Cloud
+            </span>
+          </>
+        )}
+      </div>
+    );
+  }, [cloudLibraryEnabled, multipleBadges.length, cloudAutosaveStatus]);
+
   // Early guard - don't render until we have a concrete template
   if (!activeTemplate) {
     return (
@@ -5139,7 +5877,53 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   };
 
   return (
-    <div className="flex flex-col md:flex-row bg-gray-100 p-4 md:p-6 rounded-lg shadow-lg mx-auto max-w-5xl h-screen overflow-hidden md:h-auto md:min-h-[600px] md:overflow-visible">
+    <>
+      {designLibraryDummy.enabled ? (
+        <div
+          className="max-w-5xl mx-auto w-full mb-2 px-0 md:px-0"
+          role="status"
+        >
+          <div className="rounded-lg border border-amber-400 bg-amber-50 text-amber-950 px-3 py-2 text-sm leading-snug">
+            <strong>Design library test mode (dev only):</strong> Supabase saves
+            use user{" "}
+            <code className="text-xs bg-amber-100/80 px-1 rounded break-all">
+              {designLibraryDummy.userId}
+            </code>{" "}
+            and shop{" "}
+            <code className="text-xs bg-amber-100/80 px-1 rounded break-all">
+              {designLibraryDummy.shopId}
+            </code>
+            . Remove{" "}
+            <code className="text-xs">designLibraryDummy=1</code> from the URL
+            (and unset{" "}
+            <code className="text-xs">VITE_DESIGN_LIBRARY_DUMMY_MODE</code>) to
+            use real Shopify customer and shop.
+          </div>
+        </div>
+      ) : null}
+      {showCloudLibraryLoginHint ? (
+        <div
+          className="max-w-5xl mx-auto w-full mb-2 px-0 md:px-0"
+          role="alert"
+        >
+          <div className="rounded-lg border border-blue-200 bg-blue-50 text-blue-950 px-3 py-2.5 text-sm leading-snug flex gap-3 items-start">
+            <p className="flex-1 min-w-0">
+              <span className="font-semibold">Cloud autosave</span> is off
+              until you log in. Sign in to your Shopify account to save your
+              draft to the cloud and use your design library.
+            </p>
+            <button
+              type="button"
+              className="shrink-0 p-1 rounded text-blue-800 hover:bg-blue-100/80"
+              onClick={dismissCloudLibraryLoginHint}
+              aria-label="Dismiss reminder"
+            >
+              <XMarkIcon className="w-5 h-5" aria-hidden />
+            </button>
+          </div>
+        </div>
+      ) : null}
+      <div className="flex flex-col md:flex-row bg-gray-100 p-4 md:p-6 rounded-lg shadow-lg mx-auto max-w-5xl h-screen overflow-hidden md:h-auto md:min-h-[600px] md:overflow-visible">
       {/* MOBILE: Header + preview fixed at top; editor scrolls below */}
       <div className="flex-shrink-0 md:hidden flex flex-col mb-2">
         {/* Header: title left, grid picker right */}
@@ -5158,20 +5942,23 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               </span>
             )}
           </div>
-          <div className="flex flex-col items-center gap-1">
-            <button
-              type="button"
-              className="flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-              onClick={() => setShowBadgeGridModal(true)}
-              aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
-              title={`View all ${config.labelProductPlural.toLowerCase()}`}
-            >
-              <Squares2X2Icon className="w-6 h-6" />
-            </button>
-            <div className="text-[8px] text-gray-600 text-center leading-tight">
-              Grid
-              <br />
-              View
+          <div className="flex items-start gap-1.5 shrink-0">
+            {cloudLibrarySaveHint}
+            <div className="flex flex-col items-center gap-1">
+              <button
+                type="button"
+                className="flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                onClick={() => setShowBadgeGridModal(true)}
+                aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
+                title={`View all ${config.labelProductPlural.toLowerCase()}`}
+              >
+                <Squares2X2Icon className="w-6 h-6" />
+              </button>
+              <div className="text-[8px] text-gray-600 text-center leading-tight">
+                Grid
+                <br />
+                View
+              </div>
             </div>
           </div>
         </div>
@@ -7245,20 +8032,23 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           <h2 className="text-xl font-bold text-center">
             {config.labelProduct} Preview
           </h2>
-          <div className="absolute right-0 top-0 flex flex-col items-center gap-1">
-            <button
-              type="button"
-              className="w-14 h-14 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-              onClick={() => setShowBadgeGridModal(true)}
-              aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
-              title={`View all ${config.labelProductPlural.toLowerCase()}`}
-            >
-              <Squares2X2Icon className="w-6 h-6" />
-            </button>
-            <div className="text-[8px] text-gray-600 text-center leading-tight">
-              Grid
-              <br />
-              View
+          <div className="absolute right-0 top-0 flex items-start gap-1.5">
+            {cloudLibrarySaveHint}
+            <div className="flex flex-col items-center gap-1">
+              <button
+                type="button"
+                className="w-14 h-14 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                onClick={() => setShowBadgeGridModal(true)}
+                aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
+                title={`View all ${config.labelProductPlural.toLowerCase()}`}
+              >
+                <Squares2X2Icon className="w-6 h-6" />
+              </button>
+              <div className="text-[8px] text-gray-600 text-center leading-tight">
+                Grid
+                <br />
+                View
+              </div>
             </div>
           </div>
         </div>
@@ -9306,40 +10096,253 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         </div>
       )}
 
-      {/* Load previous design modal - offer to restore saved design from Supabase */}
-      {showLoadPreviousModal && savedDesignForLoad && (
+      {/* Design gallery: autosave + milestones from Supabase */}
+      {showDesignGalleryModal && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
-          onClick={onStartFreshDesign}
+          onClick={closeDesignGalleryModal}
           role="dialog"
           aria-modal="true"
-          aria-label="Load previous design"
+          aria-label="Your saved designs"
         >
           <div
-            className="bg-white rounded-lg shadow-lg w-full max-w-md p-6"
+            className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-bold text-gray-800 mb-2">
-              Load previous design?
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              You have a previously saved design. Would you like to load it and
-              continue editing?
-            </p>
-            <div className="flex justify-end gap-2">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">
+                  Your designs
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Autosave and saved versions for this shop. Select one to
+                  continue editing.
+                </p>
+              </div>
               <button
                 type="button"
-                className="px-4 py-2 rounded shadow border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                onClick={onStartFreshDesign}
+                className="p-2 text-gray-500 hover:text-gray-700 shrink-0"
+                onClick={closeDesignGalleryModal}
+                aria-label="Close"
               >
-                No thanks
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            {designGalleryLoading && (
+              <p className="text-sm text-gray-600 py-8 text-center">
+                Loading…
+              </p>
+            )}
+            {!designGalleryLoading && designGalleryError && (
+              <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded p-3 mb-4">
+                {designGalleryError}
+              </p>
+            )}
+            {!designGalleryLoading && designGalleryItems.length > 0 && (
+              <div className="overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-3 pr-1">
+                {designGalleryItems.map((item) => {
+                  const kindLabel = item.isAutosave
+                    ? "Draft (autosave)"
+                    : item.save_kind === "cart"
+                      ? "Added to cart"
+                      : item.save_kind === "ordered"
+                        ? "Ordered"
+                        : item.save_kind === "manual"
+                          ? "Saved"
+                          : "Saved";
+                  const when =
+                    item.updated_at || item.created_at || "";
+                  const whenStr = when
+                    ? new Date(when).toLocaleString()
+                    : "";
+                  const busy = galleryDetailLoadingId === item.design_id;
+                  return (
+                    <button
+                      key={item.design_id}
+                      type="button"
+                      disabled={busy}
+                      className="text-left border border-gray-200 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50/40 transition-colors disabled:opacity-60"
+                      onClick={() => handleGalleryItemClick(item)}
+                    >
+                      <div className="flex gap-3">
+                        <div className="w-20 h-20 shrink-0 rounded bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
+                          {item.thumbnail_url ? (
+                            <img
+                              key={item.thumbnail_url}
+                              src={item.thumbnail_url}
+                              alt=""
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <span className="text-xs text-gray-400 px-1 text-center">
+                              No preview
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                            {kindLabel}
+                          </p>
+                          <p className="text-sm text-gray-800 font-medium truncate mt-0.5">
+                            {item.item_count}{" "}
+                            {item.item_count === 1
+                              ? config.labelProduct.toLowerCase()
+                              : config.labelProductPlural.toLowerCase()}
+                          </p>
+                          {whenStr ? (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {whenStr}
+                            </p>
+                          ) : null}
+                          {busy ? (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Loading…
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div className="flex justify-end mt-4 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                className="px-4 py-2 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 text-sm"
+                onClick={closeDesignGalleryModal}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* At milestone cap: pick a saved version to remove before manual save */}
+      {showSaveSlotModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
+          onClick={closeSaveSlotModal}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Make room to save design"
+        >
+          <div
+            className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">
+                  Make room to save
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Your library keeps up to {DESIGN_LIBRARY_MILESTONE_LIMIT}{" "}
+                  saved versions plus your live draft. Select one to remove,
+                  then confirm — your current design will be saved as a new
+                  version.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="p-2 text-gray-500 hover:text-gray-700 shrink-0"
+                onClick={closeSaveSlotModal}
+                aria-label="Close"
+                disabled={saveSlotBusy}
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            {saveSlotMilestones.length > 0 ? (
+              <div className="overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-3 pr-1">
+                {saveSlotMilestones.map((item) => {
+                  const kindLabel =
+                    item.save_kind === "cart"
+                      ? "Added to cart"
+                      : item.save_kind === "ordered"
+                        ? "Ordered"
+                        : item.save_kind === "manual"
+                          ? "Saved"
+                          : "Saved";
+                  const when = item.updated_at || item.created_at || "";
+                  const whenStr = when ? new Date(when).toLocaleString() : "";
+                  const selected =
+                    saveSlotSelectedDesignId === item.design_id;
+                  return (
+                    <button
+                      key={item.design_id}
+                      type="button"
+                      disabled={saveSlotBusy}
+                      className={`text-left border rounded-lg p-3 transition-colors disabled:opacity-60 ${
+                        selected
+                          ? "border-blue-500 ring-2 ring-blue-400 bg-blue-50/50"
+                          : "border-gray-200 hover:border-blue-400 hover:bg-blue-50/40"
+                      }`}
+                      onClick={() =>
+                        setSaveSlotSelectedDesignId(item.design_id)
+                      }
+                    >
+                      <div className="flex gap-3">
+                        <div className="w-20 h-20 shrink-0 rounded bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
+                          {item.thumbnail_url ? (
+                            <img
+                              src={item.thumbnail_url}
+                              alt=""
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <span className="text-xs text-gray-400 px-1 text-center">
+                              No preview
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                            {kindLabel}
+                          </p>
+                          <p className="text-sm text-gray-800 font-medium truncate mt-0.5">
+                            {item.item_count}{" "}
+                            {item.item_count === 1
+                              ? config.labelProduct.toLowerCase()
+                              : config.labelProductPlural.toLowerCase()}
+                          </p>
+                          {whenStr ? (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {whenStr}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600 py-6 text-center">
+                No saved versions found. Close and try again.
+              </p>
+            )}
+            <div className="flex flex-wrap justify-end gap-2 mt-4 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                className="px-4 py-2 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 text-sm"
+                onClick={closeSaveSlotModal}
+                disabled={saveSlotBusy}
+              >
+                Cancel
               </button>
               <button
                 type="button"
-                className="px-4 py-2 rounded shadow bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={onLoadPreviousDesign}
+                className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => void handleSaveSlotRemoveAndSave()}
+                disabled={
+                  saveSlotBusy ||
+                  !saveSlotSelectedDesignId ||
+                  saveSlotMilestones.length === 0
+                }
               >
-                Load
+                {saveSlotBusy ? "Working…" : "Remove selected & save"}
               </button>
             </div>
           </div>
@@ -9737,6 +10740,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         </div>
       )}
     </div>
+    </>
   );
 };
 

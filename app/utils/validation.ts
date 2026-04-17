@@ -37,12 +37,15 @@ export const saveBadgeBodySchema = z
   })
   .strict();
 
+export const designSaveKindSchema = z.enum(["manual", "cart", "ordered"]);
+
 /** POST /api/save-design – body (required: userId/shopId via designData or shopData) */
 export const saveDesignBodySchema = z
   .object({
     designData: z.record(z.unknown()).optional(),
     shopData: z.record(z.unknown()).optional(),
     userId: z.string().optional(),
+    saveKind: designSaveKindSchema.optional(),
   })
   .strict();
 
@@ -51,6 +54,15 @@ export const savedDesignQuerySchema = z
   .object({
     shop: z.string().min(1, "shop is required"),
     userId: z.string().min(1, "userId is required"),
+  })
+  .strict();
+
+/** GET /api/saved-design-detail – query */
+export const savedDesignDetailQuerySchema = z
+  .object({
+    shop: z.string().min(1, "shop is required"),
+    userId: z.string().min(1, "userId is required"),
+    designId: z.string().min(1, "designId is required"),
   })
   .strict();
 
@@ -105,5 +117,28 @@ export const linkOrderBodySchema = z
 export const addToCartBodySchema = z
   .object({
     badgeData: z.record(z.unknown()).refine((d) => d != null && typeof d === "object", "badgeData is required"),
+  })
+  .strict();
+
+/** POST /api/delete-*-design-milestone – body */
+export const deleteDesignMilestoneBodySchema = z
+  .object({
+    shopId: z.string().min(1, "shopId is required"),
+    userId: z.string().min(1, "userId is required"),
+    designId: z.string().min(1, "designId is required"),
+  })
+  .strict();
+
+/** POST /api/library-thumbnail – body (PNG data URL → Supabase badge-images public URL) */
+export const libraryThumbnailBodySchema = z
+  .object({
+    designId: z
+      .string()
+      .min(1, "designId is required")
+      .max(280, "designId too long"),
+    imageData: z
+      .string()
+      .min(1, "imageData is required")
+      .regex(/^data:image\/(png|jpeg|jpg|webp);base64,/, "imageData must be a base64 data URL"),
   })
   .strict();

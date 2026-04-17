@@ -52,7 +52,6 @@ export async function action({ request }: ActionFunctionArgs) {
       base_price: designData.basePrice || 9.99,
       total_price: designData.totalPrice,
       design_data: designData,
-      text_lines: designData.textLines,
       thumbnail_url: thumbnailUrl,
       full_image_url: fullImageUrl,
       status: 'saved' as const
