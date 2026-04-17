@@ -71,7 +71,10 @@ import {
 } from "../utils/badgeThumbnail";
 import { getCurrentShop, type ShopAuthData } from "../utils/shopAuth";
 import { getDesignLibraryDummyAuth } from "../utils/designLibraryDummyAuth";
-import { DESIGN_LIBRARY_MILESTONE_LIMIT } from "../constants/designLibrary";
+import {
+  CLOUD_LIBRARY_LOGIN_HINT_DISMISSED_KEY,
+  DESIGN_LIBRARY_MILESTONE_LIMIT,
+} from "../constants/designLibrary";
 import { stableAutosaveDesignId } from "../utils/stableDesignLibraryIds";
 import { createApi, type DesignLibraryListItem } from "../utils/api";
 import { getDesignerApiPaths, getDesignerConfig } from "../config/designers";
@@ -1606,6 +1609,45 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   useEffect(() => {
     if (!cloudLibraryEnabled) setCloudAutosaveStatus("idle");
   }, [cloudLibraryEnabled]);
+
+  const [showCloudLibraryLoginHint, setShowCloudLibraryLoginHint] =
+    useState(false);
+
+  useEffect(() => {
+    if (designLibraryDummy.enabled) {
+      setShowCloudLibraryLoginHint(false);
+      return;
+    }
+    if ((_customerId ?? "").trim()) {
+      setShowCloudLibraryLoginHint(false);
+      return;
+    }
+    try {
+      if (
+        typeof window !== "undefined" &&
+        window.localStorage.getItem(CLOUD_LIBRARY_LOGIN_HINT_DISMISSED_KEY) ===
+          "1"
+      ) {
+        setShowCloudLibraryLoginHint(false);
+        return;
+      }
+    } catch {
+      /* private mode */
+    }
+    setShowCloudLibraryLoginHint(true);
+  }, [designLibraryDummy.enabled, _customerId]);
+
+  const dismissCloudLibraryLoginHint = useCallback(() => {
+    setShowCloudLibraryLoginHint(false);
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(CLOUD_LIBRARY_LOGIN_HINT_DISMISSED_KEY, "1");
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const [designGalleryLoading, setDesignGalleryLoading] = useState(false);
   const [designGalleryError, setDesignGalleryError] = useState<string | null>(
     null,
@@ -5856,6 +5898,28 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             (and unset{" "}
             <code className="text-xs">VITE_DESIGN_LIBRARY_DUMMY_MODE</code>) to
             use real Shopify customer and shop.
+          </div>
+        </div>
+      ) : null}
+      {showCloudLibraryLoginHint ? (
+        <div
+          className="max-w-5xl mx-auto w-full mb-2 px-0 md:px-0"
+          role="alert"
+        >
+          <div className="rounded-lg border border-blue-200 bg-blue-50 text-blue-950 px-3 py-2.5 text-sm leading-snug flex gap-3 items-start">
+            <p className="flex-1 min-w-0">
+              <span className="font-semibold">Cloud autosave</span> is off
+              until you log in. Sign in to your Shopify account to save your
+              draft to the cloud and use your design library.
+            </p>
+            <button
+              type="button"
+              className="shrink-0 p-1 rounded text-blue-800 hover:bg-blue-100/80"
+              onClick={dismissCloudLibraryLoginHint}
+              aria-label="Dismiss reminder"
+            >
+              <XMarkIcon className="w-5 h-5" aria-hidden />
+            </button>
           </div>
         </div>
       ) : null}
