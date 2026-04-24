@@ -5,7 +5,15 @@ import {
   buildSignTextClipPathInnerMarkup,
   layoutSignTextLines,
   measureSignTextPx,
+  signCircleExtraInsetPx,
+  signHorizontalInsetPx,
+  type ResolvedSignTextLayout,
 } from "~/utils/signTextLayout";
+import {
+  adjustResolvedSignTextLayoutForSignLogo,
+  computeSignLogoDrawRect,
+  resolveSignUserLogoBoundsBox,
+} from "~/utils/signLogoTextLayout";
 import {
   getDesignerMotifPaths,
   isDesignerMotifId,
@@ -17,6 +25,7 @@ import {
 } from "~/data/signBorderTrims";
 import { loadFont } from "./fontLoader";
 import { BADGE_CONSTANTS } from "../constants/badge";
+import { signTemplateSupportsUserLogoUpload } from "~/utils/signLogoPlacement";
 
 type RenderOpts = {
   /**
@@ -137,6 +146,33 @@ export function getEffectiveDesignBox(
     return template.designBox;
   }
   return template.designBoxInnerPlate ?? template.designBox;
+}
+
+/**
+ * Sign text layout after reserving space for a user logo (editor + renderSvg single source of truth).
+ */
+export function getEffectiveSignTextLayoutForBadge(
+  template: LoadedTemplate,
+  badge: Badge,
+): ResolvedSignTextLayout | undefined {
+  if (!template.signTextLayout) return undefined;
+  const trimBox = getEffectiveDesignBox(template, badge);
+  const borderOn = resolveSignBorderOverlayActive(badge, template);
+  const logoForLayout = signTemplateSupportsUserLogoUpload(template.id)
+    ? badge.logo
+    : undefined;
+  const logoBoundsBox = resolveSignUserLogoBoundsBox(
+    template,
+    trimBox,
+    borderOn,
+  );
+  return adjustResolvedSignTextLayoutForSignLogo(
+    template.signTextLayout,
+    trimBox,
+    logoForLayout,
+    template.signTextLayout.plateCircle,
+    logoBoundsBox,
+  );
 }
 
 function resolveSignOverlayMarkup(
@@ -309,7 +345,8 @@ function calculateTextLayout(
   lines: AnyLine[],
   designBox: { x: number; y: number; width: number; height: number },
   template: LoadedTemplate,
-  fontMappings?: Map<string, string>,
+  fontMappings: Map<string, string> | undefined,
+  badge: Badge,
 ): Array<{
   line: AnyLine;
   x: number;
@@ -324,9 +361,10 @@ function calculateTextLayout(
   if (lines.length === 0) return [];
 
   if (template.signTextLayout) {
+    const signLayout = getEffectiveSignTextLayoutForBadge(template, badge)!;
     return layoutSignTextLines(
       lines as BadgeLine[],
-      template.signTextLayout,
+      signLayout,
       (args) =>
         measureSignTextPx(
           args.text,
@@ -601,22 +639,46 @@ function renderBg(
   `;
 }
 
-function renderLogo(
+/** Sign Designer user logo: fitted rect + meet. Non-sign: legacy absolute positioning. */
+function renderUserLogoLayer(
   logo: BadgeImage | undefined,
+  template: LoadedTemplate,
+  badge: Badge,
   designBox: { x: number; y: number; width: number; height: number },
 ): string {
-  if (!logo) return "";
+  if (!logo?.src?.trim()) return "";
+  if (template.signTextLayout) {
+    if (!signTemplateSupportsUserLogoUpload(template.id)) return "";
+    const trimBox = getEffectiveDesignBox(template, badge);
+    const borderOn = resolveSignBorderOverlayActive(badge, template);
+    const logoBoundsBox = resolveSignUserLogoBoundsBox(
+      template,
+      trimBox,
+      borderOn,
+    );
+    const rect = computeSignLogoDrawRect(
+      logo,
+      logoBoundsBox,
+      template.signTextLayout.plateCircle,
+      template.signTextLayout,
+    );
+    if (!rect) return "";
+    const src = esc(logo.src);
+    return `
+    <image href="${src}" xlink:href="${src}"
+      x="${rect.x}" y="${rect.y}" width="${rect.width}" height="${rect.height}"
+      preserveAspectRatio="xMidYMid meet"
+      style="image-rendering:optimizeQuality" />`;
+  }
   const lw = Math.max(1, logo.widthPx ?? Math.round(designBox.height * 0.3));
   const lh = Math.max(1, logo.heightPx ?? Math.round(designBox.height * 0.3));
-
-  // Default logo position: 10% from left, 20% from top of designBox
   const x = logo.x ?? designBox.x + designBox.width * 0.1;
   const y = logo.y ?? designBox.y + designBox.height * 0.2;
   const s = logo.scale ?? 1;
-
+  const src = esc(logo.src);
   return `
     <g transform="translate(${x}, ${y}) scale(${s})">
-      <image href="${logo.src}" x="0" y="0" width="${lw}" height="${lh}" preserveAspectRatio="none"
+      <image href="${src}" x="0" y="0" width="${lw}" height="${lh}" preserveAspectRatio="none"
              style="image-rendering:optimizeQuality" />
     </g>
   `;
@@ -676,10 +738,7 @@ function prepareElementForOutline(
   cleaned = cleaned.replace(/\s+fill\s*=\s*["'][^"']*["']/gi, "");
   cleaned = cleaned.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, "");
   cleaned = cleaned.replace(/\s+stroke-width\s*=\s*["'][^"']*["']/gi, "");
-  cleaned = cleaned.replace(
-    /\s+vector-effect\s*=\s*["'][^"']*["']/gi,
-    "",
-  );
+  cleaned = cleaned.replace(/\s+vector-effect\s*=\s*["'][^"']*["']/gi, "");
   return cleaned.replace(
     /\/?>$/,
     ` fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"${vectorEffectAttr}/>`,
@@ -771,12 +830,18 @@ export function renderBadgeToSvgString(
     }
   }
 
-  const INSET_INCHES = 0.1;
-  const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
+  const effectiveSignLayout = template.signTextLayout
+    ? getEffectiveSignTextLayoutForBadge(template, badge)
+    : undefined;
+  const layoutForTextClip = effectiveSignLayout ?? template.signTextLayout;
+  const textClipW = layoutForTextClip?.clipRect?.width ?? designBox.width;
+  const curveTextClip = layoutForTextClip?.plateCircle
+    ? signCircleExtraInsetPx(layoutForTextClip.plateCircle.r)
+    : 0;
   const textClipPath = buildSignTextClipPathInnerMarkup(
-    template.signTextLayout,
+    layoutForTextClip,
     designBox,
-    INSET_PX,
+    signHorizontalInsetPx(textClipW) + curveTextClip,
   );
 
   // Background image (if present)
@@ -792,6 +857,8 @@ export function renderBadgeToSvgString(
     badge.lines || [],
     designBox,
     template,
+    undefined,
+    badge,
   );
 
   // Render text elements
@@ -886,6 +953,17 @@ export function renderBadgeToSvgString(
   // Use the textClipPath already defined above (with CLIP_PADDING)
   const textClipPathRect = textClipPath;
 
+  const userLogoRaw = renderUserLogoLayer(
+    badge.logo,
+    template,
+    badge,
+    designBox,
+  );
+  const userLogoLayer =
+    innerPathData && userLogoRaw.trim() !== ""
+      ? `<g clip-path="url(#${clipId})">${userLogoRaw}</g>`
+      : userLogoRaw;
+
   return `${svgOpen}
   <defs>
     ${
@@ -904,16 +982,13 @@ export function renderBadgeToSvgString(
   <g transform="translate(${PADDING_PX}, ${PADDING_PX})">
     <!-- Background: inner path filled with color (defines editable area) -->
     ${innerPathWithFill}
-    ${overlayLayer}
     <!-- Background image (if present) -->
     ${bgImageLayer}
-    
-    <!-- Text on top of background -->
+    <!-- User logo (sign): clipped to die; under border overlay and text -->
+    ${userLogoLayer}
+    ${overlayLayer}
+    <!-- Text -->
     ${text}
-    
-    <!-- Logo (if present) -->
-    ${renderLogo(badge.logo, designBox)}
-    
     <!-- Outline border on top -->
     ${outline}
   </g>
@@ -1056,12 +1131,20 @@ export async function renderBadgeToSvgStringWithFonts(
     }
   }
 
-  const INSET_INCHES = 0.1;
-  const INSET_PX = INSET_INCHES * 96;
+  const effectiveSignLayoutWithFonts = template.signTextLayout
+    ? getEffectiveSignTextLayoutForBadge(template, badge)
+    : undefined;
+  const layoutForTextClipFonts =
+    effectiveSignLayoutWithFonts ?? template.signTextLayout;
+  const textClipWFonts =
+    layoutForTextClipFonts?.clipRect?.width ?? designBox.width;
+  const curveTextClipFonts = layoutForTextClipFonts?.plateCircle
+    ? signCircleExtraInsetPx(layoutForTextClipFonts.plateCircle.r)
+    : 0;
   const textClipPath = buildSignTextClipPathInnerMarkup(
-    template.signTextLayout,
+    layoutForTextClipFonts,
     designBox,
-    INSET_PX,
+    signHorizontalInsetPx(textClipWFonts) + curveTextClipFonts,
   );
 
   // Background image (if present) - rendered on top of filled inner path
@@ -1075,6 +1158,7 @@ export async function renderBadgeToSvgStringWithFonts(
     designBox,
     template,
     fontMappings,
+    badge,
   );
 
   // Render text elements
@@ -1166,6 +1250,17 @@ export async function renderBadgeToSvgStringWithFonts(
      viewBox="0 0 ${W} ${H}"
      preserveAspectRatio="xMidYMid meet">`;
 
+  const userLogoRaw = renderUserLogoLayer(
+    badge.logo,
+    template,
+    badge,
+    designBox,
+  );
+  const userLogoLayer =
+    innerPathData && userLogoRaw.trim() !== ""
+      ? `<g clip-path="url(#${clipId})">${userLogoRaw}</g>`
+      : userLogoRaw;
+
   return `${svgOpen}
   <defs>
     <style type="text/css">
@@ -1187,16 +1282,10 @@ export async function renderBadgeToSvgStringWithFonts(
   <g transform="translate(${PADDING_PX}, ${PADDING_PX})">
     <!-- Background: inner path filled with color (defines editable area) -->
     ${innerPathWithFill}
-    ${overlayLayer}
-    <!-- Background image (if present) -->
     ${bgImageLayer}
-    
-    <!-- Text on top of background -->
+    ${userLogoLayer}
+    ${overlayLayer}
     ${text}
-    
-    <!-- Logo (if present) -->
-    ${renderLogo(badge.logo, designBox)}
-    
     <!-- Outline border on top -->
     ${outline}
   </g>

@@ -44,7 +44,12 @@ import {
 import { BadgeEditPanel } from "./BadgeEditPanel";
 import { BadgeEditorPanel } from "./BadgeEditorPanel";
 
-import { BadgeLine, Badge, UndoAction } from "../types/badge";
+import {
+  BadgeLine,
+  Badge,
+  UndoAction,
+  type SignLogoPlacement,
+} from "../types/badge";
 import {
   BACKGROUND_COLORS,
   FONT_COLORS,
@@ -97,7 +102,41 @@ import type { LoadedTemplate } from "../utils/templates";
 import {
   renderBadgeToSvgString,
   getEffectiveDesignBox,
+  getEffectiveSignTextLayoutForBadge,
 } from "../utils/renderSvg";
+import {
+  getSignLogoPlacementOptionsForTemplate,
+  normalizeSignLogoPlacementForTemplate,
+  signTemplateSupportsUserLogoUpload,
+} from "~/utils/signLogoPlacement";
+
+const SIGN_LOGO_PLACEMENT_UI_LABEL: Record<SignLogoPlacement, string> = {
+  left: "Left",
+  right: "Right",
+  top: "Top",
+  bottom: "Bottom",
+};
+
+function readImageDimensionsFromFile(
+  file: File,
+): Promise<{ w: number; h: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({
+        w: Math.max(1, img.naturalWidth || 1),
+        h: Math.max(1, img.naturalHeight || 1),
+      });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not load image"));
+    };
+    img.src = url;
+  });
+}
 import {
   syncSignBadgeLinesSizeNorm,
   syncSignBadgeLinesSizeNormAfterLineReset,
@@ -1520,6 +1559,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     ...(config.templatesKey === "sign"
       ? {
           signBorderStyleId: "default",
+          // Standard frame on by default so trim matches preview expectations (chips: none vs Standard frame)
+          signBorderOptionId: "default",
         }
       : {}),
   };
@@ -1711,6 +1752,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     backing: false,
     border: false,
   });
+  /** Sign only: image/logo step panel open state (optional step). */
+  const [signLogoSectionOpen, setSignLogoSectionOpen] = useState(false);
+  const [signLogoSectionOpened, setSignLogoSectionOpened] = useState(false);
+  const [signLogoUploading, setSignLogoUploading] = useState(false);
+  const signLogoFileInputRef = useRef<HTMLInputElement | null>(null);
   /** True when the selected sign template family has a border trim (Circle/Basic omit the border step). */
   const signBorderStepRequired =
     variant === "sign" &&
@@ -1723,6 +1769,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   /** Sign: border step complete once user picks any option (including No border). */
   const signBorderConfigured =
     !signBorderStepRequired || badge.signBorderOptionId !== undefined;
+  const signUserLogoUploadSupported = signTemplateSupportsUserLogoUpload(
+    badge.templateId ?? universalTemplateId,
+  );
   /** Step 3 text: line 1 must be customized (non-empty and not placeholder). Extra lines may stay template defaults ("Title", "Line Text") or empty — typical for single-line badges, CSV, and duplicates. */
   const getStep3DefaultText = (lineIndex: number) =>
     lineIndex === 0 ? "Your Name" : lineIndex === 1 ? "Title" : "Line Text";
@@ -2725,6 +2774,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       );
       if (!hasDefaultPositions) return prevBadge;
 
+      // Signs: if universal id and badge template id are briefly out of sync (e.g. an async handler
+      // set the new id before the badge was updated), refit would use the wrong `matched` and
+      // clobber `sizeNorm`—skip until the next effect run after the badge catches up.
+      if (
+        variant === "sign" &&
+        prevBadge.templateId != null &&
+        prevBadge.templateId !== universalTemplateId
+      ) {
+        return prevBadge;
+      }
+
       // Never fall back to templates[0]: JSON order can be a different size (e.g. 10×10) than the selected id (e.g. 4×4),
       // which produced sizeNorm for ~960px height while rendering ~384px → ~9–10px text instead of 25px.
       const matched =
@@ -2745,6 +2805,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         updatedLines,
         designBox,
         matched?.signTextLayout,
+        matched,
+        prevBadge,
       );
       const centeredLines = calculateCenterPositions(scaledLines, designBox);
       return { ...prevBadge, lines: centeredLines };
@@ -2754,6 +2816,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   }, [
     templates.length,
     universalTemplateId,
+    variant,
     badge.signBorderOptionId,
     badge.signBorderStyleId,
   ]);
@@ -3396,6 +3459,188 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     });
   };
 
+  const applySignLogoRefit = (next: Badge): Badge => {
+    const id = next.templateId ?? universalTemplateId;
+    const tpl = templates.find((t) => t.id === id);
+    if (!tpl?.signTextLayout || typeof document === "undefined") return next;
+    const fitted = syncSignBadgeLinesSizeNorm(
+      next.lines,
+      getEffectiveSignTextLayoutForBadge(tpl, next)!,
+    );
+    return { ...next, lines: calculateCenterPositions(fitted) };
+  };
+
+  const ensureDesignIdForSignLogo = () => {
+    if (!sessionDesignIdRef.current) {
+      sessionDesignIdRef.current = `design_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 11)}`;
+    }
+    return sessionDesignIdRef.current;
+  };
+
+  const handleSignLogoFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || variant !== "sign") return;
+    if (
+      !signTemplateSupportsUserLogoUpload(
+        badge.templateId ?? universalTemplateId,
+      )
+    ) {
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      alert("Please choose an image file (PNG, JPEG, WebP, or GIF).");
+      return;
+    }
+    setSignLogoUploading(true);
+    try {
+      const { w, h } = await readImageDimensionsFromFile(file);
+      const designId = ensureDesignIdForSignLogo();
+      const fd = new FormData();
+      fd.set("designId", designId);
+      fd.set("file", file);
+      const res = await fetch("/api/upload-sign-logo", {
+        method: "POST",
+        body: fd,
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        publicUrl?: string;
+        error?: string;
+      };
+      if (!res.ok || !data.publicUrl) {
+        throw new Error(data.error || "Upload failed");
+      }
+      setBadge((prev) => {
+        const tid = prev.templateId ?? universalTemplateId;
+        const next: Badge = {
+          ...prev,
+          logo: {
+            src: data.publicUrl!,
+            placement: normalizeSignLogoPlacementForTemplate(
+              tid,
+              prev.logo?.placement,
+            ),
+            intrinsicWidth: w,
+            intrinsicHeight: h,
+          },
+        };
+        const refit = applySignLogoRefit(next);
+        persistCurrentBadgeToSlot(refit);
+        return refit;
+      });
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Could not upload image.");
+    } finally {
+      setSignLogoUploading(false);
+    }
+  };
+
+  const setSignLogoPlacementUi = (placement: SignLogoPlacement) => {
+    if (variant !== "sign") return;
+    setBadge((prev) => {
+      if (!prev.logo?.src) return prev;
+      const next: Badge = {
+        ...prev,
+        logo: { ...prev.logo, placement },
+      };
+      const refit = applySignLogoRefit(next);
+      persistCurrentBadgeToSlot(refit);
+      return refit;
+    });
+  };
+
+  const clearSignLogo = () => {
+    if (variant !== "sign") return;
+    setBadge((prev) => {
+      const next: Badge = { ...prev, logo: undefined };
+      const refit = applySignLogoRefit(next);
+      persistCurrentBadgeToSlot(refit);
+      return refit;
+    });
+  };
+
+  /** Remove user logos when the template does not support image upload (run before placement snap). */
+  useEffect(() => {
+    if (variant !== "sign") return;
+    const tid = badge.templateId ?? universalTemplateId;
+    if (signTemplateSupportsUserLogoUpload(tid)) return;
+    if (!badge.logo?.src && !multipleBadges.some((b) => b.logo?.src)) return;
+    setSignLogoSectionOpen(false);
+    const cleared = multipleBadges.map((b) =>
+      b.logo?.src ? applySignLogoRefit({ ...b, logo: undefined }) : b,
+    );
+    setMultipleBadges(cleared);
+    const current = cleared[selectedBadgeIndex] ?? cleared[0];
+    if (current) {
+      setBadge(current);
+      persistCurrentBadgeToSlot(current);
+    }
+    if (cleared[0]) setBadge1Data(cleared[0]);
+    void runDraftSaveForBadges(cleared);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refit on template id only; applySignLogoRefit/templ list are stable for this use
+  }, [variant, badge.templateId, universalTemplateId]);
+
+  /** When template family changes allowed placements, snap logo placement to a valid value. */
+  useEffect(() => {
+    if (variant !== "sign") return;
+    const tid = badge.templateId ?? universalTemplateId;
+    if (!signTemplateSupportsUserLogoUpload(tid)) return;
+    if (!badge.logo?.src) return;
+    const nextPlacement = normalizeSignLogoPlacementForTemplate(
+      tid,
+      badge.logo.placement,
+    );
+    if (nextPlacement === badge.logo.placement) return;
+    setBadge((prev) => {
+      if (!prev.logo?.src) return prev;
+      const next = {
+        ...prev,
+        logo: { ...prev.logo, placement: nextPlacement },
+      };
+      const refit = applySignLogoRefit(next);
+      persistCurrentBadgeToSlot(refit);
+      return refit;
+    });
+  }, [
+    variant,
+    badge.templateId,
+    universalTemplateId,
+    badge.logo?.src,
+    badge.logo?.placement,
+  ]);
+
+  const applySignLogoToAll = () => {
+    if (variant !== "sign" || multipleBadges.length <= 1) return;
+    const srcLogo = badge.logo;
+    if (!srcLogo?.src) return;
+    const updatedMultipleBadges = multipleBadges.map((b: Badge) => {
+      const withLogo: Badge = {
+        ...b,
+        logo: { ...srcLogo },
+      };
+      return applySignLogoRefit(withLogo);
+    });
+    setMultipleBadges(updatedMultipleBadges);
+    const cur = updatedMultipleBadges[selectedBadgeIndex];
+    if (cur) setBadge(cur);
+    if (updatedMultipleBadges[0]) setBadge1Data(updatedMultipleBadges[0]);
+    runDraftSaveForBadges(updatedMultipleBadges);
+    queueMicrotask(() => {
+      const run = runCloudAutosaveNowRef.current;
+      if (!run) return;
+      void run({
+        multipleBadgesOverride: updatedMultipleBadges,
+        badgeOverride:
+          updatedMultipleBadges[selectedBadgeIndex] ?? badgeRef.current,
+      });
+    });
+  };
+
   // Apply formatting from current line to all badges' corresponding lines
   const applyFormattingToAllLines = (lineIndex: number) => {
     // Save to undo history before making changes
@@ -3469,7 +3714,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     const lineTemplate =
       templates.find((t) => t.id === badge.templateId) ??
       templates.find((t) => t.id === universalTemplateId);
-    const signLayout = lineTemplate?.signTextLayout;
+    const signLayout =
+      lineTemplate?.signTextLayout && variant === "sign"
+        ? getEffectiveSignTextLayoutForBadge(lineTemplate, badge)
+        : lineTemplate?.signTextLayout;
     // Account for 0.1" (9.6px) inset on each side for text clipping
     const INSET_INCHES = 0.1;
     const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
@@ -3630,6 +3878,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         newLines,
         designBox,
         currentTemplate?.signTextLayout,
+        currentTemplate,
+        badge,
       );
 
       // Apply center-based positioning to all lines
@@ -3654,7 +3904,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         variant === "sign" &&
         rmTpl?.signTextLayout &&
         typeof document !== "undefined"
-          ? syncSignBadgeLinesSizeNorm(newLines, rmTpl.signTextLayout)
+          ? syncSignBadgeLinesSizeNorm(
+              newLines,
+              getEffectiveSignTextLayoutForBadge(rmTpl, badge)!,
+            )
           : newLines;
 
       // Apply center-based positioning to remaining lines
@@ -3717,10 +3970,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       typeof document !== "undefined"
         ? syncSignBadgeLinesSizeNormAfterLineReset(
             updatedLines,
-            lineTpl.signTextLayout,
+            getEffectiveSignTextLayoutForBadge(lineTpl, badge)!,
             index,
           )
-        : scaleLinesToFit(updatedLines, boxForCenter, lineTpl?.signTextLayout);
+        : scaleLinesToFit(
+            updatedLines,
+            boxForCenter,
+            lineTpl?.signTextLayout,
+            lineTpl,
+            badge,
+          );
     const centeredLines = calculateCenterPositions(scaledLines, boxForCenter);
 
     const updatedBadge = {
@@ -3754,6 +4013,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     lines: BadgeLine[],
     designBox: { height: number },
     signTextLayout?: LoadedTemplate["signTextLayout"],
+    layoutTemplate?: LoadedTemplate,
+    layoutBadge?: Badge,
   ): BadgeLine[] => {
     // Use only the passed design box (do not require activeTemplate — it can lag or mismatch during sign template load).
     if (!designBox?.height || designBox.height <= 0) return lines;
@@ -3763,7 +4024,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       signTextLayout &&
       typeof document !== "undefined"
     ) {
-      return syncSignBadgeLinesSizeNorm(lines, signTextLayout);
+      const eff =
+        layoutTemplate && layoutBadge
+          ? getEffectiveSignTextLayoutForBadge(layoutTemplate, layoutBadge) ??
+            signTextLayout
+          : signTextLayout;
+      return syncSignBadgeLinesSizeNorm(lines, eff);
     }
 
     const designBoxHeight = designBox.height;
@@ -3848,7 +4114,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       ...(variant === "sign"
         ? {
             signBorderStyleId: "default",
-            signBorderOptionId: undefined,
+            signBorderOptionId: "default",
             signBorderEnabled: undefined,
           }
         : {}),
@@ -3892,7 +4158,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         ...(variant === "sign"
           ? {
               signBorderStyleId: "default",
-              signBorderOptionId: undefined,
+              signBorderOptionId: "default",
               signBorderEnabled: undefined,
             }
           : {}),
@@ -3918,7 +4184,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       ...(variant === "sign"
         ? {
             signBorderStyleId: "default",
-            signBorderOptionId: undefined,
+            signBorderOptionId: "default",
             signBorderEnabled: undefined,
           }
         : {}),
@@ -4181,7 +4447,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         ...(variant === "sign"
           ? {
               signBorderStyleId: "default",
-              signBorderOptionId: undefined,
+              signBorderOptionId: "default",
               signBorderEnabled: undefined,
             }
           : {}),
@@ -4195,6 +4461,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         initialLinesWithSizes,
         designBox,
         newTemplate.signTextLayout,
+        newTemplate,
+        protoForBox,
       );
       if (variant === "sign" && !newTemplate.signTextLayout) {
         const insetPx = 0.1 * 96;
@@ -4232,7 +4500,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         ...(variant === "sign"
           ? {
               signBorderStyleId: "default",
-              signBorderOptionId: undefined,
+              signBorderOptionId: "default",
               signBorderEnabled: undefined,
             }
           : {}),
@@ -4296,9 +4564,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           width: 288,
         };
 
-    setUniversalTemplateId(newTemplateId);
-
-    // Load the new template to get its designBox
+    // Load the new template to get its designBox (do not call setUniversalTemplateId yet: doing so
+    // a tick before setBadge can leave `universalTemplateId` on the new id while `badge.templateId` is
+    // still the old size, and the templates-loaded effect may refit against the wrong template).
     const newTemplate = await loadTemplateById(newTemplateId, variant);
     if (!newTemplate) {
       console.error("Template not found:", newTemplateId);
@@ -4358,12 +4626,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     const applySignTemplateLineSizes = (
       lines: BadgeLine[],
       box: { width: number; height: number },
+      badgeForLayout: Badge,
     ): BadgeLine[] => {
       let next = lines.map((line, lineIndex) => ({
         ...line,
         sizeNorm: getDefaultSizeNorm(lineIndex, box.height),
       }));
-      next = scaleLinesToFit(next, box, newTemplate.signTextLayout);
+      next = scaleLinesToFit(
+        next,
+        box,
+        newTemplate.signTextLayout,
+        newTemplate,
+        badgeForLayout,
+      );
       if (newTemplate.signTextLayout && typeof document !== "undefined") {
         return next;
       }
@@ -4445,21 +4720,39 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       signTemplateBorderFamilyKey(badge.templateId || oldTemplateId) !==
         signTemplateBorderFamilyKey(newTemplateId);
 
+    // Align universal id with badge in the same synchronous turn as the line refit.
+    setUniversalTemplateId(newTemplateId);
+
     // Update current badge with auto-scaled text (signs: reset to 25/17 defaults then fit; badges: preserve px)
     setBadge((prev) => {
       const proto = { ...prev, templateId: newTemplateId };
       const box = getEffectiveDesignBox(newTemplate, proto);
       const scaledLines =
         variant === "sign"
-          ? applySignTemplateLineSizes(prev.lines, box)
+          ? applySignTemplateLineSizes(prev.lines, box, proto)
           : autoScaleLinesForNewTemplate(prev.lines, box, prev.templateId);
+      if (
+        variant === "sign" &&
+        newTemplate.signTextLayout &&
+        typeof document !== "undefined"
+      ) {
+        const signBorderProps = clearSignBorderOnTemplateChange
+          ? {
+              signBorderOptionId: "default" as const,
+              signBorderEnabled: undefined,
+            }
+          : {};
+        return {
+          ...applySignLogoRefit({ ...proto, lines: scaledLines, ...signBorderProps }),
+        };
+      }
       const centeredLines = calculateCenterPositions(scaledLines);
       return {
         ...proto,
         lines: centeredLines,
         ...(clearSignBorderOnTemplateChange
           ? {
-              signBorderOptionId: undefined,
+              signBorderOptionId: "default",
               signBorderEnabled: undefined,
             }
           : {}),
@@ -4473,15 +4766,30 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         const box = getEffectiveDesignBox(newTemplate, proto);
         const scaledLines =
           variant === "sign"
-            ? applySignTemplateLineSizes(b.lines, box)
+            ? applySignTemplateLineSizes(b.lines, box, proto)
             : autoScaleLinesForNewTemplate(b.lines, box, b.templateId);
+        if (
+          variant === "sign" &&
+          newTemplate.signTextLayout &&
+          typeof document !== "undefined"
+        ) {
+          const signBorderProps = clearSignBorderOnTemplateChange
+            ? {
+                signBorderOptionId: "default" as const,
+                signBorderEnabled: undefined,
+              }
+            : {};
+          return {
+            ...applySignLogoRefit({ ...proto, lines: scaledLines, ...signBorderProps }),
+          };
+        }
         const centeredLines = calculateCenterPositions(scaledLines);
         return {
           ...proto,
           lines: centeredLines,
           ...(clearSignBorderOnTemplateChange
             ? {
-                signBorderOptionId: undefined,
+                signBorderOptionId: "default",
                 signBorderEnabled: undefined,
               }
             : {}),
@@ -6147,6 +6455,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       ? signBorderConfigured && !hasStep3TextEntered
                       : hasChosenBackgroundColor && !hasStep3TextEntered,
                   },
+                  ...(variant === "sign" && signUserLogoUploadSupported
+                    ? [
+                        {
+                          label: "Image",
+                          done:
+                            signLogoSectionOpened || Boolean(badge.logo?.src),
+                          current: false,
+                        },
+                      ]
+                    : []),
                   ...(config.hasBacking
                     ? [
                         {
@@ -7383,6 +7701,125 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               </div>
             </div>
           </div>
+
+          {variant === "sign" && signUserLogoUploadSupported && (
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  const msg = getIncompleteStepsMessage(6);
+                  if (msg) {
+                    alert(msg);
+                    return;
+                  }
+                  const willBeOpen = !signLogoSectionOpen;
+                  setSignLogoSectionOpen(willBeOpen);
+                  if (willBeOpen) setSignLogoSectionOpened(true);
+                }}
+                className="flex items-center justify-between w-full mb-2 text-left"
+              >
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    {signBorderStepRequired
+                      ? "Step 6: Image or logo (optional)"
+                      : "Step 5: Image or logo (optional)"}
+                  </h3>
+                  {(signLogoSectionOpened || Boolean(badge.logo?.src)) && (
+                    <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                  )}
+                </div>
+                {signLogoSectionOpen ? (
+                  <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+                ) : (
+                  <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+                )}
+              </button>
+              <div
+                className={`transition-all duration-300 overflow-hidden ${
+                  signLogoSectionOpen
+                    ? "max-h-[2000px] opacity-100"
+                    : "max-h-0 opacity-0"
+                }`}
+              >
+                <div className="space-y-3 text-sm text-gray-800">
+                  <p className="text-xs text-gray-600">
+                    Upload a PNG, JPEG, WebP, or GIF. The image is sized to fit
+                    with your text; pick where it sits relative to the text.
+                  </p>
+                  <input
+                    ref={signLogoFileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleSignLogoFileSelect}
+                  />
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <button
+                      type="button"
+                      disabled={signLogoUploading}
+                      onClick={() => signLogoFileInputRef.current?.click()}
+                      className="px-3 py-2 rounded border border-blue-600 bg-blue-50 text-blue-900 text-sm hover:bg-blue-100 disabled:opacity-50"
+                    >
+                      {signLogoUploading ? "Uploading…" : "Choose image"}
+                    </button>
+                    {badge.logo?.src ? (
+                      <button
+                        type="button"
+                        onClick={clearSignLogo}
+                        className="px-3 py-2 rounded border border-gray-300 text-sm hover:bg-gray-50"
+                      >
+                        Remove image
+                      </button>
+                    ) : null}
+                  </div>
+                  {badge.logo?.src ? (
+                    <div className="space-y-2">
+                      <span className="text-xs font-medium text-gray-700">
+                        Placement
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(() => {
+                          const tid =
+                            badge.templateId ?? universalTemplateId;
+                          const effective =
+                            normalizeSignLogoPlacementForTemplate(
+                              tid,
+                              badge.logo?.placement,
+                            );
+                          return getSignLogoPlacementOptionsForTemplate(
+                            tid,
+                          ).map((key) => (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => setSignLogoPlacementUi(key)}
+                              className={`px-2.5 py-1.5 rounded text-xs border ${
+                                effective === key
+                                  ? "border-blue-600 bg-blue-50 text-blue-900"
+                                  : "border-gray-300 hover:bg-gray-50"
+                              }`}
+                            >
+                              {SIGN_LOGO_PLACEMENT_UI_LABEL[key]}
+                            </button>
+                          ));
+                        })()}
+                      </div>
+                      {multipleBadges.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={applySignLogoToAll}
+                          className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        >
+                          Apply image to all{" "}
+                          {config.labelProductPlural.toLowerCase()}
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          )}
 
           {config.hasBacking && (
             /* Step 4: Backing Type */

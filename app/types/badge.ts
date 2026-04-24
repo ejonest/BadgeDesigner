@@ -17,6 +17,9 @@ export interface BadgeLine {
   fontFamily?: string;
 }
 
+/** Sign Designer user logo: edge band with image centered in the band. */
+export type SignLogoPlacement = "left" | "right" | "top" | "bottom";
+
 export interface BadgeImage {
   src: string;
   // background image props:
@@ -28,6 +31,11 @@ export interface BadgeImage {
   // logo props (optional):
   x?: number;
   y?: number;
+  /** Sign Designer: which edge band the logo sits in; default left when src is set. */
+  placement?: SignLogoPlacement;
+  /** Natural pixel size from the uploaded file (used for aspect-preserving fit in the slot). */
+  intrinsicWidth?: number;
+  intrinsicHeight?: number;
 }
 
 export interface Badge {
