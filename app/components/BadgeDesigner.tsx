@@ -80,6 +80,10 @@ import {
   CLOUD_LIBRARY_LOGIN_HINT_DISMISSED_KEY,
   DESIGN_LIBRARY_MILESTONE_LIMIT,
 } from "../constants/designLibrary";
+import {
+  MANUFACTURING_DISCLAIMER_BODY,
+  MANUFACTURING_DISCLAIMER_TITLE,
+} from "../constants/manufacturingDisclaimer";
 import { stableAutosaveDesignId } from "../utils/stableDesignLibraryIds";
 import { createApi, type DesignLibraryListItem } from "../utils/api";
 import { getDesignerApiPaths, getDesignerConfig } from "../config/designers";
@@ -138,6 +142,8 @@ function readImageDimensionsFromFile(
   });
 }
 import {
+  createSignTextMeasure,
+  refitSignLinesAfterFontEdit,
   syncSignBadgeLinesSizeNorm,
   syncSignBadgeLinesSizeNormAfterLineReset,
 } from "~/utils/signTextLayout";
@@ -1558,9 +1564,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     lines: paddedLines.map((line) => ({ ...line })),
     ...(config.templatesKey === "sign"
       ? {
+          // signBorderOptionId omitted until user selects in Border step (matches Badge type).
           signBorderStyleId: "default",
-          // Standard frame on by default so trim matches preview expectations (chips: none vs Standard frame)
-          signBorderOptionId: "default",
         }
       : {}),
   };
@@ -1754,7 +1759,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   });
   /** Sign only: image/logo step panel open state (optional step). */
   const [signLogoSectionOpen, setSignLogoSectionOpen] = useState(false);
-  const [signLogoSectionOpened, setSignLogoSectionOpened] = useState(false);
   const [signLogoUploading, setSignLogoUploading] = useState(false);
   const signLogoFileInputRef = useRef<HTMLInputElement | null>(null);
   /** True when the selected sign template family has a border trim (Circle/Basic omit the border step). */
@@ -1878,6 +1882,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   /** True after we have asked to load previous design this session (don't show modal again until next visit). */
   /** When true, debounced cache save will skip one write (set after add-to-cart success so we don't write old state back). */
   const skipCacheSaveRef = useRef(false);
+  /** Debounce expensive sign `syncSignBadgeLinesSizeNorm` while typing plain text (Designer / ornate plates). */
+  const signTextSyncTimerRef = useRef<ReturnType<
+    typeof window.setTimeout
+  > | null>(null);
+  useEffect(() => {
+    return () => {
+      if (signTextSyncTimerRef.current != null) {
+        window.clearTimeout(signTextSyncTimerRef.current);
+      }
+    };
+  }, []);
   const multipleBadgesRef = useRef<Badge[]>(multipleBadges);
   const badgeRef = useRef<Badge>(badge);
   const selectedBadgeIndexRef = useRef<number>(selectedBadgeIndex);
@@ -2645,21 +2660,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     return () => window.clearTimeout(t);
   }, [lineTextsSignature, cloudLibraryEnabled, multipleBadges.length, runCloudAutosaveNow]);
 
+  /** Debounced cloud draft save for non-text edits (placement, logo fields, lines structure, etc.). Runs after `CLOUD_AUTOSAVE_NON_TEXT_MS` idle — not gated on `stepsComplete` so sign logo placement/image updates persist while the wizard is open. */
   useEffect(() => {
-    if (
-      !stepsComplete ||
-      !cloudLibraryEnabled ||
-      multipleBadges.length === 0
-    ) {
-      return;
-    }
+    if (!cloudLibraryEnabled || multipleBadges.length === 0) return;
     const t = window.setTimeout(() => {
       void runCloudAutosaveNow();
     }, CLOUD_AUTOSAVE_NON_TEXT_MS);
     return () => window.clearTimeout(t);
   }, [
     nonTextDesignSignature,
-    stepsComplete,
     cloudLibraryEnabled,
     multipleBadges.length,
     runCloudAutosaveNow,
@@ -3530,6 +3539,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         };
         const refit = applySignLogoRefit(next);
         persistCurrentBadgeToSlot(refit);
+        queueMicrotask(() => {
+          const run = runCloudAutosaveNowRef.current;
+          if (!run) return;
+          const idx = selectedBadgeIndexRef.current;
+          const mb = [...multipleBadgesRef.current];
+          if (mb[idx]) mb[idx] = refit;
+          void run({ multipleBadgesOverride: mb, badgeOverride: refit });
+        });
         return refit;
       });
     } catch (err) {
@@ -3560,6 +3577,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const next: Badge = { ...prev, logo: undefined };
       const refit = applySignLogoRefit(next);
       persistCurrentBadgeToSlot(refit);
+      queueMicrotask(() => {
+        const run = runCloudAutosaveNowRef.current;
+        if (!run) return;
+        const idx = selectedBadgeIndexRef.current;
+        const mb = [...multipleBadgesRef.current];
+        if (mb[idx]) mb[idx] = refit;
+        void run({ multipleBadgesOverride: mb, badgeOverride: refit });
+      });
       return refit;
     });
   };
@@ -3714,10 +3739,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     const lineTemplate =
       templates.find((t) => t.id === badge.templateId) ??
       templates.find((t) => t.id === universalTemplateId);
-    const signLayout =
-      lineTemplate?.signTextLayout && variant === "sign"
-        ? getEffectiveSignTextLayoutForBadge(lineTemplate, badge)
-        : lineTemplate?.signTextLayout;
     // Account for 0.1" (9.6px) inset on each side for text clipping
     const INSET_INCHES = 0.1;
     const INSET_PX = INSET_INCHES * 96; // 9.6px at 96 DPI
@@ -3739,7 +3760,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       // Signs: sizeNorm must match signTextLayout.designBoxHeight (see syncSignBadgeLinesSizeNorm).
       // Per-line shrink here used effectiveDesignBox.height and skipped height/sibling constraints — run full sync below instead.
       const useSignSync =
-        variant === "sign" && signLayout && typeof document !== "undefined";
+        variant === "sign" &&
+        !!lineTemplate?.signTextLayout &&
+        typeof document !== "undefined";
       if (
         !useSignSync &&
         (typeof changes.sizeNorm !== "undefined" ||
@@ -3825,17 +3848,80 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       return updated;
     });
 
-    const fittedLines =
+    const signHasLayout =
       variant === "sign" &&
-      signLayout &&
-      typeof document !== "undefined" &&
-      (typeof changes.sizeNorm !== "undefined" ||
-        typeof changes.text !== "undefined" ||
-        typeof changes.fontFamily !== "undefined" ||
-        typeof changes.bold !== "undefined" ||
-        typeof changes.italic !== "undefined")
-        ? syncSignBadgeLinesSizeNorm(newLines, signLayout)
-        : newLines;
+      !!lineTemplate?.signTextLayout &&
+      typeof document !== "undefined";
+
+    const typographyMayNeedSync =
+      typeof changes.sizeNorm !== "undefined" ||
+      typeof changes.text !== "undefined" ||
+      typeof changes.fontFamily !== "undefined" ||
+      typeof changes.bold !== "undefined" ||
+      typeof changes.italic !== "undefined";
+
+    // Text-only: skip `getEffectiveSignTextLayoutForBadge` on each keystroke (expensive on Fancy);
+    // sync sizeNorm after idle. Preview still uses lines.text directly.
+    const debounceSignTextSync =
+      signHasLayout &&
+      typographyMayNeedSync &&
+      typeof changes.text !== "undefined" &&
+      typeof changes.sizeNorm === "undefined" &&
+      typeof changes.fontFamily === "undefined" &&
+      typeof changes.bold === "undefined" &&
+      typeof changes.italic === "undefined" &&
+      Object.keys(changes).length === 1;
+
+    let fittedLines: BadgeLine[];
+
+    if (debounceSignTextSync && typeof window !== "undefined") {
+      fittedLines = newLines;
+      window.clearTimeout(signTextSyncTimerRef.current ?? undefined);
+      signTextSyncTimerRef.current = window.setTimeout(() => {
+        const tid =
+          badgeRef.current.templateId ?? universalTemplateIdRef.current;
+        const tpl =
+          templates.find((t) => t.id === tid) ??
+          templates.find((t) => t.id === universalTemplateIdRef.current);
+        if (!tpl?.signTextLayout) return;
+        const eff = getEffectiveSignTextLayoutForBadge(tpl, badgeRef.current);
+        if (!eff) return;
+        const synced = syncSignBadgeLinesSizeNorm(badgeRef.current.lines, eff);
+        const centered = calculateCenterPositions(synced);
+        const nb = { ...badgeRef.current, lines: centered };
+        setBadge(nb);
+        persistCurrentBadgeToSlot(nb);
+      }, 120);
+    } else {
+      if (typeof window !== "undefined") {
+        window.clearTimeout(signTextSyncTimerRef.current ?? undefined);
+        signTextSyncTimerRef.current = null;
+      }
+
+      const effectiveSignLayout =
+        lineTemplate?.signTextLayout && variant === "sign"
+          ? getEffectiveSignTextLayoutForBadge(lineTemplate, {
+              ...badge,
+              lines: newLines,
+            })
+          : undefined;
+
+      const signSyncEligible =
+        signHasLayout && !!effectiveSignLayout && typographyMayNeedSync;
+
+      fittedLines =
+        signSyncEligible && effectiveSignLayout
+          ? typeof changes.sizeNorm !== "undefined" &&
+            Object.keys(changes).length === 1
+            ? refitSignLinesAfterFontEdit(
+                newLines,
+                index,
+                effectiveSignLayout,
+                createSignTextMeasure(),
+              )
+            : syncSignBadgeLinesSizeNorm(newLines, effectiveSignLayout)
+          : newLines;
+    }
 
     // Apply center-based positioning
     const centeredLines = calculateCenterPositions(fittedLines);
@@ -4024,10 +4110,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       signTextLayout &&
       typeof document !== "undefined"
     ) {
+      // Must pass these `lines` on the badge: logo slack + clip (`getEffectiveSignTextLayoutForBadge`)
+      // reads `badge.lines` for fitters; stale sizeNorm (e.g. after switching Basic → circle) caused
+      // wrong text region / overlap with logo and chord overflow in preview.
       const eff =
         layoutTemplate && layoutBadge
-          ? getEffectiveSignTextLayoutForBadge(layoutTemplate, layoutBadge) ??
-            signTextLayout
+          ? getEffectiveSignTextLayoutForBadge(layoutTemplate, {
+              ...layoutBadge,
+              lines,
+            }) ?? signTextLayout
           : signTextLayout;
       return syncSignBadgeLinesSizeNorm(lines, eff);
     }
@@ -4114,7 +4205,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       ...(variant === "sign"
         ? {
             signBorderStyleId: "default",
-            signBorderOptionId: "default",
+            signBorderOptionId: undefined,
             signBorderEnabled: undefined,
           }
         : {}),
@@ -4158,7 +4249,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         ...(variant === "sign"
           ? {
               signBorderStyleId: "default",
-              signBorderOptionId: "default",
+              signBorderOptionId: undefined,
               signBorderEnabled: undefined,
             }
           : {}),
@@ -4184,7 +4275,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       ...(variant === "sign"
         ? {
             signBorderStyleId: "default",
-            signBorderOptionId: "default",
+            signBorderOptionId: undefined,
             signBorderEnabled: undefined,
           }
         : {}),
@@ -4447,7 +4538,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         ...(variant === "sign"
           ? {
               signBorderStyleId: "default",
-              signBorderOptionId: "default",
+              signBorderOptionId: undefined,
               signBorderEnabled: undefined,
             }
           : {}),
@@ -4500,7 +4591,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         ...(variant === "sign"
           ? {
               signBorderStyleId: "default",
-              signBorderOptionId: "default",
+              signBorderOptionId: undefined,
               signBorderEnabled: undefined,
             }
           : {}),
@@ -4738,7 +4829,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       ) {
         const signBorderProps = clearSignBorderOnTemplateChange
           ? {
-              signBorderOptionId: "default" as const,
+              signBorderOptionId: undefined,
               signBorderEnabled: undefined,
             }
           : {};
@@ -4752,7 +4843,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         lines: centeredLines,
         ...(clearSignBorderOnTemplateChange
           ? {
-              signBorderOptionId: "default",
+              signBorderOptionId: undefined,
               signBorderEnabled: undefined,
             }
           : {}),
@@ -4775,7 +4866,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         ) {
           const signBorderProps = clearSignBorderOnTemplateChange
             ? {
-                signBorderOptionId: "default" as const,
+                signBorderOptionId: undefined,
                 signBorderEnabled: undefined,
               }
             : {};
@@ -4789,7 +4880,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           lines: centeredLines,
           ...(clearSignBorderOnTemplateChange
             ? {
-                signBorderOptionId: "default",
+                signBorderOptionId: undefined,
                 signBorderEnabled: undefined,
               }
             : {}),
@@ -6231,6 +6322,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           </div>
         </div>
       ) : null}
+      <div
+        className="max-w-5xl mx-auto w-full mb-2 px-0 md:px-0"
+        role="note"
+        aria-label={MANUFACTURING_DISCLAIMER_TITLE}
+      >
+        <div className="rounded-lg border border-amber-200 bg-amber-50 text-amber-950 px-3 py-2 text-sm leading-snug">
+          <span className="font-semibold">{MANUFACTURING_DISCLAIMER_TITLE}. </span>
+          {MANUFACTURING_DISCLAIMER_BODY}
+        </div>
+      </div>
       <div className="flex flex-col md:flex-row bg-gray-100 p-4 md:p-6 rounded-lg shadow-lg mx-auto max-w-5xl h-screen overflow-hidden md:h-auto md:min-h-[600px] md:overflow-visible">
       {/* MOBILE: Header + preview fixed at top; editor scrolls below */}
       <div className="flex-shrink-0 md:hidden flex flex-col mb-2">
@@ -6459,8 +6560,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     ? [
                         {
                           label: "Image",
-                          done:
-                            signLogoSectionOpened || Boolean(badge.logo?.src),
+                          done: Boolean(badge.logo?.src),
                           current: false,
                         },
                       ]
@@ -7714,7 +7814,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   }
                   const willBeOpen = !signLogoSectionOpen;
                   setSignLogoSectionOpen(willBeOpen);
-                  if (willBeOpen) setSignLogoSectionOpened(true);
                 }}
                 className="flex items-center justify-between w-full mb-2 text-left"
               >
@@ -7724,7 +7823,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       ? "Step 6: Image or logo (optional)"
                       : "Step 5: Image or logo (optional)"}
                   </h3>
-                  {(signLogoSectionOpened || Boolean(badge.logo?.src)) && (
+                  {Boolean(badge.logo?.src) && (
                     <CheckCircleIcon className="w-5 h-5 text-green-600" />
                   )}
                 </div>
@@ -10830,6 +10929,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   print exactly what we receive, so please check for any typos
                   or spelling mistakes before you add to cart.
                 </p>
+                <p className="text-sm text-gray-600 mb-2">
+                  {MANUFACTURING_DISCLAIMER_BODY}
+                </p>
                 <p className="text-sm text-gray-600 mb-3">
                   By adding to cart you acknowledge that custom-printed items
                   cannot be returned or refunded due to customer error (e.g.
@@ -10928,6 +11030,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               </button>
             </div>
             <div className="overflow-y-auto flex-1 p-4">
+              <div
+                className="mb-4 p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-950"
+                role="note"
+              >
+                <p className="text-sm font-semibold mb-1">
+                  {MANUFACTURING_DISCLAIMER_TITLE}
+                </p>
+                <p className="text-sm leading-snug">{MANUFACTURING_DISCLAIMER_BODY}</p>
+              </div>
               <div className="space-y-4">
                 {/* Save Design */}
                 <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">

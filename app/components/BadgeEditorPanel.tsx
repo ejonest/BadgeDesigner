@@ -27,7 +27,7 @@ interface FontSizeControlProps {
   designBox: { height: number };
   editable: boolean;
   onLineChange: (index: number, changes: Partial<BadgeLine>) => void;
-  /** Absolute px bounds for the numeric control (sign: min 20, high max; badge: 8–72). */
+  /** Absolute px bounds for the numeric control (sign: min 14 nominal; badge: 8–72). */
   minFontPx: number;
   maxFontPx: number;
 }
@@ -46,7 +46,7 @@ const FontSizeControl: React.FC<FontSizeControlProps> = ({
   // Get current size in pixels for display, prefer sizeNorm if available
   const currentSizePx = line.sizeNorm
     ? sizeNormToPx(line.sizeNorm, designBox.height)
-    : (line.fontSize || 13);
+    : line.fontSize || 13;
   const currentSizeNorm =
     line.sizeNorm ??
     Math.max(
@@ -58,9 +58,7 @@ const FontSizeControl: React.FC<FontSizeControlProps> = ({
 
   // State for editable input
   const [isEditing, setIsEditing] = React.useState(false);
-  const [inputValue, setInputValue] = React.useState(
-    currentSizePx.toString()
-  );
+  const [inputValue, setInputValue] = React.useState(currentSizePx.toString());
 
   // Update input value when current size changes
   React.useEffect(() => {
@@ -89,9 +87,9 @@ const FontSizeControl: React.FC<FontSizeControlProps> = ({
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.currentTarget.blur();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       setInputValue(currentSizePx.toString());
       setIsEditing(false);
     }
@@ -103,15 +101,10 @@ const FontSizeControl: React.FC<FontSizeControlProps> = ({
         type="button"
         className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
         onClick={() => {
-          const newSizeNorm = Math.max(
-            minSizeNorm,
-            currentSizeNorm - 0.01,
-          );
+          const newSizeNorm = Math.max(minSizeNorm, currentSizeNorm - 0.01);
           onLineChange(lineIndex, { sizeNorm: newSizeNorm });
         }}
-        disabled={
-          currentSizeNorm <= minSizeNorm || !editable
-        }
+        disabled={currentSizeNorm <= minSizeNorm || !editable}
       >
         -
       </button>
@@ -141,15 +134,10 @@ const FontSizeControl: React.FC<FontSizeControlProps> = ({
         type="button"
         className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
         onClick={() => {
-          const newSizeNorm = Math.min(
-            maxSizeNorm,
-            currentSizeNorm + 0.01,
-          );
+          const newSizeNorm = Math.min(maxSizeNorm, currentSizeNorm + 0.01);
           onLineChange(lineIndex, { sizeNorm: newSizeNorm });
         }}
-        disabled={
-          currentSizeNorm >= maxSizeNorm || !editable
-        }
+        disabled={currentSizeNorm >= maxSizeNorm || !editable}
       >
         +
       </button>
@@ -272,9 +260,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   ]);
 
   const fontSizeMinPx =
-    variant === "sign"
-      ? SIGN_TEXT_MIN_FONT_PX
-      : BADGE_CONSTANTS.MIN_FONT_SIZE;
+    variant === "sign" ? SIGN_TEXT_MIN_FONT_PX : BADGE_CONSTANTS.MIN_FONT_SIZE;
   const fontSizeMaxPx =
     variant === "sign"
       ? Math.max(fontSizeMinPx, Math.ceil(designBox.height * 4))
@@ -322,14 +308,17 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                       ...FONT_COLORS.filter(
                         (fc) => fc.name !== "Brown" && fc.name !== "Ivory",
                       ),
-                      { value: "rainbow", name: "More Colors", ring: "ring-gray-400", isRainbow: true },
+                      {
+                        value: "rainbow",
+                        name: "More Colors",
+                        ring: "ring-gray-400",
+                        isRainbow: true,
+                      },
                     ].map((fc) => {
                       const isRainbow = (fc as any).isRainbow === true;
-                      const isDisabled = !isRainbow && areColorsSimilar(
-                        fc.value,
-                        badge.backgroundColor,
-                        70,
-                      );
+                      const isDisabled =
+                        !isRainbow &&
+                        areColorsSimilar(fc.value, badge.backgroundColor, 70);
                       const isRed = !isRainbow && isRedColor(fc.value);
                       return (
                         <div
@@ -339,7 +328,9 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                           <span className="relative inline-block">
                             <button
                               className={`rounded border-2 transition-colors ${
-                                line.color === fc.value && !isDisabled && !isRainbow
+                                line.color === fc.value &&
+                                !isDisabled &&
+                                !isRainbow
                                   ? "ring-2 ring-offset-1 " + fc.ring
                                   : isDisabled && !isRainbow
                                   ? "border-gray-400 opacity-50 cursor-not-allowed"
@@ -459,15 +450,13 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
               type="text"
               className="border rounded px-3 py-2 text-base w-full min-w-[120px]"
               style={{ backgroundColor: "#fff" }}
-              value={
-                (() => {
-                  const defaultText =
-                    idx === 0 ? "Your Name" : idx === 1 ? "Title" : "Line Text";
-                  const isEmptyOrDefault =
-                    !(line.text ?? "").trim() || line.text === defaultText;
-                  return isEmptyOrDefault ? "" : line.text;
-                })()
-              }
+              value={(() => {
+                const defaultText =
+                  idx === 0 ? "Your Name" : idx === 1 ? "Title" : "Line Text";
+                const isEmptyOrDefault =
+                  !(line.text ?? "").trim() || line.text === defaultText;
+                return isEmptyOrDefault ? "" : line.text;
+              })()}
               onChange={(e) => onLineChange(idx, { text: e.target.value })}
               placeholder={`Insert line ${idx + 1} text here`}
               disabled={!editable}

@@ -2,6 +2,7 @@ import type { ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
   saveSignDesignMilestone,
+  uploadedImageUrlFromBadgeRecord,
   type DesignSaveKind,
   type SignDesign,
 } from "~/utils/supabase";
@@ -113,6 +114,7 @@ export async function action({ request }: ActionFunctionArgs) {
       design_data: fullDesignData,
       status: "saved",
       thumbnail_url: thumb,
+      uploaded_image_url: uploadedImageUrlFromBadgeRecord(firstBadge),
     };
 
     const saved = await saveSignDesignMilestone(row, milestoneKind);

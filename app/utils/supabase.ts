@@ -151,6 +151,8 @@ export interface BadgeDesign {
   design_data?: any;
   thumbnail_url?: string;
   full_image_url?: string;
+  /** Sign designer: public URL of user-uploaded logo (not SVG export). */
+  uploaded_image_url?: string;
   status?: "draft" | "saved" | "ordered" | "archived";
   /** autosave | manual | cart | ordered — see docs/migration_add_save_kind_to_design_tables.sql */
   save_kind?: DesignSaveKind | null;
@@ -575,6 +577,24 @@ export async function deleteSavedDesignsForUser(
 
 /** Same row shape as {@link BadgeDesign}; stored in `sign_designs` for the sign designer. */
 export type SignDesign = BadgeDesign;
+
+/** Persistable logo URL for sign tables — skips empty and data URLs. */
+export function persistedSignUploadedImageUrl(
+  src: string | undefined | null,
+): string | undefined {
+  if (src == null || typeof src !== "string") return undefined;
+  const t = src.trim();
+  if (!t || t.startsWith("data:")) return undefined;
+  return t;
+}
+
+/** Reads sign user logo URL from serialized badge JSON (`badge.logo.src`). */
+export function uploadedImageUrlFromBadgeRecord(
+  badge: Record<string, unknown> | undefined,
+): string | undefined {
+  const logo = badge?.logo as { src?: string } | undefined;
+  return persistedSignUploadedImageUrl(logo?.src);
+}
 
 export async function saveSignDesign(design: SignDesign) {
   if (!supabaseAdmin) {
@@ -1090,6 +1110,8 @@ export async function insertOrderedDesignSnapshotFromCart(params: {
     return { skipped: true as const, reason: "no_cart_snapshot" as const };
   }
 
+  const uid = cartRow.user_id;
+  const sid = cartRow.shop_id;
   const c = cartRow as BadgeDesign;
   const dd = c.design_data as Record<string, unknown>;
   const allBadges = dd?.allBadges as unknown[] | undefined;
@@ -1113,16 +1135,19 @@ export async function insertOrderedDesignSnapshotFromCart(params: {
     total_price: c.total_price ?? 9.99,
     design_data: c.design_data,
     thumbnail_url: c.thumbnail_url,
+    uploaded_image_url:
+      (c as BadgeDesign).uploaded_image_url ??
+      uploadedImageUrlFromBadgeRecord(firstBadge),
     save_kind: "ordered",
     status: "ordered",
   };
 
   if (params.table === "badge_designs") {
     await saveBadgeDesign(row);
-    await pruneDesignMilestones("badge_designs", c.user_id, c.shop_id);
+    await pruneDesignMilestones("badge_designs", uid, sid);
   } else {
     await saveSignDesign(row as SignDesign);
-    await pruneDesignMilestones("sign_designs", c.user_id, c.shop_id);
+    await pruneDesignMilestones("sign_designs", uid, sid);
   }
 
   return { skipped: false as const, design_id: newId };
@@ -1192,6 +1217,8 @@ export interface BadgeOrderItem {
   line_6_alignment?: string;
   thumbnail_url?: string;
   full_image_url?: string;
+  /** Sign designer: user-uploaded logo URL (sign_order_items only). */
+  uploaded_image_url?: string;
   pdf_url?: string;
   shopify_customer_id?: string;
   /** Number of units; 1 at add-to-cart, updated from order line at checkout. Used for badges, signs, stamps, etc. */
@@ -1355,6 +1382,7 @@ export function convertBadgeToOrderItem(
     line_6_alignment: lines[5]?.align,
     thumbnail_url: options?.thumbnail_url,
     full_image_url: options?.full_image_url,
+    uploaded_image_url: persistedSignUploadedImageUrl(badge.logo?.src),
     pdf_url: options?.pdf_url,
     shopify_customer_id: options?.shopify_customer_id,
     quantity: options?.quantity ?? 1,

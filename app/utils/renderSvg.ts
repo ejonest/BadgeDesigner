@@ -3,6 +3,8 @@ import type { LoadedTemplate } from "~/utils/templates";
 import type { Badge, BadgeImage, BadgeLine } from "../types/badge";
 import {
   buildSignTextClipPathInnerMarkup,
+  createSignTextMeasure,
+  isSignLineStrictEmpty,
   layoutSignTextLines,
   measureSignTextPx,
   signCircleExtraInsetPx,
@@ -10,8 +12,7 @@ import {
   type ResolvedSignTextLayout,
 } from "~/utils/signTextLayout";
 import {
-  adjustResolvedSignTextLayoutForSignLogo,
-  computeSignLogoDrawRect,
+  resolveSignTextLayoutAndUserLogoSlack,
   resolveSignUserLogoBoundsBox,
 } from "~/utils/signLogoTextLayout";
 import {
@@ -166,13 +167,15 @@ export function getEffectiveSignTextLayoutForBadge(
     trimBox,
     borderOn,
   );
-  return adjustResolvedSignTextLayoutForSignLogo(
+  return resolveSignTextLayoutAndUserLogoSlack(
     template.signTextLayout,
     trimBox,
     logoForLayout,
     template.signTextLayout.plateCircle,
     logoBoundsBox,
-  );
+    badge.lines,
+    createSignTextMeasure(),
+  ).layout;
 }
 
 function resolveSignOverlayMarkup(
@@ -347,6 +350,8 @@ function calculateTextLayout(
   template: LoadedTemplate,
   fontMappings: Map<string, string> | undefined,
   badge: Badge,
+  /** When already computed for clip/logo resolve; avoids duplicate expensive work per SVG render. */
+  precResolvedSignLayout?: ResolvedSignTextLayout,
 ): Array<{
   line: AnyLine;
   x: number;
@@ -361,8 +366,10 @@ function calculateTextLayout(
   if (lines.length === 0) return [];
 
   if (template.signTextLayout) {
-    const signLayout = getEffectiveSignTextLayoutForBadge(template, badge)!;
-    return layoutSignTextLines(
+    const signLayout =
+      precResolvedSignLayout ??
+      getEffectiveSignTextLayoutForBadge(template, badge)!;
+    const laid = layoutSignTextLines(
       lines as BadgeLine[],
       signLayout,
       (args) =>
@@ -375,6 +382,7 @@ function calculateTextLayout(
         ),
       esc,
     );
+    return laid.filter((row) => !isSignLineStrictEmpty(row.line.text));
   }
 
   const MIN_FONT = BADGE_CONSTANTS.MIN_FONT_SIZE;
@@ -656,11 +664,14 @@ function renderUserLogoLayer(
       trimBox,
       borderOn,
     );
-    const rect = computeSignLogoDrawRect(
-      logo,
-      logoBoundsBox,
-      template.signTextLayout.plateCircle,
+    const { draw: rect } = resolveSignTextLayoutAndUserLogoSlack(
       template.signTextLayout,
+      trimBox,
+      logo,
+      template.signTextLayout.plateCircle,
+      logoBoundsBox,
+      badge.lines,
+      createSignTextMeasure(),
     );
     if (!rect) return "";
     const src = esc(logo.src);
@@ -849,9 +860,6 @@ export function renderBadgeToSvgString(
     ? renderBg(badge.backgroundImage, designBox)
     : "";
 
-  console.log("[renderSvg] designBox:", designBox);
-  console.log("[renderSvg] backgroundColor:", badge.backgroundColor);
-
   // Text rendering with uniform spacing and proportional scaling
   const lineLayout = calculateTextLayout(
     badge.lines || [],
@@ -859,6 +867,7 @@ export function renderBadgeToSvgString(
     template,
     undefined,
     badge,
+    effectiveSignLayout,
   );
 
   // Render text elements
@@ -1159,6 +1168,7 @@ export async function renderBadgeToSvgStringWithFonts(
     template,
     fontMappings,
     badge,
+    effectiveSignLayoutWithFonts,
   );
 
   // Render text elements

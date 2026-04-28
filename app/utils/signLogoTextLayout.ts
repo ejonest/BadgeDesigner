@@ -7,8 +7,17 @@
  */
 
 import type { LoadedTemplate } from "~/utils/templates";
-import type { BadgeImage } from "~/types/badge";
-import type { ResolvedSignTextLayout, SignPlateCircle } from "~/utils/signTextLayout";
+import type { BadgeImage, BadgeLine } from "~/types/badge";
+import {
+  computeSignTextInkBoundsFromLaid,
+  createSignTextMeasure,
+  isSignLineLayoutParticipant,
+  layoutSignTextLines,
+  signLayoutRenderedLinesFit,
+  type ResolvedSignTextLayout,
+  type SignPlateCircle,
+  type TextMeasurePx,
+} from "~/utils/signTextLayout";
 import {
   SIGN_TEXT_EXTRA_TOP_PX,
   SIGN_TEXT_INSET_PX,
@@ -27,6 +36,26 @@ export const SIGN_LOGO_MAX_SLOT_WIDTH_FRAC = 0.35;
  * top/bottom so side placements do not scale to full plate height and overflow ornate edges).
  */
 export const SIGN_LOGO_MAX_SLOT_HEIGHT_FRAC = 0.35;
+
+/**
+ * Fancy (`fancy-*`) plates are wide vs logo bitmap; a 0.35 width cap leaves huge empty band when
+ * the logo is centered between border and text — allow a larger fit so margins look balanced.
+ */
+export function signLogoMaxSlotWidthFracForTemplate(
+  templateId: string | undefined,
+): number {
+  const id = templateId?.toLowerCase() ?? "";
+  if (id.startsWith("fancy-")) return 0.54;
+  return SIGN_LOGO_MAX_SLOT_WIDTH_FRAC;
+}
+
+export function signLogoMaxSlotHeightFracForTemplate(
+  templateId: string | undefined,
+): number {
+  const id = templateId?.toLowerCase() ?? "";
+  if (id.startsWith("fancy-")) return 0.5;
+  return SIGN_LOGO_MAX_SLOT_HEIGHT_FRAC;
+}
 /** Gap (px) between fitted logo and text region at 96dpi template space. */
 export const SIGN_LOGO_TEXT_GAP_PX = 10;
 
@@ -228,13 +257,14 @@ export function computeSignLogoDrawRect(
 
   let maxSlotW: number;
   let maxSlotH: number;
+  const wFrac = signLogoMaxSlotWidthFracForTemplate(signLayout?.signTemplateId);
+  const hFrac = signLogoMaxSlotHeightFracForTemplate(signLayout?.signTemplateId);
   if (placement === "left" || placement === "right") {
-    maxSlotW = innerW * SIGN_LOGO_MAX_SLOT_WIDTH_FRAC;
-    // Same vertical cap as top/bottom — do not let side logos use the full plate height
-    maxSlotH = innerH * SIGN_LOGO_MAX_SLOT_HEIGHT_FRAC;
+    maxSlotW = innerW * wFrac;
+    maxSlotH = innerH * hFrac;
   } else {
     maxSlotW = innerW;
-    maxSlotH = innerH * SIGN_LOGO_MAX_SLOT_HEIGHT_FRAC;
+    maxSlotH = innerH * hFrac;
   }
 
   let { w: fw, h: fh } = containFit(iw, ih, maxSlotW, maxSlotH);
@@ -268,6 +298,160 @@ export function computeSignLogoDrawRect(
     return {
       x: db.x + padX + (db.width - 2 * padX - w) / 2,
       y: db.y + db.height - padY - h,
+      width: w,
+      height: h,
+    };
+  };
+
+  let rect = positionRect(fw, fh);
+  if (plateCircle) {
+    const clearM = signCircleExtraInsetPx(plateCircle.r);
+    let g = 0;
+    while (g < 40 && !rectInsidePlateCircle(rect, plateCircle, clearM)) {
+      fw *= 0.92;
+      fh *= 0.92;
+      rect = positionRect(fw, fh);
+      g++;
+    }
+  }
+
+  return rect;
+}
+
+/**
+ * Fit logo in the band between measured text ink and the plate edge (caps still bounded by
+ * {@link SIGN_LOGO_MAX_SLOT_WIDTH_FRAC} / {@link SIGN_LOGO_MAX_SLOT_HEIGHT_FRAC} as a sanity ceiling).
+ */
+export function computeSignLogoDrawRectMeasured(
+  ink: { left: number; right: number; top: number; bottom: number },
+  logoBoundsBox: Rect,
+  logo: BadgeImage,
+  plateCircle: SignPlateCircle | undefined,
+  signLayout: ResolvedSignTextLayout | undefined,
+  placement: NonNullable<BadgeImage["placement"]> | "left",
+): SignLogoDrawRect | null {
+  if (!logo?.src?.trim()) return null;
+
+  const iw =
+    logo.intrinsicWidth && logo.intrinsicWidth > 0 ? logo.intrinsicWidth : 100;
+  const ih =
+    logo.intrinsicHeight && logo.intrinsicHeight > 0 ? logo.intrinsicHeight : 100;
+
+  const { padX: basePadX, padY: basePadY } = signLogoEdgePads(logoBoundsBox);
+  const curve = plateCircle ? signCircleExtraInsetPx(plateCircle.r) : 0;
+  const taper =
+    !plateCircle && signLayout?.taperedNonRectPlate
+      ? signTaperedNonRectExtraInsetPx(
+          logoBoundsBox.width,
+          logoBoundsBox.height,
+          signLayout.signTemplateId,
+        )
+      : 0;
+  const padX = basePadX + curve + taper;
+  const padY = basePadY + curve + taper;
+  const outLr = signTaperedOrnateOutboardNudgePx(
+    logoBoundsBox.width,
+    logoBoundsBox.height,
+    signLayout?.signTemplateId,
+    placement,
+  );
+  const innerW = Math.max(
+    1,
+    logoBoundsBox.width -
+      2 * padX -
+      (placement === "left" || placement === "right" ? outLr : 0),
+  );
+  const innerH = Math.max(1, logoBoundsBox.height - 2 * padY);
+  const db = logoBoundsBox;
+  const gap = SIGN_LOGO_TEXT_GAP_PX;
+
+  let maxSlotW: number;
+  let maxSlotH: number;
+  /** Full axis span from plate inset to text ink (for centering the bitmap in that band). */
+  let bandWFull = 1;
+  let bandHFull = 1;
+
+  const wFracM = signLogoMaxSlotWidthFracForTemplate(signLayout?.signTemplateId);
+  const hFracM = signLogoMaxSlotHeightFracForTemplate(signLayout?.signTemplateId);
+  if (placement === "left") {
+    const outerLeft = db.x + padX + outLr;
+    bandWFull = Math.max(8, ink.left - gap - outerLeft);
+    maxSlotW = Math.min(innerW * wFracM, bandWFull);
+    maxSlotH = innerH * hFracM;
+  } else if (placement === "right") {
+    const outerRight = db.x + db.width - padX - outLr;
+    bandWFull = Math.max(8, outerRight - (ink.right + gap));
+    maxSlotW = Math.min(innerW * wFracM, bandWFull);
+    maxSlotH = innerH * hFracM;
+  } else if (placement === "top") {
+    maxSlotW = innerW;
+    const yMin = db.y + padY;
+    bandHFull = Math.max(8, ink.top - gap - yMin);
+    maxSlotH = Math.min(innerH * hFracM, bandHFull);
+  } else {
+    maxSlotW = innerW;
+    const yMax = db.y + db.height - padY;
+    bandHFull = Math.max(8, yMax - (ink.bottom + gap));
+    maxSlotH = Math.min(innerH * hFracM, bandHFull);
+  }
+
+  maxSlotW = Math.max(8, maxSlotW);
+  maxSlotH = Math.max(8, maxSlotH);
+
+  let { w: fw, h: fh } = containFit(iw, ih, maxSlotW, maxSlotH);
+
+  /** Designer plates: centering the logo in [plate … text] leaves a huge gap next to long text; hug the text edge instead (slack stays outboard). */
+  const flushMeasuredLogoToText =
+    signLayout?.signTemplateId?.toLowerCase().startsWith("designer-") ?? false;
+
+  const positionRect = (w: number, h: number): SignLogoDrawRect => {
+    if (placement === "left") {
+      const outerLeft = db.x + padX + outLr;
+      const x = flushMeasuredLogoToText
+        ? outerLeft + Math.max(0, bandWFull - w)
+        : outerLeft + Math.max(0, (bandWFull - w) / 2);
+      return {
+        x,
+        y: db.y + padY + (db.height - 2 * padY - h) / 2,
+        width: w,
+        height: h,
+      };
+    }
+    if (placement === "right") {
+      const outerRight = db.x + db.width - padX - outLr;
+      const textRightEdge = ink.right + gap;
+      const x = flushMeasuredLogoToText
+        ? Math.min(textRightEdge, outerRight - w)
+        : textRightEdge + Math.max(0, (bandWFull - w) / 2);
+      return {
+        x,
+        y: db.y + padY + (db.height - 2 * padY - h) / 2,
+        width: w,
+        height: h,
+      };
+    }
+    if (placement === "top") {
+      const yMin = db.y + padY;
+      /** Same idea as left flush: hug text from above (`ink.top − gap − h`), slack stays toward plate top. */
+      const y = flushMeasuredLogoToText
+        ? yMin + Math.max(0, bandHFull - h)
+        : yMin + Math.max(0, (bandHFull - h) / 2);
+      return {
+        x: db.x + padX + (db.width - 2 * padX - w) / 2,
+        y,
+        width: w,
+        height: h,
+      };
+    }
+    const yMax = db.y + db.height - padY;
+    const textBottomEdge = ink.bottom + gap;
+    /** Bottom placement: hug text from below — anchor logo top at `ink.bottom + gap`, extra space toward plate bottom. */
+    const y = flushMeasuredLogoToText
+      ? Math.min(textBottomEdge, yMax - h)
+      : textBottomEdge + Math.max(0, (bandHFull - h) / 2);
+    return {
+      x: db.x + padX + (db.width - 2 * padX - w) / 2,
+      y,
       width: w,
       height: h,
     };
@@ -332,54 +516,71 @@ function textAllowedRectAfterLogo(
   };
 }
 
+function clampf(n: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, n));
+}
+
 /**
- * Shrinks sign text layout clip/content rects so text does not overlap the user logo.
- * Returns a shallow copy; `designBoxHeight` and line weight arrays are preserved for sizeNorm.
- *
- * @param trimBoxForText - Effective design box used for sign text (same as template sign layout).
- * @param logoBoundsBox - Tighter box for sizing/placing the bitmap (e.g. inner plate on Designer).
+ * `test` is non-increasing in v over [lo,hi]: true for a prefix, then (possibly) false.
+ * Returns the largest v in [lo,hi] with `test(v)` = true, or `lo` when `test(lo)` is false
+ * (nothing fits; caller keeps the outboard/best-geometry position).
+ * If the whole range is true, returns `hi`.
  */
-export function adjustResolvedSignTextLayoutForSignLogo(
-  layout: ResolvedSignTextLayout,
+function largestTrueInDecreasingTest(
+  lo: number,
+  hi: number,
+  test: (v: number) => boolean,
+): number {
+  if (!test(lo)) return lo;
+  if (test(hi)) return hi;
+  let a = lo;
+  let b = hi;
+  while (a < b) {
+    const mid = (a + b + 1) >> 1;
+    if (test(mid)) a = mid;
+    else b = mid - 1;
+  }
+  return a;
+}
+
+/**
+ * Rebuilds clip + content from a concrete `draw` (no logo computation).
+ */
+function buildAdjustedLayoutForSignLogoDraw(
+  baseLayout: ResolvedSignTextLayout,
   trimBoxForText: Rect,
-  logo: BadgeImage | undefined,
+  draw: SignLogoDrawRect,
+  placement: NonNullable<BadgeImage["placement"]> | "left",
   plateCircle: SignPlateCircle | undefined,
   logoBoundsBox: Rect,
-): ResolvedSignTextLayout {
-  const draw = computeSignLogoDrawRect(logo, logoBoundsBox, plateCircle, layout);
-  if (!draw) return layout;
-
-  const placement = logo?.placement ?? "left";
+): ResolvedSignTextLayout | null {
   const allowed = textAllowedRectAfterLogo(trimBoxForText, draw, placement);
-
   const nextClip = intersectRects(
     {
-      x: layout.clipRect.x,
-      y: layout.clipRect.y,
-      width: layout.clipRect.width,
-      height: layout.clipRect.height,
+      x: baseLayout.clipRect.x,
+      y: baseLayout.clipRect.y,
+      width: baseLayout.clipRect.width,
+      height: baseLayout.clipRect.height,
     },
     allowed,
   );
 
   if (!nextClip) {
-    return layout;
+    return null;
   }
 
-  // Use full trim width so right margin to border matches `resolveSignTextLayout` / logo padX
-  // (if we used `nextClip.width` here, the % would shrink with the post-logo column).
   const extraTaper =
-    !plateCircle && layout.taperedNonRectPlate
+    !plateCircle && baseLayout.taperedNonRectPlate
       ? signTaperedNonRectExtraInsetPx(
           logoBoundsBox.width,
           logoBoundsBox.height,
-          layout.signTemplateId,
+          baseLayout.signTemplateId,
         )
       : 0;
   const extra =
     (plateCircle ? signCircleExtraInsetPx(plateCircle.r) : 0) + extraTaper;
   const hPad = signHorizontalInsetPx(trimBoxForText.width) + extra;
-  const ornateTop = signTextOrnateExtraTopPx(layout.signTemplateId);
+  const ornateTop = signTextOrnateExtraTopPx(baseLayout.signTemplateId);
   const contentRect = {
     x: nextClip.x + hPad,
     y:
@@ -399,11 +600,11 @@ export function adjustResolvedSignTextLayoutForSignLogo(
   };
 
   if (contentRect.width < 8 || contentRect.height < 8) {
-    return layout;
+    return null;
   }
 
   return {
-    ...layout,
+    ...baseLayout,
     contentRect,
     clipRect: {
       x: nextClip.x,
@@ -412,4 +613,249 @@ export function adjustResolvedSignTextLayoutForSignLogo(
       height: nextClip.height,
     },
   };
+}
+
+/**
+ * Places the logo using measured text ink + iterative clip convergence, then slides along the
+ * placement axis for Word-like centering while `signLayoutRenderedLinesFit` holds.
+ */
+export function resolveSignTextLayoutAndUserLogoSlack(
+  baseLayout: ResolvedSignTextLayout,
+  trimBoxForText: Rect,
+  logo: BadgeImage | undefined,
+  plateCircle: SignPlateCircle | undefined,
+  logoBoundsBox: Rect,
+  lines: BadgeLine[] | undefined,
+  measure: TextMeasurePx = createSignTextMeasure(),
+): { layout: ResolvedSignTextLayout; draw: SignLogoDrawRect | null } {
+  const placement = (logo?.placement ?? "left") as NonNullable<
+    BadgeImage["placement"]
+  >;
+
+  const layoutForDraw = (d: SignLogoDrawRect): ResolvedSignTextLayout | null =>
+    buildAdjustedLayoutForSignLogoDraw(
+      baseLayout,
+      trimBoxForText,
+      d,
+      placement,
+      plateCircle,
+      logoBoundsBox,
+    );
+
+  let draw0 = computeSignLogoDrawRect(
+    logo,
+    logoBoundsBox,
+    plateCircle,
+    baseLayout,
+  );
+  if (!draw0) {
+    return { layout: baseLayout, draw: null };
+  }
+
+  const single = (): { layout: ResolvedSignTextLayout; draw: SignLogoDrawRect } => {
+    const b = layoutForDraw(draw0!);
+    if (!b) return { layout: baseLayout, draw: draw0! };
+    return { layout: b, draw: draw0! };
+  };
+
+  if (!lines?.length || !lines.some((L) => isSignLineLayoutParticipant(L.text))) {
+    return single();
+  }
+
+  let adjLayout = baseLayout;
+  for (let iter = 0; iter < 4; iter++) {
+    const laid = layoutSignTextLines(lines, adjLayout, measure);
+    const ink = computeSignTextInkBoundsFromLaid(laid, lines, measure);
+    const nextDraw = ink
+      ? computeSignLogoDrawRectMeasured(
+          ink,
+          logoBoundsBox,
+          logo!,
+          plateCircle,
+          baseLayout,
+          placement,
+        )
+      : computeSignLogoDrawRect(logo, logoBoundsBox, plateCircle, baseLayout);
+    if (!nextDraw) break;
+    draw0 = nextDraw;
+    const nextLayout = layoutForDraw(draw0);
+    if (!nextLayout) break;
+    const cr0 = adjLayout.contentRect;
+    const cr1 = nextLayout.contentRect;
+    adjLayout = nextLayout;
+    if (
+      Math.abs(cr0.x - cr1.x) < 0.45 &&
+      Math.abs(cr0.y - cr1.y) < 0.45 &&
+      Math.abs(cr0.width - cr1.width) < 0.45 &&
+      Math.abs(cr0.height - cr1.height) < 0.45
+    ) {
+      break;
+    }
+  }
+
+  const { padX: basePadX, padY: basePadY } = signLogoEdgePads(logoBoundsBox);
+  const curve = plateCircle ? signCircleExtraInsetPx(plateCircle.r) : 0;
+  const taper =
+    !plateCircle && baseLayout.taperedNonRectPlate
+      ? signTaperedNonRectExtraInsetPx(
+          logoBoundsBox.width,
+          logoBoundsBox.height,
+          baseLayout.signTemplateId,
+        )
+      : 0;
+  const padX = basePadX + curve + taper;
+  const padY = basePadY + curve + taper;
+  const outLr = signTaperedOrnateOutboardNudgePx(
+    logoBoundsBox.width,
+    logoBoundsBox.height,
+    baseLayout?.signTemplateId,
+    placement,
+  );
+  const db = logoBoundsBox;
+  const innerW = Math.max(
+    1,
+    db.width - 2 * padX - (placement === "left" || placement === "right" ? outLr : 0),
+  );
+  const innerH = Math.max(1, db.height - 2 * padY);
+  const wFracS = signLogoMaxSlotWidthFracForTemplate(baseLayout.signTemplateId);
+  const hFracS = signLogoMaxSlotHeightFracForTemplate(baseLayout.signTemplateId);
+  let maxSlotW: number;
+  let maxSlotH: number;
+  if (placement === "left" || placement === "right") {
+    maxSlotW = innerW * wFracS;
+    maxSlotH = innerH * hFracS;
+  } else {
+    maxSlotW = innerW;
+    maxSlotH = innerH * hFracS;
+  }
+
+  const w = draw0.width;
+  const h = draw0.height;
+
+  const fits = (d: SignLogoDrawRect): boolean => {
+    const adj = layoutForDraw(d);
+    if (!adj) return false;
+    return signLayoutRenderedLinesFit(lines, adj, measure);
+  };
+
+  const templateIdLower = baseLayout.signTemplateId?.toLowerCase() ?? "";
+  const isDesignerFlushPlacement =
+    templateIdLower.startsWith("designer-") &&
+    (placement === "left" ||
+      placement === "right" ||
+      placement === "top" ||
+      placement === "bottom");
+
+  /**
+   * Measured ink–flush `draw0` can lie **outside** the slack window (`[xOut,xIn]` or `[yOut,yIn]`)
+   * because `xIn`/`yIn` use `innerW * wFrac` only, while flush uses the full trim→text band. The
+   * clamp below would then move the logo toward `FitMax` ≤ slot bound and reopen a large gap. If
+   * `draw0` already passes `fits`, keep it (horizontal **and** vertical placements).
+   */
+  if (isDesignerFlushPlacement && fits(draw0)) {
+    const adj = layoutForDraw(draw0);
+    return { layout: adj ?? baseLayout, draw: draw0 };
+  }
+
+  /**
+   * Horizontal slack for left/right logos:
+   * - **Left:** larger x → logo moves right → wider text column → `fits` is easier (monotone).
+   *   We must slide the logo inbound toward `xIn` *before* relying on font shrink. The old code
+   *   bailed when `fits(xOut)` failed even when `fits(xIn)` was true, pinching text at the
+   *   outboard column and forcing uniform shrink toward 14px while empty plate remained.
+   * - **Right:** smaller x → more room for text; check `fits(xIn)` (easiest) first, then search.
+   */
+  if (placement === "left") {
+    const xOut = db.x + padX + outLr;
+    const xIn = xOut + Math.max(0, maxSlotW - w);
+    const fitsAtX = (xv: number) => fits({ ...draw0, x: xv });
+
+    if (!fitsAtX(xIn)) {
+      const adj0 = layoutForDraw({ ...draw0, x: xOut });
+      return { layout: adj0 ?? baseLayout, draw: { ...draw0, x: xOut } };
+    }
+
+    let xFitMax: number;
+    if (!fitsAtX(xOut)) {
+      xFitMax = xIn;
+    } else {
+      xFitMax = largestTrueInDecreasingTest(xOut, xIn, fitsAtX);
+    }
+
+    const x = clampf(draw0.x, xOut, xFitMax);
+    const draw: SignLogoDrawRect = { ...draw0, x };
+    return { layout: layoutForDraw(draw) ?? baseLayout, draw };
+  }
+
+  if (placement === "right") {
+    const xOut = db.x + db.width - padX - w - outLr;
+    const xIn = xOut - Math.max(0, maxSlotW - w);
+    const fitsAtX = (xv: number) => fits({ ...draw0, x: xv });
+
+    if (!fitsAtX(xIn)) {
+      const d: SignLogoDrawRect = { ...draw0, x: xOut };
+      return { layout: layoutForDraw(d) ?? baseLayout, draw: d };
+    }
+
+    const xFitMax = largestTrueInDecreasingTest(xIn, xOut, fitsAtX);
+    const x = clampf(draw0.x, xIn, xFitMax);
+    const draw: SignLogoDrawRect = { ...draw0, x };
+    return { layout: layoutForDraw(draw) ?? baseLayout, draw };
+  }
+
+  if (placement === "top") {
+    const yOut = db.y + padY;
+    const yIn = yOut + Math.max(0, maxSlotH - h);
+    if (!fits({ ...draw0, y: yOut })) {
+      const d: SignLogoDrawRect = { ...draw0, y: yOut };
+      return { layout: layoutForDraw(d) ?? baseLayout, draw: d };
+    }
+    const yFitMax = largestTrueInDecreasingTest(yOut, yIn, (yv) =>
+      fits({ ...draw0, y: yv }),
+    );
+    const y = clampf(draw0.y, yOut, yFitMax);
+    const draw: SignLogoDrawRect = { ...draw0, y };
+    return { layout: layoutForDraw(draw) ?? baseLayout, draw };
+  }
+
+  const yOut = db.y + db.height - padY - h;
+  const yIn = yOut - Math.max(0, maxSlotH - h);
+  if (!fits({ ...draw0, y: yOut })) {
+    const d: SignLogoDrawRect = { ...draw0, y: yOut };
+    return { layout: layoutForDraw(d) ?? baseLayout, draw: d };
+  }
+  const yFitMax = largestTrueInDecreasingTest(yIn, yOut, (yv) =>
+    fits({ ...draw0, y: yv }),
+  );
+  const y = clampf(draw0.y, yIn, yFitMax);
+  const drawB: SignLogoDrawRect = { ...draw0, y };
+  return { layout: layoutForDraw(drawB) ?? baseLayout, draw: drawB };
+}
+
+/**
+ * Shrinks sign text layout clip/content rects so text does not overlap the user logo.
+ * Returns a shallow copy; `designBoxHeight` and line weight arrays are preserved for sizeNorm.
+ *
+ * @param trimBoxForText - Effective design box used for sign text (same as template sign layout).
+ * @param logoBoundsBox - Tighter box for sizing/placing the bitmap (e.g. inner plate on Designer).
+ */
+export function adjustResolvedSignTextLayoutForSignLogo(
+  layout: ResolvedSignTextLayout,
+  trimBoxForText: Rect,
+  logo: BadgeImage | undefined,
+  plateCircle: SignPlateCircle | undefined,
+  logoBoundsBox: Rect,
+  linesForSlack?: BadgeLine[],
+  measure: TextMeasurePx = createSignTextMeasure(),
+): ResolvedSignTextLayout {
+  const { layout: out } = resolveSignTextLayoutAndUserLogoSlack(
+    layout,
+    trimBoxForText,
+    logo,
+    plateCircle,
+    logoBoundsBox,
+    linesForSlack,
+    measure,
+  );
+  return out;
 }
