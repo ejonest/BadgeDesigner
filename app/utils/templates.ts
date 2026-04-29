@@ -1109,6 +1109,21 @@ async function loadOne(
       : null;
   const isSignInsetTrim = !!signInsetTrim;
 
+  /** notched- large SVGs may omit id="Border" on path1; use path order like fancy/inset. */
+  const notchedP0 =
+    variant === "sign" && c.id.startsWith("notched-")
+      ? extractNthPathFromSvg(svgContent, 0)
+      : null;
+  const notchedP1 =
+    variant === "sign" && c.id.startsWith("notched-")
+      ? extractNthPathFromSvg(svgContent, 1)
+      : null;
+  const isSignNotched =
+    variant === "sign" &&
+    c.id.startsWith("notched-") &&
+    Boolean(notchedP0 && notchedP1) &&
+    !isSignInsetTrim;
+
   if (isSignDesignerWithBorder) {
     innerPath = outerPath; // background = outer dark shape; trim + fancy bits = border color (in overlay)
     console.log(
@@ -1133,6 +1148,11 @@ async function loadOne(
     innerPath = signInsetTrim.platePath;
     console.log(
       `[templates] Sign inset trim "${c.id}": plate path for background, id=Border for trim (border color)`,
+    );
+  } else if (isSignNotched) {
+    innerPath = notchedP0!;
+    console.log(
+      `[templates] Sign notched "${c.id}": path0 = plate, path1 = border trim (overlay)`,
     );
   }
 
@@ -1197,6 +1217,8 @@ async function loadOne(
     ? trimPathFil1ForDesign!
     : isSignFancy
     ? trimPathFancy!
+    : isSignNotched
+    ? notchedP1!
     : isSignInsetTrim
     ? signInsetTrim!.trimPath
     : null;
@@ -1305,6 +1327,18 @@ async function loadOne(
           `[templates] Sign "${c.id}": overlay = trim path(s) (border color), count=${trimDs.length}`,
         );
       }
+    } else if (isSignNotched && notchedP0 && notchedP1) {
+      outlineElement = `<g transform="${transform}">${pathToOutlineElement(
+        notchedP0,
+        "Outline",
+      )}</g>`;
+      overlayElement = `<g transform="${transform}"><path d="${notchedP1.replace(
+        /"/g,
+        "&quot;",
+      )}"/></g>`;
+      console.log(
+        `[templates] Sign notched "${c.id}": plate outline + path1 trim overlay (border on/off)`,
+      );
     } else {
       outlineElement = outlinePath
         ? `<g transform="${transform}">${pathToOutlineElement(
@@ -1344,13 +1378,14 @@ async function loadOne(
       ? {
           cx: innerPlateBoundsRaw.x + innerPlateBoundsRaw.width / 2,
           cy: innerPlateBoundsRaw.y + innerPlateBoundsRaw.height / 2,
-          r: Math.min(innerPlateBoundsRaw.width, innerPlateBoundsRaw.height) / 2,
+          r:
+            Math.min(innerPlateBoundsRaw.width, innerPlateBoundsRaw.height) / 2,
         }
       : undefined;
 
   const signTextLayout =
     variant === "sign"
-      ? resolveSignTextLayout(designBox, c.textLayout, plateCircle)
+      ? resolveSignTextLayout(designBox, c.textLayout, plateCircle, c.id)
       : undefined;
 
   const t: LoadedTemplate = {

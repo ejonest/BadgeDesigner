@@ -10,16 +10,30 @@
       }
     },
     "routeIdToServerBundleId": {
+      "routes/api.delete-badge-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.delete-sign-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-sign-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.supabase-update-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.autosave-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-sign-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.library-thumbnail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-badges": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.upload-sign-logo": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.autosave-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-draft-sign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.shopify-product": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.finalize-draft": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.test-endpoints": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.badge-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.gadget-health": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.supabase-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/test-badge-shapes": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -51,10 +65,37 @@
         "file": "app/root.tsx",
         "config": {}
       },
+      "routes/api.delete-badge-design-milestone": {
+        "file": "app/routes/api.delete-badge-design-milestone.tsx",
+        "id": "routes/api.delete-badge-design-milestone",
+        "path": "api/delete-badge-design-milestone",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.delete-sign-design-milestone": {
+        "file": "app/routes/api.delete-sign-design-milestone.tsx",
+        "id": "routes/api.delete-sign-design-milestone",
+        "path": "api/delete-sign-design-milestone",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.link-order-sign-to-supabase": {
         "file": "app/routes/api.link-order-sign-to-supabase.tsx",
         "id": "routes/api.link-order-sign-to-supabase",
         "path": "api/link-order-sign-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.saved-sign-design-detail": {
+        "file": "app/routes/api.saved-sign-design-detail.tsx",
+        "id": "routes/api.saved-sign-design-detail",
+        "path": "api/saved-sign-design-detail",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -87,6 +128,42 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.autosave-sign-design": {
+        "file": "app/routes/api.autosave-sign-design.tsx",
+        "id": "routes/api.autosave-sign-design",
+        "path": "api/autosave-sign-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.saved-design-detail": {
+        "file": "app/routes/api.saved-design-detail.tsx",
+        "id": "routes/api.saved-design-detail",
+        "path": "api/saved-design-detail",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.saved-sign-designs": {
+        "file": "app/routes/api.saved-sign-designs.tsx",
+        "id": "routes/api.saved-sign-designs",
+        "path": "api/saved-sign-designs",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.library-thumbnail": {
+        "file": "app/routes/api.library-thumbnail.tsx",
+        "id": "routes/api.library-thumbnail",
+        "path": "api/library-thumbnail",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.save-draft-badges": {
         "file": "app/routes/api.save-draft-badges.tsx",
         "id": "routes/api.save-draft-badges",
@@ -96,10 +173,64 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.saved-sign-design": {
+        "file": "app/routes/api.saved-sign-design.tsx",
+        "id": "routes/api.saved-sign-design",
+        "path": "api/saved-sign-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.save-sign-design": {
+        "file": "app/routes/api.save-sign-design.tsx",
+        "id": "routes/api.save-sign-design",
+        "path": "api/save-sign-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.send-to-supabase": {
         "file": "app/routes/api.send-to-supabase.tsx",
         "id": "routes/api.send-to-supabase",
         "path": "api/send-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.upload-sign-logo": {
+        "file": "app/routes/api.upload-sign-logo.tsx",
+        "id": "routes/api.upload-sign-logo",
+        "path": "api/upload-sign-logo",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.autosave-design": {
+        "file": "app/routes/api.autosave-design.tsx",
+        "id": "routes/api.autosave-design",
+        "path": "api/autosave-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.save-draft-sign": {
+        "file": "app/routes/api.save-draft-sign.tsx",
+        "id": "routes/api.save-draft-sign",
+        "path": "api/save-draft-sign",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.shopify-product": {
+        "file": "app/routes/api.shopify-product.tsx",
+        "id": "routes/api.shopify-product",
+        "path": "api/shopify-product",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -136,6 +267,15 @@
         "file": "app/routes/api.gadget-health.tsx",
         "id": "routes/api.gadget-health",
         "path": "api/gadget-health",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.saved-designs": {
+        "file": "app/routes/api.saved-designs.tsx",
+        "id": "routes/api.saved-designs",
+        "path": "api/saved-designs",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -371,10 +511,28 @@
         "id": "root",
         "file": "root.tsx"
       },
+      "routes/api.delete-badge-design-milestone": {
+        "file": "routes/api.delete-badge-design-milestone.tsx",
+        "id": "routes/api.delete-badge-design-milestone",
+        "path": "api/delete-badge-design-milestone",
+        "parentId": "root"
+      },
+      "routes/api.delete-sign-design-milestone": {
+        "file": "routes/api.delete-sign-design-milestone.tsx",
+        "id": "routes/api.delete-sign-design-milestone",
+        "path": "api/delete-sign-design-milestone",
+        "parentId": "root"
+      },
       "routes/api.link-order-sign-to-supabase": {
         "file": "routes/api.link-order-sign-to-supabase.tsx",
         "id": "routes/api.link-order-sign-to-supabase",
         "path": "api/link-order-sign-to-supabase",
+        "parentId": "root"
+      },
+      "routes/api.saved-sign-design-detail": {
+        "file": "routes/api.saved-sign-design-detail.tsx",
+        "id": "routes/api.saved-sign-design-detail",
+        "path": "api/saved-sign-design-detail",
         "parentId": "root"
       },
       "routes/api.link-order-to-supabase": {
@@ -395,16 +553,76 @@
         "path": "api/supabase-update-badge",
         "parentId": "root"
       },
+      "routes/api.autosave-sign-design": {
+        "file": "routes/api.autosave-sign-design.tsx",
+        "id": "routes/api.autosave-sign-design",
+        "path": "api/autosave-sign-design",
+        "parentId": "root"
+      },
+      "routes/api.saved-design-detail": {
+        "file": "routes/api.saved-design-detail.tsx",
+        "id": "routes/api.saved-design-detail",
+        "path": "api/saved-design-detail",
+        "parentId": "root"
+      },
+      "routes/api.saved-sign-designs": {
+        "file": "routes/api.saved-sign-designs.tsx",
+        "id": "routes/api.saved-sign-designs",
+        "path": "api/saved-sign-designs",
+        "parentId": "root"
+      },
+      "routes/api.library-thumbnail": {
+        "file": "routes/api.library-thumbnail.tsx",
+        "id": "routes/api.library-thumbnail",
+        "path": "api/library-thumbnail",
+        "parentId": "root"
+      },
       "routes/api.save-draft-badges": {
         "file": "routes/api.save-draft-badges.tsx",
         "id": "routes/api.save-draft-badges",
         "path": "api/save-draft-badges",
         "parentId": "root"
       },
+      "routes/api.saved-sign-design": {
+        "file": "routes/api.saved-sign-design.tsx",
+        "id": "routes/api.saved-sign-design",
+        "path": "api/saved-sign-design",
+        "parentId": "root"
+      },
+      "routes/api.save-sign-design": {
+        "file": "routes/api.save-sign-design.tsx",
+        "id": "routes/api.save-sign-design",
+        "path": "api/save-sign-design",
+        "parentId": "root"
+      },
       "routes/api.send-to-supabase": {
         "file": "routes/api.send-to-supabase.tsx",
         "id": "routes/api.send-to-supabase",
         "path": "api/send-to-supabase",
+        "parentId": "root"
+      },
+      "routes/api.upload-sign-logo": {
+        "file": "routes/api.upload-sign-logo.tsx",
+        "id": "routes/api.upload-sign-logo",
+        "path": "api/upload-sign-logo",
+        "parentId": "root"
+      },
+      "routes/api.autosave-design": {
+        "file": "routes/api.autosave-design.tsx",
+        "id": "routes/api.autosave-design",
+        "path": "api/autosave-design",
+        "parentId": "root"
+      },
+      "routes/api.save-draft-sign": {
+        "file": "routes/api.save-draft-sign.tsx",
+        "id": "routes/api.save-draft-sign",
+        "path": "api/save-draft-sign",
+        "parentId": "root"
+      },
+      "routes/api.shopify-product": {
+        "file": "routes/api.shopify-product.tsx",
+        "id": "routes/api.shopify-product",
+        "path": "api/shopify-product",
         "parentId": "root"
       },
       "routes/api.finalize-draft": {
@@ -429,6 +647,12 @@
         "file": "routes/api.gadget-health.tsx",
         "id": "routes/api.gadget-health",
         "path": "api/gadget-health",
+        "parentId": "root"
+      },
+      "routes/api.saved-designs": {
+        "file": "routes/api.saved-designs.tsx",
+        "id": "routes/api.saved-designs",
+        "path": "api/saved-designs",
         "parentId": "root"
       },
       "routes/api.supabase-test": {

@@ -1,6 +1,10 @@
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { upsertSignAutosaveDesign, type SignDesign } from "~/utils/supabase";
+import {
+  upsertSignAutosaveDesign,
+  uploadedImageUrlFromBadgeRecord,
+  type SignDesign,
+} from "~/utils/supabase";
 import { parseOr400, saveDesignBodySchema } from "~/utils/validation";
 
 /** Cloud autosave for sign designer: one row per user/shop. */
@@ -74,6 +78,7 @@ export async function action({ request }: ActionFunctionArgs) {
       total_price: (top.totalPrice as number | undefined) ?? 9.99,
       design_data: fullDesignData,
       thumbnail_url: thumb,
+      uploaded_image_url: uploadedImageUrlFromBadgeRecord(firstBadge),
     };
 
     const saved = await upsertSignAutosaveDesign(row);
