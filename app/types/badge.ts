@@ -20,6 +20,22 @@ export interface BadgeLine {
 /** Sign Designer user logo: edge band with image centered in the band. */
 export type SignLogoPlacement = "left" | "right" | "top" | "bottom";
 
+/** Captured when a sign user logo is first applied (updated when the image is replaced). */
+export type SignLogoLayoutSnapshot = {
+  /**
+   * Minimum `min(w/W,h/H)` of the rendered logo vs the slot baseline box — layout never scales
+   * the logo smaller than this ratio unless the snapshot is cleared (logo removed/replaced).
+   */
+  minLogoRatioVsBaseline: number;
+  /** Rounded template-space px per line index when the snapshot was taken. */
+  textPxByLine: number[];
+  /**
+   * Max rounded px per line while this logo remains — set after the initial joint fit with the
+   * minimum logo display rule. Older payloads used {@link textPxByLine} alone; clamp falls back to it.
+   */
+  textPxCeilingByLine?: number[];
+};
+
 export interface BadgeImage {
   src: string;
   // background image props:
@@ -69,6 +85,11 @@ export interface Badge {
   backing: 'pin' | 'magnetic' | 'adhesive';
   backgroundImage?: BadgeImage;
   logo?: BadgeImage;
+  /**
+   * Sign only: bounds from the moment a user logo was committed — used so larger text can reclaim
+   * space by shrinking the image down to (at minimum) the captured ratio vs the slot baseline.
+   */
+  signLogoLayoutSnapshot?: SignLogoLayoutSnapshot;
 }
 
 export interface BadgeEditorPanelProps {

@@ -715,6 +715,114 @@ export function signMeasuredStackFits(
 }
 
 /**
+ * Whether `lines`' rounded sizeNorm pixel sizes fit `layout` — same basis as editor +/- and
+ * {@link syncSignBadgeLinesSizeNorm} (not {@link layoutSignTextLines} internal scaling).
+ */
+export function signMeasuredStackFitsForBadgeLines(
+  lines: BadgeLine[],
+  layout: ResolvedSignTextLayout,
+  measure: TextMeasurePx = createSignTextMeasure(),
+): boolean {
+  const H = layout.designBoxHeight;
+  const MIN_FONT = SIGN_TEXT_MIN_FONT_PX;
+  const MAX_FONT = signTextLayoutMaxFontPx(layout);
+  const gapPx = signTextLineGapPx(layout);
+  const anchors = lines.map((line) => {
+    const alignment = line.align || "center";
+    return alignment === "center"
+      ? "middle"
+      : alignment === "right"
+      ? "end"
+      : "start";
+  });
+  const sizes = lines.map((line, i) =>
+    Math.round(clamp((line.sizeNorm ?? 0.15) * H, MIN_FONT, MAX_FONT)),
+  );
+  const measureLine = (i: number, fontSize: number) => {
+    const raw = lines[i]?.text;
+    if (isSignLineStrictEmpty(raw)) {
+      return { width: 0, height: 0, ascent: 0, descent: 0 };
+    }
+    return measure({
+      text: signLineMeasureText(raw),
+      fontFamily: lines[i].fontFamily || "Inter, ui-sans-serif, system-ui",
+      fontSizePx: fontSize,
+      fontWeight: lines[i].bold ? "bold" : "normal",
+      fontStyle: lines[i].italic ? "italic" : "normal",
+    });
+  };
+  return signMeasuredStackFits(
+    lines,
+    layout,
+    sizes,
+    measureLine,
+    gapPx,
+    anchors,
+  );
+}
+
+/** Why `signMeasuredStackFits` failed — drives targeted refit (avoid shrinking siblings when only one line’s width overflows). */
+export type SignMeasuredStackFailure =
+  | { type: "height" }
+  | { type: "width"; lineIndex: number };
+
+/**
+ * Same geometry as {@link signMeasuredStackFits}: height check first, then per-line width at Y.
+ * Returns the first failing constraint, or null when the stack fits.
+ */
+export function diagnoseSignMeasuredStackFailure(
+  lines: BadgeLine[],
+  layout: ResolvedSignTextLayout,
+  fontSizes: number[],
+  measureLine: (
+    i: number,
+    fontSize: number,
+  ) => {
+    width: number;
+    height: number;
+    ascent: number;
+    descent: number;
+  },
+  gapPx: number,
+  anchors: string[],
+): SignMeasuredStackFailure | null {
+  const n = lines.length;
+  const { contentRect } = layout;
+  const participantIdx: number[] = [];
+  for (let i = 0; i < n; i++) {
+    if (isSignLineLayoutParticipant(lines[i]?.text)) participantIdx.push(i);
+  }
+  if (participantIdx.length === 0) return null;
+
+  let totalH = 0;
+  for (let k = 0; k < participantIdx.length; k++) {
+    const i = participantIdx[k]!;
+    const m = measureLine(i, fontSizes[i]);
+    totalH += m.height;
+    if (k < participantIdx.length - 1) totalH += gapPx;
+  }
+  if (totalH > contentRect.height + 0.5) return { type: "height" };
+
+  let curY = contentRect.y + (contentRect.height - totalH) / 2;
+  for (let k = 0; k < participantIdx.length; k++) {
+    const i = participantIdx[k]!;
+    const m = measureLine(i, fontSizes[i]);
+    const yMid = curY + m.height / 2;
+    const cap = getEffectiveSignMaxWidthPxAtY(
+      layout,
+      i,
+      n,
+      anchors[i] ?? "middle",
+      yMid,
+    );
+    if (m.width > cap + 0.5) return { type: "width", lineIndex: i };
+    curY += m.height;
+    if (k < participantIdx.length - 1) curY += gapPx;
+  }
+  return null;
+}
+
+/**
  * After resetting one line’s typography + nominal sizeNorm, refit **only** that line’s px size.
  * Other lines keep their current rendered size (rounded from sizeNorm); no uniform shrink of siblings.
  */
@@ -1137,6 +1245,17 @@ export function signLayoutRenderedLinesFit(
   );
 }
 
+/** Optional bounds when refitting after a single-line font size edit (see {@link refitSignLinesAfterFontEdit}). */
+export type RefitSignLinesAfterFontEditOptions = {
+  /**
+   * When the user **increased** this line's size, refit must not shrink that line below this px
+   * value (typically the pre-change rounded size). Otherwise + bumps `sizeNorm` up, refit then
+   * strips px for width until the line drops below where it started (and the logo slack layout
+   * makes the image grow).
+   */
+  editedLineFloorPx?: number;
+};
+
 /**
  * After the user changes font size on one line, decrement other lines by 1px at a time until
  * the measured stack fits (or floors hit). Reduces the edited line only when no other line can shrink.
@@ -1146,6 +1265,7 @@ export function refitSignLinesAfterFontEdit(
   editedIndex: number,
   layout: ResolvedSignTextLayout,
   measure: TextMeasurePx = createSignTextMeasure(),
+  options?: RefitSignLinesAfterFontEditOptions,
 ): BadgeLine[] {
   if (lines.length === 0 || editedIndex < 0 || editedIndex >= lines.length) {
     return lines;
@@ -1186,12 +1306,37 @@ export function refitSignLinesAfterFontEdit(
   const otherParticipant = (i: number) =>
     i !== editedIndex && isSignLineLayoutParticipant(lines[i]?.text);
 
+  const editedFloor =
+    options?.editedLineFloorPx !== undefined
+      ? Math.round(
+          clamp(options.editedLineFloorPx, MIN_FONT, MAX_FONT),
+        )
+      : undefined;
+
   const fits = () =>
     signMeasuredStackFits(lines, layout, sizes, measureLine, gapPx, anchors);
 
   let guard = 0;
   while (!fits() && guard < 500000) {
     guard++;
+    const failure = diagnoseSignMeasuredStackFailure(
+      lines,
+      layout,
+      sizes,
+      measureLine,
+      gapPx,
+      anchors,
+    );
+    // Width overflow on line K: only shrinking line K helps (siblings don’t change caps on line K).
+    if (failure?.type === "width") {
+      const i = failure.lineIndex;
+      const floorForLine =
+        i === editedIndex && editedFloor !== undefined ? editedFloor : MIN_FONT;
+      if (sizes[i] <= floorForLine) break;
+      sizes[i]--;
+      continue;
+    }
+
     const othersShrinkable = sizes
       .map((s, i) => i)
       .filter((i) => otherParticipant(i) && sizes[i] > MIN_FONT);
@@ -1199,9 +1344,64 @@ export function refitSignLinesAfterFontEdit(
       for (const i of othersShrinkable) sizes[i]--;
     } else {
       if (sizes[editedIndex] <= MIN_FONT) break;
+      if (
+        editedFloor !== undefined &&
+        sizes[editedIndex] <= editedFloor
+      ) {
+        break;
+      }
       sizes[editedIndex]--;
     }
   }
+
+  return lines.map((line, i) => ({
+    ...line,
+    sizeNorm: sizes[i] / H,
+  }));
+}
+
+export type ShrinkSignBadgeLinesOnePxParticipantOrder =
+  | "highLineIndexFirst"
+  | "lowLineIndexFirst";
+
+/**
+ * Decrease font by 1px on one participant line still above {@link SIGN_TEXT_MIN_FONT_PX}.
+ * Default order matches {@link syncSignBadgeLinesSizeNorm} height failures (highest line index first).
+ * Logo negotiation uses {@link lowLineIndexFirst} so upper lines are reduced before lower lines (e.g. line 1 before line 2).
+ */
+export function shrinkSignBadgeLinesOnePx(
+  lines: BadgeLine[],
+  layout: ResolvedSignTextLayout,
+  participantOrder: ShrinkSignBadgeLinesOnePxParticipantOrder = "highLineIndexFirst",
+): BadgeLine[] | null {
+  if (lines.length === 0) return null;
+
+  const H = layout.designBoxHeight;
+  const MIN_FONT = SIGN_TEXT_MIN_FONT_PX;
+  const MAX_FONT = signTextLayoutMaxFontPx(layout);
+  const sizes = lines.map((line, i) =>
+    Math.round(clamp((line.sizeNorm ?? 0.15) * H, MIN_FONT, MAX_FONT)),
+  );
+
+  const participants: number[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (isSignLineLayoutParticipant(lines[i]?.text)) participants.push(i);
+  }
+  if (participantOrder === "lowLineIndexFirst") {
+    participants.sort((a, b) => a - b);
+  } else {
+    participants.sort((a, b) => b - a);
+  }
+
+  let shrunk = false;
+  for (const i of participants) {
+    if (sizes[i] > MIN_FONT) {
+      sizes[i]--;
+      shrunk = true;
+      break;
+    }
+  }
+  if (!shrunk) return null;
 
   return lines.map((line, i) => ({
     ...line,
@@ -1258,24 +1458,124 @@ export function computeSignTextInkBoundsFromLaid(
   return { left, right, top, bottom };
 }
 
-/** Update sizeNorm from shared sign layout (editor parity with export). */
+export type SyncSignBadgeLinesSizeNormOpts = {
+  /**
+   * Height-overflow shrink order among participant lines. Default matches historical behavior
+   * (highest line index first). Logo negotiation uses {@link lowLineIndexFirst}.
+   */
+  heightShrinkParticipantOrder?:
+    | "highLineIndexFirst"
+    | "lowLineIndexFirst";
+};
+
+/**
+ * Fit stored line sizes to `layout` using **1px decrements only** (no uniform jumps from
+ * {@link layoutSignTextLines}). Width failures: shrink **earlier** participant lines (lower index)
+ * before the failing line so lower rows are not driven to min alone; height failures use
+ * {@link SyncSignBadgeLinesSizeNormOpts.heightShrinkParticipantOrder}.
+ */
 export function syncSignBadgeLinesSizeNorm(
   lines: BadgeLine[],
   layout: ResolvedSignTextLayout,
   measure: TextMeasurePx = createSignTextMeasure(),
+  opts?: SyncSignBadgeLinesSizeNormOpts,
 ): BadgeLine[] {
   if (lines.length === 0) return lines;
-  const laid = layoutSignTextLines(lines, layout, measure, (s) =>
-    s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;"),
+
+  const H = layout.designBoxHeight;
+  const MIN_FONT = SIGN_TEXT_MIN_FONT_PX;
+  const MAX_FONT = signTextLayoutMaxFontPx(layout);
+  const gapPx = signTextLineGapPx(layout);
+
+  const anchors = lines.map((line) => {
+    const alignment = line.align || "center";
+    return alignment === "center"
+      ? "middle"
+      : alignment === "right"
+      ? "end"
+      : "start";
+  });
+
+  const measureLine = (i: number, fontSize: number) => {
+    const raw = lines[i]?.text;
+    if (isSignLineStrictEmpty(raw)) {
+      return { width: 0, height: 0, ascent: 0, descent: 0 };
+    }
+    return measure({
+      text: signLineMeasureText(raw),
+      fontFamily: lines[i].fontFamily || "Inter, ui-sans-serif, system-ui",
+      fontSizePx: fontSize,
+      fontWeight: lines[i].bold ? "bold" : "normal",
+      fontStyle: lines[i].italic ? "italic" : "normal",
+    });
+  };
+
+  const sizes = lines.map((line, i) =>
+    Math.round(clamp((line.sizeNorm ?? 0.15) * H, MIN_FONT, MAX_FONT)),
   );
+
+  const fits = () =>
+    signMeasuredStackFits(lines, layout, sizes, measureLine, gapPx, anchors);
+
+  const participantsDesc: number[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (isSignLineLayoutParticipant(lines[i]?.text)) participantsDesc.push(i);
+  }
+  const heightOrder =
+    opts?.heightShrinkParticipantOrder ?? "highLineIndexFirst";
+  if (heightOrder === "lowLineIndexFirst") {
+    participantsDesc.sort((a, b) => a - b);
+  } else {
+    participantsDesc.sort((a, b) => b - a);
+  }
+
+  const participantsAsc = [...participantsDesc].sort((a, b) => a - b);
+
+  let guard = 0;
+  while (!fits() && guard < 500000) {
+    guard++;
+    const failure = diagnoseSignMeasuredStackFailure(
+      lines,
+      layout,
+      sizes,
+      measureLine,
+      gapPx,
+      anchors,
+    );
+    if (failure?.type === "width") {
+      const failedIdx = failure.lineIndex;
+      let decremented = false;
+      for (const j of participantsAsc) {
+        if (j >= failedIdx) break;
+        if (sizes[j] > MIN_FONT) {
+          sizes[j]--;
+          decremented = true;
+          break;
+        }
+      }
+      if (!decremented) {
+        if (sizes[failedIdx] > MIN_FONT) {
+          sizes[failedIdx]--;
+        } else {
+          break;
+        }
+      }
+      continue;
+    }
+
+    let shrunk = false;
+    for (const i of participantsDesc) {
+      if (sizes[i] > MIN_FONT) {
+        sizes[i]--;
+        shrunk = true;
+        break;
+      }
+    }
+    if (!shrunk) break;
+  }
+
   return lines.map((line, i) => ({
     ...line,
-    sizeNorm: laid[i]
-      ? Math.round(laid[i].fontSize) / layout.designBoxHeight
-      : line.sizeNorm,
+    sizeNorm: sizes[i] / H,
   }));
 }

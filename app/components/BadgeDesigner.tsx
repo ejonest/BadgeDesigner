@@ -104,6 +104,9 @@ import {
 } from "../utils/templates";
 import type { LoadedTemplate } from "../utils/templates";
 import {
+  clampBadgeLinesToSignLogoPxCeilings,
+  computeSignLogoLayoutSnapshot,
+  negotiateSignBadgeLinesForLogoCommit,
   renderBadgeToSvgString,
   getEffectiveDesignBox,
   getEffectiveSignTextLayoutForBadge,
@@ -142,8 +145,9 @@ function readImageDimensionsFromFile(
   });
 }
 import {
+  SIGN_TEXT_MIN_FONT_PX,
   createSignTextMeasure,
-  refitSignLinesAfterFontEdit,
+  signTextLayoutMaxFontPx,
   syncSignBadgeLinesSizeNorm,
   syncSignBadgeLinesSizeNormAfterLineReset,
 } from "~/utils/signTextLayout";
@@ -3472,11 +3476,35 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     const id = next.templateId ?? universalTemplateId;
     const tpl = templates.find((t) => t.id === id);
     if (!tpl?.signTextLayout || typeof document === "undefined") return next;
-    const fitted = syncSignBadgeLinesSizeNorm(
-      next.lines,
-      getEffectiveSignTextLayoutForBadge(tpl, next)!,
-    );
-    return { ...next, lines: calculateCenterPositions(fitted) };
+
+    const logoSrc = next.logo?.src?.trim();
+    const badgeForNegotiate =
+      logoSrc ? { ...next, signLogoLayoutSnapshot: undefined } : next;
+
+    let fitted: BadgeLine[];
+    if (logoSrc) {
+      fitted = negotiateSignBadgeLinesForLogoCommit(tpl, badgeForNegotiate);
+    } else {
+      fitted = syncSignBadgeLinesSizeNorm(
+        next.lines,
+        getEffectiveSignTextLayoutForBadge(tpl, next)!,
+      );
+    }
+    let out: Badge = { ...next, lines: calculateCenterPositions(fitted) };
+    if (next.logo?.src?.trim()) {
+      let snapshot = computeSignLogoLayoutSnapshot(tpl, out);
+      const ceilings =
+        snapshot?.textPxCeilingByLine ?? snapshot?.textPxByLine;
+      if (snapshot && ceilings?.length) {
+        const clamped = clampBadgeLinesToSignLogoPxCeilings(tpl, out, snapshot);
+        out = { ...next, lines: calculateCenterPositions(clamped) };
+        snapshot = computeSignLogoLayoutSnapshot(tpl, out) ?? snapshot;
+      }
+      if (snapshot) out = { ...out, signLogoLayoutSnapshot: snapshot };
+    } else {
+      out = { ...out, signLogoLayoutSnapshot: undefined };
+    }
+    return out;
   };
 
   const ensureDesignIdForSignLogo = () => {
@@ -3574,7 +3602,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const clearSignLogo = () => {
     if (variant !== "sign") return;
     setBadge((prev) => {
-      const next: Badge = { ...prev, logo: undefined };
+      const next: Badge = {
+        ...prev,
+        logo: undefined,
+        signLogoLayoutSnapshot: undefined,
+      };
       const refit = applySignLogoRefit(next);
       persistCurrentBadgeToSlot(refit);
       queueMicrotask(() => {
@@ -3755,7 +3787,32 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         };
       }
 
-      let updated = { ...l, ...changes };
+      let lineChanges = changes;
+      if (
+        variant === "sign" &&
+        badge.logo?.src?.trim() &&
+        typeof changes.sizeNorm === "number"
+      ) {
+        const snap = badge.signLogoLayoutSnapshot;
+        const ceilings = snap?.textPxCeilingByLine ?? snap?.textPxByLine;
+        const ceilPx = ceilings?.[index];
+        if (ceilPx !== undefined && lineTemplate?.signTextLayout) {
+          const eff = getEffectiveSignTextLayoutForBadge(lineTemplate, badge);
+          if (eff) {
+            const H = eff.designBoxHeight;
+            const MIN_FONT = SIGN_TEXT_MIN_FONT_PX;
+            const MAX_FONT = signTextLayoutMaxFontPx(eff);
+            const proposedPx = Math.round(
+              Math.max(MIN_FONT, Math.min(MAX_FONT, changes.sizeNorm * H)),
+            );
+            if (proposedPx > ceilPx) {
+              lineChanges = { ...changes, sizeNorm: ceilPx / H };
+            }
+          }
+        }
+      }
+
+      let updated = { ...l, ...lineChanges };
 
       // Signs: sizeNorm must match signTextLayout.designBoxHeight (see syncSignBadgeLinesSizeNorm).
       // Per-line shrink here used effectiveDesignBox.height and skipped height/sibling constraints — run full sync below instead.
@@ -3911,15 +3968,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
       fittedLines =
         signSyncEligible && effectiveSignLayout
-          ? typeof changes.sizeNorm !== "undefined" &&
-            Object.keys(changes).length === 1
-            ? refitSignLinesAfterFontEdit(
-                newLines,
-                index,
-                effectiveSignLayout,
-                createSignTextMeasure(),
-              )
-            : syncSignBadgeLinesSizeNorm(newLines, effectiveSignLayout)
+          ? syncSignBadgeLinesSizeNorm(newLines, effectiveSignLayout)
           : newLines;
     }
 

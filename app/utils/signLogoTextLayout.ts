@@ -7,13 +7,13 @@
  */
 
 import type { LoadedTemplate } from "~/utils/templates";
-import type { BadgeImage, BadgeLine } from "~/types/badge";
+import type { BadgeImage, BadgeLine, SignLogoPlacement } from "~/types/badge";
 import {
   computeSignTextInkBoundsFromLaid,
   createSignTextMeasure,
   isSignLineLayoutParticipant,
   layoutSignTextLines,
-  signLayoutRenderedLinesFit,
+  signMeasuredStackFitsForBadgeLines,
   type ResolvedSignTextLayout,
   type SignPlateCircle,
   type TextMeasurePx,
@@ -58,6 +58,33 @@ export function signLogoMaxSlotHeightFracForTemplate(
 }
 /** Gap (px) between fitted logo and text region at 96dpi template space. */
 export const SIGN_LOGO_TEXT_GAP_PX = 10;
+
+/**
+ * Minimum logo size vs **effective trim / design box** width or height (what users read as “sign” size).
+ * Side placements enforce min width; top/bottom enforce min height.
+ * Paired with {@link maximizeLogoUniformScaleForLinesFit} floor so finalize does not shrink the logo
+ * below this after text fit; negotiation still shrinks text when needed.
+ */
+export const SIGN_LOGO_MIN_DISPLAY_SIZE_FRAC = 1 / 5;
+
+/**
+ * Whether `draw` meets {@link SIGN_LOGO_MIN_DISPLAY_SIZE_FRAC} of `referenceBox` on the placement axis.
+ * Pass {@link resolveSignUserLogoBoundsBox} for bump logic; pass the trim/design box (see negotiation)
+ * so “fraction of total sign width” matches on-screen proportion.
+ */
+export function signLogoDrawMeetsMinDisplay(
+  draw: { width: number; height: number },
+  referenceBox: { width: number; height: number },
+  placement: SignLogoPlacement | undefined,
+): boolean {
+  const p = placement ?? "left";
+  const frac = SIGN_LOGO_MIN_DISPLAY_SIZE_FRAC;
+  const tol = 1;
+  if (p === "left" || p === "right") {
+    return draw.width >= referenceBox.width * frac - tol;
+  }
+  return draw.height >= referenceBox.height * frac - tol;
+}
 
 /**
  * When border trim overlay is on: inset from inner plate, halved vs earlier pass; use same
@@ -176,6 +203,40 @@ function containFit(
   return { w: w * s, h: h * s };
 }
 
+/** Scale up contain-fit size so width (side logos) or height (top/bottom) is at least `plate * frac`, capped by max slot. */
+function bumpContainFitToMinPlateFraction(
+  fw: number,
+  fh: number,
+  maxSlotW: number,
+  maxSlotH: number,
+  placement: "left" | "right" | "top" | "bottom",
+  plateW: number,
+  plateH: number,
+  frac: number,
+): { w: number; h: number } {
+  let w = fw;
+  let h = fh;
+  const minW = Math.min(maxSlotW, plateW * frac);
+  const minH = Math.min(maxSlotH, plateH * frac);
+  if (placement === "left" || placement === "right") {
+    if (w >= minW - 1e-6) return { w, h };
+    const s = minW / w;
+    w *= s;
+    h *= s;
+  } else {
+    if (h >= minH - 1e-6) return { w, h };
+    const s = minH / h;
+    w *= s;
+    h *= s;
+  }
+  if (w > maxSlotW || h > maxSlotH) {
+    const t = Math.min(maxSlotW / w, maxSlotH / h, 1);
+    w *= t;
+    h *= t;
+  }
+  return { w: Math.max(1, w), h: Math.max(1, h) };
+}
+
 export type SignLogoDrawRect = Rect;
 
 /**
@@ -268,6 +329,18 @@ export function computeSignLogoDrawRect(
   }
 
   let { w: fw, h: fh } = containFit(iw, ih, maxSlotW, maxSlotH);
+  const bumped = bumpContainFitToMinPlateFraction(
+    fw,
+    fh,
+    maxSlotW,
+    maxSlotH,
+    placement,
+    logoBoundsBox.width,
+    logoBoundsBox.height,
+    SIGN_LOGO_MIN_DISPLAY_SIZE_FRAC,
+  );
+  fw = bumped.w;
+  fh = bumped.h;
 
   const db = logoBoundsBox;
   const positionRect = (w: number, h: number): SignLogoDrawRect => {
@@ -331,6 +404,15 @@ export function computeSignLogoDrawRectMeasured(
   placement: NonNullable<BadgeImage["placement"]> | "left",
 ): SignLogoDrawRect | null {
   if (!logo?.src?.trim()) return null;
+
+  /** Slot fit without ink — caps measured sizing so the logo cannot grow when text shrinks and widens the trim→text band. */
+  const baselineSlotRect = computeSignLogoDrawRect(
+    logo,
+    logoBoundsBox,
+    plateCircle,
+    signLayout,
+  );
+  if (!baselineSlotRect) return null;
 
   const iw =
     logo.intrinsicWidth && logo.intrinsicWidth > 0 ? logo.intrinsicWidth : 100;
@@ -399,6 +481,27 @@ export function computeSignLogoDrawRectMeasured(
   maxSlotH = Math.max(8, maxSlotH);
 
   let { w: fw, h: fh } = containFit(iw, ih, maxSlotW, maxSlotH);
+  const bumped = bumpContainFitToMinPlateFraction(
+    fw,
+    fh,
+    maxSlotW,
+    maxSlotH,
+    placement,
+    logoBoundsBox.width,
+    logoBoundsBox.height,
+    SIGN_LOGO_MIN_DISPLAY_SIZE_FRAC,
+  );
+  fw = bumped.w;
+  fh = bumped.h;
+
+  // When text shrinks, `bandWFull` / vertical bands grow → larger max slots → containFit scales
+  // the bitmap up toward the plate slot. That steals width/height from the text column; users then
+  // cannot raise font sizes again. Baseline slot dimensions ignore ink and stay stable for a given image.
+  const capW = baselineSlotRect.width > 0 ? baselineSlotRect.width / fw : 1;
+  const capH = baselineSlotRect.height > 0 ? baselineSlotRect.height / fh : 1;
+  const capToBaseline = Math.min(1, capW, capH);
+  fw *= capToBaseline;
+  fh *= capToBaseline;
 
   /** Designer plates: centering the logo in [plate … text] leaves a huge gap next to long text; hug the text edge instead (slack stays outboard). */
   const flushMeasuredLogoToText =
@@ -615,9 +718,160 @@ function buildAdjustedLayoutForSignLogoDraw(
   };
 }
 
+function uniformScaleLogoDrawAboutCenter(
+  draw: SignLogoDrawRect,
+  scale: number,
+): SignLogoDrawRect {
+  const s = Math.max(0, Math.min(1, scale));
+  const cx = draw.x + draw.width / 2;
+  const cy = draw.y + draw.height / 2;
+  const w = Math.max(8, draw.width * s);
+  const h = Math.max(8, draw.height * s);
+  return {
+    x: cx - w / 2,
+    y: cy - h / 2,
+    width: w,
+    height: h,
+  };
+}
+
+function minUniformLogoScale(draw: SignLogoDrawRect): number {
+  const minPx = 8;
+  return Math.min(1, minPx / draw.width, minPx / draw.height);
+}
+
+/**
+ * Lowest uniform scale allowed vs `trimBox` so the logo stays at least
+ * {@link SIGN_LOGO_MIN_DISPLAY_SIZE_FRAC} of trim width (side) or height (top/bottom).
+ * Capped at 1 — cannot force upscale beyond the incoming `draw`.
+ */
+function displayMinUniformScaleFloor(
+  draw: SignLogoDrawRect,
+  trimBox: { width: number; height: number },
+  placement: SignLogoPlacement | undefined,
+): number {
+  const frac = SIGN_LOGO_MIN_DISPLAY_SIZE_FRAC;
+  const tol = 1;
+  const pixelLo = minUniformLogoScale(draw);
+  const p = placement ?? "left";
+  if (p === "left" || p === "right") {
+    const needW = Math.max(0, trimBox.width * frac - tol);
+    const s = needW <= 0 ? pixelLo : needW / Math.max(draw.width, 1e-6);
+    return Math.min(1, Math.max(pixelLo, s));
+  }
+  const needH = Math.max(0, trimBox.height * frac - tol);
+  const s = needH <= 0 ? pixelLo : needH / Math.max(draw.height, 1e-6);
+  return Math.min(1, Math.max(pixelLo, s));
+}
+
+/** Optional bounds when resolving logo + text together (see {@link resolveSignTextLayoutAndUserLogoSlack}). */
+export type ResolveSignLogoSlackOptions = {
+  /**
+   * From `Badge.signLogoLayoutSnapshot.minLogoRatioVsBaseline` — never render the logo smaller
+   * than this `min(w/W,h/H)` vs the baseline slot rect from `computeSignLogoDrawRect`.
+   */
+  minLogoRatioVsBaselineFloor?: number;
+};
+
+function ratioVsBaseline(
+  d: SignLogoDrawRect,
+  baselineSlotDraw: SignLogoDrawRect,
+): number {
+  return Math.min(
+    d.width / baselineSlotDraw.width,
+    d.height / baselineSlotDraw.height,
+  );
+}
+
+/** Smallest uniform scale on `draw` such that ratio vs baseline slot is at least `floorRatio`. */
+function minUniformScaleMeetingBaselineRatioFloor(
+  draw: SignLogoDrawRect,
+  baselineSlotDraw: SignLogoDrawRect,
+  floorRatio: number,
+): number {
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 48; i++) {
+    const mid = (lo + hi) / 2;
+    const u = uniformScaleLogoDrawAboutCenter(draw, mid);
+    if (ratioVsBaseline(u, baselineSlotDraw) >= floorRatio - 1e-12) hi = mid;
+    else lo = mid;
+  }
+  return hi;
+}
+
+/**
+ * Largest uniform scale on `draw` such that badge line px fit and logo ratio vs baseline is OK.
+ * Uses {@link signMeasuredStackFitsForBadgeLines} (not `layoutSignTextLines`) so it matches editor px.
+ */
+function maximizeLogoUniformScaleForLinesFit(
+  layoutForDraw: (d: SignLogoDrawRect) => ResolvedSignTextLayout | null,
+  lines: BadgeLine[],
+  measure: TextMeasurePx,
+  draw: SignLogoDrawRect,
+  layoutFallback: ResolvedSignTextLayout,
+  baselineSlotDraw: SignLogoDrawRect,
+  minLogoRatioVsBaselineFloor: number | undefined,
+  trimBoxForDisplayFloor: Rect,
+  placement: SignLogoPlacement | undefined,
+): { layout: ResolvedSignTextLayout; draw: SignLogoDrawRect } {
+  const fitsDraw = (d: SignLogoDrawRect): boolean => {
+    if (
+      minLogoRatioVsBaselineFloor !== undefined &&
+      ratioVsBaseline(d, baselineSlotDraw) < minLogoRatioVsBaselineFloor - 1e-9
+    ) {
+      return false;
+    }
+    const adj = layoutForDraw(d);
+    if (!adj) return false;
+    return signMeasuredStackFitsForBadgeLines(lines, adj, measure);
+  };
+
+  if (fitsDraw(draw)) {
+    const adj = layoutForDraw(draw);
+    return { layout: adj ?? layoutFallback, draw };
+  }
+
+  const pixelLo = minUniformLogoScale(draw);
+  const displayFloor = displayMinUniformScaleFloor(
+    draw,
+    trimBoxForDisplayFloor,
+    placement,
+  );
+  let loScale = Math.max(pixelLo, displayFloor);
+  if (minLogoRatioVsBaselineFloor !== undefined) {
+    loScale = Math.max(
+      loScale,
+      minUniformScaleMeetingBaselineRatioFloor(
+        draw,
+        baselineSlotDraw,
+        minLogoRatioVsBaselineFloor,
+      ),
+    );
+  }
+
+  const dLo = uniformScaleLogoDrawAboutCenter(draw, loScale);
+  if (!fitsDraw(dLo)) {
+    const adj = layoutForDraw(dLo);
+    return { layout: adj ?? layoutFallback, draw: dLo };
+  }
+
+  let low = loScale;
+  let high = 1;
+  for (let i = 0; i < 56; i++) {
+    const mid = (low + high) / 2;
+    const dMid = uniformScaleLogoDrawAboutCenter(draw, mid);
+    if (fitsDraw(dMid)) low = mid;
+    else high = mid;
+  }
+  const bestDraw = uniformScaleLogoDrawAboutCenter(draw, low);
+  const adj = layoutForDraw(bestDraw);
+  return { layout: adj ?? layoutFallback, draw: bestDraw };
+}
+
 /**
  * Places the logo using measured text ink + iterative clip convergence, then slides along the
- * placement axis for Word-like centering while `signLayoutRenderedLinesFit` holds.
+ * placement axis for Word-like centering while measured text fits (`signMeasuredStackFitsForBadgeLines`).
  */
 export function resolveSignTextLayoutAndUserLogoSlack(
   baseLayout: ResolvedSignTextLayout,
@@ -627,6 +881,7 @@ export function resolveSignTextLayoutAndUserLogoSlack(
   logoBoundsBox: Rect,
   lines: BadgeLine[] | undefined,
   measure: TextMeasurePx = createSignTextMeasure(),
+  resolveOptions?: ResolveSignLogoSlackOptions,
 ): { layout: ResolvedSignTextLayout; draw: SignLogoDrawRect | null } {
   const placement = (logo?.placement ?? "left") as NonNullable<
     BadgeImage["placement"]
@@ -642,12 +897,32 @@ export function resolveSignTextLayoutAndUserLogoSlack(
       logoBoundsBox,
     );
 
-  let draw0 = computeSignLogoDrawRect(
+  const linesArr: BadgeLine[] = lines ?? [];
+
+  const baselineSlotDraw = computeSignLogoDrawRect(
     logo,
     logoBoundsBox,
     plateCircle,
     baseLayout,
   );
+
+  const finalize = (
+    layoutRes: ResolvedSignTextLayout,
+    drawRes: SignLogoDrawRect,
+  ): { layout: ResolvedSignTextLayout; draw: SignLogoDrawRect } =>
+    maximizeLogoUniformScaleForLinesFit(
+      layoutForDraw,
+      linesArr,
+      measure,
+      drawRes,
+      layoutRes,
+      baselineSlotDraw!,
+      resolveOptions?.minLogoRatioVsBaselineFloor,
+      trimBoxForText,
+      placement,
+    );
+
+  let draw0 = baselineSlotDraw;
   if (!draw0) {
     return { layout: baseLayout, draw: null };
   }
@@ -655,7 +930,7 @@ export function resolveSignTextLayoutAndUserLogoSlack(
   const single = (): { layout: ResolvedSignTextLayout; draw: SignLogoDrawRect } => {
     const b = layoutForDraw(draw0!);
     if (!b) return { layout: baseLayout, draw: draw0! };
-    return { layout: b, draw: draw0! };
+    return finalize(b, draw0!);
   };
 
   if (!lines?.length || !lines.some((L) => isSignLineLayoutParticipant(L.text))) {
@@ -735,7 +1010,7 @@ export function resolveSignTextLayoutAndUserLogoSlack(
   const fits = (d: SignLogoDrawRect): boolean => {
     const adj = layoutForDraw(d);
     if (!adj) return false;
-    return signLayoutRenderedLinesFit(lines, adj, measure);
+    return signMeasuredStackFitsForBadgeLines(linesArr, adj, measure);
   };
 
   const templateIdLower = baseLayout.signTemplateId?.toLowerCase() ?? "";
@@ -754,7 +1029,7 @@ export function resolveSignTextLayoutAndUserLogoSlack(
    */
   if (isDesignerFlushPlacement && fits(draw0)) {
     const adj = layoutForDraw(draw0);
-    return { layout: adj ?? baseLayout, draw: draw0 };
+    return finalize(adj ?? baseLayout, draw0);
   }
 
   /**
@@ -772,7 +1047,7 @@ export function resolveSignTextLayoutAndUserLogoSlack(
 
     if (!fitsAtX(xIn)) {
       const adj0 = layoutForDraw({ ...draw0, x: xOut });
-      return { layout: adj0 ?? baseLayout, draw: { ...draw0, x: xOut } };
+      return finalize(adj0 ?? baseLayout, { ...draw0, x: xOut });
     }
 
     let xFitMax: number;
@@ -784,7 +1059,7 @@ export function resolveSignTextLayoutAndUserLogoSlack(
 
     const x = clampf(draw0.x, xOut, xFitMax);
     const draw: SignLogoDrawRect = { ...draw0, x };
-    return { layout: layoutForDraw(draw) ?? baseLayout, draw };
+    return finalize(layoutForDraw(draw) ?? baseLayout, draw);
   }
 
   if (placement === "right") {
@@ -794,13 +1069,13 @@ export function resolveSignTextLayoutAndUserLogoSlack(
 
     if (!fitsAtX(xIn)) {
       const d: SignLogoDrawRect = { ...draw0, x: xOut };
-      return { layout: layoutForDraw(d) ?? baseLayout, draw: d };
+      return finalize(layoutForDraw(d) ?? baseLayout, d);
     }
 
     const xFitMax = largestTrueInDecreasingTest(xIn, xOut, fitsAtX);
     const x = clampf(draw0.x, xIn, xFitMax);
     const draw: SignLogoDrawRect = { ...draw0, x };
-    return { layout: layoutForDraw(draw) ?? baseLayout, draw };
+    return finalize(layoutForDraw(draw) ?? baseLayout, draw);
   }
 
   if (placement === "top") {
@@ -808,28 +1083,28 @@ export function resolveSignTextLayoutAndUserLogoSlack(
     const yIn = yOut + Math.max(0, maxSlotH - h);
     if (!fits({ ...draw0, y: yOut })) {
       const d: SignLogoDrawRect = { ...draw0, y: yOut };
-      return { layout: layoutForDraw(d) ?? baseLayout, draw: d };
+      return finalize(layoutForDraw(d) ?? baseLayout, d);
     }
     const yFitMax = largestTrueInDecreasingTest(yOut, yIn, (yv) =>
       fits({ ...draw0, y: yv }),
     );
     const y = clampf(draw0.y, yOut, yFitMax);
     const draw: SignLogoDrawRect = { ...draw0, y };
-    return { layout: layoutForDraw(draw) ?? baseLayout, draw };
+    return finalize(layoutForDraw(draw) ?? baseLayout, draw);
   }
 
   const yOut = db.y + db.height - padY - h;
   const yIn = yOut - Math.max(0, maxSlotH - h);
   if (!fits({ ...draw0, y: yOut })) {
     const d: SignLogoDrawRect = { ...draw0, y: yOut };
-    return { layout: layoutForDraw(d) ?? baseLayout, draw: d };
+    return finalize(layoutForDraw(d) ?? baseLayout, d);
   }
   const yFitMax = largestTrueInDecreasingTest(yIn, yOut, (yv) =>
     fits({ ...draw0, y: yv }),
   );
   const y = clampf(draw0.y, yIn, yFitMax);
   const drawB: SignLogoDrawRect = { ...draw0, y };
-  return { layout: layoutForDraw(drawB) ?? baseLayout, draw: drawB };
+  return finalize(layoutForDraw(drawB) ?? baseLayout, drawB);
 }
 
 /**
@@ -847,6 +1122,7 @@ export function adjustResolvedSignTextLayoutForSignLogo(
   logoBoundsBox: Rect,
   linesForSlack?: BadgeLine[],
   measure: TextMeasurePx = createSignTextMeasure(),
+  resolveOptions?: ResolveSignLogoSlackOptions,
 ): ResolvedSignTextLayout {
   const { layout: out } = resolveSignTextLayoutAndUserLogoSlack(
     layout,
@@ -856,6 +1132,7 @@ export function adjustResolvedSignTextLayoutForSignLogo(
     logoBoundsBox,
     linesForSlack,
     measure,
+    resolveOptions,
   );
   return out;
 }

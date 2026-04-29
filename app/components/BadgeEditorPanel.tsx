@@ -47,12 +47,6 @@ const FontSizeControl: React.FC<FontSizeControlProps> = ({
   const currentSizePx = line.sizeNorm
     ? sizeNormToPx(line.sizeNorm, designBox.height)
     : line.fontSize || 13;
-  const currentSizeNorm =
-    line.sizeNorm ??
-    Math.max(
-      minSizeNorm,
-      Math.min(maxSizeNorm, (line.fontSize || 13) / designBox.height),
-    );
   const minSizePx = minFontPx;
   const maxSizePx = maxFontPx;
 
@@ -101,10 +95,12 @@ const FontSizeControl: React.FC<FontSizeControlProps> = ({
         type="button"
         className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
         onClick={() => {
-          const newSizeNorm = Math.max(minSizeNorm, currentSizeNorm - 0.01);
-          onLineChange(lineIndex, { sizeNorm: newSizeNorm });
+          const nextPx = Math.max(minFontPx, currentSizePx - 1);
+          onLineChange(lineIndex, {
+            sizeNorm: nextPx / designBox.height,
+          });
         }}
-        disabled={currentSizeNorm <= minSizeNorm || !editable}
+        disabled={currentSizePx <= minFontPx || !editable}
       >
         -
       </button>
@@ -134,10 +130,12 @@ const FontSizeControl: React.FC<FontSizeControlProps> = ({
         type="button"
         className="control-button w-6 h-6 flex items-center justify-center text-sm p-0"
         onClick={() => {
-          const newSizeNorm = Math.min(maxSizeNorm, currentSizeNorm + 0.01);
-          onLineChange(lineIndex, { sizeNorm: newSizeNorm });
+          const nextPx = Math.min(maxFontPx, currentSizePx + 1);
+          onLineChange(lineIndex, {
+            sizeNorm: nextPx / designBox.height,
+          });
         }}
-        disabled={currentSizeNorm >= maxSizeNorm || !editable}
+        disabled={currentSizePx >= maxFontPx || !editable}
       >
         +
       </button>
@@ -282,7 +280,24 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
     <div className="w-full max-w-2xl mx-auto flex flex-col gap-4">
       {/* Line formatting boxes */}
       <div className="flex flex-col gap-4">
-        {badge.lines.map((line: BadgeLine, idx: number) => (
+        {badge.lines.map((line: BadgeLine, idx: number) => {
+          const signLogoCeilPx =
+            variant === "sign" && badge.logo?.src?.trim()
+              ? badge.signLogoLayoutSnapshot?.textPxCeilingByLine?.[idx] ??
+                badge.signLogoLayoutSnapshot?.textPxByLine?.[idx]
+              : undefined;
+          const maxFontPxForLine =
+            signLogoCeilPx !== undefined
+              ? Math.min(fontSizeMaxPx, signLogoCeilPx)
+              : fontSizeMaxPx;
+          const linePxRounded = line.sizeNorm
+            ? sizeNormToPx(line.sizeNorm, designBox.height)
+            : Math.round(line.fontSize ?? fontSizeMinPx);
+          const showSignLogoCeilingHint =
+            signLogoCeilPx !== undefined &&
+            linePxRounded >= signLogoCeilPx;
+
+          return (
           <div
             key={idx}
             className="rounded-lg p-4 flex flex-col gap-2 relative w-full min-w-0"
@@ -523,96 +538,112 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                     <span className="underline text-lg">U</span>
                   </button>
                 </div>
-                {/* Alignment */}
-                <div className="flex gap-1 items-center min-w-0">
-                  <span className="font-semibold text-sm mr-1">Align:</span>
-                  <button
-                    className={`control-button w-7 h-7 flex items-center justify-center p-0 transition-all ${
-                      (line.align || line.alignment) === "left"
-                        ? "bg-blue-500 text-white border-blue-600 shadow-sm"
-                        : "bg-white hover:bg-gray-50 border-gray-300"
-                    }`}
-                    onClick={() => onAlignmentChange(idx, "left")}
-                    title="Align Left"
-                    disabled={!editable}
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2.5"
-                        d="M4 6h16M4 12h10M4 18h12"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    className={`control-button w-7 h-7 flex items-center justify-center p-0 transition-all ${
-                      (line.align || line.alignment) === "center"
-                        ? "bg-blue-500 text-white border-blue-600 shadow-sm"
-                        : "bg-white hover:bg-gray-50 border-gray-300"
-                    }`}
-                    onClick={() => onAlignmentChange(idx, "center")}
-                    title="Align Center"
-                    disabled={!editable}
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2.5"
-                        d="M4 6h16M8 12h8M6 18h12"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    className={`control-button w-7 h-7 flex items-center justify-center p-0 transition-all ${
-                      (line.align || line.alignment) === "right"
-                        ? "bg-blue-500 text-white border-blue-600 shadow-sm"
-                        : "bg-white hover:bg-gray-50 border-gray-300"
-                    }`}
-                    onClick={() => onAlignmentChange(idx, "right")}
-                    title="Align Right"
-                    disabled={!editable}
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2.5"
-                        d="M4 6h16M12 12h8M4 18h16"
-                      />
-                    </svg>
-                  </button>
-                </div>
-                {/* Size Controls */}
-                <div className="flex gap-1 items-center min-w-0">
-                  <span className="font-semibold text-sm mr-1">Size</span>
-                  <div className="flex items-center">
-                    <FontSizeControl
-                      line={line}
-                      lineIndex={idx}
-                      designBox={designBox}
-                      editable={editable}
-                      onLineChange={onLineChange}
-                      minFontPx={fontSizeMinPx}
-                      maxFontPx={fontSizeMaxPx}
-                    />
+                {/* Align + Size on one row; ceiling hint below (reserved height so hint toggle doesn't jump) */}
+                <div className="flex flex-col gap-0 min-w-0 w-full">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 min-w-0">
+                    <div className="flex gap-1 items-center min-w-0 shrink-0">
+                      <span className="font-semibold text-sm mr-1">
+                        Align:
+                      </span>
+                      <button
+                        className={`control-button w-7 h-7 flex items-center justify-center p-0 transition-all ${
+                          (line.align || line.alignment) === "left"
+                            ? "bg-blue-500 text-white border-blue-600 shadow-sm"
+                            : "bg-white hover:bg-gray-50 border-gray-300"
+                        }`}
+                        onClick={() => onAlignmentChange(idx, "left")}
+                        title="Align Left"
+                        disabled={!editable}
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2.5"
+                            d="M4 6h16M4 12h10M4 18h12"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        className={`control-button w-7 h-7 flex items-center justify-center p-0 transition-all ${
+                          (line.align || line.alignment) === "center"
+                            ? "bg-blue-500 text-white border-blue-600 shadow-sm"
+                            : "bg-white hover:bg-gray-50 border-gray-300"
+                        }`}
+                        onClick={() => onAlignmentChange(idx, "center")}
+                        title="Align Center"
+                        disabled={!editable}
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2.5"
+                            d="M4 6h16M8 12h8M6 18h12"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        className={`control-button w-7 h-7 flex items-center justify-center p-0 transition-all ${
+                          (line.align || line.alignment) === "right"
+                            ? "bg-blue-500 text-white border-blue-600 shadow-sm"
+                            : "bg-white hover:bg-gray-50 border-gray-300"
+                        }`}
+                        onClick={() => onAlignmentChange(idx, "right")}
+                        title="Align Right"
+                        disabled={!editable}
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2.5"
+                            d="M4 6h16M12 12h8M4 18h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="flex gap-1 items-center min-w-0">
+                      <span className="font-semibold text-sm mr-1">Size</span>
+                      <div className="flex items-center">
+                        <FontSizeControl
+                          line={line}
+                          lineIndex={idx}
+                          designBox={designBox}
+                          editable={editable}
+                          onLineChange={onLineChange}
+                          minFontPx={fontSizeMinPx}
+                          maxFontPx={maxFontPxForLine}
+                        />
+                      </div>
+                    </div>
                   </div>
+                  {signLogoCeilPx !== undefined ? (
+                    <p
+                      className={`text-xs text-gray-600 leading-snug max-w-full mt-1 min-h-[2.75rem] ${
+                        showSignLogoCeilingHint ? "" : "invisible"
+                      }`}
+                      aria-hidden={!showSignLogoCeilingHint}
+                    >
+                      Max text size while this image is placed. Remove the image
+                      to use larger type.
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -652,7 +683,8 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
       {/* Action buttons if provided */}
       <div className="flex flex-row gap-2 justify-end">
