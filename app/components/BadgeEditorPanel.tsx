@@ -7,11 +7,15 @@ import { autoScaleFontSize } from "../utils/textMeasurement";
 import { FONT_COLORS } from "../constants/colors";
 import { FONT_FAMILIES } from "../constants/fonts";
 import { loadTemplateById } from "../utils/templates";
-import { getEffectiveDesignBox } from "../utils/renderSvg";
+import {
+  getEffectiveDesignBox,
+  getEffectiveSignTextLayoutForBadge,
+} from "../utils/renderSvg";
 import { SIGN_TEXT_MIN_FONT_PX } from "~/utils/signTextLayout";
 import {
   type DesignerVariant,
   getDesignerVariantConfig,
+  isSignLikeVariant,
 } from "../constants/designerVariants";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
@@ -242,11 +246,20 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
     width: 288,
     height: 96,
   });
+  /** Matches {@link resolveSignTextLayout} designBoxHeight (e.g. attached plaque lower 2/3 when image on). */
+  const [fontMetricsHeight, setFontMetricsHeight] = React.useState(
+    designBox.height,
+  );
 
   React.useEffect(() => {
     if (badge.templateId) {
       loadTemplateById(badge.templateId, variant).then((template) => {
-        setDesignBox(getEffectiveDesignBox(template, badge));
+        const db = getEffectiveDesignBox(template, badge);
+        setDesignBox(db);
+        const signLay =
+          template.signTextLayout &&
+          getEffectiveSignTextLayoutForBadge(template, badge);
+        setFontMetricsHeight(signLay?.designBoxHeight ?? db.height);
       });
     }
   }, [
@@ -254,15 +267,19 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
     badge.signBorderOptionId,
     badge.signBorderEnabled,
     badge.signBorderStyleId,
+    badge.logo?.src,
+    badge.lines,
+    badge.signLogoLayoutSnapshot,
     variant,
   ]);
 
   const fontSizeMinPx =
-    variant === "sign" ? SIGN_TEXT_MIN_FONT_PX : BADGE_CONSTANTS.MIN_FONT_SIZE;
-  const fontSizeMaxPx =
-    variant === "sign"
-      ? Math.max(fontSizeMinPx, Math.ceil(designBox.height * 4))
-      : BADGE_CONSTANTS.MAX_FONT_SIZE;
+    isSignLikeVariant(variant)
+      ? SIGN_TEXT_MIN_FONT_PX
+      : BADGE_CONSTANTS.MIN_FONT_SIZE;
+  const fontSizeMaxPx = isSignLikeVariant(variant)
+    ? Math.max(fontSizeMinPx, Math.ceil(fontMetricsHeight * 4))
+    : BADGE_CONSTANTS.MAX_FONT_SIZE;
 
   const justifyMap = {
     left: "flex-start",
@@ -282,7 +299,9 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
       <div className="flex flex-col gap-4">
         {badge.lines.map((line: BadgeLine, idx: number) => {
           const signLogoCeilPx =
-            variant === "sign" && badge.logo?.src?.trim()
+            isSignLikeVariant(variant) &&
+            variant !== "plaque" &&
+            badge.logo?.src?.trim()
               ? badge.signLogoLayoutSnapshot?.textPxCeilingByLine?.[idx] ??
                 badge.signLogoLayoutSnapshot?.textPxByLine?.[idx]
               : undefined;
@@ -291,7 +310,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
               ? Math.min(fontSizeMaxPx, signLogoCeilPx)
               : fontSizeMaxPx;
           const linePxRounded = line.sizeNorm
-            ? sizeNormToPx(line.sizeNorm, designBox.height)
+            ? sizeNormToPx(line.sizeNorm, fontMetricsHeight)
             : Math.round(line.fontSize ?? fontSizeMinPx);
           const showSignLogoCeilingHint =
             signLogoCeilPx !== undefined &&
@@ -624,7 +643,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                         <FontSizeControl
                           line={line}
                           lineIndex={idx}
-                          designBox={designBox}
+                          designBox={{ ...designBox, height: fontMetricsHeight }}
                           editable={editable}
                           onLineChange={onLineChange}
                           minFontPx={fontSizeMinPx}

@@ -1,6 +1,7 @@
 import { json } from "@remix-run/node";
 import {
   type DesignerId,
+  getDesignLibraryTable,
   getDesignerConfig,
   resolveGadgetApiKey,
   resolveGadgetUrl,
@@ -712,13 +713,12 @@ export async function runLinkPaidOrderToSupabase(
       }
     }
 
-    if (designerId === "badge" || designerId === "sign") {
-      const table =
-        designerId === "sign" ? "sign_designs" : "badge_designs";
+    const libraryTable = getDesignLibraryTable(designerId);
+    if (libraryTable) {
       for (const designId of designIds) {
         try {
           const snap = await insertOrderedDesignSnapshotFromCart({
-            table,
+            table: libraryTable,
             cartDesignId: designId,
             shopifyOrderId: orderIdTrimmed,
           });

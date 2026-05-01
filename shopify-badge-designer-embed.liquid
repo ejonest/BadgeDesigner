@@ -1,8 +1,8 @@
 {% comment %}
-  Badge + Sign designer iframe embed
+  Badge + Sign + Plaque designer iframe embed
   - Badge: product handle custom-1x3-badge → loads app root with badge designer (default).
-  - Sign: product handle custom-sign → same app URL with ?variant=sign so Shopify prices + Shape/Size variants work.
-  Alternative: use path /sign-designer on your host instead of ?variant=sign (both set variant to sign).
+  - Sign: product handle custom-sign → ?variant=sign or /sign-designer (Shape × Size variants, live price).
+  - Plaque: product handle custom-plaque → ?variant=plaque or /plaque-designer (parallel to sign).
 
   Usage: Copy to theme snippets, then in your product template add: {% render 'badge-designer-embed' %}
 {% endcomment %}
@@ -16,6 +16,43 @@
   <iframe
     id="sign-designer-iframe"
     src="{{ badge_designer_url }}?variant=sign&shop={{ shop.permanent_domain | url_param_escape }}&storeUrl={{ shop.permanent_domain | url_param_escape }}&product={{ product.id | url_param_escape }}&signProductHandle={{ product.handle | url_param_escape }}&variantIdSign={{ sign_v0.id | url_param_escape }}{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}"
+    style="width:100%; height:900px; border:0;"
+    loading="lazy"
+    allow="clipboard-read; clipboard-write"
+  ></iframe>
+</div>
+
+<script>
+  window.addEventListener('message', function(event) {
+    if (event.origin !== '{{ badge_designer_url }}') return;
+    var data = event.data;
+    if (data.action === 'redirect-to-login') {
+      var returnTo = window.location.pathname + window.location.search;
+      window.location.href = '/customer_authentication/login?return_to=' + encodeURIComponent(returnTo);
+      return;
+    }
+    if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
+      var items = data.payload.items.map(function(item) {
+        return { id: item.variantId, quantity: item.quantity || 1, properties: item.properties || {} };
+      });
+      var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) ? window.Shopify.routes.root : '/';
+      var cartAddUrl = cartRoot.replace(/\/$/, '') + '/cart/add.js';
+      fetch(cartAddUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: items }) })
+        .then(function() { window.location.href = cartRoot.replace(/\/$/, '') + '/cart'; })
+        .catch(function() { window.location.href = cartRoot.replace(/\/$/, '') + '/cart'; });
+    }
+  });
+</script>
+
+{% comment %} Custom plaque product — mirror sign embed; handle custom-plaque. Theme may postMessage PLAQUE_DESIGNER_SHOPIFY_PRODUCT (same payload as sign) for password-protected stores. {% endcomment %}
+{% elsif product and product.handle == 'custom-plaque' %}
+
+{% assign badge_designer_url = 'https://all-quality-design-tool.vercel.app' %}
+{% assign plaque_v0 = product.selected_or_first_available_variant | default: product.variants[0] %}
+<div style="width:100%; min-height:900px;">
+  <iframe
+    id="plaque-designer-iframe"
+    src="{{ badge_designer_url }}/plaque-designer?shop={{ shop.permanent_domain | url_param_escape }}&storeUrl={{ shop.permanent_domain | url_param_escape }}&product={{ product.id | url_param_escape }}&plaqueProductHandle={{ product.handle | url_param_escape }}&variantIdSign={{ plaque_v0.id | url_param_escape }}{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}"
     style="width:100%; height:900px; border:0;"
     loading="lazy"
     allow="clipboard-read; clipboard-write"

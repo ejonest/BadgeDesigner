@@ -1,0 +1,29 @@
+{% comment %}
+  Renders plaque designer details in cart: text lines (Line 1–4), background swatch.
+  Same property keys as BadgeDesigner (plaque): Custom Badge Design, Badge Text Line 1–4, etc.
+  Pass: item (cart item)
+{% endcomment %}
+{%- if item.properties['Custom Badge Design'] != 'Yes' -%}
+{%- else -%}
+  <div class="plaque-cart-details" style="margin-top: 8px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 0.9em;">
+    {%- if item.properties['Badge Text Line 1'] != blank -%}
+      <p style="margin: 2px 0;"><strong>Line 1:</strong> {{ item.properties['Badge Text Line 1'] }}</p>
+    {%- endif -%}
+    {%- if item.properties['Badge Text Line 2'] != blank -%}
+      <p style="margin: 2px 0;"><strong>Line 2:</strong> {{ item.properties['Badge Text Line 2'] }}</p>
+    {%- endif -%}
+    {%- if item.properties['Badge Text Line 3'] != blank -%}
+      <p style="margin: 2px 0;"><strong>Line 3:</strong> {{ item.properties['Badge Text Line 3'] }}</p>
+    {%- endif -%}
+    {%- if item.properties['Badge Text Line 4'] != blank -%}
+      <p style="margin: 2px 0;"><strong>Line 4:</strong> {{ item.properties['Badge Text Line 4'] }}</p>
+    {%- endif -%}
+    {%- if item.properties['Background Color'] != blank -%}
+      <p style="margin: 2px 0;">
+        <strong>Background:</strong>
+        <span style="display: inline-block; width: 14px; height: 14px; background: {{ item.properties['Background Color'] }}; border: 1px solid #ccc; border-radius: 2px; vertical-align: middle; margin-left: 4px;"></span>
+        {{ item.properties['Background Color'] }}
+      </p>
+    {%- endif -%}
+  </div>
+{%- endif -%}

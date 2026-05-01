@@ -259,6 +259,7 @@ export function isTaperedNonRectSignTemplateId(
   templateId: string | undefined,
 ): boolean {
   if (!templateId?.trim()) return false;
+  if (/^plaque-/i.test(templateId)) return false;
   if (/^circle-/i.test(templateId)) return false;
   if (/^classic-framed-/i.test(templateId)) return false;
   if (/^square-/i.test(templateId)) return false;

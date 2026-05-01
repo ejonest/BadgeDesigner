@@ -7,6 +7,7 @@ import {
   FONT_COLORS,
 } from "~/constants/colors";
 import { DESIGN_LIBRARY_MILESTONE_LIMIT } from "~/constants/designLibrary";
+import type { SignLikeDesignsTable } from "~/config/designers";
 import { stableAutosaveDesignId } from "./stableDesignLibraryIds";
 
 export { stableAutosaveDesignId, DESIGN_LIBRARY_MILESTONE_LIMIT };
@@ -596,7 +597,10 @@ export function uploadedImageUrlFromBadgeRecord(
   return persistedSignUploadedImageUrl(logo?.src);
 }
 
-export async function saveSignDesign(design: SignDesign) {
+async function saveSignLikeDesign(
+  table: SignLikeDesignsTable,
+  design: SignDesign,
+) {
   if (!supabaseAdmin) {
     throw new Error(
       "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
@@ -608,33 +612,44 @@ export async function saveSignDesign(design: SignDesign) {
   const did = design.design_id?.trim();
   if (uid && sid && did) {
     const { error: delErr } = await supabaseAdmin
-      .from("sign_designs")
+      .from(table)
       .delete()
       .eq("user_id", uid)
       .eq("shop_id", sid)
       .eq("design_id", did);
     if (delErr) {
-      console.error("saveSignDesign delete-by-design_id error:", delErr);
+      console.error(`saveSignLikeDesign(${table}) delete-by-design_id error:`, delErr);
       throw delErr;
     }
   }
 
   const { data, error } = await supabaseAdmin
-    .from("sign_designs")
+    .from(table)
     .insert(design)
     .select()
     .single();
 
   if (error) {
-    console.error("Save sign design error:", error);
+    console.error(`Save ${table} error:`, error);
     throw error;
   }
 
   return data;
 }
 
-/** Latest milestone sign design for user/shop (excludes autosave). */
-export async function getLatestSavedSignDesign(userId: string, shopId: string) {
+export async function saveSignDesign(design: SignDesign) {
+  return saveSignLikeDesign("sign_designs", design);
+}
+
+export async function savePlaqueDesign(design: SignDesign) {
+  return saveSignLikeDesign("plaque_designs", design);
+}
+
+async function getLatestSavedSignLikeDesign(
+  table: SignLikeDesignsTable,
+  userId: string,
+  shopId: string,
+) {
   if (!supabaseAdmin) {
     throw new Error(
       "Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.",
@@ -642,7 +657,7 @@ export async function getLatestSavedSignDesign(userId: string, shopId: string) {
   }
 
   const { data, error } = await supabaseAdmin
-    .from("sign_designs")
+    .from(table)
     .select("*")
     .eq("user_id", userId)
     .eq("shop_id", shopId)
@@ -652,14 +667,27 @@ export async function getLatestSavedSignDesign(userId: string, shopId: string) {
     .maybeSingle();
 
   if (error) {
-    console.error("getLatestSavedSignDesign error:", error);
+    console.error(`getLatestSavedSignLikeDesign(${table}) error:`, error);
     throw error;
   }
 
   return data;
 }
 
-export async function deleteSavedSignDesignsForUser(
+/** Latest milestone sign design for user/shop (excludes autosave). */
+export async function getLatestSavedSignDesign(userId: string, shopId: string) {
+  return getLatestSavedSignLikeDesign("sign_designs", userId, shopId);
+}
+
+export async function getLatestSavedPlaqueDesign(
+  userId: string,
+  shopId: string,
+) {
+  return getLatestSavedSignLikeDesign("plaque_designs", userId, shopId);
+}
+
+async function deleteSavedSignLikeDesignsForUser(
+  table: SignLikeDesignsTable,
   userId: string,
   shopId: string,
 ) {
@@ -670,16 +698,30 @@ export async function deleteSavedSignDesignsForUser(
   }
 
   const { error } = await supabaseAdmin
-    .from("sign_designs")
+    .from(table)
     .delete()
     .eq("user_id", userId)
     .eq("shop_id", shopId)
     .eq("status", "saved");
 
   if (error) {
-    console.error("deleteSavedSignDesignsForUser error:", error);
+    console.error(`deleteSavedSignLikeDesignsForUser(${table}) error:`, error);
     throw error;
   }
+}
+
+export async function deleteSavedSignDesignsForUser(
+  userId: string,
+  shopId: string,
+) {
+  return deleteSavedSignLikeDesignsForUser("sign_designs", userId, shopId);
+}
+
+export async function deleteSavedPlaqueDesignsForUser(
+  userId: string,
+  shopId: string,
+) {
+  return deleteSavedSignLikeDesignsForUser("plaque_designs", userId, shopId);
 }
 
 function countBadgesInDesignData(designData: unknown): number {
@@ -698,7 +740,7 @@ function milestoneStatusForKind(kind: DesignSaveKind): BadgeDesign["status"] {
 
 /** Keep at most `limit` milestone rows (manual/cart/ordered; legacy null save_kind counts). Autosave row excluded. */
 export async function pruneDesignMilestones(
-  table: "badge_designs" | "sign_designs",
+  table: "badge_designs" | SignLikeDesignsTable,
   userId: string,
   shopId: string,
   limit = DESIGN_LIBRARY_MILESTONE_LIMIT,
@@ -765,20 +807,21 @@ async function deleteLibraryAutosaveDuplicatesBadge(
   }
 }
 
-async function deleteLibraryAutosaveDuplicatesSign(
+async function deleteLibraryAutosaveDuplicatesSignLike(
+  table: SignLikeDesignsTable,
   userId: string,
   shopId: string,
   stableDesignId: string,
 ) {
   if (!supabaseAdmin) return;
   const { error } = await supabaseAdmin
-    .from("sign_designs")
+    .from(table)
     .delete()
     .eq("user_id", userId)
     .eq("shop_id", shopId)
     .or(`save_kind.eq.autosave,design_id.eq.${stableDesignId}`);
   if (error) {
-    console.error("deleteLibraryAutosaveDuplicatesSign:", error);
+    console.error(`deleteLibraryAutosaveDuplicatesSignLike(${table}):`, error);
     throw error;
   }
 }
@@ -802,14 +845,17 @@ export async function upsertBadgeAutosaveDesign(row: BadgeDesign) {
   return saveBadgeDesign(full);
 }
 
-export async function upsertSignAutosaveDesign(row: SignDesign) {
+export async function upsertSignLikeAutosaveDesign(
+  table: SignLikeDesignsTable,
+  row: SignDesign,
+) {
   const uid = row.user_id?.trim();
   const sid = row.shop_id?.trim();
   if (!uid || !sid) {
     throw new Error("user_id and shop_id are required for autosave");
   }
   const stableId = stableAutosaveDesignId(uid, sid);
-  await deleteLibraryAutosaveDuplicatesSign(uid, sid, stableId);
+  await deleteLibraryAutosaveDuplicatesSignLike(table, uid, sid, stableId);
   const full: SignDesign = {
     ...row,
     design_id: stableId,
@@ -818,7 +864,15 @@ export async function upsertSignAutosaveDesign(row: SignDesign) {
     save_kind: "autosave",
     status: "draft",
   };
-  return saveSignDesign(full);
+  return saveSignLikeDesign(table, full);
+}
+
+export async function upsertSignAutosaveDesign(row: SignDesign) {
+  return upsertSignLikeAutosaveDesign("sign_designs", row);
+}
+
+export async function upsertPlaqueAutosaveDesign(row: SignDesign) {
+  return upsertSignLikeAutosaveDesign("plaque_designs", row);
 }
 
 /** Insert or update a milestone row, then prune old milestones. */
@@ -843,9 +897,13 @@ export async function saveBadgeDesignMilestone(row: BadgeDesign, saveKind: Desig
   return saved;
 }
 
-export async function saveSignDesignMilestone(row: SignDesign, saveKind: DesignSaveKind) {
+export async function saveSignLikeDesignMilestone(
+  table: SignLikeDesignsTable,
+  row: SignDesign,
+  saveKind: DesignSaveKind,
+) {
   if (saveKind === "autosave") {
-    throw new Error("Use upsertSignAutosaveDesign for autosave");
+    throw new Error("Use upsertSignAutosaveDesign / upsertPlaqueAutosaveDesign for autosave");
   }
   const uid = row.user_id?.trim();
   const sid = row.shop_id?.trim();
@@ -859,9 +917,20 @@ export async function saveSignDesignMilestone(row: SignDesign, saveKind: DesignS
     save_kind: saveKind,
     status: milestoneStatusForKind(saveKind),
   };
-  const saved = await saveSignDesign(full);
-  await pruneDesignMilestones("sign_designs", uid, sid);
+  const saved = await saveSignLikeDesign(table, full);
+  await pruneDesignMilestones(table, uid, sid);
   return saved;
+}
+
+export async function saveSignDesignMilestone(row: SignDesign, saveKind: DesignSaveKind) {
+  return saveSignLikeDesignMilestone("sign_designs", row, saveKind);
+}
+
+export async function savePlaqueDesignMilestone(
+  row: SignDesign,
+  saveKind: DesignSaveKind,
+) {
+  return saveSignLikeDesignMilestone("plaque_designs", row, saveKind);
 }
 
 export type DesignGalleryListItem = {
@@ -927,7 +996,8 @@ export async function listBadgeDesignGallery(
   };
 }
 
-export async function listSignDesignGallery(
+export async function listSignLikeDesignGallery(
+  table: SignLikeDesignsTable,
   userId: string,
   shopId: string,
 ): Promise<{ autosave: DesignGalleryListItem | null; milestones: DesignGalleryListItem[] }> {
@@ -938,7 +1008,7 @@ export async function listSignDesignGallery(
   }
 
   const { data: autoRow, error: autoErr } = await supabaseAdmin
-    .from("sign_designs")
+    .from(table)
     .select("*")
     .eq("user_id", userId)
     .eq("shop_id", shopId)
@@ -946,12 +1016,12 @@ export async function listSignDesignGallery(
     .maybeSingle();
 
   if (autoErr) {
-    console.error("listSignDesignGallery autosave error:", autoErr);
+    console.error(`listSignLikeDesignGallery(${table}) autosave error:`, autoErr);
     throw autoErr;
   }
 
   const { data: mileRows, error: mileErr } = await supabaseAdmin
-    .from("sign_designs")
+    .from(table)
     .select("*")
     .eq("user_id", userId)
     .eq("shop_id", shopId)
@@ -961,7 +1031,7 @@ export async function listSignDesignGallery(
     .limit(DESIGN_LIBRARY_MILESTONE_LIMIT);
 
   if (mileErr) {
-    console.error("listSignDesignGallery milestones error:", mileErr);
+    console.error(`listSignLikeDesignGallery(${table}) milestones error:`, mileErr);
     throw mileErr;
   }
 
@@ -980,9 +1050,23 @@ export async function listSignDesignGallery(
   };
 }
 
+export async function listSignDesignGallery(
+  userId: string,
+  shopId: string,
+): Promise<{ autosave: DesignGalleryListItem | null; milestones: DesignGalleryListItem[] }> {
+  return listSignLikeDesignGallery("sign_designs", userId, shopId);
+}
+
+export async function listPlaqueDesignGallery(
+  userId: string,
+  shopId: string,
+): Promise<{ autosave: DesignGalleryListItem | null; milestones: DesignGalleryListItem[] }> {
+  return listSignLikeDesignGallery("plaque_designs", userId, shopId);
+}
+
 /** Remove one milestone row (manual/cart/ordered). Cannot delete the autosave draft row. */
 export async function deleteDesignLibraryMilestone(
-  table: "badge_designs" | "sign_designs",
+  table: "badge_designs" | SignLikeDesignsTable,
   userId: string,
   shopId: string,
   designId: string,
@@ -1049,7 +1133,8 @@ export async function getBadgeDesignForUserShop(
   return data as BadgeDesign | null;
 }
 
-export async function getSignDesignForUserShop(
+export async function getSignLikeDesignForUserShop(
+  table: SignLikeDesignsTable,
   userId: string,
   shopId: string,
   designId: string,
@@ -1061,7 +1146,7 @@ export async function getSignDesignForUserShop(
   }
 
   const { data, error } = await supabaseAdmin
-    .from("sign_designs")
+    .from(table)
     .select("*")
     .eq("user_id", userId)
     .eq("shop_id", shopId)
@@ -1069,18 +1154,34 @@ export async function getSignDesignForUserShop(
     .maybeSingle();
 
   if (error) {
-    console.error("getSignDesignForUserShop error:", error);
+    console.error(`getSignLikeDesignForUserShop(${table}) error:`, error);
     throw error;
   }
 
   return data as SignDesign | null;
 }
 
+export async function getSignDesignForUserShop(
+  userId: string,
+  shopId: string,
+  designId: string,
+) {
+  return getSignLikeDesignForUserShop("sign_designs", userId, shopId, designId);
+}
+
+export async function getPlaqueDesignForUserShop(
+  userId: string,
+  shopId: string,
+  designId: string,
+) {
+  return getSignLikeDesignForUserShop("plaque_designs", userId, shopId, designId);
+}
+
 /**
  * After order is paid: copy cart milestone row to a new ordered row (new design_id), then prune.
  */
 export async function insertOrderedDesignSnapshotFromCart(params: {
-  table: "badge_designs" | "sign_designs";
+  table: "badge_designs" | SignLikeDesignsTable;
   cartDesignId: string;
   shopifyOrderId: string;
 }) {
@@ -1146,8 +1247,8 @@ export async function insertOrderedDesignSnapshotFromCart(params: {
     await saveBadgeDesign(row);
     await pruneDesignMilestones("badge_designs", uid, sid);
   } else {
-    await saveSignDesign(row as SignDesign);
-    await pruneDesignMilestones("sign_designs", uid, sid);
+    await saveSignLikeDesign(params.table, row as SignDesign);
+    await pruneDesignMilestones(params.table, uid, sid);
   }
 
   return { skipped: false as const, design_id: newId };

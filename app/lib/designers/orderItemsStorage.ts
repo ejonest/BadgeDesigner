@@ -10,11 +10,21 @@ async function toUploadBuffer(file: File | Blob): Promise<Buffer> {
   return Buffer.from(ab);
 }
 
+function hintIfStorageBucketMissing(bucket: string, message: string): string {
+  if (!/bucket not found/i.test(message)) return message;
+  return (
+    `${message}. In Supabase: Dashboard → Storage → New bucket, id exactly "${bucket}". ` +
+    `Enable Public bucket if you use getPublicUrl(); add a read policy for clients as needed.`
+  );
+}
+
 function rowPayload(
   item: BadgeOrderItem,
   def: DesignerDefinition,
 ): Record<string, unknown> {
-  const isSignTable = def.orderItemsTable === "sign_order_items";
+  const isSignTable =
+    def.orderItemsTable === "sign_order_items" ||
+    def.orderItemsTable === "plaque_order_items";
   const base: Record<string, unknown> = {
     design_id: item.design_id,
     shopify_order_id: item.shopify_order_id,
@@ -124,7 +134,7 @@ export async function uploadImageToDesignerBucket(
     });
   if (error) {
     throw new Error(
-      `Failed to upload to ${def.imageBucket}: ${error.message}`,
+      `Failed to upload to ${def.imageBucket}: ${hintIfStorageBucketMissing(def.imageBucket, error.message)}`,
     );
   }
   const {
@@ -155,7 +165,9 @@ export async function uploadPdfToDesignerBucket(
     .from(def.pdfBucket)
     .upload(fileName, body, { contentType: "application/pdf", upsert: true });
   if (error) {
-    throw new Error(`Failed to upload to ${def.pdfBucket}: ${error.message}`);
+    throw new Error(
+      `Failed to upload to ${def.pdfBucket}: ${hintIfStorageBucketMissing(def.pdfBucket, error.message)}`,
+    );
   }
   const {
     data: { publicUrl },

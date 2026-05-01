@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 768" width="576" height="768">
+  <!-- Single metal plate: image top band + text below (fill replaced at render time) -->
+  <path id="Inner" d="M 52 44 L 524 44 Q 532 44 532 52 L 532 716 Q 532 724 524 724 L 52 724 Q 44 724 44 716 L 44 52 Q 44 44 52 44 Z" fill="#3a3a3a"/>
+</svg>

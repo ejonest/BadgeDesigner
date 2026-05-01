@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "plaque-detached",
+      "name": "Detached photo",
+      "widthInches": 6,
+      "heightInches": 8,
+      "svgFile": "/templates/plaque/Plaque-Detached.svg",
+      "safeInsetPx": 6,
+      "plaquePhotoRectNorm": {
+        "xNorm": 0.118,
+        "yNorm": 0.055,
+        "widthNorm": 0.764,
+        "heightNorm": 0.391
+      }
+    },
+    {
+      "id": "plaque-attached",
+      "name": "Attached plate",
+      "widthInches": 6,
+      "heightInches": 8,
+      "svgFile": "/templates/plaque/Plaque-Attached.svg",
+      "safeInsetPx": 6
+    }
+  ]
+}

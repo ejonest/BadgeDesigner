@@ -1,20 +1,18 @@
 /**
- * Gadget Global Action: on_order_paid — badge + sign (split POST to Vercel)
+ * Gadget Global Action: on_order_paid — badge + sign + plaque (split POST to Vercel)
  *
- * Use when one Shopify store sells BOTH custom badges and custom signs. Cart line items include
- * property "Designer" = "badge" | "sign" (set by BadgeDesigner). Lines without "Designer" are
- * treated as badges (backward compatible).
+ * Cart line items include property "Designer" = "badge" | "sign" | "plaque" (set by BadgeDesigner).
+ * Lines without "Designer" are treated as badges (backward compatible).
  *
  * Env vars (Gadget → Settings → Environment variables):
- *   LINK_ORDER_SECRET           — Bearer token; must match Vercel LINK_ORDER_SECRET (and/or SIGN secret if you use one value everywhere)
- *   LINK_ORDER_SECRET_SIGN      — optional; if set, used only for the sign POST (else LINK_ORDER_SECRET)
- *   VERCEL_LINK_ORDER_URL       — default https://YOUR_APP/api/link-order-to-supabase
- *   VERCEL_LINK_ORDER_SIGN_URL  — default https://YOUR_APP/api/link-order-sign-to-supabase
+ *   LINK_ORDER_SECRET             — Bearer token; must match Vercel LINK_ORDER_SECRET
+ *   LINK_ORDER_SECRET_SIGN        — optional; sign POST (else LINK_ORDER_SECRET)
+ *   LINK_ORDER_SECRET_PLAQUE      — optional; plaque POST (else LINK_ORDER_SECRET)
+ *   VERCEL_LINK_ORDER_URL         — default https://YOUR_APP/api/link-order-to-supabase
+ *   VERCEL_LINK_ORDER_SIGN_URL    — default https://YOUR_APP/api/link-order-sign-to-supabase
+ *   VERCEL_LINK_ORDER_PLAQUE_URL  — default https://YOUR_APP/api/link-order-plaque-to-supabase
  *
- * Vercel: set LINK_ORDER_SECRET; for sign route, LINK_ORDER_SECRET_SIGN optional (falls back to LINK_ORDER_SECRET).
- *
- * Sign rows in Supabase (`sign_order_items`) are created/updated by Vercel save-draft / send-to-supabase (text lines 1–6,
- * images, pdf, no backing_type). This action only links paid orders (Shopify IDs, quantity) to those drafts.
+ * Sign / plaque rows in Supabase are filled by Vercel save-draft / send-to-supabase; this action links paid orders.
  *
  * Trigger: Shopify orders/paid (or orders/create).
  */
@@ -25,8 +23,13 @@ const BADGE_URL =
 const SIGN_URL =
   process.env.VERCEL_LINK_ORDER_SIGN_URL ||
   "https://all-quality-design-tool.vercel.app/api/link-order-sign-to-supabase";
+const PLAQUE_URL =
+  process.env.VERCEL_LINK_ORDER_PLAQUE_URL ||
+  "https://all-quality-design-tool.vercel.app/api/link-order-plaque-to-supabase";
 const BADGE_SECRET = process.env.LINK_ORDER_SECRET;
 const SIGN_SECRET = process.env.LINK_ORDER_SECRET_SIGN || process.env.LINK_ORDER_SECRET;
+const PLAQUE_SECRET =
+  process.env.LINK_ORDER_SECRET_PLAQUE || process.env.LINK_ORDER_SECRET;
 
 function getPropertiesMap(lineItem) {
   const props = lineItem.properties || lineItem.customAttributes || [];
@@ -39,15 +42,21 @@ function getPropertiesMap(lineItem) {
   }, {});
 }
 
-function isSignLine(props) {
+/** @returns {"badge"|"sign"|"plaque"} */
+function designerLineKind(props) {
   const d = props["Designer"];
-  return d != null && String(d).trim().toLowerCase() === "sign";
+  if (d == null || String(d).trim() === "") return "badge";
+  const t = String(d).trim().toLowerCase();
+  if (t === "sign") return "sign";
+  if (t === "plaque") return "plaque";
+  return "badge";
 }
 
 async function collectLinePayloads(order, api, logger) {
   const lineItems = order.line_items ?? order.lineItems ?? [];
   const badgePayload = [];
   const signPayload = [];
+  const plaquePayload = [];
 
   for (const item of lineItems) {
     const props = getPropertiesMap(item);
@@ -57,7 +66,8 @@ async function collectLinePayloads(order, api, logger) {
       : undefined;
     if (!designId && !gadgetDesignId) continue;
 
-    const indexRaw = props["Badge Index"] ?? props["Sign Index"];
+    const indexRaw =
+      props["Badge Index"] ?? props["Sign Index"] ?? props["Plaque Index"];
     let badgeIndex =
       indexRaw !== undefined && indexRaw !== null && indexRaw !== ""
         ? parseInt(String(indexRaw).trim(), 10)
@@ -72,9 +82,9 @@ async function collectLinePayloads(order, api, logger) {
       quantity,
     };
 
-    const sign = isSignLine(props);
+    const kind = designerLineKind(props);
 
-    if (sign && api && (api.signDesign || api.SignDesign)) {
+    if (kind === "sign" && api && (api.signDesign || api.SignDesign)) {
       const model = api.signDesign || api.SignDesign;
       try {
         let design = null;
@@ -94,7 +104,27 @@ async function collectLinePayloads(order, api, logger) {
           error: err.message,
         });
       }
-    } else if (!sign && api && (api.badgeDesign || api.BadgeDesign)) {
+    } else if (kind === "plaque" && api && (api.plaqueDesign || api.PlaqueDesign)) {
+      const model = api.plaqueDesign || api.PlaqueDesign;
+      try {
+        let design = null;
+        if (designId) design = await model.findOne({ filter: { designId } });
+        if (!design && gadgetDesignId)
+          design = await model.findOne({ filter: { id: gadgetDesignId } });
+        if (design?.designData != null) {
+          entry.designData =
+            typeof design.designData === "string"
+              ? JSON.parse(design.designData)
+              : design.designData;
+        }
+      } catch (err) {
+        logger.warn("on_order_paid: PlaqueDesign fetch failed", {
+          designId,
+          gadgetDesignId,
+          error: err.message,
+        });
+      }
+    } else if (kind === "badge" && api && (api.badgeDesign || api.BadgeDesign)) {
       const model = api.badgeDesign || api.BadgeDesign;
       try {
         let design = null;
@@ -116,11 +146,12 @@ async function collectLinePayloads(order, api, logger) {
       }
     }
 
-    if (sign) signPayload.push(entry);
+    if (kind === "sign") signPayload.push(entry);
+    else if (kind === "plaque") plaquePayload.push(entry);
     else badgePayload.push(entry);
   }
 
-  return { badgePayload, signPayload };
+  return { badgePayload, signPayload, plaquePayload };
 }
 
 async function postLink(url, secret, body, logger, label) {
@@ -173,13 +204,14 @@ module.exports = async ({ api, params, trigger, record, logger }) => {
     return { success: false, reason: "no_order_id" };
   }
 
-  const { badgePayload, signPayload } = await collectLinePayloads(
-    order,
-    api,
-    logger,
-  );
+  const { badgePayload, signPayload, plaquePayload } =
+    await collectLinePayloads(order, api, logger);
 
-  if (badgePayload.length === 0 && signPayload.length === 0) {
+  if (
+    badgePayload.length === 0 &&
+    signPayload.length === 0 &&
+    plaquePayload.length === 0
+  ) {
     logger.info("on_order_paid: no custom design line items (no Design ID)");
     return { success: true, skipped: true };
   }
@@ -211,6 +243,16 @@ module.exports = async ({ api, params, trigger, record, logger }) => {
       { ...baseBody, lineItems: signPayload },
       logger,
       "sign",
+    );
+  }
+
+  if (plaquePayload.length > 0) {
+    results.plaque = await postLink(
+      PLAQUE_URL,
+      PLAQUE_SECRET,
+      { ...baseBody, lineItems: plaquePayload },
+      logger,
+      "plaque",
     );
   }
 
