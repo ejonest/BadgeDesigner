@@ -56,8 +56,8 @@
     {
       "id": "plaque-detached-landscape-medium",
       "name": "Detached landscape — medium",
-      "widthInches": 8,
-      "heightInches": 10,
+      "widthInches": 10,
+      "heightInches": 8,
       "svgFile": "/templates/plaque/Plaque-Detached-Landscape-Medium.svg",
       "safeInsetPx": 6,
       "plaquePhotoRectNorm": {
@@ -70,8 +70,8 @@
     {
       "id": "plaque-detached-landscape-large",
       "name": "Detached landscape — large",
-      "widthInches": 9,
-      "heightInches": 12,
+      "widthInches": 12,
+      "heightInches": 9,
       "svgFile": "/templates/plaque/Plaque-Detached-Landscape-Large.svg",
       "safeInsetPx": 6,
       "plaquePhotoRectNorm": {
