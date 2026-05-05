@@ -3,7 +3,10 @@
  * Edit the arrays and strings below to tune the sign experience without affecting badges.
  */
 import type { BadgeLine } from "../types/badge";
-import type { DesignerVariant } from "./designerVariants";
+import {
+  type DesignerVariant,
+  isSignLikeVariant,
+} from "./designerVariants";
 
 /** Default text for new sign lines (line 1, line 2, …). Extra sign lines stay empty. */
 export const SIGN_DEFAULT_LINE_TEXTS: readonly string[] = [
@@ -63,8 +66,7 @@ export function getAddMultipleDesignerCopy(
   variant: DesignerVariant,
   maxLines: number,
 ): AddMultipleDesignerCopy {
-  const base =
-    variant === "sign"
+  const base = isSignLikeVariant(variant)
       ? signAddMultipleCopy(maxLines)
       : badgeAddMultipleCopy(maxLines);
   return {
@@ -96,7 +98,7 @@ export function buildPaddedInitialLines(
             id: `line-${i + 1}`,
             text: "",
           };
-    if (variant === "sign") {
+    if (isSignLikeVariant(variant)) {
       const text =
         i < SIGN_DEFAULT_LINE_TEXTS.length ? SIGN_DEFAULT_LINE_TEXTS[i] : "";
       return { ...base, id: `line-${i + 1}`, text };

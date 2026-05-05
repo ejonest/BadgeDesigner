@@ -1,6 +1,9 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { Badge } from "../types/badge";
-import type { DesignerVariant } from "~/constants/designerVariants";
+import {
+  type DesignerVariant,
+  isSignLikeVariant,
+} from "~/constants/designerVariants";
 import { getColorInfo } from "../constants/colors";
 import { generateBadgeTiff, generateFullBadgeImage } from "./badgeThumbnail";
 import { loadTemplateById } from "./templates";
@@ -116,7 +119,8 @@ export const generatePDFNew = async (
 
       // Load the correct template for this badge (needed for section height and image dimensions)
       const template = await loadTemplateById(
-        badge.templateId || (variant === "sign" ? "circle-4x4" : "rect-1x3"),
+        badge.templateId ||
+          (isSignLikeVariant(variant) ? "circle-4x4" : "rect-1x3"),
         variant
       );
       console.log(
@@ -440,7 +444,8 @@ export const generatePDFAsBlob = async (
 
       // Load the correct template (variant so sign templates load from sign config)
       const template = await loadTemplateById(
-        badge.templateId || (variant === "sign" ? "circle-4x4" : "rect-1x3"),
+        badge.templateId ||
+          (isSignLikeVariant(variant) ? "circle-4x4" : "rect-1x3"),
         variant
       );
       console.log(

@@ -3,8 +3,27 @@
  * Drives maxLines, backing, size step, border, labels, templates, and help content.
  */
 import { BACKGROUND_COLORS, EXTENDED_BACKGROUND_COLORS } from "./colors";
+import type { PlaqueLayoutOption } from "./plaqueLayouts";
+import { PLAQUE_LAYOUT_OPTIONS as PLAQUE_LAYOUT_OPTIONS_CONST } from "./plaqueLayouts";
 
-export type DesignerVariant = "badge" | "sign";
+export type DesignerVariant = "badge" | "sign" | "plaque";
+
+/**
+ * Sign/plaque template grid + plaque live preview: non-scaling outline so trim stays visible
+ * when scaled down; pair plaque live preview with svgMarkupToImageSrc for correct wood filters.
+ */
+export const SIGN_LIKE_TEMPLATE_THUMB_RENDER_OPTS = {
+  showOutline: true as const,
+  outlineStrokeWidth: "1.5",
+  outlineNonScalingStroke: true as const,
+};
+
+/** Same template/workflow as sign (multi-line, borders, Shopify catalog, etc.). */
+export function isSignLikeVariant(
+  variant: DesignerVariant,
+): variant is "sign" | "plaque" {
+  return variant === "sign" || variant === "plaque";
+}
 
 export interface BackgroundColorOption {
   value: string;
@@ -37,12 +56,16 @@ export interface DesignerVariantConfig {
   sizeOptions: readonly SizeOption[];
   labelProduct: string;
   labelProductPlural: string;
-  templatesKey: "badge" | "sign";
+  templatesKey: "badge" | "sign" | "plaque";
   backgroundColors: readonly BackgroundColorOption[];
   backgroundTextures: readonly BackgroundTextureOption[];
   borderOptions: readonly BorderOption[];
   helpContent: "badge" | "sign";
 }
+
+/** Plaque designer: layout families (step 2); sizes are suffixes on template ids in plaque-templates.local.json. */
+export const PLAQUE_LAYOUT_OPTIONS: readonly PlaqueLayoutOption[] =
+  PLAQUE_LAYOUT_OPTIONS_CONST;
 
 const badgeBackgroundColors: readonly BackgroundColorOption[] = [
   ...BACKGROUND_COLORS,
@@ -58,6 +81,20 @@ export const DESIGNER_VARIANT_CONFIG: Record<
   DesignerVariant,
   DesignerVariantConfig
 > = {
+  plaque: {
+    maxLines: 6,
+    hasBacking: false,
+    hasBorder: false,
+    hasSizeStep: false,
+    sizeOptions: [],
+    labelProduct: "Plaque",
+    labelProductPlural: "Plaques",
+    templatesKey: "plaque",
+    backgroundColors: signBackgroundColors,
+    backgroundTextures: [],
+    borderOptions: [],
+    helpContent: "sign",
+  },
   badge: {
     maxLines: 4,
     hasBacking: true,

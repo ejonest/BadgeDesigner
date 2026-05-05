@@ -1,6 +1,7 @@
 import { Client } from '@gadget-client/allqualitybadges';
 import {
   getDesignerApiPaths,
+  getDesignerLibraryApiPaths,
   type DesignerId,
 } from '~/config/designers';
 
@@ -30,7 +31,7 @@ export interface ShopifyProduct {
 }
 
 export interface CreateApiOptions {
-  /** Routes save/send calls to the matching designer (badge vs sign). */
+  /** Routes save/send calls to the matching designer (badge, sign, plaque, …). */
   designerId?: DesignerId;
 }
 
@@ -54,6 +55,7 @@ export function createApi(
 ) {
   const designerId = options?.designerId ?? "badge";
   const designerPaths = getDesignerApiPaths(designerId);
+  const libraryPaths = getDesignerLibraryApiPaths(designerId);
   // API configuration (Gadget client / logging)
   const GADGET_APP_URL = 'https://all-quality-badge-designer--development.gadget.app';
   const GADGET_API_URL = normalizeEnvString(gadgetApiUrl) || GADGET_APP_URL;
@@ -119,8 +121,7 @@ export function createApi(
       shopData?: any,
       options?: { saveKind?: DesignLibraryMilestoneKind },
     ): Promise<BadgeDesignData> {
-      const saveUrl =
-        designerId === "sign" ? "/api/save-sign-design" : "/api/save-design";
+      const saveUrl = libraryPaths.saveDesign;
       const payload: Record<string, unknown> = { designData, shopData };
       if (options?.saveKind) payload.saveKind = options.saveKind;
       const response = await fetch(saveUrl, {
@@ -145,10 +146,7 @@ export function createApi(
     /** Get latest saved design for user/shop from Supabase (for "Load previous design?"). */
     async getSavedDesign(shopId: string, userId: string): Promise<{ saved: boolean; design: { design_id: string; design_data: any; updated_at?: string; backing_type?: string } | null }> {
       const params = new URLSearchParams({ shop: shopId, userId });
-      const loadUrl =
-        designerId === "sign"
-          ? `/api/saved-sign-design?${params}`
-          : `/api/saved-design?${params}`;
+      const loadUrl = `${libraryPaths.savedDesign}?${params}`;
       const response = await fetch(loadUrl);
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
@@ -162,10 +160,7 @@ export function createApi(
       designData: any,
       shopData?: any,
     ): Promise<{ id?: string; designId?: string }> {
-      const url =
-        designerId === "sign"
-          ? "/api/autosave-sign-design"
-          : "/api/autosave-design";
+      const url = libraryPaths.autosaveDesign;
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -193,10 +188,7 @@ export function createApi(
       milestones: Omit<DesignLibraryListItem, "isAutosave">[];
     }> {
       const params = new URLSearchParams({ shop: shopId, userId });
-      const listUrl =
-        designerId === "sign"
-          ? `/api/saved-sign-designs?${params}`
-          : `/api/saved-designs?${params}`;
+      const listUrl = `${libraryPaths.savedDesigns}?${params}`;
       const response = await fetch(listUrl);
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
@@ -213,10 +205,7 @@ export function createApi(
       userId: string,
       designId: string,
     ): Promise<void> {
-      const url =
-        designerId === "sign"
-          ? "/api/delete-sign-design-milestone"
-          : "/api/delete-badge-design-milestone";
+      const url = libraryPaths.deleteMilestone;
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -252,10 +241,7 @@ export function createApi(
         userId,
         designId,
       });
-      const detailUrl =
-        designerId === "sign"
-          ? `/api/saved-sign-design-detail?${params}`
-          : `/api/saved-design-detail?${params}`;
+      const detailUrl = `${libraryPaths.savedDesignDetail}?${params}`;
       const response = await fetch(detailUrl);
       if (response.status === 404) {
         const body = await response.json().catch(() => ({}));

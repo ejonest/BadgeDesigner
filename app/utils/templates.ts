@@ -6,11 +6,15 @@
  * to ensure changes to SVG files are immediately visible.
  */
 
-import type { DesignerVariant } from "~/constants/designerVariants";
+import {
+  type DesignerVariant,
+  isSignLikeVariant,
+} from "~/constants/designerVariants";
 import type { DesignerSizeKey } from "~/data/designerMotifs";
 import { templateIdToDesignerSizeKey } from "~/data/designerMotifs";
 import templatesJson from "../data/templates.local.json";
 import signTemplatesJson from "../data/sign-templates.local.json";
+import plaqueTemplatesJson from "../data/plaque-templates.local.json";
 import type {
   ResolvedSignTextLayout,
   SignTextLayoutConfigJson,
@@ -32,6 +36,13 @@ export type TemplateConfig = {
   safeInsetPx?: number;
   /** Sign only: optional text region / per-line width weights (see signTextLayout.ts). */
   textLayout?: SignTextLayoutConfigJson;
+  /** Plaque detached: photo slot on wood, normalized to full plaque width/height. */
+  plaquePhotoRectNorm?: {
+    xNorm: number;
+    yNorm: number;
+    widthNorm: number;
+    heightNorm: number;
+  };
 };
 
 export type LoadedTemplate = {
@@ -57,21 +68,26 @@ export type LoadedTemplate = {
   svgFile?: string;
   /** Sign only: resolved text region, clip rect, and per-line width fractions. */
   signTextLayout?: ResolvedSignTextLayout;
+  /** Plaque detached: pixel rect for the photo on wood (template space). */
+  plaquePhotoRectPx?: { x: number; y: number; width: number; height: number };
 };
 
 type TemplatesFile = { version: number; templates: TemplateConfig[] };
 
 const badgeCfg = (templatesJson as TemplatesFile).templates || [];
 const signCfg = (signTemplatesJson as TemplatesFile).templates || [];
+const plaqueCfg = (plaqueTemplatesJson as TemplatesFile).templates || [];
 
 /** Returns template configs for the picker and loading. */
 export function getTemplateConfigsForVariant(
   variant: DesignerVariant,
 ): TemplateConfig[] {
+  if (variant === "plaque") return [...plaqueCfg];
   return variant === "sign" ? [...signCfg] : [...badgeCfg];
 }
 
 function getCfgForVariant(variant: DesignerVariant): TemplateConfig[] {
+  if (variant === "plaque") return plaqueCfg;
   return variant === "sign" ? signCfg : badgeCfg;
 }
 
@@ -1022,7 +1038,7 @@ async function loadOne(
     extractNthPathFromSvg(svgContent, 0) ||
     extractFirstPolygonFromSvg(svgContent); // Basic: polygon is the only shape
   const isSignDesignerWithBorder =
-    variant === "sign" &&
+    isSignLikeVariant(variant) &&
     c.id.startsWith("designer-") &&
     outlinePath &&
     borderPath &&
@@ -1042,7 +1058,7 @@ async function loadOne(
     extractNthPathFromSvg(svgContent, 1);
   const trimPathFancy = extractNthPathFromSvg(svgContent, 2);
   const isSignClassicFramed =
-    variant === "sign" &&
+    isSignLikeVariant(variant) &&
     c.id.startsWith("classic-framed-") &&
     classicFramedBackgroundPath &&
     trimPathClassic;
@@ -1050,13 +1066,13 @@ async function loadOne(
   const fil0PlateSignTrim = extractFil0PlatePathFromSvg(svgContent);
   const fil1TrimPathsAll = extractAllPathsByClassFromSvg(svgContent, "fil1");
   const isSignFil0Fil1TrimLayout =
-    variant === "sign" &&
+    isSignLikeVariant(variant) &&
     isSignFil0Fil1TrimTemplateId(c.id) &&
     Boolean(fil0PlateSignTrim) &&
     fil1TrimPathsAll.length > 0;
 
   // Debug: why does only 7x10 render correctly? Log extraction source and path fingerprints.
-  if (variant === "sign" && c.id.startsWith("classic-framed-")) {
+  if (isSignLikeVariant(variant) && c.id.startsWith("classic-framed-")) {
     const srcBg = classicFramedByStructure.backgroundPath
       ? "structure"
       : extractPathByClassFromSvg(svgContent, "fil0")
@@ -1094,13 +1110,13 @@ async function loadOne(
     });
   }
   const isSignFancy =
-    variant === "sign" &&
+    isSignLikeVariant(variant) &&
     c.id.startsWith("fancy-") &&
     outerPath &&
     trimPathFancy;
 
   const signInsetTrim =
-    variant === "sign" &&
+    isSignLikeVariant(variant) &&
     !isSignDesignerWithBorder &&
     !isSignClassicFramed &&
     !isSignFancy &&
@@ -1111,15 +1127,15 @@ async function loadOne(
 
   /** notched- large SVGs may omit id="Border" on path1; use path order like fancy/inset. */
   const notchedP0 =
-    variant === "sign" && c.id.startsWith("notched-")
+    isSignLikeVariant(variant) && c.id.startsWith("notched-")
       ? extractNthPathFromSvg(svgContent, 0)
       : null;
   const notchedP1 =
-    variant === "sign" && c.id.startsWith("notched-")
+    isSignLikeVariant(variant) && c.id.startsWith("notched-")
       ? extractNthPathFromSvg(svgContent, 1)
       : null;
   const isSignNotched =
-    variant === "sign" &&
+    isSignLikeVariant(variant) &&
     c.id.startsWith("notched-") &&
     Boolean(notchedP0 && notchedP1) &&
     !isSignInsetTrim;
@@ -1374,7 +1390,7 @@ async function loadOne(
   const designerSizeKey = templateIdToDesignerSizeKey(c.id);
 
   const plateCircle: SignPlateCircle | undefined =
-    variant === "sign" && /^circle-/i.test(c.id)
+    isSignLikeVariant(variant) && /^circle-/i.test(c.id)
       ? {
           cx: innerPlateBoundsRaw.x + innerPlateBoundsRaw.width / 2,
           cy: innerPlateBoundsRaw.y + innerPlateBoundsRaw.height / 2,
@@ -1384,9 +1400,25 @@ async function loadOne(
       : undefined;
 
   const signTextLayout =
-    variant === "sign"
+    isSignLikeVariant(variant)
       ? resolveSignTextLayout(designBox, c.textLayout, plateCircle, c.id)
       : undefined;
+
+  let plaquePhotoRectPx: LoadedTemplate["plaquePhotoRectPx"];
+  if (
+    variant === "plaque" &&
+    c.plaquePhotoRectNorm &&
+    Number.isFinite(widthPx) &&
+    Number.isFinite(heightPx)
+  ) {
+    const r = c.plaquePhotoRectNorm;
+    plaquePhotoRectPx = {
+      x: r.xNorm * widthPx,
+      y: r.yNorm * heightPx,
+      width: r.widthNorm * widthPx,
+      height: r.heightNorm * heightPx,
+    };
+  }
 
   const t: LoadedTemplate = {
     id: c.id,
@@ -1404,6 +1436,7 @@ async function loadOne(
     standardViewBoxHeight: STANDARD_VIEWBOX_HEIGHT,
     svgFile: c.svgFile,
     signTextLayout,
+    ...(plaquePhotoRectPx ? { plaquePhotoRectPx } : {}),
   };
 
   console.log(

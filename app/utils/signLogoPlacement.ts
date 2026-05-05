@@ -15,6 +15,7 @@ export function signTemplateSupportsUserLogoUpload(
 ): boolean {
   const id = templateId?.trim() ?? "";
   if (!id) return true;
+  if (/^plaque-/i.test(id)) return true;
   return !NO_USER_LOGO_SIGN_PREFIXES.some((re) => re.test(id));
 }
 
@@ -34,6 +35,16 @@ export function getSignLogoPlacementOptionsForTemplate(
   templateId: string | undefined,
 ): readonly SignLogoPlacement[] {
   const id = templateId ?? "";
+  if (
+    /^plaque-detached-portrait-/i.test(id) ||
+    /^plaque-detached-landscape-/i.test(id) ||
+    /^plaque-detached$/i.test(id)
+  ) {
+    return [];
+  }
+  if (/^plaque-attached-/i.test(id) || /^plaque-attached$/i.test(id)) {
+    return ["top"];
+  }
   if (/^designer-/i.test(id) || /^arrow-/i.test(id) || /^pill-/i.test(id)) {
     return ["left", "right"];
   }
@@ -47,6 +58,8 @@ export function getDefaultSignLogoPlacementForTemplate(
   templateId: string | undefined,
 ): SignLogoPlacement {
   const id = templateId ?? "";
+  if (/^plaque-attached-/i.test(id) || /^plaque-attached$/i.test(id))
+    return "top";
   if (/^door-hanger-/i.test(id)) return "bottom";
   return "left";
 }

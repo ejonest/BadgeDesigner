@@ -13,6 +13,7 @@ import {
   isSignLineStrictEmpty,
   layoutSignTextLines,
   measureSignTextPx,
+  resolveSignTextLayout,
   signCircleExtraInsetPx,
   signHorizontalInsetPx,
   SIGN_TEXT_MIN_FONT_PX,
@@ -42,6 +43,23 @@ import {
 import { loadFont } from "./fontLoader";
 import { BADGE_CONSTANTS } from "../constants/badge";
 import { signTemplateSupportsUserLogoUpload } from "~/utils/signLogoPlacement";
+import {
+  applyPlaqueMetalBrushFill,
+  isFeaturedBrushedMetalPlateColor,
+  normalizeFeaturedBrushedMetalBaseHex,
+  isPlaqueAttachedTemplateId,
+  isPlaqueDetachedTemplateId,
+  isPlaqueTemplateId,
+  plaqueAttachedLogoBandRect,
+  plaqueAttachedTextPlateRect,
+  plaqueDetachedPhotoFrameRect,
+  plaqueMetalBrushGradientDef,
+  plaqueMetalBrushGradientDefObjectBBox,
+  plaqueWoodBackgroundRect,
+  plaqueWoodGrainFilterDef,
+  plaqueWoodGradientDef,
+  renderPlaqueDetachedPhotoImage,
+} from "~/utils/plaqueRender";
 
 type RenderOpts = {
   /**
@@ -56,6 +74,12 @@ type RenderOpts = {
    * device pixels when the plate is scaled from large sign viewBoxes (Classic framed, Portrait, etc.).
    */
   outlineNonScalingStroke?: boolean;
+  /**
+   * Stable unique id per inline SVG instance on the page. Required when multiple previews mount together:
+   * without it, duplicate clipPath/linearGradient ids make `fill="url(#…)"` resolve to the wrong SVG’s defs,
+   * so solid colors work but brushed-metal gradients vanish.
+   */
+  svgDefScopeId?: string;
 };
 
 const esc = (s: string) =>
@@ -63,6 +87,14 @@ const esc = (s: string) =>
 
 const DEFAULT_PLATE_BG = "#FFFFFF";
 const DEFAULT_BORDER = "#FFFFFF";
+
+/** Clip + gradient ids must be unique among all inline SVGs in the HTML document. */
+function clipPathIdForSvg(opts: RenderOpts, badge: Badge): string {
+  const scope = opts.svgDefScopeId?.replace(/[^a-zA-Z0-9_-]/g, "");
+  if (scope) return `badge-clip-${scope}`;
+  const bid = (badge.id ?? "").replace(/[^a-zA-Z0-9_-]/g, "") || "noid";
+  return `badge-clip-${bid}-${Math.random().toString(36).slice(2, 11)}`;
+}
 
 /** Normalize #RGB / #RRGGBB to uppercase #RRGGBB, or null if not a hex color. */
 function tryNormalizeHex(input: string | undefined | null): string | null {
@@ -184,9 +216,32 @@ export function getEffectiveSignTextLayoutAndLogoDrawForBadge(
     return { layout: undefined, draw: null };
   const trimBox = getEffectiveDesignBox(template, badge);
   const borderOn = resolveSignBorderOverlayActive(badge, template);
-  const logoForLayout = signTemplateSupportsUserLogoUpload(template.id)
-    ? badge.logo
-    : undefined;
+  // Attached plaque + image: fixed upper 1/3 logo band, lower 2/3 text — no sign slack / px ceilings.
+  if (
+    isPlaqueAttachedTemplateId(template.id) &&
+    badge.logo?.src?.trim()
+  ) {
+    const textPlate = plaqueAttachedTextPlateRect(trimBox);
+    const layout = resolveSignTextLayout(
+      textPlate,
+      undefined,
+      undefined,
+      template.id,
+    );
+    const logoBand = plaqueAttachedLogoBandRect(trimBox);
+    const draw = computeSignLogoDrawRect(
+      badge.logo,
+      logoBand,
+      template.signTextLayout.plateCircle,
+      layout,
+    );
+    return { layout, draw };
+  }
+  // Detached plaque: photo is on wood only; never reserve sign-style logo slack on the metal text plate.
+  const logoOnTextPlate =
+    signTemplateSupportsUserLogoUpload(template.id) &&
+    !isPlaqueDetachedTemplateId(template.id);
+  const logoForLayout = logoOnTextPlate ? badge.logo : undefined;
   const logoBoundsBox = resolveSignUserLogoBoundsBox(
     template,
     trimBox,
@@ -222,6 +277,9 @@ export function negotiateSignBadgeLinesForLogoCommit(
   badge: Badge,
 ): BadgeLine[] {
   if (!template.signTextLayout || !badge.logo?.src?.trim()) {
+    return badge.lines;
+  }
+  if (isPlaqueTemplateId(template.id)) {
     return badge.lines;
   }
 
@@ -327,6 +385,7 @@ export function computeSignLogoLayoutSnapshot(
   badge: Badge,
 ): SignLogoLayoutSnapshot | undefined {
   if (!template.signTextLayout || !badge.logo?.src?.trim()) return undefined;
+  if (isPlaqueTemplateId(template.id)) return undefined;
   const trimBox = getEffectiveDesignBox(template, badge);
   const borderOn = resolveSignBorderOverlayActive(badge, template);
   const logoBoundsBox = resolveSignUserLogoBoundsBox(
@@ -984,44 +1043,18 @@ function prepareElementForOutline(
   );
 }
 
-export function renderBadgeToSvgString(
-  badge: Badge,
+function buildInnerFillAndClipData(
   template: LoadedTemplate,
-  opts: RenderOpts = {},
-): string {
-  // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
-  const PADDING_PX = 24;
-  // ViewBox must match content coordinates: innerElement/designBox are in template.widthPx × template.heightPx space.
-  // Using widthPx/heightPx lets large signs fit fully; SVG then scales to container (preview) with width/height="100%".
-  const W = template.widthPx + PADDING_PX * 2;
-  const H = template.heightPx + PADDING_PX * 2;
-  const designBox = getEffectiveDesignBox(template, badge);
-  const overlayActive = resolveSignBorderOverlayActive(badge, template);
-  const overlayMarkup = resolveSignOverlayMarkup(template, badge);
-  const paintOverlay = overlayActive && Boolean(overlayMarkup);
-
-  const clipId = `badge-clip-${
-    badge.id || Math.random().toString(36).substring(7)
-  }`;
-
-  // SINGLE LAYER APPROACH: Use inner path directly for background fill
-  // Handle both direct path elements and paths wrapped in <g transform> tags
-  // Extract the path, update fill, remove stroke, then reconstruct structure
+  badge: Badge,
+): { innerPathWithFill: string; innerPathData: string } {
   let innerPathWithFill: string;
-
-  // Check if innerElement is wrapped in a <g transform> tag (more robust regex)
-  // Match transform attribute with any whitespace, and capture content between tags
-  // Use [\s\S] instead of . to match newlines, and /i flag for case-insensitive
   const gTransformMatch = template.innerElement.match(
     /<g[^>]*\btransform\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/g>/i,
   );
 
   if (gTransformMatch && gTransformMatch[2].trim()) {
-    // Path is wrapped in transform group - extract path, update fill, reconstruct
     const transform = gTransformMatch[1].trim();
     const pathContent = gTransformMatch[2].trim();
-
-    // Update fill and remove stroke from the path content (more robust regex)
     let updatedPath = pathContent.replace(
       /fill\s*=\s*["'][^"']*["']/i,
       `fill="${badge.backgroundColor || "#FFFFFF"}"`,
@@ -1031,11 +1064,8 @@ export function renderBadgeToSvgString(
       /\s+stroke-width\s*=\s*["'][^"']*["']/gi,
       "",
     );
-
-    // Reconstruct with transform wrapper
     innerPathWithFill = `<g transform="${transform}">${updatedPath}</g>`;
   } else {
-    // Direct path element - update fill and remove stroke (more robust regex)
     innerPathWithFill = template.innerElement.replace(
       /fill\s*=\s*["'][^"']*["']/i,
       `fill="${badge.backgroundColor || "#FFFFFF"}"`,
@@ -1050,24 +1080,232 @@ export function renderBadgeToSvgString(
     );
   }
 
-  // Extract path data from inner element for clipPath
-  // The inner element might be wrapped in a <g transform> tag, so we need to extract just the path
   let innerPathData = template.innerElement;
-  // Remove <g> wrapper if present (handles both opening and closing tags)
   const gMatch = innerPathData.match(/<g[^>]*>(.*?)<\/g>/s);
   if (gMatch) {
     innerPathData = gMatch[1];
   }
-  // Extract the path element itself (with all attributes) for clipPath
-  // If it's already a path, use it directly; otherwise extract path from within
   const pathMatch = innerPathData.match(/<path[^>]*>/);
   if (!pathMatch) {
-    // Fallback: try to extract d attribute and reconstruct
     const dMatch = innerPathData.match(/d=["']([^"']+)["']/);
     if (dMatch) {
       innerPathData = `<path d="${dMatch[1]}"/>`;
     }
   }
+  return { innerPathWithFill, innerPathData };
+}
+
+/** Brushed-metal gradient for featured gold/silver only (badge/sign inner plate); streaks run horizontally. */
+function plateBrushGradientForBadgeInner(
+  badge: Badge,
+  template: LoadedTemplate,
+  clipId: string,
+  innerPathWithFill: string,
+): { innerPlateMarkup: string; gradientDefXml: string } {
+  if (!isFeaturedBrushedMetalPlateColor(badge.backgroundColor)) {
+    return { innerPlateMarkup: innerPathWithFill, gradientDefXml: "" };
+  }
+  const safeClip = clipId.replace(/[^a-zA-Z0-9]/g, "");
+  const gradId = `badgePlateMetal${safeClip}`;
+  const gradientDefXml = plaqueMetalBrushGradientDefObjectBBox(
+    gradId,
+    normalizeFeaturedBrushedMetalBaseHex(
+      badge.backgroundColor || DEFAULT_PLATE_BG,
+    ),
+  );
+  const innerPlateMarkup = applyPlaqueMetalBrushFill(
+    innerPathWithFill,
+    gradId,
+  );
+  return { innerPlateMarkup, gradientDefXml };
+}
+
+function renderPlaqueBadgeSvg(
+  badge: Badge,
+  template: LoadedTemplate,
+  opts: RenderOpts,
+  fontDefs: string[],
+  fontMappings: Map<string, string> | undefined,
+): string {
+  const PADDING_PX = 24;
+  const W = template.widthPx + PADDING_PX * 2;
+  const H = template.heightPx + PADDING_PX * 2;
+  const designBox = getEffectiveDesignBox(template, badge);
+  const clipId = clipPathIdForSvg(opts, badge);
+  const safeClip = clipId.replace(/[^a-zA-Z0-9]/g, "");
+  const woodGradId = `plaqueWood${safeClip}`;
+  const woodGrainFilterId = `plaqueWoodGrain${safeClip}`;
+  const metalGradId = `plaqueMetal${safeClip}`;
+
+  const { innerPathWithFill, innerPathData } = buildInnerFillAndClipData(
+    template,
+    badge,
+  );
+  const metalGradientDef = plaqueMetalBrushGradientDef(
+    metalGradId,
+    template.heightPx,
+    normalizeFeaturedBrushedMetalBaseHex(
+      badge.backgroundColor || "#FFFFFF",
+    ),
+  );
+  const innerPlateWithBrushFill = applyPlaqueMetalBrushFill(
+    innerPathWithFill,
+    metalGradId,
+  );
+
+  const effectiveSignLayout = template.signTextLayout
+    ? getEffectiveSignTextLayoutForBadge(template, badge)
+    : undefined;
+  const layoutForTextClip = effectiveSignLayout ?? template.signTextLayout;
+  const textClipW = layoutForTextClip?.clipRect?.width ?? designBox.width;
+  const curveTextClip = layoutForTextClip?.plateCircle
+    ? signCircleExtraInsetPx(layoutForTextClip.plateCircle.r)
+    : 0;
+  const textClipPathRect = buildSignTextClipPathInnerMarkup(
+    layoutForTextClip,
+    designBox,
+    signHorizontalInsetPx(textClipW) + curveTextClip,
+  );
+
+  const lineLayout = calculateTextLayout(
+    badge.lines || [],
+    designBox,
+    template,
+    fontMappings,
+    badge,
+    effectiveSignLayout,
+  );
+
+  const textElements = lineLayout
+    .map((item) => {
+      const line = item.line;
+      const color = line.color || "#000";
+      const textDecoration = line.underline ? "underline" : "none";
+      return `<text x="${item.x}" y="${item.y}" font-size="${
+        item.fontSize
+      }" text-anchor="${item.anchor}"
+              dominant-baseline="middle" font-family="${
+                item.familyEscaped
+              }" fill="${color}"
+              font-weight="${item.fontWeight}"
+              font-style="${item.fontStyle}"
+              text-decoration="${textDecoration}">${esc(
+        line.text || "",
+      )}</text>`;
+    })
+    .join("");
+
+  const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
+
+  const outlineColor =
+    opts.showOutline === true ? "#000000" : badge.borderColor ?? "#1a1a1a";
+  const outlineWidth = opts.outlineStrokeWidth ?? "1.25";
+  const outlineNonScaling = opts.outlineNonScalingStroke === true;
+  const outline = template.outlineElement
+    ? prepareElementForOutline(
+        template.outlineElement,
+        "none",
+        outlineColor,
+        outlineWidth,
+        outlineNonScaling,
+      )
+    : prepareElementForOutline(
+        template.innerElement,
+        "none",
+        outlineColor,
+        outlineWidth,
+        outlineNonScaling,
+      );
+
+  const detached = isPlaqueDetachedTemplateId(template.id);
+  const slot = template.plaquePhotoRectPx;
+  const detachedPhotoLayer =
+    detached && slot
+      ? `${renderPlaqueDetachedPhotoImage(badge.logo, slot)}${plaqueDetachedPhotoFrameRect(slot)}`
+      : "";
+
+  const attachedLogoRaw =
+    !detached && signTemplateSupportsUserLogoUpload(template.id)
+      ? renderUserLogoLayer(badge.logo, template, badge, designBox)
+      : "";
+  const attachedLogoLayer =
+    innerPathData && attachedLogoRaw.trim() !== ""
+      ? `<g clip-path="url(#${clipId})">${attachedLogoRaw}</g>`
+      : attachedLogoRaw;
+
+  const styleBlock =
+    fontDefs.length > 0
+      ? `<style type="text/css">\n${fontDefs.join("\n")}\n</style>`
+      : "";
+
+  const svgOpen = `
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="100%" height="100%"
+     viewBox="0 0 ${W} ${H}"
+     preserveAspectRatio="xMidYMid meet">`;
+
+  return `${svgOpen}
+  <defs>
+    ${styleBlock}
+    ${plaqueWoodGradientDef(woodGradId, template.widthPx)}
+    ${plaqueWoodGrainFilterDef(woodGrainFilterId)}
+    ${metalGradientDef}
+    ${
+      innerPathData
+        ? `<clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
+      ${innerPathData}
+    </clipPath>`
+        : ""
+    }
+    <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
+      ${textClipPathRect}
+    </clipPath>
+  </defs>
+  <g transform="translate(${PADDING_PX}, ${PADDING_PX})">
+    ${plaqueWoodBackgroundRect(
+      template.widthPx,
+      template.heightPx,
+      woodGradId,
+      woodGrainFilterId,
+    )}
+    ${detachedPhotoLayer}
+    ${innerPlateWithBrushFill}
+    ${attachedLogoLayer}
+    ${text}
+    ${outline}
+  </g>
+</svg>`.trim();
+}
+
+export function renderBadgeToSvgString(
+  badge: Badge,
+  template: LoadedTemplate,
+  opts: RenderOpts = {},
+): string {
+  if (isPlaqueTemplateId(template.id)) {
+    return renderPlaqueBadgeSvg(badge, template, opts, [], undefined);
+  }
+
+  // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
+  const PADDING_PX = 24;
+  // ViewBox must match content coordinates: innerElement/designBox are in template.widthPx × template.heightPx space.
+  // Using widthPx/heightPx lets large signs fit fully; SVG then scales to container (preview) with width/height="100%".
+  const W = template.widthPx + PADDING_PX * 2;
+  const H = template.heightPx + PADDING_PX * 2;
+  const designBox = getEffectiveDesignBox(template, badge);
+  const overlayActive = resolveSignBorderOverlayActive(badge, template);
+  const overlayMarkup = resolveSignOverlayMarkup(template, badge);
+  const paintOverlay = overlayActive && Boolean(overlayMarkup);
+
+  const clipId = clipPathIdForSvg(opts, badge);
+
+  const { innerPathWithFill, innerPathData } = buildInnerFillAndClipData(
+    template,
+    badge,
+  );
+  const { innerPlateMarkup, gradientDefXml: plateBrushGradientDefXml } =
+    plateBrushGradientForBadgeInner(badge, template, clipId, innerPathWithFill);
 
   const effectiveSignLayout = template.signTextLayout
     ? getEffectiveSignTextLayoutForBadge(template, badge)
@@ -1203,6 +1441,7 @@ export function renderBadgeToSvgString(
 
   return `${svgOpen}
   <defs>
+    ${plateBrushGradientDefXml}
     ${
       innerPathData
         ? `<clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
@@ -1218,7 +1457,7 @@ export function renderBadgeToSvgString(
   <!-- Single layer: padding offset -->
   <g transform="translate(${PADDING_PX}, ${PADDING_PX})">
     <!-- Background: inner path filled with color (defines editable area) -->
-    ${innerPathWithFill}
+    ${innerPlateMarkup}
     <!-- Background image (if present) -->
     ${bgImageLayer}
     <!-- User logo (sign): clipped to die; under border overlay and text -->
@@ -1238,16 +1477,6 @@ export async function renderBadgeToSvgStringWithFonts(
   template: LoadedTemplate,
   opts: RenderOpts = {},
 ): Promise<string> {
-  // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
-  const PADDING_PX = 24;
-  // ViewBox must match content coordinates (widthPx × heightPx) so full design fits; preview scales via width/height="100%".
-  const W = template.widthPx + PADDING_PX * 2;
-  const H = template.heightPx + PADDING_PX * 2;
-  const designBox = getEffectiveDesignBox(template, badge);
-  const overlayActive = resolveSignBorderOverlayActive(badge, template);
-  const overlayMarkup = resolveSignOverlayMarkup(template, badge);
-  const paintOverlay = overlayActive && Boolean(overlayMarkup);
-
   // Collect all unique font families used in the badge
   const fontFamilies = new Set<string>();
   (badge.lines || []).forEach((line) => {
@@ -1299,74 +1528,28 @@ export async function renderBadgeToSvgStringWithFonts(
     }
   }
 
-  const clipId = `badge-clip-${
-    badge.id || Math.random().toString(36).substring(7)
-  }`;
+  if (isPlaqueTemplateId(template.id)) {
+    return renderPlaqueBadgeSvg(badge, template, opts, fontDefs, fontMappings);
+  }
 
-  // SINGLE LAYER APPROACH: Use inner path directly for background fill
-  // Handle both direct path elements and paths wrapped in <g transform> tags
-  // Extract the path, update fill, remove stroke, then reconstruct structure
-  let innerPathWithFill: string;
+  // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
+  const PADDING_PX = 24;
+  // ViewBox must match content coordinates (widthPx × heightPx) so full design fits; preview scales via width/height="100%".
+  const W = template.widthPx + PADDING_PX * 2;
+  const H = template.heightPx + PADDING_PX * 2;
+  const designBox = getEffectiveDesignBox(template, badge);
+  const overlayActive = resolveSignBorderOverlayActive(badge, template);
+  const overlayMarkup = resolveSignOverlayMarkup(template, badge);
+  const paintOverlay = overlayActive && Boolean(overlayMarkup);
 
-  // Check if innerElement is wrapped in a <g transform> tag (more robust regex)
-  // Match transform attribute with any whitespace, and capture content between tags
-  // Use [\s\S] instead of . to match newlines, and /i flag for case-insensitive
-  const gTransformMatch = template.innerElement.match(
-    /<g[^>]*\btransform\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/g>/i,
+  const clipId = clipPathIdForSvg(opts, badge);
+
+  const { innerPathWithFill, innerPathData } = buildInnerFillAndClipData(
+    template,
+    badge,
   );
-
-  if (gTransformMatch && gTransformMatch[2].trim()) {
-    // Path is wrapped in transform group - extract path, update fill, reconstruct
-    const transform = gTransformMatch[1].trim();
-    const pathContent = gTransformMatch[2].trim();
-
-    // Update fill and remove stroke from the path content (more robust regex)
-    let updatedPath = pathContent.replace(
-      /fill\s*=\s*["'][^"']*["']/i,
-      `fill="${badge.backgroundColor || "#FFFFFF"}"`,
-    );
-    updatedPath = updatedPath.replace(/\s+stroke\s*=\s*["'][^"']*["']/gi, "");
-    updatedPath = updatedPath.replace(
-      /\s+stroke-width\s*=\s*["'][^"']*["']/gi,
-      "",
-    );
-
-    // Reconstruct with transform wrapper
-    innerPathWithFill = `<g transform="${transform}">${updatedPath}</g>`;
-  } else {
-    // Direct path element - update fill and remove stroke (more robust regex)
-    innerPathWithFill = template.innerElement.replace(
-      /fill\s*=\s*["'][^"']*["']/i,
-      `fill="${badge.backgroundColor || "#FFFFFF"}"`,
-    );
-    innerPathWithFill = innerPathWithFill.replace(
-      /\s+stroke\s*=\s*["'][^"']*["']/gi,
-      "",
-    );
-    innerPathWithFill = innerPathWithFill.replace(
-      /\s+stroke-width\s*=\s*["'][^"']*["']/gi,
-      "",
-    );
-  }
-
-  // Extract path data from inner element for clipPath
-  // The inner element might be wrapped in a <g transform> tag, so we need to extract just the path
-  let innerPathData = template.innerElement;
-  // Remove <g> wrapper if present (handles both opening and closing tags)
-  const gMatch = innerPathData.match(/<g[^>]*>(.*?)<\/g>/s);
-  if (gMatch) {
-    innerPathData = gMatch[1];
-  }
-  // Extract the path element itself (with all attributes) for clipPath
-  // If it's already a path, use it directly; otherwise extract path from within
-  const pathMatch = innerPathData.match(/<path[^>]*>/);
-  if (!pathMatch) {
-    // Fallback: try to extract d attribute and reconstruct
-    const dMatch = innerPathData.match(/d=["']([^"']+)["']/);
-    if (dMatch) {
-      innerPathData = `<path d="${dMatch[1]}"/>`;
-    }
-  }
+  const { innerPlateMarkup, gradientDefXml: plateBrushGradientDefXmlFonts } =
+    plateBrushGradientForBadgeInner(badge, template, clipId, innerPathWithFill);
 
   const effectiveSignLayoutWithFonts = template.signTextLayout
     ? getEffectiveSignTextLayoutForBadge(template, badge)
@@ -1504,6 +1687,7 @@ export async function renderBadgeToSvgStringWithFonts(
     <style type="text/css">
       ${fontDefs.join("\n")}
     </style>
+    ${plateBrushGradientDefXmlFonts}
     ${
       innerPathData
         ? `<clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
@@ -1519,7 +1703,7 @@ export async function renderBadgeToSvgStringWithFonts(
   <!-- Single layer: padding offset -->
   <g transform="translate(${PADDING_PX}, ${PADDING_PX})">
     <!-- Background: inner path filled with color (defines editable area) -->
-    ${innerPathWithFill}
+    ${innerPlateMarkup}
     ${bgImageLayer}
     ${userLogoLayer}
     ${overlayLayer}
