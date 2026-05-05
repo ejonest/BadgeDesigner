@@ -8414,7 +8414,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               onClick={() => {
                 const msg = getIncompleteStepsMessage(
                   variant === "plaque"
-                    ? 6
+                    ? 5
                     : config.hasSizeStep
                       ? signBorderStepRequired
                         ? 5
