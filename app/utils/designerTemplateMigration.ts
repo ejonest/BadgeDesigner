@@ -2,6 +2,12 @@ import type { Badge } from "~/types/badge";
 import type { DesignerMotifId } from "~/data/designerMotifs";
 import { composeSignBorderMigrations } from "./signBorderMigration";
 
+/** Pre–multi-size plaque ids → default medium template for same layout family. */
+const LEGACY_PLAQUE_TEMPLATE_MAP: Record<string, string> = {
+  "plaque-detached": "plaque-detached-portrait-medium",
+  "plaque-attached": "plaque-attached-medium",
+};
+
 /** Legacy sign template ids → base designer id + motif (pre–motif-library). */
 const LEGACY_DESIGNER_TEMPLATE_MAP: Record<
   string,
@@ -34,6 +40,13 @@ const LEGACY_DESIGNER_TEMPLATE_MAP: Record<
 export function migrateLegacyDesignerTemplateId(badge: Badge): Badge {
   const tid = badge.templateId;
   if (!tid) return composeSignBorderMigrations(badge);
+  const plaqueHit = LEGACY_PLAQUE_TEMPLATE_MAP[tid];
+  if (plaqueHit) {
+    return composeSignBorderMigrations({
+      ...badge,
+      templateId: plaqueHit,
+    });
+  }
   const hit = LEGACY_DESIGNER_TEMPLATE_MAP[tid];
   if (!hit) return composeSignBorderMigrations(badge);
   return composeSignBorderMigrations({
@@ -57,6 +70,8 @@ const MIN_BADGE: Badge = {
 
 /** Migrate a stored universal template id (cache / API) off removed themed Designer ids. */
 export function migrateLegacyDesignerUniversalTemplateId(id: string): string {
+  const plaque = LEGACY_PLAQUE_TEMPLATE_MAP[id];
+  if (plaque) return plaque;
   const b = migrateLegacyDesignerTemplateId({ ...MIN_BADGE, templateId: id });
   return b.templateId || id;
 }

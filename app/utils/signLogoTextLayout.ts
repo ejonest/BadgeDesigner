@@ -55,7 +55,7 @@ export function signLogoMaxSlotHeightFracForTemplate(
   const id = templateId?.toLowerCase() ?? "";
   if (id.startsWith("fancy-")) return 0.5;
   // Logo bounds are already the top (or bottom) third of the inner plate; use the full band.
-  if (id === "plaque-attached") return 1;
+  if (id === "plaque-attached" || id.startsWith("plaque-attached-")) return 1;
   return SIGN_LOGO_MAX_SLOT_HEIGHT_FRAC;
 }
 /** Gap (px) between fitted logo and text region at 96dpi template space. */

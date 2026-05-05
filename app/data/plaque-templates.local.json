@@ -2,26 +2,84 @@
   "version": 1,
   "templates": [
     {
-      "id": "plaque-detached",
-      "name": "Detached photo",
-      "widthInches": 6,
-      "heightInches": 8,
-      "svgFile": "/templates/plaque/Plaque-Detached.svg",
+      "id": "plaque-attached-small",
+      "name": "Attached plate — small",
+      "widthInches": 5,
+      "heightInches": 7,
+      "svgFile": "/templates/plaque/Plaque-Attached-Small.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "plaque-attached-medium",
+      "name": "Attached plate — medium",
+      "widthInches": 8,
+      "heightInches": 10,
+      "svgFile": "/templates/plaque/Plaque-Attached-Medium.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "plaque-attached-large",
+      "name": "Attached plate — large",
+      "widthInches": 9,
+      "heightInches": 12,
+      "svgFile": "/templates/plaque/Plaque-Attached-Large.svg",
+      "safeInsetPx": 6
+    },
+    {
+      "id": "plaque-detached-portrait-medium",
+      "name": "Detached portrait — medium",
+      "widthInches": 8,
+      "heightInches": 10,
+      "svgFile": "/templates/plaque/Plaque-Detached-Portrait-Medium.svg",
       "safeInsetPx": 6,
       "plaquePhotoRectNorm": {
-        "xNorm": 0.118,
-        "yNorm": 0.055,
-        "widthNorm": 0.764,
-        "heightNorm": 0.391
+        "xNorm": 0.21875,
+        "yNorm": 0.041666666666666664,
+        "widthNorm": 0.5625,
+        "heightNorm": 0.65
       }
     },
     {
-      "id": "plaque-attached",
-      "name": "Attached plate",
-      "widthInches": 6,
-      "heightInches": 8,
-      "svgFile": "/templates/plaque/Plaque-Attached.svg",
-      "safeInsetPx": 6
+      "id": "plaque-detached-portrait-large",
+      "name": "Detached portrait — large",
+      "widthInches": 9,
+      "heightInches": 12,
+      "svgFile": "/templates/plaque/Plaque-Detached-Portrait-Large.svg",
+      "safeInsetPx": 6,
+      "plaquePhotoRectNorm": {
+        "xNorm": 0.19444444444444445,
+        "yNorm": 0.041666666666666664,
+        "widthNorm": 0.6111111111111112,
+        "heightNorm": 0.625
+      }
+    },
+    {
+      "id": "plaque-detached-landscape-medium",
+      "name": "Detached landscape — medium",
+      "widthInches": 8,
+      "heightInches": 10,
+      "svgFile": "/templates/plaque/Plaque-Detached-Landscape-Medium.svg",
+      "safeInsetPx": 6,
+      "plaquePhotoRectNorm": {
+        "xNorm": 0.09375,
+        "yNorm": 0.05,
+        "widthNorm": 0.8125,
+        "heightNorm": 0.45
+      }
+    },
+    {
+      "id": "plaque-detached-landscape-large",
+      "name": "Detached landscape — large",
+      "widthInches": 9,
+      "heightInches": 12,
+      "svgFile": "/templates/plaque/Plaque-Detached-Landscape-Large.svg",
+      "safeInsetPx": 6,
+      "plaquePhotoRectNorm": {
+        "xNorm": 0.08333333333333333,
+        "yNorm": 0.041666666666666664,
+        "widthNorm": 0.8333333333333334,
+        "heightNorm": 0.4583333333333333
+      }
     }
   ]
 }

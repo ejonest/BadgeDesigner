@@ -124,13 +124,21 @@ export const SMART_PALETTE_COLORS = [
   { value: "#451a03", name: "Brown 950", ring: "ring-amber-950" },
 ] as const;
 
+/** Featured brushed-metal plate swatches (SVG gradient + picker). */
+export const FEATURED_BRUSHED_GOLD_HEX = "#f2d678";
+export const FEATURED_BRUSHED_SILVER_HEX = "#e2e2e2";
+
+/** Prior catalog hexes — still treated as brushed metal in render. */
+export const LEGACY_BRUSHED_GOLD_HEX = "#eac10c";
+export const LEGACY_BRUSHED_SILVER_HEX = "#C0C0C0";
+
 export const FONT_COLORS = [
   { value: "#000000", name: "Black", ring: "ring-gray-900" },
   { value: "#FFFFFF", name: "White", ring: "ring-white" },
   { value: "#FF0000", name: "Red", ring: "ring-red-500" },
   { value: "#0000FF", name: "Blue", ring: "ring-blue-500" },
-  { value: "#C0C0C0", name: "Brushed Silver", ring: "ring-gray-300" },
-  { value: "#eac10c", name: "Brushed Gold", ring: "ring-yellow-400" },
+  { value: FEATURED_BRUSHED_SILVER_HEX, name: "Brushed Silver", ring: "ring-gray-300" },
+  { value: FEATURED_BRUSHED_GOLD_HEX, name: "Brushed Gold", ring: "ring-yellow-400" },
   { value: "#6E260E", name: "Brown", ring: "ring-brown-700" },
   { value: "#F0E68C", name: "Ivory", ring: "ring-yellow-200" },
 ] as const;
@@ -140,6 +148,12 @@ export const ALL_COLORS = [
   ...BACKGROUND_COLORS,
   ...EXTENDED_BACKGROUND_COLORS,
   ...FONT_COLORS,
+  { value: LEGACY_BRUSHED_GOLD_HEX, name: "Brushed Gold", ring: "ring-yellow-400" },
+  {
+    value: LEGACY_BRUSHED_SILVER_HEX,
+    name: "Brushed Silver",
+    ring: "ring-gray-300",
+  },
   // Additional colors that were missing
   { value: "#FF0000", name: "Red", ring: "ring-red-500" },
   { value: "#00FF00", name: "Green", ring: "ring-green-500" },

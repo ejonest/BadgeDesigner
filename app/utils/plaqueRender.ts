@@ -1,6 +1,14 @@
 import type { BadgeImage } from "~/types/badge";
+import {
+  FEATURED_BRUSHED_GOLD_HEX,
+  FEATURED_BRUSHED_SILVER_HEX,
+  LEGACY_BRUSHED_GOLD_HEX,
+  LEGACY_BRUSHED_SILVER_HEX,
+} from "~/constants/colors";
 
+/** @deprecated Legacy single id; migrated to `plaque-detached-portrait-*` / `plaque-detached-landscape-*`. */
 export const PLAQUE_DETACHED_ID = "plaque-detached";
+/** @deprecated Legacy single id; migrated to `plaque-attached-*`. */
 export const PLAQUE_ATTACHED_ID = "plaque-attached";
 
 export function isPlaqueTemplateId(id: string | undefined): boolean {
@@ -8,11 +16,17 @@ export function isPlaqueTemplateId(id: string | undefined): boolean {
 }
 
 export function isPlaqueDetachedTemplateId(id: string | undefined): boolean {
-  return id === PLAQUE_DETACHED_ID;
+  const s = id ?? "";
+  return (
+    /^plaque-detached-portrait-/i.test(s) ||
+    /^plaque-detached-landscape-/i.test(s) ||
+    s === PLAQUE_DETACHED_ID
+  );
 }
 
 export function isPlaqueAttachedTemplateId(id: string | undefined): boolean {
-  return id === PLAQUE_ATTACHED_ID;
+  const s = id ?? "";
+  return /^plaque-attached-/i.test(s) || s === PLAQUE_ATTACHED_ID;
 }
 
 /**
@@ -93,13 +107,13 @@ export function plaqueWoodBackgroundRect(
 }
 
 /** Featured “Brushed Gold” from the picker — good default for plaque plate previews. */
-export const PLAQUE_DEFAULT_BRUSH_GOLD_HEX = "#eac10c";
+export const PLAQUE_DEFAULT_BRUSH_GOLD_HEX = FEATURED_BRUSHED_GOLD_HEX;
 
 /** Featured brushed silver plate color (badge/sign/plaque pickers). */
-export const FEATURED_BRUSHED_SILVER_PLATE_HEX = "#C0C0C0";
+export const FEATURED_BRUSHED_SILVER_PLATE_HEX = FEATURED_BRUSHED_SILVER_HEX;
 
 /**
- * True when the plate background should use the horizontal brushed-metal gradient
+ * True when the plate background should use the brushed-metal gradient
  * (same treatment as plaque metal), limited to featured gold/silver swatches only.
  */
 export function isFeaturedBrushedMetalPlateColor(
@@ -110,8 +124,33 @@ export function isFeaturedBrushedMetalPlateColor(
   const normalized = rgbHex(rgb.r, rgb.g, rgb.b).toUpperCase();
   return (
     normalized === PLAQUE_DEFAULT_BRUSH_GOLD_HEX.toUpperCase() ||
-    normalized === FEATURED_BRUSHED_SILVER_PLATE_HEX.toUpperCase()
+    normalized === FEATURED_BRUSHED_SILVER_PLATE_HEX.toUpperCase() ||
+    normalized === LEGACY_BRUSHED_GOLD_HEX.toUpperCase() ||
+    normalized === LEGACY_BRUSHED_SILVER_HEX.toUpperCase()
   );
+}
+
+/** Map legacy brushed gold/silver storage hexes to current lighter catalog bases for gradients. */
+export function normalizeFeaturedBrushedMetalBaseHex(
+  hex: string | undefined | null,
+): string {
+  const s = (hex ?? "").trim();
+  if (!s) return "";
+  const raw = s.startsWith("#") ? s : `#${s}`;
+  const n = raw.toUpperCase();
+  if (
+    n === LEGACY_BRUSHED_GOLD_HEX.toUpperCase() ||
+    n === PLAQUE_DEFAULT_BRUSH_GOLD_HEX.toUpperCase()
+  ) {
+    return PLAQUE_DEFAULT_BRUSH_GOLD_HEX;
+  }
+  if (
+    n === LEGACY_BRUSHED_SILVER_HEX.toUpperCase() ||
+    n === FEATURED_BRUSHED_SILVER_PLATE_HEX.toUpperCase()
+  ) {
+    return FEATURED_BRUSHED_SILVER_PLATE_HEX;
+  }
+  return raw;
 }
 
 function parseHexRgb(input: string): { r: number; g: number; b: number } | null {
@@ -141,57 +180,82 @@ function rgbHex(r: number, g: number, b: number): string {
     .padStart(2, "0")}${clamp255(b).toString(16).padStart(2, "0")}`;
 }
 
-/** Horizontal brush streak stops shared by plaque + badge/sign plate gradients. */
-function metalBrushStopElementsXml(baseHex: string): string {
+/** Per-stop RGB multipliers along the brush gradient axis (SVG + CSS swatches). */
+const METAL_BRUSH_STREAK_MUL: readonly (readonly [number, number, number])[] = [
+  [0.76, 0.78, 0.72],
+  [0.92, 0.9, 0.88],
+  [1.06, 1.04, 1.12],
+  [0.84, 0.86, 0.8],
+  [1.02, 1.0, 1.08],
+  [0.88, 0.9, 0.85],
+  [0.97, 0.96, 1.0],
+];
+const METAL_BRUSH_OFFSETS_PCT = [0, 16, 33, 50, 66, 82, 100] as const;
+
+function metalBrushStopColors(baseHex: string): { offset: number; color: string }[] {
   const rgb =
     parseHexRgb(baseHex) ?? parseHexRgb(PLAQUE_DEFAULT_BRUSH_GOLD_HEX)!;
   const { r, g, b } = rgb;
-  /** Per-stop RGB multipliers (horizontal brush streaks). */
-  const streaks: readonly (readonly [number, number, number])[] = [
-    [0.76, 0.78, 0.72],
-    [0.92, 0.9, 0.88],
-    [1.06, 1.04, 1.12],
-    [0.84, 0.86, 0.8],
-    [1.02, 1.0, 1.08],
-    [0.88, 0.9, 0.85],
-    [0.97, 0.96, 1.0],
-  ];
-  const offsets = [0, 16, 33, 50, 66, 82, 100];
-  return streaks
-    .map((mul, i) => {
-      const hr = r * mul[0];
-      const hg = g * mul[1];
-      const hb = b * mul[2];
-      return `<stop offset="${offsets[i]}%" stop-color="${rgbHex(hr, hg, hb)}"/>`;
-    })
+  return METAL_BRUSH_STREAK_MUL.map((mul, i) => ({
+    offset: METAL_BRUSH_OFFSETS_PCT[i]!,
+    color: rgbHex(r * mul[0], g * mul[1], b * mul[2]),
+  }));
+}
+
+function metalBrushStopElementsXml(baseHex: string): string {
+  return metalBrushStopColors(baseHex)
+    .map(
+      (stop) =>
+        `<stop offset="${stop.offset}%" stop-color="${stop.color}"/>`,
+    )
     .join("\n      ");
 }
 
 /**
- * Horizontal multi-stop gradient so flat plate colors read as brushed metal.
- * Stops are derived from the chosen plate color (same hue family).
+ * CSS `linear-gradient` using the same stops as {@link plaqueMetalBrushGradientDef}
+ * so picker swatches match plaque/badge preview rendering.
+ */
+export function plaqueMetalBrushCssBackgroundImage(plateBackgroundHex: string): string {
+  const normalized = normalizeFeaturedBrushedMetalBaseHex(plateBackgroundHex);
+  const base =
+    normalized ||
+    (() => {
+      const t = plateBackgroundHex.trim();
+      return t.startsWith("#") ? t : t ? `#${t}` : PLAQUE_DEFAULT_BRUSH_GOLD_HEX;
+    })();
+  const stops = metalBrushStopColors(base);
+  return `linear-gradient(180deg, ${stops
+    .map((s) => `${s.color} ${s.offset}%`)
+    .join(", ")})`;
+}
+
+/**
+ * Multi-stop linear gradient so flat plate colors read as brushed metal.
+ * Gradient runs **top → bottom** so streaks read as **horizontal** brush marks on the plate.
+ * `extentPx` is template height in px (`gradientUnits="userSpaceOnUse"`).
  */
 export function plaqueMetalBrushGradientDef(
   gradId: string,
-  widthPx: number,
+  extentPx: number,
   baseHex: string,
 ): string {
   const stops = metalBrushStopElementsXml(baseHex);
-  return `<linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${widthPx}" y2="0">
+  const h = Math.max(1, extentPx);
+  return `<linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="${h}">
       ${stops}
     </linearGradient>`;
 }
 
 /**
  * Same brush stops as {@link plaqueMetalBrushGradientDef} but in object bounding-box units.
- * Use for badge/sign inner plates: nested `transform`s on large viewBox templates keep the streaks aligned.
+ * Axis is vertical in bbox space so strokes read horizontal on the plate.
  */
 export function plaqueMetalBrushGradientDefObjectBBox(
   gradId: string,
   baseHex: string,
 ): string {
   const stops = metalBrushStopElementsXml(baseHex);
-  return `<linearGradient id="${gradId}" gradientUnits="objectBoundingBox" x1="0" y1="0" x2="1" y2="0">
+  return `<linearGradient id="${gradId}" gradientUnits="objectBoundingBox" x1="0" y1="0" x2="0" y2="1">
       ${stops}
     </linearGradient>`;
 }

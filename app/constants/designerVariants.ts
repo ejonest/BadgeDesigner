@@ -3,6 +3,8 @@
  * Drives maxLines, backing, size step, border, labels, templates, and help content.
  */
 import { BACKGROUND_COLORS, EXTENDED_BACKGROUND_COLORS } from "./colors";
+import type { PlaqueLayoutOption } from "./plaqueLayouts";
+import { PLAQUE_LAYOUT_OPTIONS as PLAQUE_LAYOUT_OPTIONS_CONST } from "./plaqueLayouts";
 
 export type DesignerVariant = "badge" | "sign" | "plaque";
 
@@ -61,25 +63,9 @@ export interface DesignerVariantConfig {
   helpContent: "badge" | "sign";
 }
 
-/** Plaque designer: two layout modes (template ids match plaque-templates.local.json). */
-export const PLAQUE_LAYOUT_OPTIONS: readonly {
-  id: string;
-  name: string;
-  description: string;
-}[] = [
-  {
-    id: "plaque-detached",
-    name: "Detached photo",
-    description:
-      "Photo sits in a frame on the wood; text is engraved on a separate metal plate below.",
-  },
-  {
-    id: "plaque-attached",
-    name: "Attached plate",
-    description:
-      "One metal plate: your image at the top and text centered below on the same plate.",
-  },
-];
+/** Plaque designer: layout families (step 2); sizes are suffixes on template ids in plaque-templates.local.json. */
+export const PLAQUE_LAYOUT_OPTIONS: readonly PlaqueLayoutOption[] =
+  PLAQUE_LAYOUT_OPTIONS_CONST;
 
 const badgeBackgroundColors: readonly BackgroundColorOption[] = [
   ...BACKGROUND_COLORS,

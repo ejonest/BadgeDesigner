@@ -46,6 +46,7 @@ import { signTemplateSupportsUserLogoUpload } from "~/utils/signLogoPlacement";
 import {
   applyPlaqueMetalBrushFill,
   isFeaturedBrushedMetalPlateColor,
+  normalizeFeaturedBrushedMetalBaseHex,
   isPlaqueAttachedTemplateId,
   isPlaqueDetachedTemplateId,
   isPlaqueTemplateId,
@@ -1094,7 +1095,7 @@ function buildInnerFillAndClipData(
   return { innerPathWithFill, innerPathData };
 }
 
-/** Horizontal brushed-metal gradient for featured gold/silver only (badge/sign inner plate). */
+/** Brushed-metal gradient for featured gold/silver only (badge/sign inner plate); streaks run horizontally. */
 function plateBrushGradientForBadgeInner(
   badge: Badge,
   template: LoadedTemplate,
@@ -1108,7 +1109,9 @@ function plateBrushGradientForBadgeInner(
   const gradId = `badgePlateMetal${safeClip}`;
   const gradientDefXml = plaqueMetalBrushGradientDefObjectBBox(
     gradId,
-    badge.backgroundColor || DEFAULT_PLATE_BG,
+    normalizeFeaturedBrushedMetalBaseHex(
+      badge.backgroundColor || DEFAULT_PLATE_BG,
+    ),
   );
   const innerPlateMarkup = applyPlaqueMetalBrushFill(
     innerPathWithFill,
@@ -1140,8 +1143,10 @@ function renderPlaqueBadgeSvg(
   );
   const metalGradientDef = plaqueMetalBrushGradientDef(
     metalGradId,
-    template.widthPx,
-    badge.backgroundColor || "#FFFFFF",
+    template.heightPx,
+    normalizeFeaturedBrushedMetalBaseHex(
+      badge.backgroundColor || "#FFFFFF",
+    ),
   );
   const innerPlateWithBrushFill = applyPlaqueMetalBrushFill(
     innerPathWithFill,
