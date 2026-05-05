@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 768 960" width="768" height="960">
-  <path id="Inner" d="M 110 576 L 658 576 Q 672 576 672 590 L 672 898 Q 672 912 658 912 L 110 912 Q 96 912 96 898 L 96 590 Q 96 576 110 576 Z" fill="#3a3a3a"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 768" width="960" height="768">
+  <path id="Inner" d="M 138 460 L 822 460 Q 840 460 840 478 L 840 712 Q 840 730 822 730 L 138 730 Q 120 730 120 712 L 120 478 Q 120 460 138 460 Z" fill="#3a3a3a"/>
 </svg>
