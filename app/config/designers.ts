@@ -108,9 +108,9 @@ export const DESIGNERS: Record<DesignerId, DesignerDefinition> = {
       defaultApiUrl:
         "https://signs-by-lita-connection--development.gadget.app",
       createField: "createSignDesign",
-      inputVariable: "SignDesign",
+      inputVariable: "signDesign",
       inputType: "CreateSignDesignInput",
-      resultSelection: "SignDesign",
+      resultSelection: "signDesign",
     },
     linkOrderSecretEnv: "LINK_ORDER_SECRET_SIGN",
     pdfProofRelativePath: (designId) =>
@@ -135,9 +135,9 @@ export const DESIGNERS: Record<DesignerId, DesignerDefinition> = {
       defaultApiUrl:
         "https://signs-by-lita-connection--development.gadget.app",
       createField: "createPlaqueDesign",
-      inputVariable: "PlaqueDesign",
+      inputVariable: "plaqueDesign",
       inputType: "CreatePlaqueDesignInput",
-      resultSelection: "PlaqueDesign",
+      resultSelection: "plaqueDesign",
     },
     linkOrderSecretEnv: "LINK_ORDER_SECRET_PLAQUE",
     pdfProofRelativePath: (designId) =>
