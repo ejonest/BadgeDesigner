@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 768" width="576" height="768">
   <!-- Bottom metal text plate (fill replaced at render time) -->
-  <path id="Inner" d="M 44 362 L 532 362 Q 540 362 540 370 L 540 724 Q 540 732 532 732 L 44 732 Q 36 732 36 724 L 36 370 Q 36 362 44 362 Z" fill="#3a3a3a"/>
+  <path id="Inner" d="M 36 362 L 540 362 L 540 732 L 36 732 Z" fill="#3a3a3a"/>
 </svg>

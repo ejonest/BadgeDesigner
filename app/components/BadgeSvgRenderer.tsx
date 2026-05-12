@@ -30,7 +30,7 @@ const PLAQUE_LOGO_DATA_URL_CACHE_MAX = 40;
 /**
  * Plaque preview is drawn as <img src="data:image/svg+xml,..."> so wood filters match the
  * template picker. In that mode browsers block most cross-origin <image href="https://...">
- * inside the SVG, so we embed the photo as a data URL first (sign preview uses inline SVG — no issue).
+ * inside the SVG, so we embed the plate logo as a data URL first (sign preview uses inline SVG — no issue).
  */
 async function badgeWithPlaqueLogoInlinedForSvgImg(
   badge: Badge,
@@ -205,7 +205,8 @@ export default function BadgeSvgRenderer({ badge, templateId, variant = "badge",
           <img
             src={plaqueImgSrc}
             alt=""
-            className="max-h-full max-w-full w-full h-full object-contain"
+            className="max-h-full max-w-full object-contain block"
+            style={{ width: "auto", height: "auto" }}
           />
         ) : (
           <div

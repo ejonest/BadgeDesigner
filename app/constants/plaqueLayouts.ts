@@ -16,48 +16,134 @@ export type PlaqueLayoutOption = {
 export const PLAQUE_LAYOUT_OPTIONS: readonly PlaqueLayoutOption[] = [
   {
     id: "plaque-attached",
-    name: "Attached plate",
+    name: "Attached plate — (S, M, & L)",
     description:
       "One metal plate: your image at the top and text centered below on the same plate.",
     thumbnailTemplateId: "plaque-attached-medium",
   },
   {
     id: "plaque-detached-portrait",
-    name: "Detached photo (portrait)",
+    name: "Photo plaque — portrait (M & L)",
     description:
-      "Portrait photo in a frame on the wood; text is engraved on a separate metal plate below.",
+      "Photo in a frame on the wood; text is engraved on a separate metal plate below.",
     thumbnailTemplateId: "plaque-detached-portrait-medium",
   },
   {
     id: "plaque-detached-landscape",
-    name: "Detached photo (landscape)",
+    name: "Photo plaque — landscape (M & L)",
     description:
-      "Landscape photo in a frame on the wood; text is engraved on a separate metal plate below.",
+      'Portrait wood board (8×10" or 9×12") with a landscape photo opening; text is engraved on a separate metal plate below.',
     thumbnailTemplateId: "plaque-detached-landscape-medium",
   },
 ];
 
-export const PLAQUE_SIZE_STEP_OPTIONS: readonly {
-  value: PlaqueSizeKey;
-  label: string;
-  detail: string;
-}[] = [
-  {
-    value: "small",
-    label: "Small",
-    detail: '5×7" wood · 4×6" plate (attached layout only)',
-  },
-  {
-    value: "medium",
-    label: "Medium",
-    detail: '8×10" wood (plate & photo vary by layout)',
-  },
-  {
-    value: "large",
-    label: "Large",
-    detail: '9×12" wood (plate & photo vary by layout)',
-  },
+/** Step 2 size keys in display order (labels come from {@link getPlaqueSizeStepDisplay}). */
+export type PlaqueSizeStepOption = {
+  readonly value: PlaqueSizeKey;
+};
+
+export const PLAQUE_SIZE_STEP_OPTIONS: readonly PlaqueSizeStepOption[] = [
+  { value: "small" },
+  { value: "medium" },
+  { value: "large" },
 ];
+
+const SIZE_STEP_LABEL: Record<PlaqueSizeKey, string> = {
+  small: "Small",
+  medium: "Medium",
+  large: "Large",
+};
+
+/**
+ * Physical specs for size chips (wood frame = template outer size).
+ * Attached plate: inner metal from plaque SVG `Inner` path vs viewBox.
+ * Detached landscape: design-sheet notes on template SVGs.
+ * Detached portrait: photo opening from `plaquePhotoRectNorm` × frame; plate from `Inner` path.
+ */
+const ATTACHED_SIZE_SPECS: Record<
+  PlaqueSizeKey,
+  { frame: string; plate: string }
+> = {
+  small: { frame: '5×7"', plate: '4×6"' },
+  medium: { frame: '8×10"', plate: '6×8"' },
+  large: { frame: '9×12"', plate: '7×10"' },
+};
+
+const DETACHED_PORTRAIT_SIZE_SPECS: Record<
+  "medium" | "large",
+  { frame: string; photoSlot: string; plate: string }
+> = {
+  medium: {
+    frame: '8×10"',
+    photoSlot: '4.5×6.5"',
+    plate: '6×2"',
+  },
+  large: {
+    frame: '9×12"',
+    photoSlot: '5.5×7.5"',
+    plate: '6×2"',
+  },
+};
+
+const DETACHED_LANDSCAPE_SIZE_SPECS: Record<
+  "medium" | "large",
+  { frame: string; photoSlot: string; plate: string }
+> = {
+  medium: {
+    frame: '8×10"',
+    photoSlot: '6.5×4.5"',
+    plate: '6×3.5"',
+  },
+  large: {
+    frame: '9×12"',
+    photoSlot: '7.5×5.5"',
+    plate: '7×4"',
+  },
+};
+
+export type PlaqueSizeStepDisplay = {
+  readonly primaryLine: string;
+  readonly detailLines: readonly string[];
+};
+
+/** Primary + secondary lines for Step 2 size buttons; defaults to attached specs when layout is unknown. */
+export function getPlaqueSizeStepDisplay(
+  layoutId: string | null | undefined,
+  size: PlaqueSizeKey,
+): PlaqueSizeStepDisplay {
+  const layout = layoutId?.trim() || "plaque-attached";
+  const label = SIZE_STEP_LABEL[size];
+
+  if (layout === "plaque-detached-portrait") {
+    const key = size === "small" ? "medium" : size;
+    const spec = DETACHED_PORTRAIT_SIZE_SPECS[key];
+    return {
+      primaryLine: `${label} - Frame size: ${spec.frame}`,
+      detailLines: [
+        `Photo slot size: ${spec.photoSlot}`,
+        `Plate size: ${spec.plate}`,
+      ],
+    };
+  }
+
+  if (layout === "plaque-detached-landscape") {
+    const key = size === "small" ? "medium" : size;
+    const spec = DETACHED_LANDSCAPE_SIZE_SPECS[key];
+    return {
+      primaryLine: `${label} - Frame size: ${spec.frame}`,
+      detailLines: [
+        `Photo slot size: ${spec.photoSlot}`,
+        `Plate size: ${spec.plate}`,
+      ],
+    };
+  }
+
+  const spec = ATTACHED_SIZE_SPECS[size];
+  return {
+    primaryLine: `${label} - Frame size: ${spec.frame}`,
+    detailLines: [`Plate size: ${spec.plate}`],
+  };
+}
 
 export function isPlaqueDetachedLayoutId(layoutId: string): boolean {
   return (

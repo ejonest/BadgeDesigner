@@ -1,10 +1,15 @@
-import type { BadgeImage } from "~/types/badge";
+import type { BadgeImage, PlaqueDetachedPhotoFrameFinish } from "~/types/badge";
 import {
   FEATURED_BRUSHED_GOLD_HEX,
   FEATURED_BRUSHED_SILVER_HEX,
   LEGACY_BRUSHED_GOLD_HEX,
   LEGACY_BRUSHED_SILVER_HEX,
 } from "~/constants/colors";
+import type { SignLogoDrawRect } from "~/utils/signLogoTextLayout";
+import {
+  signHorizontalInsetPx,
+  signVerticalInsetPx,
+} from "~/utils/signTextLayout";
 
 /** @deprecated Legacy single id; migrated to `plaque-detached-portrait-*` / `plaque-detached-landscape-*`. */
 export const PLAQUE_DETACHED_ID = "plaque-detached";
@@ -30,7 +35,13 @@ export function isPlaqueAttachedTemplateId(id: string | undefined): boolean {
 }
 
 /**
- * Inner plate box for attached + top image: user text is laid out in the lower 2/3 of the metal.
+ * Attached plaque + optional logo: graphic zone height as a fraction of inner plate height.
+ * ~38% matches classic award references where the emblem dominates the upper third.
+ */
+export const PLAQUE_ATTACHED_LOGO_BAND_HEIGHT_FRAC = 0.38;
+
+/**
+ * Inner plate box for attached + top image: text starts below the logo band.
  * (Trim box = {@link getEffectiveDesignBox} for the plaque template.)
  */
 export function plaqueAttachedTextPlateRect(trimBox: {
@@ -40,15 +51,16 @@ export function plaqueAttachedTextPlateRect(trimBox: {
   height: number;
 }): { x: number; y: number; width: number; height: number } {
   const h = trimBox.height;
+  const logoH = h * PLAQUE_ATTACHED_LOGO_BAND_HEIGHT_FRAC;
   return {
     x: trimBox.x,
-    y: trimBox.y + h / 3,
+    y: trimBox.y + logoH,
     width: trimBox.width,
-    height: (h * 2) / 3,
+    height: h - logoH,
   };
 }
 
-/** Upper third of the inner plate — fitted logo for attached plaque (placement is always `top`). */
+/** Upper band of the inner plate — fitted logo for attached plaque (placement is always `top`). */
 export function plaqueAttachedLogoBandRect(trimBox: {
   x: number;
   y: number;
@@ -56,16 +68,77 @@ export function plaqueAttachedLogoBandRect(trimBox: {
   height: number;
 }): { x: number; y: number; width: number; height: number } {
   const h = trimBox.height;
+  const logoH = h * PLAQUE_ATTACHED_LOGO_BAND_HEIGHT_FRAC;
   return {
     x: trimBox.x,
     y: trimBox.y,
     width: trimBox.width,
-    height: h / 3,
+    height: logoH,
   };
 }
 
-const esc = (s: string) =>
-  (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/**
+ * Attached plaque logo: fixed height relative to the logo band (aspect ratio preserved), centered
+ * horizontally, bottom-aligned in the band so engraved copy can sit directly under the graphic.
+ */
+export const PLAQUE_ATTACHED_LOGO_DRAW_TARGET_HEIGHT_FRAC = 0.86;
+
+export function plaqueAttachedLogoDrawRectFixed(
+  logoBand: { x: number; y: number; width: number; height: number },
+  logo: BadgeImage | undefined,
+): SignLogoDrawRect | null {
+  if (!logo?.src?.trim()) return null;
+  // Attached plaques want a larger, more “award-like” emblem with less air than sign rules.
+  const padX = Math.max(6, logoBand.width * 0.06);
+  const padY = Math.max(6, logoBand.height * 0.06);
+  const innerW = Math.max(1, logoBand.width - 2 * padX);
+  const innerH = Math.max(1, logoBand.height - 2 * padY);
+  const iw =
+    logo.intrinsicWidth && logo.intrinsicWidth > 0 ? logo.intrinsicWidth : 100;
+  const ih =
+    logo.intrinsicHeight && logo.intrinsicHeight > 0
+      ? logo.intrinsicHeight
+      : 100;
+  const targetH = innerH * 0.94;
+  let fh = targetH;
+  let fw = (iw / ih) * fh;
+  if (fw > innerW) {
+    fw = innerW;
+    fh = (ih / iw) * fw;
+  }
+  const x = logoBand.x + padX + (innerW - fw) / 2;
+  const y = logoBand.y + logoBand.height - padY - fh;
+  return { x, y, width: fw, height: fh };
+}
+
+/**
+ * Classic award plaque: same fitted emblem size as {@link plaqueAttachedLogoDrawRectFixed} (upper logo band),
+ * but positioned with its vertical center midway between the inner border top (or top inset) and the
+ * “presented to” baseline — not grown to fill that gap.
+ */
+export function plaqueAttachedLogoDrawRectClassic(
+  trimBox: { x: number; y: number; width: number; height: number },
+  logo: BadgeImage | undefined,
+  presentedToY: number,
+  topInsetPx: number,
+): SignLogoDrawRect | null {
+  const logoBand = plaqueAttachedLogoBandRect(trimBox);
+  const sized = plaqueAttachedLogoDrawRectFixed(logoBand, logo);
+  if (!sized) return null;
+
+  const { width: fw, height: fh } = sized;
+  const topY = trimBox.y + topInsetPx;
+  const gapBeforeCaption = Math.max(10, trimBox.height * 0.018);
+  const centerY = (topY + presentedToY) / 2;
+  let y = centerY - fh / 2;
+
+  const yMin = topY + 2;
+  const yMax = presentedToY - gapBeforeCaption - fh;
+  if (y < yMin) y = yMin;
+  if (y > yMax) y = Math.max(yMin, yMax);
+
+  return { x: sized.x, y, width: fw, height: fh };
+}
 
 export function plaqueWoodGradientDef(gradId: string, widthPx: number): string {
   return `<linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${widthPx}" y2="0">
@@ -100,9 +173,7 @@ export function plaqueWoodBackgroundRect(
   gradId: string,
   grainFilterId?: string,
 ): string {
-  const filterAttr = grainFilterId
-    ? ` filter="url(#${grainFilterId})"`
-    : "";
+  const filterAttr = grainFilterId ? ` filter="url(#${grainFilterId})"` : "";
   return `<rect x="0" y="0" width="${widthPx}" height="${heightPx}" fill="url(#${gradId})" stroke="none"${filterAttr}/>`;
 }
 
@@ -153,7 +224,9 @@ export function normalizeFeaturedBrushedMetalBaseHex(
   return raw;
 }
 
-function parseHexRgb(input: string): { r: number; g: number; b: number } | null {
+function parseHexRgb(
+  input: string,
+): { r: number; g: number; b: number } | null {
   let s = (input || "").trim();
   if (!s) return null;
   if (s[0] !== "#") s = `#${s}`;
@@ -192,7 +265,9 @@ const METAL_BRUSH_STREAK_MUL: readonly (readonly [number, number, number])[] = [
 ];
 const METAL_BRUSH_OFFSETS_PCT = [0, 16, 33, 50, 66, 82, 100] as const;
 
-function metalBrushStopColors(baseHex: string): { offset: number; color: string }[] {
+function metalBrushStopColors(
+  baseHex: string,
+): { offset: number; color: string }[] {
   const rgb =
     parseHexRgb(baseHex) ?? parseHexRgb(PLAQUE_DEFAULT_BRUSH_GOLD_HEX)!;
   const { r, g, b } = rgb;
@@ -205,8 +280,7 @@ function metalBrushStopColors(baseHex: string): { offset: number; color: string 
 function metalBrushStopElementsXml(baseHex: string): string {
   return metalBrushStopColors(baseHex)
     .map(
-      (stop) =>
-        `<stop offset="${stop.offset}%" stop-color="${stop.color}"/>`,
+      (stop) => `<stop offset="${stop.offset}%" stop-color="${stop.color}"/>`,
     )
     .join("\n      ");
 }
@@ -215,13 +289,19 @@ function metalBrushStopElementsXml(baseHex: string): string {
  * CSS `linear-gradient` using the same stops as {@link plaqueMetalBrushGradientDef}
  * so picker swatches match plaque/badge preview rendering.
  */
-export function plaqueMetalBrushCssBackgroundImage(plateBackgroundHex: string): string {
+export function plaqueMetalBrushCssBackgroundImage(
+  plateBackgroundHex: string,
+): string {
   const normalized = normalizeFeaturedBrushedMetalBaseHex(plateBackgroundHex);
   const base =
     normalized ||
     (() => {
       const t = plateBackgroundHex.trim();
-      return t.startsWith("#") ? t : t ? `#${t}` : PLAQUE_DEFAULT_BRUSH_GOLD_HEX;
+      return t.startsWith("#")
+        ? t
+        : t
+        ? `#${t}`
+        : PLAQUE_DEFAULT_BRUSH_GOLD_HEX;
     })();
   const stops = metalBrushStopColors(base);
   return `linear-gradient(180deg, ${stops
@@ -271,45 +351,257 @@ export function applyPlaqueMetalBrushFill(
   );
 }
 
-/** Detached layout: user photo sits in this slot on the wood, above the metal plate. */
-export function computePlaqueDetachedPhotoDraw(
-  logo: BadgeImage | undefined,
-  slot: { x: number; y: number; width: number; height: number },
-): { x: number; y: number; width: number; height: number } | null {
-  if (!logo?.src?.trim()) return null;
-  const iw =
-    logo.intrinsicWidth && logo.intrinsicWidth > 0 ? logo.intrinsicWidth : 100;
-  const ih =
-    logo.intrinsicHeight && logo.intrinsicHeight > 0
-      ? logo.intrinsicHeight
-      : 100;
-  const pad = Math.min(slot.width, slot.height) * 0.035;
-  const rw = Math.max(1, slot.width - 2 * pad);
-  const rh = Math.max(1, slot.height - 2 * pad);
-  const s = Math.min(rw / iw, rh / ih);
-  const w = iw * s;
-  const h = ih * s;
-  const x = slot.x + (slot.width - w) / 2;
-  const y = slot.y + (slot.height - h) / 2;
-  return { x, y, width: w, height: h };
+/**
+ * Detached layout: wood opening shows preview stock art (real insert is supplied separately).
+ * User-uploaded artwork renders on the metal plate beside text.
+ */
+/** Stock photo opening frame on wood: 0.25" border at template scale (96 DPI). */
+const PLAQUE_DETACHED_PHOTO_BORDER_STROKE_PX = Math.round(0.25 * 96);
+
+/**
+ * Detached wood photo opening: metallic frame stroke + gradient defs (supplier sheet 0.25" frame).
+ * Uses the same brush stops and vertical axis as {@link plaqueMetalBrushGradientDef} so gold/silver
+ * match the brushed plate treatment (fill uses horizontal streaks; stroke samples the same gradient field).
+ */
+export function plaqueDetachedPhotoFrameDecor(params: {
+  slot: { x: number; y: number; width: number; height: number };
+  finish: PlaqueDetachedPhotoFrameFinish;
+  /** Unique suffix for gradient ids (e.g. safe clip id fragment). */
+  idSuffix: string;
+  /** Template height in px — must match plate gradient extent so brush aligns with the metal plate. */
+  templateHeightPx: number;
+}): { defsSnippet: string; rectSnippet: string } {
+  const { slot, finish, idSuffix, templateHeightPx } = params;
+  const sw = PLAQUE_DETACHED_PHOTO_BORDER_STROKE_PX;
+  const gid = `plaqueDetachedPhotoFrame${idSuffix}`;
+  const x = slot.x;
+  const y = slot.y;
+  const w = slot.width;
+  const h = slot.height;
+
+  const extent = Math.max(1, Math.round(templateHeightPx));
+  const baseHex =
+    finish === "silver"
+      ? normalizeFeaturedBrushedMetalBaseHex(FEATURED_BRUSHED_SILVER_PLATE_HEX) ||
+        FEATURED_BRUSHED_SILVER_PLATE_HEX
+      : normalizeFeaturedBrushedMetalBaseHex(PLAQUE_DEFAULT_BRUSH_GOLD_HEX) ||
+        PLAQUE_DEFAULT_BRUSH_GOLD_HEX;
+
+  const stops = metalBrushStopElementsXml(baseHex);
+
+  return {
+    defsSnippet: `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="${extent}">
+      ${stops}
+    </linearGradient>`,
+    rectSnippet: `<rect x="${x}" y="${y}" width="${w}" height="${h}"
+      fill="none" stroke="url(#${gid})" stroke-width="${sw}"/>`,
+  };
 }
 
-export function renderPlaqueDetachedPhotoImage(
-  logo: BadgeImage | undefined,
-  slot: { x: number; y: number; width: number; height: number },
-): string {
-  const r = computePlaqueDetachedPhotoDraw(logo, slot);
-  if (!r || !logo?.src?.trim()) return "";
-  const src = esc(logo.src);
-  return `<image href="${src}" xlink:href="${src}"
-    x="${r.x}" y="${r.y}" width="${r.width}" height="${r.height}"
-    preserveAspectRatio="xMidYMid meet"
-    style="image-rendering:optimizeQuality"/>`;
+/** Supplier sheet: thin engraved rule inset inside the metal text plate (photo plaques). */
+export function plaqueDetachedPlateLayoutMetrics(
+  plateW: number,
+  plateH: number,
+): {
+  /** Gap from outer plate edge to inner engraving rect used for the stroke. */
+  borderInsetPx: number;
+  strokePx: number;
+  /** Inset from outer plate to layout bounds (text + plate logo stay inside this rect). */
+  layoutInsetPx: number;
+} {
+  const m = Math.min(plateW, plateH);
+  const strokePx = Math.max(1, Math.min(2.25, m * 0.0042));
+  const borderInsetPx = Math.max(6.5, m * 0.026);
+  const layoutInsetPx = borderInsetPx + strokePx * 0.5 + Math.max(2, m * 0.008);
+  return { borderInsetPx, strokePx, layoutInsetPx };
 }
 
-export function plaqueDetachedPhotoFrameRect(
-  slot: { x: number; y: number; width: number; height: number },
-): string {
-  return `<rect x="${slot.x}" y="${slot.y}" width="${slot.width}" height="${slot.height}"
-    fill="none" stroke="#c0c0c0" stroke-width="4" rx="2" ry="2"/>`;
+/**
+ * Rectangle inside the thin inner plate border: use for text layout and plate-side logo bounds.
+ * Pass the outer metal plate rect ({@link getEffectiveDesignBox} on detached templates).
+ */
+export function plaqueDetachedPlateContentRect(outer: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}): { x: number; y: number; width: number; height: number } {
+  const { layoutInsetPx } = plaqueDetachedPlateLayoutMetrics(
+    outer.width,
+    outer.height,
+  );
+  const w = outer.width - 2 * layoutInsetPx;
+  const h = outer.height - 2 * layoutInsetPx;
+  if (w < 8 || h < 8) return outer;
+  return {
+    x: outer.x + layoutInsetPx,
+    y: outer.y + layoutInsetPx,
+    width: w,
+    height: h,
+  };
+}
+
+/** Thin inner frame stroke on the detached text plate (drawn inside outer plate bounds). */
+export function plaqueDetachedPlateInnerBorderSvgMarkup(params: {
+  plateOuter: { x: number; y: number; width: number; height: number };
+  strokeHex: string;
+}): string {
+  const { borderInsetPx, strokePx } = plaqueDetachedPlateLayoutMetrics(
+    params.plateOuter.width,
+    params.plateOuter.height,
+  );
+  const { x, y, width, height } = params.plateOuter;
+  const xi = x + borderInsetPx;
+  const yi = y + borderInsetPx;
+  const wi = Math.max(1, width - 2 * borderInsetPx);
+  const hi = Math.max(1, height - 2 * borderInsetPx);
+  const stroke = (params.strokeHex || "#151515").replace(/&/g, "&amp;");
+  return `<rect x="${xi}" y="${yi}" width="${wi}" height="${hi}" fill="none" stroke="${stroke}" stroke-width="${strokePx}" vector-effect="non-scaling-stroke"/>`;
+}
+
+/**
+ * Preview-only inset from supplier mockups (no wood field / metal plate).
+ * Portrait/landscape supplier rasters are the full inner silver-frame openings (incl. bottom band); omit duplicate SVG banner.
+ * Rendering uses `meet` so the entire inset is visible inside the wood slot (may letterbox vs template aspect).
+ */
+export const PLAQUE_DETACHED_PORTRAIT_STOCK_PATH =
+  "/images/plaque/plaque-detached-portrait-stock.png";
+export const PLAQUE_DETACHED_LANDSCAPE_STOCK_PATH =
+  "/images/plaque/plaque-detached-landscape-stock.png";
+
+export function plaqueDetachedWoodStockPhotoHref(
+  templateId: string | undefined,
+): string | null {
+  const id = templateId ?? "";
+  if (/^plaque-detached-landscape-/i.test(id))
+    return PLAQUE_DETACHED_LANDSCAPE_STOCK_PATH;
+  if (/^plaque-detached-portrait-/i.test(id) || /^plaque-detached$/i.test(id)) {
+    return PLAQUE_DETACHED_PORTRAIT_STOCK_PATH;
+  }
+  return null;
+}
+
+/** Semi-transparent bar + label matching supplier mockups (stock faces ship as raster only). */
+function plaqueDetachedWoodPhotoHereBannerSvg(slot: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}): string {
+  const { x, y, width, height } = slot;
+  const bandH = Math.max(22, height * 0.2);
+  const margin = Math.max(5, height * 0.028);
+  const bx = x + margin;
+  const by = y + height - bandH - margin;
+  const bw = Math.max(1, width - 2 * margin);
+  const bh = bandH;
+  const fs = Math.max(11, Math.min(26, height * 0.068));
+  const rx = Math.max(2, fs * 0.12);
+  const ty = by + bh * 0.55;
+  const tx = x + width / 2;
+  return `
+    <rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${rx}" ry="${rx}"
+      fill="rgba(255,255,255,0.78)" stroke="rgba(255,255,255,0.55)" stroke-width="${Math.max(
+        1,
+        fs * 0.05,
+      )}"/>
+    <text x="${tx}" y="${ty}" text-anchor="middle" dominant-baseline="middle"
+      font-family="Arial, Helvetica, sans-serif" font-size="${fs}" font-weight="700"
+      fill="#111111" letter-spacing="0.06em">YOUR PHOTO HERE</text>`;
+}
+
+/**
+ * SVG defs fragment + body group: stock photo clipped to the wood opening, optional banner, frame stroke
+ * drawn on top by {@link plaqueDetachedPhotoFrameDecor}.
+ */
+export function plaqueDetachedWoodStockPlaceholderLayers(params: {
+  clipIdPrefix: string;
+  slot: { x: number; y: number; width: number; height: number };
+  href: string;
+  /** When false, skip {@link plaqueDetachedWoodPhotoHereBannerSvg} (portrait stock raster already includes it). */
+  photoHereBanner?: boolean;
+  /** Supplier inset rasters use `meet` (full inset visible); otherwise default `slice` fills the slot. */
+  preserveAspectRatio?: string;
+}): { defsSnippet: string; bodySnippet: string } {
+  const clip = `${params.clipIdPrefix}-wood-photo`;
+  const { x, y, width, height } = params.slot;
+  const href = params.href;
+  const photoHereBanner = params.photoHereBanner !== false;
+  const preserveAspectRatio = params.preserveAspectRatio ?? "xMidYMid slice";
+  const banner = photoHereBanner
+    ? plaqueDetachedWoodPhotoHereBannerSvg(params.slot)
+    : "";
+  return {
+    defsSnippet: `<clipPath id="${clip}" clipPathUnits="userSpaceOnUse">
+      <rect x="${x}" y="${y}" width="${width}" height="${height}"/>
+    </clipPath>`,
+    bodySnippet: `<g clip-path="url(#${clip})">
+      <image href="${href}" xlink:href="${href}"
+        x="${x}" y="${y}" width="${width}" height="${height}"
+        preserveAspectRatio="${preserveAspectRatio}"
+        style="image-rendering:optimizeQuality"/>
+      ${banner}
+    </g>`,
+  };
+}
+
+const detachedStockDataUrlPromises = new Map<string, Promise<string>>();
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result));
+    fr.onerror = () => reject(new Error("FileReader failed"));
+    fr.readAsDataURL(blob);
+  });
+}
+
+async function detachedStockPublicPathToDataUrl(
+  publicPath: string,
+): Promise<string> {
+  let p = detachedStockDataUrlPromises.get(publicPath);
+  if (!p) {
+    p = (async () => {
+      if (typeof window === "undefined") {
+        throw new Error("Stock inline requires window");
+      }
+      const url = `${window.location.origin}${publicPath}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return blobToDataUrl(await res.blob());
+    })();
+    detachedStockDataUrlPromises.set(publicPath, p);
+  }
+  return p;
+}
+
+/**
+ * Replace detached wood stock `<image href="/images/plaque/...">` with data URLs so SVG works inside
+ * blob/data-URL renders (PNG export) where relative `/images/...` would not resolve.
+ */
+export async function inlinePlaqueDetachedWoodStockImagesInSvg(
+  svg: string,
+): Promise<string> {
+  if (typeof window === "undefined") return svg;
+
+  const paths = [
+    PLAQUE_DETACHED_PORTRAIT_STOCK_PATH,
+    PLAQUE_DETACHED_LANDSCAPE_STOCK_PATH,
+  ] as const;
+
+  let out = svg;
+  for (const publicPath of paths) {
+    if (!out.includes(publicPath)) continue;
+    let dataUrl: string;
+    try {
+      dataUrl = await detachedStockPublicPathToDataUrl(publicPath);
+    } catch {
+      continue;
+    }
+    out = out.split(`href="${publicPath}"`).join(`href="${dataUrl}"`);
+    out = out
+      .split(`xlink:href="${publicPath}"`)
+      .join(`xlink:href="${dataUrl}"`);
+  }
+  return out;
 }

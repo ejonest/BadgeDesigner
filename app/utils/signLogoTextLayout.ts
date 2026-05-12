@@ -46,6 +46,12 @@ export function signLogoMaxSlotWidthFracForTemplate(
 ): number {
   const id = templateId?.toLowerCase() ?? "";
   if (id.startsWith("fancy-")) return 0.54;
+  if (
+    id.startsWith("plaque-detached-") ||
+    id === "plaque-detached"
+  ) {
+    return 0.4;
+  }
   return SIGN_LOGO_MAX_SLOT_WIDTH_FRAC;
 }
 
@@ -54,7 +60,7 @@ export function signLogoMaxSlotHeightFracForTemplate(
 ): number {
   const id = templateId?.toLowerCase() ?? "";
   if (id.startsWith("fancy-")) return 0.5;
-  // Logo bounds are already the top (or bottom) third of the inner plate; use the full band.
+  // Attached plaque: logo slot is the upper band of the inner plate; use the full band height.
   if (id === "plaque-attached" || id.startsWith("plaque-attached-")) return 1;
   return SIGN_LOGO_MAX_SLOT_HEIGHT_FRAC;
 }
@@ -1016,6 +1022,72 @@ export function resolveSignTextLayoutAndUserLogoSlack(
   };
 
   const templateIdLower = baseLayout.signTemplateId?.toLowerCase() ?? "";
+  /**
+   * Detached photo plaques (portrait + landscape): place the plate logo deterministically.
+   *
+   * Rule:
+   * - Fixed logo slot size (bounded by `maxSlotW` and `maxSlotH`, aspect preserved).
+   * - Add a small margin on all sides.
+   * - Keep the logo fully within the plate bounds (including margin).
+   * - Center the logo between the plate edge and the text ink edge (longest line), on the chosen side.
+   * - If text becomes too wide, the logo stops sliding at the plate edge and text shrinks to fit.
+   *
+   * This avoids the slower “search for a fit” positioning path and makes template switches feel instant.
+   */
+  const isDetachedPlaque =
+    templateIdLower.startsWith("plaque-detached-") ||
+    templateIdLower === "plaque-detached";
+  if (isDetachedPlaque && (placement === "left" || placement === "right")) {
+    const laid = layoutSignTextLines(lines, adjLayout, measure);
+    const ink = computeSignTextInkBoundsFromLaid(laid, lines, measure);
+    if (ink) {
+      const iw =
+        logo?.intrinsicWidth && logo.intrinsicWidth > 0
+          ? logo.intrinsicWidth
+          : 100;
+      const ih =
+        logo?.intrinsicHeight && logo.intrinsicHeight > 0
+          ? logo.intrinsicHeight
+          : 100;
+
+      const margin = Math.max(3, Math.min(db.width, db.height) * 0.015);
+      const gap = SIGN_LOGO_TEXT_GAP_PX;
+
+      // Fixed slot size: target full slot width, clamp by max height (aspect preserved).
+      let wFixed = Math.max(1, maxSlotW);
+      let hFixed = (wFixed * ih) / Math.max(1, iw);
+      if (hFixed > maxSlotH) {
+        hFixed = Math.max(1, maxSlotH);
+        wFixed = (hFixed * iw) / Math.max(1, ih);
+      }
+
+      // Vertical center within plate (then clamp to safe insets + margin).
+      const yMin = db.y + padY + margin;
+      const yMax = db.y + db.height - padY - margin - hFixed;
+      const yCenter = db.y + (db.height - hFixed) / 2;
+      const y = yMax >= yMin ? clampf(yCenter, yMin, yMax) : yMin;
+
+      const xLeftPlate = db.x + padX + outLr + margin;
+      const xRightPlate = db.x + db.width - padX - outLr - margin - wFixed;
+
+      let x: number;
+      if (placement === "left") {
+        const xMaxByText = ink.left - gap - margin - wFixed;
+        const xMax = Math.min(xRightPlate, xMaxByText);
+        // If text crowds the logo, stop at the plate edge.
+        x = xMax >= xLeftPlate ? (xLeftPlate + xMax) / 2 : xLeftPlate;
+      } else {
+        const xMinByText = ink.right + gap + margin;
+        const xMin = Math.max(xLeftPlate, xMinByText);
+        // If text crowds the logo, stop at the plate edge.
+        x = xRightPlate >= xMin ? (xMin + xRightPlate) / 2 : xRightPlate;
+      }
+
+      const drawFixed: SignLogoDrawRect = { x, y, width: wFixed, height: hFixed };
+      const outLayout = layoutForDraw(drawFixed) ?? adjLayout ?? baseLayout;
+      return { layout: outLayout, draw: drawFixed };
+    }
+  }
   const isDesignerFlushPlacement =
     templateIdLower.startsWith("designer-") &&
     (placement === "left" ||
