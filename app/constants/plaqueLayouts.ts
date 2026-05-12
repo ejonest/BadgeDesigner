@@ -5,6 +5,9 @@
 
 export type PlaqueSizeKey = "small" | "medium" | "large";
 
+/** Attached plate + current award-format presets: four user text lines max. Detached plaques may use more. */
+export const ATTACHED_PLAQUE_MAX_TEXT_LINES = 4;
+
 export type PlaqueLayoutOption = {
   readonly id: string;
   readonly name: string;

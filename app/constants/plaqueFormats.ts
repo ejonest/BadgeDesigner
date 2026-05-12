@@ -1,9 +1,9 @@
 /**
  * Attached plaque “award format” presets: static labels, user line mapping, border + divider art.
- * Legacy designs omit {@link Badge.plaqueFormatId} and keep generic centered lines.
+ * Legacy designs omit {@link Badge.plaqueFormatId} and {@link Badge.plaqueUseDefaultAttachedAwardVisual} → generic centered lines.
  */
 
-import type { BadgeLine } from "../types/badge";
+import type { Badge, BadgeLine } from "../types/badge";
 
 export type PlaqueDividerStyle =
   | "diamond"
@@ -743,6 +743,21 @@ export function getPlaqueAwardFormatById(
 ): PlaqueAwardFormatDefinition | undefined {
   if (!id?.trim()) return undefined;
   return BY_ID[id.trim()];
+}
+
+/**
+ * Attached plaque SVG: explicit {@link Badge.plaqueFormatId}, else optional default visual
+ * ({@link Badge.plaqueUseDefaultAttachedAwardVisual}) before the user picks Step 3, else legacy generic lines.
+ */
+export function resolveAttachedPlaqueAwardFormatForRender(
+  badge: Badge,
+): PlaqueAwardFormatDefinition | undefined {
+  const explicit = getPlaqueAwardFormatById(badge.plaqueFormatId);
+  if (explicit) return explicit;
+  if (badge.plaqueUseDefaultAttachedAwardVisual === true) {
+    return getPlaqueAwardFormatById(DEFAULT_PLAQUE_ATTACHED_FORMAT_ID);
+  }
+  return undefined;
 }
 
 /**

@@ -83,6 +83,7 @@ import {
   normalizePlaqueSizeForLayout,
   defaultPlaqueTemplateId,
   DEFAULT_PLAQUE_SIZE,
+  ATTACHED_PLAQUE_MAX_TEXT_LINES,
 } from "~/constants/plaqueLayouts";
 import {
   buildPaddedInitialLines,
@@ -143,11 +144,13 @@ import {
 } from "~/utils/plaqueRender";
 import {
   buildInitialLinesForPlaqueAwardFormat,
+  DEFAULT_PLAQUE_ATTACHED_FORMAT_ID,
   getPlaqueAwardFormatById,
   getPlaqueAwardFormats,
   getPlaqueAwardFormatsForPicker,
   plaqueAwardEditorLabelsForFormat,
   plaqueAwardFormatsPickerHasExtras,
+  resolveAttachedPlaqueAwardFormatForRender,
 } from "~/constants/plaqueFormats";
 import { buildPlaqueAwardFormatPreviewBadge } from "~/utils/plaqueAwardFormatPreview";
 import {
@@ -907,8 +910,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     return getCurrentShop(_shop);
   }, [designLibraryDummy, _shop, _productId]);
   const config = getDesignerVariantConfig(variant);
-  const maxLines = config.maxLines;
-  const addMultipleCopy = getAddMultipleDesignerCopy(variant, maxLines);
 
   // Color similarity utility functions
   const hexToRgb = (hex: string): [number, number, number] => {
@@ -1930,7 +1931,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const defaultLineShape = INITIAL_BADGE.lines[0];
   const paddedLines = buildPaddedInitialLines(
     variant,
-    config.maxLines,
+    variant === "plaque"
+      ? ATTACHED_PLAQUE_MAX_TEXT_LINES
+      : config.maxLines,
     INITIAL_BADGE.lines,
     defaultLineShape,
   );
@@ -2127,6 +2130,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   // UNIVERSAL TEMPLATE: Single template for all badges
   const [universalTemplateId, setUniversalTemplateId] =
     useState<string>(defaultTemplateId);
+
+  const maxLines = useMemo(() => {
+    if (variant !== "plaque") return config.maxLines;
+    const tid = badge.templateId ?? universalTemplateId;
+    if (isPlaqueAttachedTemplateId(tid)) {
+      return ATTACHED_PLAQUE_MAX_TEXT_LINES;
+    }
+    return config.maxLines;
+  }, [variant, config.maxLines, badge.templateId, universalTemplateId]);
+
+  const addMultipleCopy = useMemo(
+    () => getAddMultipleDesignerCopy(variant, maxLines),
+    [variant, maxLines],
+  );
+
   // Collapsible sections state - only first section (template) open by default
   type SectionsNavState = {
     template: boolean;
@@ -2188,7 +2206,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const b = buildPlaqueAwardFormatPreviewBadge({
         formatId: fmt.id,
         templateId: plaqueAwardFormatPreviewTemplateId,
-        maxLines: config.maxLines,
+        maxLines: ATTACHED_PLAQUE_MAX_TEXT_LINES,
         defaultLineShape,
         plateBackgroundHex: PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
       });
@@ -2197,7 +2215,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     return m;
   }, [
     plaqueAwardFormatPreviewTemplateId,
-    config.maxLines,
     defaultLineShape,
   ]);
 
@@ -2236,8 +2253,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       }
       const fmt =
         plaqueAttachedSelected &&
-        badge.plaqueFormatId &&
-        getPlaqueAwardFormatById(badge.plaqueFormatId);
+        (() => {
+          const explicit = getPlaqueAwardFormatById(badge.plaqueFormatId);
+          if (explicit) return explicit;
+          if (badge.plaqueUseDefaultAttachedAwardVisual === true) {
+            return getPlaqueAwardFormatById(
+              DEFAULT_PLAQUE_ATTACHED_FORMAT_ID,
+            );
+          }
+          return undefined;
+        })();
       if (fmt) {
         const slot0 = fmt.slots.find(
           (s) => s.kind === "user" && s.userIndex === 0,
@@ -2708,9 +2733,24 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     const migratedUniversal = migrateLegacyDesignerUniversalTemplateId(
       payload.universalTemplateId!,
     );
-    const migratedBadges = migrateLegacyDesignerTemplateIdsOnBadges(
+    let migratedBadges = migrateLegacyDesignerTemplateIdsOnBadges(
       payload.multipleBadges,
     );
+    if (variant === "plaque") {
+      migratedBadges = migratedBadges.map((b) => {
+        const tid = b.templateId ?? "";
+        if (
+          isPlaqueAttachedTemplateId(tid) &&
+          b.lines.length > ATTACHED_PLAQUE_MAX_TEXT_LINES
+        ) {
+          return {
+            ...b,
+            lines: b.lines.slice(0, ATTACHED_PLAQUE_MAX_TEXT_LINES),
+          };
+        }
+        return b;
+      });
+    }
     if (
       !migratedUniversal ||
       !templates.some((t) => t.id === migratedUniversal)
@@ -5168,7 +5208,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         const fresh = buildInitialLinesForPlaqueAwardFormat(
           fmt,
           defaultLineShape,
-          config.maxLines,
+          ATTACHED_PLAQUE_MAX_TEXT_LINES,
         );
         const lines = fresh.map((line, i) => {
           const old = prev.lines[i];
@@ -5183,7 +5223,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             underline: old?.underline ?? line.underline,
           };
         });
-        return { ...prev, plaqueFormatId: formatId, lines };
+        return { ...prev, plaqueFormatId: formatId, plaqueUseDefaultAttachedAwardVisual: false, lines };
       };
       setMultipleBadges((prev) => {
         const next = prev.map((b, i) =>
@@ -5195,8 +5235,25 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         return next;
       });
       setBadge((prev) => mergeInto(prev));
+      if (variant === "plaque") {
+        setSectionsOpen({
+          template: false,
+          size: false,
+          export: false,
+          background: true,
+          textLines: false,
+          backing: false,
+          border: false,
+          plaqueFormat: false,
+        });
+        setSectionsOpened((prev) => ({
+          ...prev,
+          plaqueFormat: true,
+          background: true,
+        }));
+      }
     },
-    [config.maxLines, defaultLineShape, selectedBadgeIndex],
+    [defaultLineShape, selectedBadgeIndex, variant],
   );
 
   // UNIVERSAL TEMPLATE: When template changes, update all badges and auto-scale text to fit
@@ -5283,6 +5340,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               signBorderEnabled: undefined,
             }
           : {}),
+        ...(variant === "plaque" && isPlaqueAttachedTemplateId(newTemplateId)
+          ? { plaqueUseDefaultAttachedAwardVisual: true }
+          : {}),
       };
       setUniversalTemplateId(newTemplateId);
       setMultipleBadges([newBadge]);
@@ -5306,23 +5366,23 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             size: true,
           }));
         } else {
-          const openPlaqueAttachedFormat =
+          const openPlaqueAttachedAwardFormatStep =
             variant === "plaque" &&
             isPlaqueAttachedTemplateId(newTemplateId);
           setSectionsOpen({
             template: false,
             size: false,
             export: false,
-            background: openPlaqueAttachedFormat ? false : true,
+            background: openPlaqueAttachedAwardFormatStep ? false : true,
             textLines: false,
             backing: false,
             border: false,
-            plaqueFormat: openPlaqueAttachedFormat,
+            plaqueFormat: openPlaqueAttachedAwardFormatStep,
           });
           setSectionsOpened((prev) => ({
             ...prev,
             template: true,
-            ...(openPlaqueAttachedFormat
+            ...(openPlaqueAttachedAwardFormatStep
               ? { size: true, plaqueFormat: true }
               : { background: true }),
           }));
@@ -5522,12 +5582,20 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         const nowAttached = isPlaqueAttachedTemplateId(newTemplateId);
         const wasAttached = isPlaqueAttachedTemplateId(prevB.templateId ?? "");
         if (!nowAttached) {
-          proto = { ...proto, plaqueFormatId: undefined };
+          proto = {
+            ...proto,
+            plaqueFormatId: undefined,
+            plaqueUseDefaultAttachedAwardVisual: undefined,
+          };
         } else if (nowAttached && !wasAttached) {
-          proto = { ...proto, plaqueFormatId: undefined };
+          proto = {
+            ...proto,
+            plaqueFormatId: undefined,
+            plaqueUseDefaultAttachedAwardVisual: true,
+          };
           linesSource = buildPaddedInitialLines(
             variant,
-            config.maxLines,
+            ATTACHED_PLAQUE_MAX_TEXT_LINES,
             INITIAL_BADGE.lines,
             defaultLineShape,
           );
@@ -5543,18 +5611,35 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         newTemplate.signTextLayout &&
         typeof document !== "undefined"
       ) {
-        return {
-          ...applySignLogoRefit({
-            ...proto,
-            lines: scaledLines,
-            ...signBorderPropsOnTemplateChange,
-          }),
-        };
+        const refit = applySignLogoRefit({
+          ...proto,
+          lines: scaledLines,
+          ...signBorderPropsOnTemplateChange,
+        });
+        if (
+          variant === "plaque" &&
+          isPlaqueAttachedTemplateId(newTemplateId) &&
+          refit.lines.length > ATTACHED_PLAQUE_MAX_TEXT_LINES
+        ) {
+          return {
+            ...refit,
+            lines: refit.lines.slice(0, ATTACHED_PLAQUE_MAX_TEXT_LINES),
+          };
+        }
+        return refit;
       }
       const centeredLines = calculateCenterPositions(scaledLines);
+      let outLines = centeredLines;
+      if (
+        variant === "plaque" &&
+        isPlaqueAttachedTemplateId(newTemplateId) &&
+        centeredLines.length > ATTACHED_PLAQUE_MAX_TEXT_LINES
+      ) {
+        outLines = centeredLines.slice(0, ATTACHED_PLAQUE_MAX_TEXT_LINES);
+      }
       return {
         ...proto,
-        lines: centeredLines,
+        lines: outLines,
         ...signBorderPropsOnTemplateChange,
       };
     };
@@ -6016,6 +6101,29 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         (design.badge ? [design.badge, ...(design.multipleBadges ?? [])] : []);
       if (!Array.isArray(rawBadges) || rawBadges.length === 0) return;
       let restoredBadges = migrateBadgeArray(rawBadges);
+      if (variant === "plaque") {
+        restoredBadges = restoredBadges.map((b) => {
+          const tid = b.templateId ?? "";
+          let next = b;
+          if (
+            isPlaqueAttachedTemplateId(tid) &&
+            !b.plaqueFormatId?.trim() &&
+            b.plaqueUseDefaultAttachedAwardVisual !== true
+          ) {
+            next = { ...next, plaqueUseDefaultAttachedAwardVisual: false };
+          }
+          if (
+            isPlaqueAttachedTemplateId(tid) &&
+            next.lines.length > ATTACHED_PLAQUE_MAX_TEXT_LINES
+          ) {
+            next = {
+              ...next,
+              lines: next.lines.slice(0, ATTACHED_PLAQUE_MAX_TEXT_LINES),
+            };
+          }
+          return next;
+        });
+      }
       const backingFallback = row.backing_type;
       if (backingFallback) {
         restoredBadges = restoredBadges.map((b) => ({
@@ -7151,7 +7259,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 );
                 return (
                   <BadgeSvgRenderer
-                    key={`svg-prev-${p.templateId}-${p.badge.backgroundColor ?? ""}-${p.badge.plaqueFormatId ?? ""}-${selectedBadgeIndex}`}
+                    key={`svg-prev-${p.templateId}-${p.badge.backgroundColor ?? ""}-${p.badge.plaqueFormatId ?? ""}-${p.badge.plaqueUseDefaultAttachedAwardVisual ? "vdef" : "vno"}-${selectedBadgeIndex}`}
                     variant={variant}
                     badge={p.badge}
                     templateId={p.templateId}
@@ -9239,11 +9347,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   onResetLineToDefault={resetLineToDefault}
                   variant={variant}
                   lineLabels={
-                    variant === "plaque" && badge.plaqueFormatId
-                      ? plaqueAwardEditorLabelsForFormat(
-                          getPlaqueAwardFormatById(badge.plaqueFormatId),
-                          maxLines,
-                        )
+                    variant === "plaque"
+                      ? (() => {
+                          const fmt =
+                            resolveAttachedPlaqueAwardFormatForRender(badge);
+                          return fmt
+                            ? plaqueAwardEditorLabelsForFormat(fmt, maxLines)
+                            : undefined;
+                        })()
                       : undefined
                   }
                 />

@@ -9,6 +9,7 @@ import {
 } from "~/constants/designerVariants";
 import { isPlaqueTemplateId } from "~/utils/plaqueRender";
 import { svgMarkupToImageSrc } from "~/utils/svgDataUrl";
+import { badgeWithPlaqueLogoInlinedForSvgImg } from "~/utils/plaqueLogoInline";
 import type { Badge } from "~/types/badge";
 
 type Props = {
@@ -24,54 +25,6 @@ type Props = {
 
 /** Ms to wait after the last badge-only change before rebuilding SVG (coalesces rapid typing). */
 const PREVIEW_DEBOUNCE_MS = 72;
-
-const PLAQUE_LOGO_DATA_URL_CACHE_MAX = 40;
-
-/**
- * Plaque preview is drawn as <img src="data:image/svg+xml,..."> so wood filters match the
- * template picker. In that mode browsers block most cross-origin <image href="https://...">
- * inside the SVG, so we embed the plate logo as a data URL first (sign preview uses inline SVG — no issue).
- */
-async function badgeWithPlaqueLogoInlinedForSvgImg(
-  badge: Badge,
-  cache: Map<string, string>,
-): Promise<Badge> {
-  const raw = badge.logo?.src?.trim();
-  if (!raw || raw.startsWith("data:") || !/^https?:\/\//i.test(raw)) {
-    return badge;
-  }
-  const hit = cache.get(raw);
-  if (hit) {
-    return {
-      ...badge,
-      logo: badge.logo ? { ...badge.logo, src: hit } : badge.logo,
-    };
-  }
-  try {
-    const res = await fetch(raw, { mode: "cors", credentials: "omit" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const blob = await res.blob();
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const fr = new FileReader();
-      fr.onload = () => resolve(String(fr.result));
-      fr.onerror = () => reject(new Error("FileReader failed"));
-      fr.readAsDataURL(blob);
-    });
-    cache.set(raw, dataUrl);
-    while (cache.size > PLAQUE_LOGO_DATA_URL_CACHE_MAX) {
-      const first = cache.keys().next().value as string | undefined;
-      if (!first) break;
-      cache.delete(first);
-    }
-    return {
-      ...badge,
-      logo: badge.logo ? { ...badge.logo, src: dataUrl } : badge.logo,
-    };
-  } catch (e) {
-    console.warn("[BadgeSvgRenderer] Could not inline plaque logo for SVG-as-img preview:", e);
-    return badge;
-  }
-}
 
 export default function BadgeSvgRenderer({ badge, templateId, variant = "badge", actualSize = false, className, height }: Props) {
   const [svg, setSvg] = React.useState<string>("");
