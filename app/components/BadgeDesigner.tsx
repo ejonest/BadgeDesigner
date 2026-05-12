@@ -2,6 +2,7 @@
 import React, {
   useState,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useCallback,
@@ -76,6 +77,7 @@ import {
 import type { PlaqueSizeKey } from "~/constants/plaqueLayouts";
 import {
   getPlaqueSizeStepOptionsForLayout,
+  getPlaqueSizeStepDisplay,
   buildPlaqueTemplateId,
   parsePlaqueTemplateId,
   normalizePlaqueSizeForLayout,
@@ -135,9 +137,19 @@ import {
 import {
   PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
   isFeaturedBrushedMetalPlateColor,
+  isPlaqueAttachedTemplateId,
   isPlaqueDetachedTemplateId,
   plaqueMetalBrushCssBackgroundImage,
 } from "~/utils/plaqueRender";
+import {
+  buildInitialLinesForPlaqueAwardFormat,
+  getPlaqueAwardFormatById,
+  getPlaqueAwardFormats,
+  getPlaqueAwardFormatsForPicker,
+  plaqueAwardEditorLabelsForFormat,
+  plaqueAwardFormatsPickerHasExtras,
+} from "~/constants/plaqueFormats";
+import { buildPlaqueAwardFormatPreviewBadge } from "~/utils/plaqueAwardFormatPreview";
 import {
   getSignLogoPlacementOptionsForTemplate,
   normalizeSignLogoPlacementForTemplate,
@@ -152,6 +164,18 @@ const SIGN_LOGO_PLACEMENT_UI_LABEL: Record<SignLogoPlacement, string> = {
 };
 
 /** Image upload is required only after user picks detached-photo layout. */
+/** True when UI should show attached-plaque-only steps (format picker). */
+function plaqueAttachedFlowSelected(
+  selectedPlaqueLayoutId: string | null,
+  badgeTemplateId: string | undefined,
+  universalTemplateId: string,
+  multipleBadgesLength: number,
+): boolean {
+  if (selectedPlaqueLayoutId === "plaque-attached") return true;
+  if (multipleBadgesLength === 0) return false;
+  return isPlaqueAttachedTemplateId(badgeTemplateId ?? universalTemplateId);
+}
+
 function plaqueDetachedPhotoRequired(
   multipleBadgesLength: number,
   badgeTemplateId: string | undefined,
@@ -490,6 +514,98 @@ function remapLinesForNewDesignBox(
 
 const PREVIEW_DIM_DPI = 96;
 
+/**
+ * Matches `PADDING_PX` in app/utils/renderSvg.ts: badge/sign preview SVGs use a viewBox
+ * `[0, 0, widthPx + 2*pad, heightPx + 2*pad]` with the physical piece in the inset rect.
+ */
+const PREVIEW_SVG_VIEWBOX_PADDING_PX = 24;
+
+/**
+ * Screen rect of the full padded preview (viewBox including margin) → physical piece rect
+ * relative to `root`. Matches renderSvg / renderPlaqueBadgeSvg: viewBox is template + 48px
+ * and the wood/badge plate lives in the inset. Works for inline SVG element bounds and for
+ * plaque `<img src="data:image/svg+xml,...">` bitmap bounds.
+ */
+function physicalRectInsidePaddedPreviewScreenRect(
+  paddedScreenRect: DOMRectReadOnly,
+  root: HTMLElement,
+  templateWidthPx: number,
+  templateHeightPx: number,
+): { left: number; top: number; width: number; height: number } | null {
+  const pad = PREVIEW_SVG_VIEWBOX_PADDING_PX;
+  const vbW = templateWidthPx + 2 * pad;
+  const vbH = templateHeightPx + 2 * pad;
+  if (vbW <= 0 || vbH <= 0) return null;
+  const rr = root.getBoundingClientRect();
+  const sr = paddedScreenRect;
+  if (sr.width <= 0 || sr.height <= 0) return null;
+
+  const scale = Math.min(sr.width / vbW, sr.height / vbH);
+  const ox = sr.left + (sr.width - scale * vbW) / 2;
+  const oy = sr.top + (sr.height - scale * vbH) / 2;
+
+  return {
+    left: ox + pad * scale - rr.left,
+    top: oy + pad * scale - rr.top,
+    width: templateWidthPx * scale,
+    height: templateHeightPx * scale,
+  };
+}
+
+/**
+ * Maps the physical badge/sign rectangle inside an inline preview SVG to coordinates
+ * relative to `root` (same as getBoundingClientRect math). Uses uniform scale + centering
+ * (`preserveAspectRatio` xMidYMid meet), matching renderSvg output.
+ */
+function physicalRectFromInlinePreviewSvg(
+  svg: SVGSVGElement,
+  root: HTMLElement,
+  templateWidthPx: number,
+  templateHeightPx: number,
+): { left: number; top: number; width: number; height: number } | null {
+  const vb = svg.viewBox?.baseVal;
+  if (!vb || vb.width <= 0 || vb.height <= 0) return null;
+  const pad = PREVIEW_SVG_VIEWBOX_PADDING_PX;
+  let innerW = vb.width - 2 * pad;
+  let innerH = vb.height - 2 * pad;
+  let insetPad = pad;
+  const paddedMatchesTemplate =
+    innerW > 0 &&
+    innerH > 0 &&
+    Math.abs(innerW - templateWidthPx) <= 2 &&
+    Math.abs(innerH - templateHeightPx) <= 2;
+  if (!paddedMatchesTemplate) {
+    insetPad = 0;
+    innerW = vb.width;
+    innerH = vb.height;
+  }
+  if (innerW < 2 || innerH < 2) return null;
+
+  const sr = svg.getBoundingClientRect();
+  const rr = root.getBoundingClientRect();
+  if (sr.width <= 0 || sr.height <= 0) return null;
+
+  if (paddedMatchesTemplate) {
+    return physicalRectInsidePaddedPreviewScreenRect(
+      sr,
+      root,
+      templateWidthPx,
+      templateHeightPx,
+    );
+  }
+
+  const scale = Math.min(sr.width / vb.width, sr.height / vb.height);
+  const ox = sr.left + (sr.width - scale * vb.width) / 2;
+  const oy = sr.top + (sr.height - scale * vb.height) / 2;
+
+  return {
+    left: ox + insetPad * scale - rr.left,
+    top: oy + insetPad * scale - rr.top,
+    width: innerW * scale,
+    height: innerH * scale,
+  };
+}
+
 /** Plate swatches: brushed metal uses the same stops as SVG preview (see plaqueMetalBrushCssBackgroundImage). */
 function featuredPlateBackgroundSwatchStyle(hex: string): React.CSSProperties {
   const s = hex.trim().startsWith("#") ? hex.trim() : `#${hex.trim()}`;
@@ -511,6 +627,12 @@ function DesktopPreviewDimensionFrame({
   compact?: boolean;
   children: React.ReactNode;
 }) {
+  const previewAreaRef = useRef<HTMLDivElement>(null);
+  const [previewLayout, setPreviewLayout] = useState<{
+    inset: { left: number; top: number; width: number; height: number };
+    previewH: number;
+  } | null>(null);
+
   const fmtIn = (px: number) => {
     const inches = px / PREVIEW_DIM_DPI;
     const r = Math.round(inches * 100) / 100;
@@ -525,53 +647,206 @@ function DesktopPreviewDimensionFrame({
   const tickH = compact ? "h-1.5" : "h-2";
   const sideW = compact ? "w-5" : "w-7";
 
+  const measureItemInset = useCallback(() => {
+    const root = previewAreaRef.current;
+    if (!root) return;
+    const rw = root.clientWidth;
+    const rh = root.clientHeight;
+    const rr = root.getBoundingClientRect();
+    const fillPreview = {
+      inset: { left: 0, top: 0, width: rw, height: rh },
+      previewH: rh,
+    };
+    if (rw <= 0 || rh <= 0) {
+      setPreviewLayout(fillPreview);
+      return;
+    }
+
+    const img = root.querySelector("img");
+    if (img) {
+      const pr = img.getBoundingClientRect();
+      if (pr.width < 2 || pr.height < 2) {
+        setPreviewLayout(fillPreview);
+        return;
+      }
+      const plaquePhys = physicalRectInsidePaddedPreviewScreenRect(
+        pr,
+        root,
+        widthPx,
+        heightPx,
+      );
+      if (
+        plaquePhys &&
+        plaquePhys.width >= 2 &&
+        plaquePhys.height >= 2 &&
+        Number.isFinite(plaquePhys.left) &&
+        Number.isFinite(plaquePhys.top)
+      ) {
+        setPreviewLayout({ inset: plaquePhys, previewH: rh });
+        return;
+      }
+      setPreviewLayout({
+        inset: {
+          left: pr.left - rr.left,
+          top: pr.top - rr.top,
+          width: pr.width,
+          height: pr.height,
+        },
+        previewH: rh,
+      });
+      return;
+    }
+
+    const svg = root.querySelector("svg");
+    if (svg instanceof SVGSVGElement) {
+      const phys = physicalRectFromInlinePreviewSvg(
+        svg,
+        root,
+        widthPx,
+        heightPx,
+      );
+      if (
+        phys &&
+        phys.width >= 2 &&
+        phys.height >= 2 &&
+        Number.isFinite(phys.left) &&
+        Number.isFinite(phys.top)
+      ) {
+        setPreviewLayout({ inset: phys, previewH: rh });
+        return;
+      }
+      const pr = svg.getBoundingClientRect();
+      if (pr.width < 2 || pr.height < 2) {
+        setPreviewLayout(fillPreview);
+        return;
+      }
+      setPreviewLayout({
+        inset: {
+          left: pr.left - rr.left,
+          top: pr.top - rr.top,
+          width: pr.width,
+          height: pr.height,
+        },
+        previewH: rh,
+      });
+      return;
+    }
+
+    setPreviewLayout(fillPreview);
+  }, [widthPx, heightPx]);
+
+  useLayoutEffect(() => {
+    const root = previewAreaRef.current;
+    if (!root) return;
+    const schedule = () => requestAnimationFrame(measureItemInset);
+    schedule();
+    const ro = new ResizeObserver(schedule);
+    ro.observe(root);
+    const imgListeners = new Map<HTMLImageElement, () => void>();
+    const attachImgLoadListeners = () => {
+      root.querySelectorAll("img").forEach((el) => {
+        const img = el as HTMLImageElement;
+        if (imgListeners.has(img)) return;
+        const onLoad = () => schedule();
+        img.addEventListener("load", onLoad);
+        imgListeners.set(img, onLoad);
+      });
+    };
+    attachImgLoadListeners();
+    const mo = new MutationObserver(() => {
+      attachImgLoadListeners();
+      schedule();
+    });
+    mo.observe(root, { subtree: true, childList: true });
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+      imgListeners.forEach((onLoad, img) =>
+        img.removeEventListener("load", onLoad),
+      );
+      imgListeners.clear();
+    };
+  }, [measureItemInset]);
+
+  const inset = previewLayout?.inset ?? {
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+  };
+  const previewH = previewLayout?.previewH ?? 0;
+  const midH =
+    inset.height > 0 ? inset.height : previewH > 0 ? previewH : compact ? 20 : 28;
+
   return (
     <div className="w-full flex flex-col items-stretch min-w-0">
       <div className="flex flex-row items-stretch gap-1 min-w-0">
-        <div className="min-w-0 flex-1 flex flex-col justify-center">
+        <div
+          ref={previewAreaRef}
+          className="min-w-0 flex-1 flex flex-col justify-center"
+        >
           {children}
         </div>
         <div
-          className={`flex flex-col items-center justify-between shrink-0 self-stretch ${sideW} ${
-            compact ? "py-0.5" : "py-1"
-          }`}
+          className={`flex flex-col shrink-0 self-stretch ${sideW}`}
           aria-hidden
         >
-          <div className={`${tickW} h-px ${tick}`} />
+          <div style={{ height: inset.top }} className="shrink-0" />
           <div
-            className={`flex-1 w-px ${tick} min-h-[28px] relative flex items-center justify-center my-0.5`}
+            className="shrink-0 flex flex-col items-center justify-between"
+            style={{ height: midH }}
           >
-            <span
-              className={`absolute ${tw} font-semibold text-gray-700 bg-blue-50/95 px-1.5 py-0.5 rounded border border-gray-300 whitespace-nowrap`}
-              style={{ transform: "rotate(-90deg)" }}
+            <div className={`${tickW} h-px ${tick} shrink-0`} />
+            <div
+              className={`flex-1 w-px ${tick} min-h-[12px] relative flex items-center justify-center`}
             >
-              {fmtIn(heightPx)}
-            </span>
+              <span
+                className={`absolute ${tw} font-semibold text-gray-700 bg-blue-50/95 px-1.5 py-0.5 rounded border border-gray-300 whitespace-nowrap`}
+                style={{ transform: "rotate(-90deg)" }}
+              >
+                {fmtIn(heightPx)}
+              </span>
+            </div>
+            <div className={`${tickW} h-px ${tick} shrink-0`} />
           </div>
-          <div className={`${tickW} h-px ${tick}`} />
+          <div className="flex-1 min-h-0 basis-0" />
         </div>
       </div>
       <div className="flex flex-row items-start gap-1 min-w-0 pt-1">
         <div className="flex-1 flex flex-row items-center min-w-0">
           <div
-            className={`flex flex-col items-center ${tickW} shrink-0 justify-center`}
-          >
-            <div className={`w-px ${tickH} ${tick}`} />
-          </div>
+            className="shrink-0"
+            style={{ width: Math.max(0, inset.left) }}
+            aria-hidden
+          />
           <div
-            className={`flex-1 h-px ${tick} relative flex items-center justify-center min-w-[1.5rem]`}
+            className={`flex flex-row items-center shrink-0 justify-center`}
+            style={{
+              width: Math.max(inset.width, 8),
+              minWidth: "1.25rem",
+            }}
           >
-            <span
-              className={`absolute ${tw} font-semibold text-gray-700 bg-blue-50/95 px-1.5 py-0.5 rounded border border-gray-300 whitespace-nowrap`}
+            <div
+              className={`flex flex-col items-center ${tickW} shrink-0 justify-center`}
             >
-              {fmtIn(widthPx)}
-            </span>
+              <div className={`w-px ${tickH} ${tick}`} />
+            </div>
+            <div
+              className={`flex-1 h-px ${tick} relative flex items-center justify-center min-w-[1rem]`}
+            >
+              <span
+                className={`absolute ${tw} font-semibold text-gray-700 bg-blue-50/95 px-1.5 py-0.5 rounded border border-gray-300 whitespace-nowrap`}
+              >
+                {fmtIn(widthPx)}
+              </span>
+            </div>
+            <div
+              className={`flex flex-col items-center ${tickW} shrink-0 justify-center`}
+            >
+              <div className={`w-px ${tickH} ${tick}`} />
+            </div>
           </div>
-          <div
-            className={`flex flex-col items-center ${tickW} shrink-0 justify-center`}
-          >
-            <div className={`w-px ${tickH} ${tick}`} />
-          </div>
+          <div className="flex-1 min-w-0" aria-hidden />
         </div>
         <div className={`shrink-0 ${sideW}`} aria-hidden />
       </div>
@@ -1715,6 +1990,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   >(null);
   const [showBadgeGridModal, setShowBadgeGridModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [plaqueAwardFormatsExpanded, setPlaqueAwardFormatsExpanded] =
+    useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [templateSortBy, setTemplateSortBy] = useState<
     "popularity" | "size" | "alphabetical"
@@ -1851,7 +2128,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [universalTemplateId, setUniversalTemplateId] =
     useState<string>(defaultTemplateId);
   // Collapsible sections state - only first section (template) open by default
-  const [sectionsOpen, setSectionsOpen] = useState(() => ({
+  type SectionsNavState = {
+    template: boolean;
+    size: boolean;
+    export: boolean;
+    background: boolean;
+    textLines: boolean;
+    backing: boolean;
+    border: boolean;
+    plaqueFormat?: boolean;
+  };
+  const [sectionsOpen, setSectionsOpen] = useState<SectionsNavState>(() => ({
     template: true,
     size: false,
     export: false,
@@ -1859,6 +2146,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     textLines: false,
     backing: false,
     border: false,
+    plaqueFormat: false,
   }));
   // Track which sections have been opened at least once
   const [sectionsOpened, setSectionsOpened] = useState({
@@ -1869,7 +2157,54 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     textLines: false,
     backing: false,
     border: false,
+    plaqueFormat: false,
   });
+
+  const plaqueAttachedSelected = plaqueAttachedFlowSelected(
+    selectedPlaqueLayoutId,
+    badge.templateId,
+    universalTemplateId,
+    multipleBadges.length,
+  );
+
+  const plaqueAwardFormatPreviewTemplateId = useMemo(() => {
+    const tid = (badge.templateId ?? universalTemplateId) || "";
+    if (/^plaque-attached-/i.test(tid)) return tid;
+    if (selectedPlaqueLayoutId === "plaque-attached") {
+      const size = selectedPlaqueSize ?? DEFAULT_PLAQUE_SIZE;
+      return buildPlaqueTemplateId("plaque-attached", size);
+    }
+    return buildPlaqueTemplateId("plaque-attached", DEFAULT_PLAQUE_SIZE);
+  }, [
+    badge.templateId,
+    universalTemplateId,
+    selectedPlaqueLayoutId,
+    selectedPlaqueSize,
+  ]);
+
+  const plaqueAwardFormatPreviewBadges = useMemo(() => {
+    const m = new Map<string, Badge>();
+    for (const fmt of getPlaqueAwardFormats()) {
+      const b = buildPlaqueAwardFormatPreviewBadge({
+        formatId: fmt.id,
+        templateId: plaqueAwardFormatPreviewTemplateId,
+        maxLines: config.maxLines,
+        defaultLineShape,
+        plateBackgroundHex: PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
+      });
+      if (b) m.set(fmt.id, b);
+    }
+    return m;
+  }, [
+    plaqueAwardFormatPreviewTemplateId,
+    config.maxLines,
+    defaultLineShape,
+  ]);
+
+  useEffect(() => {
+    if (!plaqueAttachedSelected) setPlaqueAwardFormatsExpanded(false);
+  }, [plaqueAttachedSelected]);
+
   /** Sign only: image/logo step panel open state (optional step). */
   const [signLogoSectionOpen, setSignLogoSectionOpen] = useState(false);
   const [signLogoUploading, setSignLogoUploading] = useState(false);
@@ -1896,6 +2231,27 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     badge.lines.length > 0 &&
     (() => {
       const t0 = (badge.lines[0]?.text || "").trim();
+      if (variant !== "plaque") {
+        return t0 !== "" && t0 !== getStep3DefaultText(0);
+      }
+      const fmt =
+        plaqueAttachedSelected &&
+        badge.plaqueFormatId &&
+        getPlaqueAwardFormatById(badge.plaqueFormatId);
+      if (fmt) {
+        const slot0 = fmt.slots.find(
+          (s) => s.kind === "user" && s.userIndex === 0,
+        );
+        const ph =
+          slot0 && slot0.kind === "user"
+            ? slot0.placeholder.trim()
+            : "";
+        if (!ph) return t0 !== "";
+        return (
+          t0 !== "" &&
+          t0.localeCompare(ph, undefined, { sensitivity: "accent" }) !== 0
+        );
+      }
       return t0 !== "" && t0 !== getStep3DefaultText(0);
     })();
   const stepsComplete =
@@ -1904,14 +2260,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     hasStep3TextEntered &&
     (config.hasBacking ? sectionsOpened.backing : true) &&
     (variant === "plaque"
-      ? selectedPlaqueSize != null && multipleBadges.length > 0
+      ? selectedPlaqueSize != null &&
+        multipleBadges.length > 0 &&
+        (!plaqueAttachedSelected || Boolean(badge.plaqueFormatId?.trim()))
       : true) &&
     (config.hasSizeStep ? selectedSignSizeTemplateId != null : true) &&
     (signBorderStepRequired ? signBorderConfigured : true);
 
   /** Returns message like "Please complete steps (1)" or "Please complete steps (1-4)" for step-guard alerts. When opening step N, pass forStep = N so only steps 1..N-1 are required. */
   const getIncompleteStepsMessage = (
-    forStep: 2 | 3 | 4 | 5 | 6,
+    forStep: 2 | 3 | 4 | 5 | 6 | 7,
   ): string | null => {
     const incomplete: number[] = [];
 
@@ -1919,7 +2277,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const st1 =
         selectedPlaqueLayoutId != null || multipleBadges.length > 0;
       const st2 = multipleBadges.length > 0;
-      const st3 = hasChosenBackgroundColor;
+      const attachedFlow = plaqueAttachedFlowSelected(
+        selectedPlaqueLayoutId,
+        badge.templateId,
+        universalTemplateId,
+        multipleBadges.length,
+      );
+      const stFormat =
+        !attachedFlow || Boolean(badge.plaqueFormatId?.trim());
+      const stMetal = hasChosenBackgroundColor;
       const detachedPhotoReq = plaqueDetachedPhotoRequired(
         multipleBadges.length,
         badge.templateId,
@@ -1929,9 +2295,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         detachedPhotoReq && !badge.logo?.src?.trim();
       if (forStep >= 2 && !st1) incomplete.push(1);
       if (forStep >= 3 && !st2) incomplete.push(2);
-      if (forStep >= 4 && !st3) incomplete.push(3);
-      if (forStep >= 5 && missingDetachedPhoto) incomplete.push(4);
-      if (forStep >= 6 && !hasStep3TextEntered) incomplete.push(5);
+      if (attachedFlow) {
+        if (forStep >= 4 && !stFormat) incomplete.push(3);
+        if (forStep >= 5 && !stMetal) incomplete.push(4);
+        if (forStep >= 6 && missingDetachedPhoto) incomplete.push(5);
+        if (forStep >= 7 && !hasStep3TextEntered) incomplete.push(6);
+      } else {
+        if (forStep >= 4 && !stMetal) incomplete.push(3);
+        if (forStep >= 5 && missingDetachedPhoto) incomplete.push(4);
+        if (forStep >= 6 && !hasStep3TextEntered) incomplete.push(5);
+      }
       if (incomplete.length === 0) return null;
       if (incomplete.length === 1)
         return `Please complete steps (${incomplete[0]})`;
@@ -1973,9 +2346,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     })`;
   };
 
-  const incompleteStepsForCart = (): 2 | 3 | 4 | 5 | 6 =>
+  const incompleteStepsForCart = (): 2 | 3 | 4 | 5 | 6 | 7 =>
     variant === "plaque"
-      ? 6
+      ? plaqueAttachedSelected
+        ? 7
+        : 6
       : config.hasSizeStep
         ? signBorderStepRequired
           ? 6
@@ -3209,14 +3584,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     badge.templateId,
   ]);
 
-  /** Step 2 size chips: hide Small for detached portrait/landscape. */
-  const plaqueSizeStepOptions = useMemo(() => {
-    const layoutId =
+  /** Step 2: resolved layout for size list + dimension copy (fallback: attached). */
+  const effectivePlaqueLayoutIdForStep2 = useMemo(() => {
+    return (
       selectedPlaqueLayoutId ??
       parsePlaqueTemplateId(universalTemplateId)?.layoutId ??
-      null;
-    return getPlaqueSizeStepOptionsForLayout(layoutId);
+      null
+    );
   }, [selectedPlaqueLayoutId, universalTemplateId]);
+
+  /** Step 2 size chips: hide Small for detached portrait/landscape. */
+  const plaqueSizeStepOptions = useMemo(() => {
+    return getPlaqueSizeStepOptionsForLayout(effectivePlaqueLayoutIdForStep2);
+  }, [effectivePlaqueLayoutIdForStep2]);
 
   // Main preview (top): template aspect ratio, always shrink to fit container width so no horizontal scroll.
   const previewBoxStyle = useMemo(() => {
@@ -4656,6 +5036,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       textLines: false,
       backing: false,
       border: false,
+      plaqueFormat: false,
     });
     setSectionsOpen({
       template: true,
@@ -4665,6 +5046,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       textLines: false,
       backing: false,
       border: false,
+      plaqueFormat: false,
     });
     setUniversalTemplateId(
       variant === "plaque"
@@ -4778,6 +5160,45 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     removeBadgeAtIndex(selectedBadgeIndex);
   };
 
+  const applyPlaqueAwardFormatSelection = useCallback(
+    (formatId: string) => {
+      const fmt = getPlaqueAwardFormatById(formatId);
+      if (!fmt) return;
+      const mergeInto = (prev: Badge): Badge => {
+        const fresh = buildInitialLinesForPlaqueAwardFormat(
+          fmt,
+          defaultLineShape,
+          config.maxLines,
+        );
+        const lines = fresh.map((line, i) => {
+          const old = prev.lines[i];
+          const freshText = fresh[i]?.text ?? "";
+          const keepOld =
+            Boolean(old?.text?.trim()) && old!.text.trim() !== freshText;
+          return {
+            ...line,
+            text: keepOld ? old!.text : line.text,
+            color: old?.color ?? line.color,
+            fontFamily: old?.fontFamily ?? line.fontFamily,
+            underline: old?.underline ?? line.underline,
+          };
+        });
+        return { ...prev, plaqueFormatId: formatId, lines };
+      };
+      setMultipleBadges((prev) => {
+        const next = prev.map((b, i) =>
+          i === selectedBadgeIndex ? mergeInto(b) : b,
+        );
+        if (selectedBadgeIndex === 0 && next[0]) {
+          setBadge1Data(next[0]);
+        }
+        return next;
+      });
+      setBadge((prev) => mergeInto(prev));
+    },
+    [config.maxLines, defaultLineShape, selectedBadgeIndex],
+  );
+
   // UNIVERSAL TEMPLATE: When template changes, update all badges and auto-scale text to fit
   const handleUniversalTemplateChange = async (newTemplateId: string) => {
     console.log(`[UNIVERSAL] Template changed to: ${newTemplateId}`);
@@ -4877,6 +5298,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             textLines: false,
             backing: false,
             border: false,
+            plaqueFormat: false,
           });
           setSectionsOpened((prev) => ({
             ...prev,
@@ -4884,19 +5306,25 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             size: true,
           }));
         } else {
+          const openPlaqueAttachedFormat =
+            variant === "plaque" &&
+            isPlaqueAttachedTemplateId(newTemplateId);
           setSectionsOpen({
             template: false,
             size: false,
             export: false,
-            background: true,
+            background: openPlaqueAttachedFormat ? false : true,
             textLines: false,
             backing: false,
             border: false,
+            plaqueFormat: openPlaqueAttachedFormat,
           });
           setSectionsOpened((prev) => ({
             ...prev,
             template: true,
-            background: true,
+            ...(openPlaqueAttachedFormat
+              ? { size: true, plaqueFormat: true }
+              : { background: true }),
           }));
         }
         templateGuidedAutoAdvanceDoneRef.current = true;
@@ -5078,89 +5506,75 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       signTemplateBorderFamilyKey(badge.templateId || oldTemplateId) !==
         signTemplateBorderFamilyKey(newTemplateId);
 
-    // Align universal id with badge in the same synchronous turn as the line refit.
-    setUniversalTemplateId(newTemplateId);
+    const signBorderPropsOnTemplateChange = clearSignBorderOnTemplateChange
+      ? {
+          signBorderOptionId: undefined,
+          signBorderEnabled: undefined,
+        }
+      : {};
 
-    // Update current badge with auto-scaled text (signs: reset to 25/17 defaults then fit; badges: preserve px)
-    setBadge((prev) => {
-      const proto = { ...prev, templateId: newTemplateId };
+    const computeBadgeAfterUniversalTemplateChange = (
+      prevB: Badge,
+    ): Badge => {
+      let proto: Badge = { ...prevB, templateId: newTemplateId };
+      let linesSource = prevB.lines;
+      if (variant === "plaque") {
+        const nowAttached = isPlaqueAttachedTemplateId(newTemplateId);
+        const wasAttached = isPlaqueAttachedTemplateId(prevB.templateId ?? "");
+        if (!nowAttached) {
+          proto = { ...proto, plaqueFormatId: undefined };
+        } else if (nowAttached && !wasAttached) {
+          proto = { ...proto, plaqueFormatId: undefined };
+          linesSource = buildPaddedInitialLines(
+            variant,
+            config.maxLines,
+            INITIAL_BADGE.lines,
+            defaultLineShape,
+          );
+        }
+      }
       const box = getEffectiveDesignBox(newTemplate, proto);
       const scaledLines =
         isSignLikeVariant(variant)
-          ? applySignTemplateLineSizes(prev.lines, box, proto)
-          : autoScaleLinesForNewTemplate(prev.lines, box, prev.templateId);
+          ? applySignTemplateLineSizes(linesSource, box, proto)
+          : autoScaleLinesForNewTemplate(linesSource, box, prevB.templateId);
       if (
         isSignLikeVariant(variant) &&
         newTemplate.signTextLayout &&
         typeof document !== "undefined"
       ) {
-        const signBorderProps = clearSignBorderOnTemplateChange
-          ? {
-              signBorderOptionId: undefined,
-              signBorderEnabled: undefined,
-            }
-          : {};
         return {
-          ...applySignLogoRefit({ ...proto, lines: scaledLines, ...signBorderProps }),
+          ...applySignLogoRefit({
+            ...proto,
+            lines: scaledLines,
+            ...signBorderPropsOnTemplateChange,
+          }),
         };
       }
       const centeredLines = calculateCenterPositions(scaledLines);
       return {
         ...proto,
         lines: centeredLines,
-        ...(clearSignBorderOnTemplateChange
-          ? {
-              signBorderOptionId: undefined,
-              signBorderEnabled: undefined,
-            }
-          : {}),
+        ...signBorderPropsOnTemplateChange,
       };
-    });
+    };
 
-    // Update all badges in multipleBadges with auto-scaled text
-    setMultipleBadges((prev) => {
-      const updated = prev.map((b) => {
-        const proto = { ...b, templateId: newTemplateId };
-        const box = getEffectiveDesignBox(newTemplate, proto);
-        const scaledLines =
-          isSignLikeVariant(variant)
-            ? applySignTemplateLineSizes(b.lines, box, proto)
-            : autoScaleLinesForNewTemplate(b.lines, box, b.templateId);
-        if (
-          isSignLikeVariant(variant) &&
-          newTemplate.signTextLayout &&
-          typeof document !== "undefined"
-        ) {
-          const signBorderProps = clearSignBorderOnTemplateChange
-            ? {
-                signBorderOptionId: undefined,
-                signBorderEnabled: undefined,
-              }
-            : {};
-          return {
-            ...applySignLogoRefit({ ...proto, lines: scaledLines, ...signBorderProps }),
-          };
-        }
-        const centeredLines = calculateCenterPositions(scaledLines);
-        return {
-          ...proto,
-          lines: centeredLines,
-          ...(clearSignBorderOnTemplateChange
-            ? {
-                signBorderOptionId: undefined,
-                signBorderEnabled: undefined,
-              }
-            : {}),
-        };
-      });
+    // Align universal id with badge in the same synchronous turn as the line refit.
+    setUniversalTemplateId(newTemplateId);
 
-      // Sync badge1Data with the first badge
-      if (updated[0]) {
-        setBadge1Data(updated[0]);
-      }
-
-      return updated;
-    });
+    // One refit per badge — previously setBadge + setMultipleBadges each ran applySignLogoRefit for
+    // the same badge (2× logo negotiation / snapshots), freezing the UI for tens of seconds.
+    const prevList = multipleBadgesRef.current;
+    const updated = prevList.map(computeBadgeAfterUniversalTemplateChange);
+    const nextCurrent =
+      updated[selectedBadgeIndex] ?? updated[0] ?? badgeRef.current;
+    if (nextCurrent) {
+      setBadge(nextCurrent);
+    }
+    setMultipleBadges(updated);
+    if (updated[0]) {
+      setBadge1Data(updated[0]);
+    }
   };
 
   // Supabase upload (logic also runs inside addToCart; this standalone flow kept for optional "Upload proof only" use)
@@ -6725,7 +7139,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               <div className="text-center text-gray-500 text-sm px-4">
                 {variant === "plaque"
                   ? selectedPlaqueLayoutId == null
-                    ? "Choose your style below to get started"
+                    ? "Choose a layout below to get started"
                     : "Choose a size below to get started"
                   : "Select a shape below to get started"}
               </div>
@@ -6737,7 +7151,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 );
                 return (
                   <BadgeSvgRenderer
-                    key={`svg-prev-${p.templateId}-${p.badge.backgroundColor ?? ""}-${selectedBadgeIndex}`}
+                    key={`svg-prev-${p.templateId}-${p.badge.backgroundColor ?? ""}-${p.badge.plaqueFormatId ?? ""}-${selectedBadgeIndex}`}
                     variant={variant}
                     badge={p.badge}
                     templateId={p.templateId}
@@ -6788,6 +7202,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       (plaqueLogoOk ||
                         sectionsOpened.textLines ||
                         hasStep3TextEntered);
+                  const plaqueFormatDone =
+                    !plaqueAttachedSelected ||
+                    Boolean(badge.plaqueFormatId?.trim());
+                  const plaqueFormatCurrent =
+                    plaqueAttachedSelected &&
+                    multipleBadges.length > 0 &&
+                    !plaqueFormatDone;
+                  const plaqueMetalCurrent =
+                    multipleBadges.length > 0 &&
+                    plaqueFormatDone &&
+                    !hasChosenBackgroundColor;
                   const plaqueImageCurrent =
                     multipleBadges.length > 0 &&
                     hasChosenBackgroundColor &&
@@ -6809,37 +7234,75 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     label: string;
                     done: boolean;
                     current: boolean;
-                  }[] = [
-                    {
-                      label: "Style",
-                      done: plaqueStyleDone,
-                      current: !plaqueStyleDone,
-                    },
-                    {
-                      label: "Size",
-                      done: plaqueSizeDone,
-                      current: plaqueStyleDone && !plaqueSizeDone,
-                    },
-                    {
-                      label: "Metal",
-                      done: hasChosenBackgroundColor,
-                      current:
-                        multipleBadges.length > 0 && !hasChosenBackgroundColor,
-                    },
-                    {
-                      label: plaqueImageLabel,
-                      done: plaqueImageDone,
-                      current: plaqueImageCurrent,
-                    },
-                    {
-                      label: "Text",
-                      done: hasStep3TextEntered,
-                      current:
-                        hasChosenBackgroundColor &&
-                        !hasStep3TextEntered &&
-                        plaqueCanEditText,
-                    },
-                  ];
+                  }[] = plaqueAttachedSelected
+                    ? [
+                        {
+                          label: "Layout",
+                          done: plaqueStyleDone,
+                          current: !plaqueStyleDone,
+                        },
+                        {
+                          label: "Size",
+                          done: plaqueSizeDone,
+                          current: plaqueStyleDone && !plaqueSizeDone,
+                        },
+                        {
+                          label: "Format",
+                          done: plaqueFormatDone,
+                          current: plaqueFormatCurrent,
+                        },
+                        {
+                          label: "Metal",
+                          done: hasChosenBackgroundColor,
+                          current: plaqueMetalCurrent,
+                        },
+                        {
+                          label: plaqueImageLabel,
+                          done: plaqueImageDone,
+                          current: plaqueImageCurrent,
+                        },
+                        {
+                          label: "Text",
+                          done: hasStep3TextEntered,
+                          current:
+                            hasChosenBackgroundColor &&
+                            !hasStep3TextEntered &&
+                            plaqueCanEditText,
+                        },
+                      ]
+                    : [
+                        {
+                          label: "Layout",
+                          done: plaqueStyleDone,
+                          current: !plaqueStyleDone,
+                        },
+                        {
+                          label: "Size",
+                          done: plaqueSizeDone,
+                          current: plaqueStyleDone && !plaqueSizeDone,
+                        },
+                        {
+                          label: "Metal",
+                          done: hasChosenBackgroundColor,
+                          current:
+                            multipleBadges.length > 0 &&
+                            plaqueSizeDone &&
+                            !hasChosenBackgroundColor,
+                        },
+                        {
+                          label: plaqueImageLabel,
+                          done: plaqueImageDone,
+                          current: plaqueImageCurrent,
+                        },
+                        {
+                          label: "Text",
+                          done: hasStep3TextEntered,
+                          current:
+                            hasChosenBackgroundColor &&
+                            !hasStep3TextEntered &&
+                            plaqueCanEditText,
+                        },
+                      ];
                   const doneStates = steps.map((s) => s.done);
                   return steps.map((step, i) => (
                     <React.Fragment key={i}>
@@ -7040,7 +7503,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-gray-800">
                   {variant === "plaque"
-                    ? "Step 1: Choose your style"
+                    ? "Step 1: Choose layout"
                     : "Step 1: Pick a template"}
                 </h3>
                 {(variant === "plaque"
@@ -7232,10 +7695,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                             const parsed = parsePlaqueTemplateId(
                               universalTemplateId,
                             );
+                            /** Avoid double highlight during async template load: parsed id lags behind `selectedPlaqueLayoutId`. */
                             const isSelected =
-                              selectedPlaqueLayoutId === opt.id ||
-                              (multipleBadges.length > 0 &&
-                                parsed?.layoutId === opt.id);
+                              selectedPlaqueLayoutId != null
+                                ? selectedPlaqueLayoutId === opt.id
+                                : multipleBadges.length > 0 &&
+                                  parsed?.layoutId === opt.id;
                             return (
                               <div key={opt.id} className="relative">
                                 <button
@@ -7264,6 +7729,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                           textLines: false,
                                           backing: false,
                                           border: false,
+                                          plaqueFormat: false,
                                         });
                                         setSectionsOpened((prev) => ({
                                           ...prev,
@@ -7508,6 +7974,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     textLines: false,
                     backing: false,
                     border: false,
+                    plaqueFormat: false,
                   });
                   if (willBeOpen) {
                     setSectionsOpened((prev) => ({ ...prev, size: true }));
@@ -7542,55 +8009,187 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   Large.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {plaqueSizeStepOptions.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => {
-                        if (multipleBadges.length > 0) {
-                          const parsed = parsePlaqueTemplateId(
-                            universalTemplateId,
-                          );
-                          if (!parsed) return;
+                  {plaqueSizeStepOptions.map((opt) => {
+                    const sizeDisplay = getPlaqueSizeStepDisplay(
+                      effectivePlaqueLayoutIdForStep2,
+                      opt.value,
+                    );
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          if (multipleBadges.length > 0) {
+                            const parsed = parsePlaqueTemplateId(
+                              universalTemplateId,
+                            );
+                            if (!parsed) return;
+                            const normalized = normalizePlaqueSizeForLayout(
+                              parsed.layoutId,
+                              opt.value,
+                            );
+                            setSelectedPlaqueSize(normalized);
+                            void handleUniversalTemplateChange(
+                              buildPlaqueTemplateId(parsed.layoutId, normalized),
+                            );
+                            return;
+                          }
+                          if (!selectedPlaqueLayoutId) {
+                            alert("Please choose a layout in Step 1 first.");
+                            return;
+                          }
                           const normalized = normalizePlaqueSizeForLayout(
-                            parsed.layoutId,
+                            selectedPlaqueLayoutId,
                             opt.value,
                           );
                           setSelectedPlaqueSize(normalized);
                           void handleUniversalTemplateChange(
-                            buildPlaqueTemplateId(parsed.layoutId, normalized),
+                            buildPlaqueTemplateId(
+                              selectedPlaqueLayoutId,
+                              normalized,
+                            ),
                           );
-                          return;
-                        }
-                        if (!selectedPlaqueLayoutId) {
-                          alert("Please choose your style in Step 1 first.");
-                          return;
-                        }
-                        const normalized = normalizePlaqueSizeForLayout(
-                          selectedPlaqueLayoutId,
-                          opt.value,
-                        );
-                        setSelectedPlaqueSize(normalized);
-                        void handleUniversalTemplateChange(
-                          buildPlaqueTemplateId(
-                            selectedPlaqueLayoutId,
-                            normalized,
-                          ),
-                        );
-                      }}
-                      className={`px-3 py-2 rounded border text-left text-sm font-medium transition-colors max-w-[220px] ${
-                        selectedPlaqueSize === opt.value
-                          ? "border-blue-600 bg-blue-50 text-blue-700"
-                          : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      <div>{opt.label}</div>
-                      <div className="text-xs font-normal text-gray-500 mt-0.5 leading-snug">
-                        {opt.detail}
-                      </div>
-                    </button>
-                  ))}
+                        }}
+                        className={`px-3 py-2 rounded border text-left text-sm font-medium transition-colors max-w-[260px] ${
+                          selectedPlaqueSize === opt.value
+                            ? "border-blue-600 bg-blue-50 text-blue-700"
+                            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div>{sizeDisplay.primaryLine}</div>
+                        <div className="text-xs font-normal text-gray-500 mt-0.5 leading-snug space-y-0.5">
+                          {sizeDisplay.detailLines.map((line) => (
+                            <div key={line}>{line}</div>
+                          ))}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {variant === "plaque" && plaqueAttachedSelected && (
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  const msg = getIncompleteStepsMessage(3);
+                  if (msg) {
+                    alert(msg);
+                    return;
+                  }
+                  const willBeOpen = !(sectionsOpen.plaqueFormat ?? false);
+                  setSectionsOpen({
+                    template: false,
+                    size: false,
+                    export: false,
+                    background: false,
+                    textLines: false,
+                    backing: false,
+                    border: false,
+                    plaqueFormat: willBeOpen,
+                  });
+                  if (willBeOpen) {
+                    setSectionsOpened((prev) => ({
+                      ...prev,
+                      plaqueFormat: true,
+                    }));
+                  }
+                }}
+                className="flex items-center justify-between w-full mb-2 text-left"
+              >
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    Step 3: Choose award format
+                  </h3>
+                  {Boolean(badge.plaqueFormatId?.trim()) && (
+                    <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                  )}
+                </div>
+                {sectionsOpen.plaqueFormat ? (
+                  <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+                ) : (
+                  <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+                )}
+              </button>
+              <div
+                className={`transition-all duration-300 overflow-hidden ${
+                  sectionsOpen.plaqueFormat
+                    ? "max-h-[2000px] opacity-100"
+                    : "max-h-0 opacity-0"
+                }`}
+              >
+                <p className="text-xs text-gray-600 mb-1.5 leading-snug">
+                  Previews use brushed gold and sample text. Pick a layout — captions,
+                  dividers, and borders match each preset.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {getPlaqueAwardFormatsForPicker({
+                    expanded: plaqueAwardFormatsExpanded,
+                    selectedFormatId: badge.plaqueFormatId,
+                  }).map((fmt) => {
+                    const selected =
+                      badge.plaqueFormatId?.trim() === fmt.id;
+                    const previewBadge =
+                      plaqueAwardFormatPreviewBadges.get(fmt.id) ?? null;
+                    return (
+                      <button
+                        key={fmt.id}
+                        type="button"
+                        aria-label={`Award format: ${fmt.name}`}
+                        onClick={() => {
+                          applyPlaqueAwardFormatSelection(fmt.id);
+                          setSectionsOpened((prev) => ({
+                            ...prev,
+                            plaqueFormat: true,
+                          }));
+                        }}
+                        className={`flex flex-col gap-1 text-left rounded-lg border p-1.5 transition-colors ${
+                          selected
+                            ? "border-blue-600 bg-blue-50 ring-2 ring-blue-200"
+                            : "border-gray-300 bg-white hover:border-gray-400"
+                        }`}
+                      >
+                        <div className="w-full overflow-hidden rounded border border-gray-200 bg-slate-100/90 flex items-center justify-center aspect-[4/5] max-h-[148px] min-h-[92px]">
+                          {previewBadge ? (
+                            <BadgeSvgRenderer
+                              key={`plaque-fmt-thumb-${fmt.id}-${plaqueAwardFormatPreviewTemplateId}`}
+                              variant="plaque"
+                              badge={previewBadge}
+                              templateId={plaqueAwardFormatPreviewTemplateId}
+                              height={138}
+                              className="max-h-[138px]"
+                            />
+                          ) : (
+                            <span className="text-[10px] text-gray-400 px-1">
+                              Preview unavailable
+                            </span>
+                          )}
+                        </div>
+                        <div className="px-0.5 pb-0.5">
+                          <div className="text-xs font-semibold text-gray-900 leading-tight">
+                            {fmt.name}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {plaqueAwardFormatsPickerHasExtras() ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPlaqueAwardFormatsExpanded((prev) => !prev)
+                    }
+                    className="text-sm text-blue-600 hover:text-blue-800 underline text-left py-1 w-full"
+                  >
+                    {plaqueAwardFormatsExpanded
+                      ? "fewer award formats"
+                      : "more award formats"}
+                  </button>
+                ) : null}
               </div>
             </div>
           )}
@@ -7697,7 +8296,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 type="button"
                 onClick={() => {
                   const msg = getIncompleteStepsMessage(
-                    variant === "plaque" ? 4 : 2,
+                    variant === "plaque"
+                      ? plaqueAttachedSelected
+                        ? 4
+                        : 3
+                      : 2,
                   );
                   if (msg) {
                     alert(msg);
@@ -7712,6 +8315,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     textLines: false,
                     backing: false,
                     border: false,
+                    plaqueFormat: false,
                   });
                   setSectionsOpened((prev) => ({ ...prev, background: true }));
                 }}
@@ -7720,7 +8324,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-semibold text-gray-800">
                     {variant === "plaque"
-                      ? "Step 3: Metal plate finish"
+                      ? plaqueAttachedSelected
+                        ? "Step 4: Metal plate finish"
+                        : "Step 3: Metal plate finish"
                       : config.templatesKey === "sign"
                         ? "Step 3: Pick backgrounds"
                         : "Step 2: Pick a background Color"}
@@ -7742,11 +8348,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     : "max-h-0 opacity-0"
                 }`}
               >
-                {/* Featured Colors: Black, White, Gold, Silver, Blue, Red */}
+                {/* Featured Colors: Gold, Silver, White, then Black / Blue / Red */}
                 {(() => {
                   const featuredColors = [
-                    { value: "#000000", name: "Black", ring: "ring-gray-900" },
-                    { value: "#FFFFFF", name: "White", ring: "ring-white" },
                     {
                       value: FEATURED_BRUSHED_GOLD_HEX,
                       name: "Brushed Gold",
@@ -7757,6 +8361,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       name: "Brushed Silver",
                       ring: "ring-gray-300",
                     },
+                    { value: "#FFFFFF", name: "White", ring: "ring-white" },
+                    { value: "#000000", name: "Black", ring: "ring-gray-900" },
                     { value: "#0000FF", name: "Blue", ring: "ring-blue-500" },
                     { value: "#FF0000", name: "Red", ring: "ring-red-500" },
                     {
@@ -7910,6 +8516,72 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                           </span>
                         </div>
                       </div>
+                      {variant === "plaque" &&
+                        isPlaqueDetachedTemplateId(
+                          badge.templateId ?? universalTemplateId,
+                        ) && (
+                          <div className="mt-3 ml-1.5 border-t border-gray-200 pt-3 w-full max-w-md">
+                            <p className="text-sm text-gray-700 mb-2">
+                              Photo frame finish
+                            </p>
+                            <div className="flex flex-wrap gap-3">
+                              {(
+                                [
+                                  {
+                                    id: "gold" as const,
+                                    label: "Gold",
+                                    src: "/images/plaque/plaque-detached-photo-frame-gold.png",
+                                  },
+                                  {
+                                    id: "silver" as const,
+                                    label: "Silver",
+                                    src: "/images/plaque/plaque-detached-photo-frame-silver.png",
+                                  },
+                                ] as const
+                              ).map((opt) => {
+                                const cur =
+                                  badge.plaqueDetachedPhotoFrameFinish ??
+                                  "gold";
+                                const active = cur === opt.id;
+                                return (
+                                  <button
+                                    key={opt.id}
+                                    type="button"
+                                    onClick={() => {
+                                      const next: Badge = {
+                                        ...badge,
+                                        plaqueDetachedPhotoFrameFinish: opt.id,
+                                      };
+                                      setBadge(next);
+                                      const ub = [...multipleBadges];
+                                      if (ub[selectedBadgeIndex]) {
+                                        ub[selectedBadgeIndex] = next;
+                                      }
+                                      setMultipleBadges(ub);
+                                      if (selectedBadgeIndex === 0) {
+                                        setBadge1Data(next);
+                                      }
+                                    }}
+                                    className={`flex flex-col items-center gap-1 rounded border px-2 py-2 transition-colors ${
+                                      active
+                                        ? "border-blue-600 bg-blue-50 ring-2 ring-blue-200"
+                                        : "border-gray-200 bg-white hover:bg-gray-50"
+                                    }`}
+                                  >
+                                    <img
+                                      src={opt.src}
+                                      alt=""
+                                      className="h-14 w-10 object-cover rounded-sm border border-gray-200"
+                                    />
+                                    <span className="text-[10px] font-medium text-gray-700">
+                                      {opt.label}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                     </>
                   );
                 })()}
@@ -8032,16 +8704,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                           <div className="grid grid-cols-4 gap-2 w-fit">
                             {[
                               {
-                                value: "#000000",
-                                name: "Black",
-                                ring: "ring-gray-900",
-                              },
-                              {
-                                value: "#FFFFFF",
-                                name: "White",
-                                ring: "ring-white",
-                              },
-                              {
                                 value: FEATURED_BRUSHED_GOLD_HEX,
                                 name: "Brushed Gold",
                                 ring: "ring-yellow-400",
@@ -8050,6 +8712,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                 value: FEATURED_BRUSHED_SILVER_HEX,
                                 name: "Brushed Silver",
                                 ring: "ring-gray-300",
+                              },
+                              {
+                                value: "#FFFFFF",
+                                name: "White",
+                                ring: "ring-white",
+                              },
+                              {
+                                value: "#000000",
+                                name: "Black",
+                                ring: "ring-gray-900",
                               },
                               {
                                 value: "#0000FF",
@@ -8265,7 +8937,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  const msg = getIncompleteStepsMessage(4);
+                  const msg = getIncompleteStepsMessage(
+                    // Guard should require only prior steps. For plaques:
+                    // - attached flow: photo is step 5 (requires steps 1-4)
+                    // - detached flow: photo is step 4 (requires steps 1-3)
+                    plaqueAttachedSelected ? 5 : 4,
+                  );
                   if (msg) {
                     alert(msg);
                     return;
@@ -8282,8 +8959,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       badge.templateId,
                       universalTemplateId,
                     )
-                      ? "Step 4: Upload top image"
-                      : "Step 4: Upload top image (optional)"}
+                      ? plaqueAttachedSelected
+                        ? "Step 5: Upload icon"
+                        : "Step 4: Upload icon"
+                      : plaqueAttachedSelected
+                        ? "Step 5: Upload icon (optional)"
+                        : "Step 4: Upload icon (optional)"}
                   </h3>
                   {(() => {
                     const logoOk = Boolean(badge.logo?.src?.trim());
@@ -8321,7 +9002,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     {isPlaqueDetachedTemplateId(
                       badge.templateId ?? universalTemplateId,
                     )
-                      ? "Your photo appears in the frame on the wood, above the metal text plate."
+                      ? "The framed area on the wood is for your printed photo (inserted separately). Your uploaded image appears on the metal plate beside your text — set left or right below."
                       : "Your image is placed on the metal plate above your text."}{" "}
                     PNG, JPEG, WebP, or GIF.
                   </p>
@@ -8414,7 +9095,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               onClick={() => {
                 const msg = getIncompleteStepsMessage(
                   variant === "plaque"
-                    ? 5
+                    ? plaqueAttachedSelected
+                      ? 6
+                      : 5
                     : config.hasSizeStep
                       ? signBorderStepRequired
                         ? 5
@@ -8442,7 +9125,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-gray-800">
                   {variant === "plaque"
-                    ? "Step 5: Enter your text"
+                    ? plaqueAttachedSelected
+                      ? "Step 6: Enter your text"
+                      : "Step 5: Enter your text"
                     : config.templatesKey === "sign"
                       ? signBorderStepRequired
                         ? "Step 5: Enter your text"
@@ -8553,6 +9238,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   hasMultipleBadges={multipleBadges.length > 1}
                   onResetLineToDefault={resetLineToDefault}
                   variant={variant}
+                  lineLabels={
+                    variant === "plaque" && badge.plaqueFormatId
+                      ? plaqueAwardEditorLabelsForFormat(
+                          getPlaqueAwardFormatById(badge.plaqueFormatId),
+                          maxLines,
+                        )
+                      : undefined
+                  }
                 />
                 <div className="flex items-center justify-end">
                   <button
@@ -9294,6 +9987,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                             textLines: false,
                             backing: false,
                             border: false,
+                            plaqueFormat: false,
                           });
                           setSectionsOpen({
                             template: true,
@@ -9303,6 +9997,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                             textLines: false,
                             backing: false,
                             border: false,
+                            plaqueFormat: false,
                           });
                           setUniversalTemplateId(
                             variant === "plaque"
@@ -9707,6 +10402,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   (plaqueLogoOk ||
                     sectionsOpened.textLines ||
                     hasStep3TextEntered);
+              const plaqueFormatDoneM =
+                !plaqueAttachedSelected ||
+                Boolean(badge.plaqueFormatId?.trim());
+              const plaqueFormatCurrentM =
+                plaqueAttachedSelected &&
+                multipleBadges.length > 0 &&
+                !plaqueFormatDoneM;
+              const plaqueMetalCurrentM =
+                multipleBadges.length > 0 &&
+                plaqueFormatDoneM &&
+                !hasChosenBackgroundColor;
               const plaqueImageCurrent =
                 multipleBadges.length > 0 &&
                 hasChosenBackgroundColor &&
@@ -9724,37 +10430,75 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 selectedPlaqueLayoutId != null ||
                 multipleBadges.length > 0;
               const plaqueSizeDoneM = multipleBadges.length > 0;
-              const plaqueMobileSteps = [
-                {
-                  label: "Style",
-                  done: plaqueStyleDoneM,
-                  current: !plaqueStyleDoneM,
-                },
-                {
-                  label: "Size",
-                  done: plaqueSizeDoneM,
-                  current: plaqueStyleDoneM && !plaqueSizeDoneM,
-                },
-                {
-                  label: "Metal",
-                  done: hasChosenBackgroundColor,
-                  current:
-                    multipleBadges.length > 0 && !hasChosenBackgroundColor,
-                },
-                {
-                  label: plaqueImageLabel,
-                  done: plaqueImageDone,
-                  current: plaqueImageCurrent,
-                },
-                {
-                  label: "Text",
-                  done: hasStep3TextEntered,
-                  current:
-                    hasChosenBackgroundColor &&
-                    !hasStep3TextEntered &&
-                    plaqueCanEditText,
-                },
-              ];
+              const plaqueMobileSteps = plaqueAttachedSelected
+                ? [
+                    {
+                      label: "Layout",
+                      done: plaqueStyleDoneM,
+                      current: !plaqueStyleDoneM,
+                    },
+                    {
+                      label: "Size",
+                      done: plaqueSizeDoneM,
+                      current: plaqueStyleDoneM && !plaqueSizeDoneM,
+                    },
+                    {
+                      label: "Format",
+                      done: plaqueFormatDoneM,
+                      current: plaqueFormatCurrentM,
+                    },
+                    {
+                      label: "Metal",
+                      done: hasChosenBackgroundColor,
+                      current: plaqueMetalCurrentM,
+                    },
+                    {
+                      label: plaqueImageLabel,
+                      done: plaqueImageDone,
+                      current: plaqueImageCurrent,
+                    },
+                    {
+                      label: "Text",
+                      done: hasStep3TextEntered,
+                      current:
+                        hasChosenBackgroundColor &&
+                        !hasStep3TextEntered &&
+                        plaqueCanEditText,
+                    },
+                  ]
+                : [
+                    {
+                      label: "Layout",
+                      done: plaqueStyleDoneM,
+                      current: !plaqueStyleDoneM,
+                    },
+                    {
+                      label: "Size",
+                      done: plaqueSizeDoneM,
+                      current: plaqueStyleDoneM && !plaqueSizeDoneM,
+                    },
+                    {
+                      label: "Metal",
+                      done: hasChosenBackgroundColor,
+                      current:
+                        multipleBadges.length > 0 &&
+                        plaqueSizeDoneM &&
+                        !hasChosenBackgroundColor,
+                    },
+                    {
+                      label: plaqueImageLabel,
+                      done: plaqueImageDone,
+                      current: plaqueImageCurrent,
+                    },
+                    {
+                      label: "Text",
+                      done: hasStep3TextEntered,
+                      current:
+                        hasChosenBackgroundColor &&
+                        !hasStep3TextEntered &&
+                        plaqueCanEditText,
+                    },
+                  ];
               return plaqueMobileSteps.map((step, i) => (
                 <React.Fragment key={i}>
                   {i > 0 && (

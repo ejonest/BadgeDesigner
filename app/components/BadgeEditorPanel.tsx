@@ -17,6 +17,10 @@ import {
   getDesignerVariantConfig,
   isSignLikeVariant,
 } from "../constants/designerVariants";
+import {
+  isPlaqueAttachedTemplateId,
+  isPlaqueDetachedTemplateId,
+} from "~/utils/plaqueRender";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
 // Helper functions for normalized font size conversion
@@ -216,6 +220,8 @@ export interface BadgeEditorPanelProps {
   onResetLineToDefault?: (lineIndex: number) => void;
   /** Pass "sign" in Sign Designer so designBox / font-size math uses sign templates (ids like circle-6x6). */
   variant?: DesignerVariant;
+  /** Plaque award format: label per line index (falls back to “Line n”). */
+  lineLabels?: (string | undefined)[];
 }
 
 export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
@@ -235,6 +241,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   hasMultipleBadges = false,
   onResetLineToDefault,
   variant = "badge",
+  lineLabels,
 }) => {
   const { labelProductPlural } = getDesignerVariantConfig(variant);
   const allItemsLabel = labelProductPlural.toLowerCase();
@@ -246,7 +253,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
     width: 288,
     height: 96,
   });
-  /** Matches {@link resolveSignTextLayout} designBoxHeight (e.g. attached plaque lower 2/3 when image on). */
+  /** Matches {@link resolveSignTextLayout} designBoxHeight (e.g. attached plaque text band below logo when image on). */
   const [fontMetricsHeight, setFontMetricsHeight] = React.useState(
     designBox.height,
   );
@@ -293,6 +300,9 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
         | "center"
         | "right"
     ];
+  const hideAttachedPlaqueFontSize =
+    variant === "plaque" &&
+    Boolean(badge.templateId && isPlaqueAttachedTemplateId(badge.templateId));
   return (
     <div className="w-full max-w-2xl mx-auto flex flex-col gap-4">
       {/* Line formatting boxes */}
@@ -300,8 +310,12 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
         {badge.lines.map((line: BadgeLine, idx: number) => {
           const signLogoCeilPx =
             isSignLikeVariant(variant) &&
-            variant !== "plaque" &&
-            badge.logo?.src?.trim()
+            badge.logo?.src?.trim() &&
+            (variant !== "plaque" ||
+              Boolean(
+                badge.templateId &&
+                  isPlaqueDetachedTemplateId(badge.templateId),
+              ))
               ? badge.signLogoLayoutSnapshot?.textPxCeilingByLine?.[idx] ??
                 badge.signLogoLayoutSnapshot?.textPxByLine?.[idx]
               : undefined;
@@ -324,7 +338,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
           >
             <div className="flex flex-col w-full gap-2 mb-1">
               <label className="font-semibold text-sm">
-                Line {idx + 1} Text
+                {(lineLabels?.[idx] ?? `Line ${idx + 1}`).trim()} Text
               </label>
               <div className="flex flex-col gap-1 min-w-0 w-full">
                 <div className="flex items-center gap-2">
@@ -637,20 +651,29 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                         </svg>
                       </button>
                     </div>
-                    <div className="flex gap-1 items-center min-w-0">
-                      <span className="font-semibold text-sm mr-1">Size</span>
-                      <div className="flex items-center">
-                        <FontSizeControl
-                          line={line}
-                          lineIndex={idx}
-                          designBox={{ ...designBox, height: fontMetricsHeight }}
-                          editable={editable}
-                          onLineChange={onLineChange}
-                          minFontPx={fontSizeMinPx}
-                          maxFontPx={maxFontPxForLine}
-                        />
+                    {!hideAttachedPlaqueFontSize ? (
+                      <div className="flex gap-1 items-center min-w-0">
+                        <span className="font-semibold text-sm mr-1">Size</span>
+                        <div className="flex items-center">
+                          <FontSizeControl
+                            line={line}
+                            lineIndex={idx}
+                            designBox={{
+                              ...designBox,
+                              height: fontMetricsHeight,
+                            }}
+                            editable={editable}
+                            onLineChange={onLineChange}
+                            minFontPx={fontSizeMinPx}
+                            maxFontPx={maxFontPxForLine}
+                          />
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <p className="text-xs text-gray-600 leading-snug max-w-[14rem]">
+                        Type size is fixed for attached plaques.
+                      </p>
+                    )}
                   </div>
                   {signLogoCeilPx !== undefined ? (
                     <p

@@ -34,7 +34,7 @@
       "safeInsetPx": 6,
       "plaquePhotoRectNorm": {
         "xNorm": 0.21875,
-        "yNorm": 0.041666666666666664,
+        "yNorm": 0.075,
         "widthNorm": 0.5625,
         "heightNorm": 0.65
       }
@@ -48,7 +48,7 @@
       "safeInsetPx": 6,
       "plaquePhotoRectNorm": {
         "xNorm": 0.19444444444444445,
-        "yNorm": 0.041666666666666664,
+        "yNorm": 0.125,
         "widthNorm": 0.6111111111111112,
         "heightNorm": 0.625
       }
@@ -56,8 +56,8 @@
     {
       "id": "plaque-detached-landscape-medium",
       "name": "Detached landscape — medium",
-      "widthInches": 10,
-      "heightInches": 8,
+      "widthInches": 8,
+      "heightInches": 10,
       "svgFile": "/templates/plaque/Plaque-Detached-Landscape-Medium.svg",
       "safeInsetPx": 6,
       "plaquePhotoRectNorm": {
@@ -70,8 +70,8 @@
     {
       "id": "plaque-detached-landscape-large",
       "name": "Detached landscape — large",
-      "widthInches": 12,
-      "heightInches": 9,
+      "widthInches": 9,
+      "heightInches": 12,
       "svgFile": "/templates/plaque/Plaque-Detached-Landscape-Large.svg",
       "safeInsetPx": 6,
       "plaquePhotoRectNorm": {

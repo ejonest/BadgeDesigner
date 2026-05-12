@@ -40,7 +40,7 @@ export function getSignLogoPlacementOptionsForTemplate(
     /^plaque-detached-landscape-/i.test(id) ||
     /^plaque-detached$/i.test(id)
   ) {
-    return [];
+    return ["left", "right"];
   }
   if (/^plaque-attached-/i.test(id) || /^plaque-attached$/i.test(id)) {
     return ["top"];

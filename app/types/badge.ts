@@ -17,6 +17,9 @@ export interface BadgeLine {
   fontFamily?: string;
 }
 
+/** Detached plaque wood photo opening: metallic frame overlay (PNG asset). */
+export type PlaqueDetachedPhotoFrameFinish = "gold" | "silver";
+
 /** Sign Designer user logo: edge band with image centered in the band. */
 export type SignLogoPlacement = "left" | "right" | "top" | "bottom";
 
@@ -82,6 +85,16 @@ export interface Badge {
    * `"none"` = plate only; any other id = framed trim (matches `signBorderStyleId` for v1).
    */
   signBorderOptionId?: string;
+  /**
+   * Plaque attached plate only: award layout preset (static captions, divider, optional inner border).
+   * Omitted on detached layouts and legacy saves → generic line layout.
+   */
+  plaqueFormatId?: string;
+  /**
+   * Plaque detached wood photo slot only: metallic frame stroke around the photo opening.
+   * Omitted on legacy payloads → render as gold (matches default brushed-gold plate previews).
+   */
+  plaqueDetachedPhotoFrameFinish?: PlaqueDetachedPhotoFrameFinish;
   backing: 'pin' | 'magnetic' | 'adhesive';
   backgroundImage?: BadgeImage;
   logo?: BadgeImage;

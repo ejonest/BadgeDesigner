@@ -4,6 +4,7 @@ import type {
   Badge,
   BadgeImage,
   BadgeLine,
+  PlaqueDetachedPhotoFrameFinish,
   SignLogoLayoutSnapshot,
 } from "../types/badge";
 import {
@@ -51,15 +52,35 @@ import {
   isPlaqueDetachedTemplateId,
   isPlaqueTemplateId,
   plaqueAttachedLogoBandRect,
+  plaqueAttachedLogoDrawRectClassic,
+  plaqueAttachedLogoDrawRectFixed,
   plaqueAttachedTextPlateRect,
-  plaqueDetachedPhotoFrameRect,
+  plaqueDetachedPhotoFrameDecor,
+  PLAQUE_DETACHED_LANDSCAPE_STOCK_PATH,
+  PLAQUE_DETACHED_PORTRAIT_STOCK_PATH,
+  plaqueDetachedWoodStockPhotoHref,
+  plaqueDetachedWoodStockPlaceholderLayers,
+  plaqueDetachedPlateContentRect,
+  plaqueDetachedPlateInnerBorderSvgMarkup,
+  inlinePlaqueDetachedWoodStockImagesInSvg,
   plaqueMetalBrushGradientDef,
   plaqueMetalBrushGradientDefObjectBBox,
   plaqueWoodBackgroundRect,
   plaqueWoodGrainFilterDef,
   plaqueWoodGradientDef,
-  renderPlaqueDetachedPhotoImage,
 } from "~/utils/plaqueRender";
+import {
+  getPlaqueAwardFormatById,
+  plaqueAwardUsesClassicAttachedLogo,
+} from "~/constants/plaqueFormats";
+import {
+  PLAQUE_CLASSIC_Y_PRESENTED_TO_FRAC,
+  layoutPlaqueAwardFormat,
+  plaqueAwardInkHex,
+  plaqueAwardLogoTopOffsetPx,
+  plaqueAwardPlateBorderSvgMarkup,
+  plaqueAwardRowsToSvgMarkup,
+} from "~/utils/plaqueAwardLayout";
 
 type RenderOpts = {
   /**
@@ -196,7 +217,9 @@ export function getEffectiveDesignBox(
   return template.designBoxInnerPlate ?? template.designBox;
 }
 
-function resolveOptsFromBadge(badge: Badge): ResolveSignLogoSlackOptions | undefined {
+function resolveOptsFromBadge(
+  badge: Badge,
+): ResolveSignLogoSlackOptions | undefined {
   return badge.signLogoLayoutSnapshot?.minLogoRatioVsBaseline !== undefined
     ? {
         minLogoRatioVsBaselineFloor:
@@ -211,16 +234,19 @@ function resolveOptsFromBadge(badge: Badge): ResolveSignLogoSlackOptions | undef
 export function getEffectiveSignTextLayoutAndLogoDrawForBadge(
   template: LoadedTemplate,
   badge: Badge,
-): { layout: ResolvedSignTextLayout | undefined; draw: SignLogoDrawRect | null } {
-  if (!template.signTextLayout)
-    return { layout: undefined, draw: null };
+): {
+  layout: ResolvedSignTextLayout | undefined;
+  draw: SignLogoDrawRect | null;
+} {
+  if (!template.signTextLayout) return { layout: undefined, draw: null };
   const trimBox = getEffectiveDesignBox(template, badge);
   const borderOn = resolveSignBorderOverlayActive(badge, template);
-  // Attached plaque + image: fixed upper 1/3 logo band, lower 2/3 text — no sign slack / px ceilings.
-  if (
-    isPlaqueAttachedTemplateId(template.id) &&
-    badge.logo?.src?.trim()
-  ) {
+  // Attached plaque + image: classic/formal formats center the emblem under the inner border; others use the logo band.
+  if (isPlaqueAttachedTemplateId(template.id) && badge.logo?.src?.trim()) {
+    const awardFmt = getPlaqueAwardFormatById(badge.plaqueFormatId);
+    const useClassicAwardLogo =
+      awardFmt && plaqueAwardUsesClassicAttachedLogo(awardFmt);
+
     const textPlate = plaqueAttachedTextPlateRect(trimBox);
     const layout = resolveSignTextLayout(
       textPlate,
@@ -228,19 +254,49 @@ export function getEffectiveSignTextLayoutAndLogoDrawForBadge(
       undefined,
       template.id,
     );
-    const logoBand = plaqueAttachedLogoBandRect(trimBox);
-    const draw = computeSignLogoDrawRect(
-      badge.logo,
-      logoBand,
-      template.signTextLayout.plateCircle,
-      layout,
-    );
+
+    const draw = useClassicAwardLogo
+      ? plaqueAttachedLogoDrawRectClassic(
+          trimBox,
+          badge.logo,
+          trimBox.y + trimBox.height * PLAQUE_CLASSIC_Y_PRESENTED_TO_FRAC,
+          plaqueAwardLogoTopOffsetPx(trimBox, awardFmt.border),
+        )
+      : plaqueAttachedLogoDrawRectFixed(
+          plaqueAttachedLogoBandRect(trimBox),
+          badge.logo,
+        );
     return { layout, draw };
   }
-  // Detached plaque: photo is on wood only; never reserve sign-style logo slack on the metal text plate.
+  // Detached photo plaque: copy + plate logo stay inside the thin inner engraving frame (not the outer metal rect).
+  if (isPlaqueDetachedTemplateId(template.id)) {
+    const plateOuter = trimBox;
+    const plateInner = plaqueDetachedPlateContentRect(plateOuter);
+    const baseLayout = resolveSignTextLayout(
+      plateInner,
+      undefined,
+      undefined,
+      template.id,
+    );
+    const logoOnTextPlate =
+      signTemplateSupportsUserLogoUpload(template.id) &&
+      !isPlaqueAttachedTemplateId(template.id);
+    const logoForLayout = logoOnTextPlate ? badge.logo : undefined;
+    return resolveSignTextLayoutAndUserLogoSlack(
+      baseLayout,
+      plateInner,
+      logoForLayout,
+      undefined,
+      plateInner,
+      badge.lines,
+      createSignTextMeasure(),
+      resolveOptsFromBadge(badge),
+    );
+  }
+  // Attached plaque without the early return uses full text plate; side logos apply only to detached + signs.
   const logoOnTextPlate =
     signTemplateSupportsUserLogoUpload(template.id) &&
-    !isPlaqueDetachedTemplateId(template.id);
+    !isPlaqueAttachedTemplateId(template.id);
   const logoForLayout = logoOnTextPlate ? badge.logo : undefined;
   const logoBoundsBox = resolveSignUserLogoBoundsBox(
     template,
@@ -279,8 +335,25 @@ export function negotiateSignBadgeLinesForLogoCommit(
   if (!template.signTextLayout || !badge.logo?.src?.trim()) {
     return badge.lines;
   }
-  if (isPlaqueTemplateId(template.id)) {
+  if (isPlaqueAttachedTemplateId(template.id)) {
     return badge.lines;
+  }
+  /**
+   * Plaque detached: keep logo sizing/positioning fixed (left/right) and avoid the expensive
+   * 600-iteration “grow logo by shrinking text 1px” negotiation loop. We just fit text to the
+   * reserved logo slack in one pass so template switches stay responsive.
+   */
+  if (isPlaqueDetachedTemplateId(template.id)) {
+    const layout = getEffectiveSignTextLayoutForBadge(template, badge);
+    if (!layout) return badge.lines;
+    return syncSignBadgeLinesSizeNorm(
+      badge.lines,
+      layout,
+      createSignTextMeasure(),
+      {
+        heightShrinkParticipantOrder: "lowLineIndexFirst",
+      },
+    );
   }
 
   const trimBox = getEffectiveDesignBox(template, badge);
@@ -340,9 +413,7 @@ export function computeSignLogoTextPxCeilings(
   const probeBadge: Badge = { ...badge, lines: baselineLines };
   const layout0 = getEffectiveSignTextLayoutForBadge(template, probeBadge);
   const H0 =
-    layout0?.designBoxHeight ??
-    template.signTextLayout?.designBoxHeight ??
-    96;
+    layout0?.designBoxHeight ?? template.signTextLayout?.designBoxHeight ?? 96;
   const MIN = SIGN_TEXT_MIN_FONT_PX;
   const MAX = layout0
     ? signTextLayoutMaxFontPx(layout0)
@@ -385,34 +456,26 @@ export function computeSignLogoLayoutSnapshot(
   badge: Badge,
 ): SignLogoLayoutSnapshot | undefined {
   if (!template.signTextLayout || !badge.logo?.src?.trim()) return undefined;
-  if (isPlaqueTemplateId(template.id)) return undefined;
+  if (isPlaqueAttachedTemplateId(template.id)) return undefined;
+  const badgeFreshRatio = { ...badge, signLogoLayoutSnapshot: undefined };
+  const { layout, draw } = getEffectiveSignTextLayoutAndLogoDrawForBadge(
+    template,
+    badgeFreshRatio,
+  );
+  if (!layout || !draw) return undefined;
+
   const trimBox = getEffectiveDesignBox(template, badge);
   const borderOn = resolveSignBorderOverlayActive(badge, template);
-  const logoBoundsBox = resolveSignUserLogoBoundsBox(
-    template,
-    trimBox,
-    borderOn,
-  );
+  const logoBoundsBox = isPlaqueDetachedTemplateId(template.id)
+    ? plaqueDetachedPlateContentRect(trimBox)
+    : resolveSignUserLogoBoundsBox(template, trimBox, borderOn);
   const baseline = computeSignLogoDrawRect(
     badge.logo,
     logoBoundsBox,
     template.signTextLayout.plateCircle,
-    template.signTextLayout,
+    layout,
   );
   if (!baseline) return undefined;
-
-  const badgeFreshRatio = { ...badge, signLogoLayoutSnapshot: undefined };
-  const { layout, draw } = resolveSignTextLayoutAndUserLogoSlack(
-    template.signTextLayout,
-    trimBox,
-    badge.logo,
-    template.signTextLayout.plateCircle,
-    logoBoundsBox,
-    badge.lines,
-    createSignTextMeasure(),
-    resolveOptsFromBadge(badgeFreshRatio),
-  );
-  if (!layout || !draw) return undefined;
   const minLogoRatioVsBaseline = Math.min(
     draw.width / baseline.width,
     draw.height / baseline.height,
@@ -426,6 +489,16 @@ export function computeSignLogoLayoutSnapshot(
       Math.max(MIN_FONT, Math.min(MAX_FONT, (l.sizeNorm ?? 0.15) * H)),
     ),
   );
+
+  // Detached plaques: avoid marginal per-line ceiling probing (binary searches) — it’s expensive
+  // and not needed when the logo slot width is fixed. Treat current sizes as the ceiling.
+  if (isPlaqueDetachedTemplateId(template.id)) {
+    return {
+      minLogoRatioVsBaseline,
+      textPxByLine,
+      textPxCeilingByLine: [...textPxByLine],
+    };
+  }
 
   const badgeWithRatioFloor: Badge = {
     ...badge,
@@ -959,7 +1032,10 @@ function renderUserLogoLayer(
   if (!logo?.src?.trim()) return "";
   if (template.signTextLayout) {
     if (!signTemplateSupportsUserLogoUpload(template.id)) return "";
-    const rect = getEffectiveSignTextLayoutAndLogoDrawForBadge(template, badge).draw;
+    const rect = getEffectiveSignTextLayoutAndLogoDrawForBadge(
+      template,
+      badge,
+    ).draw;
     if (!rect) return "";
     const src = esc(logo.src);
     return `
@@ -1113,10 +1189,7 @@ function plateBrushGradientForBadgeInner(
       badge.backgroundColor || DEFAULT_PLATE_BG,
     ),
   );
-  const innerPlateMarkup = applyPlaqueMetalBrushFill(
-    innerPathWithFill,
-    gradId,
-  );
+  const innerPlateMarkup = applyPlaqueMetalBrushFill(innerPathWithFill, gradId);
   return { innerPlateMarkup, gradientDefXml };
 }
 
@@ -1130,7 +1203,10 @@ function renderPlaqueBadgeSvg(
   const PADDING_PX = 24;
   const W = template.widthPx + PADDING_PX * 2;
   const H = template.heightPx + PADDING_PX * 2;
-  const designBox = getEffectiveDesignBox(template, badge);
+  const plateOuterRect = getEffectiveDesignBox(template, badge);
+  const designBox = isPlaqueDetachedTemplateId(template.id)
+    ? plaqueDetachedPlateContentRect(plateOuterRect)
+    : plateOuterRect;
   const clipId = clipPathIdForSvg(opts, badge);
   const safeClip = clipId.replace(/[^a-zA-Z0-9]/g, "");
   const woodGradId = `plaqueWood${safeClip}`;
@@ -1144,9 +1220,7 @@ function renderPlaqueBadgeSvg(
   const metalGradientDef = plaqueMetalBrushGradientDef(
     metalGradId,
     template.heightPx,
-    normalizeFeaturedBrushedMetalBaseHex(
-      badge.backgroundColor || "#FFFFFF",
-    ),
+    normalizeFeaturedBrushedMetalBaseHex(badge.backgroundColor || "#FFFFFF"),
   );
   const innerPlateWithBrushFill = applyPlaqueMetalBrushFill(
     innerPathWithFill,
@@ -1167,33 +1241,71 @@ function renderPlaqueBadgeSvg(
     signHorizontalInsetPx(textClipW) + curveTextClip,
   );
 
-  const lineLayout = calculateTextLayout(
-    badge.lines || [],
-    designBox,
-    template,
-    fontMappings,
-    badge,
-    effectiveSignLayout,
-  );
+  const awardFormat =
+    isPlaqueAttachedTemplateId(template.id) && badge.plaqueFormatId
+      ? getPlaqueAwardFormatById(badge.plaqueFormatId)
+      : undefined;
 
-  const textElements = lineLayout
-    .map((item) => {
-      const line = item.line;
-      const color = line.color || "#000";
-      const textDecoration = line.underline ? "underline" : "none";
-      return `<text x="${item.x}" y="${item.y}" font-size="${
-        item.fontSize
-      }" text-anchor="${item.anchor}"
+  let textElements: string;
+  let plaqueInnerBorderMarkup = "";
+
+  if (awardFormat && effectiveSignLayout) {
+    const ink = plaqueAwardInkHex(badge.backgroundColor);
+    const baseBody = Math.max(
+      15,
+      Math.min(
+        28,
+        effectiveSignLayout.contentRect.height /
+          Math.max(5, awardFormat.slots.length),
+      ),
+    );
+    const rows = layoutPlaqueAwardFormat(
+      awardFormat,
+      badge.lines || [],
+      effectiveSignLayout,
+      baseBody,
+      ink,
+      designBox,
+      { dividerArtIdSuffix: safeClip },
+    );
+    textElements = plaqueAwardRowsToSvgMarkup(rows);
+    if (awardFormat.border !== "none") {
+      plaqueInnerBorderMarkup = plaqueAwardPlateBorderSvgMarkup({
+        designBox,
+        stroke: ink,
+        border: awardFormat.border,
+        svgFilterIdSuffix: safeClip,
+      });
+    }
+  } else {
+    const lineLayout = calculateTextLayout(
+      badge.lines || [],
+      designBox,
+      template,
+      fontMappings,
+      badge,
+      effectiveSignLayout,
+    );
+
+    textElements = lineLayout
+      .map((item) => {
+        const line = item.line;
+        const color = line.color || "#000";
+        const textDecoration = line.underline ? "underline" : "none";
+        return `<text x="${item.x}" y="${item.y}" font-size="${
+          item.fontSize
+        }" text-anchor="${item.anchor}"
               dominant-baseline="middle" font-family="${
                 item.familyEscaped
               }" fill="${color}"
               font-weight="${item.fontWeight}"
               font-style="${item.fontStyle}"
               text-decoration="${textDecoration}">${esc(
-        line.text || "",
-      )}</text>`;
-    })
-    .join("");
+          line.text || "",
+        )}</text>`;
+      })
+      .join("");
+  }
 
   const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
 
@@ -1219,19 +1331,58 @@ function renderPlaqueBadgeSvg(
 
   const detached = isPlaqueDetachedTemplateId(template.id);
   const slot = template.plaquePhotoRectPx;
-  const detachedPhotoLayer =
+  const detachedWoodStockHref =
+    detached && slot ? plaqueDetachedWoodStockPhotoHref(template.id) : null;
+  const detachedStockUsesSupplierInset =
+    detachedWoodStockHref === PLAQUE_DETACHED_PORTRAIT_STOCK_PATH ||
+    detachedWoodStockHref === PLAQUE_DETACHED_LANDSCAPE_STOCK_PATH;
+  const detachedWoodStockLayers =
+    detachedWoodStockHref && slot
+      ? plaqueDetachedWoodStockPlaceholderLayers({
+          clipIdPrefix: clipId,
+          slot,
+          href: detachedWoodStockHref,
+          photoHereBanner: !detachedStockUsesSupplierInset,
+          preserveAspectRatio: detachedStockUsesSupplierInset
+            ? "xMidYMid meet"
+            : "xMidYMid slice",
+        })
+      : null;
+
+  const detachedPhotoFrameFinish: PlaqueDetachedPhotoFrameFinish =
+    badge.plaqueDetachedPhotoFrameFinish ?? "gold";
+  const detachedPhotoFrameDecor =
     detached && slot
-      ? `${renderPlaqueDetachedPhotoImage(badge.logo, slot)}${plaqueDetachedPhotoFrameRect(slot)}`
+      ? plaqueDetachedPhotoFrameDecor({
+          slot,
+          finish: detachedPhotoFrameFinish,
+          idSuffix: safeClip,
+          templateHeightPx: template.heightPx,
+        })
+      : null;
+
+  /** Wood photo opening: stock preview art + metallic frame stroke (plate upload is separate). */
+  const detachedStockPhotoSlotLayer =
+    detachedPhotoFrameDecor?.rectSnippet ?? "";
+
+  const detachedPlateInnerBorderMarkup =
+    detached && innerPathData
+      ? plaqueDetachedPlateInnerBorderSvgMarkup({
+          plateOuter: plateOuterRect,
+          strokeHex: plaqueAwardInkHex(badge.backgroundColor),
+        })
       : "";
 
-  const attachedLogoRaw =
-    !detached && signTemplateSupportsUserLogoUpload(template.id)
-      ? renderUserLogoLayer(badge.logo, template, badge, designBox)
-      : "";
-  const attachedLogoLayer =
-    innerPathData && attachedLogoRaw.trim() !== ""
-      ? `<g clip-path="url(#${clipId})">${attachedLogoRaw}</g>`
-      : attachedLogoRaw;
+  const plateLogoClipId =
+    detached && innerPathData ? `${clipId}-plateContent` : clipId;
+
+  const plateUserLogoRaw = signTemplateSupportsUserLogoUpload(template.id)
+    ? renderUserLogoLayer(badge.logo, template, badge, designBox)
+    : "";
+  const plateUserLogoLayer =
+    innerPathData && plateUserLogoRaw.trim() !== ""
+      ? `<g clip-path="url(#${plateLogoClipId})">${plateUserLogoRaw}</g>`
+      : plateUserLogoRaw;
 
   const styleBlock =
     fontDefs.length > 0
@@ -1261,6 +1412,15 @@ function renderPlaqueBadgeSvg(
     <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
       ${textClipPathRect}
     </clipPath>
+    ${
+      detached && innerPathData
+        ? `<clipPath id="${clipId}-plateContent" clipPathUnits="userSpaceOnUse">
+      <rect x="${designBox.x}" y="${designBox.y}" width="${designBox.width}" height="${designBox.height}"/>
+    </clipPath>`
+        : ""
+    }
+    ${detachedWoodStockLayers?.defsSnippet ?? ""}
+    ${detachedPhotoFrameDecor?.defsSnippet ?? ""}
   </defs>
   <g transform="translate(${PADDING_PX}, ${PADDING_PX})">
     ${plaqueWoodBackgroundRect(
@@ -1269,9 +1429,20 @@ function renderPlaqueBadgeSvg(
       woodGradId,
       woodGrainFilterId,
     )}
-    ${detachedPhotoLayer}
+    ${detachedWoodStockLayers?.bodySnippet ?? ""}
+    ${detachedStockPhotoSlotLayer}
     ${innerPlateWithBrushFill}
-    ${attachedLogoLayer}
+    ${
+      detachedPlateInnerBorderMarkup && innerPathData
+        ? `<g clip-path="url(#${clipId})">${detachedPlateInnerBorderMarkup}</g>`
+        : ""
+    }
+    ${
+      plaqueInnerBorderMarkup && innerPathData
+        ? `<g clip-path="url(#${clipId})">${plaqueInnerBorderMarkup}</g>`
+        : ""
+    }
+    ${plateUserLogoLayer}
     ${text}
     ${outline}
   </g>
@@ -1529,7 +1700,17 @@ export async function renderBadgeToSvgStringWithFonts(
   }
 
   if (isPlaqueTemplateId(template.id)) {
-    return renderPlaqueBadgeSvg(badge, template, opts, fontDefs, fontMappings);
+    let svg = renderPlaqueBadgeSvg(
+      badge,
+      template,
+      opts,
+      fontDefs,
+      fontMappings,
+    );
+    if (isPlaqueDetachedTemplateId(template.id)) {
+      svg = await inlinePlaqueDetachedWoodStockImagesInSvg(svg);
+    }
+    return svg;
   }
 
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)

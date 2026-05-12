@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1152 864" width="1152" height="864">
-  <path id="Inner" d="M 148 540 L 1004 540 Q 1024 540 1024 560 L 1024 808 Q 1024 828 1004 828 L 148 828 Q 128 828 128 808 L 128 560 Q 128 540 148 540 Z" fill="#3a3a3a"/>
+<!-- 9×12" portrait board; plate 7×4", photo opening 7.5×5.5" + 0.5" gap (design sheet). ViewBox 9×12 @ 96dpi. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 864 1152" width="864" height="1152">
+  <path id="Inner" d="M 96 624 L 768 624 L 768 1008 L 96 1008 Z" fill="#3a3a3a"/>
 </svg>
