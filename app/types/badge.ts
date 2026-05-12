@@ -86,8 +86,14 @@ export interface Badge {
    */
   signBorderOptionId?: string;
   /**
+   * Attached plaque: when true and {@link plaqueFormatId} is unset, render like Standard award
+   * (Step 3 shows no preset selected until the user picks one). Legacy saves omit this → generic lines.
+   */
+  plaqueUseDefaultAttachedAwardVisual?: boolean;
+  /**
    * Plaque attached plate only: award layout preset (static captions, divider, optional inner border).
-   * Omitted on detached layouts and legacy saves → generic line layout.
+   * Omitted on detached layouts and legacy saves → generic line layout (unless
+   * {@link plaqueUseDefaultAttachedAwardVisual} supplies the default Standard look).
    */
   plaqueFormatId?: string;
   /**

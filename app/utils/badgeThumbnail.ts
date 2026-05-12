@@ -5,6 +5,8 @@ import {
 } from '~/constants/designerVariants';
 import { renderBadgeToSvgString, renderBadgeToSvgStringWithFonts } from './renderSvg';
 import { loadTemplateById, type LoadedTemplate } from './templates';
+import { isPlaqueTemplateId } from './plaqueRender';
+import { badgeWithPlaqueLogoInlinedForSvgImg } from './plaqueLogoInline';
 // import UTIF encoder
 // @ts-ignore
 import * as UTIF from 'utif';
@@ -30,6 +32,9 @@ function rgbaToTiff(rgba: Uint8Array, w: number, h: number): string {
 }
 
 // Legacy function removed - now using unified renderer
+
+/** Reuse data URLs when generating plaque proof PDFs / full rasters (bounded inside helper). */
+const plaqueLogoRasterCache = new Map<string, string>();
 
 /**
  * Generates a thumbnail image of a badge design using the unified renderer
@@ -134,9 +139,16 @@ export async function generateFullBadgeImage(badge: Badge, variant: DesignerVari
     
     // Load the template (variant so sign templates load from sign config)
     const template = await loadTemplateById(badge.templateId || (isSignLikeVariant(variant) ? 'circle-4x4' : 'rect-1x3'), variant);
-    
+
+    const badgeForSvg =
+      variant === "plaque" && isPlaqueTemplateId(template.id)
+        ? await badgeWithPlaqueLogoInlinedForSvgImg(badge, plaqueLogoRasterCache)
+        : badge;
+
     // Generate SVG using font-embedding version for consistent font rendering
-    const svgString = await renderBadgeToSvgStringWithFonts(badge, template, { showOutline: false });
+    const svgString = await renderBadgeToSvgStringWithFonts(badgeForSvg, template, {
+      showOutline: false,
+    });
     
     // Match SVG viewBox dimensions exactly (same as renderSvg: standardViewBox + PADDING_PX*2)
     // so rasterization has the same aspect ratio as the SVG and no stretching occurs.

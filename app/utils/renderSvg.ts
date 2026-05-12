@@ -70,8 +70,8 @@ import {
   plaqueWoodGradientDef,
 } from "~/utils/plaqueRender";
 import {
-  getPlaqueAwardFormatById,
   plaqueAwardUsesClassicAttachedLogo,
+  resolveAttachedPlaqueAwardFormatForRender,
 } from "~/constants/plaqueFormats";
 import {
   PLAQUE_CLASSIC_Y_PRESENTED_TO_FRAC,
@@ -243,7 +243,7 @@ export function getEffectiveSignTextLayoutAndLogoDrawForBadge(
   const borderOn = resolveSignBorderOverlayActive(badge, template);
   // Attached plaque + image: classic/formal formats center the emblem under the inner border; others use the logo band.
   if (isPlaqueAttachedTemplateId(template.id) && badge.logo?.src?.trim()) {
-    const awardFmt = getPlaqueAwardFormatById(badge.plaqueFormatId);
+    const awardFmt = resolveAttachedPlaqueAwardFormatForRender(badge);
     const useClassicAwardLogo =
       awardFmt && plaqueAwardUsesClassicAttachedLogo(awardFmt);
 
@@ -1241,10 +1241,9 @@ function renderPlaqueBadgeSvg(
     signHorizontalInsetPx(textClipW) + curveTextClip,
   );
 
-  const awardFormat =
-    isPlaqueAttachedTemplateId(template.id) && badge.plaqueFormatId
-      ? getPlaqueAwardFormatById(badge.plaqueFormatId)
-      : undefined;
+  const awardFormat = isPlaqueAttachedTemplateId(template.id)
+    ? resolveAttachedPlaqueAwardFormatForRender(badge)
+    : undefined;
 
   let textElements: string;
   let plaqueInnerBorderMarkup = "";

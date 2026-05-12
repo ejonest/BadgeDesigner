@@ -5,6 +5,7 @@ import {
   plaqueAwardFormatUserLineCount,
   type BadgeLineShape,
 } from "~/constants/plaqueFormats";
+import { ATTACHED_PLAQUE_MAX_TEXT_LINES } from "~/constants/plaqueLayouts";
 import { PLAQUE_DEFAULT_BRUSH_GOLD_HEX } from "~/utils/plaqueRender";
 
 /** Generic “logo” tile for format thumbnails (data URL, CORS-free in SVG-as-img plaque previews). */
@@ -33,7 +34,10 @@ export function buildPlaqueAwardFormatPreviewBadge(params: {
   const fmt = getPlaqueAwardFormatById(params.formatId);
   if (!fmt) return null;
   const userSlots = plaqueAwardFormatUserLineCount(fmt);
-  const lineCount = Math.max(params.maxLines, userSlots);
+  const lineCount = Math.min(
+    ATTACHED_PLAQUE_MAX_TEXT_LINES,
+    Math.max(params.maxLines, userSlots),
+  );
   const linesRaw = buildInitialLinesForPlaqueAwardFormat(
     fmt,
     params.defaultLineShape,
