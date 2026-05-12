@@ -1,4 +1,8 @@
-import { ALL_SIGN_TEMPLATE_TYPES } from "~/constants/designerVariants";
+import {
+  ALL_SIGN_TEMPLATE_TYPES,
+  type DesignerVariant,
+} from "~/constants/designerVariants";
+import { parsePlaqueTemplateId } from "~/constants/plaqueLayouts";
 
 /**
  * Maps sign template *type* id (from ALL_SIGN_TEMPLATE_TYPES) to Shopify option1 "Shape"
@@ -64,6 +68,44 @@ export function getSignShopifyShapeSizeForTemplateId(
 }
 
 /**
+ * Plaque `templateId` (e.g. plaque-attached-medium) → Shopify variant option1 + option2.
+ * Option strings must match the **custom-plaque** product in Shopify (matching is normalized).
+ * Adjust {@link PLAQUE_SHOPIFY_OPTION1_BY_LAYOUT_ID} if your CSV uses different labels.
+ */
+const PLAQUE_SHOPIFY_OPTION1_BY_LAYOUT_ID: Readonly<Record<string, string>> = {
+  "plaque-attached": "Attached Plate",
+  "plaque-detached-portrait": "Photo Plaque Portrait",
+  "plaque-detached-landscape": "Photo Plaque Landscape",
+};
+
+export function getPlaqueShopifyShapeSizeForTemplateId(
+  templateId: string,
+): { shape: string; size: string } | null {
+  const parsed = parsePlaqueTemplateId(templateId);
+  if (!parsed) return null;
+  const shape = PLAQUE_SHOPIFY_OPTION1_BY_LAYOUT_ID[parsed.layoutId];
+  if (!shape) return null;
+  return {
+    shape,
+    size: normalizeSignSizeOptionLabel(parsed.size),
+  };
+}
+
+/** Sign or plaque catalog row: Shape/Type × Size (Shopify option1 × option2). */
+export function getSignLikeShopifyShapeSizeForTemplateId(
+  variant: DesignerVariant,
+  templateId: string,
+): { shape: string; size: string } | null {
+  if (variant === "plaque") {
+    return getPlaqueShopifyShapeSizeForTemplateId(templateId);
+  }
+  if (variant === "sign") {
+    return getSignShopifyShapeSizeForTemplateId(templateId);
+  }
+  return null;
+}
+
+/**
  * `getAllBadges` may leave `templateId` as badge defaults (e.g. rect-1x3). For pricing/cart,
  * use the badge id only when it maps to a real sign SKU; otherwise use the universal template
  * from the template/size steps.
@@ -74,7 +116,8 @@ export function effectiveSignTemplateIdForBadge(
 ): string {
   if (
     badgeTemplateId &&
-    getSignShopifyShapeSizeForTemplateId(badgeTemplateId)
+    (getSignShopifyShapeSizeForTemplateId(badgeTemplateId) ||
+      getPlaqueShopifyShapeSizeForTemplateId(badgeTemplateId))
   ) {
     return badgeTemplateId;
   }

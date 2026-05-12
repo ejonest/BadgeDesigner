@@ -117,7 +117,7 @@ import {
 } from "~/utils/signShopifyCatalog";
 import {
   effectiveSignTemplateIdForBadge,
-  getSignShopifyShapeSizeForTemplateId,
+  getSignLikeShopifyShapeSizeForTemplateId,
 } from "~/utils/signTemplateShopifyOptions";
 
 import {
@@ -2926,7 +2926,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             b.templateId,
             universalTemplateId,
           );
-          const opts = getSignShopifyShapeSizeForTemplateId(tid);
+          const opts = getSignLikeShopifyShapeSizeForTemplateId(variant, tid);
           if (!opts || !product) return 9.99;
           return (
             resolveSignVariantIdAndPrice(product, opts.shape, opts.size)
@@ -3137,7 +3137,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           const product = signShopifyProductRef.current;
           const linePrices = allFinalizedBadges.map((b) => {
             const tid = effectiveSignTemplateIdForBadge(b.templateId, uni);
-            const opts = getSignShopifyShapeSizeForTemplateId(tid);
+            const opts = getSignLikeShopifyShapeSizeForTemplateId(variant, tid);
             if (!opts || !product) return 9.99;
             return (
               resolveSignVariantIdAndPrice(product, opts.shape, opts.size)
@@ -3557,7 +3557,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         b.templateId,
         universalTemplateId,
       );
-      const opts = getSignShopifyShapeSizeForTemplateId(tid);
+      const opts = getSignLikeShopifyShapeSizeForTemplateId(variant, tid);
       if (!opts) continue;
       const hit = resolveSignVariantIdAndPrice(
         signShopifyProduct,
@@ -6368,7 +6368,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           b.templateId,
           universalTemplateId,
         );
-        const opts = getSignShopifyShapeSizeForTemplateId(tid);
+        const opts = getSignLikeShopifyShapeSizeForTemplateId(variant, tid);
         if (opts && signCatalog) {
           const hit = resolveSignVariantIdAndPrice(
             signCatalog,
@@ -6552,7 +6552,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               b.templateId,
               universalTemplateId,
             );
-            const opts = getSignShopifyShapeSizeForTemplateId(tid);
+            const opts = getSignLikeShopifyShapeSizeForTemplateId(variant, tid);
             if (!opts || !product) return 9.99;
             return (
               resolveSignVariantIdAndPrice(product, opts.shape, opts.size)
