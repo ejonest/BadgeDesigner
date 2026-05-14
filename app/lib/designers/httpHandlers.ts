@@ -225,6 +225,11 @@ export async function runSaveToGadget(
 
   const g = def.gadget;
   const graphqlUrl = `${GADGET_API_URL.replace(/\/$/, "")}/api/graphql`;
+  console.log(
+    `${LOG_PREFIX} Gadget GraphQL (${designerId})`,
+    graphqlUrl,
+    `mutation=${g.createField}`,
+  );
   const createMutation = `
       mutation CreateDesign($${g.inputVariable}: ${g.inputType}!) {
         ${g.createField}(${g.inputVariable}: $${g.inputVariable}) {

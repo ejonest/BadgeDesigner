@@ -21,6 +21,7 @@ import {
   isPlaqueAttachedTemplateId,
   isPlaqueDetachedTemplateId,
 } from "~/utils/plaqueRender";
+import { plaqueUserLineTextMatchesPlaceholder } from "~/constants/plaqueFormats";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
 // Helper functions for normalized font size conversion
@@ -222,6 +223,8 @@ export interface BadgeEditorPanelProps {
   variant?: DesignerVariant;
   /** Plaque award format: label per line index (falls back to “Line n”). */
   lineLabels?: (string | undefined)[];
+  /** Plaque: slot placeholder per line (HTML placeholder + treat as unset when it matches stored text). */
+  linePlaceholders?: (string | undefined)[];
 }
 
 export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
@@ -242,6 +245,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   onResetLineToDefault,
   variant = "badge",
   lineLabels,
+  linePlaceholders,
 }) => {
   const { labelProductPlural } = getDesignerVariantConfig(variant);
   const allItemsLabel = labelProductPlural.toLowerCase();
@@ -501,12 +505,28 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
               value={(() => {
                 const defaultText =
                   idx === 0 ? "Your Name" : idx === 1 ? "Title" : "Line Text";
+                const slotPh = linePlaceholders?.[idx];
+                const rawTrim = (line.text ?? "").trim();
+                const matchesSlotPlaceholder =
+                  variant === "plaque" &&
+                  Boolean(slotPh?.trim()) &&
+                  plaqueUserLineTextMatchesPlaceholder(line.text, slotPh);
                 const isEmptyOrDefault =
-                  !(line.text ?? "").trim() || line.text === defaultText;
-                return isEmptyOrDefault ? "" : line.text;
+                  !rawTrim ||
+                  line.text === defaultText ||
+                  matchesSlotPlaceholder;
+                return isEmptyOrDefault ? "" : line.text ?? "";
               })()}
               onChange={(e) => onLineChange(idx, { text: e.target.value })}
-              placeholder={`Insert line ${idx + 1} text here`}
+              placeholder={(() => {
+                if (variant === "plaque") {
+                  if (idx === 0) return "Your Name";
+                  if (idx === 1) return "Title";
+                }
+                const ph = linePlaceholders?.[idx];
+                const t = ph?.trim();
+                return t ? t : `Insert line ${idx + 1} text here`;
+              })()}
               disabled={!editable}
             />
             <div className="flex flex-col sm:flex-row gap-2 items-center mt-2 min-w-0">

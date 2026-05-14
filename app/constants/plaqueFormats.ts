@@ -846,24 +846,47 @@ export function plaqueAwardEditorLabelsForFormat(
   return out;
 }
 
+/** Slot {@link PlaqueAwardSlot.placeholder} per line index (for HTML placeholders + “unset” detection). */
+export function plaqueAwardEditorPlaceholdersForFormat(
+  format: PlaqueAwardFormatDefinition | undefined,
+  maxLines: number,
+): (string | undefined)[] {
+  const out: (string | undefined)[] = Array.from(
+    { length: maxLines },
+    () => undefined,
+  );
+  if (!format) return out;
+  for (const s of format.slots) {
+    if (s.kind === "user" && s.userIndex < maxLines && !out[s.userIndex]) {
+      out[s.userIndex] = s.placeholder;
+    }
+  }
+  return out;
+}
+
+/** True when stored line text is the same as the award slot placeholder (legacy init or accidental match). */
+export function plaqueUserLineTextMatchesPlaceholder(
+  lineText: string | undefined,
+  slotPlaceholder: string | undefined,
+): boolean {
+  const t = (lineText ?? "").trim();
+  const ph = (slotPlaceholder ?? "").trim();
+  if (!t || !ph) return false;
+  return t.localeCompare(ph, undefined, { sensitivity: "accent" }) === 0;
+}
+
 export function buildInitialLinesForPlaqueAwardFormat(
   format: PlaqueAwardFormatDefinition,
   defaultLineShape: BadgeLineShape,
   maxLines: number,
 ): BadgeLine[] {
   const lines: BadgeLine[] = [];
-  const placeholdersByIndex = new Map<number, string>();
-  for (const slot of format.slots) {
-    if (slot.kind === "user") {
-      placeholdersByIndex.set(slot.userIndex, slot.placeholder);
-    }
-  }
   for (let i = 0; i < maxLines; i++) {
-    const ph = placeholdersByIndex.get(i) ?? "";
     lines.push({
       ...defaultLineShape,
       id: `line-${i + 1}`,
-      text: ph,
+      /** Empty so preview uses {@link PlaqueAwardSlot.placeholder}; editor shows native placeholder. */
+      text: "",
       align: "center",
       bold: format.slots.some(
         (s) => s.kind === "user" && s.userIndex === i && s.bold,

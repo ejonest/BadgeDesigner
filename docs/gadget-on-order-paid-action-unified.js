@@ -9,8 +9,8 @@
  *   LINK_ORDER_SECRET_SIGN        — optional; sign POST (else LINK_ORDER_SECRET)
  *   LINK_ORDER_SECRET_PLAQUE      — optional; plaque POST (else LINK_ORDER_SECRET)
  *   VERCEL_LINK_ORDER_URL         — default https://YOUR_APP/api/link-order-to-supabase
- *   VERCEL_LINK_ORDER_SIGN_URL    — default https://YOUR_APP/api/link-order-sign-to-supabase
- *   VERCEL_LINK_ORDER_PLAQUE_URL  — default https://YOUR_APP/api/link-order-plaque-to-supabase
+ *   VERCEL_LINK_ORDER_SIGN_URL    — sign POST (alias: VERCEL_LINK_ORDER_URL_SIGN)
+ *   VERCEL_LINK_ORDER_PLAQUE_URL  — plaque POST (alias: VERCEL_LINK_ORDER_URL_PLAQUE)
  *
  * Sign / plaque rows in Supabase are filled by Vercel save-draft / send-to-supabase; this action links paid orders.
  *
@@ -22,9 +22,11 @@ const BADGE_URL =
   "https://all-quality-design-tool.vercel.app/api/link-order-to-supabase";
 const SIGN_URL =
   process.env.VERCEL_LINK_ORDER_SIGN_URL ||
+  process.env.VERCEL_LINK_ORDER_URL_SIGN ||
   "https://all-quality-design-tool.vercel.app/api/link-order-sign-to-supabase";
 const PLAQUE_URL =
   process.env.VERCEL_LINK_ORDER_PLAQUE_URL ||
+  process.env.VERCEL_LINK_ORDER_URL_PLAQUE ||
   "https://all-quality-design-tool.vercel.app/api/link-order-plaque-to-supabase";
 const BADGE_SECRET = process.env.LINK_ORDER_SECRET;
 const SIGN_SECRET = process.env.LINK_ORDER_SECRET_SIGN || process.env.LINK_ORDER_SECRET;
