@@ -48,6 +48,7 @@ import {
   applyPlaqueMetalBrushFill,
   isFeaturedBrushedMetalPlateColor,
   normalizeFeaturedBrushedMetalBaseHex,
+  PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
   isPlaqueAttachedTemplateId,
   isPlaqueDetachedTemplateId,
   isPlaqueTemplateId,
@@ -1217,15 +1218,21 @@ function renderPlaqueBadgeSvg(
     template,
     badge,
   );
-  const metalGradientDef = plaqueMetalBrushGradientDef(
-    metalGradId,
-    template.heightPx,
-    normalizeFeaturedBrushedMetalBaseHex(badge.backgroundColor || "#FFFFFF"),
+  const plateUsesBrushedMetal = isFeaturedBrushedMetalPlateColor(
+    badge.backgroundColor,
   );
-  const innerPlateWithBrushFill = applyPlaqueMetalBrushFill(
-    innerPathWithFill,
-    metalGradId,
-  );
+  const metalGradientDef = plateUsesBrushedMetal
+    ? plaqueMetalBrushGradientDef(
+        metalGradId,
+        template.heightPx,
+        normalizeFeaturedBrushedMetalBaseHex(
+          badge.backgroundColor || DEFAULT_PLATE_BG,
+        ) || PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
+      )
+    : "";
+  const innerPlateWithBrushFill = plateUsesBrushedMetal
+    ? applyPlaqueMetalBrushFill(innerPathWithFill, metalGradId)
+    : innerPathWithFill;
 
   const effectiveSignLayout = template.signTextLayout
     ? getEffectiveSignTextLayoutForBadge(template, badge)

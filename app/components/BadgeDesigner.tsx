@@ -149,7 +149,10 @@ import {
   getPlaqueAwardFormats,
   getPlaqueAwardFormatsForPicker,
   plaqueAwardEditorLabelsForFormat,
+  plaqueAwardEditorPlaceholdersForFormat,
+  plaqueAwardFormatUserLineCount,
   plaqueAwardFormatsPickerHasExtras,
+  plaqueUserLineTextMatchesPlaceholder,
   resolveAttachedPlaqueAwardFormatForRender,
 } from "~/constants/plaqueFormats";
 import { buildPlaqueAwardFormatPreviewBadge } from "~/utils/plaqueAwardFormatPreview";
@@ -166,7 +169,7 @@ const SIGN_LOGO_PLACEMENT_UI_LABEL: Record<SignLogoPlacement, string> = {
   bottom: "Bottom",
 };
 
-/** Image upload is required only after user picks detached-photo layout. */
+/** Image upload is required for detached-photo layouts and for attached-plaque (icon on the plate). */
 /** True when UI should show attached-plaque-only steps (format picker). */
 function plaqueAttachedFlowSelected(
   selectedPlaqueLayoutId: string | null,
@@ -2247,41 +2250,52 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const hasStep3TextEntered =
     badge.lines.length > 0 &&
     (() => {
-      const t0 = (badge.lines[0]?.text || "").trim();
       if (variant !== "plaque") {
+        const t0 = (badge.lines[0]?.text || "").trim();
         return t0 !== "" && t0 !== getStep3DefaultText(0);
       }
-      const fmt =
-        plaqueAttachedSelected &&
-        (() => {
-          const explicit = getPlaqueAwardFormatById(badge.plaqueFormatId);
-          if (explicit) return explicit;
-          if (badge.plaqueUseDefaultAttachedAwardVisual === true) {
-            return getPlaqueAwardFormatById(
-              DEFAULT_PLAQUE_ATTACHED_FORMAT_ID,
+      if (plaqueAttachedSelected) {
+        const fmt = resolveAttachedPlaqueAwardFormatForRender(badge);
+        if (fmt) {
+          const n = plaqueAwardFormatUserLineCount(fmt);
+          for (let i = 0; i < n; i++) {
+            if (i >= badge.lines.length) continue;
+            const raw = badge.lines[i]?.text;
+            const t = (raw ?? "").trim();
+            if (!t) return false;
+            const slot = fmt.slots.find(
+              (s) => s.kind === "user" && s.userIndex === i,
             );
+            if (
+              slot &&
+              slot.kind === "user" &&
+              plaqueUserLineTextMatchesPlaceholder(raw, slot.placeholder)
+            ) {
+              return false;
+            }
+            if (t === getStep3DefaultText(i)) return false;
           }
-          return undefined;
-        })();
-      if (fmt) {
-        const slot0 = fmt.slots.find(
-          (s) => s.kind === "user" && s.userIndex === 0,
-        );
-        const ph =
-          slot0 && slot0.kind === "user"
-            ? slot0.placeholder.trim()
-            : "";
-        if (!ph) return t0 !== "";
-        return (
-          t0 !== "" &&
-          t0.localeCompare(ph, undefined, { sensitivity: "accent" }) !== 0
-        );
+          return true;
+        }
+        const t0 = (badge.lines[0]?.text || "").trim();
+        return t0 !== "" && t0 !== getStep3DefaultText(0);
       }
+      const t0 = (badge.lines[0]?.text || "").trim();
       return t0 !== "" && t0 !== getStep3DefaultText(0);
     })();
+  /** Attached plate or detached-photo layout: user must upload an image before the design is complete. */
+  const requiresPlaqueLogo =
+    variant === "plaque" &&
+    (plaqueAttachedSelected ||
+      plaqueDetachedPhotoRequired(
+        multipleBadges.length,
+        badge.templateId,
+        universalTemplateId,
+      ));
   const stepsComplete =
     multipleBadges.length > 0 &&
     hasChosenBackgroundColor &&
+    (!requiresPlaqueLogo || Boolean(badge.logo?.src?.trim())) &&
     hasStep3TextEntered &&
     (config.hasBacking ? sectionsOpened.backing : true) &&
     (variant === "plaque"
@@ -2316,18 +2330,20 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         badge.templateId,
         universalTemplateId,
       );
-      const missingDetachedPhoto =
-        detachedPhotoReq && !badge.logo?.src?.trim();
+      const requiresLogo =
+        attachedFlow || detachedPhotoReq;
+      const missingPlaqueLogo =
+        requiresLogo && !badge.logo?.src?.trim();
       if (forStep >= 2 && !st1) incomplete.push(1);
       if (forStep >= 3 && !st2) incomplete.push(2);
       if (attachedFlow) {
         if (forStep >= 4 && !stFormat) incomplete.push(3);
         if (forStep >= 5 && !stMetal) incomplete.push(4);
-        if (forStep >= 6 && missingDetachedPhoto) incomplete.push(5);
+        if (forStep >= 6 && missingPlaqueLogo) incomplete.push(5);
         if (forStep >= 7 && !hasStep3TextEntered) incomplete.push(6);
       } else {
         if (forStep >= 4 && !stMetal) incomplete.push(3);
-        if (forStep >= 5 && missingDetachedPhoto) incomplete.push(4);
+        if (forStep >= 5 && missingPlaqueLogo) incomplete.push(4);
         if (forStep >= 6 && !hasStep3TextEntered) incomplete.push(5);
       }
       if (incomplete.length === 0) return null;
@@ -5006,6 +5022,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
   };
 
+  /** When editing multiple products, switching items should land on “Enter your text” — customers usually only change copy on extras. */
+  const openEnterTextSectionOnly = () => {
+    setSectionsOpen({
+      template: false,
+      size: false,
+      export: false,
+      background: false,
+      textLines: true,
+      backing: false,
+      border: false,
+      plaqueFormat: false,
+    });
+    setSectionsOpened((prev) => ({ ...prev, textLines: true }));
+  };
+
   // UNIVERSAL TEMPLATE: Auto-save on switch, all badges use same template
   const selectBadge = (index: number) => {
     if (multipleBadges.length === 0) return;
@@ -5040,7 +5071,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
     // SWITCH: Load the selected badge for editing
     setSelectedBadgeIndex(index);
-    if (index !== selectedBadgeIndex) setDraftSaveTrigger((t) => t + 1);
+    if (index !== selectedBadgeIndex) {
+      setDraftSaveTrigger((t) => t + 1);
+      if (multipleBadges.length > 1) {
+        openEnterTextSectionOnly();
+      }
+    }
 
     // Load from the array we just wrote (stale closure on `multipleBadges` would skip the save we just applied)
     const selectedBadge = newMultipleBadges[index];
@@ -5173,6 +5209,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     setMultipleBadges(newMultiple);
     const newIndex = index + 1;
     setSelectedBadgeIndex(newIndex);
+    openEnterTextSectionOnly();
     setBadge(dupBadge);
     if (newMultiple[0]) setBadge1Data(newMultiple[0]);
     setDraftSaveTrigger((t) => t + 1);
@@ -7299,12 +7336,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               {(() => {
                 if (variant === "plaque") {
                   const plaqueLogoOk = Boolean(badge.logo?.src?.trim());
-                  const plaqueDetachedReq = plaqueDetachedPhotoRequired(
-                    multipleBadges.length,
-                    badge.templateId,
-                    universalTemplateId,
-                  );
-                  const plaqueImageDone = plaqueDetachedReq
+                  const plaqueImageDone = requiresPlaqueLogo
                     ? plaqueLogoOk
                     : multipleBadges.length > 0 &&
                       (plaqueLogoOk ||
@@ -7325,13 +7357,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     multipleBadges.length > 0 &&
                     hasChosenBackgroundColor &&
                     !plaqueLogoOk &&
-                    !hasStep3TextEntered &&
-                    (plaqueDetachedReq || !sectionsOpened.textLines);
-                  const plaqueCanEditText =
-                    plaqueDetachedReq
-                      ? plaqueLogoOk
-                      : plaqueLogoOk || sectionsOpened.textLines;
-                  const plaqueImageLabel = plaqueDetachedReq
+                    (requiresPlaqueLogo
+                      ? true
+                      : !hasStep3TextEntered &&
+                        !sectionsOpened.textLines);
+                  const plaqueCanEditText = requiresPlaqueLogo
+                    ? plaqueLogoOk
+                    : plaqueLogoOk || sectionsOpened.textLines;
+                  const plaqueImageLabel = requiresPlaqueLogo
                     ? "Image"
                     : "Image · optional";
                   const plaqueStyleDone =
@@ -9062,11 +9095,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               >
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-semibold text-gray-800">
-                    {plaqueDetachedPhotoRequired(
-                      multipleBadges.length,
-                      badge.templateId,
-                      universalTemplateId,
-                    )
+                    {requiresPlaqueLogo
                       ? plaqueAttachedSelected
                         ? "Step 5: Upload icon"
                         : "Step 4: Upload icon"
@@ -9076,12 +9105,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   </h3>
                   {(() => {
                     const logoOk = Boolean(badge.logo?.src?.trim());
-                    const detachedReq = plaqueDetachedPhotoRequired(
-                      multipleBadges.length,
-                      badge.templateId,
-                      universalTemplateId,
-                    );
-                    const stepDone = detachedReq
+                    const stepDone = requiresPlaqueLogo
                       ? logoOk
                       : multipleBadges.length > 0 &&
                         (logoOk ||
@@ -9353,6 +9377,20 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                             resolveAttachedPlaqueAwardFormatForRender(badge);
                           return fmt
                             ? plaqueAwardEditorLabelsForFormat(fmt, maxLines)
+                            : undefined;
+                        })()
+                      : undefined
+                  }
+                  linePlaceholders={
+                    variant === "plaque"
+                      ? (() => {
+                          const fmt =
+                            resolveAttachedPlaqueAwardFormatForRender(badge);
+                          return fmt
+                            ? plaqueAwardEditorPlaceholdersForFormat(
+                                fmt,
+                                maxLines,
+                              )
                             : undefined;
                         })()
                       : undefined
@@ -10502,12 +10540,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               selectedSignSizeTemplateId != null && hasChosenBackgroundColor;
             if (variant === "plaque") {
               const plaqueLogoOk = Boolean(badge.logo?.src?.trim());
-              const plaqueDetachedReq = plaqueDetachedPhotoRequired(
-                multipleBadges.length,
-                badge.templateId,
-                universalTemplateId,
-              );
-              const plaqueImageDone = plaqueDetachedReq
+              const plaqueImageDone = requiresPlaqueLogo
                 ? plaqueLogoOk
                 : multipleBadges.length > 0 &&
                   (plaqueLogoOk ||
@@ -10528,13 +10561,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 multipleBadges.length > 0 &&
                 hasChosenBackgroundColor &&
                 !plaqueLogoOk &&
-                !hasStep3TextEntered &&
-                (plaqueDetachedReq || !sectionsOpened.textLines);
-              const plaqueCanEditText =
-                plaqueDetachedReq
-                  ? plaqueLogoOk
-                  : plaqueLogoOk || sectionsOpened.textLines;
-              const plaqueImageLabel = plaqueDetachedReq
+                (requiresPlaqueLogo
+                  ? true
+                  : !hasStep3TextEntered && !sectionsOpened.textLines);
+              const plaqueCanEditText = requiresPlaqueLogo
+                ? plaqueLogoOk
+                : plaqueLogoOk || sectionsOpened.textLines;
+              const plaqueImageLabel = requiresPlaqueLogo
                 ? "Image"
                 : "Image · optional";
               const plaqueStyleDoneM =
