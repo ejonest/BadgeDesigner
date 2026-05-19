@@ -26,7 +26,21 @@ type Props = {
 /** Ms to wait after the last badge-only change before rebuilding SVG (coalesces rapid typing). */
 const PREVIEW_DEBOUNCE_MS = 72;
 
-export default function BadgeSvgRenderer({ badge, templateId, variant = "badge", actualSize = false, className, height }: Props) {
+/** Grid + column previews scale the SVG down; non-scaling stroke keeps the die edge readable. */
+const BADGE_LIKE_PREVIEW_RENDER_OPTS = {
+  showOutline: true as const,
+  outlineStrokeWidth: "0.5",
+  outlineNonScalingStroke: true as const,
+};
+
+export default function BadgeSvgRenderer({
+  badge,
+  templateId,
+  variant = "badge",
+  actualSize = false,
+  className,
+  height,
+}: Props) {
   const [svg, setSvg] = React.useState<string>("");
   const [plaqueImgSrc, setPlaqueImgSrc] = React.useState<string | null>(null);
   const plaqueLogoCacheRef = React.useRef<Map<string, string>>(new Map());
@@ -81,16 +95,15 @@ export default function BadgeSvgRenderer({ badge, templateId, variant = "badge",
           }
 
           const isPlaque = isPlaqueTemplateId(template.id);
-          const bRender =
-            isPlaque
-              ? await badgeWithPlaqueLogoInlinedForSvgImg(
-                  b as Badge,
-                  plaqueLogoCacheRef.current,
-                )
-              : b;
+          const bRender = isPlaque
+            ? await badgeWithPlaqueLogoInlinedForSvgImg(
+                b as Badge,
+                plaqueLogoCacheRef.current,
+              )
+            : b;
           const baseOpts = isPlaque
             ? SIGN_LIKE_TEMPLATE_THUMB_RENDER_OPTS
-            : { showOutline: true as const };
+            : BADGE_LIKE_PREVIEW_RENDER_OPTS;
           const s = await renderBadgeToSvgStringWithFonts(bRender, template, {
             ...baseOpts,
             svgDefScopeId: svgDefScopeRef.current,
@@ -143,7 +156,7 @@ export default function BadgeSvgRenderer({ badge, templateId, variant = "badge",
       key={`badge-render-${templateId}`}
       className={`w-full min-h-0 min-w-0 ${className || ""}`}
       style={{
-        height: height === "100%" ? "100%" : (height ?? 280),
+        height: height === "100%" ? "100%" : height ?? 280,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

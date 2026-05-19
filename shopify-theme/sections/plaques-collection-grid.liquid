@@ -1,0 +1,554 @@
+{%- comment -%}
+  Plaques collection product grid with optional client-side filters.
+  Upload: sections/plaques-collection-grid.liquid
+{%- endcomment -%}
+
+{%- liquid
+  assign per_page = section.settings.products_per_page | default: 50
+  if request.params.limit != blank
+    assign limit_param = request.params.limit | plus: 0
+    if limit_param > 0 and limit_param <= 50
+      assign per_page = limit_param
+    endif
+  endif
+  assign columns = section.settings.columns_desktop | default: 4
+-%}
+
+<div
+  class="plaques-collection-grid collection-products-wrapper"
+  id="plaques-collection-products"
+  data-section-id="{{ section.id }}"
+  {% if section.settings.enable_filters %}
+    data-plaques-filter-section
+    data-collection-handle="{{ collection.handle }}"
+    data-fetch-catalog-count="{{ section.settings.show_catalog_match_count }}"
+  {% endif %}
+>
+    {%- if section.settings.show_collection_title -%}
+    <div class="page-header collection-header">
+      <h2 class="page-heading">{{ collection.title | escape }}</h2>
+      {%- if collection.description != blank and section.settings.show_description -%}
+        <div class="collection-description rte">{{ collection.description }}</div>
+      {%- endif -%}
+    </div>
+    {%- elsif collection.description != blank and section.settings.show_description -%}
+      <div class="collection-description rte">{{ collection.description }}</div>
+    {%- endif -%}
+
+    {%- if section.settings.enable_filters -%}
+      {% render 'plaques-collection-filters-bar', section: section %}
+    {%- endif -%}
+
+    {%- if collection.products_count == 0 -%}
+      <p class="plaques-collection-grid__empty">{{ section.settings.empty_text | escape }}</p>
+    {%- else -%}
+      {% paginate collection.products by per_page %}
+        <div
+          class="products-grid row collection-products plaques-collection-grid__row"
+          style="--plaques-grid-cols: {{ columns }};"
+          data-plaques-product-grid
+        >
+          {%- for product in collection.products -%}
+            <div
+              class="product-item col-6 col-md-4 col-lg-3 grid-item plaques-collection-grid__item"
+              data-plaque-filters="{% render 'plaque-collection-filter-attrs', product: product %}"
+              data-product-handle="{{ product.handle }}"
+            >
+              {%- if snippets['product-grid-item'] -%}
+                {% render 'product-grid-item', product: product %}
+              {%- elsif snippets['product-card'] -%}
+                {% render 'product-card', product: product %}
+              {%- elsif snippets['collection-product-grid'] -%}
+                {% render 'collection-product-grid', product: product %}
+              {%- elsif snippets['product-item-grid'] -%}
+                {% render 'product-item-grid', product: product %}
+              {%- else -%}
+                <div class="plaques-collection-grid__fallback-card">
+                  <a href="{{ product.url }}" class="plaques-collection-grid__fallback-image-link">
+                    {%- if product.featured_image -%}
+                      <img
+                        src="{{ product.featured_image | image_url: width: 480 }}"
+                        alt="{{ product.featured_image.alt | default: product.title | escape }}"
+                        width="480"
+                        height="{{ 480 | divided_by: product.featured_image.aspect_ratio | ceil }}"
+                        loading="lazy"
+                      >
+                    {%- else -%}
+                      <div class="plaques-collection-grid__fallback-placeholder" aria-hidden="true"></div>
+                    {%- endif -%}
+                  </a>
+                  <div class="plaques-collection-grid__fallback-info">
+                    <a href="{{ product.url }}" class="plaques-collection-grid__fallback-title">
+                      {{ product.title | escape }}
+                    </a>
+                    <p class="plaques-collection-grid__fallback-price">
+                      {%- if product.compare_at_price > product.price -%}
+                        <s>{{ product.compare_at_price | money }}</s>
+                      {%- endif -%}
+                      {{ product.price | money }}
+                    </p>
+                  </div>
+                </div>
+              {%- endif -%}
+            </div>
+          {%- endfor -%}
+        </div>
+
+        {%- if paginate.pages > 1 -%}
+          <div class="plaques-collection-grid__pagination" data-plaques-pagination>
+            {%- if paginate.previous -%}
+              <a href="{{ paginate.previous.url }}" class="btn">{{ section.settings.prev_label | escape }}</a>
+            {%- endif -%}
+            <span class="plaques-collection-grid__page-count">
+              {{ paginate.current_page }} / {{ paginate.pages }}
+            </span>
+            {%- if paginate.next -%}
+              <a href="{{ paginate.next.url }}" class="btn">{{ section.settings.next_label | escape }}</a>
+            {%- endif -%}
+          </div>
+          {%- if section.settings.enable_filters -%}
+            <p class="plaques-collection-grid__pagination-note">
+              {{ section.settings.pagination_filter_note | escape }}
+            </p>
+          {%- endif -%}
+        {%- endif -%}
+      {% endpaginate %}
+    {%- endif -%}
+</div>
+
+<style>
+  .collection-page--plaques .halo-collection-content {
+    align-items: flex-start;
+  }
+  .collection-page--plaques .sidebar-column {
+    margin-bottom: 24px;
+  }
+  .collection-page--plaques .main-collection-column .page-heading {
+    margin: 0 0 8px;
+    font-size: 1.35rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .plaques-filters {
+    margin: 0 0 24px;
+    padding: 16px 18px;
+    background: #f7f8f9;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+  }
+  .plaques-filters__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+    margin-bottom: 14px;
+  }
+  .plaques-filters__title {
+    margin: 0;
+    font-weight: 700;
+    font-size: 15px;
+    color: #222;
+  }
+  .plaques-filters__count {
+    margin: 0;
+    font-size: 13px;
+    color: #555;
+  }
+  .plaques-filters__clear {
+    margin-left: auto;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid #ccc;
+    background: #fff;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+  .plaques-filters__clear:hover {
+    border-color: #888;
+  }
+  .plaques-filters__groups {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  @media (min-width: 750px) {
+    .plaques-filters__groups {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 990px) {
+    .plaques-filters__groups {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+  .plaques-filters__label {
+    display: block;
+    margin: 0 0 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #444;
+  }
+  .plaques-filters__select {
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    background: #fff;
+    font-size: 14px;
+  }
+  .plaques-filters__no-results {
+    margin: 14px 0 0;
+    color: #666;
+    font-size: 14px;
+  }
+  .plaques-collection-grid__item.is-filter-hidden {
+    display: none !important;
+  }
+  .plaques-collection-grid__row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 16px;
+    margin: 0 0 32px;
+  }
+  @media (min-width: 750px) {
+    .plaques-collection-grid__row {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 990px) {
+    .plaques-collection-grid__row {
+      grid-template-columns: repeat(var(--plaques-grid-cols, 4), minmax(0, 1fr));
+      gap: 28px 20px;
+    }
+  }
+  .plaques-collection-grid .product-item {
+    width: auto;
+    max-width: none;
+    flex: none;
+    padding: 0;
+  }
+  .plaques-collection-grid__fallback-card {
+    height: 100%;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .plaques-collection-grid__fallback-image-link {
+    display: block;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: #f5f5f5;
+  }
+  .plaques-collection-grid__fallback-image-link img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .plaques-collection-grid__fallback-placeholder {
+    width: 100%;
+    height: 100%;
+    min-height: 180px;
+    background: #eee;
+  }
+  .plaques-collection-grid__fallback-info {
+    padding: 12px 14px 16px;
+  }
+  .plaques-collection-grid__fallback-title {
+    display: block;
+    font-weight: 600;
+    color: #222;
+    text-decoration: none;
+    margin: 0 0 6px;
+    line-height: 1.35;
+  }
+  .plaques-collection-grid__fallback-price {
+    margin: 0;
+    color: #333;
+  }
+  .plaques-collection-grid__fallback-price s {
+    color: #888;
+    margin-right: 6px;
+  }
+  .plaques-collection-grid__empty {
+    padding: 24px 0 48px;
+    color: #555;
+  }
+  .plaques-collection-grid__pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding-bottom: 12px;
+  }
+  .plaques-collection-grid__pagination-note {
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+    margin: 0 0 32px;
+  }
+</style>
+
+<script>
+  (function () {
+    var section = document.querySelector('[data-plaques-filter-section][data-section-id="{{ section.id }}"]');
+    if (!section) return;
+
+    var items = Array.prototype.slice.call(section.querySelectorAll('.plaques-collection-grid__item'));
+    var selects = Array.prototype.slice.call(section.querySelectorAll('[data-plaques-filter-select]'));
+    var countEl = section.querySelector('[data-plaques-filter-count]');
+    var clearBtn = section.querySelector('[data-plaques-filter-clear]');
+    var emptyMsg = section.querySelector('[data-plaques-filter-empty]');
+    var sizeGroup = section.querySelector('[data-plaques-size-group]');
+    var sizeSelect = sizeGroup ? sizeGroup.querySelector('select') : null;
+    var pagination = section.querySelector('[data-plaques-pagination]');
+
+    function tokenize(value) {
+      if (!value) return [];
+      return value.split(',').map(function (t) { return t.trim(); }).filter(Boolean);
+    }
+
+    function getActiveFilters() {
+      return selects
+        .map(function (sel) { return sel.value; })
+        .filter(function (v) { return v; });
+    }
+
+    function itemMatches(item, active) {
+      if (!active.length) return true;
+      var tokens = tokenize(item.getAttribute('data-plaque-filters'));
+      return active.every(function (filter) { return tokens.indexOf(filter) !== -1; });
+    }
+
+    function pruneSelectOptions() {
+      selects.forEach(function (sel) {
+        Array.prototype.slice.call(sel.options).forEach(function (opt, idx) {
+          if (idx === 0) return;
+          var hasMatch = items.some(function (item) {
+            var tokens = tokenize(item.getAttribute('data-plaque-filters'));
+            return tokens.indexOf(opt.value) !== -1;
+          });
+          opt.hidden = !hasMatch;
+          opt.disabled = !hasMatch;
+        });
+        if (sel.value && sel.selectedOptions[0] && sel.selectedOptions[0].disabled) {
+          sel.value = '';
+        }
+      });
+    }
+
+    function buildSizeOptions() {
+      if (!sizeSelect) return;
+      var sizes = {};
+      items.forEach(function (item) {
+        tokenize(item.getAttribute('data-plaque-filters')).forEach(function (t) {
+          if (t.indexOf('size-') === 0) sizes[t] = true;
+        });
+      });
+      var keys = Object.keys(sizes).sort();
+      if (!keys.length) {
+        sizeGroup.hidden = true;
+        return;
+      }
+      sizeGroup.hidden = false;
+      keys.forEach(function (key) {
+        var opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = key.replace('size-', '').replace(/-/g, ' ');
+        sizeSelect.appendChild(opt);
+      });
+    }
+
+    function applyFilters() {
+      var active = getActiveFilters();
+      var visible = 0;
+      items.forEach(function (item) {
+        var show = itemMatches(item, active);
+        item.classList.toggle('is-filter-hidden', !show);
+        if (show) visible += 1;
+      });
+
+      if (countEl) {
+        countEl.textContent = active.length
+          ? 'Showing ' + visible + ' of ' + items.length + ' on this page'
+          : items.length + ' products on this page';
+      }
+      if (clearBtn) clearBtn.hidden = !active.length;
+      if (emptyMsg) emptyMsg.hidden = visible > 0;
+      if (pagination) pagination.style.display = active.length ? 'none' : '';
+    }
+
+    selects.forEach(function (sel) {
+      sel.addEventListener('change', applyFilters);
+    });
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        selects.forEach(function (sel) { sel.value = ''; });
+        applyFilters();
+      });
+    }
+
+    buildSizeOptions();
+    pruneSelectOptions();
+    applyFilters();
+
+    if (section.getAttribute('data-fetch-catalog-count') === 'true') {
+      var handle = section.getAttribute('data-collection-handle');
+      if (!handle || !countEl) return;
+      fetch('/collections/' + encodeURIComponent(handle) + '/products.json?limit=250')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var total = (data.products || []).length;
+          if (total > items.length) {
+            countEl.textContent += ' (' + total + '+ in collection — use pages for more)';
+          }
+        })
+        .catch(function () {});
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Plaques collection grid",
+  "tag": "section",
+  "class": "section-plaques-collection-grid",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Filters"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_filters",
+      "label": "Enable product filters (legacy — use native collection layout instead)",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "filters_heading",
+      "label": "Filters heading",
+      "default": "Filter plaques"
+    },
+    {
+      "type": "text",
+      "id": "filter_all_label",
+      "label": "“All” option label",
+      "default": "All"
+    },
+    {
+      "type": "text",
+      "id": "filters_clear_label",
+      "label": "Clear filters button",
+      "default": "Clear filters"
+    },
+    {
+      "type": "text",
+      "id": "filters_empty_message",
+      "label": "No results message",
+      "default": "No plaques match these filters on this page. Try clearing filters or another page."
+    },
+    {
+      "type": "text",
+      "id": "pagination_filter_note",
+      "label": "Pagination note when filters enabled",
+      "default": "Filters apply to products on this page. Use pagination to browse more plaques."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_catalog_match_count",
+      "label": "Show total collection size hint",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_filter_type",
+      "label": "Show plaque type filter",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_filter_category",
+      "label": "Show award / theme filter",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_filter_mount",
+      "label": "Show mount filter",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_filter_material",
+      "label": "Show material filter",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Product grid"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_collection_title",
+      "label": "Show collection title (disable if title is in template)",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "products_per_page",
+      "min": 8,
+      "max": 50,
+      "step": 2,
+      "label": "Products per page",
+      "default": 50
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "label": "Columns on desktop",
+      "default": 4
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "Show collection description under title",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "empty_text",
+      "label": "Empty collection message",
+      "default": "No plaques in this collection yet."
+    },
+    {
+      "type": "text",
+      "id": "prev_label",
+      "label": "Previous page button",
+      "default": "Previous"
+    },
+    {
+      "type": "text",
+      "id": "next_label",
+      "label": "Next page button",
+      "default": "Next"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Plaques collection grid"
+    }
+  ]
+}
+{% endschema %}

@@ -14,7 +14,7 @@ export type DesignerVariant = "badge" | "sign" | "plaque";
  */
 export const SIGN_LIKE_TEMPLATE_THUMB_RENDER_OPTS = {
   showOutline: true as const,
-  outlineStrokeWidth: "1.5",
+  outlineStrokeWidth: "2.5",
   outlineNonScalingStroke: true as const,
 };
 

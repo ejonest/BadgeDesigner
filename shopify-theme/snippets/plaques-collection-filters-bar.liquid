@@ -1,0 +1,81 @@
+{%- comment -%}
+  Filter toolbar for plaques collection (client-side).
+  Requires matching data-plaque-filters on each .plaques-collection-grid__item
+{%- endcomment -%}
+{%- if section.settings.enable_filters -%}
+  <div
+    class="plaques-filters"
+    data-plaques-filters-root
+  >
+    <div class="plaques-filters__header">
+      <p class="plaques-filters__title">{{ section.settings.filters_heading | escape }}</p>
+      <p class="plaques-filters__count" data-plaques-filter-count aria-live="polite"></p>
+      <button type="button" class="plaques-filters__clear" data-plaques-filter-clear hidden>
+        {{ section.settings.filters_clear_label | escape }}
+      </button>
+    </div>
+
+    <div class="plaques-filters__groups">
+      {%- if section.settings.show_filter_type -%}
+        <div class="plaques-filters__group" data-filter-group="type">
+          <label class="plaques-filters__label" for="plaques-filter-type-{{ section.id }}">Plaque type</label>
+          <select id="plaques-filter-type-{{ section.id }}" class="plaques-filters__select" data-plaques-filter-select data-filter-prefix="type-">
+            <option value="">{{ section.settings.filter_all_label | escape }}</option>
+            <option value="type-award">Award plaques</option>
+            <option value="type-decorative">Decorative / wall</option>
+            <option value="type-photo">Photo plaques</option>
+            <option value="type-attached">Attached plate</option>
+          </select>
+        </div>
+      {%- endif -%}
+
+      {%- if section.settings.show_filter_category -%}
+        <div class="plaques-filters__group" data-filter-group="category">
+          <label class="plaques-filters__label" for="plaques-filter-category-{{ section.id }}">Award / theme</label>
+          <select id="plaques-filter-category-{{ section.id }}" class="plaques-filters__select" data-plaques-filter-select data-filter-prefix="category-">
+            <option value="">{{ section.settings.filter_all_label | escape }}</option>
+            <option value="category-sports">Sports &amp; activities</option>
+            <option value="category-church">Church &amp; religious</option>
+            <option value="category-academic">Academic</option>
+            <option value="category-corporate">Corporate &amp; service</option>
+            <option value="category-competitions">Competitions &amp; events</option>
+            <option value="category-general">General awards</option>
+          </select>
+        </div>
+      {%- endif -%}
+
+      {%- if section.settings.show_filter_mount -%}
+        <div class="plaques-filters__group" data-filter-group="mount">
+          <label class="plaques-filters__label" for="plaques-filter-mount-{{ section.id }}">Mount</label>
+          <select id="plaques-filter-mount-{{ section.id }}" class="plaques-filters__select" data-plaques-filter-select data-filter-prefix="mount-">
+            <option value="">{{ section.settings.filter_all_label | escape }}</option>
+            <option value="mount-easel">Easel mount</option>
+            <option value="mount-wall">Wall mount</option>
+          </select>
+        </div>
+      {%- endif -%}
+
+      {%- if section.settings.show_filter_material -%}
+        <div class="plaques-filters__group" data-filter-group="material">
+          <label class="plaques-filters__label" for="plaques-filter-material-{{ section.id }}">Material</label>
+          <select id="plaques-filter-material-{{ section.id }}" class="plaques-filters__select" data-plaques-filter-select data-filter-prefix="material-">
+            <option value="">{{ section.settings.filter_all_label | escape }}</option>
+            <option value="material-wooden">Wooden</option>
+            <option value="material-acrylic">Acrylic</option>
+          </select>
+        </div>
+      {%- endif -%}
+
+      <div class="plaques-filters__group plaques-filters__group--size" data-filter-group="size" hidden data-plaques-size-group>
+        <label class="plaques-filters__label" for="plaques-filter-size-{{ section.id }}">Size</label>
+        <select id="plaques-filter-size-{{ section.id }}" class="plaques-filters__select" data-plaques-filter-select data-filter-prefix="size-">
+          <option value="">{{ section.settings.filter_all_label | escape }}</option>
+        </select>
+      </div>
+    </div>
+
+    <p class="plaques-filters__no-results" data-plaques-filter-empty hidden>
+      {{ section.settings.filters_empty_message | escape }}
+    </p>
+  </div>
+{%- endif -%}

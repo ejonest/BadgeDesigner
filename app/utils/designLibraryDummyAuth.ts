@@ -23,7 +23,7 @@ export type DesignLibraryDummyAuth =
  * - Env (must use `VITE_` prefix so the browser bundle can read it):
  *   `VITE_DESIGN_LIBRARY_DUMMY_MODE=true`
  * - URL query (no .env needed): `?designLibraryDummy=1` or `?dummyLibrary=1`
- *   Works on any designer route (e.g. `/sign-designer`, `/plaque-designer`).
+ *   Works on any designer route (e.g. `/sign-designer`, `/plaque-designer`, `/badge-designer-redesign`).
  *
  * Optional env:
  * - VITE_DESIGN_LIBRARY_DUMMY_USER_ID=…

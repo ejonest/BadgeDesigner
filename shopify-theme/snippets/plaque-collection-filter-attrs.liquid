@@ -1,0 +1,117 @@
+{%- comment -%}
+  Outputs comma-separated filter slugs for a plaque product (no trailing comma).
+  Usage: data-plaque-filters="{% render 'plaque-collection-filter-attrs', product: product %}"
+
+  Optional product tags (recommended for accuracy):
+    plaque-filter:<slug>           e.g. plaque-filter:sports
+    plaque-mount:easel             mount group
+    plaque-type:award              type group
+    plaque-size:7x5                size group
+    plaque-material:wooden
+{%- endcomment -%}
+{%- liquid
+  assign parts = ''
+  assign title_down = product.title | downcase
+  assign ptype = product.type | downcase
+
+  for tag in product.tags
+    assign tag_down = tag | downcase | strip
+    if tag_down contains 'plaque-filter:'
+      assign slug = tag_down | remove: 'plaque-filter:' | strip
+      if slug != blank
+        assign parts = parts | append: slug | append: ','
+      endif
+    elsif tag_down contains 'plaque-mount:'
+      assign slug = tag_down | remove: 'plaque-mount:' | strip
+      if slug != blank
+        assign parts = parts | append: 'mount-' | append: slug | append: ','
+      endif
+    elsif tag_down contains 'plaque-type:'
+      assign slug = tag_down | remove: 'plaque-type:' | strip
+      if slug != blank
+        assign parts = parts | append: 'type-' | append: slug | append: ','
+      endif
+    elsif tag_down contains 'plaque-size:'
+      assign slug = tag_down | remove: 'plaque-size:' | strip
+      if slug != blank
+        assign parts = parts | append: 'size-' | append: slug | append: ','
+      endif
+    elsif tag_down contains 'plaque-material:'
+      assign slug = tag_down | remove: 'plaque-material:' | strip
+      if slug != blank
+        assign parts = parts | append: 'material-' | append: slug | append: ','
+      endif
+    elsif tag_down contains 'plaque-category:'
+      assign slug = tag_down | remove: 'plaque-category:' | strip
+      if slug != blank
+        assign parts = parts | append: 'category-' | append: slug | append: ','
+      endif
+    endif
+  endfor
+
+  if ptype contains 'church' or ptype contains 'religious'
+    assign parts = parts | append: 'category-church,'
+  endif
+
+  if title_down contains 'decorative wall' or title_down contains 'wall plaque'
+    assign parts = parts | append: 'type-decorative,'
+  elsif title_down contains 'photo plaque' or title_down contains 'photo '
+    assign parts = parts | append: 'type-photo,'
+  elsif title_down contains 'attached plate' or title_down contains 'attached '
+    assign parts = parts | append: 'type-attached,'
+  else
+    assign parts = parts | append: 'type-award,'
+  endif
+
+  if title_down contains 'easel'
+    assign parts = parts | append: 'mount-easel,'
+  endif
+  if title_down contains 'wall mount' or title_down contains 'wall plaque' or title_down contains 'keyhole'
+    assign parts = parts | append: 'mount-wall,'
+  endif
+
+  if title_down contains 'wooden' or title_down contains 'wood '
+    assign parts = parts | append: 'material-wooden,'
+  endif
+  if title_down contains 'acrylic'
+    assign parts = parts | append: 'material-acrylic,'
+  endif
+
+  assign sport_kw = 'wrestling,volleyball,football,basketball,baseball,soccer,track,triathlon,golf,tennis,hockey,swimming,cheer,softball,lacrosse,cross country' | split: ','
+  for kw in sport_kw
+    if title_down contains kw
+      assign parts = parts | append: 'category-sports,'
+      break
+    endif
+  endfor
+
+  if title_down contains 'church' or title_down contains 'religion' or title_down contains 'prayer' or title_down contains 'faith' or title_down contains 'bible' or title_down contains 'thessalonians'
+    assign parts = parts | append: 'category-church,'
+  endif
+  if title_down contains 'graduation' or title_down contains 'academic' or title_down contains 'school'
+    assign parts = parts | append: 'category-academic,'
+  endif
+  if title_down contains 'employee' or title_down contains 'retirement' or title_down contains 'years of service' or title_down contains 'service award'
+    assign parts = parts | append: 'category-corporate,'
+  endif
+  if title_down contains 'cook off' or title_down contains 'chili' or title_down contains 'bbq' or title_down contains 'competition'
+    assign parts = parts | append: 'category-competitions,'
+  endif
+
+  unless parts contains 'category-'
+    assign parts = parts | append: 'category-general,'
+  endunless
+
+  for option in product.options_with_values
+    assign oname = option.name | downcase
+    if oname == 'size' or oname == 'dimensions'
+      for value in option.values
+        assign size_slug = value | handleize
+        if size_slug != blank
+          assign parts = parts | append: 'size-' | append: size_slug | append: ','
+        endif
+      endfor
+    endif
+  endfor
+
+-%}{{- parts | remove: ',,' -}}

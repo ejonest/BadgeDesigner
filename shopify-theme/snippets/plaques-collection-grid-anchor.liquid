@@ -1,0 +1,17 @@
+{%- comment -%}
+  Drop this once at the top of the product grid on the plaques collection template
+  (Theme customize → main collection section → Custom liquid at top, or paste into
+  collection section if Ella exposes custom liquid).
+
+  Gives the hero secondary button a scroll target: #plaques-collection-products
+{%- endcomment -%}
+<span id="plaques-collection-products" class="plaques-collection-grid-anchor" aria-hidden="true"></span>
+<style>
+  .plaques-collection-grid-anchor {
+    display: block;
+    position: relative;
+    top: -120px;
+    visibility: hidden;
+    pointer-events: none;
+  }
+</style>
