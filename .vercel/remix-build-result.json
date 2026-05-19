@@ -26,6 +26,7 @@
       "routes/api.saved-plaque-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-plaque-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/badge-designer-redesign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-plaque-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-sign-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.upload-plaque-logo": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -216,6 +217,15 @@
         "file": "app/routes/api.saved-plaque-design.tsx",
         "id": "routes/api.saved-plaque-design",
         "path": "api/saved-plaque-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/badge-designer-redesign": {
+        "file": "app/routes/badge-designer-redesign.tsx",
+        "id": "routes/badge-designer-redesign",
+        "path": "badge-designer-redesign",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -725,6 +735,12 @@
         "file": "routes/api.saved-plaque-design.tsx",
         "id": "routes/api.saved-plaque-design",
         "path": "api/saved-plaque-design",
+        "parentId": "root"
+      },
+      "routes/badge-designer-redesign": {
+        "file": "routes/badge-designer-redesign.tsx",
+        "id": "routes/badge-designer-redesign",
+        "path": "badge-designer-redesign",
         "parentId": "root"
       },
       "routes/api.save-plaque-design": {

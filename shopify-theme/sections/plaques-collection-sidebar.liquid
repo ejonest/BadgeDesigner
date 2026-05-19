@@ -1,0 +1,173 @@
+{%- comment -%}
+  Left column categories menu for plaques collection template.
+  Ella themes may use a different section name — use this if {% section 'sidebar' %} fails.
+{%- endcomment -%}
+
+{%- liquid
+  assign menu = linklists[section.settings.menu]
+  assign current_url = request.path
+-%}
+
+<aside
+  class="plaques-collection-sidebar sidebar sidebar-collection"
+  data-section-id="{{ section.id }}"
+  aria-label="{{ section.settings.heading | escape }}"
+>
+  {%- if section.settings.heading != blank -%}
+    <h3 class="sidebar-title plaques-collection-sidebar__title">{{ section.settings.heading | escape }}</h3>
+  {%- endif -%}
+
+  {%- if menu.links.size > 0 -%}
+    <nav class="plaques-collection-sidebar__nav" aria-label="{{ section.settings.heading | escape }}">
+      <ul class="sidebar-menu list-unstyled plaques-collection-sidebar__menu">
+        {%- for link in menu.links -%}
+          <li class="sidebar-menu-item plaques-collection-sidebar__item{% if link.links.size > 0 %} has-dropdown{% endif %}">
+            <a
+              href="{{ link.url }}"
+              class="sidebar-link{% if link.active or link.child_active %} active{% endif %}"
+              {% if link.current %}aria-current="page"{% endif %}
+            >
+              {{ link.title | escape }}
+            </a>
+            {%- if link.links.size > 0 -%}
+              <ul class="sidebar-submenu list-unstyled">
+                {%- for child in link.links -%}
+                  <li class="sidebar-menu-item">
+                    <a
+                      href="{{ child.url }}"
+                      class="sidebar-link{% if child.active %} active{% endif %}"
+                      {% if child.current %}aria-current="page"{% endif %}
+                    >
+                      {{ child.title | escape }}
+                    </a>
+                    {%- if child.links.size > 0 -%}
+                      <ul class="sidebar-submenu list-unstyled sidebar-submenu--nested">
+                        {%- for grandchild in child.links -%}
+                          <li class="sidebar-menu-item">
+                            <a
+                              href="{{ grandchild.url }}"
+                              class="sidebar-link{% if grandchild.active %} active{% endif %}"
+                              {% if grandchild.current %}aria-current="page"{% endif %}
+                            >
+                              {{ grandchild.title | escape }}
+                            </a>
+                          </li>
+                        {%- endfor -%}
+                      </ul>
+                    {%- endif -%}
+                  </li>
+                {%- endfor -%}
+              </ul>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+      </ul>
+    </nav>
+  {%- elsif section.settings.empty_message != blank -%}
+    <p class="plaques-collection-sidebar__empty">{{ section.settings.empty_message | escape }}</p>
+  {%- endif -%}
+
+  {%- if section.settings.show_plaques_link and collection.url != blank -%}
+    <p class="plaques-collection-sidebar__back">
+      <a href="{{ collection.url }}" class="sidebar-link active">{{ section.settings.plaques_link_label | escape }}</a>
+    </p>
+  {%- endif -%}
+</aside>
+
+<style>
+  .plaques-collection-sidebar {
+    margin-bottom: 24px;
+  }
+  .plaques-collection-sidebar__title {
+    margin: 0 0 14px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #222;
+  }
+  .plaques-collection-sidebar__menu,
+  .plaques-collection-sidebar .sidebar-submenu {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .plaques-collection-sidebar__item {
+    margin: 0 0 4px;
+  }
+  .plaques-collection-sidebar .sidebar-link {
+    display: block;
+    padding: 6px 0;
+    color: #333;
+    text-decoration: none;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .plaques-collection-sidebar .sidebar-link:hover,
+  .plaques-collection-sidebar .sidebar-link.active {
+    color: #0d6efd;
+  }
+  .plaques-collection-sidebar .sidebar-submenu {
+    margin: 4px 0 8px 12px;
+    padding-left: 8px;
+    border-left: 1px solid #e5e5e5;
+  }
+  .plaques-collection-sidebar .sidebar-submenu--nested {
+    margin-left: 10px;
+  }
+  .plaques-collection-sidebar__empty {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+  }
+  .plaques-collection-sidebar__back {
+    margin: 16px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid #e8e8e8;
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Plaques sidebar",
+  "tag": "section",
+  "class": "section-plaques-sidebar",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Categories"
+    },
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "Menu",
+      "info": "Pick your catalog menu (e.g. Main menu from Online Store → Navigation)."
+    },
+    {
+      "type": "text",
+      "id": "empty_message",
+      "label": "Message when menu is empty",
+      "default": "Select a menu in section settings."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_plaques_link",
+      "label": "Highlight link to this collection",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "plaques_link_label",
+      "label": "Plaques link label",
+      "default": "Plaques"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Plaques sidebar"
+    }
+  ]
+}
+{% endschema %}

@@ -128,6 +128,38 @@ export const SMART_PALETTE_COLORS = [
 export const FEATURED_BRUSHED_GOLD_HEX = "#f2d678";
 export const FEATURED_BRUSHED_SILVER_HEX = "#e2e2e2";
 
+/** Badge redesign Step 2 — featured plate swatches (order: white, brushed metals, black, then brand colors). */
+export const BADGE_AQB_FEATURED_BACKGROUND_COLORS = [
+  { value: "#FFFFFF", name: "White", light: true },
+  {
+    value: FEATURED_BRUSHED_GOLD_HEX,
+    name: "Br. Gold",
+    light: false,
+    brushed: true,
+  },
+  {
+    value: FEATURED_BRUSHED_SILVER_HEX,
+    name: "Br. Silver",
+    light: false,
+    brushed: true,
+  },
+  { value: "#2C2C2C", name: "Black", light: false },
+  { value: "#0D1B2A", name: "Navy", light: false },
+  { value: "#C0392B", name: "Red", light: false },
+  { value: "#1A5C8E", name: "Blue", light: false },
+  { value: "#2D6A4F", name: "Green", light: false },
+] as const;
+
+/** Badge redesign Step 3 — text colour swatches (reference mock). */
+export const BADGE_AQB_TEXT_COLORS = [
+  { value: "#FFFFFF", light: true, bordered: true },
+  { value: "#0D1B2A", light: false },
+  { value: "#C8962A", light: false },
+  { value: "#FFFFFF", light: true, bordered: false },
+  { value: "#C0392B", light: false },
+  { value: "#1A5C8E", light: false },
+] as const;
+
 /** Prior catalog hexes — still treated as brushed metal in render. */
 export const LEGACY_BRUSHED_GOLD_HEX = "#eac10c";
 export const LEGACY_BRUSHED_SILVER_HEX = "#C0C0C0";

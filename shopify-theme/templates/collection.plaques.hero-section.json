@@ -1,0 +1,17 @@
+{
+  "plaques_hero": {
+    "type": "plaques-collection-hero",
+    "settings": {
+      "ribbon_label": "PLAQUES",
+      "heading": "Custom Plaques — Design Online",
+      "subheading": "Create attached, photo, and award plaques in minutes. Browse stock sport and decorative plaques below.",
+      "primary_button_label": "Start designing",
+      "primary_button_link": "",
+      "secondary_button_label": "",
+      "secondary_button_link": "",
+      "min_height_desktop": 480,
+      "min_height_mobile": 380,
+      "overlay_opacity": 30
+    }
+  }
+}

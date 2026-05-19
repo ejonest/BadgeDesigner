@@ -1,9 +1,11 @@
 {% comment %}
   Renders plaque designer details in cart: text lines (Line 1–4), background swatch.
-  Same property keys as BadgeDesigner (plaque): Custom Badge Design, Badge Text Line 1–4, etc.
+  Omits Price (Shopify variant price is shown on the line item); hides Design ID, Gadget ID, thumbnail URL, etc.
+  Line item keys match BadgeDesigner (plaque): Custom Badge Design, Badge Text Line 1–4, etc.
   Pass: item (cart item)
 {% endcomment %}
 {%- if item.properties['Custom Badge Design'] != 'Yes' -%}
+  {%- comment -%} Not a custom plaque design line {%- endcomment -%}
 {%- else -%}
   <div class="plaque-cart-details" style="margin-top: 8px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 0.9em;">
     {%- if item.properties['Badge Text Line 1'] != blank -%}

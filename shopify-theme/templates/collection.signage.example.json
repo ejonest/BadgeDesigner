@@ -1,0 +1,22 @@
+{
+  "sections": {
+    "collection-header": {
+      "type": "collection-header",
+      "settings": {
+        "show_page_title": true
+      },
+      "blocks": {
+        "banner": {
+          "type": "collection_image",
+          "settings": {}
+        }
+      },
+      "block_order": ["banner"]
+    },
+    "main": {
+      "type": "main-collection",
+      "settings": {}
+    }
+  },
+  "order": ["collection-header", "main"]
+}

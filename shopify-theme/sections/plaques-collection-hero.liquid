@@ -1,0 +1,469 @@
+{%- comment -%}
+  Plaques collection hero — banner with overlay CTA to custom plaque designer.
+  Default: centered in theme .container (matches product grid). Optional full-width.
+  Upload to theme: sections/plaques-collection-hero.liquid
+  Use with template: templates/collection.plaques.json (see docs/PLAQUES-COLLECTION-TEMPLATE.md)
+{%- endcomment -%}
+
+{%- liquid
+  assign hero_image = section.settings.image
+  if hero_image == blank and collection.image
+    assign hero_image = collection.image
+  endif
+
+  assign primary_url = section.settings.primary_button_link
+  if primary_url == blank
+    assign primary_url = '/products/custom-plaque'
+  endif
+
+  assign secondary_url = section.settings.secondary_button_link
+  if secondary_url == blank and collection.url
+    assign secondary_url = collection.url | append: '#plaques-collection-products'
+  endif
+
+  assign banner_width = section.settings.banner_width | default: 'contained'
+  assign is_contained = false
+  if banner_width == 'contained'
+    assign is_contained = true
+  endif
+
+  if is_contained
+    assign hero_image_sizes = '(min-width: 1200px) 1170px, (min-width: 750px) 90vw, 100vw'
+  else
+    assign hero_image_sizes = '100vw'
+  endif
+-%}
+
+<section
+  id="plaques-collection-hero-{{ section.id }}"
+  class="plaques-collection-hero plaques-collection-hero--{{ banner_width }}"
+  aria-label="{{ section.settings.heading | default: 'Plaques' | escape }}"
+>
+  {%- unless is_contained -%}
+  <div class="plaques-collection-hero__frame">
+  {%- else -%}
+  <div class="container">
+    <div class="plaques-collection-hero__frame">
+  {%- endunless -%}
+
+  <div class="plaques-collection-hero__media" role="presentation">
+    {%- if hero_image != blank -%}
+      <img
+        class="plaques-collection-hero__img"
+        src="{{ hero_image | image_url: width: 2400 }}"
+        srcset="
+          {{ hero_image | image_url: width: 800 }} 800w,
+          {{ hero_image | image_url: width: 1200 }} 1200w,
+          {{ hero_image | image_url: width: 1600 }} 1600w,
+          {{ hero_image | image_url: width: 2000 }} 2000w,
+          {{ hero_image | image_url: width: 2400 }} 2400w
+        "
+        sizes="{{ hero_image_sizes }}"
+        alt="{{ section.settings.image_alt | default: section.settings.heading | escape }}"
+        width="{{ hero_image.width }}"
+        height="{{ hero_image.height }}"
+        loading="eager"
+        fetchpriority="high"
+      >
+    {%- else -%}
+      <div class="plaques-collection-hero__placeholder" aria-hidden="true"></div>
+    {%- endif -%}
+    <div
+      class="plaques-collection-hero__overlay"
+      style="--plaques-hero-overlay: {{ section.settings.overlay_color }}; --plaques-hero-overlay-opacity: {{ section.settings.overlay_opacity | divided_by: 100.0 }};"
+    ></div>
+  </div>
+
+  <div class="plaques-collection-hero__content{% unless is_contained %} page-width{% endunless %}">
+    {%- if section.settings.ribbon_label != blank -%}
+      <p class="plaques-collection-hero__ribbon">{{ section.settings.ribbon_label | escape }}</p>
+    {%- endif -%}
+
+    <div class="plaques-collection-hero__card">
+      {%- if section.settings.heading != blank -%}
+        <h1 class="plaques-collection-hero__heading">{{ section.settings.heading | escape }}</h1>
+      {%- endif -%}
+
+      {%- if section.settings.subheading != blank -%}
+        <p class="plaques-collection-hero__subheading">{{ section.settings.subheading | escape }}</p>
+      {%- endif -%}
+
+      <div class="plaques-collection-hero__actions">
+        {%- if section.settings.primary_button_label != blank -%}
+          <a href="{{ primary_url }}" class="plaques-collection-hero__btn plaques-collection-hero__btn--primary">
+            {{ section.settings.primary_button_label | escape }}
+          </a>
+        {%- endif -%}
+
+        {%- if section.settings.secondary_button_label != blank and secondary_url != blank -%}
+          <a href="{{ secondary_url }}" class="plaques-collection-hero__btn plaques-collection-hero__btn--secondary">
+            {{ section.settings.secondary_button_label | escape }}
+          </a>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+  </div>
+
+  {%- if is_contained -%}
+  </div>
+  {%- endif -%}
+</section>
+
+<style>
+  #plaques-collection-hero-{{ section.id }} {
+    --plaques-hero-min-height: {{ section.settings.min_height_desktop }}px;
+    --plaques-hero-min-height-mobile: {{ section.settings.min_height_mobile }}px;
+    --plaques-hero-primary: {{ section.settings.primary_button_bg }};
+    --plaques-hero-primary-text: {{ section.settings.primary_button_text }};
+    --plaques-hero-secondary-text: {{ section.settings.secondary_button_text }};
+    --plaques-hero-card-bg: {{ section.settings.card_background }};
+    width: 100%;
+    margin: 0 0 {{ section.settings.margin_bottom }}px;
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__frame {
+    position: relative;
+    width: 100%;
+    min-height: var(--plaques-hero-min-height);
+    overflow: hidden;
+  }
+
+  #plaques-collection-hero-{{ section.id }}.plaques-collection-hero--full {
+    position: relative;
+    min-height: var(--plaques-hero-min-height);
+    overflow: hidden;
+  }
+
+  #plaques-collection-hero-{{ section.id }}.plaques-collection-hero--full .plaques-collection-hero__frame {
+    min-height: 100%;
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__media {
+    position: absolute;
+    inset: 0;
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__img,
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: {{ section.settings.image_focal_point }};
+    display: block;
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__placeholder {
+    background: linear-gradient(135deg, #5c6b73 0%, #8a9aa3 45%, #c4b8a8 100%);
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--plaques-hero-overlay, #1a1a1a);
+    opacity: var(--plaques-hero-overlay-opacity, 0.35);
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__content {
+    position: relative;
+    z-index: 1;
+    min-height: var(--plaques-hero-min-height);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 48px 20px;
+    box-sizing: border-box;
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__ribbon {
+    margin: 0 0 16px;
+    padding: 8px 18px;
+    background: {{ section.settings.ribbon_background }};
+    color: {{ section.settings.ribbon_text_color }};
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__card {
+    max-width: {{ section.settings.card_max_width }}px;
+    background: var(--plaques-hero-card-bg, rgba(255, 255, 255, 0.96));
+    padding: 28px 32px 32px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+    border-radius: 2px;
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__heading {
+    margin: 0 0 12px;
+    font-size: clamp(1.5rem, 2.8vw, 2.25rem);
+    line-height: 1.2;
+    font-weight: 700;
+    color: {{ section.settings.heading_color }};
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__subheading {
+    margin: 0 0 22px;
+    font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+    line-height: 1.5;
+    color: {{ section.settings.subheading_color }};
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 22px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 2px solid transparent;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__btn:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__btn--primary {
+    background: var(--plaques-hero-primary, #1e3a5f);
+    color: var(--plaques-hero-primary-text, #fff);
+    border-color: var(--plaques-hero-primary, #1e3a5f);
+  }
+
+  #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__btn--secondary {
+    background: #fff;
+    color: var(--plaques-hero-secondary-text, #1e3a5f);
+    border-color: var(--plaques-hero-secondary-text, #1e3a5f);
+  }
+
+  @media (max-width: 749px) {
+    #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__frame,
+    #plaques-collection-hero-{{ section.id }}.plaques-collection-hero--full {
+      min-height: var(--plaques-hero-min-height-mobile);
+    }
+
+    #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__content {
+      min-height: var(--plaques-hero-min-height-mobile);
+      padding: 32px 16px;
+    }
+
+    #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__card {
+      padding: 22px 20px 24px;
+    }
+
+    #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__actions {
+      flex-direction: column;
+    }
+
+    #plaques-collection-hero-{{ section.id }} .plaques-collection-hero__btn {
+      width: 100%;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Plaques collection hero",
+  "tag": "section",
+  "class": "section-plaques-collection-hero",
+  "settings": [
+    {
+      "type": "select",
+      "id": "banner_width",
+      "label": "Banner width",
+      "default": "contained",
+      "options": [
+        { "value": "contained", "label": "Centered (matches page content)" },
+        { "value": "full", "label": "Full screen width" }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Background image",
+      "info": "Leave empty to use the Plaques collection image from Products → Collections → Plaques."
+    },
+    {
+      "type": "text",
+      "id": "image_alt",
+      "label": "Image alt text",
+      "default": "Custom and stock plaques"
+    },
+    {
+      "type": "select",
+      "id": "image_focal_point",
+      "label": "Image focal point",
+      "default": "center center",
+      "options": [
+        { "value": "center center", "label": "Center" },
+        { "value": "top center", "label": "Top" },
+        { "value": "bottom center", "label": "Bottom" }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "min_height_desktop",
+      "min": 280,
+      "max": 720,
+      "step": 20,
+      "unit": "px",
+      "label": "Minimum height (desktop)",
+      "default": 480
+    },
+    {
+      "type": "range",
+      "id": "min_height_mobile",
+      "min": 240,
+      "max": 560,
+      "step": 20,
+      "unit": "px",
+      "label": "Minimum height (mobile)",
+      "default": 380
+    },
+    {
+      "type": "color",
+      "id": "overlay_color",
+      "label": "Overlay color",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "label": "Overlay opacity",
+      "default": 30
+    },
+    {
+      "type": "text",
+      "id": "ribbon_label",
+      "label": "Ribbon label",
+      "default": "PLAQUES"
+    },
+    {
+      "type": "color",
+      "id": "ribbon_background",
+      "label": "Ribbon background",
+      "default": "#0d9488"
+    },
+    {
+      "type": "color",
+      "id": "ribbon_text_color",
+      "label": "Ribbon text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Custom Plaques — Design Online"
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Create attached, photo, and award plaques in minutes. Browse our stock plaques below."
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading color",
+      "default": "#111111"
+    },
+    {
+      "type": "color",
+      "id": "subheading_color",
+      "label": "Subheading color",
+      "default": "#444444"
+    },
+    {
+      "type": "color",
+      "id": "card_background",
+      "label": "Card background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "range",
+      "id": "card_max_width",
+      "min": 320,
+      "max": 640,
+      "step": 20,
+      "unit": "px",
+      "label": "Card max width",
+      "default": 520
+    },
+    {
+      "type": "text",
+      "id": "primary_button_label",
+      "label": "Primary button label",
+      "default": "Start designing"
+    },
+    {
+      "type": "url",
+      "id": "primary_button_link",
+      "label": "Primary button link",
+      "info": "Defaults to /products/custom-plaque if empty."
+    },
+    {
+      "type": "text",
+      "id": "secondary_button_label",
+      "label": "Secondary button label (optional)",
+      "info": "Leave blank to hide. Stock plaques appear in the grid below the hero."
+    },
+    {
+      "type": "url",
+      "id": "secondary_button_link",
+      "label": "Secondary button link"
+    },
+    {
+      "type": "color",
+      "id": "primary_button_bg",
+      "label": "Primary button background",
+      "default": "#1e3a5f"
+    },
+    {
+      "type": "color",
+      "id": "primary_button_text",
+      "label": "Primary button text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "secondary_button_text",
+      "label": "Secondary button border/text",
+      "default": "#1e3a5f"
+    },
+    {
+      "type": "range",
+      "id": "margin_bottom",
+      "min": 0,
+      "max": 60,
+      "step": 4,
+      "unit": "px",
+      "label": "Space below hero",
+      "default": 24
+    }
+  ],
+  "presets": [
+    {
+      "name": "Plaques collection hero"
+    }
+  ]
+}
+{% endschema %}

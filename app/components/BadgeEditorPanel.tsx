@@ -4,7 +4,7 @@ import { BADGE_CONSTANTS } from "../constants/badge";
 import { BadgeLineEditor } from "./BadgeLineEditor";
 import BadgeSvgRenderer from "./BadgeSvgRenderer";
 import { autoScaleFontSize } from "../utils/textMeasurement";
-import { FONT_COLORS } from "../constants/colors";
+import { BADGE_AQB_TEXT_COLORS, FONT_COLORS } from "../constants/colors";
 import { FONT_FAMILIES } from "../constants/fonts";
 import { loadTemplateById } from "../utils/templates";
 import {
@@ -197,6 +197,46 @@ function areColorsSimilar(
   return colorDistance(color1, color2) <= threshold;
 }
 
+const AQB_BADGE_FONT_OPTIONS = [
+  { value: "Playfair Display", label: "Playfair (Serif)" },
+  { value: "DM Sans", label: "DM Sans (Clean)" },
+  { value: "Roboto Mono", label: "Monospace" },
+] as const;
+
+const AQB_BADGE_SIZE_PRESETS = [
+  { label: "Large", px: 22 },
+  { label: "Medium", px: 17 },
+  { label: "Small", px: 13 },
+] as const;
+
+function normalizeTextColorHex(hex: string): string {
+  const t = hex.trim().toUpperCase();
+  return t.startsWith("#") ? t : `#${t}`;
+}
+
+function getAqbBadgeLineLabel(idx: number): string {
+  if (idx === 0) return "Line 1 — Name / Main text";
+  if (idx === 1) return "Line 2 — Role / Title";
+  return `Line ${idx + 1}`;
+}
+
+function getLineSizePx(
+  line: BadgeLine,
+  metricsHeight: number,
+  minPx: number,
+): number {
+  if (line.sizeNorm) {
+    return Math.round(line.sizeNorm * metricsHeight);
+  }
+  return Math.round(line.fontSize ?? minPx);
+}
+
+function nearestAqbSizePreset(px: number): (typeof AQB_BADGE_SIZE_PRESETS)[number] {
+  return AQB_BADGE_SIZE_PRESETS.reduce((best, preset) =>
+    Math.abs(preset.px - px) < Math.abs(best.px - px) ? preset : best,
+  );
+}
+
 // Check if a color is red (high red component, low green/blue)
 function isRedColor(color: string): boolean {
   const [r, g, b] = hexToRgb(color);
@@ -225,6 +265,8 @@ export interface BadgeEditorPanelProps {
   lineLabels?: (string | undefined)[];
   /** Plaque: slot placeholder per line (HTML placeholder + treat as unset when it matches stored text). */
   linePlaceholders?: (string | undefined)[];
+  /** Badge redesign: reference-style text line cards. */
+  panelLayout?: "default" | "aqb-badge";
 }
 
 export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
@@ -246,6 +288,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   variant = "badge",
   lineLabels,
   linePlaceholders,
+  panelLayout = "default",
 }) => {
   const { labelProductPlural } = getDesignerVariantConfig(variant);
   const allItemsLabel = labelProductPlural.toLowerCase();
@@ -307,6 +350,197 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   const hideAttachedPlaqueFontSize =
     variant === "plaque" &&
     Boolean(badge.templateId && isPlaqueAttachedTemplateId(badge.templateId));
+
+  if (panelLayout === "aqb-badge") {
+    const lineInputValue = (line: BadgeLine, idx: number) => {
+      const defaultText =
+        idx === 0 ? "Your Name" : idx === 1 ? "Title" : "Line Text";
+      const slotPh = linePlaceholders?.[idx];
+      const rawTrim = (line.text ?? "").trim();
+      const matchesSlotPlaceholder =
+        variant === "plaque" &&
+        Boolean(slotPh?.trim()) &&
+        plaqueUserLineTextMatchesPlaceholder(line.text, slotPh);
+      const isEmptyOrDefault =
+        !rawTrim ||
+        line.text === defaultText ||
+        matchesSlotPlaceholder;
+      return isEmptyOrDefault ? "" : (line.text ?? "");
+    };
+
+    const linePlaceholder = (idx: number) => {
+      if (idx === 0) return "Enter name or organisation...";
+      if (idx === 1) return "Enter role or title...";
+      const ph = linePlaceholders?.[idx]?.trim();
+      return ph || `Insert line ${idx + 1} text here`;
+    };
+
+    const fontOptionsForLine = (line: BadgeLine) => {
+      const cur = line.fontFamily ?? "";
+      const inList = AQB_BADGE_FONT_OPTIONS.some((f) => f.value === cur);
+      if (!cur || inList) return [...AQB_BADGE_FONT_OPTIONS];
+      return [{ value: cur, label: cur }, ...AQB_BADGE_FONT_OPTIONS];
+    };
+
+    return (
+      <div className="aqb-badge-text-section w-full">
+        {badge.lines.map((line: BadgeLine, idx: number) => {
+          const linePx = getLineSizePx(line, fontMetricsHeight, fontSizeMinPx);
+          const sizePreset = nearestAqbSizePreset(linePx);
+          const lineColor = normalizeTextColorHex(line.color ?? "#000000");
+
+          return (
+            <div key={line.id ?? idx} className="aqb-badge-text-line">
+              <div className="aqb-badge-tl-header">
+                <div className="aqb-badge-tl-label">
+                  {lineLabels?.[idx]?.trim() || getAqbBadgeLineLabel(idx)}
+                </div>
+                <div className="aqb-badge-tl-actions">
+                  {onResetLineToDefault && editable ? (
+                    <button
+                      type="button"
+                      className="aqb-badge-tl-action"
+                      onClick={() => onResetLineToDefault(idx)}
+                    >
+                      <ArrowPathIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      Reset font
+                    </button>
+                  ) : null}
+                  {showRemove && badge.lines.length > 1 ? (
+                    <button
+                      type="button"
+                      className="aqb-badge-tl-action text-red-700"
+                      onClick={() => onRemoveLine(idx)}
+                      disabled={!editable}
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              <input
+                type="text"
+                className="aqb-badge-text-input"
+                value={lineInputValue(line, idx)}
+                onChange={(e) => onLineChange(idx, { text: e.target.value })}
+                placeholder={linePlaceholder(idx)}
+                disabled={!editable}
+              />
+
+              <div className="aqb-badge-text-row-controls">
+                <div className="aqb-badge-trc-group">
+                  <div className="aqb-badge-trc-label">Font</div>
+                  <select
+                    className="aqb-badge-trc-select"
+                    value={line.fontFamily ?? AQB_BADGE_FONT_OPTIONS[1].value}
+                    onChange={(e) =>
+                      onLineChange(idx, { fontFamily: e.target.value })
+                    }
+                    disabled={!editable}
+                  >
+                    {fontOptionsForLine(line).map((font) => (
+                      <option key={font.value} value={font.value}>
+                        {font.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="aqb-badge-trc-group">
+                  <div className="aqb-badge-trc-label">Size</div>
+                  <select
+                    className="aqb-badge-trc-select"
+                    value={sizePreset.label}
+                    onChange={(e) => {
+                      const preset = AQB_BADGE_SIZE_PRESETS.find(
+                        (p) => p.label === e.target.value,
+                      );
+                      if (!preset) return;
+                      onLineChange(idx, {
+                        sizeNorm: preset.px / fontMetricsHeight,
+                      });
+                    }}
+                    disabled={!editable}
+                  >
+                    {AQB_BADGE_SIZE_PRESETS.map((p) => (
+                      <option key={p.label} value={p.label}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="aqb-badge-text-colour-row">
+                <span className="aqb-badge-tc-lbl">Colour:</span>
+                {BADGE_AQB_TEXT_COLORS.map((tc, tcIdx) => {
+                  const disabled = areColorsSimilar(
+                    tc.value,
+                    badge.backgroundColor,
+                    70,
+                  );
+                  const selected =
+                    lineColor === normalizeTextColorHex(tc.value);
+                  return (
+                    <button
+                      key={`${tc.value}-${tcIdx}`}
+                      type="button"
+                      className={`aqb-badge-tc-sw ${tc.light ? "light" : ""} ${
+                        selected ? "selected" : ""
+                      }`}
+                      style={{
+                        backgroundColor: tc.value,
+                        ...(tc.bordered && tc.light
+                          ? { borderColor: "#ddd" }
+                          : {}),
+                      }}
+                      title={
+                        disabled
+                          ? "May not show on this background"
+                          : tc.value
+                      }
+                      disabled={disabled || !editable}
+                      onClick={() => onLineChange(idx, { color: tc.value })}
+                    />
+                  );
+                })}
+                {onOpenTextColorModal ? (
+                  <button
+                    type="button"
+                    className="aqb-badge-tl-action ml-1"
+                    onClick={() => onOpenTextColorModal(idx)}
+                    disabled={!editable}
+                  >
+                    More
+                  </button>
+                ) : null}
+              </div>
+
+              {line.color &&
+              areColorsSimilar(line.color, badge.backgroundColor, 70) ? (
+                <p className="mt-1.5 text-[10px] font-medium text-red-600">
+                  Similar colours may not show well on this background.
+                </p>
+              ) : null}
+
+              {onApplyFormattingToAll && hasMultipleBadges ? (
+                <button
+                  type="button"
+                  className="aqb-badge-tl-action mt-2"
+                  onClick={() => onApplyFormattingToAll(idx)}
+                  disabled={!editable}
+                >
+                  Apply line {idx + 1} format to all {allItemsLabel}
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
+        {addLineButton}
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-2xl mx-auto flex flex-col gap-4">
       {/* Line formatting boxes */}
