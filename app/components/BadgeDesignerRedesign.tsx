@@ -54,13 +54,27 @@ import { BadgeEditPanel } from "./BadgeEditPanel";
 import { BadgeEditorPanel } from "./BadgeEditorPanel";
 import { AqbBadgeBackingPicker } from "./AqbBadgeBackingPicker";
 import { AqbBadgeOrderQtySection } from "./AqbBadgeOrderQtySection";
-import { AqbToolActionsRow } from "./AqbToolActionsRow";
+import { BadgeQtyStepper } from "./BadgeQtyStepper";
+import {
+  AddMultipleGridIcon,
+  AqbToolActionsRow,
+} from "./AqbToolActionsRow";
 import {
   BADGE_AQB_BACKING_META,
   type BadgeBackingKey,
   badgeAqbBackingOptionLabel,
 } from "../constants/badgeAqbBacking";
 import { computeBadgeAqbOrderQtyUiModel, splitOrderTotalAcrossDesignLines } from "../constants/badgeAqbOrderQty";
+import {
+  bumpAllBadgeLineQuantities,
+  clampBadgeLineQty,
+  insertBadgeLineQtyAt,
+  removeBadgeLineQtyAt,
+  setAllBadgeLineQuantities,
+  sumBadgeLineQuantities,
+  syncBadgeLineQuantities,
+  uniformBadgeLineQty,
+} from "../utils/badgeLineQuantities";
 
 import {
   BadgeLine,
@@ -673,6 +687,14 @@ function featuredPlateBackgroundSwatchStyle(hex: string): React.CSSProperties {
   return { backgroundColor: hex };
 }
 
+/** Round vs square corner choice applies only to these four size+shape templates. */
+const BADGE_CORNER_ELIGIBLE_TEMPLATE_IDS = new Set([
+  "rect-1x3",
+  "rect-1_5x3",
+  "square-1x3",
+  "square-1_5x3",
+]);
+
 const BADGE_CORNER_TEMPLATE_IDS = {
   rounded: { "1x3": "rect-1x3", "1.5x3": "rect-1_5x3" },
   square: { "1x3": "square-1x3", "1.5x3": "square-1_5x3" },
@@ -681,7 +703,14 @@ const BADGE_CORNER_TEMPLATE_IDS = {
 type BadgeTemplateSizeKey = keyof typeof BADGE_CORNER_TEMPLATE_IDS.rounded;
 type BadgeCornerStyleKey = keyof typeof BADGE_CORNER_TEMPLATE_IDS;
 
-function getBadgeTemplateSizeKey(templateId: string): BadgeTemplateSizeKey | null {
+function isBadgeCornerStyleEligible(templateId: string): boolean {
+  return BADGE_CORNER_ELIGIBLE_TEMPLATE_IDS.has(templateId);
+}
+
+function getBadgeTemplateSizeKey(
+  templateId: string,
+): BadgeTemplateSizeKey | null {
+  if (!isBadgeCornerStyleEligible(templateId)) return null;
   if (templateId.includes("1_5x3")) return "1.5x3";
   if (templateId.includes("1x3")) return "1x3";
   return null;
@@ -690,6 +719,7 @@ function getBadgeTemplateSizeKey(templateId: string): BadgeTemplateSizeKey | nul
 function getBadgeCornerStyleFromTemplate(
   templateId: string,
 ): BadgeCornerStyleKey | null {
+  if (!isBadgeCornerStyleEligible(templateId)) return null;
   if (templateId.startsWith("rect-")) return "rounded";
   if (templateId.startsWith("square-")) return "square";
   return null;
@@ -1015,7 +1045,7 @@ const AqbBadgeStepSectionToggle: React.FC<AqbBadgeStepSectionToggleProps> = ({
     <div className="flex shrink-0 items-center gap-1.5 pl-1">
       {summary ? (
         <span
-          className="max-w-[7rem] truncate text-[11px] font-semibold leading-none text-[#0d1b2a] sm:max-w-[11rem]"
+          className="max-w-[7rem] truncate text-[14px] font-semibold leading-none text-[#0d1b2a] sm:max-w-[11rem]"
           title={summary}
         >
           {summary}
@@ -2218,12 +2248,39 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   );
   // Design gallery (Supabase): list autosave + milestones; user picks a row to restore
   const [showDesignGalleryModal, setShowDesignGalleryModal] = useState(false);
-  /** Badge redesign: quantity per design line (mock tier UI + Shopify line item qty). */
-  const [badgeOrderQty, setBadgeOrderQty] = useState(25);
-  const badgeOrderQtyRef = useRef(25);
+  /** Per-design copy counts (grid view); total = sum for pricing / checkout. */
+  const [badgeLineQuantities, setBadgeLineQuantities] = useState<number[]>([]);
+  const badgeLineQuantitiesRef = useRef<number[]>([]);
   useEffect(() => {
-    badgeOrderQtyRef.current = badgeOrderQty;
-  }, [badgeOrderQty]);
+    badgeLineQuantitiesRef.current = badgeLineQuantities;
+  }, [badgeLineQuantities]);
+  useEffect(() => {
+    if (variant !== "badge") return;
+    setBadgeLineQuantities((prev) =>
+      syncBadgeLineQuantities(multipleBadges.length, prev),
+    );
+  }, [multipleBadges.length, variant]);
+  const badgeOrderQty = useMemo(
+    () =>
+      variant === "badge"
+        ? sumBadgeLineQuantities(badgeLineQuantities)
+        : multipleBadges.length,
+    [variant, badgeLineQuantities, multipleBadges.length],
+  );
+  const [gridSetAllQtyText, setGridSetAllQtyText] = useState("");
+  const [gridSetAllQtyFocused, setGridSetAllQtyFocused] = useState(false);
+  useEffect(() => {
+    if (!showBadgeGridModal || gridSetAllQtyFocused || variant !== "badge") {
+      return;
+    }
+    const u = uniformBadgeLineQty(badgeLineQuantities);
+    setGridSetAllQtyText(u != null ? String(u) : "");
+  }, [
+    showBadgeGridModal,
+    badgeLineQuantities,
+    gridSetAllQtyFocused,
+    variant,
+  ]);
   /** Cloud library draft: shown beside Grid View when signed in + library enabled. */
   const [cloudAutosaveStatus, setCloudAutosaveStatus] = useState<
     "idle" | "saving" | "saved" | "error"
@@ -2930,6 +2987,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       selectedPlaqueSize?: PlaqueSizeKey | null;
       selectedPlaqueLayoutId?: string | null;
       badgeOrderQty?: number;
+      badgeLineQuantities?: number[];
     };
     try {
       payload = JSON.parse(raw);
@@ -2982,6 +3040,16 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       sessionDesignIdRef.current = payload.designId;
     }
     setBadge1Data(migratedBadges[0] ?? null);
+    if (variant === "badge") {
+      setBadgeLineQuantities(
+        syncBadgeLineQuantities(
+          migratedBadges.length,
+          Array.isArray(payload.badgeLineQuantities)
+            ? payload.badgeLineQuantities
+            : undefined,
+        ),
+      );
+    }
     templateGuidedAutoAdvanceDoneRef.current = true;
     signSizeGuidedAutoAdvanceDoneRef.current = true;
     if (variant === "sign") {
@@ -3013,12 +3081,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           DEFAULT_PLAQUE_SIZE,
       );
       plaqueLayoutGuidedAutoAdvanceDoneRef.current = true;
-    }
-    if (variant === "badge") {
-      const q = payload.badgeOrderQty;
-      if (typeof q === "number" && Number.isFinite(q) && q >= 1) {
-        setBadgeOrderQty(Math.min(999_999, Math.floor(q)));
-      }
     }
     // Do not mark steps 3 or 4 as opened; user must open step 4 (and step 3 counts complete only when they have non-default text) in this session
   }, [templates, _shop, _productId, variant]);
@@ -3088,7 +3150,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         ...(variant === "plaque"
           ? { selectedPlaqueSize, selectedPlaqueLayoutId }
           : {}),
-        ...(variant === "badge" ? { badgeOrderQty } : {}),
+        ...(variant === "badge"
+          ? { badgeOrderQty, badgeLineQuantities }
+          : {}),
       };
       try {
         localStorage.setItem(cacheKey, JSON.stringify(payload));
@@ -3110,6 +3174,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     _shop,
     _productId,
     badgeOrderQty,
+    badgeLineQuantities,
   ]);
 
   /** First-line preview PNG → Supabase public URL for design library gallery. */
@@ -3219,7 +3284,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             allBadges: allFinalizedBadges,
             timestamp: new Date().toISOString(),
             ...(variant === "badge"
-              ? { badgeOrderQty: badgeOrderQtyRef.current }
+              ? { badgeOrderQty }
               : {}),
             ...(isSignLikeVariant(variant)
               ? {
@@ -3430,7 +3495,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             allBadges: allFinalizedBadges,
             timestamp: new Date().toISOString(),
             ...(variant === "badge"
-              ? { badgeOrderQty: badgeOrderQtyRef.current }
+              ? { badgeOrderQty }
               : {}),
             ...(isSignLikeVariant(variant)
               ? {
@@ -3511,6 +3576,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     return () => window.clearTimeout(t);
   }, [
     badgeOrderQty,
+    badgeLineQuantities,
     variant,
     cloudLibraryEnabled,
     multipleBadges.length,
@@ -3539,7 +3605,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               selectedSignSizeTemplateId,
             }
           : {}),
-        ...(variant === "badge" ? { badgeOrderQty } : {}),
+        ...(variant === "badge"
+          ? { badgeOrderQty, badgeLineQuantities }
+          : {}),
       };
       try {
         localStorage.setItem(cacheKey, JSON.stringify(payload));
@@ -3560,6 +3628,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     _shop,
     _productId,
     badgeOrderQty,
+    badgeLineQuantities,
   ]);
 
   // Add keyboard shortcut to refresh templates (Ctrl+R or Cmd+R, but prevent page reload)
@@ -4159,7 +4228,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           backgroundColor: allBadgesForDraft[0].backgroundColor,
           backingType: allBadgesForDraft[0].backing,
           ...(variant === "badge"
-            ? { badgeOrderQty: badgeOrderQtyRef.current }
+            ? { badgeOrderQty }
             : {}),
         };
         const formData = new FormData();
@@ -4283,7 +4352,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             backgroundColor: normalized[0].backgroundColor,
             backingType: normalized[0].backing,
             ...(variant === "badge"
-              ? { badgeOrderQty: badgeOrderQtyRef.current }
+              ? { badgeOrderQty }
               : {}),
           };
           const formData = new FormData();
@@ -5414,6 +5483,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       lines: initialDefaultBadge.lines.map((line) => ({ ...line })),
     };
     setMultipleBadges([]);
+    setBadgeLineQuantities([]);
     setBadge(blankBadge);
     setSelectedBadgeIndex(0);
     setHasChosenBackgroundColor(false);
@@ -5481,6 +5551,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }
 
     setMultipleBadges(newMultipleBadges);
+    setBadgeLineQuantities((prev) =>
+      removeBadgeLineQtyAt(prev, indexToRemove),
+    );
     setSelectedBadgeIndex(newSelectedIndex);
 
     const badgeToLoad = newMultipleBadges[newSelectedIndex];
@@ -5520,6 +5593,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       ...multipleBadges.slice(index + 1),
     ];
     setMultipleBadges(newMultiple);
+    setBadgeLineQuantities((prev) =>
+      insertBadgeLineQtyAt(prev, index, prev[index] ?? 1),
+    );
     const newIndex = index + 1;
     setSelectedBadgeIndex(newIndex);
     openEnterTextSectionOnly();
@@ -5696,6 +5772,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       };
       setUniversalTemplateId(newTemplateId);
       setMultipleBadges([newBadge]);
+      setBadgeLineQuantities([1]);
       setBadge(newBadge);
       setSectionsOpened((prev) => ({ ...prev, template: true }));
       if (!templateGuidedAutoAdvanceDoneRef.current) {
@@ -6427,16 +6504,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       );
       const n = allBadgesForSupabase.length;
 
-      if (variant === "badge" && n < badgeOrderQty) {
-        allocationBaselineOrderQtyRef.current = badgeOrderQty;
-        setAllocationModalTargetTotal(badgeOrderQty);
-        setAllocationDraftLineQtys(
-          splitOrderTotalAcrossDesignLines(n, badgeOrderQty),
-        );
-        setShowOrderQtyAllocationModal(true);
-        return;
-      }
-
       const shopData = resolveShopDataForDesigner(_shop);
       const designId = sessionDesignIdRef.current;
       const shopifyCustomerIdFromUrl =
@@ -6444,12 +6511,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           ? new URLSearchParams(window.location.search).get("customerId")
           : null;
 
+      const lineQtys = syncBadgeLineQuantities(
+        n,
+        badgeLineQuantitiesRef.current,
+      );
+
       setIsAddingToCart(true);
       await runProofModalPipelineInner(
         allBadgesForSupabase,
-        variant === "badge"
-          ? splitOrderTotalAcrossDesignLines(n, Math.max(badgeOrderQty, n))
-          : allBadgesForSupabase.map(() => 1),
+        lineQtys,
         shopData,
         designId,
         shopifyCustomerIdFromUrl,
@@ -6495,7 +6565,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         alert("Each design needs at least one badge.");
         return;
       }
-      setBadgeOrderQty(sumQ);
       setAllocationTotalFieldFocused(false);
       setAllocationSetAllFieldFocused(false);
       setShowOrderQtyAllocationModal(false);
@@ -6516,7 +6585,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   };
 
   const closeOrderQtyAllocationModal = () => {
-    setBadgeOrderQty(allocationBaselineOrderQtyRef.current);
     setAllocationTotalFieldFocused(false);
     setAllocationSetAllFieldFocused(false);
     setShowOrderQtyAllocationModal(false);
@@ -6635,6 +6703,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         }));
       }
       setMultipleBadges(restoredBadges);
+      if (variant === "badge") {
+        setBadgeLineQuantities(
+          syncBadgeLineQuantities(restoredBadges.length, undefined),
+        );
+      }
       setBadge(restoredBadges[0]);
       setBadge1Data(restoredBadges[0] ?? null);
       setSelectedBadgeIndex(0);
@@ -6671,15 +6744,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         sessionDesignIdRef.current = row.design_id;
       }
       sessionHadLineTextEditRef.current = false;
-      const rawOrderQty = (design as { badgeOrderQty?: unknown }).badgeOrderQty;
-      if (
-        variant === "badge" &&
-        typeof rawOrderQty === "number" &&
-        Number.isFinite(rawOrderQty) &&
-        rawOrderQty >= 1
-      ) {
-        setBadgeOrderQty(Math.min(999_999, Math.floor(rawOrderQty)));
-      }
     },
     [variant, config.hasSizeStep],
   );
@@ -7495,12 +7559,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   }
 
   const badgeOrderQtyUi = useMemo(() => {
-    if (variant !== "badge") return null;
+    if (variant !== "badge" || badgeOrderQty < 1) return null;
     return computeBadgeAqbOrderQtyUiModel(
       badgeOrderQty,
       badge.backing as BadgeBackingKey,
       {
-        designCount: Math.max(1, multipleBadges.length),
+        designCount: multipleBadges.length,
         totalPieces: badgeOrderQty,
       },
     );
@@ -7555,21 +7619,21 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               className="h-6 w-6 text-blue-600 animate-spin"
               aria-hidden
             />
-            <span className="text-[7px] font-medium text-blue-700 leading-tight mt-0.5">
+            <span className="text-[14px] font-medium text-blue-700 leading-tight mt-0.5">
               Saving
             </span>
           </>
         ) : cloudAutosaveStatus === "saved" ? (
           <>
             <CheckCircleIcon className="h-6 w-6 text-green-600" aria-hidden />
-            <span className="text-[7px] font-medium text-green-700 leading-tight mt-0.5">
+            <span className="text-[14px] font-medium text-green-700 leading-tight mt-0.5">
               Saved
             </span>
           </>
         ) : cloudAutosaveStatus === "error" ? (
           <>
             <XMarkIcon className="h-6 w-6 text-red-500" aria-hidden />
-            <span className="text-[7px] font-medium text-red-600 leading-tight mt-0.5">
+            <span className="text-[14px] font-medium text-red-600 leading-tight mt-0.5">
               Error
             </span>
           </>
@@ -7579,7 +7643,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               className="h-5 w-5 text-gray-400"
               aria-hidden
             />
-            <span className="text-[7px] text-gray-500 leading-tight mt-0.5">
+            <span className="text-[14px] text-gray-500 leading-tight mt-0.5">
               Cloud
             </span>
           </>
@@ -7627,6 +7691,27 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     if (dx < -50 && canGoNext) selectBadge(selectedBadgeIndex + 1);
     else if (dx > 50 && canGoPrev) selectBadge(selectedBadgeIndex - 1);
   };
+
+  const aqbBadgeToolActions =
+    variant === "badge" ? (
+      <AqbToolActionsRow
+        onUndo={handleUndo}
+        undoDisabled={undoHistory.length === 0}
+        onReset={() => resetBadge()}
+        showResetAll={multipleBadges.length > 1}
+        onResetAll={resetAllBadges}
+        showApplyFormatToAll={multipleBadges.length > 1}
+        onApplyFormatToAll={applyAllFormattingToAll}
+        applyFormatLabel={`Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`}
+        onHelp={() => setShowHelpModal(true)}
+        onSave={() => {
+          void saveBadge();
+        }}
+        onLoad={() => {
+          void onLoadDesignClick();
+        }}
+      />
+    ) : null;
 
   return (
     <div className="aqb-redesign-root min-h-screen bg-[#F0EDE6] pb-8 overflow-x-hidden text-sm leading-[1.55] text-[#0d1b2a]">
@@ -7717,7 +7802,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           <div className="max-w-[1320px] mx-auto w-full px-6 md:px-10 py-7 text-white">
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#e0ac42] mb-1.5 flex items-center gap-2">
+                <p className="text-[14px] font-semibold uppercase tracking-[0.14em] text-[#e0ac42] mb-1.5 flex items-center gap-2">
                   <span
                     className="inline-block h-[7px] w-[7px] rounded-full bg-emerald-400 animate-pulse shrink-0"
                     aria-hidden
@@ -7731,11 +7816,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   </em>
                 </h1>
                 <p className="text-[13px] text-white/45 mt-1 max-w-xl">
-                  Pick your shape, colour and text — see it live before you order.
+                  Pick your shape, color and text — see it live before you order.
                   Artwork generates automatically on checkout.
                 </p>
               </div>
-              <div className="hidden sm:flex flex-col sm:flex-row flex-wrap gap-x-5 gap-y-2 text-[11px] text-white/40">
+              <div className="hidden sm:flex flex-col sm:flex-row flex-wrap gap-x-5 gap-y-2 text-[14px] text-white/40">
                 <span className="flex items-center gap-1.5 whitespace-nowrap">
                   ✓ No artwork fees
                 </span>
@@ -7811,13 +7896,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               </span>
             )}
           </div>
-          <div className="flex items-start gap-1.5 shrink-0">
-            {cloudLibrarySaveHint}
+          <div className="flex items-stretch gap-1.5 shrink-0">
+            {variant !== "badge" ? cloudLibrarySaveHint : null}
             {variant === "badge" && multipleBadges.length > 0 ? (
               <>
                 <button
                   type="button"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                  className="aqb-preview-action-btn aqb-preview-action-btn--icon-only"
                   onClick={(e) => {
                     e.preventDefault();
                     duplicateCurrentBadge();
@@ -7825,11 +7910,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   aria-label={`Duplicate ${config.labelProduct.toLowerCase()}`}
                   title={`Duplicate this ${config.labelProduct.toLowerCase()}`}
                 >
-                  <DocumentDuplicateIcon className="w-4 h-4 md:w-5 md:h-5" />
+                  <DocumentDuplicateIcon className="h-5 w-5 shrink-0" />
                 </button>
                 <button
                   type="button"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                  className="aqb-preview-action-btn aqb-preview-action-btn--icon-only"
                   onClick={(e) => {
                     e.preventDefault();
                     deleteCurrentBadgeFromPreview();
@@ -7837,39 +7922,57 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   aria-label={`Delete ${config.labelProduct.toLowerCase()}`}
                   title={`Delete this ${config.labelProduct.toLowerCase()}`}
                 >
-                  <TrashIcon className="w-4 h-4 md:w-5 md:h-5" />
+                  <TrashIcon className="h-5 w-5 shrink-0" />
                 </button>
               </>
             ) : null}
-            <div className="flex flex-col items-center gap-0.5">
+            <button
+              type="button"
+              className={
+                variant === "badge"
+                  ? "aqb-preview-action-btn"
+                  : "flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+              }
+              onClick={() => setShowBadgeGridModal(true)}
+              aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
+              title={`View all ${config.labelProductPlural.toLowerCase()}`}
+            >
+              <Squares2X2Icon
+                className={variant === "badge" ? "h-5 w-5 shrink-0" : "w-6 h-6"}
+              />
+              {variant === "badge" ? (
+                <span className="aqb-preview-action-btn__label">Grid</span>
+              ) : null}
+            </button>
+            {variant !== "badge" ? (
+              <div className="text-[14px] text-gray-600 text-center leading-tight">
+                Grid
+                <br />
+                View
+              </div>
+            ) : null}
+            {variant === "badge" ? (
               <button
                 type="button"
-                className={
-                  variant === "badge"
-                    ? "flex min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-lg border border-gray-300 bg-white px-2 py-1 text-gray-700 hover:bg-gray-100"
-                    : "flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                }
-                onClick={() => setShowBadgeGridModal(true)}
-                aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
-                title={`View all ${config.labelProductPlural.toLowerCase()}`}
+                className="aqb-preview-action-btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCsvText("");
+                  setCsvPreview([]);
+                  setCsvError("");
+                  setShowCsvModal(true);
+                }}
+                aria-label="Add multiple badges from CSV"
+                title="Add multiple badges from CSV"
               >
-                <Squares2X2Icon
-                  className={variant === "badge" ? "w-5 h-5" : "w-6 h-6"}
-                />
-                {variant === "badge" ? (
-                  <span className="text-[10px] font-medium leading-none text-[#0d1b2a]">
-                    Grid
-                  </span>
-                ) : null}
-              </button>
-              {variant !== "badge" ? (
-                <div className="text-[8px] text-gray-600 text-center leading-tight">
-                  Grid
+                <AddMultipleGridIcon className="h-5 w-5 shrink-0 stroke-[1.75]" />
+                <span className="aqb-preview-action-btn__label">
+                  Add
                   <br />
-                  View
-                </div>
-              ) : null}
-            </div>
+                  Multiple
+                </span>
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -7881,7 +7984,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           {config.labelProduct} Preview
         </h2>
         {variant === "badge" ? (
-          <p className="mb-2 w-full text-center text-[11px] leading-snug text-[#6b7f92]">
+          <p className="mb-2 w-full text-center text-[14px] leading-snug text-[#6b7f92]">
             Select grid view to view more badges
           </p>
         ) : null}
@@ -7989,32 +8092,38 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             )}
           </div>
         </div>
+        {aqbBadgeToolActions ? (
+          <div className="shrink-0 md:hidden">{aqbBadgeToolActions}</div>
+        ) : null}
       </div>
 
       {/* LEFT COLUMN - Controls */}
       <div className="aqb-left-panel w-full lg:min-w-0 overflow-y-auto flex-1 min-h-0 lg:max-h-[calc(100vh-48px)] rounded-xl border border-[rgba(13,27,42,0.1)] bg-white shadow-[0_2px_12px_rgba(13,27,42,0.06)] flex flex-col">
         <div
-          className={`hidden w-full shrink-0 flex-col border-b border-[rgba(13,27,42,0.1)] bg-[#F8F7F4] md:flex ${
+          className={`w-full shrink-0 flex-col border-b border-[rgba(13,27,42,0.1)] bg-[#F8F7F4] flex ${
             variant === "badge"
               ? "gap-0 px-6 py-[14px]"
-              : "gap-3 px-5 py-4 sm:px-6"
+              : "hidden gap-3 px-5 py-4 sm:px-6 md:flex"
           }`}
         >
             <div
-              className={`min-w-0 w-full ${
+              className={`flex w-full min-w-0 items-center justify-between gap-3 ${
                 variant === "badge" ? "mb-[10px]" : ""
               }`}
             >
-              <h2 className="text-[11px] font-bold uppercase leading-tight tracking-[0.5px] text-[#0D1B2A]">
-                {multipleBadges.length === 0
-                  ? `Customize your ${config.labelProduct.toLowerCase()}`
-                  : `Customize your ${config.labelProduct.toLowerCase()} — ${selectedBadgeIndex + 1} of ${totalBadges}`}
-              </h2>
-              {multipleBadges.length > 0 && activeTemplate && (
-                <span className="mt-0.5 text-[11px] font-semibold leading-tight text-[#c8962a]">
-                  {activeTemplate.name}
-                </span>
-              )}
+              <div className="min-w-0 flex-1">
+                <h2 className="text-[14px] font-bold uppercase leading-tight tracking-[0.5px] text-[#0D1B2A]">
+                  {multipleBadges.length === 0
+                    ? `Customize your ${config.labelProduct.toLowerCase()}`
+                    : `Customize your ${config.labelProduct.toLowerCase()} — ${selectedBadgeIndex + 1} of ${totalBadges}`}
+                </h2>
+                {multipleBadges.length > 0 && activeTemplate && (
+                  <span className="mt-0.5 block text-[14px] font-semibold leading-tight text-[#c8962a]">
+                    {activeTemplate.name}
+                  </span>
+                )}
+              </div>
+              {variant === "badge" ? cloudLibrarySaveHint : null}
             </div>
             <div className="flex w-full min-w-0 flex-wrap items-center gap-y-2 gap-x-0.5 sm:flex-nowrap sm:justify-between sm:gap-0">
               {(() => {
@@ -8152,7 +8261,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             <CheckIcon className="w-3 h-3 stroke-[2.5]" />
                           ) : (
                             <span
-                              className={`text-[9px] font-semibold ${
+                              className={`text-[11px] font-semibold ${
                                 step.current ? "text-white" : "text-[#6B7F92]"
                               }`}
                             >
@@ -8160,7 +8269,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] text-gray-600 mt-0.5 whitespace-nowrap leading-tight">
+                        <span className="text-[14px] text-gray-600 mt-0.5 whitespace-nowrap leading-tight">
                           {step.label}
                         </span>
                       </div>
@@ -8288,8 +8397,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           <span
                             className={`${
                               variant === "badge"
-                                ? "text-[11px] font-bold"
-                                : "text-[9px] font-semibold"
+                                ? "text-[12px] font-bold"
+                                : "text-[11px] font-semibold"
                             } ${
                               step.current ? "text-white" : "text-[#6B7F92]"
                             }`}
@@ -8299,7 +8408,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         )}
                       </div>
                       <span
-                        className={`whitespace-nowrap text-[10px] leading-tight ${
+                        className={`whitespace-nowrap text-[14px] leading-tight ${
                           variant === "badge" ? "mt-[3px]" : "mt-0.5"
                         } ${
                           variant === "badge"
@@ -8553,10 +8662,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                 />
                               </div>
                               <div className="shrink-0 bg-white px-3 pb-2.5 pt-1.5 text-center">
-                                <div className="text-[11px] font-semibold leading-tight text-[#0d1b2a]">
+                                <div className="text-[14px] font-semibold leading-tight text-[#0d1b2a]">
                                   {t.name}
                                 </div>
-                                <div className="mt-0.5 text-[10px] leading-snug text-[#6b7f92]">
+                                <div className="mt-0.5 text-[14px] leading-snug text-[#6b7f92]">
                                   {subtitle}
                                 </div>
                               </div>
@@ -9122,7 +9231,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               className="max-h-[138px]"
                             />
                           ) : (
-                            <span className="text-[10px] text-gray-400 px-1">
+                            <span className="text-[14px] text-gray-400 px-1">
                               Preview unavailable
                             </span>
                           )}
@@ -9261,7 +9370,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   buttonRef={backgroundSectionRef}
                   stepNumber={2}
                   visualState={aqbBadgeStepHeaderModel.background.state}
-                  title="Step 2: Pick a background colour"
+                  title="Step 2: Pick a background color"
                   summary={aqbBadgeStepHeaderModel.background.summary}
                   open={sectionsOpen.background}
                   onClick={() => {
@@ -9432,14 +9541,18 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     return null;
                   };
 
-                  // Badge redesign: match reference colour row + corner-style pills.
+                  // Badge redesign: colour row; corner pills only for round/square 1×3 & 1.5×3.
                   if (variant === "badge") {
-                    const badgeSizeKey = getBadgeTemplateSizeKey(
+                    const showCornerStyle = isBadgeCornerStyleEligible(
                       universalTemplateId,
                     );
-                    const activeBadgeCornerStyle =
-                      getBadgeCornerStyleFromTemplate(universalTemplateId) ??
-                      "rounded";
+                    const badgeSizeKey = showCornerStyle
+                      ? getBadgeTemplateSizeKey(universalTemplateId)
+                      : null;
+                    const activeBadgeCornerStyle = showCornerStyle
+                      ? getBadgeCornerStyleFromTemplate(universalTemplateId) ??
+                        "rounded"
+                      : null;
 
                     const applyBadgeCornerStyle = (
                       style: BadgeCornerStyleKey,
@@ -9498,43 +9611,43 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           })}
                         </div>
 
-                        <div className="finish-row">
-                          <div className="aqb-badge-finish-lbl">
-                            Corner style
+                        {showCornerStyle && badgeSizeKey && activeBadgeCornerStyle ? (
+                          <div className="finish-row">
+                            <div className="aqb-badge-finish-lbl">
+                              Corner style
+                            </div>
+                            <div className="aqb-badge-finish-pills">
+                              <button
+                                type="button"
+                                className={`aqb-badge-finish-pill ${
+                                  activeBadgeCornerStyle === "rounded"
+                                    ? "selected"
+                                    : ""
+                                }`}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  applyBadgeCornerStyle("rounded");
+                                }}
+                              >
+                                Rounded corners
+                              </button>
+                              <button
+                                type="button"
+                                className={`aqb-badge-finish-pill ${
+                                  activeBadgeCornerStyle === "square"
+                                    ? "selected"
+                                    : ""
+                                }`}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  applyBadgeCornerStyle("square");
+                                }}
+                              >
+                                Square corners
+                              </button>
+                            </div>
                           </div>
-                          <div className="aqb-badge-finish-pills">
-                            <button
-                              type="button"
-                              className={`aqb-badge-finish-pill ${
-                                activeBadgeCornerStyle === "rounded"
-                                  ? "selected"
-                                  : ""
-                              }`}
-                              disabled={!badgeSizeKey}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                applyBadgeCornerStyle("rounded");
-                              }}
-                            >
-                              Rounded corners
-                            </button>
-                            <button
-                              type="button"
-                              className={`aqb-badge-finish-pill ${
-                                activeBadgeCornerStyle === "square"
-                                  ? "selected"
-                                  : ""
-                              }`}
-                              disabled={!badgeSizeKey}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                applyBadgeCornerStyle("square");
-                              }}
-                            >
-                              Square corners
-                            </button>
-                          </div>
-                        </div>
+                        ) : null}
 
                         {multipleBadges.length > 1 ? (
                           <div className="mt-2">
@@ -9587,7 +9700,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                     }
                                   }}
                                 />
-                                <span className="text-[8px] text-gray-600 text-center leading-tight">
+                                <span className="text-[14px] text-gray-600 text-center leading-tight">
                                   {c.name === "Brushed Gold" ? (
                                     <>
                                       Brushed
@@ -9639,7 +9752,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               badge.backgroundColor || "#FFFFFF"
                             }`}
                           />
-                          <span className="text-[8px] text-gray-600 text-center">
+                          <span className="text-[14px] text-gray-600 text-center">
                             Current color
                           </span>
                         </div>
@@ -9701,7 +9814,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                       alt=""
                                       className="h-14 w-10 object-cover rounded-sm border border-gray-200"
                                     />
-                                    <span className="text-[10px] font-medium text-gray-700">
+                                    <span className="text-[14px] font-medium text-gray-700">
                                       {opt.label}
                                     </span>
                                   </button>
@@ -9899,7 +10012,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                     }
                                   }}
                                 />
-                                <span className="text-[8px] text-gray-600 text-center leading-tight">
+                                <span className="text-[14px] text-gray-600 text-center leading-tight">
                                   {c.name === "Brushed Gold" ? (
                                     <>
                                       Brushed
@@ -9936,7 +10049,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               badge.borderColor ?? "#FFFFFF"
                             }`}
                           />
-                          <span className="text-[8px] text-gray-600 text-center">
+                          <span className="text-[14px] text-gray-600 text-center">
                             Current color
                           </span>
                         </div>
@@ -9991,13 +10104,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                           }}
                                         />
                                       ) : (
-                                        <span className="text-[10px] font-medium px-0.5 text-center leading-tight">
+                                        <span className="text-[14px] font-medium px-0.5 text-center leading-tight">
                                           {opt.label}
                                         </span>
                                       )}
                                     </div>
                                     <div
-                                      className={`text-[8px] text-center leading-tight max-w-[4.5rem] ${
+                                      className={`text-[14px] text-center leading-tight max-w-[4.5rem] ${
                                         active
                                           ? "text-blue-800"
                                           : "text-gray-600"
@@ -10254,14 +10367,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   ) ? (
                     <span
                       className="inline-flex"
-                      title="Please check font colours — some text may not show well on this background."
+                      title="Please check font colors — some text may not show well on this background."
                     >
                       <ExclamationTriangleIcon
                         className="h-4 w-4 text-red-500"
                         aria-hidden
                       />
                       <span className="sr-only">
-                        Please check font colours — some text may not show well
+                        Please check font colors — some text may not show well
                         on this background.
                       </span>
                     </span>
@@ -10774,14 +10887,18 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           {variant === "badge" && config.hasBacking ? (
             <AqbBadgeOrderQtySection
               qty={badgeOrderQty}
-              onQtyChange={setBadgeOrderQty}
               backingKey={badge.backing as BadgeBackingKey}
-              designCount={Math.max(1, multipleBadges.length)}
+              designCount={multipleBadges.length}
               onAddToCart={() => {
                 void addToCart();
               }}
               addToCartDisabled={
                 isGeneratingDesigns || !stepsComplete
+              }
+              addToCartReady={
+                stepsComplete &&
+                multipleBadges.length > 0 &&
+                !isGeneratingDesigns
               }
               isAddingToCart={isAddingToCart}
             />
@@ -10859,32 +10976,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             </div>
           )}
 
-          {/* Actions - below all steps (AQB reference toolbar) */}
-          {variant === "badge" ? (
-            <AqbToolActionsRow
-              onUndo={handleUndo}
-              undoDisabled={undoHistory.length === 0}
-              onReset={() => resetBadge()}
-              showResetAll={multipleBadges.length > 1}
-              onResetAll={resetAllBadges}
-              showApplyFormatToAll={multipleBadges.length > 1}
-              onApplyFormatToAll={applyAllFormattingToAll}
-              applyFormatLabel={`Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`}
-              onAddMultiple={() => {
-                setCsvText("");
-                setCsvPreview([]);
-                setCsvError("");
-                setShowCsvModal(true);
-              }}
-              onHelp={() => setShowHelpModal(true)}
-              onSave={() => {
-                void saveBadge();
-              }}
-              onLoad={() => {
-                void onLoadDesignClick();
-              }}
-            />
-          ) : (
+          {variant !== "badge" ? (
             <div className="mb-4 flex flex-wrap items-start justify-center gap-2 border-t border-[rgba(13,27,42,0.08)] bg-[#faf8f4] -mx-4 px-4 py-3 md:-mx-5 md:px-5 md:gap-3">
             <div className="flex flex-col items-center gap-1">
               <button
@@ -10898,7 +10990,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               >
                 <ArrowUturnLeftIcon className="w-5 h-5 md:w-6 md:h-6" />
               </button>
-              <div className="text-[8px] text-gray-600 text-center leading-tight">
+              <div className="text-[14px] text-gray-600 text-center leading-tight">
                 Undo
               </div>
             </div>
@@ -10914,7 +11006,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               >
                 <ArrowPathRoundedSquareIcon className="w-5 h-5 md:w-6 md:h-6" />
               </button>
-              <div className="text-[8px] text-gray-600 text-center leading-tight">
+              <div className="text-[14px] text-gray-600 text-center leading-tight">
                 Reset
                 <br />
                 this {config.labelProduct}
@@ -10933,7 +11025,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 >
                   <ArrowPathIconOutline className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
-                <div className="text-[8px] text-gray-600 text-center leading-tight">
+                <div className="text-[14px] text-gray-600 text-center leading-tight">
                   Reset
                   <br />
                   All {config.labelProductPlural}
@@ -10953,7 +11045,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 >
                   <Square2StackIcon className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
-                <div className="text-[8px] text-gray-600 text-center leading-tight">
+                <div className="text-[14px] text-gray-600 text-center leading-tight">
                   Apply Format
                   <br />
                   to All {config.labelProductPlural}
@@ -10975,7 +11067,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               >
                 <SquaresPlusIcon className="w-5 h-5 md:w-6 md:h-6" />
               </button>
-              <div className="text-[8px] text-gray-600 text-center leading-tight">
+              <div className="text-[14px] text-gray-600 text-center leading-tight">
                 Add Multiple
                 <br />
                 {config.labelProductPlural}
@@ -10993,14 +11085,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               >
                 <QuestionMarkCircleIcon className="w-5 h-5 md:w-6 md:h-6" />
               </button>
-              <div className="text-[8px] text-gray-600 text-center leading-tight">
+              <div className="text-[14px] text-gray-600 text-center leading-tight">
                 Help <br></br> Center
               </div>
             </div>
           </div>
-
-
-          )}
+          ) : null}
 
           {/* Save / Add to cart (non-badge; badge uses toolbar + right-panel ATC) */}
           {variant !== "badge" ? (
@@ -11368,18 +11458,18 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   : `${config.labelProduct} preview`}
               </span>
               {variant === "badge" ? (
-                <p className="text-[10px] leading-snug text-[#6b7f92] pr-2">
+                <p className="text-[14px] leading-snug text-[#6b7f92] pr-2">
                   Select grid view to view more badges
                 </p>
               ) : null}
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              {cloudLibrarySaveHint}
+            <div className="flex items-stretch gap-1.5 shrink-0">
+              {variant !== "badge" ? cloudLibrarySaveHint : null}
               {variant === "badge" && multipleBadges.length > 0 ? (
                 <>
                   <button
                     type="button"
-                    className="h-9 w-9 flex shrink-0 items-center justify-center rounded-md border border-[rgba(13,27,42,0.12)] bg-white text-[#0D1B2A] hover:bg-[#F5F2EE] transition-colors"
+                    className="aqb-preview-action-btn aqb-preview-action-btn--icon-only"
                     onClick={(e) => {
                       e.preventDefault();
                       duplicateCurrentBadge();
@@ -11387,11 +11477,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     aria-label={`Duplicate ${config.labelProduct.toLowerCase()}`}
                     title={`Duplicate this ${config.labelProduct.toLowerCase()}`}
                   >
-                    <DocumentDuplicateIcon className="w-5 h-5" />
+                    <DocumentDuplicateIcon className="h-5 w-5 shrink-0" />
                   </button>
                   <button
                     type="button"
-                    className="h-9 w-9 flex shrink-0 items-center justify-center rounded-md border border-[rgba(13,27,42,0.12)] bg-white text-[#0D1B2A] hover:bg-[#F5F2EE] transition-colors"
+                    className="aqb-preview-action-btn aqb-preview-action-btn--icon-only"
                     onClick={(e) => {
                       e.preventDefault();
                       deleteCurrentBadgeFromPreview();
@@ -11399,7 +11489,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     aria-label={`Delete ${config.labelProduct.toLowerCase()}`}
                     title={`Delete this ${config.labelProduct.toLowerCase()}`}
                   >
-                    <TrashIcon className="w-5 h-5" />
+                    <TrashIcon className="h-5 w-5 shrink-0" />
                   </button>
                 </>
               ) : null}
@@ -11407,20 +11497,42 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 type="button"
                 className={
                   variant === "badge"
-                    ? "flex min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-md border border-[rgba(13,27,42,0.12)] bg-white px-2 py-1 text-[#0D1B2A] hover:bg-[#F5F2EE] transition-colors"
+                    ? "aqb-preview-action-btn"
                     : "h-9 w-9 flex items-center justify-center rounded-md border border-[rgba(13,27,42,0.12)] bg-white text-[#0D1B2A] hover:bg-[#F5F2EE] transition-colors"
                 }
                 onClick={() => setShowBadgeGridModal(true)}
                 aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
                 title={`View all ${config.labelProductPlural.toLowerCase()}`}
               >
-                <Squares2X2Icon className="w-5 h-5" />
+                <Squares2X2Icon
+                  className={variant === "badge" ? "h-5 w-5 shrink-0" : "w-5 h-5"}
+                />
                 {variant === "badge" ? (
-                  <span className="text-[10px] font-medium leading-none text-[#0d1b2a]">
-                    Grid
-                  </span>
+                  <span className="aqb-preview-action-btn__label">Grid</span>
                 ) : null}
               </button>
+              {variant === "badge" ? (
+                <button
+                  type="button"
+                  className="aqb-preview-action-btn"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCsvText("");
+                    setCsvPreview([]);
+                    setCsvError("");
+                    setShowCsvModal(true);
+                  }}
+                  aria-label="Add multiple badges from CSV"
+                  title="Add multiple badges from CSV"
+                >
+                  <AddMultipleGridIcon className="h-5 w-5 shrink-0 stroke-[1.75]" />
+                  <span className="aqb-preview-action-btn__label">
+                    Add
+                    <br />
+                    Multiple
+                  </span>
+                </button>
+              ) : null}
             </div>
           </div>
         <div className="aqb-preview-area bg-[#E8E4DC] px-3 py-7 md:px-5 min-h-[220px] flex flex-col items-center justify-center gap-3.5">
@@ -11520,7 +11632,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               {/* Current badge being edited */}
               <div className="flex w-full flex-shrink-0 flex-col items-center">
                 <div
-                  className="font-semibold text-[#c8962a] mb-1"
+                  className="font-semibold text-[#0d1b2a] mb-1"
                   style={{
                     fontSize: `${DESIGNER_UI_TYPOGRAPHY.nowEditingFontRem}rem`,
                   }}
@@ -11753,6 +11865,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           )}
         </div>
         </div>
+        {aqbBadgeToolActions}
         {multipleBadges.length > 0
           ? (() => {
               const p = getBadgeForPreview(
@@ -11787,7 +11900,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 (l.text ?? "").trim(),
               ).length;
               return (
-                <div className="border-t border-[rgba(13,27,42,0.08)] bg-white px-4 py-3 space-y-1.5 text-[11px]">
+                <div className="border-t border-[rgba(13,27,42,0.08)] bg-white px-4 py-3 space-y-1.5 text-[14px]">
                   <div className="flex justify-between gap-2">
                     <span className="text-[#6b7f92]">Shape</span>
                     <span className="font-medium text-[#0d1b2a] text-right">
@@ -11814,10 +11927,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   </div>
                   {variant === "badge" ? (
                     <div className="flex justify-between gap-2">
-                      <span className="text-[#6b7f92]">Order quantity</span>
+                      <span className="text-[#6b7f92]">Badges in order</span>
                       <span className="font-semibold text-[#c8962a] text-right">
                         {badgeOrderQty} badge{badgeOrderQty === 1 ? "" : "s"}
-                        {multipleBadges.length > 1 ? " / design" : ""}
+                        {multipleBadges.length > 1
+                          ? ` · ${multipleBadges.length} designs`
+                          : ""}
                       </span>
                     </div>
                   ) : null}
@@ -11842,7 +11957,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 <div className="text-[26px] md:text-[28px] font-bold text-[#e0ac42] leading-none tracking-tight">
                   {addToCartPriceLabel}
                 </div>
-                <p className="text-[10px] text-white/35 mt-2 leading-snug">
+                <p className="text-[14px] text-white/35 mt-2 leading-snug">
                   {variant === "badge" && badgePriceBreakdownLine
                     ? badgePriceBreakdownLine
                     : multipleBadges.length > 0
@@ -11852,10 +11967,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               </div>
               {variant === "badge" && multipleBadges.length > 0 ? (
                 <div className="text-right shrink-0 pt-0.5">
-                  <div className="text-[11px] font-semibold text-[#2d9e75] leading-tight">
+                  <div className="text-[14px] font-semibold text-[#2d9e75] leading-tight">
                     Est. bundle
                   </div>
-                  <div className="text-[10px] text-white/30 mt-1 max-w-[112px] ml-auto leading-snug">
+                  <div className="text-[14px] text-white/30 mt-1 max-w-[112px] ml-auto leading-snug">
                     vs. single-badge checkout
                   </div>
                 </div>
@@ -11863,10 +11978,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             </div>
             <button
               type="button"
-              className={`w-full rounded-lg py-4 text-lg font-bold transition-opacity ${
-                isAddingToCart || isGeneratingDesigns || !stepsComplete
-                  ? "bg-[#5c6570] text-white/70 cursor-not-allowed"
-                  : "bg-[#c8962a] text-[#0d1b2a] hover:opacity-90"
+              className={`aqb-atc-btn aqb-atc-btn--panel ${
+                stepsComplete && !isGeneratingDesigns
+                  ? "aqb-atc-btn--ready"
+                  : "aqb-atc-btn--inactive"
               }`}
               onClick={(e) => {
                 e.preventDefault();
@@ -11903,87 +12018,41 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               ♡ Save this design to your account
             </button>
           </div>
-          {variant === "badge" ? (
-            <div className="aqb-trust-strip">
-              <div className="aqb-ts-item">
-                <span className="aqb-ts-icon" aria-hidden>
-                  🚚
-                </span>
-                Free USA shipping on every order
-              </div>
-              <div className="aqb-ts-item">
-                <span className="aqb-ts-icon" aria-hidden>
-                  ⚡
-                </span>
-                Ships in 2 business days
-              </div>
-              <div className="aqb-ts-item">
-                <span className="aqb-ts-icon" aria-hidden>
-                  🏭
-                </span>
-                Manufactured in our US facility
-              </div>
-              <div className="aqb-ts-item">
-                <span className="aqb-ts-icon" aria-hidden>
-                  ✏️
-                </span>
-                Artwork generates automatically on order
-              </div>
-              <div className="aqb-ts-item">
-                <span className="aqb-ts-icon" aria-hidden>
-                  🔁
-                </span>
-                <span>
-                  <span className="text-[#c8962a] font-medium">Sign in</span>{" "}
-                  on the storefront to save and reorder in one click
-                </span>
-              </div>
-            </div>
-          ) : (
+          {variant !== "badge" ? (
             <div className="rounded-lg border border-[rgba(13,27,42,0.1)] bg-white px-3 py-3 space-y-2">
-              <div className="flex items-start gap-2 text-[11px] text-[#3a4f63] leading-snug">
+              <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
                 <TruckIcon className="h-4 w-4 shrink-0 text-[#2d9e75] mt-0.5" />
                 <span>Free USA shipping on many badge orders — final rates in cart.</span>
               </div>
-              <div className="flex items-start gap-2 text-[11px] text-[#3a4f63] leading-snug">
+              <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
                 <BoltIcon className="h-4 w-4 shrink-0 text-[#c8962a] mt-0.5" />
                 <span>Fast production — most custom badges ship within two business days.</span>
               </div>
-              <div className="flex items-start gap-2 text-[11px] text-[#3a4f63] leading-snug">
+              <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
                 <WrenchScrewdriverIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
                 <span>Manufactured in the USA with quality-controlled materials.</span>
               </div>
-              <div className="flex items-start gap-2 text-[11px] text-[#3a4f63] leading-snug">
+              <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
                 <PencilSquareIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
                 <span>Print-ready artwork is generated automatically when you check out.</span>
               </div>
-              <div className="flex items-start gap-2 text-[11px] text-[#3a4f63] leading-snug">
+              <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
                 <UserIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
                 <span>Sign in on the storefront to save drafts and reorder faster.</span>
               </div>
             </div>
-          )}
+          ) : null}
           {variant !== "badge" ? (
-            <p className="text-[10px] leading-snug text-[#6b7f92] px-0.5">
+            <p className="text-[14px] leading-snug text-[#6b7f92] px-0.5">
               <strong className="text-[#3a4f63]">
                 {BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE}
               </strong>{" "}
-              On-screen colours are a guide; finished badges may vary slightly from
+              On-screen colors are a guide; finished badges may vary slightly from
               your display.
             </p>
           ) : null}
         </div>
         </div>
-        {variant === "badge" ? (
-          <div
-            className="aqb-print-colours-disclaimer"
-            role="note"
-            aria-label={BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE}
-          >
-            <strong>{BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE}</strong>{" "}
-            {BADGE_AQB_PRINT_COLOURS_DISCLAIMER_BODY}
-          </div>
-        ) : null}
       </div>
 
       {/* MOBILE: Step progress bar as fixed footer at bottom, full width */}
@@ -12268,6 +12337,97 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
+            {variant === "badge" && multipleBadges.length > 0 ? (
+              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 space-y-1.5 shrink-0">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-gray-800">
+                    {badgeOrderQty} badge{badgeOrderQty === 1 ? "" : "s"}{" "}
+                    total
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-medium text-gray-600 whitespace-nowrap">
+                      Copies per design:
+                    </span>
+                    <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-1 py-0.5">
+                      <button
+                        type="button"
+                        className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+                        onClick={() =>
+                          setBadgeLineQuantities((prev) =>
+                            bumpAllBadgeLineQuantities(prev, -1),
+                          )
+                        }
+                        disabled={
+                          badgeLineQuantities.length === 0 ||
+                          badgeLineQuantities.every((q) => q <= 1)
+                        }
+                        aria-label="Decrease copies for every design"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="—"
+                        title="Set every design to the same number of copies"
+                        className="min-w-[2.25rem] max-w-[5rem] rounded border border-transparent bg-transparent px-1 py-0.5 text-center text-sm font-semibold tabular-nums text-gray-900 focus:border-gray-300 focus:outline-none"
+                        value={gridSetAllQtyText}
+                        aria-label="Copies per design for all badges"
+                        onFocus={() => setGridSetAllQtyFocused(true)}
+                        onChange={(e) =>
+                          setGridSetAllQtyText(
+                            e.target.value.replace(/[^\d]/g, ""),
+                          )
+                        }
+                        onBlur={() => {
+                          setGridSetAllQtyFocused(false);
+                          const raw = gridSetAllQtyText.trim();
+                          const n = multipleBadges.length;
+                          if (raw === "" || n < 1) {
+                            const u = uniformBadgeLineQty(badgeLineQuantities);
+                            setGridSetAllQtyText(u != null ? String(u) : "");
+                            return;
+                          }
+                          const each = parseInt(raw, 10);
+                          if (Number.isNaN(each) || each < 1) {
+                            const u = uniformBadgeLineQty(badgeLineQuantities);
+                            setGridSetAllQtyText(u != null ? String(u) : "");
+                            return;
+                          }
+                          const clamped = clampBadgeLineQty(each);
+                          setBadgeLineQuantities(
+                            setAllBadgeLineQuantities(n, clamped),
+                          );
+                          setGridSetAllQtyText(String(clamped));
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter")
+                            (e.target as HTMLInputElement).blur();
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+                        onClick={() =>
+                          setBadgeLineQuantities((prev) =>
+                            bumpAllBadgeLineQuantities(prev, 1),
+                          )
+                        }
+                        disabled={badgeLineQuantities.length === 0}
+                        aria-label="Increase copies for every design"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[14px] text-gray-500 leading-snug">
+                  Use − / + on each badge to change quantities, or set the same
+                  count for all designs above.
+                </p>
+              </div>
+            ) : null}
             <div className="grid grid-cols-2 gap-3 p-4 overflow-y-auto flex-1 min-h-0">
               {Array.from({ length: totalBadges }, (_, i) => {
                 const { badge: b, templateId: tid } = getBadgeForPreview(
@@ -12330,6 +12490,42 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       )}
                     </div>
 
+                    <div className="mb-1 flex w-full items-center gap-1 self-start">
+                      <span className="text-sm font-bold text-gray-700">
+                        {i + 1}.
+                      </span>
+                      {hasColorIssues && (
+                        <div
+                          className="relative flex h-4 w-4 items-center justify-center"
+                          title="Some text may not show well. Please check font colors"
+                        >
+                          <svg
+                            className="h-4 w-4 text-red-600"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <circle
+                              cx="10"
+                              cy="10"
+                              r="9"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              fill="none"
+                            />
+                            <line
+                              x1="5"
+                              y1="5"
+                              x2="15"
+                              y2="15"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Clickable preview */}
                     <button
                       type="button"
@@ -12339,41 +12535,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         setShowBadgeGridModal(false);
                       }}
                     >
-                      <div className="flex items-center gap-1 mb-1">
-                        <span className="text-sm font-bold text-gray-700">
-                          {i + 1}.
-                        </span>
-                        {hasColorIssues && (
-                          <div
-                            className="relative w-4 h-4 flex items-center justify-center"
-                            title="Some text may not show well. Please check font colors"
-                          >
-                            <svg
-                              className="w-4 h-4 h-full text-red-600"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <circle
-                                cx="10"
-                                cy="10"
-                                r="9"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                fill="none"
-                              />
-                              <line
-                                x1="5"
-                                y1="5"
-                                x2="15"
-                                y2="15"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                              />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
                       <div
                         className="w-full flex items-center justify-center"
                         style={{ height: 80 }}
@@ -12387,6 +12548,29 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         />
                       </div>
                     </button>
+                    {variant === "badge" ? (
+                      <div
+                        className="mt-2 flex w-full flex-col items-center gap-0.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="text-[14px] font-medium text-gray-500">
+                          Qty
+                        </span>
+                        <BadgeQtyStepper
+                          compact
+                          value={badgeLineQuantities[i] ?? 1}
+                          onChange={(next) => {
+                            setBadgeLineQuantities((prev) => {
+                              const updated = [...prev];
+                              if (i < 0 || i >= updated.length) return prev;
+                              updated[i] = next;
+                              return updated;
+                            });
+                          }}
+                          ariaLabel={`Quantity for design ${i + 1}`}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}

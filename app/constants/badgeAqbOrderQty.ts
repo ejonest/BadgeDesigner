@@ -12,9 +12,30 @@ export const BADGE_AQB_ORDER_TIERS = [
 ] as const;
 
 export const BADGE_AQB_ORDER_SHIP_FEE = 5.99;
-export const BADGE_AQB_ORDER_FREE_SHIP_MIN = 10;
+/** Free USA shipping when total badge count in the editor reaches this. */
+export const BADGE_AQB_ORDER_FREE_SHIP_MIN = 5;
 
-/** Tier chip anchors (qty set when user taps a chip) — matches reference. */
+/** Progress fill width (0–100): 0 badges = 0%, each badge aligns with its marker (n/goal). */
+export function badgeAqbFreeShipProgressWidthPct(
+  orderCount: number,
+  goal: number = BADGE_AQB_ORDER_FREE_SHIP_MIN,
+): number {
+  const c = Math.max(0, Math.floor(orderCount));
+  if (c <= 0) return 0;
+  if (c >= goal) return 100;
+  return (c / goal) * 100;
+}
+
+/** Marker tick position (0–100): label `n` sits at n/goal so fill meets the number. */
+export function badgeAqbFreeShipMarkerLeftPct(
+  markerIndex1Based: number,
+  goal: number = BADGE_AQB_ORDER_FREE_SHIP_MIN,
+): number {
+  const n = Math.max(1, Math.min(goal, Math.floor(markerIndex1Based)));
+  return (n / goal) * 100;
+}
+
+/** Tier chip anchors (display-only; quantity comes from editor designs). */
 export const BADGE_AQB_ORDER_TIER_ANCHORS = [1, 5, 10, 25, 100, 250] as const;
 
 /** Uplift used with mock tier base (reference HTML), not Shopify variant price. */
@@ -97,34 +118,39 @@ export function computeBadgeAqbOrderQtyUiModel(
   const qty = Math.max(1, Math.min(999_999, Math.floor(Number(qtyRaw) || 1)));
   const hasExplicitTotal =
     typeof opts?.totalPieces === "number" && Number.isFinite(opts.totalPieces);
-  const pieces = hasExplicitTotal
-    ? Math.max(1, Math.min(999_999, Math.floor(opts.totalPieces as number)))
-    : qty * designCount;
-  const tierBasis = hasExplicitTotal ? pieces : qty;
+  const orderCount = hasExplicitTotal
+    ? Math.max(
+        0,
+        Math.min(999_999, Math.floor(opts.totalPieces as number)),
+      )
+    : Math.max(0, qty * designCount);
+  /** Pricing/tier math uses at least 1; progress bar uses orderCount (0 = empty bar). */
+  const pricingPieces = Math.max(1, orderCount);
+  const tierBasis = hasExplicitTotal ? pricingPieces : qty;
   const tier = getBadgeAqbOrderTierForQty(tierBasis);
   const uplift = badgeAqbOrderBackingUplift(backing);
   const pu = tier.p + uplift;
-  const freeShipPieces = pieces >= BADGE_AQB_ORDER_FREE_SHIP_MIN;
+  const freeShipPieces = orderCount >= BADGE_AQB_ORDER_FREE_SHIP_MIN;
   const ship = freeShipPieces ? 0 : BADGE_AQB_ORDER_SHIP_FEE;
-  const badgeTotal = pu * pieces;
-  const grandTotal = badgeTotal + ship;
+  const badgeTotal = pu * pricingPieces;
+  const grandTotal = orderCount > 0 ? badgeTotal + ship : 0;
   const refPu = BADGE_AQB_ORDER_TIERS[0].p + uplift;
-  const savingAmount = Math.max(0, (refPu - pu) * pieces);
-  const toFreePieces = Math.max(0, BADGE_AQB_ORDER_FREE_SHIP_MIN - pieces);
-  const nextTier = BADGE_AQB_ORDER_TIERS.find((t) => t.min > tierBasis);
+  const savingAmount = Math.max(0, (refPu - pu) * pricingPieces);
+  const toFreePieces = Math.max(0, BADGE_AQB_ORDER_FREE_SHIP_MIN - orderCount);
 
   let hintText: string;
   let hintWarn = false;
   if (!freeShipPieces && toFreePieces > 0) {
     hintText = `Add ${toFreePieces} more badge${
       toFreePieces !== 1 ? "s" : ""
-    } total to unlock free shipping`;
+    } for free shipping`;
     hintWarn = true;
-  } else if (tier.save > 0) {
-    hintText = `You're saving ${tier.save}% at this quantity`;
+  } else if (freeShipPieces) {
+    hintText = "Free USA shipping unlocked";
+  } else if (orderCount > 0) {
+    hintText = `${orderCount} badge${orderCount === 1 ? "" : "s"} in your order`;
   } else {
-    hintText = "Add more badges for volume discounts";
-    hintWarn = true;
+    hintText = "Add a badge design to start";
   }
 
   let shippingMain: string;
@@ -133,32 +159,36 @@ export function computeBadgeAqbOrderQtyUiModel(
   if (freeShipPieces) {
     shippingVariant = "free";
     shippingMain = "Free USA shipping included";
-    shippingSub = "Orders of 10+ badges always ship free";
+    shippingSub = `Orders of ${BADGE_AQB_ORDER_FREE_SHIP_MIN}+ badges always ship free`;
   } else {
     shippingVariant = "paid";
-    shippingMain = "$5.99 shipping applies — orders under 10 badges";
+    shippingMain = `$${BADGE_AQB_ORDER_SHIP_FEE.toFixed(2)} shipping — free on orders of ${BADGE_AQB_ORDER_FREE_SHIP_MIN}+ badges`;
     shippingSub = `Add ${toFreePieces} more badge${
       toFreePieces !== 1 ? "s" : ""
     } total to unlock free shipping`;
   }
 
-  const savingsBarWidthPct = Math.min(100, Math.max(0, tier.save));
+  const freeShipGoal = BADGE_AQB_ORDER_FREE_SHIP_MIN;
+  const savingsBarWidthPct = badgeAqbFreeShipProgressWidthPct(
+    orderCount,
+    freeShipGoal,
+  );
   const savingsBarGradient = freeShipPieces
     ? "linear-gradient(90deg,#C8962A,#2D9E75)"
     : "linear-gradient(90deg,#C8962A,#E0AC42)";
-  const savingsBarLabel =
-    tier.save > 0 ? `${tier.save}% saved` : "No discount yet";
+  const savingsBarLabel = freeShipPieces
+    ? "Free shipping unlocked"
+    : orderCount > 0
+      ? `${orderCount} of ${freeShipGoal} badges`
+      : `0 of ${freeShipGoal} badges`;
 
   let tierNoteText: string;
   let tierNoteTone: "free" | "unlock";
   if (!freeShipPieces) {
     tierNoteText = `Add ${toFreePieces} more → free shipping`;
     tierNoteTone = "unlock";
-  } else if (nextTier) {
-    tierNoteText = `Next tier: ${nextTier.min} → $${nextTier.p.toFixed(2)} ea`;
-    tierNoteTone = "free";
   } else {
-    tierNoteText = "250+ · best rate";
+    tierNoteText = "Free USA shipping included";
     tierNoteTone = "free";
   }
 
@@ -191,12 +221,13 @@ export function computeBadgeAqbOrderQtyUiModel(
     };
   });
 
-  const markerLabels = BADGE_AQB_ORDER_TIER_ANCHORS.map((m) =>
-    m === 10 && freeShipPieces ? "10 ✓" : String(m),
-  );
+  const markerLabels = Array.from({ length: freeShipGoal }, (_, i) => {
+    const n = i + 1;
+    return n === freeShipGoal && freeShipPieces ? `${n} ✓` : String(n);
+  });
 
   return {
-    qty: pieces,
+    qty: orderCount,
     hintText,
     hintWarn,
     shippingVariant,

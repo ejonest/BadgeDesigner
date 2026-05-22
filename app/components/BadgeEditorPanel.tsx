@@ -472,7 +472,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
               </div>
 
               <div className="aqb-badge-text-colour-row">
-                <span className="aqb-badge-tc-lbl">Colour:</span>
+                <span className="aqb-badge-tc-lbl">Color:</span>
                 {BADGE_AQB_TEXT_COLORS.map((tc, tcIdx) => {
                   const disabled = areColorsSimilar(
                     tc.value,
@@ -519,7 +519,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
               {line.color &&
               areColorsSimilar(line.color, badge.backgroundColor, 70) ? (
                 <p className="mt-1.5 text-[10px] font-medium text-red-600">
-                  Similar colours may not show well on this background.
+                  Similar colors may not show well on this background.
                 </p>
               ) : null}
 
