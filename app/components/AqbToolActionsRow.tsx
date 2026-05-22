@@ -4,7 +4,6 @@ import {
   ArrowUturnLeftIcon,
   QuestionMarkCircleIcon,
   Square2StackIcon,
-  Squares2X2Icon,
 } from "@heroicons/react/24/outline";
 
 export interface AqbToolActionsRowProps {
@@ -16,13 +15,76 @@ export interface AqbToolActionsRowProps {
   onApplyFormatToAll?: () => void;
   showApplyFormatToAll?: boolean;
   applyFormatLabel?: string;
-  onAddMultiple: () => void;
   onHelp: () => void;
   onSave: () => void;
   onLoad: () => void;
 }
 
 const iconClass = "h-[18px] w-[18px] stroke-[1.75] text-[#0d1b2a]";
+
+/** 2×2 grid: 3 squares + plus in top-right (matches 4-grid, fourth cell is “add”). */
+export const AddMultipleGridIcon: React.FC<{ className?: string }> = ({
+  className,
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.75}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <rect x="3" y="3" width="7" height="7" rx="1.25" />
+    <rect x="3" y="14" width="7" height="7" rx="1.25" />
+    <rect x="14" y="14" width="7" height="7" rx="1.25" />
+    <path d="M17.5 3.75v5.5M14.25 6.5h6.5" />
+  </svg>
+);
+
+interface ToolButtonProps {
+  label: string;
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+  variant?: "default" | "save";
+  icon?: React.ReactNode;
+  emojiIcon?: string;
+}
+
+const ToolButton: React.FC<ToolButtonProps> = ({
+  label,
+  title,
+  onClick,
+  disabled = false,
+  variant = "default",
+  icon,
+  emojiIcon,
+}) => (
+  <button
+    type="button"
+    className={`aqb-ta-btn${variant === "save" ? " aqb-ta-btn--save" : ""}`}
+    onClick={(e) => {
+      e.preventDefault();
+      onClick();
+    }}
+    disabled={disabled}
+    title={title}
+  >
+    <span
+      className={`aqb-ta-icon${emojiIcon ? " aqb-ta-icon--emoji" : ""}`}
+      aria-hidden
+    >
+      {emojiIcon ?? icon}
+    </span>
+    <span className="aqb-ta-label">{label}</span>
+  </button>
+);
+
+const ToolButtonRow: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => <div className="aqb-tool-actions-row__row">{children}</div>;
 
 export const AqbToolActionsRow: React.FC<AqbToolActionsRowProps> = ({
   onUndo,
@@ -33,135 +95,66 @@ export const AqbToolActionsRow: React.FC<AqbToolActionsRowProps> = ({
   onApplyFormatToAll,
   showApplyFormatToAll = false,
   applyFormatLabel = "Apply to all",
-  onAddMultiple,
   onHelp,
   onSave,
   onLoad,
 }) => (
-  <div className="aqb-tool-actions-row" role="toolbar" aria-label="Design tools">
-    <button
-      type="button"
-      className="aqb-ta-btn"
-      onClick={(e) => {
-        e.preventDefault();
-        onUndo();
-      }}
-      disabled={undoDisabled}
-      title="Undo last change"
-    >
-      <span className="aqb-ta-icon" aria-hidden>
-        <ArrowUturnLeftIcon className={iconClass} />
-      </span>
-      <span className="aqb-ta-label">Undo</span>
-    </button>
-
-    <button
-      type="button"
-      className="aqb-ta-btn"
-      onClick={(e) => {
-        e.preventDefault();
-        onReset();
-      }}
-      title="Reset current badge to default settings"
-    >
-      <span className="aqb-ta-icon" aria-hidden>
-        <ArrowPathIcon className={iconClass} />
-      </span>
-      <span className="aqb-ta-label">Reset</span>
-    </button>
-
-    {showResetAll && onResetAll ? (
-      <button
-        type="button"
-        className="aqb-ta-btn"
-        onClick={(e) => {
-          e.preventDefault();
-          onResetAll();
-        }}
-        title="Reset all badges to default settings"
-      >
-        <span className="aqb-ta-icon" aria-hidden>
-          <ArrowPathIcon className={iconClass} />
-        </span>
-        <span className="aqb-ta-label">Reset all</span>
-      </button>
-    ) : null}
-
-    {showApplyFormatToAll && onApplyFormatToAll ? (
-      <button
-        type="button"
-        className="aqb-ta-btn"
-        onClick={(e) => {
-          e.preventDefault();
-          onApplyFormatToAll();
-        }}
-        title={applyFormatLabel}
-      >
-        <span className="aqb-ta-icon" aria-hidden>
-          <Square2StackIcon className={iconClass} />
-        </span>
-        <span className="aqb-ta-label">Apply all</span>
-      </button>
-    ) : null}
-
-    <button
-      type="button"
-      className="aqb-ta-btn"
-      onClick={(e) => {
-        e.preventDefault();
-        onAddMultiple();
-      }}
-      title="Add multiple badges from CSV"
-    >
-      <span className="aqb-ta-icon" aria-hidden>
-        <Squares2X2Icon className={iconClass} />
-      </span>
-      <span className="aqb-ta-label">Add Multiple</span>
-    </button>
-
-    <button
-      type="button"
-      className="aqb-ta-btn"
-      onClick={(e) => {
-        e.preventDefault();
-        onHelp();
-      }}
-      title="Help — learn about the designer"
-    >
-      <span className="aqb-ta-icon" aria-hidden>
-        <QuestionMarkCircleIcon className={iconClass} />
-      </span>
-      <span className="aqb-ta-label">Help Centre</span>
-    </button>
-
-    <button
-      type="button"
-      className="aqb-ta-btn aqb-ta-btn--save"
-      onClick={(e) => {
-        e.preventDefault();
-        onSave();
-      }}
-      title="Save design"
-    >
-      <span className="aqb-ta-icon aqb-ta-icon--emoji" aria-hidden>
-        ⭐
-      </span>
-      <span className="aqb-ta-label">Save Design</span>
-    </button>
-
-    <button
-      type="button"
-      className="aqb-ta-btn"
-      onClick={(e) => {
-        e.preventDefault();
-        onLoad();
-      }}
-      title="Load a saved design"
-    >
-      <span className="aqb-ta-icon aqb-ta-icon--emoji" aria-hidden>
-        📂
-      </span>
-      <span className="aqb-ta-label">Load Design</span>
-    </button>
+  <div
+    className="aqb-tool-actions-row"
+    role="toolbar"
+    aria-label="Design tools"
+  >
+    <ToolButtonRow>
+      <ToolButton
+        label="Undo"
+        title="Undo last change"
+        onClick={onUndo}
+        disabled={undoDisabled}
+        icon={<ArrowUturnLeftIcon className={iconClass} />}
+      />
+      <ToolButton
+        label="Reset"
+        title="Reset current badge to default settings"
+        onClick={onReset}
+        icon={<ArrowPathIcon className={iconClass} />}
+      />
+      {showResetAll && onResetAll ? (
+        <ToolButton
+          label="Reset all"
+          title="Reset all badges to default settings"
+          onClick={onResetAll}
+          icon={<ArrowPathIcon className={iconClass} />}
+        />
+      ) : null}
+      {showApplyFormatToAll && onApplyFormatToAll ? (
+        <ToolButton
+          label="Apply all"
+          title={applyFormatLabel}
+          onClick={onApplyFormatToAll}
+          icon={<Square2StackIcon className={iconClass} />}
+        />
+      ) : null}
+    </ToolButtonRow>
+    <ToolButtonRow>
+      <ToolButton
+        label="Help Center"
+        title="Help — learn about the designer"
+        onClick={onHelp}
+        icon={<QuestionMarkCircleIcon className={iconClass} />}
+      />
+      <ToolButton
+        label="Save Design"
+        title="Save design"
+        onClick={onSave}
+        variant="save"
+        emojiIcon="⭐"
+      />
+      <ToolButton
+        label="Load Design"
+        title="Load a saved design"
+        onClick={onLoad}
+        emojiIcon="📂"
+      />
+    </ToolButtonRow>
   </div>
 );

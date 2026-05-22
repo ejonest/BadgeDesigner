@@ -26,7 +26,7 @@
 
 .aqb-redesign-root .aqb-a-item {
   padding: 0 36px;
-  font-size: 10px;
+  font-size: 14px;
   letter-spacing: 1.6px;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.5);
@@ -94,7 +94,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--aqb-gold-l);
   flex-shrink: 0;
@@ -203,12 +203,53 @@
   position: absolute;
   top: 9px;
   left: 12px;
-  font-size: 8px;
+  font-size: 14px;
   letter-spacing: 1.2px;
   text-transform: uppercase;
   color: rgba(0, 0, 0, 0.3);
   font-weight: 600;
   pointer-events: none;
+}
+
+/* Badge preview header — duplicate, delete, grid, add multiple: equal height */
+.aqb-redesign-root .aqb-preview-action-btn {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 48px;
+  height: 58px;
+  padding: 4px 8px;
+  flex-shrink: 0;
+  border: 1px solid var(--aqb-border);
+  border-radius: 6px;
+  background: #fff;
+  color: #0d1b2a;
+  font-family: inherit;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.aqb-redesign-root .aqb-preview-action-btn:hover {
+  background: #f5f2ee;
+}
+
+.aqb-redesign-root .aqb-preview-action-btn--icon-only {
+  gap: 0;
+}
+
+.aqb-redesign-root .aqb-preview-action-btn__label {
+  min-height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.15;
+  text-align: center;
 }
 
 /* Trust strip — reference spacing */
@@ -226,7 +267,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: 14px;
   color: #3a4f63;
   line-height: 1.45;
 }
@@ -243,35 +284,41 @@
   line-height: 1.2;
 }
 
-/* Bottom tool row — reference .tool-actions-row / .ta-btn */
+/* Tool toolbar under preview — two full-width rows, equal button widths per row */
 .aqb-redesign-root .aqb-tool-actions-row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
   padding: 10px 24px;
   border-top: 1px solid var(--aqb-border);
   background: #fff;
 }
 
+.aqb-redesign-root .aqb-tool-actions-row__row {
+  display: flex;
+  width: 100%;
+  align-items: stretch;
+  gap: 6px;
+}
+
 .aqb-redesign-root .aqb-ta-btn {
   display: flex;
+  flex: 1 1 0;
+  min-width: 0;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 8px 10px;
-  min-width: 52px;
+  padding: 8px 6px;
   border: 1px solid var(--aqb-border);
   border-radius: 7px;
   background: #fff;
   cursor: pointer;
   font-family: inherit;
-  transition:
-    border-color 0.15s,
-    background 0.15s,
-    opacity 0.15s;
+  transition: border-color 0.15s, background 0.15s, opacity 0.15s;
 }
 
 .aqb-redesign-root .aqb-ta-btn:hover:not(:disabled) {
@@ -308,12 +355,16 @@
 }
 
 .aqb-redesign-root .aqb-ta-label {
-  font-size: 9px;
+  font-size: 14px;
   font-weight: 500;
   color: #6b7f92;
   text-align: center;
   line-height: 1.2;
-  max-width: 72px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .aqb-redesign-root .aqb-ta-btn--save .aqb-ta-label {
@@ -328,6 +379,10 @@
   --aqb-gold: #c8962a;
   --aqb-gold-l: #e0ac42;
   --aqb-gold-p: #f5e6c0;
+  --aqb-atc-inactive: #5c6570;
+  /* Brighter than --aqb-gold (#c8962a), still warm mustard not lemon */
+  --aqb-atc-ready: #fac60a;
+  --aqb-atc-ready-hover: #fac60a;
   --aqb-cream: #faf8f4;
   --aqb-cream-2: #f0ede6;
   --aqb-cream-3: #e8e4dc;
@@ -367,7 +422,7 @@
   border: 1px solid var(--aqb-border);
   border-radius: 8px;
   padding: 10px 14px;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.55;
   color: #6b7f92;
 }
@@ -384,7 +439,7 @@
   border: 1px solid var(--aqb-border);
   border-radius: 8px;
   padding: 12px 16px;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.55;
   color: #6b7f92;
   flex-shrink: 0;
@@ -424,9 +479,7 @@
   height: 36px;
   border-radius: 8px;
   border: 2px solid transparent;
-  transition:
-    transform 0.15s,
-    border-color 0.15s;
+  transition: transform 0.15s, border-color 0.15s;
   position: relative;
   display: flex;
   align-items: center;
@@ -434,7 +487,9 @@
   flex-shrink: 0;
 }
 
-.aqb-redesign-root .aqb-badge-colour-swatch:not(:disabled):hover .aqb-badge-cs-circle {
+.aqb-redesign-root
+  .aqb-badge-colour-swatch:not(:disabled):hover
+  .aqb-badge-cs-circle {
   transform: scale(1.1);
 }
 
@@ -451,14 +506,14 @@
 }
 
 .aqb-redesign-root .aqb-badge-cs-name {
-  font-size: 9px;
+  font-size: 14px;
   color: var(--aqb-text-l, #6b7f92);
   line-height: 1.2;
   text-align: center;
 }
 
 .aqb-redesign-root .aqb-badge-finish-lbl {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.8px;
@@ -473,7 +528,7 @@
 }
 
 .aqb-redesign-root .aqb-badge-finish-pill {
-  font-size: 11px;
+  font-size: 14px;
   padding: 5px 13px;
   border: 1.5px solid var(--aqb-border);
   border-radius: 5px;
@@ -517,7 +572,7 @@
 }
 
 .aqb-redesign-root .aqb-badge-tl-label {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--aqb-navy);
 }
@@ -533,7 +588,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
+  font-size: 14px;
   color: #6b7f92;
   background: none;
   border: none;
@@ -582,7 +637,7 @@
 }
 
 .aqb-redesign-root .aqb-badge-trc-label {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -619,7 +674,7 @@
 }
 
 .aqb-redesign-root .aqb-badge-tc-lbl {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -712,9 +767,7 @@
   cursor: pointer;
   font-family: inherit;
   text-align: left;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .aqb-redesign-root .aqb-backing-select-trigger.is-open,
@@ -735,7 +788,7 @@
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
-  font-size: 10px;
+  font-size: 14px;
   color: #6b7f92;
 }
 
@@ -824,7 +877,7 @@
 }
 
 .aqb-redesign-root .aqb-bi-popular {
-  font-size: 9px;
+  font-size: 14px;
   padding: 1px 7px;
   border-radius: 6px;
   background: var(--aqb-navy);
@@ -833,7 +886,7 @@
 }
 
 .aqb-redesign-root .aqb-bi-desc {
-  font-size: 11px;
+  font-size: 14px;
   color: #6b7f92;
   margin-top: 1px;
   line-height: 1.45;
@@ -851,7 +904,7 @@
 }
 
 .aqb-redesign-root .aqb-bi-modifier {
-  font-size: 10px;
+  font-size: 14px;
   color: #6b7f92;
   font-weight: 500;
   margin-top: 2px;
@@ -886,7 +939,7 @@
 }
 
 .aqb-redesign-root .aqb-bq-qty-hint {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--aqb-green);
   font-weight: 500;
   text-align: right;
@@ -905,7 +958,7 @@
   padding: 8px 12px;
   border-radius: 6px;
   margin-bottom: 10px;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.5;
 }
 
@@ -948,12 +1001,12 @@
   }
 }
 
-.aqb-redesign-root .aqb-bq-tier-btn {
+.aqb-redesign-root .aqb-bq-tier-btn,
+.aqb-redesign-root .aqb-bq-tier-chip {
   border: 1.5px solid var(--aqb-border);
   border-radius: 6px;
   padding: 7px 3px 4px;
   text-align: center;
-  cursor: pointer;
   background: #fff;
   transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   position: relative;
@@ -963,30 +1016,43 @@
   color: inherit;
 }
 
+.aqb-redesign-root .aqb-bq-tier-btn {
+  cursor: pointer;
+}
+
 .aqb-redesign-root .aqb-bq-tier-btn:hover {
   border-color: var(--aqb-navy);
 }
 
-.aqb-redesign-root .aqb-bq-tier-btn.active {
+.aqb-redesign-root .aqb-bq-tier-chip {
+  cursor: default;
+}
+
+.aqb-redesign-root .aqb-bq-tier-btn.active,
+.aqb-redesign-root .aqb-bq-tier-chip.active {
   border-color: var(--aqb-navy);
   background: var(--aqb-navy);
 }
 
-.aqb-redesign-root .aqb-bq-tier-btn.pop {
+.aqb-redesign-root .aqb-bq-tier-btn.pop,
+.aqb-redesign-root .aqb-bq-tier-chip.pop {
   border-color: var(--aqb-gold);
 }
 
-.aqb-redesign-root .aqb-bq-tier-btn.ships-free {
+.aqb-redesign-root .aqb-bq-tier-btn.ships-free,
+.aqb-redesign-root .aqb-bq-tier-chip.ships-free {
   background: var(--aqb-green-l);
   border-color: var(--aqb-green);
 }
 
-.aqb-redesign-root .aqb-bq-tier-btn.ships-free.active {
+.aqb-redesign-root .aqb-bq-tier-btn.ships-free.active,
+.aqb-redesign-root .aqb-bq-tier-chip.ships-free.active {
   background: var(--aqb-navy);
   border-color: var(--aqb-navy);
 }
 
-.aqb-redesign-root .aqb-bq-tier-btn.paid-ship {
+.aqb-redesign-root .aqb-bq-tier-btn.paid-ship,
+.aqb-redesign-root .aqb-bq-tier-chip.paid-ship {
   background: #fffbf5;
 }
 
@@ -997,7 +1063,7 @@
   transform: translateX(-50%);
   background: var(--aqb-gold);
   color: var(--aqb-navy);
-  font-size: 7px;
+  font-size: 14px;
   font-weight: 700;
   padding: 1px 5px;
   border-radius: 3px;
@@ -1012,14 +1078,15 @@
   right: 0;
   background: var(--aqb-green);
   color: #fff;
-  font-size: 7px;
+  font-size: 14px;
   font-weight: 700;
   padding: 2px 3px;
   text-align: center;
   letter-spacing: 0.3px;
 }
 
-.aqb-redesign-root .aqb-bq-tier-btn.active .aqb-bq-free-ship-flag {
+.aqb-redesign-root .aqb-bq-tier-btn.active .aqb-bq-free-ship-flag,
+.aqb-redesign-root .aqb-bq-tier-chip.active .aqb-bq-free-ship-flag {
   background: var(--aqb-gold);
   color: var(--aqb-navy);
 }
@@ -1032,32 +1099,36 @@
   margin-bottom: 2px;
 }
 
-.aqb-redesign-root .aqb-bq-tier-btn.active .aqb-bq-tb-q {
+.aqb-redesign-root .aqb-bq-tier-btn.active .aqb-bq-tb-q,
+.aqb-redesign-root .aqb-bq-tier-chip.active .aqb-bq-tb-q {
   color: #fff;
 }
 
 .aqb-redesign-root .aqb-bq-tb-p {
-  font-size: 9px;
+  font-size: 14px;
   color: #6b7f92;
 }
 
-.aqb-redesign-root .aqb-bq-tier-btn.active .aqb-bq-tb-p {
+.aqb-redesign-root .aqb-bq-tier-btn.active .aqb-bq-tb-p,
+.aqb-redesign-root .aqb-bq-tier-chip.active .aqb-bq-tb-p {
   color: rgba(255, 255, 255, 0.55);
 }
 
 .aqb-redesign-root .aqb-bq-tb-s {
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--aqb-green);
   min-height: 11px;
   padding-bottom: 14px;
 }
 
-.aqb-redesign-root .aqb-bq-tier-btn.active .aqb-bq-tb-s {
+.aqb-redesign-root .aqb-bq-tier-btn.active .aqb-bq-tb-s,
+.aqb-redesign-root .aqb-bq-tier-chip.active .aqb-bq-tb-s {
   color: var(--aqb-gold-l);
 }
 
-.aqb-redesign-root .aqb-bq-tier-btn.paid-ship .aqb-bq-tb-s {
+.aqb-redesign-root .aqb-bq-tier-btn.paid-ship .aqb-bq-tb-s,
+.aqb-redesign-root .aqb-bq-tier-chip.paid-ship .aqb-bq-tb-s {
   color: var(--aqb-gold);
 }
 
@@ -1068,7 +1139,7 @@
 .aqb-redesign-root .aqb-bq-sb-label {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: 14px;
   color: #6b7f92;
   margin-bottom: 5px;
   gap: 8px;
@@ -1088,19 +1159,60 @@
 }
 
 .aqb-redesign-root .aqb-bq-sb-markers {
-  display: flex;
-  justify-content: space-between;
+  position: relative;
+  height: 14px;
   margin-top: 3px;
 }
 
 .aqb-redesign-root .aqb-bq-sb-marker {
-  font-size: 8px;
+  position: absolute;
+  top: 0;
+  font-size: 14px;
   color: #6b7f92;
+  white-space: nowrap;
 }
 
 .aqb-redesign-root .aqb-bq-sb-marker.free-marker {
   color: var(--aqb-green);
   font-weight: 700;
+}
+
+.aqb-redesign-root .aqb-bq-editor-qty-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--aqb-cream-2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.aqb-redesign-root .aqb-bq-editor-qty-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--aqb-navy);
+}
+
+.aqb-redesign-root .aqb-bq-editor-qty-tier-note {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.aqb-redesign-root .aqb-bq-editor-qty-tier-note.unlock {
+  color: var(--aqb-gold);
+}
+
+.aqb-redesign-root .aqb-bq-editor-qty-tier-note.free {
+  color: var(--aqb-green);
+}
+
+.aqb-redesign-root .aqb-bq-editor-qty-help {
+  font-size: 14px;
+  color: #6b7f92;
+  line-height: 1.45;
+  margin: 0 0 10px;
 }
 
 .aqb-redesign-root .aqb-bq-custom-row {
@@ -1115,7 +1227,7 @@
 }
 
 .aqb-redesign-root .aqb-bq-custom-label {
-  font-size: 11px;
+  font-size: 14px;
   color: #6b7f92;
   flex-shrink: 0;
 }
@@ -1169,7 +1281,7 @@
 }
 
 .aqb-redesign-root .aqb-bq-custom-tier-note {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 500;
   flex: 1;
   text-align: right;
@@ -1184,19 +1296,61 @@
   color: var(--aqb-gold);
 }
 
-.aqb-redesign-root .aqb-bq-total-strip {
-  background: var(--aqb-navy);
-  border-radius: 8px;
-  padding: 11px 14px;
+/* Checkout footer — tall ATC column + trust / disclaimer column */
+.aqb-redesign-root .aqb-bq-checkout-footer {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 10px;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
-.aqb-redesign-root .aqb-bq-ts-left {
-  flex: 1;
-  min-width: 140px;
+.aqb-redesign-root .aqb-bq-checkout-atc-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--aqb-navy);
+  border-radius: 8px;
+  padding: 10px 12px;
+  gap: 8px;
+}
+
+.aqb-redesign-root .aqb-bq-checkout-atc-pricing {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.aqb-redesign-root .aqb-bq-checkout-save {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.aqb-redesign-root .aqb-bq-checkout-atc-col .aqb-bq-ts-save {
+  text-align: left;
+}
+
+.aqb-redesign-root .aqb-bq-checkout-atc-col .aqb-bq-ts-save-sub {
+  text-align: left;
+}
+
+.aqb-redesign-root .aqb-badge-trust-disclaimer {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aqb-redesign-root .aqb-badge-trust-disclaimer .aqb-trust-strip {
+  flex: 1 1 auto;
+}
+
+.aqb-redesign-root .aqb-badge-trust-disclaimer .aqb-print-colours-disclaimer {
+  flex-shrink: 0;
+  margin: 0;
 }
 
 .aqb-redesign-root .aqb-bq-ts-total {
@@ -1207,13 +1361,13 @@
 }
 
 .aqb-redesign-root .aqb-bq-ts-breakdown {
-  font-size: 10px;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.35);
   margin-top: 2px;
 }
 
 .aqb-redesign-root .aqb-bq-ts-ship {
-  font-size: 10px;
+  font-size: 14px;
   margin-top: 2px;
   font-weight: 500;
 }
@@ -1232,44 +1386,105 @@
 }
 
 .aqb-redesign-root .aqb-bq-ts-save {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--aqb-green);
 }
 
 .aqb-redesign-root .aqb-bq-ts-save-sub {
-  font-size: 10px;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.3);
   margin-top: 1px;
 }
 
-.aqb-redesign-root .aqb-bq-ts-atc-btn {
-  background: var(--aqb-gold);
-  color: var(--aqb-navy);
+/* Add to cart — grey until design complete, bright yellow when ready */
+.aqb-redesign-root .aqb-atc-btn {
   border: none;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, opacity 0.15s;
+}
+
+.aqb-redesign-root .aqb-atc-btn--inactive {
+  background: var(--aqb-atc-inactive);
+  color: rgba(255, 255, 255, 0.88);
+  cursor: not-allowed;
+}
+
+.aqb-redesign-root .aqb-atc-btn--inactive:hover:not(:disabled) {
+  background: var(--aqb-atc-inactive);
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.aqb-redesign-root .aqb-atc-btn--ready {
+  background: var(--aqb-atc-ready);
+  color: var(--aqb-navy);
+  cursor: pointer;
+}
+
+.aqb-redesign-root .aqb-atc-btn--ready:hover:not(:disabled) {
+  background: var(--aqb-atc-ready-hover);
+}
+
+.aqb-redesign-root .aqb-atc-btn--ready:disabled {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+.aqb-redesign-root .aqb-bq-ts-atc-btn {
   border-radius: 6px;
   padding: 12px 20px;
   font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-  transition: opacity 0.15s;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-.aqb-redesign-root .aqb-bq-ts-atc-btn:hover:not(:disabled) {
-  opacity: 0.88;
+.aqb-redesign-root .aqb-bq-ts-atc-btn--tall {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 88px;
+  padding: 14px 8px;
+  font-size: 15px;
+  line-height: 1.25;
+  white-space: normal;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
 }
 
-.aqb-redesign-root .aqb-bq-ts-atc-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+.aqb-redesign-root .aqb-atc-btn--panel {
+  width: 100%;
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 18px;
+  line-height: 1.2;
 }
 
-@media (max-width: 520px) {
-  .aqb-redesign-root .aqb-bq-ts-atc-btn {
+@media (max-width: 640px) {
+  .aqb-redesign-root .aqb-bq-checkout-footer {
+    flex-direction: column;
+  }
+
+  .aqb-redesign-root .aqb-bq-checkout-atc-col {
+    flex: none;
     width: 100%;
-    justify-content: center;
+    min-width: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px;
+  }
+
+  .aqb-redesign-root .aqb-bq-checkout-atc-pricing {
+    flex: 1 1 160px;
+  }
+
+  .aqb-redesign-root .aqb-bq-checkout-atc-col .aqb-bq-ts-atc-btn--tall {
+    flex: 1 1 120px;
+    min-height: 52px;
+    max-width: 140px;
   }
 }

@@ -1,65 +1,63 @@
-import React, { memo, useEffect, useMemo, useState } from "react";
+import React, { memo, useMemo } from "react";
 import type { BadgeBackingKey } from "../constants/badgeAqbBacking";
-import { computeBadgeAqbOrderQtyUiModel } from "../constants/badgeAqbOrderQty";
+import {
+  BADGE_AQB_ORDER_FREE_SHIP_MIN,
+  badgeAqbFreeShipMarkerLeftPct,
+  computeBadgeAqbOrderQtyUiModel,
+} from "../constants/badgeAqbOrderQty";
+import { AqbBadgeTrustAndDisclaimer } from "./AqbBadgeTrustAndDisclaimer";
 
 export interface AqbBadgeOrderQtySectionProps {
+  /** Total physical badges = number of designs in the editor (read-only here). */
   qty: number;
-  onQtyChange: (next: number) => void;
-  backingKey: BadgeBackingKey;
   designCount: number;
+  backingKey: BadgeBackingKey;
   onAddToCart: () => void;
   addToCartDisabled: boolean;
+  /** When true, ATC uses bright yellow; otherwise grey (incomplete design). */
+  addToCartReady: boolean;
   isAddingToCart: boolean;
-}
-
-function clampQty(n: number) {
-  if (!Number.isFinite(n)) return 1;
-  return Math.max(1, Math.min(999_999, Math.floor(n)));
 }
 
 export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
   qty,
-  onQtyChange,
-  backingKey,
   designCount,
+  backingKey,
   onAddToCart,
   addToCartDisabled,
+  addToCartReady,
   isAddingToCart,
 }: AqbBadgeOrderQtySectionProps) {
-  /** `qty` is total badges to order (same semantics as `badgeOrderQty` in the designer). */
+  const pieces = Math.max(0, Math.floor(qty));
   const m = useMemo(
     () =>
-      computeBadgeAqbOrderQtyUiModel(qty, backingKey, {
-        designCount,
-        totalPieces: qty,
+      computeBadgeAqbOrderQtyUiModel(Math.max(1, pieces || 1), backingKey, {
+        designCount: Math.max(0, designCount),
+        totalPieces: pieces,
       }),
-    [qty, backingKey, designCount],
+    [pieces, backingKey, designCount],
   );
-
-  const clampedQty = clampQty(qty);
-  const [qtyInputText, setQtyInputText] = useState(() =>
-    String(clampedQty),
-  );
-
-  useEffect(() => {
-    setQtyInputText(String(clampedQty));
-  }, [clampedQty]);
 
   const grandFmt = `$${m.grandTotal.toFixed(2)}`;
   const saveFmt = `$${m.savingAmount.toFixed(2)}`;
   const breakdown =
     designCount > 1
-      ? `${m.qty} badges total · ${designCount} designs · $${m.perUnit.toFixed(2)} ea · ${m.backingWord}`
-      : `${m.qty} × $${m.perUnit.toFixed(2)} · ${m.backingWord}`;
+      ? `${pieces} badge${pieces === 1 ? "" : "s"} total · ${designCount} designs · $${m.perUnit.toFixed(2)} ea · ${m.backingWord}`
+      : `${pieces} × $${m.perUnit.toFixed(2)} · ${m.backingWord}`;
+
+  const orderCountLabel =
+    pieces === 0
+      ? "No badge designs yet"
+      : `${pieces} badge${pieces === 1 ? "" : "s"} in your order`;
 
   return (
     <div className="aqb-bq-qty-section">
       <div className="aqb-bq-qty-header">
-        <div className="aqb-bq-qty-title">How many badges do you need?</div>
+        <div className="aqb-bq-qty-title">Your order</div>
         <div
           className={`aqb-bq-qty-hint${m.hintWarn ? " shipping-warn" : ""}`}
         >
-          {m.hintText}
+          {pieces === 0 ? "Add a badge design to see pricing" : m.hintText}
         </div>
       </div>
 
@@ -73,15 +71,21 @@ export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
         </div>
       </div>
 
-      <div className="aqb-bq-tier-btns" role="group" aria-label="Quantity tiers">
+      {/* Volume tier cards — hidden while pricing stays static (re-enable when tier UI returns). */}
+      {/*
+      <div
+        className="aqb-bq-tier-btns"
+        role="list"
+        aria-label="Volume pricing tiers"
+      >
         {m.tierChips.map((chip) => (
-          <button
+          <div
             key={chip.anchor}
-            type="button"
-            className={`aqb-bq-tier-btn${chip.active ? " active" : ""}${
+            role="listitem"
+            className={`aqb-bq-tier-chip${chip.active ? " active" : ""}${
               chip.shipsFree ? " ships-free" : " paid-ship"
             }${chip.popular ? " pop" : ""}`}
-            onClick={() => onQtyChange(clampQty(chip.anchor))}
+            aria-current={chip.active ? "true" : undefined}
           >
             {chip.popular ? (
               <div className="aqb-bq-pop-flag">★ Popular</div>
@@ -92,14 +96,21 @@ export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
             <div className="aqb-bq-tb-q">{chip.anchor}</div>
             <div className="aqb-bq-tb-p">{chip.priceLabel}</div>
             <div className="aqb-bq-tb-s">{chip.saveLabel}</div>
-          </button>
+          </div>
         ))}
       </div>
+      */}
 
       <div className="aqb-bq-savings-bar-wrap">
         <div className="aqb-bq-sb-label">
-          <span>More badges = lower price + free shipping</span>
-          <span>{m.savingsBarLabel}</span>
+          <span>
+            {pieces === 0
+              ? `Free USA shipping on orders of ${BADGE_AQB_ORDER_FREE_SHIP_MIN}+ badges`
+              : m.freeShip
+                ? "You've unlocked free USA shipping"
+                : `${pieces} badge${pieces === 1 ? "" : "s"} ordered — ${Math.max(0, BADGE_AQB_ORDER_FREE_SHIP_MIN - pieces)} more for free shipping`}
+          </span>
+          <span>{pieces === 0 ? "—" : m.savingsBarLabel}</span>
         </div>
         <div className="aqb-bq-sb-track">
           <div
@@ -111,96 +122,80 @@ export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
           />
         </div>
         <div className="aqb-bq-sb-markers">
-          {m.markerLabels.map((label, i) => (
-            <span
-              key={`${label}-${i}`}
-              className={
-                label.includes("✓")
-                  ? "aqb-bq-sb-marker free-marker"
-                  : "aqb-bq-sb-marker"
-              }
-            >
-              {label}
-            </span>
-          ))}
+          {m.markerLabels.map((label, i) => {
+            const markerNum = i + 1;
+            const leftPct = badgeAqbFreeShipMarkerLeftPct(markerNum);
+            const isLast = markerNum === BADGE_AQB_ORDER_FREE_SHIP_MIN;
+            return (
+              <span
+                key={`${label}-${i}`}
+                className={
+                  label.includes("✓")
+                    ? "aqb-bq-sb-marker free-marker"
+                    : "aqb-bq-sb-marker"
+                }
+                style={{
+                  left: `${leftPct}%`,
+                  transform: isLast ? "translateX(-100%)" : "translateX(-50%)",
+                }}
+              >
+                {label}
+              </span>
+            );
+          })}
         </div>
       </div>
 
-      <div className="aqb-bq-custom-row">
-        <span className="aqb-bq-custom-label">Custom qty:</span>
-        <div className="aqb-bq-qty-stepper">
-          <button
-            type="button"
-            className="aqb-bq-qs-btn"
-            aria-label="Decrease quantity"
-            disabled={clampedQty <= 1}
-            onClick={() => {
-              const next = clampQty(clampedQty - 1);
-              onQtyChange(next);
-            }}
-          >
-            −
-          </button>
-          <input
-            className="aqb-bq-qs-input"
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete="off"
-            value={qtyInputText}
-            aria-label="Custom quantity"
-            onChange={(e) => {
-              setQtyInputText(e.target.value);
-            }}
-            onBlur={() => {
-              const v = parseInt(qtyInputText, 10);
-              if (Number.isNaN(v) || v < 1) {
-                onQtyChange(1);
-              } else {
-                onQtyChange(clampQty(v));
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-            }}
-          />
-          <button
-            type="button"
-            className="aqb-bq-qs-btn"
-            aria-label="Increase quantity"
-            onClick={() => {
-              const next = clampQty(clampedQty + 1);
-              onQtyChange(next);
-            }}
-          >
-            +
-          </button>
-        </div>
-        <span className={`aqb-bq-custom-tier-note ${m.tierNoteTone}`}>
-          {m.tierNoteText}
+      <div className="aqb-bq-editor-qty-note">
+        <span className="aqb-bq-editor-qty-count">{orderCountLabel}</span>
+        <span className={`aqb-bq-editor-qty-tier-note ${m.tierNoteTone}`}>
+          {pieces === 0
+            ? "Use duplicate or add design in the editor"
+            : m.tierNoteText}
         </span>
       </div>
+      <p className="aqb-bq-editor-qty-help">
+        To change quantity, use Grid View (per design or set all), or add
+        duplicate designs in the editor.
+      </p>
 
-      <div className="aqb-bq-total-strip">
-        <div className="aqb-bq-ts-left">
-          <div className="aqb-bq-ts-total">{grandFmt}</div>
-          <div className="aqb-bq-ts-breakdown">{breakdown}</div>
-          <div className={`aqb-bq-ts-ship ${m.freeShip ? "free" : "paid"}`}>
-            {m.freeShip ? "+ Free USA shipping" : "+ $5.99 shipping (est.)"}
+      <div className="aqb-bq-checkout-footer">
+        <div className="aqb-bq-checkout-atc-col">
+          <div className="aqb-bq-checkout-atc-pricing">
+            <div className="aqb-bq-ts-total">{pieces === 0 ? "—" : grandFmt}</div>
+            <div className="aqb-bq-ts-breakdown">
+              {pieces === 0
+                ? "Pricing updates when you add a design"
+                : breakdown}
+            </div>
+            <div
+              className={`aqb-bq-ts-ship ${pieces === 0 ? "paid" : m.freeShip ? "free" : "paid"}`}
+            >
+              {pieces === 0
+                ? "Est. shipping at checkout"
+                : m.freeShip
+                  ? "+ Free USA shipping"
+                  : "+ $5.99 shipping (est.)"}
+            </div>
+            <div className="aqb-bq-checkout-save">
+              <div className="aqb-bq-ts-save">
+                {pieces === 0 ? "—" : `Save ${saveFmt}`}
+              </div>
+              <div className="aqb-bq-ts-save-sub">vs. buying 1 at a time</div>
+            </div>
           </div>
+          <button
+            type="button"
+            className={`aqb-atc-btn aqb-bq-ts-atc-btn aqb-bq-ts-atc-btn--tall ${
+              addToCartReady ? "aqb-atc-btn--ready" : "aqb-atc-btn--inactive"
+            }`}
+            disabled={addToCartDisabled || isAddingToCart || pieces === 0}
+            onClick={() => onAddToCart()}
+          >
+            {isAddingToCart ? "Adding…" : "Add to cart"}
+          </button>
         </div>
-        <div className="aqb-bq-ts-mid">
-          <div className="aqb-bq-ts-save">Save {saveFmt}</div>
-          <div className="aqb-bq-ts-save-sub">vs. buying 1 at a time</div>
-        </div>
-        <button
-          type="button"
-          className="aqb-bq-ts-atc-btn"
-          disabled={addToCartDisabled || isAddingToCart}
-          onClick={() => onAddToCart()}
-        >
-          {isAddingToCart ? "Adding…" : "Add to Cart"}
-        </button>
+        <AqbBadgeTrustAndDisclaimer />
       </div>
     </div>
   );
