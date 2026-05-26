@@ -387,14 +387,6 @@ const DESIGNER_UI_TYPOGRAPHY = {
   nowEditingFontRem: 1,
 } as const;
 
-/** Scrolling ticker lines for badge redesign chrome (matches reference HTML). */
-const AQB_REFERENCE_ANNOUNCE_ITEMS = [
-  "Free USA shipping on every order",
-  "Custom name badges — design yours live",
-  "Ships in 2 business days from our US facility",
-  "No artwork fees · No minimum order",
-] as const;
-
 /** Payload stored when proof modal is open; used by onProofConfirm to complete add-to-cart. */
 interface ProofPendingPayload {
   pdfBlob: Blob;
@@ -1086,6 +1078,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   );
   const [searchParams] = useSearchParams();
   const designLibrarySearchKey = searchParams.toString();
+  /** Shopify product page supplies store header; hide duplicate announce/nav/page hero in iframe. */
+  const storeChromeless = useMemo(() => {
+    if (searchParams.get("showStoreChrome") === "1") return false;
+    return (
+      searchParams.get("embedded") === "1" ||
+      searchParams.get("chromeless") === "1"
+    );
+  }, [searchParams]);
   const designLibraryDummy = useMemo(
     () =>
       getDesignLibraryDummyAuth(new URLSearchParams(designLibrarySearchKey)),
@@ -7714,64 +7714,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     ) : null;
 
   return (
-    <div className="aqb-redesign-root min-h-screen bg-[#F0EDE6] pb-8 overflow-x-hidden text-sm leading-[1.55] text-[#0d1b2a]">
-      {variant === "badge" ? (
-        <>
-          <div
-            className="aqb-announce"
-            role="region"
-            aria-label="Store announcements"
-          >
-            <div className="aqb-a-track">
-              {[...AQB_REFERENCE_ANNOUNCE_ITEMS, ...AQB_REFERENCE_ANNOUNCE_ITEMS].map(
-                (text, i) => (
-                  <div className="aqb-a-item" key={`${text}-${i}`}>
-                    <div className="aqb-a-dot" />
-                    {text}
-                  </div>
-                ),
-              )}
-            </div>
-          </div>
-          <nav className="aqb-nav" aria-label="Reference storefront navigation">
-            <div className="aqb-nav-inner">
-              <button type="button" className="aqb-logo">
-                <span className="aqb-logo-mark">AQ</span>
-                <span className="aqb-logo-text">
-                  All Quality <span>Badges</span>
-                </span>
-              </button>
-              <ul className="aqb-nav-links">
-                <li>
-                  <button type="button" className="aqb-nav-link-active">
-                    Design Your Badge
-                  </button>
-                </li>
-                <li>
-                  <button type="button">Name Tag Blanks</button>
-                </li>
-                <li>
-                  <button type="button">Church &amp; Congregation</button>
-                </li>
-                <li>
-                  <button type="button">Role Badges</button>
-                </li>
-                <li>
-                  <button type="button">Bulk Orders</button>
-                </li>
-              </ul>
-              <div className="aqb-nav-right">
-                <button type="button" className="aqb-btn-n-ghost">
-                  Sign In
-                </button>
-                <button type="button" className="aqb-btn-n-gold">
-                  Shop All Badges
-                </button>
-              </div>
-            </div>
-          </nav>
-        </>
-      ) : null}
+    <div
+      className={`aqb-redesign-root min-h-screen bg-[#F0EDE6] overflow-x-hidden text-sm leading-[1.55] text-[#0d1b2a] ${
+        storeChromeless ? "pb-0" : "pb-8"
+      }`}
+    >
       {designLibraryDummy.enabled ? (
         <div
           className={`max-w-[1320px] mx-auto w-full mb-2 ${
@@ -7794,44 +7741,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             (and unset{" "}
             <code className="text-xs">VITE_DESIGN_LIBRARY_DUMMY_MODE</code>) to
             use real Shopify customer and shop.
-          </div>
-        </div>
-      ) : null}
-      {variant === "badge" ? (
-        <div className="bg-[#0D1B2A] border-b border-white/[0.06] mb-4">
-          <div className="max-w-[1320px] mx-auto w-full px-6 md:px-10 py-7 text-white">
-            <div className="flex flex-wrap items-center justify-between gap-6">
-              <div className="min-w-0">
-                <p className="text-[14px] font-semibold uppercase tracking-[0.14em] text-[#e0ac42] mb-1.5 flex items-center gap-2">
-                  <span
-                    className="inline-block h-[7px] w-[7px] rounded-full bg-emerald-400 animate-pulse shrink-0"
-                    aria-hidden
-                  />
-                  Design tool live
-                </p>
-                <h1 className="aqb-ph-title text-2xl md:text-[26px] font-bold tracking-[-0.3px] leading-tight">
-                  Design your badge.{" "}
-                  <em className="text-[#e0ac42] not-italic">
-                    We&apos;ll make it in 2 days.
-                  </em>
-                </h1>
-                <p className="text-[13px] text-white/45 mt-1 max-w-xl">
-                  Pick your shape, color and text — see it live before you order.
-                  Artwork generates automatically on checkout.
-                </p>
-              </div>
-              <div className="hidden sm:flex flex-col sm:flex-row flex-wrap gap-x-5 gap-y-2 text-[14px] text-white/40">
-                <span className="flex items-center gap-1.5 whitespace-nowrap">
-                  ✓ No artwork fees
-                </span>
-                <span className="flex items-center gap-1.5 whitespace-nowrap">
-                  ✓ Straight to production
-                </span>
-                <span className="flex items-center gap-1.5 whitespace-nowrap">
-                  ✓ Ships in 2 days
-                </span>
-              </div>
-            </div>
           </div>
         </div>
       ) : null}
@@ -7874,7 +7783,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       <div
         className={`aqb-tool-shell flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start mx-auto max-w-[1320px] w-full min-h-0 h-screen overflow-hidden lg:h-auto lg:min-h-[560px] lg:overflow-visible ${
           variant === "badge"
-            ? "gap-5 px-4 md:px-10 pt-5 pb-10 lg:pb-12"
+            ? storeChromeless
+              ? "gap-5 px-4 md:px-10 pt-4 pb-8 lg:pb-10"
+              : "gap-5 px-4 md:px-10 pt-5 pb-10 lg:pb-12"
             : "gap-5 px-4 md:px-8"
         }`}
       >

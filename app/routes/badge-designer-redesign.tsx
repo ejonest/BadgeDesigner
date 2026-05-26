@@ -13,7 +13,8 @@ import {
  * Sandbox route for badge (and sign/plaque via same query params as `/`) redesign work.
  * Production storefronts keep embedding `/`; this URL is for staging, theme experiments, and local dev.
  *
- * Example: `/badge-designer-redesign?shop=…&product=…&designLibraryDummy=1`
+ * Example: `/badge-designer-redesign?embedded=1&shop=…&product=…` (embedded=1 hides duplicate store chrome)
+ * Local dev with placeholder nav: add `showStoreChrome=1`
  */
 export const meta: MetaFunction = () => {
   return [
