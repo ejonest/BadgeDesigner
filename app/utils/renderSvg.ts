@@ -43,6 +43,10 @@ import {
 } from "~/data/signBorderTrims";
 import { loadFont } from "./fontLoader";
 import { BADGE_CONSTANTS } from "../constants/badge";
+import {
+  getBadgeIconTextInsetPx,
+  renderBadgeIconLayer,
+} from "~/utils/badgeIconRender";
 import { signTemplateSupportsUserLogoUpload } from "~/utils/signLogoPlacement";
 import {
   applyPlaqueMetalBrushFill,
@@ -765,9 +769,14 @@ function calculateTextLayout(
   const MAX_FONT = BADGE_CONSTANTS.MAX_FONT_SIZE;
   const INSET_PX = 0.1 * 96; // 0.1" at 96 DPI
   const EXTRA_TOP_PX = 4; // try 4–8
+  const iconTextInsetPx = getBadgeIconTextInsetPx(
+    designBox,
+    badge.badgeIconId,
+    template.id,
+  );
 
-  // Available text area (with inset for padding)
-  const textAreaLeft = designBox.x + INSET_PX;
+  // Available text area (with inset for padding + optional left icon)
+  const textAreaLeft = designBox.x + INSET_PX + iconTextInsetPx;
   const textAreaTop = designBox.y + INSET_PX + EXTRA_TOP_PX;
   const textAreaRight = designBox.x + designBox.width - INSET_PX;
   const textAreaBottom = designBox.y + designBox.height - INSET_PX;
@@ -1513,6 +1522,12 @@ export function renderBadgeToSvgString(
     effectiveSignLayout,
   );
 
+  const badgeIconLayer = renderBadgeIconLayer(
+    badge.badgeIconId,
+    designBox,
+    template.id,
+  );
+
   // Render text elements
   const textElements = lineLayout
     .map((item) => {
@@ -1640,6 +1655,8 @@ export function renderBadgeToSvgString(
     <!-- User logo (sign): clipped to die; under border overlay and text -->
     ${userLogoLayer}
     ${overlayLayer}
+    <!-- Left badge icon (name badges) -->
+    ${badgeIconLayer}
     <!-- Text -->
     ${text}
     <!-- Outline border on top -->
@@ -1769,6 +1786,12 @@ export async function renderBadgeToSvgStringWithFonts(
     effectiveSignLayoutWithFonts,
   );
 
+  const badgeIconLayer = renderBadgeIconLayer(
+    badge.badgeIconId,
+    designBox,
+    template.id,
+  );
+
   // Render text elements
   const textElements = lineLayout
     .map((item) => {
@@ -1894,6 +1917,7 @@ export async function renderBadgeToSvgStringWithFonts(
     ${bgImageLayer}
     ${userLogoLayer}
     ${overlayLayer}
+    ${badgeIconLayer}
     ${text}
     <!-- Outline border on top -->
     ${outline}
