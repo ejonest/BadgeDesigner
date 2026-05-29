@@ -6758,11 +6758,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         }
         // Prevent any pending debounced save from writing old state back to cache
         skipCacheSaveRef.current = true;
+        closeProofModal();
+      } else {
+        alert(
+          result.message ||
+            "Failed to add badge(s) to cart. Please try again.",
+        );
       }
-      if (!result.success) {
-        alert("Failed to add badge(s) to cart. Please try again.");
-      }
-      closeProofModal();
     } catch (error) {
       console.error("Failed to complete add to cart:", error);
       alert("Failed to add badge to cart. Please try again.");

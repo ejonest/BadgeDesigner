@@ -4,6 +4,14 @@ import {
   getDesignerLibraryApiPaths,
   type DesignerId,
 } from '~/config/designers';
+import {
+  isDesignerEmbeddedInStorefront,
+  resolveShopifyStoreUrl,
+  sanitizeCartLineItems,
+  waitForStorefrontCartAddAck,
+  type CartAddResult,
+  type CartLineItemPayload,
+} from '~/utils/shopifyCartClient';
 
 function normalizeEnvString(val: any): string | undefined {
   return typeof val === "string" && val.trim() !== "" ? val : undefined;
@@ -327,21 +335,32 @@ export function createApi(
       return this.addToCartMultiple([badgeData]);
   },
 
-  // Add one or more badge line items to cart. Single item: redirect to cart/add. Multiple: postMessage for theme to call cart/add.js.
-  async addToCartMultiple(cartItems: Array<{ variantId: string; quantity: number; properties: Record<string, string> }>) {
+  // Add one or more badge line items to cart. Embedded: parent theme calls cart/add.js and acks. Standalone single item: redirect to cart/add.
+  async addToCartMultiple(cartItems: CartLineItemPayload[]): Promise<CartAddResult> {
       if (!cartItems || cartItems.length === 0) {
         console.error('addToCartMultiple: no items provided');
         return { success: false, message: 'No items to add' };
       }
+      const items = sanitizeCartLineItems(cartItems);
+      const requestId = `cart-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       try {
-        if (cartItems.length === 1) {
-          const badgeData = cartItems[0];
-          const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-          const shopifyStoreUrl =
-            (typeof window !== 'undefined' && (window as any).SHOPIFY_STORE_URL) ||
-            urlParams?.get('storeUrl') ||
-            urlParams?.get('shop') ||
-            'badgesonly.myshopify.com';
+        if (isDesignerEmbeddedInStorefront()) {
+          this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items } });
+          const ack = await waitForStorefrontCartAddAck(requestId);
+          if (!ack.success) {
+            return {
+              success: false,
+              message: ack.error || 'Failed to add to cart',
+            };
+          }
+          return {
+            success: true,
+            message: `Added ${items.length} item(s) to cart`,
+          };
+        }
+        if (items.length === 1) {
+          const badgeData = items[0];
+          const shopifyStoreUrl = resolveShopifyStoreUrl();
           const params = new URLSearchParams();
           params.append('id', badgeData.variantId);
           params.append('quantity', badgeData.quantity.toString());
@@ -354,14 +373,18 @@ export function createApi(
           this.sendToParent({ action: 'add-to-cart', payload: badgeData });
           return { success: true, message: 'Redirecting to add item to cart', cartData: { redirectUrl: cartUrl }, badgeData };
         }
-        this.sendToParent({ action: 'add-to-cart-multiple', payload: { items: cartItems } });
-        return { success: true, message: `Adding ${cartItems.length} items to cart (theme will add via cart/add.js)` };
+        this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items } });
+        const ack = await waitForStorefrontCartAddAck(requestId);
+        if (!ack.success) {
+          return { success: false, message: ack.error || 'Failed to add to cart' };
+        }
+        return { success: true, message: `Added ${items.length} items to cart` };
       } catch (error) {
         console.error('Error adding to cart:', error);
-        if (cartItems.length === 1) {
-          this.sendToParent({ action: 'add-to-cart', payload: cartItems[0] });
+        if (items.length === 1) {
+          this.sendToParent({ action: 'add-to-cart', payload: items[0] });
         } else {
-          this.sendToParent({ action: 'add-to-cart-multiple', payload: { items: cartItems } });
+          this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items } });
         }
         throw error;
       }
