@@ -73,7 +73,8 @@ export function resolveShopifyStoreUrl(): string {
   );
 }
 
-const CART_ADD_ACK_TIMEOUT_MS = 20_000;
+/** How long to wait for an explicit ack from an updated theme snippet. */
+const CART_ADD_ACK_TIMEOUT_MS = 5_000;
 
 export type CartAddResult = {
   success: boolean;
@@ -82,18 +83,20 @@ export type CartAddResult = {
   badgeData?: CartLineItemPayload;
 };
 
+export type StorefrontCartAddAck = {
+  /** true = added, false = theme reported failure, null = legacy theme (no ack; parent may still redirect). */
+  success: boolean | null;
+  error?: string;
+};
+
 /** Wait for parent theme to confirm cart/add.js result (embedded flow). */
 export function waitForStorefrontCartAddAck(
   requestId: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<StorefrontCartAddAck> {
   return new Promise((resolve) => {
     const timeout = window.setTimeout(() => {
       window.removeEventListener("message", onMessage);
-      resolve({
-        success: false,
-        error:
-          "The store did not confirm the cart update. Update the badge-designer-embed snippet in your Shopify theme.",
-      });
+      resolve({ success: null });
     }, CART_ADD_ACK_TIMEOUT_MS);
 
     const onMessage = (event: MessageEvent) => {

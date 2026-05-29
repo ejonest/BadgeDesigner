@@ -4353,8 +4353,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   /** Run draft save immediately for the given badges (e.g. after CSV override/add). Shows generating spinner over badges. */
   const runDraftSaveForBadges = useCallback(
-    async (allBadges: Badge[]) => {
-      if (!allBadges?.length || !activeTemplateRef.current) return;
+    (allBadges: Badge[]): Promise<void> => {
+      if (!allBadges?.length || !activeTemplateRef.current) return Promise.resolve();
       if (!sessionDesignIdRef.current) {
         sessionDesignIdRef.current = `design_${Date.now()}_${Math.random()
           .toString(36)
@@ -4468,6 +4468,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         }
       })();
       draftSaveInProgressRef.current = promise;
+      return promise;
     },
     [_productId, designerApiPaths.saveDraft, variant],
   );
@@ -6931,9 +6932,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
     setIsAddingToCart(true);
     try {
+      // Ensure Supabase draft rows exist before finalize-draft (autosave only runs on section close).
+      if (!isSignLikeVariant(variant) && badgesForSupabase.length > 0) {
+        await runDraftSaveForBadges(badgesForSupabase);
+      }
+
       let thumbnailUrls: string[] = [];
       let pdfUrlForCart: string | undefined;
       let usedFinalize = false;
+      let proofUploadWarning: string | null = null;
       try {
         // Badge-only: uploads to badge PDFs bucket and reads badge_order_items. Signs always use designer send-to-supabase below.
         if (!addDuplicates && !isSignLikeVariant(variant)) {
@@ -7073,33 +7080,40 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 pdfUrlForCart = supabaseJson.pdfUrl;
               } else {
                 const errData = await supabaseResponse.json().catch(() => ({}));
+                const detail =
+                  (typeof errData.message === "string" && errData.message) ||
+                  (typeof errData.error === "string" && errData.error) ||
+                  supabaseResponse.statusText ||
+                  "Unknown error";
                 console.warn(
                   "Supabase proof upload failed (cart will still add):",
-                  errData.message || supabaseResponse.statusText,
+                  detail,
                 );
-                alert(
-                  "Proof upload failed; your design will still be added to cart. Support may follow up for the proof.",
-                );
+                proofUploadWarning = detail;
               }
             }
           } catch (fallbackErr) {
+            const detail =
+              fallbackErr instanceof Error
+                ? fallbackErr.message
+                : "Proof upload failed";
             console.warn(
               "Supabase fallback upload error (cart will still add):",
               fallbackErr,
             );
-            alert(
-              "Proof upload failed; your design will still be added to cart. Support may follow up for the proof.",
-            );
+            proofUploadWarning = detail;
           }
         }
       } catch (supabaseErr) {
+        const detail =
+          supabaseErr instanceof Error
+            ? supabaseErr.message
+            : "Proof upload failed";
         console.warn(
           "Supabase upload error (cart will still add):",
           supabaseErr,
         );
-        alert(
-          "Proof upload failed; your design will still be added to cart. Support may follow up for the proof.",
-        );
+        proofUploadWarning = detail;
       }
 
       if (isSignLikeVariant(variant)) {
@@ -7370,6 +7384,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
       const result = await api.addToCartMultiple(cartItems);
       if (result.success) {
+        if (proofUploadWarning) {
+          console.warn(
+            "[BadgeDesignerRedesign] Proof upload warning:",
+            proofUploadWarning,
+          );
+        }
         try {
           const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${
             _shop ?? "default"
@@ -7381,10 +7401,19 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         // Prevent any pending debounced save from writing old state back to cache
         skipCacheSaveRef.current = true;
         closeProofModal();
+        if (proofUploadWarning) {
+          console.info(
+            "Design added to cart; proof files may need follow-up:",
+            proofUploadWarning,
+          );
+        }
       } else {
+        const proofNote = proofUploadWarning
+          ? `\n\nProof upload also failed: ${proofUploadWarning}`
+          : "";
         alert(
-          result.message ||
-            "Failed to add badge(s) to cart. Please try again.",
+          (result.message ||
+            "Failed to add badge(s) to cart. Please try again.") + proofNote,
         );
       }
     } catch (error) {
