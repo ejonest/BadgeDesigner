@@ -12,21 +12,12 @@ export interface AqbBadgeOrderQtySectionProps {
   qty: number;
   designCount: number;
   backingKey: BadgeBackingKey;
-  onAddToCart: () => void;
-  addToCartDisabled: boolean;
-  /** When true, ATC uses bright yellow; otherwise grey (incomplete design). */
-  addToCartReady: boolean;
-  isAddingToCart: boolean;
 }
 
 export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
   qty,
   designCount,
   backingKey,
-  onAddToCart,
-  addToCartDisabled,
-  addToCartReady,
-  isAddingToCart,
 }: AqbBadgeOrderQtySectionProps) {
   const pieces = Math.max(0, Math.floor(qty));
   const m = useMemo(
@@ -37,13 +28,6 @@ export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
       }),
     [pieces, backingKey, designCount],
   );
-
-  const grandFmt = `$${m.grandTotal.toFixed(2)}`;
-  const saveFmt = `$${m.savingAmount.toFixed(2)}`;
-  const breakdown =
-    designCount > 1
-      ? `${pieces} badge${pieces === 1 ? "" : "s"} total · ${designCount} designs · $${m.perUnit.toFixed(2)} ea · ${m.backingWord}`
-      : `${pieces} × $${m.perUnit.toFixed(2)} · ${m.backingWord}`;
 
   const orderCountLabel =
     pieces === 0
@@ -160,41 +144,6 @@ export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
       </p>
 
       <div className="aqb-bq-checkout-footer">
-        <div className="aqb-bq-checkout-atc-col">
-          <div className="aqb-bq-checkout-atc-pricing">
-            <div className="aqb-bq-ts-total">{pieces === 0 ? "—" : grandFmt}</div>
-            <div className="aqb-bq-ts-breakdown">
-              {pieces === 0
-                ? "Pricing updates when you add a design"
-                : breakdown}
-            </div>
-            <div
-              className={`aqb-bq-ts-ship ${pieces === 0 ? "paid" : m.freeShip ? "free" : "paid"}`}
-            >
-              {pieces === 0
-                ? "Est. shipping at checkout"
-                : m.freeShip
-                  ? "+ Free USA shipping"
-                  : "+ $5.99 shipping (est.)"}
-            </div>
-            <div className="aqb-bq-checkout-save">
-              <div className="aqb-bq-ts-save">
-                {pieces === 0 ? "—" : `Save ${saveFmt}`}
-              </div>
-              <div className="aqb-bq-ts-save-sub">vs. buying 1 at a time</div>
-            </div>
-          </div>
-          <button
-            type="button"
-            className={`aqb-atc-btn aqb-bq-ts-atc-btn aqb-bq-ts-atc-btn--tall ${
-              addToCartReady ? "aqb-atc-btn--ready" : "aqb-atc-btn--inactive"
-            }`}
-            disabled={addToCartDisabled || isAddingToCart || pieces === 0}
-            onClick={() => onAddToCart()}
-          >
-            {isAddingToCart ? "Adding…" : "Add to cart"}
-          </button>
-        </div>
         <AqbBadgeTrustAndDisclaimer />
       </div>
     </div>

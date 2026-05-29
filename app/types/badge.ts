@@ -102,6 +102,8 @@ export interface Badge {
    */
   plaqueDetachedPhotoFrameFinish?: PlaqueDetachedPhotoFrameFinish;
   backing: 'pin' | 'magnetic' | 'adhesive';
+  /** Name badge tool: optional left-side pictogram id from {@link BADGE_ICON_IDS}. Omit = none. */
+  badgeIconId?: string;
   backgroundImage?: BadgeImage;
   logo?: BadgeImage;
   /**

@@ -35,6 +35,12 @@ export const AqbBadgeTrustAndDisclaimer = memo(
           </div>
           <div className="aqb-ts-item">
             <span className="aqb-ts-icon" aria-hidden>
+              🇺🇸
+            </span>
+            Made in the USA
+          </div>
+          <div className="aqb-ts-item">
+            <span className="aqb-ts-icon" aria-hidden>
               🔁
             </span>
             <span>
