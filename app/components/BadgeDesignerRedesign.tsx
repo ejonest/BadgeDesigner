@@ -3954,10 +3954,26 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       ...SMART_PALETTE_COLORS,
     ];
     const hx = (badge.backgroundColor || "").toUpperCase();
-    const bgName =
-      lookup.find((c) => c.value.toUpperCase() === hx)?.name ??
-      badge.backgroundColor ??
-      "";
+    const bgName = (() => {
+      if (isFeaturedBrushedMetalPlateColor(badge.backgroundColor)) {
+        const norm = normalizeFeaturedBrushedMetalBaseHex(
+          badge.backgroundColor!,
+        ).toUpperCase();
+        const brushedHit = BADGE_AQB_FEATURED_BACKGROUND_COLORS.find(
+          (c) =>
+            "brushed" in c &&
+            c.brushed &&
+            normalizeFeaturedBrushedMetalBaseHex(c.value).toUpperCase() ===
+              norm,
+        );
+        if (brushedHit) return brushedHit.name;
+      }
+      return (
+        lookup.find((c) => c.value.toUpperCase() === hx)?.name ??
+        badge.backgroundColor ??
+        ""
+      );
+    })();
     const hasAnyBg = Boolean((badge.backgroundColor ?? "").trim());
 
     const lineTexts = badge.lines
@@ -9563,7 +9579,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                   ) : null}
                                 </span>
                                 <span className="aqb-badge-cs-name">
-                                  {c.name}
+                                  {"brushed" in c && c.brushed ? (
+                                    <>
+                                      Brushed
+                                      <br />
+                                      {c.name.replace(/^Brushed\s+/, "")}
+                                    </>
+                                  ) : (
+                                    c.name
+                                  )}
                                 </span>
                               </button>
                             );
@@ -11848,15 +11872,32 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 getSavedBadgeFor(selectedBadgeIndex),
               );
               const lookup = [
+                ...BADGE_AQB_FEATURED_BACKGROUND_COLORS,
                 ...BACKGROUND_COLORS,
                 ...EXTENDED_BACKGROUND_COLORS,
                 ...SMART_PALETTE_COLORS,
               ];
               const hx = (p.badge.backgroundColor || "").toUpperCase();
-              const bgName =
-                lookup.find((c) => c.value.toUpperCase() === hx)?.name ??
-                p.badge.backgroundColor ??
-                "—";
+              const bgName = (() => {
+                if (isFeaturedBrushedMetalPlateColor(p.badge.backgroundColor)) {
+                  const norm = normalizeFeaturedBrushedMetalBaseHex(
+                    p.badge.backgroundColor!,
+                  ).toUpperCase();
+                  const brushedHit = BADGE_AQB_FEATURED_BACKGROUND_COLORS.find(
+                    (c) =>
+                      "brushed" in c &&
+                      c.brushed &&
+                      normalizeFeaturedBrushedMetalBaseHex(c.value).toUpperCase() ===
+                        norm,
+                  );
+                  if (brushedHit) return brushedHit.name;
+                }
+                return (
+                  lookup.find((c) => c.value.toUpperCase() === hx)?.name ??
+                  p.badge.backgroundColor ??
+                  "—"
+                );
+              })();
               const backingNames: Record<string, string> = {
                 magnetic: "Magnetic",
                 pin: "Pin",

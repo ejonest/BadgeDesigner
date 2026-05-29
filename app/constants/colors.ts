@@ -133,13 +133,13 @@ export const BADGE_AQB_FEATURED_BACKGROUND_COLORS = [
   { value: "#FFFFFF", name: "White", light: true },
   {
     value: FEATURED_BRUSHED_GOLD_HEX,
-    name: "Br. Gold",
+    name: "Brushed Gold",
     light: false,
     brushed: true,
   },
   {
     value: FEATURED_BRUSHED_SILVER_HEX,
-    name: "Br. Silver",
+    name: "Brushed Silver",
     light: false,
     brushed: true,
   },

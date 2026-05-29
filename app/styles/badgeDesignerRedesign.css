@@ -506,6 +506,7 @@
   color: var(--aqb-text-l, #6b7f92);
   line-height: 1.2;
   text-align: center;
+  max-width: 3.25rem;
 }
 
 .aqb-redesign-root .aqb-badge-finish-lbl {
