@@ -2664,7 +2664,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       if (forStep >= 2 && step1Incomplete) incomplete.push(1);
       if (forStep >= 3 && !s2) incomplete.push(2);
       if (forStep >= 4 && !sText) incomplete.push(3);
-      if (forStep >= 4 && config.hasBacking && !sBacking) incomplete.push(4);
+      if (forStep >= 5 && config.hasBacking && !sBacking) incomplete.push(4);
     }
 
     if (incomplete.length === 0) return null;
@@ -2685,7 +2685,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           ? 6
           : 5
         : config.hasBacking
-          ? 4
+          ? 5
           : 3;
 
   // Refs for section headers to enable scroll-into-view

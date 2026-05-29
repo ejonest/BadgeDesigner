@@ -1,0 +1,181 @@
+{{ 'aqb-footer.css' | asset_url | stylesheet_tag }}
+
+<footer class="aqb-footer">
+  <div class="aqb-footer__inner">
+    <div class="aqb-footer__top">
+      <div class="aqb-footer__brand">
+        <a href="{{ routes.root_url }}" class="aqb-footer__logo">
+          <span class="aqb-footer__logo-mark" aria-hidden="true">{{ section.settings.logo_mark | escape }}</span>
+          <span class="aqb-footer__logo-text">
+            {{- section.settings.logo_text_before | escape -}}
+            <span>{{ section.settings.logo_text_accent | escape }}</span>
+          </span>
+        </a>
+        {%- if section.settings.brand_description != blank -%}
+          <p class="aqb-footer__brand-copy">{{ section.settings.brand_description | escape }}</p>
+        {%- endif -%}
+      </div>
+
+      <div class="aqb-footer__col">
+        <h4 class="aqb-footer__col-title">{{ section.settings.products_heading | escape }}</h4>
+        <ul class="aqb-footer__links" role="list">
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'link' and block.settings.column == 'products' and block.settings.url != blank -%}
+              <li {{ block.shopify_attributes }}>
+                <a href="{{ block.settings.url }}">{{ block.settings.label | escape }}</a>
+              </li>
+            {%- endif -%}
+          {%- endfor -%}
+        </ul>
+      </div>
+
+      <div class="aqb-footer__col">
+        <h4 class="aqb-footer__col-title">{{ section.settings.buyers_heading | escape }}</h4>
+        <ul class="aqb-footer__links" role="list">
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'link' and block.settings.column == 'buyers' and block.settings.url != blank -%}
+              <li {{ block.shopify_attributes }}>
+                <a href="{{ block.settings.url }}">{{ block.settings.label | escape }}</a>
+              </li>
+            {%- endif -%}
+          {%- endfor -%}
+        </ul>
+      </div>
+
+      <div class="aqb-footer__col">
+        <h4 class="aqb-footer__col-title">{{ section.settings.lita_heading | escape }}</h4>
+        <ul class="aqb-footer__links" role="list">
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'link' and block.settings.column == 'lita' and block.settings.url != blank -%}
+              <li {{ block.shopify_attributes }}>
+                <a
+                  href="{{ block.settings.url }}"
+                  {% if block.settings.open_new_tab %}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  {% endif %}
+                >
+                  {{- block.settings.label | escape -}}
+                </a>
+              </li>
+            {%- endif -%}
+          {%- endfor -%}
+        </ul>
+      </div>
+    </div>
+
+    <div class="aqb-footer__bottom">
+      <p class="aqb-footer__copyright">{{ section.settings.copyright | escape }}</p>
+      {%- if section.settings.portfolio_text != blank -%}
+        <div class="aqb-footer__lita-row">
+          {{ section.settings.portfolio_text }}
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+</footer>
+
+{% schema %}
+{
+  "name": "AQB Footer",
+  "tag": "footer",
+  "class": "aqb-footer-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "logo_mark",
+      "label": "Logo mark",
+      "default": "AQ"
+    },
+    {
+      "type": "text",
+      "id": "logo_text_before",
+      "label": "Logo text (before accent)",
+      "default": "All Quality "
+    },
+    {
+      "type": "text",
+      "id": "logo_text_accent",
+      "label": "Logo accent word",
+      "default": "Badges"
+    },
+    {
+      "type": "textarea",
+      "id": "brand_description",
+      "label": "Brand description",
+      "default": "The dedicated badge brand of the LITA family. Custom and blank name tags — designed by you, made by us, shipped from the USA."
+    },
+    {
+      "type": "text",
+      "id": "products_heading",
+      "label": "Products column heading",
+      "default": "Products"
+    },
+    {
+      "type": "text",
+      "id": "buyers_heading",
+      "label": "For buyers column heading",
+      "default": "For buyers"
+    },
+    {
+      "type": "text",
+      "id": "lita_heading",
+      "label": "LITA brands column heading",
+      "default": "LITA brands"
+    },
+    {
+      "type": "text",
+      "id": "copyright",
+      "label": "Copyright line",
+      "default": "© 2025 All Quality Badges™ — A LITA brand. All rights reserved."
+    },
+    {
+      "type": "html",
+      "id": "portfolio_text",
+      "label": "Portfolio line (right)",
+      "default": "<span>Part of the</span> <span>LITA <span class=\"aqb-footer__lita-dot\">◆</span> Living in the Arena</span> <span>portfolio</span>"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "link",
+      "name": "Footer link",
+      "settings": [
+        {
+          "type": "select",
+          "id": "column",
+          "label": "Column",
+          "options": [
+            { "value": "products", "label": "Products" },
+            { "value": "buyers", "label": "For buyers" },
+            { "value": "lita", "label": "LITA brands" }
+          ],
+          "default": "products"
+        },
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "Link"
+        },
+        {
+          "type": "url",
+          "id": "url",
+          "label": "URL"
+        },
+        {
+          "type": "checkbox",
+          "id": "open_new_tab",
+          "label": "Open in new tab",
+          "default": false
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Footer"
+    }
+  ]
+}
+{% endschema %}
