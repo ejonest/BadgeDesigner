@@ -7,10 +7,111 @@
   Usage: Copy to theme snippets, then in your product template add: {% render 'badge-designer-embed' %}
 {% endcomment %}
 
+{% comment %}
+  Replace with your actual Vercel app URL. Must match exactly where the iframe loads from.
+{% endcomment %}
+{% assign badge_designer_origin = 'https://all-quality-design-tool.vercel.app' %}
+
+<script>
+  (function() {
+    var DESIGNER_ORIGIN = {{ badge_designer_origin | json }};
+
+    function isAllowedDesignerOrigin(origin) {
+      if (origin === DESIGNER_ORIGIN) return true;
+      if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+      if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return true;
+      return false;
+    }
+
+    function replyToDesigner(event, requestId, success, error) {
+      if (!requestId || !event || !event.source) return;
+      try {
+        event.source.postMessage({
+          action: 'add-to-cart-result',
+          requestId: requestId,
+          success: success,
+          error: error || null
+        }, event.origin);
+      } catch (e) {
+        console.error('Badge designer: could not ack iframe', e);
+      }
+    }
+
+    function aqbDesignerCartAdd(items, event, requestId) {
+      if (!items || !items.length) {
+        console.error('Badge designer: no cart items to add');
+        replyToDesigner(event, requestId, false, 'No cart items to add');
+        return;
+      }
+      var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) ? window.Shopify.routes.root : '/';
+      var cartAddUrl = cartRoot.replace(/\/$/, '') + '/cart/add.js';
+      var payload = {
+        items: items.map(function(item) {
+          var variantId = parseInt(String(item.variantId), 10);
+          return {
+            id: variantId,
+            quantity: item.quantity || 1,
+            properties: item.properties || {}
+          };
+        })
+      };
+      fetch(cartAddUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function(res) {
+          return res.json().then(function(body) {
+            if (!res.ok) {
+              var msg = (body && (body.description || body.message)) || ('HTTP ' + res.status);
+              throw new Error(msg);
+            }
+            return body;
+          });
+        })
+        .then(function() {
+          replyToDesigner(event, requestId, true);
+          window.location.href = cartRoot.replace(/\/$/, '') + '/cart';
+        })
+        .catch(function(err) {
+          console.error('Badge designer: cart/add.js failed', err);
+          var message = err && err.message ? err.message : String(err);
+          replyToDesigner(event, requestId, false, message);
+          alert('Could not add your design to the cart. Please try again or contact support.\n\n' + message);
+        });
+    }
+
+    window.addEventListener('message', function(event) {
+      if (!isAllowedDesignerOrigin(event.origin)) return;
+      var data = event.data;
+      if (!data || !data.action) return;
+
+      if (data.action === 'redirect-to-login') {
+        var returnTo = window.location.pathname + window.location.search;
+        window.location.href = '/customer_authentication/login?return_to=' + encodeURIComponent(returnTo);
+        return;
+      }
+
+      if (data.action === 'add-to-cart' && data.payload) {
+        aqbDesignerCartAdd([data.payload], event, data.requestId);
+        return;
+      }
+
+      if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
+        aqbDesignerCartAdd(data.payload.items, event, data.requestId);
+        return;
+      }
+
+      if (data.action === 'design-saved') {
+        console.log('Design saved:', data.payload);
+      }
+    });
+  })();
+</script>
+
 {% comment %} Custom sign product (Shape × Size variants, live price from Shopify) {% endcomment %}
 {% if product and product.handle == 'custom-sign' %}
 
-{% assign badge_designer_origin = 'https://all-quality-design-tool.vercel.app' %}
 {% assign sign_v0 = product.selected_or_first_available_variant | default: product.variants[0] %}
 <div style="width:100%; min-height:900px;">
   <iframe
@@ -22,35 +123,9 @@
   ></iframe>
 </div>
 
-<script>
-  window.addEventListener('message', function(event) {
-    if (event.origin !== {{ badge_designer_origin | json }}) return;
-    var data = event.data;
-    if (data.action === 'redirect-to-login') {
-      var returnTo = window.location.pathname + window.location.search;
-      window.location.href = '/customer_authentication/login?return_to=' + encodeURIComponent(returnTo);
-      return;
-    }
-    if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
-      var items = data.payload.items.map(function(item) {
-        return { id: item.variantId, quantity: item.quantity || 1, properties: item.properties || {} };
-      });
-      var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) ? window.Shopify.routes.root : '/';
-      var cartAddUrl = cartRoot.replace(/\/$/, '') + '/cart/add.js';
-      fetch(cartAddUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: items }) })
-        .then(function() { window.location.href = cartRoot.replace(/\/$/, '') + '/cart'; })
-        .catch(function() { window.location.href = cartRoot.replace(/\/$/, '') + '/cart'; });
-    }
-  });
-</script>
-
-{% comment %} Custom plaque product — two options (order flexible): option1 = layout type, option2 = Size.
-  Values must match app/utils/signTemplateShopifyOptions.ts → PLAQUE_SHOPIFY_OPTION1_BY_LAYOUT_ID + Small/Medium/Large:
-  "Attached Plate", "Photo Plaque Portrait", "Photo Plaque Landscape" × Small | Medium | Large
-  (omit Small for detached layouts in Shopify if you do not sell it). Theme may postMessage PLAQUE_DESIGNER_SHOPIFY_PRODUCT for password stores. {% endcomment %}
+{% comment %} Custom plaque product {% endcomment %}
 {% elsif product and product.handle == 'custom-plaque' %}
 
-{% assign badge_designer_origin = 'https://all-quality-design-tool.vercel.app' %}
 {% assign plaque_v0 = product.selected_or_first_available_variant | default: product.variants[0] %}
 <div style="width:100%; min-height:900px;">
   <iframe
@@ -62,44 +137,14 @@
   ></iframe>
 </div>
 
-<script>
-  window.addEventListener('message', function(event) {
-    if (event.origin !== {{ badge_designer_origin | json }}) return;
-    var data = event.data;
-    if (data.action === 'redirect-to-login') {
-      var returnTo = window.location.pathname + window.location.search;
-      window.location.href = '/customer_authentication/login?return_to=' + encodeURIComponent(returnTo);
-      return;
-    }
-    if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
-      var items = data.payload.items.map(function(item) {
-        return { id: item.variantId, quantity: item.quantity || 1, properties: item.properties || {} };
-      });
-      var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) ? window.Shopify.routes.root : '/';
-      var cartAddUrl = cartRoot.replace(/\/$/, '') + '/cart/add.js';
-      fetch(cartAddUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: items }) })
-        .then(function() { window.location.href = cartRoot.replace(/\/$/, '') + '/cart'; })
-        .catch(function() { window.location.href = cartRoot.replace(/\/$/, '') + '/cart'; });
-    }
-  });
-</script>
-
 {% comment %} Custom badge product (pin / magnetic / adhesive variants) {% endcomment %}
 {% elsif product and product.handle == 'custom-1x3-badge' %}
 
-{% comment %}
-  Replace with your actual Vercel app URL. Must match exactly where the iframe loads from.
-  If you use a new Vercel link (e.g. new project or new deployment URL), update this so the
-  parent accepts postMessages from the iframe (redirect-to-login, add-to-cart, etc.).
-{% endcomment %}
-{% assign badge_designer_origin = 'https://all-quality-design-tool.vercel.app' %}
 {% assign badge_designer_path = '/badge-designer-redesign' %}
 
-{% comment %} Pass variant IDs so the app adds the correct store variants to cart (order: Pin, Magnetic, Adhesive). Use first variant as fallback if product has fewer than 3 variants. {% endcomment %}
 {% assign v0 = product.variants[0] %}
 {% assign v1 = product.variants[1] | default: v0 %}
 {% assign v2 = product.variants[2] | default: v0 %}
-{% comment %} Duplicate product for upsell (unlisted): same variants at reduced price. Handle may be custom-1x3-badge-duplicate. {% endcomment %}
 {% assign duplicate_product = all_products['custom-1x3-badge-duplicate'] %}
 {% if duplicate_product and duplicate_product.variants.size >= 3 %}
   {% assign dup0 = duplicate_product.variants[0] %}
@@ -120,58 +165,5 @@
     allow="clipboard-read; clipboard-write"
   ></iframe>
 </div>
-
-<script>
-  window.addEventListener('message', function(event) {
-    if (event.origin !== {{ badge_designer_origin | json }}) {
-      return;
-    }
-    
-    const data = event.data;
-    
-    // Save design / Load design without being logged in: redirect to store login, then return to this page
-    if (data.action === 'redirect-to-login') {
-      var returnTo = window.location.pathname + window.location.search;
-      window.location.href = '/customer_authentication/login?return_to=' + encodeURIComponent(returnTo);
-      return;
-    }
-    
-    // Handle add-to-cart messages (single item - iframe redirects; log only)
-    if (data.action === 'add-to-cart') {
-      console.log('Add to cart received:', data.payload);
-    }
-    
-    // Handle add-to-cart-multiple: add each badge as a separate line item via Cart API, then redirect to cart
-    if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
-      const items = data.payload.items.map(function(item) {
-        return {
-          id: item.variantId,
-          quantity: item.quantity || 1,
-          properties: item.properties || {}
-        };
-      });
-      const cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) ? window.Shopify.routes.root : '/';
-      const cartAddUrl = cartRoot.replace(/\/$/, '') + '/cart/add.js';
-      fetch(cartAddUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: items })
-      })
-        .then(function(res) { return res.json(); })
-        .then(function() {
-          window.location.href = cartRoot.replace(/\/$/, '') + '/cart';
-        })
-        .catch(function(err) {
-          console.error('Badge designer: cart/add.js failed', err);
-          window.location.href = cartRoot.replace(/\/$/, '') + '/cart';
-        });
-    }
-    
-    // Handle design saved messages
-    if (data.action === 'design-saved') {
-      console.log('Design saved:', data.payload);
-    }
-  });
-</script>
 
 {% endif %}
