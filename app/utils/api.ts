@@ -347,7 +347,7 @@ export function createApi(
         if (isDesignerEmbeddedInStorefront()) {
           this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items } });
           const ack = await waitForStorefrontCartAddAck(requestId);
-          if (!ack.success) {
+          if (ack.success === false) {
             return {
               success: false,
               message: ack.error || 'Failed to add to cart',
@@ -355,7 +355,10 @@ export function createApi(
           }
           return {
             success: true,
-            message: `Added ${items.length} item(s) to cart`,
+            message:
+              ack.success === true
+                ? `Added ${items.length} item(s) to cart`
+                : `Adding ${items.length} item(s) to cart`,
           };
         }
         if (items.length === 1) {
@@ -375,10 +378,16 @@ export function createApi(
         }
         this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items } });
         const ack = await waitForStorefrontCartAddAck(requestId);
-        if (!ack.success) {
+        if (ack.success === false) {
           return { success: false, message: ack.error || 'Failed to add to cart' };
         }
-        return { success: true, message: `Added ${items.length} items to cart` };
+        return {
+          success: true,
+          message:
+            ack.success === true
+              ? `Added ${items.length} items to cart`
+              : `Adding ${items.length} items to cart`,
+        };
       } catch (error) {
         console.error('Error adding to cart:', error);
         if (items.length === 1) {
