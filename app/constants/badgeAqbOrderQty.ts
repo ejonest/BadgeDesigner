@@ -15,6 +15,17 @@ export const BADGE_AQB_ORDER_SHIP_FEE = 5.99;
 /** Free USA shipping when total badge count in the editor reaches this. */
 export const BADGE_AQB_ORDER_FREE_SHIP_MIN = 5;
 
+/** Short upsell for checkout panel — free shipping only (bulk tiers disabled for now). */
+export function formatBadgeAqbFreeShippingUpsell(
+  orderCount: number,
+  goal: number = BADGE_AQB_ORDER_FREE_SHIP_MIN,
+): string | null {
+  const count = Math.max(0, Math.floor(orderCount));
+  if (count <= 0 || count >= goal) return null;
+  const remaining = goal - count;
+  return `Add ${remaining} more to get free shipping`;
+}
+
 /** Progress fill width (0–100): 0 badges = 0%, each badge aligns with its marker (n/goal). */
 export function badgeAqbFreeShipProgressWidthPct(
   orderCount: number,
@@ -90,6 +101,8 @@ export type BadgeAqbOrderQtyUiModel = {
   savingsBarLabel: string;
   tierNoteText: string;
   tierNoteTone: "free" | "unlock";
+  /** Shown near Add to cart (e.g. “Add 3 more to get free shipping”). */
+  addToCartUpsellText: string | null;
   grandTotal: number;
   perUnit: number;
   savingAmount: number;
@@ -141,9 +154,7 @@ export function computeBadgeAqbOrderQtyUiModel(
   let hintText: string;
   let hintWarn = false;
   if (!freeShipPieces && toFreePieces > 0) {
-    hintText = `Add ${toFreePieces} more badge${
-      toFreePieces !== 1 ? "s" : ""
-    } for free shipping`;
+    hintText = `Add ${toFreePieces} more to get free shipping`;
     hintWarn = true;
   } else if (freeShipPieces) {
     hintText = "Free USA shipping unlocked";
@@ -163,9 +174,7 @@ export function computeBadgeAqbOrderQtyUiModel(
   } else {
     shippingVariant = "paid";
     shippingMain = `$${BADGE_AQB_ORDER_SHIP_FEE.toFixed(2)} shipping — free on orders of ${BADGE_AQB_ORDER_FREE_SHIP_MIN}+ badges`;
-    shippingSub = `Add ${toFreePieces} more badge${
-      toFreePieces !== 1 ? "s" : ""
-    } total to unlock free shipping`;
+    shippingSub = `Add ${toFreePieces} more to get free shipping`;
   }
 
   const freeShipGoal = BADGE_AQB_ORDER_FREE_SHIP_MIN;
@@ -185,12 +194,14 @@ export function computeBadgeAqbOrderQtyUiModel(
   let tierNoteText: string;
   let tierNoteTone: "free" | "unlock";
   if (!freeShipPieces) {
-    tierNoteText = `Add ${toFreePieces} more → free shipping`;
+    tierNoteText = `Add ${toFreePieces} more to get free shipping`;
     tierNoteTone = "unlock";
   } else {
     tierNoteText = "Free USA shipping included";
     tierNoteTone = "free";
   }
+
+  const addToCartUpsellText = formatBadgeAqbFreeShippingUpsell(orderCount);
 
   const backingWord =
     backing === "magnetic"
@@ -238,6 +249,7 @@ export function computeBadgeAqbOrderQtyUiModel(
     savingsBarLabel,
     tierNoteText,
     tierNoteTone,
+    addToCartUpsellText,
     grandTotal,
     perUnit: pu,
     savingAmount,

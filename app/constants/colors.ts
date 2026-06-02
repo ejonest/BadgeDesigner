@@ -165,8 +165,16 @@ export const LEGACY_BRUSHED_GOLD_HEX = "#eac10c";
 export const LEGACY_BRUSHED_SILVER_HEX = "#C0C0C0";
 
 export const FONT_COLORS = [
-  { value: FEATURED_BRUSHED_GOLD_HEX, name: "Brushed Gold", ring: "ring-yellow-400" },
-  { value: FEATURED_BRUSHED_SILVER_HEX, name: "Brushed Silver", ring: "ring-gray-300" },
+  {
+    value: FEATURED_BRUSHED_GOLD_HEX,
+    name: "Brushed Gold",
+    ring: "ring-yellow-400",
+  },
+  {
+    value: FEATURED_BRUSHED_SILVER_HEX,
+    name: "Brushed Silver",
+    ring: "ring-gray-300",
+  },
   { value: "#FFFFFF", name: "White", ring: "ring-white" },
   { value: "#000000", name: "Black", ring: "ring-gray-900" },
   { value: "#FF0000", name: "Red", ring: "ring-red-500" },
@@ -180,7 +188,11 @@ export const ALL_COLORS = [
   ...BACKGROUND_COLORS,
   ...EXTENDED_BACKGROUND_COLORS,
   ...FONT_COLORS,
-  { value: LEGACY_BRUSHED_GOLD_HEX, name: "Brushed Gold", ring: "ring-yellow-400" },
+  {
+    value: LEGACY_BRUSHED_GOLD_HEX,
+    name: "Brushed Gold",
+    ring: "ring-yellow-400",
+  },
   {
     value: LEGACY_BRUSHED_SILVER_HEX,
     name: "Brushed Silver",

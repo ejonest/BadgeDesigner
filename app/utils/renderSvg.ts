@@ -49,7 +49,6 @@ import {
 } from "~/utils/badgeIconRender";
 import { signTemplateSupportsUserLogoUpload } from "~/utils/signLogoPlacement";
 import {
-  applyPlaqueMetalBrushFill,
   isFeaturedBrushedMetalPlateColor,
   normalizeFeaturedBrushedMetalBaseHex,
   PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
@@ -68,8 +67,7 @@ import {
   plaqueDetachedPlateContentRect,
   plaqueDetachedPlateInnerBorderSvgMarkup,
   inlinePlaqueDetachedWoodStockImagesInSvg,
-  plaqueMetalBrushGradientDef,
-  plaqueMetalBrushGradientDefObjectBBox,
+  plaqueMetalBrushInnerPlateTreatment,
   plaqueWoodBackgroundRect,
   plaqueWoodGrainFilterDef,
   plaqueWoodGradientDef,
@@ -1181,7 +1179,7 @@ function buildInnerFillAndClipData(
   return { innerPathWithFill, innerPathData };
 }
 
-/** Brushed-metal gradient for featured gold/silver only (badge/sign inner plate); streaks run horizontally. */
+/** Brushed-metal gradient + grain filter for featured gold/silver (horizontal brush streaks). */
 function plateBrushGradientForBadgeInner(
   badge: Badge,
   template: LoadedTemplate,
@@ -1192,15 +1190,16 @@ function plateBrushGradientForBadgeInner(
     return { innerPlateMarkup: innerPathWithFill, gradientDefXml: "" };
   }
   const safeClip = clipId.replace(/[^a-zA-Z0-9]/g, "");
-  const gradId = `badgePlateMetal${safeClip}`;
-  const gradientDefXml = plaqueMetalBrushGradientDefObjectBBox(
-    gradId,
-    normalizeFeaturedBrushedMetalBaseHex(
-      badge.backgroundColor || DEFAULT_PLATE_BG,
-    ),
+  const filterId = `badgePlateMetalBrush${safeClip}`;
+  const baseHex = normalizeFeaturedBrushedMetalBaseHex(
+    badge.backgroundColor || DEFAULT_PLATE_BG,
   );
-  const innerPlateMarkup = applyPlaqueMetalBrushFill(innerPathWithFill, gradId);
-  return { innerPlateMarkup, gradientDefXml };
+  const { defsXml, innerPlateMarkup } = plaqueMetalBrushInnerPlateTreatment({
+    innerPathWithFill,
+    filterId,
+    baseHex,
+  });
+  return { innerPlateMarkup, gradientDefXml: defsXml };
 }
 
 function renderPlaqueBadgeSvg(
@@ -1221,7 +1220,6 @@ function renderPlaqueBadgeSvg(
   const safeClip = clipId.replace(/[^a-zA-Z0-9]/g, "");
   const woodGradId = `plaqueWood${safeClip}`;
   const woodGrainFilterId = `plaqueWoodGrain${safeClip}`;
-  const metalGradId = `plaqueMetal${safeClip}`;
 
   const { innerPathWithFill, innerPathData } = buildInnerFillAndClipData(
     template,
@@ -1230,18 +1228,20 @@ function renderPlaqueBadgeSvg(
   const plateUsesBrushedMetal = isFeaturedBrushedMetalPlateColor(
     badge.backgroundColor,
   );
-  const metalGradientDef = plateUsesBrushedMetal
-    ? plaqueMetalBrushGradientDef(
-        metalGradId,
-        template.heightPx,
-        normalizeFeaturedBrushedMetalBaseHex(
-          badge.backgroundColor || DEFAULT_PLATE_BG,
-        ) || PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
-      )
-    : "";
-  const innerPlateWithBrushFill = plateUsesBrushedMetal
-    ? applyPlaqueMetalBrushFill(innerPathWithFill, metalGradId)
-    : innerPathWithFill;
+  const metalBrushFilterId = `plaqueMetalBrush${safeClip}`;
+  const metalPlateTreatment = plateUsesBrushedMetal
+    ? plaqueMetalBrushInnerPlateTreatment({
+        innerPathWithFill,
+        filterId: metalBrushFilterId,
+        baseHex:
+          normalizeFeaturedBrushedMetalBaseHex(
+            badge.backgroundColor || DEFAULT_PLATE_BG,
+          ) || PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
+      })
+    : null;
+  const metalGradientDef = metalPlateTreatment?.defsXml ?? "";
+  const innerPlateWithBrushFill =
+    metalPlateTreatment?.innerPlateMarkup ?? innerPathWithFill;
 
   const effectiveSignLayout = template.signTextLayout
     ? getEffectiveSignTextLayoutForBadge(template, badge)

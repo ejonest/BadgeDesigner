@@ -57,10 +57,7 @@ import { AqbBadgeBackingPicker } from "./AqbBadgeBackingPicker";
 import { AqbBadgeIconPicker } from "./AqbBadgeIconPicker";
 import { AqbBadgeOrderQtySection } from "./AqbBadgeOrderQtySection";
 import { BadgeQtyStepper } from "./BadgeQtyStepper";
-import {
-  AddMultipleGridIcon,
-  AqbToolActionsRow,
-} from "./AqbToolActionsRow";
+import { AddMultipleGridIcon, AqbToolActionsRow } from "./AqbToolActionsRow";
 import {
   BADGE_AQB_BACKING_META,
   type BadgeBackingKey,
@@ -71,7 +68,16 @@ import {
   type BadgeIconId,
   isBadgeIconId,
 } from "../constants/badgeIcons";
-import { computeBadgeAqbOrderQtyUiModel, splitOrderTotalAcrossDesignLines } from "../constants/badgeAqbOrderQty";
+import { badgeTemplateSupportsIcon } from "../constants/badgeIconLayout";
+import {
+  formatBadgeCsvLineTruncationWarning,
+  getBadgeMaxTextLines,
+  truncateBadgeCsvRows,
+} from "../constants/badgeTextLines";
+import {
+  computeBadgeAqbOrderQtyUiModel,
+  splitOrderTotalAcrossDesignLines,
+} from "../constants/badgeAqbOrderQty";
 import {
   bumpAllBadgeLineQuantities,
   clampBadgeLineQty,
@@ -681,7 +687,7 @@ function physicalRectFromInlinePreviewSvg(
 function featuredPlateBackgroundSwatchStyle(hex: string): React.CSSProperties {
   const s = hex.trim().startsWith("#") ? hex.trim() : `#${hex.trim()}`;
   if (isFeaturedBrushedMetalPlateColor(s)) {
-    return { backgroundImage: plaqueMetalBrushCssBackgroundImage(s) };
+    return { backgroundColor: plaqueMetalBrushCssBackgroundImage(s) };
   }
   return { backgroundColor: hex };
 }
@@ -729,7 +735,10 @@ function normalizeBadgeBgHex(hex: string): string {
   return t.startsWith("#") ? t : `#${t}`;
 }
 
-function isAqbBadgeBgSwatchSelected(current: string, swatchValue: string): boolean {
+function isAqbBadgeBgSwatchSelected(
+  current: string,
+  swatchValue: string,
+): boolean {
   if (
     isFeaturedBrushedMetalPlateColor(current) &&
     isFeaturedBrushedMetalPlateColor(swatchValue)
@@ -903,7 +912,13 @@ function DesktopPreviewDimensionFrame({
   };
   const previewH = previewLayout?.previewH ?? 0;
   const midH =
-    inset.height > 0 ? inset.height : previewH > 0 ? previewH : compact ? 20 : 28;
+    inset.height > 0
+      ? inset.height
+      : previewH > 0
+      ? previewH
+      : compact
+      ? 20
+      : 28;
 
   return (
     <div className="w-full flex flex-col items-stretch min-w-0">
@@ -1018,8 +1033,8 @@ const AqbBadgeStepSectionToggle: React.FC<AqbBadgeStepSectionToggleProps> = ({
           visualState === "done"
             ? "bg-[#2d9e75]"
             : visualState === "active"
-              ? "bg-[#0d1b2a]"
-              : "bg-[#d4cec6]"
+            ? "bg-[#0d1b2a]"
+            : "bg-[#d4cec6]"
         }`}
       >
         {visualState === "done" ? (
@@ -1959,16 +1974,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   };
 
   // Apply backing type to all badges (optional explicit backing for badge redesign: one backing for every design)
-  const applyBackingToAll = (
-    backingOverride?: Badge["backing"],
-  ) => {
+  const applyBackingToAll = (backingOverride?: Badge["backing"]) => {
     saveToUndoHistory({
       type: "apply-backing-to-all",
       badgeIndex: selectedBadgeIndex,
     });
 
-    const currentBacking =
-      backingOverride ?? badge.backing;
+    const currentBacking = backingOverride ?? badge.backing;
 
     setBadge({ ...badge, backing: currentBacking });
 
@@ -1994,6 +2006,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   };
 
   const setBadgeIconForCurrent = (iconId: BadgeIconId | undefined) => {
+    if (!badgeTemplateSupportsIcon(universalTemplateId)) return;
     const next: Badge = { ...badge, badgeIconId: iconId };
     setBadge(next);
     const updatedMultipleBadges = [...multipleBadges];
@@ -2007,6 +2020,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   };
 
   const applyBadgeIconToAll = (iconId: BadgeIconId | undefined) => {
+    if (!badgeTemplateSupportsIcon(universalTemplateId)) return;
     const updatedMultipleBadges = multipleBadges.map((b: Badge) => ({
       ...b,
       badgeIconId: iconId,
@@ -2162,8 +2176,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     variant === "plaque"
       ? defaultPlaqueTemplateId()
       : config.templatesKey === "sign"
-        ? SIGN_TEMPLATE_TYPES[0].sizes[0].templateId
-        : "rect-1x3";
+      ? SIGN_TEMPLATE_TYPES[0].sizes[0].templateId
+      : "rect-1x3";
   /** Plaque preview/thumbnails need a non-white default so brushed-metal SVG reads as a plate (step 2 still overrides). */
   const initialPlateBackgroundHex =
     variant === "plaque"
@@ -2174,6 +2188,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     variant,
     variant === "plaque"
       ? ATTACHED_PLAQUE_MAX_TEXT_LINES
+      : variant === "badge"
+      ? getBadgeMaxTextLines(defaultTemplateId)
       : config.maxLines,
     INITIAL_BADGE.lines,
     defaultLineShape,
@@ -2202,7 +2218,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const [hasChosenBackgroundColor, setHasChosenBackgroundColor] =
     useState(false);
   const [templates, setTemplates] = useState<LoadedTemplate[]>([]);
-  /** Data URLs for template picker thumbnails: white background, black trim (consistent across badge/sign). */
+  /** Data URLs for template picker thumbnails (plate fill follows background color step). */
   const [templatePreviewDataUrls, setTemplatePreviewDataUrls] = useState<
     Record<string, string>
   >({});
@@ -2309,12 +2325,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }
     const u = uniformBadgeLineQty(badgeLineQuantities);
     setGridSetAllQtyText(u != null ? String(u) : "");
-  }, [
-    showBadgeGridModal,
-    badgeLineQuantities,
-    gridSetAllQtyFocused,
-    variant,
-  ]);
+  }, [showBadgeGridModal, badgeLineQuantities, gridSetAllQtyFocused, variant]);
   /** Cloud library draft: shown beside Grid View when signed in + library enabled. */
   const [cloudAutosaveStatus, setCloudAutosaveStatus] = useState<
     "idle" | "saving" | "saved" | "error"
@@ -2371,7 +2382,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setShowCloudLibraryLoginHint(false);
     try {
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(CLOUD_LIBRARY_LOGIN_HINT_DISMISSED_KEY, "1");
+        window.localStorage.setItem(
+          CLOUD_LIBRARY_LOGIN_HINT_DISMISSED_KEY,
+          "1",
+        );
       }
     } catch {
       /* ignore */
@@ -2404,6 +2418,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const [csvText, setCsvText] = useState("");
   const [csvPreview, setCsvPreview] = useState<string[][]>([]);
   const [csvError, setCsvError] = useState("");
+  const [csvWarning, setCsvWarning] = useState("");
   const [selectedBadgeIndex, setSelectedBadgeIndex] = useState<number>(0); // 0 = first badge (multipleBadges[0]), 1+ = additional badges
   const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Keep for backward compatibility, synced with multipleBadges[0]
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -2423,6 +2438,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     useState<string>(defaultTemplateId);
 
   const maxLines = useMemo(() => {
+    if (variant === "badge") {
+      return getBadgeMaxTextLines(universalTemplateId);
+    }
     if (variant !== "plaque") return config.maxLines;
     const tid = badge.templateId ?? universalTemplateId;
     if (isPlaqueAttachedTemplateId(tid)) {
@@ -2435,6 +2453,29 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     () => getAddMultipleDesignerCopy(variant, maxLines),
     [variant, maxLines],
   );
+
+  useEffect(() => {
+    if (variant !== "badge") return;
+
+    const trimLines = (b: Badge): Badge => {
+      if (b.lines.length <= maxLines) return b;
+      return {
+        ...b,
+        lines: calculateCenterPositions(b.lines.slice(0, maxLines)),
+      };
+    };
+
+    setBadge((prev) => trimLines(prev));
+    setMultipleBadges((prev) => {
+      let changed = false;
+      const next = prev.map((b) => {
+        const trimmed = trimLines(b);
+        if (trimmed !== b) changed = true;
+        return trimmed;
+      });
+      return changed ? next : prev;
+    });
+  }, [variant, maxLines]);
 
   // Collapsible sections state - only first section (template) open by default
   type SectionsNavState = {
@@ -2504,10 +2545,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       if (b) m.set(fmt.id, b);
     }
     return m;
-  }, [
-    plaqueAwardFormatPreviewTemplateId,
-    defaultLineShape,
-  ]);
+  }, [plaqueAwardFormatPreviewTemplateId, defaultLineShape]);
 
   useEffect(() => {
     if (!plaqueAttachedSelected) setPlaqueAwardFormatsExpanded(false);
@@ -2601,8 +2639,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     const incomplete: number[] = [];
 
     if (variant === "plaque") {
-      const st1 =
-        selectedPlaqueLayoutId != null || multipleBadges.length > 0;
+      const st1 = selectedPlaqueLayoutId != null || multipleBadges.length > 0;
       const st2 = multipleBadges.length > 0;
       const attachedFlow = plaqueAttachedFlowSelected(
         selectedPlaqueLayoutId,
@@ -2610,18 +2647,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         universalTemplateId,
         multipleBadges.length,
       );
-      const stFormat =
-        !attachedFlow || Boolean(badge.plaqueFormatId?.trim());
+      const stFormat = !attachedFlow || Boolean(badge.plaqueFormatId?.trim());
       const stMetal = hasChosenBackgroundColor;
       const detachedPhotoReq = plaqueDetachedPhotoRequired(
         multipleBadges.length,
         badge.templateId,
         universalTemplateId,
       );
-      const requiresLogo =
-        attachedFlow || detachedPhotoReq;
-      const missingPlaqueLogo =
-        requiresLogo && !badge.logo?.src?.trim();
+      const requiresLogo = attachedFlow || detachedPhotoReq;
+      const missingPlaqueLogo = requiresLogo && !badge.logo?.src?.trim();
       if (forStep >= 2 && !st1) incomplete.push(1);
       if (forStep >= 3 && !st2) incomplete.push(2);
       if (attachedFlow) {
@@ -2681,12 +2715,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         ? 7
         : 6
       : config.hasSizeStep
-        ? signBorderStepRequired
-          ? 6
-          : 5
-        : config.hasBacking
-          ? 5
-          : 3;
+      ? signBorderStepRequired
+        ? 6
+        : 5
+      : config.hasBacking
+      ? 5
+      : 3;
 
   // Refs for section headers to enable scroll-into-view
   const templateSectionRef = useRef<HTMLButtonElement | null>(null);
@@ -2938,9 +2972,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         // Default universal template id (no badge yet)
         if (list.length > 0) {
           setUniversalTemplateId(
-            variant === "plaque"
-              ? defaultPlaqueTemplateId()
-              : list[0].id,
+            variant === "plaque" ? defaultPlaqueTemplateId() : list[0].id,
           );
         }
       } catch (error) {
@@ -2951,55 +2983,62 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     })();
   }, [templateRefreshKey, variant]);
 
-  // Build template picker thumbnails: plate + outline only (no trim/motifs). Users add frame, color, and
-  // Designer motifs in the border step. Sign viewBoxes are large in px — thicker stroke for small grid cells.
+  // Build template picker thumbnails: plate + outline only (no trim/motifs). Plate fill mirrors the
+  // background color from step 2 so shape previews match the user's current finish choice.
   useEffect(() => {
     if (templates.length === 0) return;
-    const previewBadge: Badge = {
-      templateId: "",
-      backgroundColor: "#FFFFFF",
-      borderColor: "#000000",
-      signBorderOptionId: SIGN_BORDER_OPTION_NONE,
-      signBorderEnabled: false,
-      signBorderStyleId: "default",
-      lines: [],
-      backing: "pin",
-    };
-    const badgeTemplateThumbRenderOpts = {
-      showOutline: true as const,
-      outlineStrokeWidth: "8",
-    };
-    const templateThumbRenderOpts =
-      variant === "sign" || variant === "plaque"
-        ? SIGN_LIKE_TEMPLATE_THUMB_RENDER_OPTS
-        : badgeTemplateThumbRenderOpts;
-    setTemplatePreviewDataUrls((prev) => {
-      const next = { ...prev };
-      for (const t of templates) {
-        try {
-          const svg = renderBadgeToSvgString(
-            {
-              ...previewBadge,
-              templateId: t.id,
-              backgroundColor: t.id.startsWith("plaque-")
-                ? PLAQUE_DEFAULT_BRUSH_GOLD_HEX
-                : previewBadge.backgroundColor,
-            },
-            t,
-            templateThumbRenderOpts,
-          );
-          next[t.id] = svgMarkupToImageSrc(svg);
-        } catch (e) {
-          console.error(
-            `[BadgeDesignerRedesign] Template thumbnail failed for ${t.id}:`,
-            e,
-          );
-          delete next[t.id];
+
+    const plateColor =
+      (badge.backgroundColor || "").trim() || initialPlateBackgroundHex;
+
+    const timer = window.setTimeout(() => {
+      const previewBadge: Badge = {
+        templateId: "",
+        backgroundColor: plateColor,
+        borderColor: "#000000",
+        signBorderOptionId: SIGN_BORDER_OPTION_NONE,
+        signBorderEnabled: false,
+        signBorderStyleId: "default",
+        lines: [],
+        backing: "pin",
+      };
+      const badgeTemplateThumbRenderOpts = {
+        showOutline: true as const,
+        outlineStrokeWidth: "8",
+      };
+      const templateThumbRenderOpts =
+        variant === "sign" || variant === "plaque"
+          ? SIGN_LIKE_TEMPLATE_THUMB_RENDER_OPTS
+          : badgeTemplateThumbRenderOpts;
+
+      setTemplatePreviewDataUrls((prev) => {
+        const next = { ...prev };
+        for (const t of templates) {
+          try {
+            const svg = renderBadgeToSvgString(
+              {
+                ...previewBadge,
+                templateId: t.id,
+                backgroundColor: plateColor,
+              },
+              t,
+              templateThumbRenderOpts,
+            );
+            next[t.id] = svgMarkupToImageSrc(svg);
+          } catch (e) {
+            console.error(
+              `[BadgeDesignerRedesign] Template thumbnail failed for ${t.id}:`,
+              e,
+            );
+            delete next[t.id];
+          }
         }
-      }
-      return next;
-    });
-  }, [templates, variant]);
+        return next;
+      });
+    }, 80);
+
+    return () => window.clearTimeout(timer);
+  }, [templates, variant, badge.backgroundColor, initialPlateBackgroundHex]);
 
   // Restore badge designer state from localStorage cache (once, after templates are loaded)
   useEffect(() => {
@@ -3051,6 +3090,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             ...b,
             lines: b.lines.slice(0, ATTACHED_PLAQUE_MAX_TEXT_LINES),
           };
+        }
+        return b;
+      });
+    }
+    if (variant === "badge") {
+      const max = getBadgeMaxTextLines(migratedUniversal);
+      migratedBadges = migratedBadges.map((b) => {
+        if (b.lines.length > max) {
+          return { ...b, lines: b.lines.slice(0, max) };
         }
         return b;
       });
@@ -3109,11 +3157,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       setSelectedPlaqueLayoutId(
         payload.selectedPlaqueLayoutId ?? parsed?.layoutId ?? null,
       );
-      setSelectedPlaqueSize(
-        fromPayload ??
-          parsed?.size ??
-          DEFAULT_PLAQUE_SIZE,
-      );
+      setSelectedPlaqueSize(fromPayload ?? parsed?.size ?? DEFAULT_PLAQUE_SIZE);
       plaqueLayoutGuidedAutoAdvanceDoneRef.current = true;
     }
     // Do not mark steps 3 or 4 as opened; user must open step 4 (and step 3 counts complete only when they have non-default text) in this session
@@ -3184,9 +3228,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         ...(variant === "plaque"
           ? { selectedPlaqueSize, selectedPlaqueLayoutId }
           : {}),
-        ...(variant === "badge"
-          ? { badgeOrderQty, badgeLineQuantities }
-          : {}),
+        ...(variant === "badge" ? { badgeOrderQty, badgeLineQuantities } : {}),
       };
       try {
         localStorage.setItem(cacheKey, JSON.stringify(payload));
@@ -3268,14 +3310,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         .slice(2, 11)}`;
 
       let basePrice = 9.99;
-      let backingPrice =
-        isSignLikeVariant(variant)
-          ? 0
-          : firstFin.backing === "magnetic"
-            ? 2.0
-            : firstFin.backing === "adhesive"
-              ? 1.0
-              : 0;
+      let backingPrice = isSignLikeVariant(variant)
+        ? 0
+        : firstFin.backing === "magnetic"
+        ? 2.0
+        : firstFin.backing === "adhesive"
+        ? 1.0
+        : 0;
       let totalPrice = basePrice + backingPrice;
       if (isSignLikeVariant(variant)) {
         backingPrice = 0;
@@ -3311,22 +3352,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         productId: _productId,
         designId: milestoneDesignId,
         status: "saved",
-          designData: {
-            badge: allFinalizedBadges[0],
-            multipleBadges:
-              allFinalizedBadges.length > 1 ? allFinalizedBadges.slice(1) : [],
-            allBadges: allFinalizedBadges,
-            timestamp: new Date().toISOString(),
-            ...(variant === "badge"
-              ? { badgeOrderQty }
-              : {}),
-            ...(isSignLikeVariant(variant)
-              ? {
-                  selectedSignTemplateType: stType,
-                  selectedSignSizeTemplateId: stSize,
-                }
-              : {}),
-          },
+        designData: {
+          badge: allFinalizedBadges[0],
+          multipleBadges:
+            allFinalizedBadges.length > 1 ? allFinalizedBadges.slice(1) : [],
+          allBadges: allFinalizedBadges,
+          timestamp: new Date().toISOString(),
+          ...(variant === "badge" ? { badgeOrderQty } : {}),
+          ...(isSignLikeVariant(variant)
+            ? {
+                selectedSignTemplateType: stType,
+                selectedSignSizeTemplateId: stSize,
+              }
+            : {}),
+        },
         backgroundColor: allFinalizedBadges[0].backgroundColor,
         ...(!isSignLikeVariant(variant)
           ? { backingType: allFinalizedBadges[0].backing }
@@ -3392,10 +3431,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       selected?.save_kind === "cart"
         ? "Added to cart"
         : selected?.save_kind === "ordered"
-          ? "Ordered"
-          : selected?.save_kind === "manual"
-            ? "Saved"
-            : "Saved";
+        ? "Ordered"
+        : selected?.save_kind === "manual"
+        ? "Saved"
+        : "Saved";
     const whenStr =
       selected?.updated_at || selected?.created_at
         ? new Date(
@@ -3464,8 +3503,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       if (typeof window === "undefined") return;
       if (!cloudLibraryEnabledRef.current || !designLibraryUserIdRef.current)
         return;
-      const mb =
-        snapshot?.multipleBadgesOverride ?? multipleBadgesRef.current;
+      const mb = snapshot?.multipleBadgesOverride ?? multipleBadgesRef.current;
       if (mb.length === 0) return;
       const shopData = resolveDesignLibraryShopDataRef.current();
       if (!shopData?.shopId) return;
@@ -3485,14 +3523,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
         const first = allFinalizedBadges[0];
         let basePrice = 9.99;
-        let backingPrice =
-          isSignLikeVariant(variant)
-            ? 0
-            : first.backing === "magnetic"
-              ? 2.0
-              : first.backing === "adhesive"
-                ? 1.0
-                : 0;
+        let backingPrice = isSignLikeVariant(variant)
+          ? 0
+          : first.backing === "magnetic"
+          ? 2.0
+          : first.backing === "adhesive"
+          ? 1.0
+          : 0;
         let totalPrice = basePrice + backingPrice;
         if (isSignLikeVariant(variant)) {
           backingPrice = 0;
@@ -3523,14 +3560,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           designData: {
             badge: allFinalizedBadges[0],
             multipleBadges:
-              allFinalizedBadges.length > 1
-                ? allFinalizedBadges.slice(1)
-                : [],
+              allFinalizedBadges.length > 1 ? allFinalizedBadges.slice(1) : [],
             allBadges: allFinalizedBadges,
             timestamp: new Date().toISOString(),
-            ...(variant === "badge"
-              ? { badgeOrderQty }
-              : {}),
+            ...(variant === "badge" ? { badgeOrderQty } : {}),
             ...(isSignLikeVariant(variant)
               ? {
                   selectedSignTemplateType: stType,
@@ -3559,7 +3592,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         scheduleCloudAutosaveStatusIdle();
       }
     },
-    [api, uploadDesignLibraryThumbnail, variant, scheduleCloudAutosaveStatusIdle],
+    [
+      api,
+      uploadDesignLibraryThumbnail,
+      variant,
+      scheduleCloudAutosaveStatusIdle,
+    ],
   );
 
   useEffect(() => {
@@ -3573,7 +3611,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       void runCloudAutosaveNow();
     }, CLOUD_AUTOSAVE_TEXT_IDLE_MS);
     return () => window.clearTimeout(t);
-  }, [lineTextsSignature, cloudLibraryEnabled, multipleBadges.length, runCloudAutosaveNow]);
+  }, [
+    lineTextsSignature,
+    cloudLibraryEnabled,
+    multipleBadges.length,
+    runCloudAutosaveNow,
+  ]);
 
   /** Debounced cloud draft save for non-text edits (placement, logo fields, lines structure, etc.). Runs after `CLOUD_AUTOSAVE_NON_TEXT_MS` idle — not gated on `stepsComplete` so sign logo placement/image updates persist while the wizard is open. */
   useEffect(() => {
@@ -3599,10 +3642,19 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       void runCloudAutosaveNow();
     }
     prevStepsCompleteForCloudRef.current = stepsComplete;
-  }, [stepsComplete, cloudLibraryEnabled, multipleBadges.length, runCloudAutosaveNow]);
+  }, [
+    stepsComplete,
+    cloudLibraryEnabled,
+    multipleBadges.length,
+    runCloudAutosaveNow,
+  ]);
 
   useEffect(() => {
-    if (variant !== "badge" || !cloudLibraryEnabled || multipleBadges.length === 0)
+    if (
+      variant !== "badge" ||
+      !cloudLibraryEnabled ||
+      multipleBadges.length === 0
+    )
       return;
     const t = window.setTimeout(() => {
       void runCloudAutosaveNow();
@@ -3639,9 +3691,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               selectedSignSizeTemplateId,
             }
           : {}),
-        ...(variant === "badge"
-          ? { badgeOrderQty, badgeLineQuantities }
-          : {}),
+        ...(variant === "badge" ? { badgeOrderQty, badgeLineQuantities } : {}),
       };
       try {
         localStorage.setItem(cacheKey, JSON.stringify(payload));
@@ -3868,7 +3918,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         }
         if (cancelled) return;
         if (!isShopifyProductJsPayload(data)) {
-          throw new Error("Shopify product JSON missing variants (password page or wrong handle?)");
+          throw new Error(
+            "Shopify product JSON missing variants (password page or wrong handle?)",
+          );
         }
         clearEmbeddedErrorTimer();
         setSignShopifyProduct(data);
@@ -3932,12 +3984,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     const textDone = hasStep3TextEntered;
     const backingDone = sectionsOpened.backing;
 
-    const completions = [
-      templateDone,
-      backgroundDone,
-      textDone,
-      backingDone,
-    ];
+    const completions = [templateDone, backgroundDone, textDone, backingDone];
     const firstIncomplete = completions.findIndex((c) => !c);
 
     const visual = (index: number): AqbBadgeStepVisualState => {
@@ -3987,19 +4034,22 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     const bKey = badge.backing as BadgeBackingKey;
     const backingMeta = BADGE_AQB_BACKING_META[bKey];
     const backingSummary = backingMeta
-      ? `${backingMeta.shortName} — ${badgeAqbBackingOptionLabel(bKey).split(" — ").pop() ?? ""}`
+      ? `${backingMeta.shortName} — ${
+          badgeAqbBackingOptionLabel(bKey).split(" — ").pop() ?? ""
+        }`
       : badge.backing;
 
     return {
       template: {
         state: visual(0),
-        summary: templateDone ? (activeTemplate?.name?.trim() || "—") : null,
+        summary: templateDone ? activeTemplate?.name?.trim() || "—" : null,
       },
       background: {
         state: visual(1),
         summary: hasAnyBg
           ? [
               bgName,
+              badgeTemplateSupportsIcon(universalTemplateId) &&
               isBadgeIconId(badge.badgeIconId)
                 ? BADGE_ICON_LABELS[badge.badgeIconId]
                 : null,
@@ -4010,7 +4060,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       },
       text: {
         state: visual(2),
-        summary: textDone ? (textSummary || "Text added") : null,
+        summary: textDone ? textSummary || "Text added" : null,
       },
       backing: {
         state: visual(3),
@@ -4027,6 +4077,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     badge.lines,
     badge.backing,
     badge.badgeIconId,
+    universalTemplateId,
     activeTemplate?.name,
   ]);
 
@@ -4287,9 +4338,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           productId: _productId || "test-product",
           backgroundColor: allBadgesForDraft[0].backgroundColor,
           backingType: allBadgesForDraft[0].backing,
-          ...(variant === "badge"
-            ? { badgeOrderQty }
-            : {}),
+          ...(variant === "badge" ? { badgeOrderQty } : {}),
         };
         const formData = new FormData();
         formData.append("designId", designId);
@@ -4354,7 +4403,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   /** Run draft save immediately for the given badges (e.g. after CSV override/add). Shows generating spinner over badges. */
   const runDraftSaveForBadges = useCallback(
     (allBadges: Badge[]): Promise<void> => {
-      if (!allBadges?.length || !activeTemplateRef.current) return Promise.resolve();
+      if (!allBadges?.length || !activeTemplateRef.current)
+        return Promise.resolve();
       if (!sessionDesignIdRef.current) {
         sessionDesignIdRef.current = `design_${Date.now()}_${Math.random()
           .toString(36)
@@ -4411,9 +4461,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             productId: _productId || "test-product",
             backgroundColor: normalized[0].backgroundColor,
             backingType: normalized[0].backing,
-            ...(variant === "badge"
-              ? { badgeOrderQty }
-              : {}),
+            ...(variant === "badge" ? { badgeOrderQty } : {}),
           };
           const formData = new FormData();
           formData.append("designId", designId);
@@ -4461,7 +4509,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             );
           }
         } catch (err) {
-          console.warn("[BadgeDesignerRedesign] runDraftSaveForBadges error:", err);
+          console.warn(
+            "[BadgeDesignerRedesign] runDraftSaveForBadges error:",
+            err,
+          );
         } finally {
           setIsGeneratingDesigns(false);
           draftSaveInProgressRef.current = null;
@@ -4554,8 +4605,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     if (!tpl?.signTextLayout || typeof document === "undefined") return next;
 
     const logoSrc = next.logo?.src?.trim();
-    const badgeForNegotiate =
-      logoSrc ? { ...next, signLogoLayoutSnapshot: undefined } : next;
+    const badgeForNegotiate = logoSrc
+      ? { ...next, signLogoLayoutSnapshot: undefined }
+      : next;
 
     let fitted: BadgeLine[];
     if (logoSrc) {
@@ -4569,8 +4621,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     let out: Badge = { ...next, lines: calculateCenterPositions(fitted) };
     if (next.logo?.src?.trim()) {
       let snapshot = computeSignLogoLayoutSnapshot(tpl, out);
-      const ceilings =
-        snapshot?.textPxCeilingByLine ?? snapshot?.textPxByLine;
+      const ceilings = snapshot?.textPxCeilingByLine ?? snapshot?.textPxByLine;
       if (snapshot && ceilings?.length) {
         const clamped = clampBadgeLinesToSignLogoPxCeilings(tpl, out, snapshot);
         out = { ...next, lines: calculateCenterPositions(clamped) };
@@ -5427,8 +5478,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       const plateBg = !isWhiteishPlate(badge.backgroundColor)
         ? badge.backgroundColor!.trim()
         : !isWhiteishPlate(slot?.backgroundColor)
-          ? slot!.backgroundColor!.trim()
-          : "#FFFFFF";
+        ? slot!.backgroundColor!.trim()
+        : "#FFFFFF";
       const liveBadge = { ...badge, backgroundColor: plateBg };
       console.log(
         `[UNIVERSAL] Badge ${badgeIndex} LIVE PREVIEW - plate backgroundColor: ${liveBadge.backgroundColor}`,
@@ -5572,8 +5623,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       variant === "plaque"
         ? defaultPlaqueTemplateId()
         : isSignLikeVariant(variant)
-          ? SIGN_TEMPLATE_TYPES[0].sizes[0].templateId
-          : "rect-1x3",
+        ? SIGN_TEMPLATE_TYPES[0].sizes[0].templateId
+        : "rect-1x3",
     );
     if (variant === "plaque") {
       setSelectedPlaqueSize(null);
@@ -5612,9 +5663,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }
 
     setMultipleBadges(newMultipleBadges);
-    setBadgeLineQuantities((prev) =>
-      removeBadgeLineQtyAt(prev, indexToRemove),
-    );
+    setBadgeLineQuantities((prev) => removeBadgeLineQtyAt(prev, indexToRemove));
     setSelectedBadgeIndex(newSelectedIndex);
 
     const badgeToLoad = newMultipleBadges[newSelectedIndex];
@@ -5710,7 +5759,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             underline: old?.underline ?? line.underline,
           };
         });
-        return { ...prev, plaqueFormatId: formatId, plaqueUseDefaultAttachedAwardVisual: false, lines };
+        return {
+          ...prev,
+          plaqueFormatId: formatId,
+          plaqueUseDefaultAttachedAwardVisual: false,
+          lines,
+        };
       };
       setMultipleBadges((prev) => {
         const next = prev.map((b, i) =>
@@ -5758,15 +5812,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         templateId: newTemplateId,
         backgroundColor: initialPlateBackgroundHex,
         backing: INITIAL_BADGE.backing ?? "magnetic",
-        lines:
-          isSignLikeVariant(variant)
-            ? buildPaddedInitialLines(
-                variant,
-                config.maxLines,
-                INITIAL_BADGE.lines,
-                defaultLineShape,
-              )
-            : [...INITIAL_BADGE.lines],
+        lines: isSignLikeVariant(variant)
+          ? buildPaddedInitialLines(
+              variant,
+              config.maxLines,
+              INITIAL_BADGE.lines,
+              defaultLineShape,
+            )
+          : [...INITIAL_BADGE.lines],
         ...(variant === "sign"
           ? {
               signBorderStyleId: "default",
@@ -5855,8 +5908,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           }));
         } else {
           const openPlaqueAttachedAwardFormatStep =
-            variant === "plaque" &&
-            isPlaqueAttachedTemplateId(newTemplateId);
+            variant === "plaque" && isPlaqueAttachedTemplateId(newTemplateId);
           setSectionsOpen({
             template: false,
             size: false,
@@ -6061,10 +6113,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         }
       : {};
 
-    const computeBadgeAfterUniversalTemplateChange = (
-      prevB: Badge,
-    ): Badge => {
-      let proto: Badge = { ...prevB, templateId: newTemplateId };
+    const computeBadgeAfterUniversalTemplateChange = (prevB: Badge): Badge => {
+      let proto: Badge = {
+        ...prevB,
+        templateId: newTemplateId,
+        ...(variant === "badge" && !badgeTemplateSupportsIcon(newTemplateId)
+          ? { badgeIconId: undefined }
+          : {}),
+      };
       let linesSource = prevB.lines;
       if (variant === "plaque") {
         const nowAttached = isPlaqueAttachedTemplateId(newTemplateId);
@@ -6090,10 +6146,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         }
       }
       const box = getEffectiveDesignBox(newTemplate, proto);
-      const scaledLines =
-        isSignLikeVariant(variant)
-          ? applySignTemplateLineSizes(linesSource, box, proto)
-          : autoScaleLinesForNewTemplate(linesSource, box, prevB.templateId);
+      const scaledLines = isSignLikeVariant(variant)
+        ? applySignTemplateLineSizes(linesSource, box, proto)
+        : autoScaleLinesForNewTemplate(linesSource, box, prevB.templateId);
       if (
         isSignLikeVariant(variant) &&
         newTemplate.signTextLayout &&
@@ -6124,6 +6179,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         centeredLines.length > ATTACHED_PLAQUE_MAX_TEXT_LINES
       ) {
         outLines = centeredLines.slice(0, ATTACHED_PLAQUE_MAX_TEXT_LINES);
+      }
+      if (variant === "badge") {
+        const badgeMax = getBadgeMaxTextLines(newTemplateId);
+        if (outLines.length > badgeMax) {
+          outLines = calculateCenterPositions(outLines.slice(0, badgeMax));
+        }
       }
       return {
         ...proto,
@@ -6517,9 +6578,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       variant,
     );
     const perLineQuantities =
-      variant === "badge"
-        ? lineQtys
-        : allBadgesForSupabase.map(() => 1);
+      variant === "badge" ? lineQtys : allBadgesForSupabase.map(() => 1);
     const badgeOrderQtyForProof = variant === "badge" ? totalPieces : 1;
     proofPendingAddToCartRef.current = {
       pdfBlob,
@@ -6718,11 +6777,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   }, [proofPdfObjectUrl]);
 
   const applyRestoredDesign = useCallback(
-    (row: {
-      design_id?: string;
-      design_data: any;
-      backing_type?: string;
-    }) => {
+    (row: { design_id?: string; design_data: any; backing_type?: string }) => {
       const design = row.design_data;
       if (!design) return;
       const rawBadges =
@@ -6800,7 +6855,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           }
         }
       }
-      setSectionsOpened((prev) => ({ ...prev, textLines: true, backing: true }));
+      setSectionsOpened((prev) => ({
+        ...prev,
+        textLines: true,
+        backing: true,
+      }));
       if (row.design_id) {
         sessionDesignIdRef.current = row.design_id;
       }
@@ -6880,10 +6939,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         : allBadgesForSupabase.map(() =>
             Math.max(
               1,
-              Math.min(
-                999_999,
-                Math.floor(Number(pending.badgeOrderQty) || 1),
-              ),
+              Math.min(999_999, Math.floor(Number(pending.badgeOrderQty) || 1)),
             ),
           );
     const totalOrderPieces = perLineQtysResolved.reduce((s, q) => s + q, 0);
@@ -7313,14 +7369,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         const cid = designLibraryUserId;
         const allBadges = badgesForSupabase;
         let basePrice = 9.99;
-        let backingPrice =
-          isSignLikeVariant(variant)
-            ? 0
-            : allBadges[0]?.backing === "magnetic"
-              ? 2.0
-              : allBadges[0]?.backing === "adhesive"
-                ? 1.0
-                : 0;
+        let backingPrice = isSignLikeVariant(variant)
+          ? 0
+          : allBadges[0]?.backing === "magnetic"
+          ? 2.0
+          : allBadges[0]?.backing === "adhesive"
+          ? 1.0
+          : 0;
         let totalPrice = basePrice + backingPrice;
         if (isSignLikeVariant(variant)) {
           backingPrice = 0;
@@ -7348,13 +7403,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           status: "saved",
           designData: {
             badge: allBadges[0],
-            multipleBadges:
-              allBadges.length > 1 ? allBadges.slice(1) : [],
+            multipleBadges: allBadges.length > 1 ? allBadges.slice(1) : [],
             allBadges,
             timestamp: new Date().toISOString(),
-            ...(variant === "badge"
-              ? { badgeOrderQty: totalOrderPieces }
-              : {}),
+            ...(variant === "badge" ? { badgeOrderQty: totalOrderPieces } : {}),
             ...(isSignLikeVariant(variant)
               ? {
                   selectedSignTemplateType,
@@ -7378,7 +7430,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             { saveKind: "cart" },
           );
         } catch (err) {
-          console.warn("[BadgeDesignerRedesign] Cart milestone save failed:", err);
+          console.warn(
+            "[BadgeDesignerRedesign] Cart milestone save failed:",
+            err,
+          );
         }
       }
 
@@ -7429,33 +7484,28 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   function previewCsv(text: string) {
     try {
       setCsvError("");
-      const rows = text
+      setCsvWarning("");
+      const rawRows = text
         .trim()
         .split(/\r?\n/)
         .filter((row: string) => row.trim().length > 0) // Filter out empty rows
         .map((row: string) => row.split(","));
 
-      // Validate that each row has at most maxLines comma-separated values
-      const invalidRows: number[] = [];
-      rows.forEach((row, index) => {
-        if (row.length > maxLines) {
-          invalidRows.push(index + 1); // 1-indexed for user display
-        }
-      });
-
-      if (invalidRows.length > 0) {
-        setCsvError(
-          `Each ${config.labelProduct.toLowerCase()} can have a maximum of ${maxLines} lines of text. ` +
-            `Row${invalidRows.length > 1 ? "s" : ""} ${invalidRows.join(
-              ", ",
-            )} ` +
-            `exceed${invalidRows.length > 1 ? "" : "s"} this limit.`,
-        );
-      }
+      const { rows, truncatedRowNumbers } = truncateBadgeCsvRows(
+        rawRows,
+        maxLines,
+      );
+      const warning = formatBadgeCsvLineTruncationWarning(
+        truncatedRowNumbers,
+        maxLines,
+        config.labelProduct.toLowerCase(),
+      );
+      if (warning) setCsvWarning(warning);
 
       setCsvPreview(rows);
     } catch {
       setCsvError("Invalid CSV format.");
+      setCsvWarning("");
       setCsvPreview([]);
     }
   }
@@ -7473,30 +7523,22 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     );
     try {
       setCsvError("");
-      const rows = text
+      const rawRows = text
         .trim()
         .split(/\r?\n/)
         .filter((row: string) => row.trim().length > 0) // Filter out empty rows
         .map((row: string) => row.split(","));
 
-      // Validate that each row has at most maxLines comma-separated values
-      const invalidRows: number[] = [];
-      rows.forEach((row, index) => {
-        if (row.length > maxLines) {
-          invalidRows.push(index + 1); // 1-indexed for user display
-        }
-      });
-
-      if (invalidRows.length > 0) {
-        setCsvError(
-          `Each ${config.labelProduct.toLowerCase()} can have a maximum of ${maxLines} lines of text. ` +
-            `Row${invalidRows.length > 1 ? "s" : ""} ${invalidRows.join(
-              ", ",
-            )} ` +
-            `exceed${invalidRows.length > 1 ? "" : "s"} this limit.`,
-        );
-        return; // Don't proceed with badge creation
-      }
+      const { rows, truncatedRowNumbers } = truncateBadgeCsvRows(
+        rawRows,
+        maxLines,
+      );
+      const warning = formatBadgeCsvLineTruncationWarning(
+        truncatedRowNumbers,
+        maxLines,
+        config.labelProduct.toLowerCase(),
+      );
+      if (warning) setCsvWarning(warning);
 
       if (rows.length > 0 && rows[0].length > 0) {
         // Create badges based on current badge template but with CSV text
@@ -7633,6 +7675,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       }
     } catch {
       setCsvError("Invalid CSV format.");
+      setCsvWarning("");
       setCsvPreview([]);
     }
   }
@@ -7666,10 +7709,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     variant === "badge" && badgeOrderQtyUi
       ? `$${badgeOrderQtyUi.grandTotal.toFixed(2)}`
       : isSignLikeVariant(variant) && signShopifyCatalogStatus === "loading"
-        ? "…"
-        : totalPriceAllBadges === "—"
-          ? "—"
-          : `$${totalPriceAllBadges}`;
+      ? "…"
+      : totalPriceAllBadges === "—"
+      ? "—"
+      : `$${totalPriceAllBadges}`;
 
   const badgePriceBreakdownLine =
     variant === "badge" && badgeOrderQtyUi && multipleBadges.length > 0
@@ -7692,10 +7735,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       cloudAutosaveStatus === "saving"
         ? "Saving draft to your design library…"
         : cloudAutosaveStatus === "saved"
-          ? "Draft saved to your design library"
-          : cloudAutosaveStatus === "error"
-            ? "Could not save draft. Check connection and try again."
-            : "Design library autosave is on; draft updates when you finish edits.";
+        ? "Draft saved to your design library"
+        : cloudAutosaveStatus === "error"
+        ? "Could not save draft. Check connection and try again."
+        : "Design library autosave is on; draft updates when you finish edits.";
     return (
       <div
         className="flex flex-col items-center justify-center w-11 shrink-0 text-center"
@@ -7730,10 +7773,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           </>
         ) : (
           <>
-            <CloudArrowUpIcon
-              className="h-5 w-5 text-gray-400"
-              aria-hidden
-            />
+            <CloudArrowUpIcon className="h-5 w-5 text-gray-400" aria-hidden />
             <span className="text-[14px] text-gray-500 leading-tight mt-0.5">
               Cloud
             </span>
@@ -7827,9 +7867,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             <code className="text-xs bg-amber-100/80 px-1 rounded break-all">
               {designLibraryDummy.shopId}
             </code>
-            . Remove{" "}
-            <code className="text-xs">designLibraryDummy=1</code> from the URL
-            (and unset{" "}
+            . Remove <code className="text-xs">designLibraryDummy=1</code> from
+            the URL (and unset{" "}
             <code className="text-xs">VITE_DESIGN_LIBRARY_DUMMY_MODE</code>) to
             use real Shopify customer and shop.
           </div>
@@ -7844,9 +7883,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         >
           <div className="rounded-lg border border-blue-200 bg-blue-50 text-blue-950 px-3 py-2.5 text-sm leading-snug flex gap-3 items-start">
             <p className="flex-1 min-w-0">
-              <span className="font-semibold">Cloud autosave</span> is off
-              until you log in. Sign in to your Shopify account to save your
-              draft to the cloud and use your design library.
+              <span className="font-semibold">Cloud autosave</span> is off until
+              you log in. Sign in to your Shopify account to save your draft to
+              the cloud and use your design library.
             </p>
             <button
               type="button"
@@ -7866,7 +7905,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           aria-label={MANUFACTURING_DISCLAIMER_TITLE}
         >
           <div className="aqb-redesign-disclaimer">
-            <span className="font-semibold">{MANUFACTURING_DISCLAIMER_TITLE}. </span>
+            <span className="font-semibold">
+              {MANUFACTURING_DISCLAIMER_TITLE}.{" "}
+            </span>
             {MANUFACTURING_DISCLAIMER_BODY}
           </div>
         </div>
@@ -7880,236 +7921,253 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             : "gap-5 px-4 md:px-8"
         }`}
       >
-      {/* MOBILE: Header + preview fixed at top; editor scrolls below */}
-      <div className="flex-shrink-0 md:hidden flex flex-col mb-2">
-        {/* Header: title left, grid picker right */}
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="flex flex-col gap-1 min-w-0">
-            <h2 className="text-xl font-bold text-gray-800">
-              {multipleBadges.length === 0
-                ? `Design Your ${config.labelProduct}`
-                : `Customize Your ${config.labelProduct} ${
-                    selectedBadgeIndex + 1
-                  } of ${totalBadges}`}
-            </h2>
-            {multipleBadges.length > 0 && (
-              <span className="text-xl font-bold text-red-600">
-                {activeTemplate?.name ?? ""}
-              </span>
-            )}
-          </div>
-          <div className="flex items-stretch gap-1.5 shrink-0">
-            {variant !== "badge" ? cloudLibrarySaveHint : null}
-            {variant === "badge" && multipleBadges.length > 0 ? (
-              <>
+        {/* MOBILE: Header + preview fixed at top; editor scrolls below */}
+        <div className="flex-shrink-0 md:hidden flex flex-col mb-2">
+          {/* Header: title left, grid picker right */}
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <div className="flex flex-col gap-1 min-w-0">
+              <h2 className="text-xl font-bold text-gray-800">
+                {multipleBadges.length === 0
+                  ? `Design Your ${config.labelProduct}`
+                  : `Customize Your ${config.labelProduct} ${
+                      selectedBadgeIndex + 1
+                    } of ${totalBadges}`}
+              </h2>
+              {multipleBadges.length > 0 && (
+                <span className="text-xl font-bold text-red-600">
+                  {activeTemplate?.name ?? ""}
+                </span>
+              )}
+            </div>
+            <div className="flex items-stretch gap-1.5 shrink-0">
+              {variant !== "badge" ? cloudLibrarySaveHint : null}
+              {variant === "badge" && multipleBadges.length > 0 ? (
+                <>
+                  <button
+                    type="button"
+                    className="aqb-preview-action-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      duplicateCurrentBadge();
+                    }}
+                    aria-label={`Duplicate ${config.labelProduct.toLowerCase()}`}
+                    title={`Duplicate this ${config.labelProduct.toLowerCase()}`}
+                  >
+                    <DocumentDuplicateIcon className="h-5 w-5 shrink-0" />
+                    <span className="aqb-preview-action-btn__label">Copy</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="aqb-preview-action-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      deleteCurrentBadgeFromPreview();
+                    }}
+                    aria-label={`Delete ${config.labelProduct.toLowerCase()}`}
+                    title={`Delete this ${config.labelProduct.toLowerCase()}`}
+                  >
+                    <TrashIcon className="h-5 w-5 shrink-0" />
+                    <span className="aqb-preview-action-btn__label">
+                      Delete
+                    </span>
+                  </button>
+                </>
+              ) : null}
+              <button
+                type="button"
+                className={
+                  variant === "badge"
+                    ? "aqb-preview-action-btn"
+                    : "flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                }
+                onClick={() => setShowBadgeGridModal(true)}
+                aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
+                title={`View all ${config.labelProductPlural.toLowerCase()}`}
+              >
+                <Squares2X2Icon
+                  className={
+                    variant === "badge" ? "h-5 w-5 shrink-0" : "w-6 h-6"
+                  }
+                />
+                {variant === "badge" ? (
+                  <span className="aqb-preview-action-btn__label">
+                    View
+                    <br />
+                    All
+                  </span>
+                ) : null}
+              </button>
+              {variant !== "badge" ? (
+                <div className="text-[14px] text-gray-600 text-center leading-tight">
+                  View
+                  <br />
+                  All
+                </div>
+              ) : null}
+              {variant === "badge" ? (
                 <button
                   type="button"
                   className="aqb-preview-action-btn"
                   onClick={(e) => {
                     e.preventDefault();
+                    setCsvText("");
+                    setCsvPreview([]);
+                    setCsvError("");
+                    setCsvWarning("");
+                    setShowCsvModal(true);
+                  }}
+                  aria-label="Add multiple badges from CSV"
+                  title="Add multiple badges from CSV"
+                >
+                  <AddMultipleGridIcon className="h-5 w-5 shrink-0 stroke-[1.75]" />
+                  <span className="aqb-preview-action-btn__label">
+                    Add
+                    <br />
+                    Multiple
+                  </span>
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          <h2
+            className={`text-xl font-bold text-gray-800 w-full text-center ${
+              variant === "badge" ? "mb-1" : "mb-2"
+            }`}
+          >
+            {config.labelProduct} Preview
+          </h2>
+          {variant === "badge" ? (
+            <p className="mb-2 w-full text-center text-[14px] leading-snug text-[#6b7f92]">
+              Use View All to see and edit more badges
+            </p>
+          ) : null}
+          <div
+            className={`w-full flex items-center justify-center relative select-none rounded-lg border overflow-hidden ${
+              variant === "plaque"
+                ? "bg-gray-100 border-gray-300"
+                : "bg-white/60 border-gray-200"
+            }`}
+            style={{
+              padding: `${MOBILE_PREVIEW.boxMarginYRem}rem ${MOBILE_PREVIEW.badgeMarginXRem}rem`,
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            {isGeneratingDesigns && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/85 rounded-lg">
+                <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-blue-600 mb-2" />
+                <span className="text-gray-700 font-medium">
+                  Generating {config.labelProduct.toLowerCase()} designs
+                </span>
+                <span className="text-gray-500 text-sm mt-1">
+                  Saving to database…
+                </span>
+              </div>
+            )}
+            {multipleBadges.length > 0 && variant !== "badge" ? (
+              <div className="absolute z-20 left-2 top-2 flex items-center gap-1.5">
+                <button
+                  type="button"
+                  className="flex h-9 w-9 md:h-10 md:w-10 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     duplicateCurrentBadge();
                   }}
                   aria-label={`Duplicate ${config.labelProduct.toLowerCase()}`}
                   title={`Duplicate this ${config.labelProduct.toLowerCase()}`}
                 >
-                  <DocumentDuplicateIcon className="h-5 w-5 shrink-0" />
-                  <span className="aqb-preview-action-btn__label">Copy</span>
+                  <DocumentDuplicateIcon className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
                 <button
                   type="button"
-                  className="aqb-preview-action-btn"
+                  className="flex h-9 w-9 md:h-10 md:w-10 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
                   onClick={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     deleteCurrentBadgeFromPreview();
                   }}
                   aria-label={`Delete ${config.labelProduct.toLowerCase()}`}
                   title={`Delete this ${config.labelProduct.toLowerCase()}`}
                 >
-                  <TrashIcon className="h-5 w-5 shrink-0" />
-                  <span className="aqb-preview-action-btn__label">Delete</span>
+                  <TrashIcon className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
-              </>
-            ) : null}
-            <button
-              type="button"
-              className={
-                variant === "badge"
-                  ? "aqb-preview-action-btn"
-                  : "flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-              }
-              onClick={() => setShowBadgeGridModal(true)}
-              aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
-              title={`View all ${config.labelProductPlural.toLowerCase()}`}
-            >
-              <Squares2X2Icon
-                className={variant === "badge" ? "h-5 w-5 shrink-0" : "w-6 h-6"}
-              />
-              {variant === "badge" ? (
-                <span className="aqb-preview-action-btn__label">Grid</span>
-              ) : null}
-            </button>
-            {variant !== "badge" ? (
-              <div className="text-[14px] text-gray-600 text-center leading-tight">
-                Grid
-                <br />
-                View
               </div>
             ) : null}
-            {variant === "badge" ? (
+            {totalBadges > 1 && canGoPrev && (
               <button
                 type="button"
-                className="aqb-preview-action-btn"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setCsvText("");
-                  setCsvPreview([]);
-                  setCsvError("");
-                  setShowCsvModal(true);
-                }}
-                aria-label="Add multiple badges from CSV"
-                title="Add multiple badges from CSV"
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/90 shadow border border-gray-200 text-gray-700 hover:bg-gray-100"
+                onClick={() => selectBadge(selectedBadgeIndex - 1)}
+                aria-label="Previous badge"
               >
-                <AddMultipleGridIcon className="h-5 w-5 shrink-0 stroke-[1.75]" />
-                <span className="aqb-preview-action-btn__label">
-                  Add
-                  <br />
-                  Multiple
-                </span>
+                <ChevronLeftIcon className="w-6 h-6" />
               </button>
-            ) : null}
-          </div>
-        </div>
-
-        <h2
-          className={`text-xl font-bold text-gray-800 w-full text-center ${
-            variant === "badge" ? "mb-1" : "mb-2"
-          }`}
-        >
-          {config.labelProduct} Preview
-        </h2>
-        {variant === "badge" ? (
-          <p className="mb-2 w-full text-center text-[14px] leading-snug text-[#6b7f92]">
-            Select grid view to view more badges
-          </p>
-        ) : null}
-        <div
-          className={`w-full flex items-center justify-center relative select-none rounded-lg border overflow-hidden ${
-            variant === "plaque"
-              ? "bg-gray-100 border-gray-300"
-              : "bg-white/60 border-gray-200"
-          }`}
-          style={{
-            padding: `${MOBILE_PREVIEW.boxMarginYRem}rem ${MOBILE_PREVIEW.badgeMarginXRem}rem`,
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-        >
-          {isGeneratingDesigns && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/85 rounded-lg">
-              <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-blue-600 mb-2" />
-              <span className="text-gray-700 font-medium">
-                Generating {config.labelProduct.toLowerCase()} designs
-              </span>
-              <span className="text-gray-500 text-sm mt-1">
-                Saving to database…
-              </span>
-            </div>
-          )}
-          {multipleBadges.length > 0 && variant !== "badge" ? (
-            <div className="absolute z-20 left-2 top-2 flex items-center gap-1.5">
-              <button
-                type="button"
-                className="flex h-9 w-9 md:h-10 md:w-10 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  duplicateCurrentBadge();
-                }}
-                aria-label={`Duplicate ${config.labelProduct.toLowerCase()}`}
-                title={`Duplicate this ${config.labelProduct.toLowerCase()}`}
-              >
-                <DocumentDuplicateIcon className="w-4 h-4 md:w-5 md:h-5" />
-              </button>
-              <button
-                type="button"
-                className="flex h-9 w-9 md:h-10 md:w-10 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  deleteCurrentBadgeFromPreview();
-                }}
-                aria-label={`Delete ${config.labelProduct.toLowerCase()}`}
-                title={`Delete this ${config.labelProduct.toLowerCase()}`}
-              >
-                <TrashIcon className="w-4 h-4 md:w-5 md:h-5" />
-              </button>
-            </div>
-          ) : null}
-          {totalBadges > 1 && canGoPrev && (
-            <button
-              type="button"
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/90 shadow border border-gray-200 text-gray-700 hover:bg-gray-100"
-              onClick={() => selectBadge(selectedBadgeIndex - 1)}
-              aria-label="Previous badge"
-            >
-              <ChevronLeftIcon className="w-6 h-6" />
-            </button>
-          )}
-          {totalBadges > 1 && canGoNext && (
-            <button
-              type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/90 shadow border border-gray-200 text-gray-700 hover:bg-gray-100"
-              onClick={() => selectBadge(selectedBadgeIndex + 1)}
-              aria-label="Next badge"
-            >
-              <ChevronRightIcon className="w-6 h-6" />
-            </button>
-          )}
-          <div
-            className="flex flex-shrink-0 items-center justify-center"
-            style={previewBoxStyle}
-          >
-            {multipleBadges.length === 0 ? (
-              <div className="text-center text-gray-500 text-sm px-4">
-                {variant === "plaque"
-                  ? selectedPlaqueLayoutId == null
-                    ? "Choose a layout below to get started"
-                    : "Choose a size below to get started"
-                  : "Select a shape below to get started"}
-              </div>
-            ) : (
-              (() => {
-                const p = getBadgeForPreview(
-                  selectedBadgeIndex,
-                  getSavedBadgeFor(selectedBadgeIndex),
-                );
-                return (
-                  <BadgeSvgRenderer
-                    key={`svg-prev-${p.templateId}-${p.badge.backgroundColor ?? ""}-${p.badge.badgeIconId ?? "noicon"}-${p.badge.plaqueFormatId ?? ""}-${p.badge.plaqueUseDefaultAttachedAwardVisual ? "vdef" : "vno"}-${selectedBadgeIndex}`}
-                    variant={variant}
-                    badge={p.badge}
-                    templateId={p.templateId}
-                    height="100%"
-                  />
-                );
-              })()
             )}
+            {totalBadges > 1 && canGoNext && (
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/90 shadow border border-gray-200 text-gray-700 hover:bg-gray-100"
+                onClick={() => selectBadge(selectedBadgeIndex + 1)}
+                aria-label="Next badge"
+              >
+                <ChevronRightIcon className="w-6 h-6" />
+              </button>
+            )}
+            <div
+              className="flex flex-shrink-0 items-center justify-center"
+              style={previewBoxStyle}
+            >
+              {multipleBadges.length === 0 ? (
+                <div className="text-center text-gray-500 text-sm px-4">
+                  {variant === "plaque"
+                    ? selectedPlaqueLayoutId == null
+                      ? "Choose a layout below to get started"
+                      : "Choose a size below to get started"
+                    : "Select a shape below to get started"}
+                </div>
+              ) : (
+                (() => {
+                  const p = getBadgeForPreview(
+                    selectedBadgeIndex,
+                    getSavedBadgeFor(selectedBadgeIndex),
+                  );
+                  return (
+                    <BadgeSvgRenderer
+                      key={`svg-prev-${p.templateId}-${
+                        p.badge.backgroundColor ?? ""
+                      }-${p.badge.badgeIconId ?? "noicon"}-${
+                        p.badge.plaqueFormatId ?? ""
+                      }-${
+                        p.badge.plaqueUseDefaultAttachedAwardVisual
+                          ? "vdef"
+                          : "vno"
+                      }-${selectedBadgeIndex}`}
+                      variant={variant}
+                      badge={p.badge}
+                      templateId={p.templateId}
+                      height="100%"
+                    />
+                  );
+                })()
+              )}
+            </div>
           </div>
+          {aqbBadgeToolActions ? (
+            <div className="shrink-0 md:hidden">{aqbBadgeToolActions}</div>
+          ) : null}
         </div>
-        {aqbBadgeToolActions ? (
-          <div className="shrink-0 md:hidden">{aqbBadgeToolActions}</div>
-        ) : null}
-      </div>
 
-      {/* LEFT COLUMN - Controls */}
-      <div className="aqb-left-panel w-full md:min-w-0 overflow-y-auto flex-1 min-h-0 md:max-h-[calc(100vh-48px)] md:self-start rounded-xl border border-[rgba(13,27,42,0.1)] bg-white shadow-[0_2px_12px_rgba(13,27,42,0.06)] flex flex-col">
-        <div
-          className={`w-full shrink-0 flex-col border-b border-[rgba(13,27,42,0.1)] bg-[#F8F7F4] flex ${
-            variant === "badge"
-              ? "gap-0 px-6 py-[14px]"
-              : "hidden gap-3 px-5 py-4 sm:px-6 md:flex"
-          }`}
-        >
+        {/* LEFT COLUMN - Controls */}
+        <div className="aqb-left-panel w-full md:min-w-0 overflow-y-auto flex-1 min-h-0 md:max-h-[calc(100vh-48px)] md:self-start rounded-xl border border-[rgba(13,27,42,0.1)] bg-white shadow-[0_2px_12px_rgba(13,27,42,0.06)] flex flex-col">
+          <div
+            className={`w-full shrink-0 flex-col border-b border-[rgba(13,27,42,0.1)] bg-[#F8F7F4] flex ${
+              variant === "badge"
+                ? "gap-0 px-6 py-[14px]"
+                : "hidden gap-3 px-5 py-4 sm:px-6 md:flex"
+            }`}
+          >
             <div
               className={`flex w-full min-w-0 items-center justify-between gap-3 ${
                 variant === "badge" ? "mb-[10px]" : ""
@@ -8119,7 +8177,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 <h2 className="text-[14px] font-bold uppercase leading-tight tracking-[0.5px] text-[#0D1B2A]">
                   {multipleBadges.length === 0
                     ? `Customize your ${config.labelProduct.toLowerCase()}`
-                    : `Customize your ${config.labelProduct.toLowerCase()} — ${selectedBadgeIndex + 1} of ${totalBadges}`}
+                    : `Customize your ${config.labelProduct.toLowerCase()} — ${
+                        selectedBadgeIndex + 1
+                      } of ${totalBadges}`}
                 </h2>
                 {multipleBadges.length > 0 && activeTemplate && (
                   <span className="mt-0.5 block text-[14px] font-semibold leading-tight text-[#c8962a]">
@@ -8156,8 +8216,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     !plaqueLogoOk &&
                     (requiresPlaqueLogo
                       ? true
-                      : !hasStep3TextEntered &&
-                        !sectionsOpened.textLines);
+                      : !hasStep3TextEntered && !sectionsOpened.textLines);
                   const plaqueCanEditText = requiresPlaqueLogo
                     ? plaqueLogoOk
                     : plaqueLogoOk || sectionsOpened.textLines;
@@ -8165,8 +8224,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     ? "Image"
                     : "Image · optional";
                   const plaqueStyleDone =
-                    selectedPlaqueLayoutId != null ||
-                    multipleBadges.length > 0;
+                    selectedPlaqueLayoutId != null || multipleBadges.length > 0;
                   const plaqueSizeDone = multipleBadges.length > 0;
                   const steps: {
                     label: string;
@@ -8254,11 +8312,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       <div className="flex flex-col items-center flex-shrink-0">
                         <div
                           className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                          step.done
-                            ? "bg-[#2D9E75] text-white"
-                            : step.current
-                            ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
-                            : "bg-[#D4CEC6] text-white"
+                            step.done
+                              ? "bg-[#2D9E75] text-white"
+                              : step.current
+                              ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
+                              : "bg-[#D4CEC6] text-white"
                           }`}
                         >
                           {step.done ? (
@@ -8380,9 +8438,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     <div className="flex flex-shrink-0 flex-col items-center">
                       <div
                         className={`${
-                          variant === "badge"
-                            ? "w-[26px] h-[26px]"
-                            : "w-5 h-5"
+                          variant === "badge" ? "w-[26px] h-[26px]" : "w-5 h-5"
                         } rounded-full flex items-center justify-center ${
                           step.done
                             ? "bg-[#2D9E75] text-white"
@@ -8419,8 +8475,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             ? step.done
                               ? "font-medium text-[#2d9e75]"
                               : step.current
-                                ? "font-semibold text-[#0d1b2a]"
-                                : "font-medium text-[#6b7f92]"
+                              ? "font-semibold text-[#0d1b2a]"
+                              : "font-medium text-[#6b7f92]"
                             : "text-gray-600"
                         }`}
                       >
@@ -8431,14 +8487,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 ));
               })()}
             </div>
-        </div>
+          </div>
 
-        <div
-          className={`section-container flex-1 min-h-0 ${
-            variant === "badge" ? "mb-0 min-w-0 px-0" : "mb-4 px-4 md:px-5"
-          }`}
-        >
-          {/* <button
+          <div
+            className={`section-container flex-1 min-h-0 ${
+              variant === "badge" ? "mb-0 min-w-0 px-0" : "mb-4 px-4 md:px-5"
+            }`}
+          >
+            {/* <button
               className="px-2 py-1 text-xs border rounded bg-gray-100 hover:bg-gray-200"
               onClick={() => {
                 console.log("[BadgeDesignerRedesign] Refreshing templates...");
@@ -8449,195 +8505,254 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               Refresh
             </button> */}
 
-          {/* Template Selector - Image Swatches */}
-          <div
-            className={
-              variant === "badge"
-                ? "w-full min-w-0 border-b border-[rgba(13,27,42,0.1)]"
-                : "mb-4"
-            }
-          >
-            {variant === "badge" && aqbBadgeStepHeaderModel ? (
-              <AqbBadgeStepSectionToggle
-                buttonRef={templateSectionRef}
-                stepNumber={1}
-                visualState={aqbBadgeStepHeaderModel.template.state}
-                title="Step 1: Pick a template"
-                summary={aqbBadgeStepHeaderModel.template.summary}
-                open={sectionsOpen.template}
-                onClick={() => {
-                  const willBeOpen = !sectionsOpen.template;
-                  setSectionsOpen({
-                    template: willBeOpen,
-                    size: false,
-                    export: false,
-                    background: false,
-                    textLines: false,
-                    backing: false,
-                    border: false,
-                  });
-                  setSectionsOpened((prev) => ({ ...prev, template: true }));
-                }}
-              />
-            ) : (
-              <button
-                ref={templateSectionRef}
-                type="button"
-                onClick={() => {
-                  const willBeOpen = !sectionsOpen.template;
-                  setSectionsOpen({
-                    template: willBeOpen,
-                    size: false,
-                    export: false,
-                    background: false,
-                    textLines: false,
-                    backing: false,
-                    border: false,
-                  });
-                  // Mark as opened when user interacts with the section
-                  setSectionsOpened((prev) => ({ ...prev, template: true }));
-                }}
-                className="flex items-center justify-between w-full mb-2 text-left"
-              >
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-[#0D1B2A]">
-                    {variant === "plaque"
-                      ? "Step 1: Choose layout"
-                      : "Step 1: Pick a template"}
-                  </h3>
-                  {(variant === "plaque"
-                    ? selectedPlaqueLayoutId != null ||
-                      multipleBadges.length > 0
-                    : multipleBadges.length > 0) && (
-                    <CheckCircleIcon className="w-5 h-5 text-green-600" />
-                  )}
-                </div>
-                {sectionsOpen.template ? (
-                  <ChevronUpIcon className="w-5 h-5 text-gray-600" />
-                ) : (
-                  <ChevronDownIcon className="w-5 h-5 text-gray-600" />
-                )}
-              </button>
-            )}
+            {/* Template Selector - Image Swatches */}
             <div
-              className={`transition-all duration-300 overflow-hidden ${
+              className={
                 variant === "badge"
-                  ? sectionsOpen.template
-                    ? "px-6 pb-5 pt-2"
-                    : "p-0"
-                  : ""
-              } ${
-                sectionsOpen.template
-                  ? "max-h-[2000px] opacity-100"
-                  : "max-h-0 opacity-0"
-              }`}
+                  ? "w-full min-w-0 border-b border-[rgba(13,27,42,0.1)]"
+                  : "mb-4"
+              }
             >
-              {templates.length === 0 ? (
-                <div className="text-sm text-gray-500">
-                  Loading templates...
-                </div>
+              {variant === "badge" && aqbBadgeStepHeaderModel ? (
+                <AqbBadgeStepSectionToggle
+                  buttonRef={templateSectionRef}
+                  stepNumber={1}
+                  visualState={aqbBadgeStepHeaderModel.template.state}
+                  title="Step 1: Pick a template"
+                  summary={aqbBadgeStepHeaderModel.template.summary}
+                  open={sectionsOpen.template}
+                  onClick={() => {
+                    const willBeOpen = !sectionsOpen.template;
+                    setSectionsOpen({
+                      template: willBeOpen,
+                      size: false,
+                      export: false,
+                      background: false,
+                      textLines: false,
+                      backing: false,
+                      border: false,
+                    });
+                    setSectionsOpened((prev) => ({ ...prev, template: true }));
+                  }}
+                />
               ) : (
-                <>
-                  {/* Helper function to get thumbnail filename */}
-                  {(() => {
-                    const getThumbnailFilename = (
-                      templateId: string,
-                    ): string => {
-                      const thumbnailMap: Record<string, string> = {
-                        "rect-1x3": "3x1-Round-Corners-Badge",
-                        "rect-1_5x3": "3x1.5-Round-Corners-Badge",
-                        "oval-1_5x3": "3x1.5-Oval-Badge",
-                        "house-1_5x3": "3x1.5-House-Badge",
-                        "square-1x3": "3x1-Badge",
-                        "square-1_5x3": "3x1.5-Badge",
-                        "designer-1x3": "3x1-Designer-Badge",
-                        "fancy-1_5x3": "3x1.5-Fancy-Badge",
+                <button
+                  ref={templateSectionRef}
+                  type="button"
+                  onClick={() => {
+                    const willBeOpen = !sectionsOpen.template;
+                    setSectionsOpen({
+                      template: willBeOpen,
+                      size: false,
+                      export: false,
+                      background: false,
+                      textLines: false,
+                      backing: false,
+                      border: false,
+                    });
+                    // Mark as opened when user interacts with the section
+                    setSectionsOpened((prev) => ({ ...prev, template: true }));
+                  }}
+                  className="flex items-center justify-between w-full mb-2 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                      {variant === "plaque"
+                        ? "Step 1: Choose layout"
+                        : "Step 1: Pick a template"}
+                    </h3>
+                    {(variant === "plaque"
+                      ? selectedPlaqueLayoutId != null ||
+                        multipleBadges.length > 0
+                      : multipleBadges.length > 0) && (
+                      <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                    )}
+                  </div>
+                  {sectionsOpen.template ? (
+                    <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+                  ) : (
+                    <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+                  )}
+                </button>
+              )}
+              <div
+                className={`transition-all duration-300 overflow-hidden ${
+                  variant === "badge"
+                    ? sectionsOpen.template
+                      ? "px-6 pb-5 pt-2"
+                      : "p-0"
+                    : ""
+                } ${
+                  sectionsOpen.template
+                    ? "max-h-[2000px] opacity-100"
+                    : "max-h-0 opacity-0"
+                }`}
+              >
+                {templates.length === 0 ? (
+                  <div className="text-sm text-gray-500">
+                    Loading templates...
+                  </div>
+                ) : (
+                  <>
+                    {/* Helper function to get thumbnail filename */}
+                    {(() => {
+                      const getThumbnailFilename = (
+                        templateId: string,
+                      ): string => {
+                        const thumbnailMap: Record<string, string> = {
+                          "rect-1x3": "3x1-Round-Corners-Badge",
+                          "rect-1_5x3": "3x1.5-Round-Corners-Badge",
+                          "oval-1_5x3": "3x1.5-Oval-Badge",
+                          "house-1_5x3": "3x1.5-House-Badge",
+                          "square-1x3": "3x1-Badge",
+                          "square-1_5x3": "3x1.5-Badge",
+                          "designer-1x3": "3x1-Designer-Badge",
+                          "fancy-1_5x3": "3x1.5-Fancy-Badge",
+                        };
+                        return thumbnailMap[templateId] || templateId;
                       };
-                      return thumbnailMap[templateId] || templateId;
-                    };
 
-                    const BADGE_FEATURED_TEMPLATE_TAGLINE: Record<
-                      string,
-                      string
-                    > = {
-                      "rect-1x3": "Standard size · Most popular",
-                      "rect-1_5x3": "Roomier plate · Easy to read",
-                      "oval-1_5x3": "Classic oval · Smooth profile",
-                      "house-1_5x3": "House profile · Stand-out shape",
-                    };
+                      const BADGE_FEATURED_TEMPLATE_TAGLINE: Record<
+                        string,
+                        string
+                      > = {
+                        "rect-1x3": "Standard size · Most popular",
+                        "rect-1_5x3": "Roomier plate · Easy to read",
+                        "oval-1_5x3": "Classic oval · Smooth profile",
+                        "house-1_5x3": "House profile · Stand-out shape",
+                      };
 
-                    const renderTemplateButton = (t: LoadedTemplate) => {
-                      const thumbnailFilename = getThumbnailFilename(t.id);
-                      const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
-                      const svgPath = t.svgFile
-                        ? t.svgFile.includes(" ")
-                          ? encodeURI(t.svgFile)
-                          : t.svgFile
-                        : `/templates/${
-                            isSignLikeVariant(variant) ? "sign/" : "badge/"
-                          }${t.id}.svg`;
-                      const previewSrc =
-                        templatePreviewDataUrls[t.id] ||
-                        (t.svgFile
+                      const renderTemplateButton = (t: LoadedTemplate) => {
+                        const thumbnailFilename = getThumbnailFilename(t.id);
+                        const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
+                        const svgPath = t.svgFile
                           ? t.svgFile.includes(" ")
                             ? encodeURI(t.svgFile)
                             : t.svgFile
-                          : thumbnailPath);
-                      const isSelected =
-                        multipleBadges.length > 0 &&
-                        universalTemplateId === t.id;
+                          : `/templates/${
+                              isSignLikeVariant(variant) ? "sign/" : "badge/"
+                            }${t.id}.svg`;
+                        const previewSrc =
+                          templatePreviewDataUrls[t.id] ||
+                          (t.svgFile
+                            ? t.svgFile.includes(" ")
+                              ? encodeURI(t.svgFile)
+                              : t.svgFile
+                            : thumbnailPath);
+                        const isSelected =
+                          multipleBadges.length > 0 &&
+                          universalTemplateId === t.id;
 
-                      const signThumbScale =
-                        isSignLikeVariant(variant) &&
-                        getSignTemplateUiContentScale(t.id) !== 1;
+                        const signThumbScale =
+                          isSignLikeVariant(variant) &&
+                          getSignTemplateUiContentScale(t.id) !== 1;
 
-                      const imgOnError = (e: React.SyntheticEvent<
-                        HTMLImageElement,
-                        Event
-                      >) => {
-                        const target = e.target as HTMLImageElement;
-                        if (previewSrc === thumbnailPath) {
-                          target.style.display = "none";
-                          const svgImg = document.createElement("img");
-                          svgImg.src = svgPath;
-                          svgImg.className = "object-contain";
-                          const st = signTemplatePickerImgStyle(
-                            t.id,
-                            isSignLikeVariant(variant),
-                          );
-                          svgImg.style.maxWidth = String(st.maxWidth ?? "100%");
-                          svgImg.style.maxHeight = String(
-                            st.maxHeight ?? "100%",
-                          );
-                          svgImg.style.width = String(st.width ?? "auto");
-                          svgImg.style.height = String(st.height ?? "auto");
-                          svgImg.style.objectFit = String(
-                            st.objectFit ?? "contain",
-                          );
-                          if (st.transform)
-                            svgImg.style.transform = st.transform;
-                          if (st.transformOrigin != null)
-                            svgImg.style.transformOrigin = String(
-                              st.transformOrigin,
+                        const imgOnError = (
+                          e: React.SyntheticEvent<HTMLImageElement, Event>,
+                        ) => {
+                          const target = e.target as HTMLImageElement;
+                          if (previewSrc === thumbnailPath) {
+                            target.style.display = "none";
+                            const svgImg = document.createElement("img");
+                            svgImg.src = svgPath;
+                            svgImg.className = "object-contain";
+                            const st = signTemplatePickerImgStyle(
+                              t.id,
+                              isSignLikeVariant(variant),
                             );
-                          svgImg.alt = t.name;
-                          target.parentElement?.appendChild(svgImg);
-                        }
-                      };
+                            svgImg.style.maxWidth = String(
+                              st.maxWidth ?? "100%",
+                            );
+                            svgImg.style.maxHeight = String(
+                              st.maxHeight ?? "100%",
+                            );
+                            svgImg.style.width = String(st.width ?? "auto");
+                            svgImg.style.height = String(st.height ?? "auto");
+                            svgImg.style.objectFit = String(
+                              st.objectFit ?? "contain",
+                            );
+                            if (st.transform)
+                              svgImg.style.transform = st.transform;
+                            if (st.transformOrigin != null)
+                              svgImg.style.transformOrigin = String(
+                                st.transformOrigin,
+                              );
+                            svgImg.alt = t.name;
+                            target.parentElement?.appendChild(svgImg);
+                          }
+                        };
 
-                      if (variant === "badge") {
-                        const subtitle =
-                          BADGE_FEATURED_TEMPLATE_TAGLINE[t.id] ??
-                          "Official badge layout";
+                        if (variant === "badge") {
+                          const subtitle =
+                            BADGE_FEATURED_TEMPLATE_TAGLINE[t.id] ??
+                            "Official badge layout";
+                          return (
+                            <div key={t.id} className="relative min-w-0">
+                              <button
+                                type="button"
+                                className={`relative flex w-full flex-col overflow-hidden rounded-[9px] bg-white transition-all ${
+                                  isSelected
+                                    ? "border-2 border-[#0d1b2a] shadow-[0_0_0_2px_rgba(13,27,42,0.08)]"
+                                    : "border-2 border-[rgba(13,27,42,0.1)] hover:border-[#3a4f63]"
+                                }`}
+                                onClick={() => {
+                                  console.log(
+                                    "[UNIVERSAL] Template changed to:",
+                                    t.id,
+                                  );
+                                  handleUniversalTemplateChange(t.id);
+                                }}
+                                title={t.name}
+                              >
+                                <div
+                                  className={`flex h-[90px] shrink-0 items-center justify-center bg-[#f0ede6] p-2.5 ${
+                                    signThumbScale
+                                      ? "overflow-visible"
+                                      : "overflow-hidden"
+                                  }`}
+                                >
+                                  <img
+                                    src={previewSrc}
+                                    alt={t.name}
+                                    className="max-h-[70px] w-auto max-w-full object-contain"
+                                    style={signTemplatePickerImgStyle(
+                                      t.id,
+                                      isSignLikeVariant(variant),
+                                    )}
+                                    onError={imgOnError}
+                                  />
+                                </div>
+                                <div className="shrink-0 bg-white px-3 pb-2.5 pt-1.5 text-center">
+                                  <div className="text-[14px] font-semibold leading-tight text-[#0d1b2a]">
+                                    {t.name}
+                                  </div>
+                                  <div className="mt-0.5 text-[14px] leading-snug text-[#6b7f92]">
+                                    {subtitle}
+                                  </div>
+                                </div>
+                              </button>
+                            </div>
+                          );
+                        }
+
                         return (
-                          <div key={t.id} className="relative min-w-0">
+                          <div key={t.id} className="relative">
                             <button
                               type="button"
-                              className={`relative flex w-full flex-col overflow-hidden rounded-[9px] bg-white transition-all ${
+                              className={`relative rounded-lg ${
+                                signThumbScale
+                                  ? "overflow-visible"
+                                  : "overflow-hidden"
+                              } transition-all w-full border bg-white ${
                                 isSelected
-                                  ? "border-2 border-[#0d1b2a] shadow-[0_0_0_2px_rgba(13,27,42,0.08)]"
-                                  : "border-2 border-[rgba(13,27,42,0.1)] hover:border-[#3a4f63]"
+                                  ? "border-blue-600 ring-2 ring-blue-300 shadow-md"
+                                  : "border-gray-300 hover:border-gray-400"
                               }`}
+                              style={{
+                                height: "140px",
+                                display: "flex",
+                                flexDirection: "column",
+                              }}
                               onClick={() => {
                                 console.log(
                                   "[UNIVERSAL] Template changed to:",
@@ -8648,16 +8763,35 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               title={t.name}
                             >
                               <div
-                                className={`flex h-[90px] shrink-0 items-center justify-center bg-[#f0ede6] p-2.5 ${
+                                className={`text-center py-1 flex-shrink-0 leading-tight ${
+                                  isSelected
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-gray-200 text-gray-700"
+                                }`}
+                                style={{
+                                  fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
+                                }}
+                              >
+                                {t.name}
+                              </div>
+                              <div
+                                className={`flex-1 ${
                                   signThumbScale
                                     ? "overflow-visible"
                                     : "overflow-hidden"
-                                }`}
+                                } flex items-center justify-center`}
+                                style={{
+                                  minHeight: 0,
+                                  width: "100%",
+                                  height: "100%",
+                                  padding: "6px",
+                                  boxSizing: "border-box",
+                                }}
                               >
                                 <img
                                   src={previewSrc}
                                   alt={t.name}
-                                  className="max-h-[70px] w-auto max-w-full object-contain"
+                                  className="object-contain"
                                   style={signTemplatePickerImgStyle(
                                     t.id,
                                     isSignLikeVariant(variant),
@@ -8665,256 +8799,34 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                   onError={imgOnError}
                                 />
                               </div>
-                              <div className="shrink-0 bg-white px-3 pb-2.5 pt-1.5 text-center">
-                                <div className="text-[14px] font-semibold leading-tight text-[#0d1b2a]">
-                                  {t.name}
-                                </div>
-                                <div className="mt-0.5 text-[14px] leading-snug text-[#6b7f92]">
-                                  {subtitle}
-                                </div>
-                              </div>
                             </button>
                           </div>
                         );
-                      }
-
-                      return (
-                        <div key={t.id} className="relative">
-                          <button
-                            type="button"
-                            className={`relative rounded-lg ${
-                              signThumbScale
-                                ? "overflow-visible"
-                                : "overflow-hidden"
-                            } transition-all w-full border bg-white ${
-                              isSelected
-                                ? "border-blue-600 ring-2 ring-blue-300 shadow-md"
-                                : "border-gray-300 hover:border-gray-400"
-                            }`}
-                            style={{
-                              height: "140px",
-                              display: "flex",
-                              flexDirection: "column",
-                            }}
-                            onClick={() => {
-                              console.log(
-                                "[UNIVERSAL] Template changed to:",
-                                t.id,
-                              );
-                              handleUniversalTemplateChange(t.id);
-                            }}
-                            title={t.name}
-                          >
-                            <div
-                              className={`text-center py-1 flex-shrink-0 leading-tight ${
-                                isSelected
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-gray-200 text-gray-700"
-                              }`}
-                              style={{
-                                fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
-                              }}
-                            >
-                              {t.name}
-                            </div>
-                            <div
-                              className={`flex-1 ${
-                                signThumbScale
-                                  ? "overflow-visible"
-                                  : "overflow-hidden"
-                              } flex items-center justify-center`}
-                              style={{
-                                minHeight: 0,
-                                width: "100%",
-                                height: "100%",
-                                padding: "6px",
-                                boxSizing: "border-box",
-                              }}
-                            >
-                              <img
-                                src={previewSrc}
-                                alt={t.name}
-                                className="object-contain"
-                                style={signTemplatePickerImgStyle(
-                                  t.id,
-                                  isSignLikeVariant(variant),
-                                )}
-                                onError={imgOnError}
-                              />
-                            </div>
-                          </button>
-                        </div>
-                      );
-                    };
-
-                    if (variant === "plaque") {
-                      return (
-                        <div className="grid grid-cols-2 gap-2 mb-2">
-                          {PLAQUE_LAYOUT_OPTIONS.map((opt) => {
-                            const thumbId = opt.thumbnailTemplateId;
-                            const t = templates.find((x) => x.id === thumbId);
-                            const previewSrc =
-                              templatePreviewDataUrls[thumbId] ||
-                              (t?.svgFile != null
-                                ? t.svgFile.includes(" ")
-                                  ? encodeURI(t.svgFile)
-                                  : t.svgFile
-                                : "");
-                            const parsed = parsePlaqueTemplateId(
-                              universalTemplateId,
-                            );
-                            /** Avoid double highlight during async template load: parsed id lags behind `selectedPlaqueLayoutId`. */
-                            const isSelected =
-                              selectedPlaqueLayoutId != null
-                                ? selectedPlaqueLayoutId === opt.id
-                                : multipleBadges.length > 0 &&
-                                  parsed?.layoutId === opt.id;
-                            return (
-                              <div key={opt.id} className="relative">
-                                <button
-                                  type="button"
-                                  className={`relative rounded-lg overflow-hidden transition-all w-full border bg-white ${
-                                    isSelected
-                                      ? "border-blue-600 ring-2 ring-blue-300 shadow-md"
-                                      : "border-gray-300 hover:border-gray-400"
-                                  }`}
-                                  style={{
-                                    height: "160px",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                  }}
-                                  onClick={() => {
-                                    setSelectedPlaqueLayoutId(opt.id);
-                                    if (multipleBadges.length === 0) {
-                                      if (
-                                        !plaqueLayoutGuidedAutoAdvanceDoneRef.current
-                                      ) {
-                                        setSectionsOpen({
-                                          template: false,
-                                          size: true,
-                                          export: false,
-                                          background: false,
-                                          textLines: false,
-                                          backing: false,
-                                          border: false,
-                                          plaqueFormat: false,
-                                        });
-                                        setSectionsOpened((prev) => ({
-                                          ...prev,
-                                          size: true,
-                                        }));
-                                        plaqueLayoutGuidedAutoAdvanceDoneRef.current =
-                                          true;
-                                      }
-                                      return;
-                                    }
-                                    const sz =
-                                      selectedPlaqueSize ?? DEFAULT_PLAQUE_SIZE;
-                                    const normalized =
-                                      normalizePlaqueSizeForLayout(
-                                        opt.id,
-                                        sz,
-                                      );
-                                    if (normalized !== sz) {
-                                      setSelectedPlaqueSize(normalized);
-                                    }
-                                    void handleUniversalTemplateChange(
-                                      buildPlaqueTemplateId(
-                                        opt.id,
-                                        normalized,
-                                      ),
-                                    );
-                                  }}
-                                  title={opt.description}
-                                >
-                                  <div
-                                    className={`text-center py-1 flex-shrink-0 leading-tight ${
-                                      isSelected
-                                        ? "bg-blue-600 text-white"
-                                        : "bg-gray-200 text-gray-700"
-                                    }`}
-                                    style={{
-                                      fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
-                                    }}
-                                  >
-                                    {opt.name}
-                                  </div>
-                                  <div
-                                    className="flex-1 overflow-hidden flex items-center justify-center"
-                                    style={{
-                                      minHeight: 0,
-                                      width: "100%",
-                                      height: "100%",
-                                      padding: "6px",
-                                      boxSizing: "border-box",
-                                    }}
-                                  >
-                                    {previewSrc ? (
-                                      <img
-                                        src={previewSrc}
-                                        alt={opt.name}
-                                        className="object-contain max-w-full max-h-full"
-                                      />
-                                    ) : (
-                                      <span className="text-gray-400 text-xs px-1 text-center leading-tight">
-                                        {opt.description}
-                                      </span>
-                                    )}
-                                  </div>
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    }
-
-                    // Sign: primary shape grid (Classic framed, Standard, Fancy, Designer); more in "more templates"
-                    if (variant === "sign") {
-                      const handleSignTypeSelect = (
-                        type: (typeof SIGN_TEMPLATE_TYPES)[0],
-                      ) => {
-                        const firstSizeId = type.sizes[0].templateId;
-                        setSelectedSignTemplateType(type.id);
-                        setUniversalTemplateId(firstSizeId);
-                        setSelectedSignSizeTemplateId(null);
-                        if (!templateGuidedAutoAdvanceDoneRef.current) {
-                          setSectionsOpen({
-                            template: false,
-                            size: true,
-                            export: false,
-                            background: false,
-                            textLines: false,
-                            backing: false,
-                            border: false,
-                          });
-                          setSectionsOpened((prev) => ({
-                            ...prev,
-                            size: true,
-                          }));
-                          templateGuidedAutoAdvanceDoneRef.current = true;
-                        }
-                        handleUniversalTemplateChange(firstSizeId);
                       };
-                      return (
-                        <>
+
+                      if (variant === "plaque") {
+                        return (
                           <div className="grid grid-cols-2 gap-2 mb-2">
-                            {SIGN_TEMPLATE_TYPES.map((type) => {
-                              const firstSizeId = type.sizes[0].templateId;
-                              const firstTemplate = templates.find(
-                                (t) => t.id === firstSizeId,
-                              );
+                            {PLAQUE_LAYOUT_OPTIONS.map((opt) => {
+                              const thumbId = opt.thumbnailTemplateId;
+                              const t = templates.find((x) => x.id === thumbId);
                               const previewSrc =
-                                templatePreviewDataUrls[firstSizeId] ||
-                                (firstTemplate?.svgFile != null
-                                  ? firstTemplate.svgFile.includes(" ")
-                                    ? encodeURI(firstTemplate.svgFile)
-                                    : firstTemplate.svgFile
+                                templatePreviewDataUrls[thumbId] ||
+                                (t?.svgFile != null
+                                  ? t.svgFile.includes(" ")
+                                    ? encodeURI(t.svgFile)
+                                    : t.svgFile
                                   : "");
+                              const parsed =
+                                parsePlaqueTemplateId(universalTemplateId);
+                              /** Avoid double highlight during async template load: parsed id lags behind `selectedPlaqueLayoutId`. */
                               const isSelected =
-                                selectedSignTemplateType === type.id;
+                                selectedPlaqueLayoutId != null
+                                  ? selectedPlaqueLayoutId === opt.id
+                                  : multipleBadges.length > 0 &&
+                                    parsed?.layoutId === opt.id;
                               return (
-                                <div key={type.id} className="relative">
+                                <div key={opt.id} className="relative">
                                   <button
                                     type="button"
                                     className={`relative rounded-lg overflow-hidden transition-all w-full border bg-white ${
@@ -8923,12 +8835,54 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                         : "border-gray-300 hover:border-gray-400"
                                     }`}
                                     style={{
-                                      height: "140px",
+                                      height: "160px",
                                       display: "flex",
                                       flexDirection: "column",
                                     }}
-                                    onClick={() => handleSignTypeSelect(type)}
-                                    title={type.name}
+                                    onClick={() => {
+                                      setSelectedPlaqueLayoutId(opt.id);
+                                      if (multipleBadges.length === 0) {
+                                        if (
+                                          !plaqueLayoutGuidedAutoAdvanceDoneRef.current
+                                        ) {
+                                          setSectionsOpen({
+                                            template: false,
+                                            size: true,
+                                            export: false,
+                                            background: false,
+                                            textLines: false,
+                                            backing: false,
+                                            border: false,
+                                            plaqueFormat: false,
+                                          });
+                                          setSectionsOpened((prev) => ({
+                                            ...prev,
+                                            size: true,
+                                          }));
+                                          plaqueLayoutGuidedAutoAdvanceDoneRef.current =
+                                            true;
+                                        }
+                                        return;
+                                      }
+                                      const sz =
+                                        selectedPlaqueSize ??
+                                        DEFAULT_PLAQUE_SIZE;
+                                      const normalized =
+                                        normalizePlaqueSizeForLayout(
+                                          opt.id,
+                                          sz,
+                                        );
+                                      if (normalized !== sz) {
+                                        setSelectedPlaqueSize(normalized);
+                                      }
+                                      void handleUniversalTemplateChange(
+                                        buildPlaqueTemplateId(
+                                          opt.id,
+                                          normalized,
+                                        ),
+                                      );
+                                    }}
+                                    title={opt.description}
                                   >
                                     <div
                                       className={`text-center py-1 flex-shrink-0 leading-tight ${
@@ -8940,7 +8894,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                         fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
                                       }}
                                     >
-                                      {type.name}
+                                      {opt.name}
                                     </div>
                                     <div
                                       className="flex-1 overflow-hidden flex items-center justify-center"
@@ -8955,24 +8909,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                       {previewSrc ? (
                                         <img
                                           src={previewSrc}
-                                          alt={type.name}
-                                          className="object-contain"
-                                          style={{
-                                            maxWidth: "100%",
-                                            maxHeight: "100%",
-                                            width: "auto",
-                                            height: "auto",
-                                            objectFit: "contain",
-                                          }}
+                                          alt={opt.name}
+                                          className="object-contain max-w-full max-h-full"
                                         />
                                       ) : (
-                                        <span
-                                          className="text-gray-400 text-center px-1"
-                                          style={{
-                                            fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
-                                          }}
-                                        >
-                                          {type.name}
+                                        <span className="text-gray-400 text-xs px-1 text-center leading-tight">
+                                          {opt.description}
                                         </span>
                                       )}
                                     </div>
@@ -8981,456 +8923,1616 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               );
                             })}
                           </div>
+                        );
+                      }
+
+                      // Sign: primary shape grid (Classic framed, Standard, Fancy, Designer); more in "more templates"
+                      if (variant === "sign") {
+                        const handleSignTypeSelect = (
+                          type: (typeof SIGN_TEMPLATE_TYPES)[0],
+                        ) => {
+                          const firstSizeId = type.sizes[0].templateId;
+                          setSelectedSignTemplateType(type.id);
+                          setUniversalTemplateId(firstSizeId);
+                          setSelectedSignSizeTemplateId(null);
+                          if (!templateGuidedAutoAdvanceDoneRef.current) {
+                            setSectionsOpen({
+                              template: false,
+                              size: true,
+                              export: false,
+                              background: false,
+                              textLines: false,
+                              backing: false,
+                              border: false,
+                            });
+                            setSectionsOpened((prev) => ({
+                              ...prev,
+                              size: true,
+                            }));
+                            templateGuidedAutoAdvanceDoneRef.current = true;
+                          }
+                          handleUniversalTemplateChange(firstSizeId);
+                        };
+                        return (
+                          <>
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                              {SIGN_TEMPLATE_TYPES.map((type) => {
+                                const firstSizeId = type.sizes[0].templateId;
+                                const firstTemplate = templates.find(
+                                  (t) => t.id === firstSizeId,
+                                );
+                                const previewSrc =
+                                  templatePreviewDataUrls[firstSizeId] ||
+                                  (firstTemplate?.svgFile != null
+                                    ? firstTemplate.svgFile.includes(" ")
+                                      ? encodeURI(firstTemplate.svgFile)
+                                      : firstTemplate.svgFile
+                                    : "");
+                                const isSelected =
+                                  selectedSignTemplateType === type.id;
+                                return (
+                                  <div key={type.id} className="relative">
+                                    <button
+                                      type="button"
+                                      className={`relative rounded-lg overflow-hidden transition-all w-full border bg-white ${
+                                        isSelected
+                                          ? "border-blue-600 ring-2 ring-blue-300 shadow-md"
+                                          : "border-gray-300 hover:border-gray-400"
+                                      }`}
+                                      style={{
+                                        height: "140px",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                      }}
+                                      onClick={() => handleSignTypeSelect(type)}
+                                      title={type.name}
+                                    >
+                                      <div
+                                        className={`text-center py-1 flex-shrink-0 leading-tight ${
+                                          isSelected
+                                            ? "bg-blue-600 text-white"
+                                            : "bg-gray-200 text-gray-700"
+                                        }`}
+                                        style={{
+                                          fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
+                                        }}
+                                      >
+                                        {type.name}
+                                      </div>
+                                      <div
+                                        className="flex-1 overflow-hidden flex items-center justify-center"
+                                        style={{
+                                          minHeight: 0,
+                                          width: "100%",
+                                          height: "100%",
+                                          padding: "6px",
+                                          boxSizing: "border-box",
+                                        }}
+                                      >
+                                        {previewSrc ? (
+                                          <img
+                                            src={previewSrc}
+                                            alt={type.name}
+                                            className="object-contain"
+                                            style={{
+                                              maxWidth: "100%",
+                                              maxHeight: "100%",
+                                              width: "auto",
+                                              height: "auto",
+                                              objectFit: "contain",
+                                            }}
+                                          />
+                                        ) : (
+                                          <span
+                                            className="text-gray-400 text-center px-1"
+                                            style={{
+                                              fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
+                                            }}
+                                          >
+                                            {type.name}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowTemplateModal(true)}
+                              className="text-sm text-blue-600 hover:text-blue-800 underline text-right py-1"
+                            >
+                              more templates
+                            </button>
+                          </>
+                        );
+                      }
+
+                      // Badge: featured templates + more templates link
+                      const featuredBadgeTemplateIds = [
+                        "rect-1x3",
+                        "rect-1_5x3",
+                        "oval-1_5x3",
+                        "house-1_5x3",
+                      ];
+                      const featuredTemplates = featuredBadgeTemplateIds
+                        .map((id) => templates.find((t) => t.id === id))
+                        .filter((t): t is LoadedTemplate => t !== undefined);
+
+                      return (
+                        <>
+                          <div className="mb-1 grid grid-cols-2 gap-[10px]">
+                            {featuredTemplates.map(renderTemplateButton)}
+                          </div>
                           <button
                             type="button"
                             onClick={() => setShowTemplateModal(true)}
-                            className="text-sm text-blue-600 hover:text-blue-800 underline text-right py-1"
+                            className={
+                              variant === "badge"
+                                ? "py-1 text-left text-sm font-medium text-[#c8962a] hover:underline"
+                                : "py-1 text-right text-sm text-blue-600 underline hover:text-blue-800"
+                            }
                           >
-                            more templates
+                            {variant === "badge"
+                              ? "+ More templates"
+                              : "more templates"}
                           </button>
                         </>
                       );
-                    }
-
-                    // Badge: featured templates + more templates link
-                    const featuredBadgeTemplateIds = [
-                      "rect-1x3",
-                      "rect-1_5x3",
-                      "oval-1_5x3",
-                      "house-1_5x3",
-                    ];
-                    const featuredTemplates = featuredBadgeTemplateIds
-                      .map((id) => templates.find((t) => t.id === id))
-                      .filter((t): t is LoadedTemplate => t !== undefined);
-
-                    return (
-                      <>
-                        <div className="mb-1 grid grid-cols-2 gap-[10px]">
-                          {featuredTemplates.map(renderTemplateButton)}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setShowTemplateModal(true)}
-                          className={
-                            variant === "badge"
-                              ? "py-1 text-left text-sm font-medium text-[#c8962a] hover:underline"
-                              : "py-1 text-right text-sm text-blue-600 underline hover:text-blue-800"
-                          }
-                        >
-                          {variant === "badge" ? "+ More templates" : "more templates"}
-                        </button>
-                      </>
-                    );
-                  })()}
-                </>
-              )}
-            </div>
-          </div>
-
-          {variant === "plaque" && (
-            <div className="mb-4">
-              <button
-                type="button"
-                onClick={() => {
-                  const msg = getIncompleteStepsMessage(2);
-                  if (msg) {
-                    alert(msg);
-                    return;
-                  }
-                  const willBeOpen = !sectionsOpen.size;
-                  setSectionsOpen({
-                    template: false,
-                    size: willBeOpen,
-                    export: false,
-                    background: false,
-                    textLines: false,
-                    backing: false,
-                    border: false,
-                    plaqueFormat: false,
-                  });
-                  if (willBeOpen) {
-                    setSectionsOpened((prev) => ({ ...prev, size: true }));
-                  }
-                }}
-                className="flex items-center justify-between w-full mb-2 text-left"
-              >
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-[#0D1B2A]">
-                    Step 2: Choose size
-                  </h3>
-                  {multipleBadges.length > 0 && (
-                    <CheckCircleIcon className="w-5 h-5 text-green-600" />
-                  )}
-                </div>
-                {sectionsOpen.size ? (
-                  <ChevronUpIcon className="w-5 h-5 text-gray-600" />
-                ) : (
-                  <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+                    })()}
+                  </>
                 )}
-              </button>
-              <div
-                className={`transition-all duration-300 overflow-hidden ${
-                  sectionsOpen.size
-                    ? "max-h-[520px] opacity-100"
-                    : "max-h-0 opacity-0"
-                }`}
-              >
-                <p className="text-xs text-gray-600 mb-2 leading-snug">
-                  Small (5×7&quot; wood) is only available for the attached
-                  plate style. Detached portrait and landscape use Medium and
-                  Large.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {plaqueSizeStepOptions.map((opt) => {
-                    const sizeDisplay = getPlaqueSizeStepDisplay(
-                      effectivePlaqueLayoutIdForStep2,
-                      opt.value,
-                    );
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => {
-                          if (multipleBadges.length > 0) {
-                            const parsed = parsePlaqueTemplateId(
-                              universalTemplateId,
-                            );
-                            if (!parsed) return;
-                            const normalized = normalizePlaqueSizeForLayout(
-                              parsed.layoutId,
-                              opt.value,
-                            );
-                            setSelectedPlaqueSize(normalized);
-                            void handleUniversalTemplateChange(
-                              buildPlaqueTemplateId(parsed.layoutId, normalized),
-                            );
-                            return;
-                          }
-                          if (!selectedPlaqueLayoutId) {
-                            alert("Please choose a layout in Step 1 first.");
-                            return;
-                          }
-                          const normalized = normalizePlaqueSizeForLayout(
-                            selectedPlaqueLayoutId,
-                            opt.value,
-                          );
-                          setSelectedPlaqueSize(normalized);
-                          void handleUniversalTemplateChange(
-                            buildPlaqueTemplateId(
-                              selectedPlaqueLayoutId,
-                              normalized,
-                            ),
-                          );
-                        }}
-                        className={`px-3 py-2 rounded border text-left text-sm font-medium transition-colors max-w-[260px] ${
-                          selectedPlaqueSize === opt.value
-                            ? "border-blue-600 bg-blue-50 text-blue-700"
-                            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                        }`}
-                      >
-                        <div>{sizeDisplay.primaryLine}</div>
-                        <div className="text-xs font-normal text-gray-500 mt-0.5 leading-snug space-y-0.5">
-                          {sizeDisplay.detailLines.map((line) => (
-                            <div key={line}>{line}</div>
-                          ))}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
             </div>
-          )}
 
-          {variant === "plaque" && plaqueAttachedSelected && (
-            <div className="mb-4">
-              <button
-                type="button"
-                onClick={() => {
-                  const msg = getIncompleteStepsMessage(3);
-                  if (msg) {
-                    alert(msg);
-                    return;
-                  }
-                  const willBeOpen = !(sectionsOpen.plaqueFormat ?? false);
-                  setSectionsOpen({
-                    template: false,
-                    size: false,
-                    export: false,
-                    background: false,
-                    textLines: false,
-                    backing: false,
-                    border: false,
-                    plaqueFormat: willBeOpen,
-                  });
-                  if (willBeOpen) {
-                    setSectionsOpened((prev) => ({
-                      ...prev,
-                      plaqueFormat: true,
-                    }));
-                  }
-                }}
-                className="flex items-center justify-between w-full mb-2 text-left"
-              >
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-[#0D1B2A]">
-                    Step 3: Choose award format
-                  </h3>
-                  {Boolean(badge.plaqueFormatId?.trim()) && (
-                    <CheckCircleIcon className="w-5 h-5 text-green-600" />
-                  )}
-                </div>
-                {sectionsOpen.plaqueFormat ? (
-                  <ChevronUpIcon className="w-5 h-5 text-gray-600" />
-                ) : (
-                  <ChevronDownIcon className="w-5 h-5 text-gray-600" />
-                )}
-              </button>
-              <div
-                className={`transition-all duration-300 overflow-hidden ${
-                  sectionsOpen.plaqueFormat
-                    ? "max-h-[2000px] opacity-100"
-                    : "max-h-0 opacity-0"
-                }`}
-              >
-                <p className="text-xs text-gray-600 mb-1.5 leading-snug">
-                  Previews use brushed gold and sample text. Pick a layout — captions,
-                  dividers, and borders match each preset.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {getPlaqueAwardFormatsForPicker({
-                    expanded: plaqueAwardFormatsExpanded,
-                    selectedFormatId: badge.plaqueFormatId,
-                  }).map((fmt) => {
-                    const selected =
-                      badge.plaqueFormatId?.trim() === fmt.id;
-                    const previewBadge =
-                      plaqueAwardFormatPreviewBadges.get(fmt.id) ?? null;
-                    return (
-                      <button
-                        key={fmt.id}
-                        type="button"
-                        aria-label={`Award format: ${fmt.name}`}
-                        onClick={() => {
-                          applyPlaqueAwardFormatSelection(fmt.id);
-                          setSectionsOpened((prev) => ({
-                            ...prev,
-                            plaqueFormat: true,
-                          }));
-                        }}
-                        className={`flex flex-col gap-1 text-left rounded-lg border p-1.5 transition-colors ${
-                          selected
-                            ? "border-blue-600 bg-blue-50 ring-2 ring-blue-200"
-                            : "border-gray-300 bg-white hover:border-gray-400"
-                        }`}
-                      >
-                        <div className="w-full overflow-hidden rounded border border-gray-200 bg-slate-100/90 flex items-center justify-center aspect-[4/5] max-h-[148px] min-h-[92px]">
-                          {previewBadge ? (
-                            <BadgeSvgRenderer
-                              key={`plaque-fmt-thumb-${fmt.id}-${plaqueAwardFormatPreviewTemplateId}`}
-                              variant="plaque"
-                              badge={previewBadge}
-                              templateId={plaqueAwardFormatPreviewTemplateId}
-                              height={138}
-                              className="max-h-[138px]"
-                            />
-                          ) : (
-                            <span className="text-[14px] text-gray-400 px-1">
-                              Preview unavailable
-                            </span>
-                          )}
-                        </div>
-                        <div className="px-0.5 pb-0.5">
-                          <div className="text-xs font-semibold text-gray-900 leading-tight">
-                            {fmt.name}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-                {plaqueAwardFormatsPickerHasExtras() ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPlaqueAwardFormatsExpanded((prev) => !prev)
-                    }
-                    className="text-sm text-blue-600 hover:text-blue-800 underline text-left py-1 w-full"
-                  >
-                    {plaqueAwardFormatsExpanded
-                      ? "fewer award formats"
-                      : "more award formats"}
-                  </button>
-                ) : null}
-              </div>
-            </div>
-          )}
-
-          {config.hasSizeStep && (
-            /* Step 2: Size (sign only) – always visible; openable only after Step 1 (template type) complete; opens when template selected */
-            <div className="mb-4">
-              <button
-                type="button"
-                onClick={() => {
-                  if (selectedSignTemplateType == null) {
-                    const msg = getIncompleteStepsMessage(2);
-                    if (msg) alert(msg);
-                    return;
-                  }
-                  const willBeOpen = !sectionsOpen.size;
-                  setSectionsOpen({
-                    template: false,
-                    size: willBeOpen,
-                    export: false,
-                    background: false,
-                    textLines: false,
-                    backing: false,
-                    border: false,
-                  });
-                  if (willBeOpen)
-                    setSectionsOpened((prev) => ({ ...prev, size: true }));
-                }}
-                className="flex items-center justify-between w-full mb-2 text-left"
-              >
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-[#0D1B2A]">
-                    Step 2: Size
-                  </h3>
-                  {selectedSignSizeTemplateId != null && (
-                    <CheckCircleIcon className="w-5 h-5 text-green-600" />
-                  )}
-                </div>
-                {sectionsOpen.size ? (
-                  <ChevronUpIcon className="w-5 h-5 text-gray-600" />
-                ) : (
-                  <ChevronDownIcon className="w-5 h-5 text-gray-600" />
-                )}
-              </button>
-              <div
-                className={`transition-all duration-300 overflow-hidden ${
-                  sectionsOpen.size
-                    ? "max-h-[300px] opacity-100"
-                    : "max-h-0 opacity-0"
-                }`}
-              >
-                <div className="flex flex-wrap gap-2">
-                  {(
-                    ALL_SIGN_TEMPLATE_TYPES.find(
-                      (t) => t.id === selectedSignTemplateType,
-                    )?.sizes ?? []
-                  ).map((sizeOpt) => (
-                    <button
-                      key={sizeOpt.templateId}
-                      type="button"
-                      onClick={() => {
-                        setSelectedSignSizeTemplateId(sizeOpt.templateId);
-                        setSignSize(
-                          sizeOpt.label.toLowerCase().replace(/\s+/g, "-"),
-                        );
-                        handleUniversalTemplateChange(sizeOpt.templateId);
-                        if (!signSizeGuidedAutoAdvanceDoneRef.current) {
-                          setSectionsOpen({
-                            template: false,
-                            size: false,
-                            export: false,
-                            background: true,
-                            textLines: false,
-                            backing: false,
-                            border: false,
-                          });
-                          setSectionsOpened((prev) => ({
-                            ...prev,
-                            background: true,
-                          }));
-                          signSizeGuidedAutoAdvanceDoneRef.current = true;
-                        }
-                      }}
-                      className={`px-3 py-2 rounded border text-sm font-medium transition-colors ${
-                        selectedSignSizeTemplateId === sizeOpt.templateId
-                          ? "border-blue-600 bg-blue-50 text-blue-700"
-                          : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      {sizeOpt.label} ({sizeOpt.sizeText})
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Background Color / Backgrounds */}
-          <div
-            className={
-              variant === "badge"
-                ? "flex w-full min-w-0 flex-col border-b border-[rgba(13,27,42,0.1)]"
-                : "mb-6 flex w-full flex-col"
-            }
-          >
-            {/* Background Color - Smart palette grid (columns = color families, rows = gradients) */}
-            <div className="flex w-full flex-col">
-              {variant === "badge" && aqbBadgeStepHeaderModel ? (
-                <AqbBadgeStepSectionToggle
-                  buttonRef={backgroundSectionRef}
-                  stepNumber={2}
-                  visualState={aqbBadgeStepHeaderModel.background.state}
-                  title="Step 2: Pick a background color"
-                  summary={aqbBadgeStepHeaderModel.background.summary}
-                  open={sectionsOpen.background}
+            {variant === "plaque" && (
+              <div className="mb-4">
+                <button
+                  type="button"
                   onClick={() => {
                     const msg = getIncompleteStepsMessage(2);
                     if (msg) {
                       alert(msg);
                       return;
                     }
-                    const willBeOpen = !sectionsOpen.background;
+                    const willBeOpen = !sectionsOpen.size;
                     setSectionsOpen({
                       template: false,
-                      size: false,
+                      size: willBeOpen,
                       export: false,
-                      background: willBeOpen,
+                      background: false,
                       textLines: false,
                       backing: false,
                       border: false,
                       plaqueFormat: false,
                     });
-                    setSectionsOpened((prev) => ({
-                      ...prev,
-                      background: true,
-                    }));
+                    if (willBeOpen) {
+                      setSectionsOpened((prev) => ({ ...prev, size: true }));
+                    }
                   }}
+                  className="flex items-center justify-between w-full mb-2 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                      Step 2: Choose size
+                    </h3>
+                    {multipleBadges.length > 0 && (
+                      <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                    )}
+                  </div>
+                  {sectionsOpen.size ? (
+                    <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+                  ) : (
+                    <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+                  )}
+                </button>
+                <div
+                  className={`transition-all duration-300 overflow-hidden ${
+                    sectionsOpen.size
+                      ? "max-h-[520px] opacity-100"
+                      : "max-h-0 opacity-0"
+                  }`}
+                >
+                  <p className="text-xs text-gray-600 mb-2 leading-snug">
+                    Small (5×7&quot; wood) is only available for the attached
+                    plate style. Detached portrait and landscape use Medium and
+                    Large.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {plaqueSizeStepOptions.map((opt) => {
+                      const sizeDisplay = getPlaqueSizeStepDisplay(
+                        effectivePlaqueLayoutIdForStep2,
+                        opt.value,
+                      );
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            if (multipleBadges.length > 0) {
+                              const parsed =
+                                parsePlaqueTemplateId(universalTemplateId);
+                              if (!parsed) return;
+                              const normalized = normalizePlaqueSizeForLayout(
+                                parsed.layoutId,
+                                opt.value,
+                              );
+                              setSelectedPlaqueSize(normalized);
+                              void handleUniversalTemplateChange(
+                                buildPlaqueTemplateId(
+                                  parsed.layoutId,
+                                  normalized,
+                                ),
+                              );
+                              return;
+                            }
+                            if (!selectedPlaqueLayoutId) {
+                              alert("Please choose a layout in Step 1 first.");
+                              return;
+                            }
+                            const normalized = normalizePlaqueSizeForLayout(
+                              selectedPlaqueLayoutId,
+                              opt.value,
+                            );
+                            setSelectedPlaqueSize(normalized);
+                            void handleUniversalTemplateChange(
+                              buildPlaqueTemplateId(
+                                selectedPlaqueLayoutId,
+                                normalized,
+                              ),
+                            );
+                          }}
+                          className={`px-3 py-2 rounded border text-left text-sm font-medium transition-colors max-w-[260px] ${
+                            selectedPlaqueSize === opt.value
+                              ? "border-blue-600 bg-blue-50 text-blue-700"
+                              : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                          }`}
+                        >
+                          <div>{sizeDisplay.primaryLine}</div>
+                          <div className="text-xs font-normal text-gray-500 mt-0.5 leading-snug space-y-0.5">
+                            {sizeDisplay.detailLines.map((line) => (
+                              <div key={line}>{line}</div>
+                            ))}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {variant === "plaque" && plaqueAttachedSelected && (
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const msg = getIncompleteStepsMessage(3);
+                    if (msg) {
+                      alert(msg);
+                      return;
+                    }
+                    const willBeOpen = !(sectionsOpen.plaqueFormat ?? false);
+                    setSectionsOpen({
+                      template: false,
+                      size: false,
+                      export: false,
+                      background: false,
+                      textLines: false,
+                      backing: false,
+                      border: false,
+                      plaqueFormat: willBeOpen,
+                    });
+                    if (willBeOpen) {
+                      setSectionsOpened((prev) => ({
+                        ...prev,
+                        plaqueFormat: true,
+                      }));
+                    }
+                  }}
+                  className="flex items-center justify-between w-full mb-2 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                      Step 3: Choose award format
+                    </h3>
+                    {Boolean(badge.plaqueFormatId?.trim()) && (
+                      <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                    )}
+                  </div>
+                  {sectionsOpen.plaqueFormat ? (
+                    <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+                  ) : (
+                    <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+                  )}
+                </button>
+                <div
+                  className={`transition-all duration-300 overflow-hidden ${
+                    sectionsOpen.plaqueFormat
+                      ? "max-h-[2000px] opacity-100"
+                      : "max-h-0 opacity-0"
+                  }`}
+                >
+                  <p className="text-xs text-gray-600 mb-1.5 leading-snug">
+                    Previews use brushed gold and sample text. Pick a layout —
+                    captions, dividers, and borders match each preset.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {getPlaqueAwardFormatsForPicker({
+                      expanded: plaqueAwardFormatsExpanded,
+                      selectedFormatId: badge.plaqueFormatId,
+                    }).map((fmt) => {
+                      const selected = badge.plaqueFormatId?.trim() === fmt.id;
+                      const previewBadge =
+                        plaqueAwardFormatPreviewBadges.get(fmt.id) ?? null;
+                      return (
+                        <button
+                          key={fmt.id}
+                          type="button"
+                          aria-label={`Award format: ${fmt.name}`}
+                          onClick={() => {
+                            applyPlaqueAwardFormatSelection(fmt.id);
+                            setSectionsOpened((prev) => ({
+                              ...prev,
+                              plaqueFormat: true,
+                            }));
+                          }}
+                          className={`flex flex-col gap-1 text-left rounded-lg border p-1.5 transition-colors ${
+                            selected
+                              ? "border-blue-600 bg-blue-50 ring-2 ring-blue-200"
+                              : "border-gray-300 bg-white hover:border-gray-400"
+                          }`}
+                        >
+                          <div className="w-full overflow-hidden rounded border border-gray-200 bg-slate-100/90 flex items-center justify-center aspect-[4/5] max-h-[148px] min-h-[92px]">
+                            {previewBadge ? (
+                              <BadgeSvgRenderer
+                                key={`plaque-fmt-thumb-${fmt.id}-${plaqueAwardFormatPreviewTemplateId}`}
+                                variant="plaque"
+                                badge={previewBadge}
+                                templateId={plaqueAwardFormatPreviewTemplateId}
+                                height={138}
+                                className="max-h-[138px]"
+                              />
+                            ) : (
+                              <span className="text-[14px] text-gray-400 px-1">
+                                Preview unavailable
+                              </span>
+                            )}
+                          </div>
+                          <div className="px-0.5 pb-0.5">
+                            <div className="text-xs font-semibold text-gray-900 leading-tight">
+                              {fmt.name}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {plaqueAwardFormatsPickerHasExtras() ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPlaqueAwardFormatsExpanded((prev) => !prev)
+                      }
+                      className="text-sm text-blue-600 hover:text-blue-800 underline text-left py-1 w-full"
+                    >
+                      {plaqueAwardFormatsExpanded
+                        ? "fewer award formats"
+                        : "more award formats"}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            )}
+
+            {config.hasSizeStep && (
+              /* Step 2: Size (sign only) – always visible; openable only after Step 1 (template type) complete; opens when template selected */
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedSignTemplateType == null) {
+                      const msg = getIncompleteStepsMessage(2);
+                      if (msg) alert(msg);
+                      return;
+                    }
+                    const willBeOpen = !sectionsOpen.size;
+                    setSectionsOpen({
+                      template: false,
+                      size: willBeOpen,
+                      export: false,
+                      background: false,
+                      textLines: false,
+                      backing: false,
+                      border: false,
+                    });
+                    if (willBeOpen)
+                      setSectionsOpened((prev) => ({ ...prev, size: true }));
+                  }}
+                  className="flex items-center justify-between w-full mb-2 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                      Step 2: Size
+                    </h3>
+                    {selectedSignSizeTemplateId != null && (
+                      <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                    )}
+                  </div>
+                  {sectionsOpen.size ? (
+                    <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+                  ) : (
+                    <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+                  )}
+                </button>
+                <div
+                  className={`transition-all duration-300 overflow-hidden ${
+                    sectionsOpen.size
+                      ? "max-h-[300px] opacity-100"
+                      : "max-h-0 opacity-0"
+                  }`}
+                >
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      ALL_SIGN_TEMPLATE_TYPES.find(
+                        (t) => t.id === selectedSignTemplateType,
+                      )?.sizes ?? []
+                    ).map((sizeOpt) => (
+                      <button
+                        key={sizeOpt.templateId}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSignSizeTemplateId(sizeOpt.templateId);
+                          setSignSize(
+                            sizeOpt.label.toLowerCase().replace(/\s+/g, "-"),
+                          );
+                          handleUniversalTemplateChange(sizeOpt.templateId);
+                          if (!signSizeGuidedAutoAdvanceDoneRef.current) {
+                            setSectionsOpen({
+                              template: false,
+                              size: false,
+                              export: false,
+                              background: true,
+                              textLines: false,
+                              backing: false,
+                              border: false,
+                            });
+                            setSectionsOpened((prev) => ({
+                              ...prev,
+                              background: true,
+                            }));
+                            signSizeGuidedAutoAdvanceDoneRef.current = true;
+                          }
+                        }}
+                        className={`px-3 py-2 rounded border text-sm font-medium transition-colors ${
+                          selectedSignSizeTemplateId === sizeOpt.templateId
+                            ? "border-blue-600 bg-blue-50 text-blue-700"
+                            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        {sizeOpt.label} ({sizeOpt.sizeText})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Background Color / Backgrounds */}
+            <div
+              className={
+                variant === "badge"
+                  ? "flex w-full min-w-0 flex-col border-b border-[rgba(13,27,42,0.1)]"
+                  : "mb-6 flex w-full flex-col"
+              }
+            >
+              {/* Background Color - Smart palette grid (columns = color families, rows = gradients) */}
+              <div className="flex w-full flex-col">
+                {variant === "badge" && aqbBadgeStepHeaderModel ? (
+                  <AqbBadgeStepSectionToggle
+                    buttonRef={backgroundSectionRef}
+                    stepNumber={2}
+                    visualState={aqbBadgeStepHeaderModel.background.state}
+                    title="Step 2: Pick a background color"
+                    summary={aqbBadgeStepHeaderModel.background.summary}
+                    open={sectionsOpen.background}
+                    onClick={() => {
+                      const msg = getIncompleteStepsMessage(2);
+                      if (msg) {
+                        alert(msg);
+                        return;
+                      }
+                      const willBeOpen = !sectionsOpen.background;
+                      setSectionsOpen({
+                        template: false,
+                        size: false,
+                        export: false,
+                        background: willBeOpen,
+                        textLines: false,
+                        backing: false,
+                        border: false,
+                        plaqueFormat: false,
+                      });
+                      setSectionsOpened((prev) => ({
+                        ...prev,
+                        background: true,
+                      }));
+                    }}
+                  />
+                ) : (
+                  <button
+                    ref={backgroundSectionRef}
+                    type="button"
+                    onClick={() => {
+                      const msg = getIncompleteStepsMessage(
+                        variant === "plaque"
+                          ? plaqueAttachedSelected
+                            ? 4
+                            : 3
+                          : 2,
+                      );
+                      if (msg) {
+                        alert(msg);
+                        return;
+                      }
+                      const willBeOpen = !sectionsOpen.background;
+                      setSectionsOpen({
+                        template: false,
+                        size: false,
+                        export: false,
+                        background: willBeOpen,
+                        textLines: false,
+                        backing: false,
+                        border: false,
+                        plaqueFormat: false,
+                      });
+                      setSectionsOpened((prev) => ({
+                        ...prev,
+                        background: true,
+                      }));
+                    }}
+                    className="mb-2 flex w-full items-center justify-between text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                        {variant === "plaque"
+                          ? plaqueAttachedSelected
+                            ? "Step 4: Metal plate finish"
+                            : "Step 3: Metal plate finish"
+                          : config.templatesKey === "sign"
+                          ? "Step 3: Pick backgrounds"
+                          : "Step 2: Pick a background Color"}
+                      </h3>
+                      {hasChosenBackgroundColor && (
+                        <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                      )}
+                    </div>
+                    {sectionsOpen.background ? (
+                      <ChevronUpIcon className="h-5 w-5 text-gray-600" />
+                    ) : (
+                      <ChevronDownIcon className="h-5 w-5 text-gray-600" />
+                    )}
+                  </button>
+                )}
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${
+                    variant === "badge"
+                      ? sectionsOpen.background
+                        ? "px-6 pb-5 pt-2"
+                        : "p-0"
+                      : ""
+                  } ${
+                    sectionsOpen.background
+                      ? variant === "badge"
+                        ? "max-h-[720px] opacity-100"
+                        : "max-h-[500px] opacity-100"
+                      : "max-h-0 opacity-0"
+                  }`}
+                >
+                  {/* Featured Colors: Gold, Silver, White, then Black / Blue / Red */}
+                  {(() => {
+                    const featuredColors = [
+                      {
+                        value: FEATURED_BRUSHED_GOLD_HEX,
+                        name: "Brushed Gold",
+                        ring: "ring-yellow-400",
+                      },
+                      {
+                        value: FEATURED_BRUSHED_SILVER_HEX,
+                        name: "Brushed Silver",
+                        ring: "ring-gray-300",
+                      },
+                      { value: "#FFFFFF", name: "White", ring: "ring-white" },
+                      {
+                        value: "#000000",
+                        name: "Black",
+                        ring: "ring-gray-900",
+                      },
+                      { value: "#0000FF", name: "Blue", ring: "ring-blue-500" },
+                      { value: "#FF0000", name: "Red", ring: "ring-red-500" },
+                      {
+                        value: "rainbow",
+                        name: "More Colors",
+                        ring: "ring-gray-400",
+                        isRainbow: true,
+                      },
+                    ];
+
+                    const handleColorClick = (colorValue: string) => {
+                      // Check if the new background color is similar to any text line colors
+                      if (checkBackgroundColorSimilarity(colorValue)) {
+                        setPendingBackgroundColor(colorValue);
+                        setShowBackgroundColorWarning(true);
+                      } else {
+                        applyBackgroundColor(colorValue);
+                      }
+                    };
+
+                    // Parse hex or RGB input and convert to hex
+                    const parseColorInput = (input: string): string | null => {
+                      const trimmed = input.trim();
+
+                      // Check if it's already a valid hex
+                      if (/^#?[0-9A-Fa-f]{6}$/.test(trimmed)) {
+                        return trimmed.startsWith("#")
+                          ? trimmed
+                          : `#${trimmed}`;
+                      }
+
+                      // Check if it's a 3-digit hex
+                      if (/^#?[0-9A-Fa-f]{3}$/.test(trimmed)) {
+                        const hex = trimmed.startsWith("#")
+                          ? trimmed.slice(1)
+                          : trimmed;
+                        return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`;
+                      }
+
+                      // Check if it's RGB format: rgb(r, g, b) or r, g, b
+                      const rgbMatch = trimmed.match(
+                        /^rgb\(?\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)?$/i,
+                      );
+                      if (rgbMatch) {
+                        const r = parseInt(rgbMatch[1], 10);
+                        const g = parseInt(rgbMatch[2], 10);
+                        const b = parseInt(rgbMatch[3], 10);
+                        if (
+                          r >= 0 &&
+                          r <= 255 &&
+                          g >= 0 &&
+                          g <= 255 &&
+                          b >= 0 &&
+                          b <= 255
+                        ) {
+                          return `#${r.toString(16).padStart(2, "0")}${g
+                            .toString(16)
+                            .padStart(2, "0")}${b
+                            .toString(16)
+                            .padStart(2, "0")}`;
+                        }
+                      }
+
+                      return null;
+                    };
+
+                    // Badge redesign: colour row; corner pills only for round/square 1×3 & 1.5×3.
+                    if (variant === "badge") {
+                      const showCornerStyle =
+                        isBadgeCornerStyleEligible(universalTemplateId);
+                      const badgeSizeKey = showCornerStyle
+                        ? getBadgeTemplateSizeKey(universalTemplateId)
+                        : null;
+                      const activeBadgeCornerStyle = showCornerStyle
+                        ? getBadgeCornerStyleFromTemplate(
+                            universalTemplateId,
+                          ) ?? "rounded"
+                        : null;
+
+                      const applyBadgeCornerStyle = (
+                        style: BadgeCornerStyleKey,
+                      ) => {
+                        if (!badgeSizeKey) return;
+                        const nextId =
+                          BADGE_CORNER_TEMPLATE_IDS[style][badgeSizeKey];
+                        if (nextId && nextId !== universalTemplateId) {
+                          void handleUniversalTemplateChange(nextId);
+                        }
+                      };
+
+                      return (
+                        <>
+                          <div className="aqb-badge-colour-row">
+                            {BADGE_AQB_FEATURED_BACKGROUND_COLORS.map((c) => {
+                              const selected = isAqbBadgeBgSwatchSelected(
+                                badge.backgroundColor,
+                                c.value,
+                              );
+                              return (
+                                <button
+                                  key={c.value}
+                                  type="button"
+                                  className="aqb-badge-colour-swatch"
+                                  title={c.name}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handleColorClick(c.value);
+                                  }}
+                                >
+                                  <span
+                                    className={`aqb-badge-cs-circle ${
+                                      c.light ? "light" : ""
+                                    } ${selected ? "selected" : ""}`}
+                                    style={featuredPlateBackgroundSwatchStyle(
+                                      c.value,
+                                    )}
+                                  >
+                                    {selected ? (
+                                      <CheckIcon
+                                        className={`h-3.5 w-3.5 stroke-[3] ${
+                                          c.light
+                                            ? "text-[#0d1b2a]"
+                                            : "text-white"
+                                        }`}
+                                        aria-hidden
+                                      />
+                                    ) : null}
+                                  </span>
+                                  <span className="aqb-badge-cs-name">
+                                    {"brushed" in c && c.brushed ? (
+                                      <>
+                                        Brushed
+                                        <br />
+                                        {c.name.replace(/^Brushed\s+/, "")}
+                                      </>
+                                    ) : (
+                                      c.name
+                                    )}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {showCornerStyle &&
+                          badgeSizeKey &&
+                          activeBadgeCornerStyle ? (
+                            <div className="finish-row">
+                              <div className="aqb-badge-finish-lbl">
+                                Corner style
+                              </div>
+                              <div className="aqb-badge-finish-pills">
+                                <button
+                                  type="button"
+                                  className={`aqb-badge-finish-pill ${
+                                    activeBadgeCornerStyle === "rounded"
+                                      ? "selected"
+                                      : ""
+                                  }`}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    applyBadgeCornerStyle("rounded");
+                                  }}
+                                >
+                                  Rounded corners
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`aqb-badge-finish-pill ${
+                                    activeBadgeCornerStyle === "square"
+                                      ? "selected"
+                                      : ""
+                                  }`}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    applyBadgeCornerStyle("square");
+                                  }}
+                                >
+                                  Square corners
+                                </button>
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {badgeTemplateSupportsIcon(universalTemplateId) ? (
+                            <div className="finish-row">
+                              <div className="aqb-badge-finish-lbl">
+                                Badge icon (optional)
+                              </div>
+                              <AqbBadgeIconPicker
+                                variant="inline"
+                                value={
+                                  isBadgeIconId(badge.badgeIconId)
+                                    ? badge.badgeIconId
+                                    : undefined
+                                }
+                                onChange={(iconId) =>
+                                  setBadgeIconForCurrent(iconId)
+                                }
+                              />
+                            </div>
+                          ) : null}
+
+                          {multipleBadges.length > 1 ? (
+                            <div className="mt-2 flex flex-col gap-1">
+                              <button
+                                type="button"
+                                onClick={applyBackgroundColorToAll}
+                                className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#0d1b2a] underline transition-colors hover:text-[#3a4f63]"
+                                title={`Apply background color to all ${config.labelProductPlural.toLowerCase()}`}
+                              >
+                                Apply background color to all{" "}
+                                {config.labelProductPlural.toLowerCase()}
+                              </button>
+                              {badgeTemplateSupportsIcon(
+                                universalTemplateId,
+                              ) ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    applyBadgeIconToAll(
+                                      isBadgeIconId(badge.badgeIconId)
+                                        ? badge.badgeIconId
+                                        : undefined,
+                                    )
+                                  }
+                                  className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#0d1b2a] underline transition-colors hover:text-[#3a4f63]"
+                                >
+                                  Apply icon choice to all badges
+                                </button>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </>
+                      );
+                    }
+
+                    return (
+                      <>
+                        <div className="flex items-start gap-3 ml-1.5 mt-1.5">
+                          <div className="flex flex-col gap-2">
+                            <div className="grid grid-cols-4 gap-2 w-fit">
+                              {featuredColors.map((c) => (
+                                <div
+                                  key={c.value}
+                                  className="flex flex-col items-center gap-1"
+                                >
+                                  <button
+                                    className={`w-12 h-12 border rounded ${
+                                      badge.backgroundColor === c.value
+                                        ? "ring-2 ring-offset-1 " + c.ring
+                                        : ""
+                                    }`}
+                                    style={
+                                      c.isRainbow
+                                        ? {
+                                            background:
+                                              "linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)",
+                                          }
+                                        : featuredPlateBackgroundSwatchStyle(
+                                            c.value,
+                                          )
+                                    }
+                                    title={c.name}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      if (c.isRainbow) {
+                                        setShowColorModal(true);
+                                      } else {
+                                        handleColorClick(c.value);
+                                      }
+                                    }}
+                                  />
+                                  <span className="text-[14px] text-gray-600 text-center leading-tight">
+                                    {c.name === "Brushed Gold" ? (
+                                      <>
+                                        Brushed
+                                        <br />
+                                        Gold
+                                      </>
+                                    ) : c.name === "Brushed Silver" ? (
+                                      <>
+                                        Brushed
+                                        <br />
+                                        Silver
+                                      </>
+                                    ) : c.name === "More Colors" ? (
+                                      <>
+                                        More
+                                        <br />
+                                        Colors
+                                      </>
+                                    ) : (
+                                      c.name
+                                    )}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            {/* Apply to All Button */}
+                            {multipleBadges.length > 1 && (
+                              <div className="mt-2">
+                                <button
+                                  type="button"
+                                  onClick={applyBackgroundColorToAll}
+                                  className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
+                                  title={`Apply background color to all ${config.labelProductPlural.toLowerCase()}`}
+                                >
+                                  Apply background color to all{" "}
+                                  {config.labelProductPlural.toLowerCase()}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          {/* Current Color Display - Large square aligned right */}
+                          <div className="flex-shrink-0 ml-auto flex flex-col items-center gap-1">
+                            <div
+                              className="w-24 h-24 md:w-32 md:h-32 border-2 border-gray-300 rounded shadow-sm"
+                              style={featuredPlateBackgroundSwatchStyle(
+                                badge.backgroundColor || "#FFFFFF",
+                              )}
+                              title={`Current background color: ${
+                                badge.backgroundColor || "#FFFFFF"
+                              }`}
+                            />
+                            <span className="text-[14px] text-gray-600 text-center">
+                              Current color
+                            </span>
+                          </div>
+                        </div>
+                        {variant === "plaque" &&
+                          isPlaqueDetachedTemplateId(
+                            badge.templateId ?? universalTemplateId,
+                          ) && (
+                            <div className="mt-3 ml-1.5 border-t border-gray-200 pt-3 w-full max-w-md">
+                              <p className="text-sm text-gray-700 mb-2">
+                                Photo frame finish
+                              </p>
+                              <div className="flex flex-wrap gap-3">
+                                {(
+                                  [
+                                    {
+                                      id: "gold" as const,
+                                      label: "Gold",
+                                      src: "/images/plaque/plaque-detached-photo-frame-gold.png",
+                                    },
+                                    {
+                                      id: "silver" as const,
+                                      label: "Silver",
+                                      src: "/images/plaque/plaque-detached-photo-frame-silver.png",
+                                    },
+                                  ] as const
+                                ).map((opt) => {
+                                  const cur =
+                                    badge.plaqueDetachedPhotoFrameFinish ??
+                                    "gold";
+                                  const active = cur === opt.id;
+                                  return (
+                                    <button
+                                      key={opt.id}
+                                      type="button"
+                                      onClick={() => {
+                                        const next: Badge = {
+                                          ...badge,
+                                          plaqueDetachedPhotoFrameFinish:
+                                            opt.id,
+                                        };
+                                        setBadge(next);
+                                        const ub = [...multipleBadges];
+                                        if (ub[selectedBadgeIndex]) {
+                                          ub[selectedBadgeIndex] = next;
+                                        }
+                                        setMultipleBadges(ub);
+                                        if (selectedBadgeIndex === 0) {
+                                          setBadge1Data(next);
+                                        }
+                                      }}
+                                      className={`flex flex-col items-center gap-1 rounded border px-2 py-2 transition-colors ${
+                                        active
+                                          ? "border-blue-600 bg-blue-50 ring-2 ring-blue-200"
+                                          : "border-gray-200 bg-white hover:bg-gray-50"
+                                      }`}
+                                    >
+                                      <img
+                                        src={opt.src}
+                                        alt=""
+                                        className="h-14 w-10 object-cover rounded-sm border border-gray-200"
+                                      />
+                                      <span className="text-[14px] font-medium text-gray-700">
+                                        {opt.label}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {signBorderStepRequired && (
+              <div className="mb-4">
+                <button
+                  ref={borderSectionRef}
+                  type="button"
+                  onClick={() => {
+                    const msg = getIncompleteStepsMessage(4);
+                    if (msg) {
+                      alert(msg);
+                      return;
+                    }
+                    const willBeOpen = !sectionsOpen.border;
+                    setSectionsOpen({
+                      template: false,
+                      size: false,
+                      export: false,
+                      background: false,
+                      textLines: false,
+                      backing: false,
+                      border: willBeOpen,
+                    });
+                    setSectionsOpened((prev) => ({ ...prev, border: true }));
+                  }}
+                  className="flex items-center justify-between w-full mb-2 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                      Step 4: Border
+                    </h3>
+                    {signBorderConfigured && (
+                      <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                    )}
+                  </div>
+                  {sectionsOpen.border ? (
+                    <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+                  ) : (
+                    <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+                  )}
+                </button>
+                <div
+                  className={`transition-all duration-300 overflow-hidden ${
+                    sectionsOpen.border
+                      ? "max-h-[520px] opacity-100"
+                      : "max-h-0 opacity-0"
+                  }`}
+                >
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-600 mb-3">
+                      Template previews show the plate shape only. Choose a
+                      border type below (including &quot;No border&quot;). With
+                      a frame, pick trim color and — on Designer — a center
+                      motif.
+                    </p>
+                    <p className="text-sm text-gray-700 mb-2">Border type</p>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {getSignBorderStepChipOptions(universalTemplateId).map(
+                        (opt) => {
+                          const active = badge.signBorderOptionId === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => {
+                                const isNone =
+                                  opt.id === SIGN_BORDER_OPTION_NONE;
+                                const next: Badge = {
+                                  ...badge,
+                                  signBorderOptionId: opt.id,
+                                  signBorderEnabled: !isNone,
+                                  signBorderStyleId: isNone
+                                    ? badge.signBorderStyleId ?? "default"
+                                    : opt.id,
+                                  ...(!isNone
+                                    ? {
+                                        borderColor:
+                                          badge.borderColor ?? "#FFFFFF",
+                                      }
+                                    : {}),
+                                };
+                                setBadge(next);
+                                const ub = [...multipleBadges];
+                                if (ub[selectedBadgeIndex]) {
+                                  ub[selectedBadgeIndex] = next;
+                                }
+                                setMultipleBadges(ub);
+                                if (selectedBadgeIndex === 0) {
+                                  setBadge1Data(next);
+                                }
+                              }}
+                              className={`px-2.5 py-1.5 rounded border text-xs font-medium transition-colors ${
+                                active
+                                  ? "border-blue-600 bg-blue-50 text-blue-800"
+                                  : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          );
+                        },
+                      )}
+                    </div>
+                    {badge.signBorderOptionId === undefined && (
+                      <p className="text-xs text-amber-700 mb-3">
+                        Select a border type to finish this step.
+                      </p>
+                    )}
+                    {signBorderFramed && (
+                      <>
+                        <p className="text-sm text-gray-700 mb-2">
+                          Color for frame and trim (and Designer center motif
+                          when shown)
+                        </p>
+                        <div className="flex items-start gap-3 ml-1.5 mt-1.5">
+                          <div className="flex flex-col gap-2">
+                            <div className="grid grid-cols-4 gap-2 w-fit">
+                              {[
+                                {
+                                  value: FEATURED_BRUSHED_GOLD_HEX,
+                                  name: "Brushed Gold",
+                                  ring: "ring-yellow-400",
+                                },
+                                {
+                                  value: FEATURED_BRUSHED_SILVER_HEX,
+                                  name: "Brushed Silver",
+                                  ring: "ring-gray-300",
+                                },
+                                {
+                                  value: "#FFFFFF",
+                                  name: "White",
+                                  ring: "ring-white",
+                                },
+                                {
+                                  value: "#000000",
+                                  name: "Black",
+                                  ring: "ring-gray-900",
+                                },
+                                {
+                                  value: "#0000FF",
+                                  name: "Blue",
+                                  ring: "ring-blue-500",
+                                },
+                                {
+                                  value: "#FF0000",
+                                  name: "Red",
+                                  ring: "ring-red-500",
+                                },
+                                {
+                                  value: "rainbow",
+                                  name: "More Colors",
+                                  ring: "ring-gray-400",
+                                  isRainbow: true,
+                                },
+                              ].map((c) => (
+                                <div
+                                  key={c.value}
+                                  className="flex flex-col items-center gap-1"
+                                >
+                                  <button
+                                    type="button"
+                                    className={`w-12 h-12 border rounded ${
+                                      (badge.borderColor ?? "#FFFFFF") ===
+                                      c.value
+                                        ? "ring-2 ring-offset-1 " + c.ring
+                                        : ""
+                                    }`}
+                                    style={
+                                      c.isRainbow
+                                        ? {
+                                            background:
+                                              "linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)",
+                                          }
+                                        : { backgroundColor: c.value }
+                                    }
+                                    title={c.name}
+                                    onClick={() => {
+                                      if (c.isRainbow) {
+                                        setShowBorderColorModal(true);
+                                      } else {
+                                        setBadge({
+                                          ...badge,
+                                          borderColor: c.value,
+                                        });
+                                      }
+                                    }}
+                                  />
+                                  <span className="text-[14px] text-gray-600 text-center leading-tight">
+                                    {c.name === "Brushed Gold" ? (
+                                      <>
+                                        Brushed
+                                        <br />
+                                        Gold
+                                      </>
+                                    ) : c.name === "Brushed Silver" ? (
+                                      <>
+                                        Brushed
+                                        <br />
+                                        Silver
+                                      </>
+                                    ) : c.name === "More Colors" ? (
+                                      <>
+                                        More
+                                        <br />
+                                        Colors
+                                      </>
+                                    ) : (
+                                      c.name
+                                    )}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0 ml-auto flex flex-col items-center gap-1">
+                            <div
+                              className="w-24 h-24 md:w-32 md:h-32 border-2 border-gray-300 rounded shadow-sm"
+                              style={{
+                                backgroundColor: badge.borderColor ?? "#FFFFFF",
+                              }}
+                              title={`Current border color: ${
+                                badge.borderColor ?? "#FFFFFF"
+                              }`}
+                            />
+                            <span className="text-[14px] text-gray-600 text-center">
+                              Current color
+                            </span>
+                          </div>
+                        </div>
+                        {selectedSignTemplateType === "designer-heart" &&
+                          universalTemplateId.startsWith("designer-") && (
+                            <div className="mt-4 w-full">
+                              <p className="text-sm text-gray-700 mb-2">
+                                Center motif
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {DESIGNER_MOTIF_UI_OPTIONS.map((opt) => {
+                                  const active =
+                                    (badge.designerMotif ?? "heart") === opt.id;
+                                  const motifSvg =
+                                    designerMotifPreviewSvgMarkup(opt.id);
+                                  return (
+                                    <button
+                                      key={opt.id}
+                                      type="button"
+                                      title={opt.label}
+                                      onClick={() => {
+                                        const next = {
+                                          ...badge,
+                                          designerMotif: opt.id,
+                                        };
+                                        setBadge(next);
+                                        const ub = [...multipleBadges];
+                                        if (ub[selectedBadgeIndex]) {
+                                          ub[selectedBadgeIndex] = next;
+                                        }
+                                        setMultipleBadges(ub);
+                                        if (selectedBadgeIndex === 0) {
+                                          setBadge1Data(next);
+                                        }
+                                      }}
+                                      className="flex flex-col items-center gap-1"
+                                    >
+                                      <div
+                                        className={`control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center rounded border transition-colors ${
+                                          active
+                                            ? "border-blue-600 bg-blue-50 text-blue-800"
+                                            : "border-gray-400 bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                        }`}
+                                      >
+                                        {motifSvg ? (
+                                          <span
+                                            className="block w-8 h-8 md:w-10 md:h-10 shrink-0 [&>svg]:h-full [&>svg]:w-full [&>svg]:block"
+                                            dangerouslySetInnerHTML={{
+                                              __html: motifSvg,
+                                            }}
+                                          />
+                                        ) : (
+                                          <span className="text-[14px] font-medium px-0.5 text-center leading-tight">
+                                            {opt.label}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div
+                                        className={`text-[14px] text-center leading-tight max-w-[4.5rem] ${
+                                          active
+                                            ? "text-blue-800"
+                                            : "text-gray-600"
+                                        }`}
+                                      >
+                                        {opt.label}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                      </>
+                    )}
+                    {badge.signBorderOptionId === SIGN_BORDER_OPTION_NONE && (
+                      <p className="text-xs text-gray-500">
+                        No frame or decorations; text uses the full plate area.
+                      </p>
+                    )}
+                    {multipleBadges.length > 1 && (
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={applyBorderToAll}
+                          className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors whitespace-nowrap"
+                          title={
+                            !signBorderFramed
+                              ? `No frame on all; border color follows each ${config.labelProduct.toLowerCase()}'s background`
+                              : `Apply frame style, motif (Designer), and border color to all ${config.labelProductPlural.toLowerCase()}`
+                          }
+                        >
+                          Apply border to all{" "}
+                          {config.labelProductPlural.toLowerCase()}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {config.borderOptions.length === 0 ? null : (
+                    <div className="flex flex-wrap gap-2">
+                      {config.borderOptions.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            setSignBorderId(opt.value);
+                          }}
+                          className={`px-3 py-2 rounded border text-sm ${
+                            signBorderId === opt.value
+                              ? "border-blue-600 bg-blue-50"
+                              : "border-gray-300 bg-white hover:bg-gray-50"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {variant === "plaque" && signUserLogoUploadSupported && (
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const msg = getIncompleteStepsMessage(
+                      // Guard should require only prior steps. For plaques:
+                      // - attached flow: photo is step 5 (requires steps 1-4)
+                      // - detached flow: photo is step 4 (requires steps 1-3)
+                      plaqueAttachedSelected ? 5 : 4,
+                    );
+                    if (msg) {
+                      alert(msg);
+                      return;
+                    }
+                    const willBeOpen = !signLogoSectionOpen;
+                    setSignLogoSectionOpen(willBeOpen);
+                  }}
+                  className="flex items-center justify-between w-full mb-2 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                      {requiresPlaqueLogo
+                        ? plaqueAttachedSelected
+                          ? "Step 5: Upload icon"
+                          : "Step 4: Upload icon"
+                        : plaqueAttachedSelected
+                        ? "Step 5: Upload icon (optional)"
+                        : "Step 4: Upload icon (optional)"}
+                    </h3>
+                    {(() => {
+                      const logoOk = Boolean(badge.logo?.src?.trim());
+                      const stepDone = requiresPlaqueLogo
+                        ? logoOk
+                        : multipleBadges.length > 0 &&
+                          (logoOk ||
+                            sectionsOpened.textLines ||
+                            hasStep3TextEntered);
+                      return stepDone ? (
+                        <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                      ) : null;
+                    })()}
+                  </div>
+                  {signLogoSectionOpen ? (
+                    <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+                  ) : (
+                    <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+                  )}
+                </button>
+                <div
+                  className={`transition-all duration-300 overflow-hidden ${
+                    signLogoSectionOpen
+                      ? "max-h-[2000px] opacity-100"
+                      : "max-h-0 opacity-0"
+                  }`}
+                >
+                  <div className="space-y-3 text-sm text-gray-800">
+                    <p className="text-xs text-gray-600">
+                      {isPlaqueDetachedTemplateId(
+                        badge.templateId ?? universalTemplateId,
+                      )
+                        ? "The framed area on the wood is for your printed photo (inserted separately). Your uploaded image appears on the metal plate beside your text — set left or right below."
+                        : "Your image is placed on the metal plate above your text."}{" "}
+                      PNG, JPEG, WebP, or GIF.
+                    </p>
+                    <input
+                      ref={signLogoFileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                      className="hidden"
+                      onChange={handleSignLogoFileSelect}
+                    />
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <button
+                        type="button"
+                        disabled={signLogoUploading}
+                        onClick={() => signLogoFileInputRef.current?.click()}
+                        className="px-3 py-2 rounded border border-blue-600 bg-blue-50 text-blue-900 text-sm hover:bg-blue-100 disabled:opacity-50"
+                      >
+                        {signLogoUploading ? "Uploading…" : "Choose image"}
+                      </button>
+                      {badge.logo?.src ? (
+                        <button
+                          type="button"
+                          onClick={clearSignLogo}
+                          className="px-3 py-2 rounded border border-gray-300 text-sm hover:bg-gray-50"
+                        >
+                          Remove image
+                        </button>
+                      ) : null}
+                    </div>
+                    {badge.logo?.src ? (
+                      <>
+                        {getSignLogoPlacementOptionsForTemplate(
+                          badge.templateId ?? universalTemplateId,
+                        ).length > 1 ? (
+                          <div className="space-y-2">
+                            <span className="text-xs font-medium text-gray-700">
+                              Placement
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(() => {
+                                const tid =
+                                  badge.templateId ?? universalTemplateId;
+                                const effective =
+                                  normalizeSignLogoPlacementForTemplate(
+                                    tid,
+                                    badge.logo?.placement,
+                                  );
+                                return getSignLogoPlacementOptionsForTemplate(
+                                  tid,
+                                ).map((key) => (
+                                  <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => setSignLogoPlacementUi(key)}
+                                    className={`px-2.5 py-1.5 rounded text-xs border ${
+                                      effective === key
+                                        ? "border-blue-600 bg-blue-50 text-blue-900"
+                                        : "border-gray-300 hover:bg-gray-50"
+                                    }`}
+                                  >
+                                    {SIGN_LOGO_PLACEMENT_UI_LABEL[key]}
+                                  </button>
+                                ));
+                              })()}
+                            </div>
+                          </div>
+                        ) : null}
+                        {multipleBadges.length > 1 ? (
+                          <button
+                            type="button"
+                            onClick={applySignLogoToAll}
+                            className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 mt-2"
+                          >
+                            Apply image to all{" "}
+                            {config.labelProductPlural.toLowerCase()}
+                          </button>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Text Lines */}
+            <div
+              className={
+                variant === "badge"
+                  ? "w-full min-w-0 border-b border-[rgba(13,27,42,0.1)]"
+                  : "mb-4"
+              }
+            >
+              {variant === "badge" && aqbBadgeStepHeaderModel ? (
+                <AqbBadgeStepSectionToggle
+                  buttonRef={textLinesSectionRef}
+                  stepNumber={3}
+                  visualState={aqbBadgeStepHeaderModel.text.state}
+                  title="Step 3: Enter your text"
+                  summary={aqbBadgeStepHeaderModel.text.summary}
+                  open={sectionsOpen.textLines}
+                  onClick={() => {
+                    const msg = getIncompleteStepsMessage(
+                      config.hasSizeStep ? (signBorderStepRequired ? 5 : 4) : 3,
+                    );
+                    if (msg) {
+                      alert(msg);
+                      return;
+                    }
+                    const willBeOpen = !sectionsOpen.textLines;
+                    setSectionsOpen({
+                      template: false,
+                      size: false,
+                      export: false,
+                      background: false,
+                      textLines: willBeOpen,
+                      backing: false,
+                      border: false,
+                    });
+                    setSectionsOpened((prev) => ({ ...prev, textLines: true }));
+                  }}
+                  endSlot={
+                    badge.lines.some(
+                      (l) =>
+                        l.color &&
+                        areColorsSimilar(l.color, badge.backgroundColor, 70),
+                    ) ? (
+                      <span
+                        className="inline-flex"
+                        title="Please check font colors — some text may not show well on this background."
+                      >
+                        <ExclamationTriangleIcon
+                          className="h-4 w-4 text-red-500"
+                          aria-hidden
+                        />
+                        <span className="sr-only">
+                          Please check font colors — some text may not show well
+                          on this background.
+                        </span>
+                      </span>
+                    ) : null
+                  }
                 />
               ) : (
                 <button
-                  ref={backgroundSectionRef}
+                  ref={textLinesSectionRef}
                   type="button"
                   onClick={() => {
                     const msg = getIncompleteStepsMessage(
                       variant === "plaque"
                         ? plaqueAttachedSelected
-                          ? 4
-                          : 3
-                        : 2,
+                          ? 6
+                          : 5
+                        : config.hasSizeStep
+                        ? signBorderStepRequired
+                          ? 5
+                          : 4
+                        : 3,
                     );
                     if (msg) {
                       alert(msg);
                       return;
                     }
-                    const willBeOpen = !sectionsOpen.background;
+                    const willBeOpen = !sectionsOpen.textLines;
                     setSectionsOpen({
                       template: false,
                       size: false,
                       export: false,
-                      background: willBeOpen,
-                      textLines: false,
+                      background: false,
+                      textLines: willBeOpen,
                       backing: false,
                       border: false,
-                      plaqueFormat: false,
                     });
-                    setSectionsOpened((prev) => ({
-                      ...prev,
-                      background: true,
-                    }));
+                    setSectionsOpened((prev) => ({ ...prev, textLines: true }));
                   }}
                   className="mb-2 flex w-full items-center justify-between text-left"
                 >
@@ -9438,17 +10540,28 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     <h3 className="text-lg font-semibold text-[#0D1B2A]">
                       {variant === "plaque"
                         ? plaqueAttachedSelected
-                          ? "Step 4: Metal plate finish"
-                          : "Step 3: Metal plate finish"
+                          ? "Step 6: Enter your text"
+                          : "Step 5: Enter your text"
                         : config.templatesKey === "sign"
-                          ? "Step 3: Pick backgrounds"
-                          : "Step 2: Pick a background Color"}
+                        ? signBorderStepRequired
+                          ? "Step 5: Enter your text"
+                          : "Step 4: Enter your text"
+                        : "Step 3: Enter your text"}
                     </h3>
-                    {hasChosenBackgroundColor && (
+                    {hasStep3TextEntered && (
                       <CheckCircleIcon className="h-5 w-5 text-green-600" />
                     )}
+                    {badge.lines.some(
+                      (l) =>
+                        l.color &&
+                        areColorsSimilar(l.color, badge.backgroundColor, 70),
+                    ) && (
+                      <span className="text-xs font-medium text-red-600">
+                        Please check font colors
+                      </span>
+                    )}
                   </div>
-                  {sectionsOpen.background ? (
+                  {sectionsOpen.textLines ? (
                     <ChevronUpIcon className="h-5 w-5 text-gray-600" />
                   ) : (
                     <ChevronDownIcon className="h-5 w-5 text-gray-600" />
@@ -9458,1914 +10571,757 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               <div
                 className={`overflow-hidden transition-all duration-300 ${
                   variant === "badge"
-                    ? sectionsOpen.background
+                    ? sectionsOpen.textLines
                       ? "px-6 pb-5 pt-2"
                       : "p-0"
                     : ""
                 } ${
-                  sectionsOpen.background
-                    ? variant === "badge"
-                      ? "max-h-[720px] opacity-100"
-                      : "max-h-[500px] opacity-100"
+                  sectionsOpen.textLines
+                    ? "max-h-[5000px] opacity-100"
                     : "max-h-0 opacity-0"
                 }`}
               >
-                {/* Featured Colors: Gold, Silver, White, then Black / Blue / Red */}
-                {(() => {
-                  const featuredColors = [
-                    {
-                      value: FEATURED_BRUSHED_GOLD_HEX,
-                      name: "Brushed Gold",
-                      ring: "ring-yellow-400",
-                    },
-                    {
-                      value: FEATURED_BRUSHED_SILVER_HEX,
-                      name: "Brushed Silver",
-                      ring: "ring-gray-300",
-                    },
-                    { value: "#FFFFFF", name: "White", ring: "ring-white" },
-                    { value: "#000000", name: "Black", ring: "ring-gray-900" },
-                    { value: "#0000FF", name: "Blue", ring: "ring-blue-500" },
-                    { value: "#FF0000", name: "Red", ring: "ring-red-500" },
-                    {
-                      value: "rainbow",
-                      name: "More Colors",
-                      ring: "ring-gray-400",
-                      isRainbow: true,
-                    },
-                  ];
+                <div className="w-full">
+                  <BadgeEditorPanel
+                    badge={badge}
+                    panelLayout={variant === "badge" ? "aqb-badge" : "default"}
+                    onLineChange={updateLine}
+                    onAlignmentChange={(index, alignment) => {
+                      // Save to undo history before making changes
+                      saveToUndoHistory({
+                        type: "line-property",
+                        badgeIndex: selectedBadgeIndex,
+                        lineIndex: index,
+                        property: "align",
+                      });
 
-                  const handleColorClick = (colorValue: string) => {
-                    // Check if the new background color is similar to any text line colors
-                    if (checkBackgroundColorSimilarity(colorValue)) {
-                      setPendingBackgroundColor(colorValue);
-                      setShowBackgroundColorWarning(true);
-                    } else {
-                      applyBackgroundColor(colorValue);
-                    }
-                  };
-
-                  // Parse hex or RGB input and convert to hex
-                  const parseColorInput = (input: string): string | null => {
-                    const trimmed = input.trim();
-
-                    // Check if it's already a valid hex
-                    if (/^#?[0-9A-Fa-f]{6}$/.test(trimmed)) {
-                      return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
-                    }
-
-                    // Check if it's a 3-digit hex
-                    if (/^#?[0-9A-Fa-f]{3}$/.test(trimmed)) {
-                      const hex = trimmed.startsWith("#")
-                        ? trimmed.slice(1)
-                        : trimmed;
-                      return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`;
-                    }
-
-                    // Check if it's RGB format: rgb(r, g, b) or r, g, b
-                    const rgbMatch = trimmed.match(
-                      /^rgb\(?\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)?$/i,
-                    );
-                    if (rgbMatch) {
-                      const r = parseInt(rgbMatch[1], 10);
-                      const g = parseInt(rgbMatch[2], 10);
-                      const b = parseInt(rgbMatch[3], 10);
-                      if (
-                        r >= 0 &&
-                        r <= 255 &&
-                        g >= 0 &&
-                        g <= 255 &&
-                        b >= 0 &&
-                        b <= 255
-                      ) {
-                        return `#${r.toString(16).padStart(2, "0")}${g
-                          .toString(16)
-                          .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
-                      }
-                    }
-
-                    return null;
-                  };
-
-                  // Badge redesign: colour row; corner pills only for round/square 1×3 & 1.5×3.
-                  if (variant === "badge") {
-                    const showCornerStyle = isBadgeCornerStyleEligible(
-                      universalTemplateId,
-                    );
-                    const badgeSizeKey = showCornerStyle
-                      ? getBadgeTemplateSizeKey(universalTemplateId)
-                      : null;
-                    const activeBadgeCornerStyle = showCornerStyle
-                      ? getBadgeCornerStyleFromTemplate(universalTemplateId) ??
-                        "rounded"
-                      : null;
-
-                    const applyBadgeCornerStyle = (
-                      style: BadgeCornerStyleKey,
-                    ) => {
-                      if (!badgeSizeKey) return;
-                      const nextId =
-                        BADGE_CORNER_TEMPLATE_IDS[style][badgeSizeKey];
-                      if (nextId && nextId !== universalTemplateId) {
-                        void handleUniversalTemplateChange(nextId);
-                      }
-                    };
-
-                    return (
-                      <>
-                        <div className="aqb-badge-colour-row">
-                          {BADGE_AQB_FEATURED_BACKGROUND_COLORS.map((c) => {
-                            const selected = isAqbBadgeBgSwatchSelected(
-                              badge.backgroundColor,
-                              c.value,
-                            );
-                            return (
-                              <button
-                                key={c.value}
-                                type="button"
-                                className="aqb-badge-colour-swatch"
-                                title={c.name}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handleColorClick(c.value);
-                                }}
-                              >
-                                <span
-                                  className={`aqb-badge-cs-circle ${
-                                    c.light ? "light" : ""
-                                  } ${selected ? "selected" : ""}`}
-                                  style={featuredPlateBackgroundSwatchStyle(
-                                    c.value,
-                                  )}
-                                >
-                                  {selected ? (
-                                    <CheckIcon
-                                      className={`h-3.5 w-3.5 stroke-[3] ${
-                                        c.light
-                                          ? "text-[#0d1b2a]"
-                                          : "text-white"
-                                      }`}
-                                      aria-hidden
-                                    />
-                                  ) : null}
-                                </span>
-                                <span className="aqb-badge-cs-name">
-                                  {"brushed" in c && c.brushed ? (
-                                    <>
-                                      Brushed
-                                      <br />
-                                      {c.name.replace(/^Brushed\s+/, "")}
-                                    </>
-                                  ) : (
-                                    c.name
-                                  )}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        {showCornerStyle && badgeSizeKey && activeBadgeCornerStyle ? (
-                          <div className="finish-row">
-                            <div className="aqb-badge-finish-lbl">
-                              Corner style
-                            </div>
-                            <div className="aqb-badge-finish-pills">
-                              <button
-                                type="button"
-                                className={`aqb-badge-finish-pill ${
-                                  activeBadgeCornerStyle === "rounded"
-                                    ? "selected"
-                                    : ""
-                                }`}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  applyBadgeCornerStyle("rounded");
-                                }}
-                              >
-                                Rounded corners
-                              </button>
-                              <button
-                                type="button"
-                                className={`aqb-badge-finish-pill ${
-                                  activeBadgeCornerStyle === "square"
-                                    ? "selected"
-                                    : ""
-                                }`}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  applyBadgeCornerStyle("square");
-                                }}
-                              >
-                                Square corners
-                              </button>
-                            </div>
-                          </div>
-                        ) : null}
-
-                        <div className="finish-row">
-                          <div className="aqb-badge-finish-lbl">
-                            Badge icon (optional)
-                          </div>
-                          <AqbBadgeIconPicker
-                            variant="inline"
-                            value={
-                              isBadgeIconId(badge.badgeIconId)
-                                ? badge.badgeIconId
-                                : undefined
-                            }
-                            onChange={(iconId) => setBadgeIconForCurrent(iconId)}
-                          />
-                        </div>
-
-                        {multipleBadges.length > 1 ? (
-                          <div className="mt-2 flex flex-col gap-1">
-                            <button
-                              type="button"
-                              onClick={applyBackgroundColorToAll}
-                              className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#0d1b2a] underline transition-colors hover:text-[#3a4f63]"
-                              title={`Apply background color to all ${config.labelProductPlural.toLowerCase()}`}
-                            >
-                              Apply background color to all{" "}
-                              {config.labelProductPlural.toLowerCase()}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                applyBadgeIconToAll(
-                                  isBadgeIconId(badge.badgeIconId)
-                                    ? badge.badgeIconId
-                                    : undefined,
-                                )
-                              }
-                              className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#0d1b2a] underline transition-colors hover:text-[#3a4f63]"
-                            >
-                              Apply icon choice to all badges
-                            </button>
-                          </div>
-                        ) : null}
-                      </>
-                    );
-                  }
-
-                  return (
-                    <>
-                      <div className="flex items-start gap-3 ml-1.5 mt-1.5">
-                        <div className="flex flex-col gap-2">
-                          <div className="grid grid-cols-4 gap-2 w-fit">
-                            {featuredColors.map((c) => (
-                              <div
-                                key={c.value}
-                                className="flex flex-col items-center gap-1"
-                              >
-                                <button
-                                  className={`w-12 h-12 border rounded ${
-                                    badge.backgroundColor === c.value
-                                      ? "ring-2 ring-offset-1 " + c.ring
-                                      : ""
-                                  }`}
-                                  style={
-                                    c.isRainbow
-                                      ? {
-                                          background:
-                                            "linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)",
-                                        }
-                                      : featuredPlateBackgroundSwatchStyle(c.value)
-                                  }
-                                  title={c.name}
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    if (c.isRainbow) {
-                                      setShowColorModal(true);
-                                    } else {
-                                      handleColorClick(c.value);
-                                    }
-                                  }}
-                                />
-                                <span className="text-[14px] text-gray-600 text-center leading-tight">
-                                  {c.name === "Brushed Gold" ? (
-                                    <>
-                                      Brushed
-                                      <br />
-                                      Gold
-                                    </>
-                                  ) : c.name === "Brushed Silver" ? (
-                                    <>
-                                      Brushed
-                                      <br />
-                                      Silver
-                                    </>
-                                  ) : c.name === "More Colors" ? (
-                                    <>
-                                      More
-                                      <br />
-                                      Colors
-                                    </>
-                                  ) : (
-                                    c.name
-                                  )}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                          {/* Apply to All Button */}
-                          {multipleBadges.length > 1 && (
-                            <div className="mt-2">
-                              <button
-                                type="button"
-                                onClick={applyBackgroundColorToAll}
-                                className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
-                                title={`Apply background color to all ${config.labelProductPlural.toLowerCase()}`}
-                              >
-                                Apply background color to all{" "}
-                                {config.labelProductPlural.toLowerCase()}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        {/* Current Color Display - Large square aligned right */}
-                        <div className="flex-shrink-0 ml-auto flex flex-col items-center gap-1">
-                          <div
-                            className="w-24 h-24 md:w-32 md:h-32 border-2 border-gray-300 rounded shadow-sm"
-                            style={featuredPlateBackgroundSwatchStyle(
-                              badge.backgroundColor || "#FFFFFF",
-                            )}
-                            title={`Current background color: ${
-                              badge.backgroundColor || "#FFFFFF"
-                            }`}
-                          />
-                          <span className="text-[14px] text-gray-600 text-center">
-                            Current color
-                          </span>
-                        </div>
-                      </div>
-                      {variant === "plaque" &&
-                        isPlaqueDetachedTemplateId(
-                          badge.templateId ?? universalTemplateId,
-                        ) && (
-                          <div className="mt-3 ml-1.5 border-t border-gray-200 pt-3 w-full max-w-md">
-                            <p className="text-sm text-gray-700 mb-2">
-                              Photo frame finish
-                            </p>
-                            <div className="flex flex-wrap gap-3">
-                              {(
-                                [
-                                  {
-                                    id: "gold" as const,
-                                    label: "Gold",
-                                    src: "/images/plaque/plaque-detached-photo-frame-gold.png",
-                                  },
-                                  {
-                                    id: "silver" as const,
-                                    label: "Silver",
-                                    src: "/images/plaque/plaque-detached-photo-frame-silver.png",
-                                  },
-                                ] as const
-                              ).map((opt) => {
-                                const cur =
-                                  badge.plaqueDetachedPhotoFrameFinish ??
-                                  "gold";
-                                const active = cur === opt.id;
-                                return (
-                                  <button
-                                    key={opt.id}
-                                    type="button"
-                                    onClick={() => {
-                                      const next: Badge = {
-                                        ...badge,
-                                        plaqueDetachedPhotoFrameFinish: opt.id,
-                                      };
-                                      setBadge(next);
-                                      const ub = [...multipleBadges];
-                                      if (ub[selectedBadgeIndex]) {
-                                        ub[selectedBadgeIndex] = next;
-                                      }
-                                      setMultipleBadges(ub);
-                                      if (selectedBadgeIndex === 0) {
-                                        setBadge1Data(next);
-                                      }
-                                    }}
-                                    className={`flex flex-col items-center gap-1 rounded border px-2 py-2 transition-colors ${
-                                      active
-                                        ? "border-blue-600 bg-blue-50 ring-2 ring-blue-200"
-                                        : "border-gray-200 bg-white hover:bg-gray-50"
-                                    }`}
-                                  >
-                                    <img
-                                      src={opt.src}
-                                      alt=""
-                                      className="h-14 w-10 object-cover rounded-sm border border-gray-200"
-                                    />
-                                    <span className="text-[14px] font-medium text-gray-700">
-                                      {opt.label}
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                    </>
-                  );
-                })()}
-              </div>
-            </div>
-          </div>
-
-          {signBorderStepRequired && (
-            <div className="mb-4">
-              <button
-                ref={borderSectionRef}
-                type="button"
-                onClick={() => {
-                  const msg = getIncompleteStepsMessage(4);
-                  if (msg) {
-                    alert(msg);
-                    return;
-                  }
-                  const willBeOpen = !sectionsOpen.border;
-                  setSectionsOpen({
-                    template: false,
-                    size: false,
-                    export: false,
-                    background: false,
-                    textLines: false,
-                    backing: false,
-                    border: willBeOpen,
-                  });
-                  setSectionsOpened((prev) => ({ ...prev, border: true }));
-                }}
-                className="flex items-center justify-between w-full mb-2 text-left"
-              >
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-[#0D1B2A]">
-                    Step 4: Border
-                  </h3>
-                  {signBorderConfigured && (
-                    <CheckCircleIcon className="w-5 h-5 text-green-600" />
-                  )}
-                </div>
-                {sectionsOpen.border ? (
-                  <ChevronUpIcon className="w-5 h-5 text-gray-600" />
-                ) : (
-                  <ChevronDownIcon className="w-5 h-5 text-gray-600" />
-                )}
-              </button>
-              <div
-                className={`transition-all duration-300 overflow-hidden ${
-                  sectionsOpen.border
-                    ? "max-h-[520px] opacity-100"
-                    : "max-h-0 opacity-0"
-                }`}
-              >
-                <div className="mb-3">
-                  <p className="text-xs text-gray-600 mb-3">
-                    Template previews show the plate shape only. Choose a border
-                    type below (including &quot;No border&quot;). With a frame,
-                    pick trim color and — on Designer — a center motif.
-                  </p>
-                  <p className="text-sm text-gray-700 mb-2">Border type</p>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {getSignBorderStepChipOptions(universalTemplateId).map(
-                      (opt) => {
-                        const active = badge.signBorderOptionId === opt.id;
-                        return (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            onClick={() => {
-                              const isNone = opt.id === SIGN_BORDER_OPTION_NONE;
-                              const next: Badge = {
-                                ...badge,
-                                signBorderOptionId: opt.id,
-                                signBorderEnabled: !isNone,
-                                signBorderStyleId: isNone
-                                  ? badge.signBorderStyleId ?? "default"
-                                  : opt.id,
-                                ...(!isNone
-                                  ? {
-                                      borderColor:
-                                        badge.borderColor ?? "#FFFFFF",
-                                    }
-                                  : {}),
-                              };
-                              setBadge(next);
-                              const ub = [...multipleBadges];
-                              if (ub[selectedBadgeIndex]) {
-                                ub[selectedBadgeIndex] = next;
-                              }
-                              setMultipleBadges(ub);
-                              if (selectedBadgeIndex === 0) {
-                                setBadge1Data(next);
-                              }
-                            }}
-                            className={`px-2.5 py-1.5 rounded border text-xs font-medium transition-colors ${
-                              active
-                                ? "border-blue-600 bg-blue-50 text-blue-800"
-                                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        );
-                      },
-                    )}
-                  </div>
-                  {badge.signBorderOptionId === undefined && (
-                    <p className="text-xs text-amber-700 mb-3">
-                      Select a border type to finish this step.
-                    </p>
-                  )}
-                  {signBorderFramed && (
-                    <>
-                      <p className="text-sm text-gray-700 mb-2">
-                        Color for frame and trim (and Designer center motif when
-                        shown)
-                      </p>
-                      <div className="flex items-start gap-3 ml-1.5 mt-1.5">
-                        <div className="flex flex-col gap-2">
-                          <div className="grid grid-cols-4 gap-2 w-fit">
-                            {[
-                              {
-                                value: FEATURED_BRUSHED_GOLD_HEX,
-                                name: "Brushed Gold",
-                                ring: "ring-yellow-400",
-                              },
-                              {
-                                value: FEATURED_BRUSHED_SILVER_HEX,
-                                name: "Brushed Silver",
-                                ring: "ring-gray-300",
-                              },
-                              {
-                                value: "#FFFFFF",
-                                name: "White",
-                                ring: "ring-white",
-                              },
-                              {
-                                value: "#000000",
-                                name: "Black",
-                                ring: "ring-gray-900",
-                              },
-                              {
-                                value: "#0000FF",
-                                name: "Blue",
-                                ring: "ring-blue-500",
-                              },
-                              {
-                                value: "#FF0000",
-                                name: "Red",
-                                ring: "ring-red-500",
-                              },
-                              {
-                                value: "rainbow",
-                                name: "More Colors",
-                                ring: "ring-gray-400",
-                                isRainbow: true,
-                              },
-                            ].map((c) => (
-                              <div
-                                key={c.value}
-                                className="flex flex-col items-center gap-1"
-                              >
-                                <button
-                                  type="button"
-                                  className={`w-12 h-12 border rounded ${
-                                    (badge.borderColor ?? "#FFFFFF") === c.value
-                                      ? "ring-2 ring-offset-1 " + c.ring
-                                      : ""
-                                  }`}
-                                  style={
-                                    c.isRainbow
-                                      ? {
-                                          background:
-                                            "linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)",
-                                        }
-                                      : { backgroundColor: c.value }
-                                  }
-                                  title={c.name}
-                                  onClick={() => {
-                                    if (c.isRainbow) {
-                                      setShowBorderColorModal(true);
-                                    } else {
-                                      setBadge({
-                                        ...badge,
-                                        borderColor: c.value,
-                                      });
-                                    }
-                                  }}
-                                />
-                                <span className="text-[14px] text-gray-600 text-center leading-tight">
-                                  {c.name === "Brushed Gold" ? (
-                                    <>
-                                      Brushed
-                                      <br />
-                                      Gold
-                                    </>
-                                  ) : c.name === "Brushed Silver" ? (
-                                    <>
-                                      Brushed
-                                      <br />
-                                      Silver
-                                    </>
-                                  ) : c.name === "More Colors" ? (
-                                    <>
-                                      More
-                                      <br />
-                                      Colors
-                                    </>
-                                  ) : (
-                                    c.name
-                                  )}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="flex-shrink-0 ml-auto flex flex-col items-center gap-1">
-                          <div
-                            className="w-24 h-24 md:w-32 md:h-32 border-2 border-gray-300 rounded shadow-sm"
-                            style={{
-                              backgroundColor: badge.borderColor ?? "#FFFFFF",
-                            }}
-                            title={`Current border color: ${
-                              badge.borderColor ?? "#FFFFFF"
-                            }`}
-                          />
-                          <span className="text-[14px] text-gray-600 text-center">
-                            Current color
-                          </span>
-                        </div>
-                      </div>
-                      {selectedSignTemplateType === "designer-heart" &&
-                        universalTemplateId.startsWith("designer-") && (
-                          <div className="mt-4 w-full">
-                            <p className="text-sm text-gray-700 mb-2">
-                              Center motif
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {DESIGNER_MOTIF_UI_OPTIONS.map((opt) => {
-                                const active =
-                                  (badge.designerMotif ?? "heart") === opt.id;
-                                const motifSvg = designerMotifPreviewSvgMarkup(
-                                  opt.id,
-                                );
-                                return (
-                                  <button
-                                    key={opt.id}
-                                    type="button"
-                                    title={opt.label}
-                                    onClick={() => {
-                                      const next = {
-                                        ...badge,
-                                        designerMotif: opt.id,
-                                      };
-                                      setBadge(next);
-                                      const ub = [...multipleBadges];
-                                      if (ub[selectedBadgeIndex]) {
-                                        ub[selectedBadgeIndex] = next;
-                                      }
-                                      setMultipleBadges(ub);
-                                      if (selectedBadgeIndex === 0) {
-                                        setBadge1Data(next);
-                                      }
-                                    }}
-                                    className="flex flex-col items-center gap-1"
-                                  >
-                                    <div
-                                      className={`control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center rounded border transition-colors ${
-                                        active
-                                          ? "border-blue-600 bg-blue-50 text-blue-800"
-                                          : "border-gray-400 bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                      }`}
-                                    >
-                                      {motifSvg ? (
-                                        <span
-                                          className="block w-8 h-8 md:w-10 md:h-10 shrink-0 [&>svg]:h-full [&>svg]:w-full [&>svg]:block"
-                                          dangerouslySetInnerHTML={{
-                                            __html: motifSvg,
-                                          }}
-                                        />
-                                      ) : (
-                                        <span className="text-[14px] font-medium px-0.5 text-center leading-tight">
-                                          {opt.label}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div
-                                      className={`text-[14px] text-center leading-tight max-w-[4.5rem] ${
-                                        active
-                                          ? "text-blue-800"
-                                          : "text-gray-600"
-                                      }`}
-                                    >
-                                      {opt.label}
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                    </>
-                  )}
-                  {badge.signBorderOptionId === SIGN_BORDER_OPTION_NONE && (
-                    <p className="text-xs text-gray-500">
-                      No frame or decorations; text uses the full plate area.
-                    </p>
-                  )}
-                  {multipleBadges.length > 1 && (
-                    <div className="mt-3">
-                      <button
-                        type="button"
-                        onClick={applyBorderToAll}
-                        className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors whitespace-nowrap"
-                        title={
-                          !signBorderFramed
-                            ? `No frame on all; border color follows each ${config.labelProduct.toLowerCase()}'s background`
-                            : `Apply frame style, motif (Designer), and border color to all ${config.labelProductPlural.toLowerCase()}`
+                      const newLines = badge.lines.map((l, i) => {
+                        if (i === index) {
+                          // Set both align and alignment for compatibility
+                          // For center alignment, ensure xNorm is 0.5 for proper centering
+                          const updatedLine = {
+                            ...l,
+                            align: alignment as "left" | "center" | "right",
+                            alignment: alignment as "left" | "center" | "right",
+                          };
+                          if (alignment === "center") {
+                            updatedLine.xNorm = 0.5;
+                          }
+                          return updatedLine;
                         }
-                      >
-                        Apply border to all{" "}
-                        {config.labelProductPlural.toLowerCase()}
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {config.borderOptions.length === 0 ? null : (
-                  <div className="flex flex-wrap gap-2">
-                    {config.borderOptions.map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => {
-                          setSignBorderId(opt.value);
-                        }}
-                        className={`px-3 py-2 rounded border text-sm ${
-                          signBorderId === opt.value
-                            ? "border-blue-600 bg-blue-50"
-                            : "border-gray-300 bg-white hover:bg-gray-50"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+                        return l;
+                      }) as BadgeLine[];
 
-          {variant === "plaque" && signUserLogoUploadSupported && (
-            <div className="mb-4">
-              <button
-                type="button"
-                onClick={() => {
-                  const msg = getIncompleteStepsMessage(
-                    // Guard should require only prior steps. For plaques:
-                    // - attached flow: photo is step 5 (requires steps 1-4)
-                    // - detached flow: photo is step 4 (requires steps 1-3)
-                    plaqueAttachedSelected ? 5 : 4,
-                  );
-                  if (msg) {
-                    alert(msg);
-                    return;
-                  }
-                  const willBeOpen = !signLogoSectionOpen;
-                  setSignLogoSectionOpen(willBeOpen);
-                }}
-                className="flex items-center justify-between w-full mb-2 text-left"
-              >
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-[#0D1B2A]">
-                    {requiresPlaqueLogo
-                      ? plaqueAttachedSelected
-                        ? "Step 5: Upload icon"
-                        : "Step 4: Upload icon"
-                      : plaqueAttachedSelected
-                        ? "Step 5: Upload icon (optional)"
-                        : "Step 4: Upload icon (optional)"}
-                  </h3>
-                  {(() => {
-                    const logoOk = Boolean(badge.logo?.src?.trim());
-                    const stepDone = requiresPlaqueLogo
-                      ? logoOk
-                      : multipleBadges.length > 0 &&
-                        (logoOk ||
-                          sectionsOpened.textLines ||
-                          hasStep3TextEntered);
-                    return stepDone ? (
-                      <CheckCircleIcon className="w-5 h-5 text-green-600" />
-                    ) : null;
-                  })()}
-                </div>
-                {signLogoSectionOpen ? (
-                  <ChevronUpIcon className="w-5 h-5 text-gray-600" />
-                ) : (
-                  <ChevronDownIcon className="w-5 h-5 text-gray-600" />
-                )}
-              </button>
-              <div
-                className={`transition-all duration-300 overflow-hidden ${
-                  signLogoSectionOpen
-                    ? "max-h-[2000px] opacity-100"
-                    : "max-h-0 opacity-0"
-                }`}
-              >
-                <div className="space-y-3 text-sm text-gray-800">
-                  <p className="text-xs text-gray-600">
-                    {isPlaqueDetachedTemplateId(
-                      badge.templateId ?? universalTemplateId,
-                    )
-                      ? "The framed area on the wood is for your printed photo (inserted separately). Your uploaded image appears on the metal plate beside your text — set left or right below."
-                      : "Your image is placed on the metal plate above your text."}{" "}
-                    PNG, JPEG, WebP, or GIF.
-                  </p>
-                  <input
-                    ref={signLogoFileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
-                    className="hidden"
-                    onChange={handleSignLogoFileSelect}
-                  />
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <button
-                      type="button"
-                      disabled={signLogoUploading}
-                      onClick={() => signLogoFileInputRef.current?.click()}
-                      className="px-3 py-2 rounded border border-blue-600 bg-blue-50 text-blue-900 text-sm hover:bg-blue-100 disabled:opacity-50"
-                    >
-                      {signLogoUploading ? "Uploading…" : "Choose image"}
-                    </button>
-                    {badge.logo?.src ? (
-                      <button
-                        type="button"
-                        onClick={clearSignLogo}
-                        className="px-3 py-2 rounded border border-gray-300 text-sm hover:bg-gray-50"
-                      >
-                        Remove image
-                      </button>
-                    ) : null}
-                  </div>
-                  {badge.logo?.src ? (
-                    <>
-                      {getSignLogoPlacementOptionsForTemplate(
-                        badge.templateId ?? universalTemplateId,
-                      ).length > 1 ? (
-                        <div className="space-y-2">
-                          <span className="text-xs font-medium text-gray-700">
-                            Placement
-                          </span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {(() => {
-                              const tid =
-                                badge.templateId ?? universalTemplateId;
-                              const effective =
-                                normalizeSignLogoPlacementForTemplate(
-                                  tid,
-                                  badge.logo?.placement,
-                                );
-                              return getSignLogoPlacementOptionsForTemplate(
-                                tid,
-                              ).map((key) => (
-                                <button
-                                  key={key}
-                                  type="button"
-                                  onClick={() => setSignLogoPlacementUi(key)}
-                                  className={`px-2.5 py-1.5 rounded text-xs border ${
-                                    effective === key
-                                      ? "border-blue-600 bg-blue-50 text-blue-900"
-                                      : "border-gray-300 hover:bg-gray-50"
-                                  }`}
-                                >
-                                  {SIGN_LOGO_PLACEMENT_UI_LABEL[key]}
-                                </button>
-                              ));
-                            })()}
-                          </div>
-                        </div>
-                      ) : null}
-                      {multipleBadges.length > 1 ? (
+                      // Recalculate center positions
+                      const centeredLines = calculateCenterPositions(newLines);
+                      setBadge({ ...badge, lines: centeredLines });
+
+                      // Update the badge in multipleBadges array
+                      const updatedMultipleBadges = [...multipleBadges];
+                      if (updatedMultipleBadges[selectedBadgeIndex]) {
+                        updatedMultipleBadges[selectedBadgeIndex] = {
+                          ...updatedMultipleBadges[selectedBadgeIndex],
+                          lines: centeredLines,
+                        };
+                        setMultipleBadges(updatedMultipleBadges);
+                      }
+
+                      // Sync badge1Data if editing the first badge
+                      if (selectedBadgeIndex === 0) {
+                        setBadge1Data(updatedMultipleBadges[0]);
+                      }
+                    }}
+                    onBackgroundColorChange={(backgroundColor) => {
+                      setBadge({ ...badge, backgroundColor });
+                      setHasChosenBackgroundColor(true);
+                    }}
+                    onRemoveLine={removeLine}
+                    showRemove={true}
+                    maxLines={maxLines}
+                    addLineButton={
+                      variant === "badge" ? (
                         <button
                           type="button"
-                          onClick={applySignLogoToAll}
-                          className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 mt-2"
+                          className="aqb-badge-add-line-btn"
+                          onClick={addLine}
+                          disabled={badge.lines.length >= maxLines}
                         >
-                          Apply image to all{" "}
-                          {config.labelProductPlural.toLowerCase()}
+                          + Add line ({badge.lines.length}/{maxLines})
                         </button>
-                      ) : null}
-                    </>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Text Lines */}
-          <div
-            className={
-              variant === "badge"
-                ? "w-full min-w-0 border-b border-[rgba(13,27,42,0.1)]"
-                : "mb-4"
-            }
-          >
-            {variant === "badge" && aqbBadgeStepHeaderModel ? (
-              <AqbBadgeStepSectionToggle
-                buttonRef={textLinesSectionRef}
-                stepNumber={3}
-                visualState={aqbBadgeStepHeaderModel.text.state}
-                title="Step 3: Enter your text"
-                summary={aqbBadgeStepHeaderModel.text.summary}
-                open={sectionsOpen.textLines}
-                onClick={() => {
-                  const msg = getIncompleteStepsMessage(
-                    config.hasSizeStep
-                      ? signBorderStepRequired
-                        ? 5
-                        : 4
-                      : 3,
-                  );
-                  if (msg) {
-                    alert(msg);
-                    return;
-                  }
-                  const willBeOpen = !sectionsOpen.textLines;
-                  setSectionsOpen({
-                    template: false,
-                    size: false,
-                    export: false,
-                    background: false,
-                    textLines: willBeOpen,
-                    backing: false,
-                    border: false,
-                  });
-                  setSectionsOpened((prev) => ({ ...prev, textLines: true }));
-                }}
-                endSlot={
-                  badge.lines.some(
-                    (l) =>
-                      l.color &&
-                      areColorsSimilar(l.color, badge.backgroundColor, 70),
-                  ) ? (
-                    <span
-                      className="inline-flex"
-                      title="Please check font colors — some text may not show well on this background."
-                    >
-                      <ExclamationTriangleIcon
-                        className="h-4 w-4 text-red-500"
-                        aria-hidden
-                      />
-                      <span className="sr-only">
-                        Please check font colors — some text may not show well
-                        on this background.
-                      </span>
-                    </span>
-                  ) : null
-                }
-              />
-            ) : (
-              <button
-                ref={textLinesSectionRef}
-                type="button"
-                onClick={() => {
-                  const msg = getIncompleteStepsMessage(
-                    variant === "plaque"
-                      ? plaqueAttachedSelected
-                        ? 6
-                        : 5
-                      : config.hasSizeStep
-                        ? signBorderStepRequired
-                          ? 5
-                          : 4
-                        : 3,
-                  );
-                  if (msg) {
-                    alert(msg);
-                    return;
-                  }
-                  const willBeOpen = !sectionsOpen.textLines;
-                  setSectionsOpen({
-                    template: false,
-                    size: false,
-                    export: false,
-                    background: false,
-                    textLines: willBeOpen,
-                    backing: false,
-                    border: false,
-                  });
-                  setSectionsOpened((prev) => ({ ...prev, textLines: true }));
-                }}
-                className="mb-2 flex w-full items-center justify-between text-left"
-              >
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-[#0D1B2A]">
-                    {variant === "plaque"
-                      ? plaqueAttachedSelected
-                        ? "Step 6: Enter your text"
-                        : "Step 5: Enter your text"
-                      : config.templatesKey === "sign"
-                        ? signBorderStepRequired
-                          ? "Step 5: Enter your text"
-                          : "Step 4: Enter your text"
-                        : "Step 3: Enter your text"}
-                  </h3>
-                  {hasStep3TextEntered && (
-                    <CheckCircleIcon className="h-5 w-5 text-green-600" />
-                  )}
-                  {badge.lines.some(
-                    (l) =>
-                      l.color &&
-                      areColorsSimilar(l.color, badge.backgroundColor, 70),
-                  ) && (
-                    <span className="text-xs font-medium text-red-600">
-                      Please check font colors
-                    </span>
-                  )}
-                </div>
-                {sectionsOpen.textLines ? (
-                  <ChevronUpIcon className="h-5 w-5 text-gray-600" />
-                ) : (
-                  <ChevronDownIcon className="h-5 w-5 text-gray-600" />
-                )}
-              </button>
-            )}
-            <div
-              className={`overflow-hidden transition-all duration-300 ${
-                variant === "badge"
-                  ? sectionsOpen.textLines
-                    ? "px-6 pb-5 pt-2"
-                    : "p-0"
-                  : ""
-              } ${
-                sectionsOpen.textLines
-                  ? "max-h-[5000px] opacity-100"
-                  : "max-h-0 opacity-0"
-              }`}
-            >
-              <div className="w-full">
-                <BadgeEditorPanel
-                  badge={badge}
-                  panelLayout={variant === "badge" ? "aqb-badge" : "default"}
-                  onLineChange={updateLine}
-                  onAlignmentChange={(index, alignment) => {
-                    // Save to undo history before making changes
-                    saveToUndoHistory({
-                      type: "line-property",
-                      badgeIndex: selectedBadgeIndex,
-                      lineIndex: index,
-                      property: "align",
-                    });
-
-                    const newLines = badge.lines.map((l, i) => {
-                      if (i === index) {
-                        // Set both align and alignment for compatibility
-                        // For center alignment, ensure xNorm is 0.5 for proper centering
-                        const updatedLine = {
-                          ...l,
-                          align: alignment as "left" | "center" | "right",
-                          alignment: alignment as "left" | "center" | "right",
-                        };
-                        if (alignment === "center") {
-                          updatedLine.xNorm = 0.5;
-                        }
-                        return updatedLine;
-                      }
-                      return l;
-                    }) as BadgeLine[];
-
-                    // Recalculate center positions
-                    const centeredLines = calculateCenterPositions(newLines);
-                    setBadge({ ...badge, lines: centeredLines });
-
-                    // Update the badge in multipleBadges array
-                    const updatedMultipleBadges = [...multipleBadges];
-                    if (updatedMultipleBadges[selectedBadgeIndex]) {
-                      updatedMultipleBadges[selectedBadgeIndex] = {
-                        ...updatedMultipleBadges[selectedBadgeIndex],
-                        lines: centeredLines,
-                      };
-                      setMultipleBadges(updatedMultipleBadges);
+                      ) : null
                     }
-
-                    // Sync badge1Data if editing the first badge
-                    if (selectedBadgeIndex === 0) {
-                      setBadge1Data(updatedMultipleBadges[0]);
+                    resetButton={null}
+                    multiBadgeButton={null}
+                    editable={true}
+                    onOpenTextColorModal={(lineIndex) => {
+                      setTextColorModalLineIndex(lineIndex);
+                      setShowTextColorModal(true);
+                    }}
+                    onApplyFormattingToAll={applyFormattingToAllLines}
+                    hasMultipleBadges={multipleBadges.length > 1}
+                    onResetLineToDefault={resetLineToDefault}
+                    variant={variant}
+                    lineLabels={
+                      variant === "plaque"
+                        ? (() => {
+                            const fmt =
+                              resolveAttachedPlaqueAwardFormatForRender(badge);
+                            return fmt
+                              ? plaqueAwardEditorLabelsForFormat(fmt, maxLines)
+                              : undefined;
+                          })()
+                        : undefined
                     }
-                  }}
-                  onBackgroundColorChange={(backgroundColor) => {
-                    setBadge({ ...badge, backgroundColor });
-                    setHasChosenBackgroundColor(true);
-                  }}
-                  onRemoveLine={removeLine}
-                  showRemove={true}
-                  maxLines={maxLines}
-                  addLineButton={
-                    variant === "badge" ? (
+                    linePlaceholders={
+                      variant === "plaque"
+                        ? (() => {
+                            const fmt =
+                              resolveAttachedPlaqueAwardFormatForRender(badge);
+                            return fmt
+                              ? plaqueAwardEditorPlaceholdersForFormat(
+                                  fmt,
+                                  maxLines,
+                                )
+                              : undefined;
+                          })()
+                        : undefined
+                    }
+                  />
+                  {variant !== "badge" ? (
+                    <div className="flex items-center justify-end">
                       <button
                         type="button"
-                        className="aqb-badge-add-line-btn"
                         onClick={addLine}
                         disabled={badge.lines.length >= maxLines}
+                        className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
                       >
-                        + Add line ({badge.lines.length}/{maxLines})
+                        Add Line ({badge.lines.length}/{maxLines})
                       </button>
-                    ) : null
-                  }
-                  resetButton={null}
-                  multiBadgeButton={null}
-                  editable={true}
-                  onOpenTextColorModal={(lineIndex) => {
-                    setTextColorModalLineIndex(lineIndex);
-                    setShowTextColorModal(true);
-                  }}
-                  onApplyFormattingToAll={applyFormattingToAllLines}
-                  hasMultipleBadges={multipleBadges.length > 1}
-                  onResetLineToDefault={resetLineToDefault}
-                  variant={variant}
-                  lineLabels={
-                    variant === "plaque"
-                      ? (() => {
-                          const fmt =
-                            resolveAttachedPlaqueAwardFormatForRender(badge);
-                          return fmt
-                            ? plaqueAwardEditorLabelsForFormat(fmt, maxLines)
-                            : undefined;
-                        })()
-                      : undefined
-                  }
-                  linePlaceholders={
-                    variant === "plaque"
-                      ? (() => {
-                          const fmt =
-                            resolveAttachedPlaqueAwardFormatForRender(badge);
-                          return fmt
-                            ? plaqueAwardEditorPlaceholdersForFormat(
-                                fmt,
-                                maxLines,
-                              )
-                            : undefined;
-                        })()
-                      : undefined
-                  }
-                />
-                {variant !== "badge" ? (
-                  <div className="flex items-center justify-end">
-                    <button
-                      type="button"
-                      onClick={addLine}
-                      disabled={badge.lines.length >= maxLines}
-                      className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                    >
-                      Add Line ({badge.lines.length}/{maxLines})
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </div>
-
-          {variant !== "plaque" &&
-            isSignLikeVariant(variant) &&
-            signUserLogoUploadSupported && (
-            <div className="mb-4">
-              <button
-                type="button"
-                onClick={() => {
-                  const msg = getIncompleteStepsMessage(6);
-                  if (msg) {
-                    alert(msg);
-                    return;
-                  }
-                  const willBeOpen = !signLogoSectionOpen;
-                  setSignLogoSectionOpen(willBeOpen);
-                }}
-                className="flex items-center justify-between w-full mb-2 text-left"
-              >
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-[#0D1B2A]">
-                    {signBorderStepRequired
-                      ? "Step 6: Image or logo (optional)"
-                      : "Step 5: Image or logo (optional)"}
-                  </h3>
-                  {Boolean(badge.logo?.src) && (
-                    <CheckCircleIcon className="w-5 h-5 text-green-600" />
-                  )}
-                </div>
-                {signLogoSectionOpen ? (
-                  <ChevronUpIcon className="w-5 h-5 text-gray-600" />
-                ) : (
-                  <ChevronDownIcon className="w-5 h-5 text-gray-600" />
-                )}
-              </button>
-              <div
-                className={`transition-all duration-300 overflow-hidden ${
-                  signLogoSectionOpen
-                    ? "max-h-[2000px] opacity-100"
-                    : "max-h-0 opacity-0"
-                }`}
-              >
-                <div className="space-y-3 text-sm text-gray-800">
-                  <p className="text-xs text-gray-600">
-                    Upload a PNG, JPEG, WebP, or GIF. The image is sized to fit
-                    with your text; pick where it sits relative to the text.
-                  </p>
-                  <input
-                    ref={signLogoFileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
-                    className="hidden"
-                    onChange={handleSignLogoFileSelect}
-                  />
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <button
-                      type="button"
-                      disabled={signLogoUploading}
-                      onClick={() => signLogoFileInputRef.current?.click()}
-                      className="px-3 py-2 rounded border border-blue-600 bg-blue-50 text-blue-900 text-sm hover:bg-blue-100 disabled:opacity-50"
-                    >
-                      {signLogoUploading ? "Uploading…" : "Choose image"}
-                    </button>
-                    {badge.logo?.src ? (
-                      <button
-                        type="button"
-                        onClick={clearSignLogo}
-                        className="px-3 py-2 rounded border border-gray-300 text-sm hover:bg-gray-50"
-                      >
-                        Remove image
-                      </button>
-                    ) : null}
-                  </div>
-                  {badge.logo?.src ? (
-                    <>
-                      {getSignLogoPlacementOptionsForTemplate(
-                        badge.templateId ?? universalTemplateId,
-                      ).length > 1 ? (
-                        <div className="space-y-2">
-                          <span className="text-xs font-medium text-gray-700">
-                            Placement
-                          </span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {(() => {
-                              const tid =
-                                badge.templateId ?? universalTemplateId;
-                              const effective =
-                                normalizeSignLogoPlacementForTemplate(
-                                  tid,
-                                  badge.logo?.placement,
-                                );
-                              return getSignLogoPlacementOptionsForTemplate(
-                                tid,
-                              ).map((key) => (
-                                <button
-                                  key={key}
-                                  type="button"
-                                  onClick={() => setSignLogoPlacementUi(key)}
-                                  className={`px-2.5 py-1.5 rounded text-xs border ${
-                                    effective === key
-                                      ? "border-blue-600 bg-blue-50 text-blue-900"
-                                      : "border-gray-300 hover:bg-gray-50"
-                                  }`}
-                                >
-                                  {SIGN_LOGO_PLACEMENT_UI_LABEL[key]}
-                                </button>
-                              ));
-                            })()}
-                          </div>
-                        </div>
-                      ) : null}
-                      {multipleBadges.length > 1 ? (
-                        <button
-                          type="button"
-                          onClick={applySignLogoToAll}
-                          className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 mt-2"
-                        >
-                          Apply image to all{" "}
-                          {config.labelProductPlural.toLowerCase()}
-                        </button>
-                      ) : null}
-                    </>
+                    </div>
                   ) : null}
                 </div>
               </div>
             </div>
-          )}
 
-          {config.hasBacking && (
-            /* Step 4: Backing Type */
-            <div
-              className={
-                variant === "badge"
-                  ? `w-full min-w-0 border-b border-[rgba(13,27,42,0.1)]${
-                      sectionsOpen.backing ? " relative z-20" : ""
-                    }`
-                  : "mb-4"
-              }
-            >
-              {variant === "badge" && aqbBadgeStepHeaderModel ? (
-                <AqbBadgeStepSectionToggle
-                  buttonRef={backingSectionRef}
-                  stepNumber={4}
-                  visualState={aqbBadgeStepHeaderModel.backing.state}
-                  title="Step 4: Choose backing type"
-                  summary={aqbBadgeStepHeaderModel.backing.summary}
-                  open={sectionsOpen.backing}
-                  onClick={() => {
-                    const msg = getIncompleteStepsMessage(4);
-                    if (msg) {
-                      alert(msg);
-                      return;
-                    }
-                    const willBeOpen = !sectionsOpen.backing;
-                    setSectionsOpen({
-                      template: false,
-                      size: false,
-                      export: false,
-                      background: false,
-                      textLines: false,
-                      backing: willBeOpen,
-                      border: false,
-                    });
-                    setSectionsOpened((prev) => ({ ...prev, backing: true }));
-                  }}
-                />
-              ) : (
-                <button
-                  ref={backingSectionRef}
-                  type="button"
-                  onClick={() => {
-                    const msg = getIncompleteStepsMessage(4);
-                    if (msg) {
-                      alert(msg);
-                      return;
-                    }
-                    const willBeOpen = !sectionsOpen.backing;
-                    setSectionsOpen({
-                      template: false,
-                      size: false,
-                      export: false,
-                      background: false,
-                      textLines: false,
-                      backing: willBeOpen,
-                      border: false,
-                    });
-                    setSectionsOpened((prev) => ({ ...prev, backing: true }));
-                  }}
-                  className="mb-2 flex w-full items-center justify-between text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
-                      Step 4: Choose backing type
-                    </h3>
-                    {sectionsOpened.backing && (
-                      <CheckCircleIcon className="h-5 w-5 text-green-600" />
+            {variant !== "plaque" &&
+              isSignLikeVariant(variant) &&
+              signUserLogoUploadSupported && (
+                <div className="mb-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const msg = getIncompleteStepsMessage(6);
+                      if (msg) {
+                        alert(msg);
+                        return;
+                      }
+                      const willBeOpen = !signLogoSectionOpen;
+                      setSignLogoSectionOpen(willBeOpen);
+                    }}
+                    className="flex items-center justify-between w-full mb-2 text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                        {signBorderStepRequired
+                          ? "Step 6: Image or logo (optional)"
+                          : "Step 5: Image or logo (optional)"}
+                      </h3>
+                      {Boolean(badge.logo?.src) && (
+                        <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                      )}
+                    </div>
+                    {signLogoSectionOpen ? (
+                      <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+                    ) : (
+                      <ChevronDownIcon className="w-5 h-5 text-gray-600" />
                     )}
+                  </button>
+                  <div
+                    className={`transition-all duration-300 overflow-hidden ${
+                      signLogoSectionOpen
+                        ? "max-h-[2000px] opacity-100"
+                        : "max-h-0 opacity-0"
+                    }`}
+                  >
+                    <div className="space-y-3 text-sm text-gray-800">
+                      <p className="text-xs text-gray-600">
+                        Upload a PNG, JPEG, WebP, or GIF. The image is sized to
+                        fit with your text; pick where it sits relative to the
+                        text.
+                      </p>
+                      <input
+                        ref={signLogoFileInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                        className="hidden"
+                        onChange={handleSignLogoFileSelect}
+                      />
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <button
+                          type="button"
+                          disabled={signLogoUploading}
+                          onClick={() => signLogoFileInputRef.current?.click()}
+                          className="px-3 py-2 rounded border border-blue-600 bg-blue-50 text-blue-900 text-sm hover:bg-blue-100 disabled:opacity-50"
+                        >
+                          {signLogoUploading ? "Uploading…" : "Choose image"}
+                        </button>
+                        {badge.logo?.src ? (
+                          <button
+                            type="button"
+                            onClick={clearSignLogo}
+                            className="px-3 py-2 rounded border border-gray-300 text-sm hover:bg-gray-50"
+                          >
+                            Remove image
+                          </button>
+                        ) : null}
+                      </div>
+                      {badge.logo?.src ? (
+                        <>
+                          {getSignLogoPlacementOptionsForTemplate(
+                            badge.templateId ?? universalTemplateId,
+                          ).length > 1 ? (
+                            <div className="space-y-2">
+                              <span className="text-xs font-medium text-gray-700">
+                                Placement
+                              </span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {(() => {
+                                  const tid =
+                                    badge.templateId ?? universalTemplateId;
+                                  const effective =
+                                    normalizeSignLogoPlacementForTemplate(
+                                      tid,
+                                      badge.logo?.placement,
+                                    );
+                                  return getSignLogoPlacementOptionsForTemplate(
+                                    tid,
+                                  ).map((key) => (
+                                    <button
+                                      key={key}
+                                      type="button"
+                                      onClick={() =>
+                                        setSignLogoPlacementUi(key)
+                                      }
+                                      className={`px-2.5 py-1.5 rounded text-xs border ${
+                                        effective === key
+                                          ? "border-blue-600 bg-blue-50 text-blue-900"
+                                          : "border-gray-300 hover:bg-gray-50"
+                                      }`}
+                                    >
+                                      {SIGN_LOGO_PLACEMENT_UI_LABEL[key]}
+                                    </button>
+                                  ));
+                                })()}
+                              </div>
+                            </div>
+                          ) : null}
+                          {multipleBadges.length > 1 ? (
+                            <button
+                              type="button"
+                              onClick={applySignLogoToAll}
+                              className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 mt-2"
+                            >
+                              Apply image to all{" "}
+                              {config.labelProductPlural.toLowerCase()}
+                            </button>
+                          ) : null}
+                        </>
+                      ) : null}
+                    </div>
                   </div>
-                  {sectionsOpen.backing ? (
-                    <ChevronUpIcon className="h-5 w-5 text-gray-600" />
-                  ) : (
-                    <ChevronDownIcon className="h-5 w-5 text-gray-600" />
-                  )}
-                </button>
+                </div>
               )}
+
+            {config.hasBacking && (
+              /* Step 4: Backing Type */
               <div
-                className={`transition-all duration-300 ${
-                  variant === "badge" && sectionsOpen.backing
-                    ? "overflow-visible"
-                    : "overflow-hidden"
-                } ${
+                className={
                   variant === "badge"
-                    ? sectionsOpen.backing
-                      ? "px-6 pb-5 pt-2"
-                      : "p-0"
-                    : ""
-                } ${
-                  sectionsOpen.backing
-                    ? variant === "badge"
-                      ? "max-h-[420px] opacity-100"
-                      : "max-h-[200px] opacity-100"
-                    : "max-h-0 opacity-0"
-                }`}
+                    ? `w-full min-w-0 border-b border-[rgba(13,27,42,0.1)]${
+                        sectionsOpen.backing ? " relative z-20" : ""
+                      }`
+                    : "mb-4"
+                }
               >
-                {variant === "badge" ? (
-                  <AqbBadgeBackingPicker
-                    value={badge.backing as BadgeBackingKey}
-                    onChange={(value) => {
-                      applyBackingToAll(value);
+                {variant === "badge" && aqbBadgeStepHeaderModel ? (
+                  <AqbBadgeStepSectionToggle
+                    buttonRef={backingSectionRef}
+                    stepNumber={4}
+                    visualState={aqbBadgeStepHeaderModel.backing.state}
+                    title="Step 4: Choose backing type"
+                    summary={aqbBadgeStepHeaderModel.backing.summary}
+                    open={sectionsOpen.backing}
+                    onClick={() => {
+                      const msg = getIncompleteStepsMessage(4);
+                      if (msg) {
+                        alert(msg);
+                        return;
+                      }
+                      const willBeOpen = !sectionsOpen.backing;
+                      setSectionsOpen({
+                        template: false,
+                        size: false,
+                        export: false,
+                        background: false,
+                        textLines: false,
+                        backing: willBeOpen,
+                        border: false,
+                      });
                       setSectionsOpened((prev) => ({ ...prev, backing: true }));
                     }}
                   />
                 ) : (
-                  <div className="mb-2">
-                    <label htmlFor="backing-select" className="sr-only">
-                      Backing type
-                    </label>
-                    <select
-                      id="backing-select"
-                      value={badge.backing}
-                      onChange={(e) => {
-                        const value = e.target.value as
-                          | "pin"
-                          | "magnetic"
-                          | "adhesive";
-                        setBadge({ ...badge, backing: value });
-                        const updatedMultipleBadges = [...multipleBadges];
-                        if (updatedMultipleBadges[selectedBadgeIndex]) {
-                          updatedMultipleBadges[selectedBadgeIndex] = {
-                            ...updatedMultipleBadges[selectedBadgeIndex],
-                            backing: value,
-                          };
-                          setMultipleBadges(updatedMultipleBadges);
-                        }
-                        if (selectedBadgeIndex === 0) {
-                          setBadge1Data(updatedMultipleBadges[0] ?? null);
-                        }
+                  <button
+                    ref={backingSectionRef}
+                    type="button"
+                    onClick={() => {
+                      const msg = getIncompleteStepsMessage(4);
+                      if (msg) {
+                        alert(msg);
+                        return;
+                      }
+                      const willBeOpen = !sectionsOpen.backing;
+                      setSectionsOpen({
+                        template: false,
+                        size: false,
+                        export: false,
+                        background: false,
+                        textLines: false,
+                        backing: willBeOpen,
+                        border: false,
+                      });
+                      setSectionsOpened((prev) => ({ ...prev, backing: true }));
+                    }}
+                    className="mb-2 flex w-full items-center justify-between text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                        Step 4: Choose backing type
+                      </h3>
+                      {sectionsOpened.backing && (
+                        <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                      )}
+                    </div>
+                    {sectionsOpen.backing ? (
+                      <ChevronUpIcon className="h-5 w-5 text-gray-600" />
+                    ) : (
+                      <ChevronDownIcon className="h-5 w-5 text-gray-600" />
+                    )}
+                  </button>
+                )}
+                <div
+                  className={`transition-all duration-300 ${
+                    variant === "badge" && sectionsOpen.backing
+                      ? "overflow-visible"
+                      : "overflow-hidden"
+                  } ${
+                    variant === "badge"
+                      ? sectionsOpen.backing
+                        ? "px-6 pb-5 pt-2"
+                        : "p-0"
+                      : ""
+                  } ${
+                    sectionsOpen.backing
+                      ? variant === "badge"
+                        ? "max-h-[420px] opacity-100"
+                        : "max-h-[200px] opacity-100"
+                      : "max-h-0 opacity-0"
+                  }`}
+                >
+                  {variant === "badge" ? (
+                    <AqbBadgeBackingPicker
+                      value={badge.backing as BadgeBackingKey}
+                      onChange={(value) => {
+                        applyBackingToAll(value);
+                        setSectionsOpened((prev) => ({
+                          ...prev,
+                          backing: true,
+                        }));
                       }}
-                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-800 bg-white"
-                    >
-                      {BADGE_CONSTANTS.BACKING_OPTIONS.map((option) => {
-                        const prices = BADGE_CONSTANTS.BACKING_PRICES;
-                        const currentPrice = prices[badge.backing] ?? 0;
-                        const optionPrice =
-                          prices[option.value as keyof typeof prices] ?? 0;
-                        const delta = optionPrice - currentPrice;
-                        const names: Record<string, string> = {
-                          magnetic: "Magnetic",
-                          pin: "Pin",
-                          adhesive: "Adhesive",
-                        };
-                        const name = names[option.value] ?? option.value;
-                        const label =
-                          delta === 0
-                            ? name
-                            : delta > 0
+                    />
+                  ) : (
+                    <div className="mb-2">
+                      <label htmlFor="backing-select" className="sr-only">
+                        Backing type
+                      </label>
+                      <select
+                        id="backing-select"
+                        value={badge.backing}
+                        onChange={(e) => {
+                          const value = e.target.value as
+                            | "pin"
+                            | "magnetic"
+                            | "adhesive";
+                          setBadge({ ...badge, backing: value });
+                          const updatedMultipleBadges = [...multipleBadges];
+                          if (updatedMultipleBadges[selectedBadgeIndex]) {
+                            updatedMultipleBadges[selectedBadgeIndex] = {
+                              ...updatedMultipleBadges[selectedBadgeIndex],
+                              backing: value,
+                            };
+                            setMultipleBadges(updatedMultipleBadges);
+                          }
+                          if (selectedBadgeIndex === 0) {
+                            setBadge1Data(updatedMultipleBadges[0] ?? null);
+                          }
+                        }}
+                        className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-800 bg-white"
+                      >
+                        {BADGE_CONSTANTS.BACKING_OPTIONS.map((option) => {
+                          const prices = BADGE_CONSTANTS.BACKING_PRICES;
+                          const currentPrice = prices[badge.backing] ?? 0;
+                          const optionPrice =
+                            prices[option.value as keyof typeof prices] ?? 0;
+                          const delta = optionPrice - currentPrice;
+                          const names: Record<string, string> = {
+                            magnetic: "Magnetic",
+                            pin: "Pin",
+                            adhesive: "Adhesive",
+                          };
+                          const name = names[option.value] ?? option.value;
+                          const label =
+                            delta === 0
+                              ? name
+                              : delta > 0
                               ? `${name} (+$${delta.toFixed(2)})`
                               : `${name} (-$${Math.abs(delta).toFixed(2)})`;
-                        return (
-                          <option key={option.value} value={option.value}>
-                            {label}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-                )}
-                {multipleBadges.length > 1 && variant !== "badge" ? (
-                  <div className="mt-2">
-                    <button
-                      type="button"
-                      onClick={() => applyBackingToAll()}
-                      className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
-                      title={`Apply backing type to all ${config.labelProductPlural.toLowerCase()}`}
-                    >
-                      Apply backing type to all{" "}
-                      {config.labelProductPlural.toLowerCase()}
-                    </button>
-                  </div>
-                ) : null}
+                          return (
+                            <option key={option.value} value={option.value}>
+                              {label}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  )}
+                  {multipleBadges.length > 1 && variant !== "badge" ? (
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() => applyBackingToAll()}
+                        className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
+                        title={`Apply backing type to all ${config.labelProductPlural.toLowerCase()}`}
+                      >
+                        Apply backing type to all{" "}
+                        {config.labelProductPlural.toLowerCase()}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {variant === "badge" && config.hasBacking ? (
-            <AqbBadgeOrderQtySection
-              qty={badgeOrderQty}
-              backingKey={badge.backing as BadgeBackingKey}
-              designCount={multipleBadges.length}
-            />
-          ) : null}
+            {variant === "badge" && config.hasBacking ? (
+              <AqbBadgeOrderQtySection
+                qty={badgeOrderQty}
+                backingKey={badge.backing as BadgeBackingKey}
+                designCount={multipleBadges.length}
+              />
+            ) : null}
 
-          {config.hasBorder && !isSignLikeVariant(variant) && (
-            <div className="mb-4">
-              <button
-                ref={borderSectionRef}
-                type="button"
-                onClick={() => {
-                  const msg = getIncompleteStepsMessage(5);
-                  if (msg) {
-                    alert(msg);
-                    return;
-                  }
-                  const willBeOpen = !sectionsOpen.border;
-                  setSectionsOpen({
-                    template: false,
-                    size: false,
-                    export: false,
-                    background: false,
-                    textLines: false,
-                    backing: false,
-                    border: willBeOpen,
-                  });
-                  setSectionsOpened((prev) => ({ ...prev, border: true }));
-                }}
-                className="flex items-center justify-between w-full mb-2 text-left"
-              >
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-[#0D1B2A]">
-                    Border
-                  </h3>
-                  {sectionsOpened.border && (
-                    <CheckCircleIcon className="w-5 h-5 text-green-600" />
+            {config.hasBorder && !isSignLikeVariant(variant) && (
+              <div className="mb-4">
+                <button
+                  ref={borderSectionRef}
+                  type="button"
+                  onClick={() => {
+                    const msg = getIncompleteStepsMessage(5);
+                    if (msg) {
+                      alert(msg);
+                      return;
+                    }
+                    const willBeOpen = !sectionsOpen.border;
+                    setSectionsOpen({
+                      template: false,
+                      size: false,
+                      export: false,
+                      background: false,
+                      textLines: false,
+                      backing: false,
+                      border: willBeOpen,
+                    });
+                    setSectionsOpened((prev) => ({ ...prev, border: true }));
+                  }}
+                  className="flex items-center justify-between w-full mb-2 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                      Border
+                    </h3>
+                    {sectionsOpened.border && (
+                      <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                    )}
+                  </div>
+                  {sectionsOpen.border ? (
+                    <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+                  ) : (
+                    <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+                  )}
+                </button>
+                <div
+                  className={`transition-all duration-300 overflow-hidden ${
+                    sectionsOpen.border
+                      ? "max-h-[400px] opacity-100"
+                      : "max-h-0 opacity-0"
+                  }`}
+                >
+                  {config.borderOptions.length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      No border options yet.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {config.borderOptions.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setSignBorderId(opt.value)}
+                          className={`px-3 py-2 rounded border text-sm ${
+                            signBorderId === opt.value
+                              ? "border-blue-600 bg-blue-50"
+                              : "border-gray-300 bg-white hover:bg-gray-50"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
-                {sectionsOpen.border ? (
-                  <ChevronUpIcon className="w-5 h-5 text-gray-600" />
-                ) : (
-                  <ChevronDownIcon className="w-5 h-5 text-gray-600" />
-                )}
-              </button>
-              <div
-                className={`transition-all duration-300 overflow-hidden ${
-                  sectionsOpen.border
-                    ? "max-h-[400px] opacity-100"
-                    : "max-h-0 opacity-0"
-                }`}
-              >
-                {config.borderOptions.length === 0 ? (
-                  <p className="text-sm text-gray-500">
-                    No border options yet.
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {config.borderOptions.map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setSignBorderId(opt.value)}
-                        className={`px-3 py-2 rounded border text-sm ${
-                          signBorderId === opt.value
-                            ? "border-blue-600 bg-blue-50"
-                            : "border-gray-300 bg-white hover:bg-gray-50"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+              </div>
+            )}
+
+            {variant !== "badge" ? (
+              <div className="mb-4 flex flex-wrap items-start justify-center gap-2 border-t border-[rgba(13,27,42,0.08)] bg-[#faf8f4] -mx-4 px-4 py-3 md:-mx-5 md:px-5 md:gap-3">
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors disabled:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleUndo();
+                    }}
+                    disabled={undoHistory.length === 0}
+                    title="Undo last change"
+                  >
+                    <ArrowUturnLeftIcon className="w-5 h-5 md:w-6 md:h-6" />
+                  </button>
+                  <div className="text-[14px] text-gray-600 text-center leading-tight">
+                    Undo
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      resetBadge();
+                    }}
+                    title={`Reset current ${config.labelProduct.toLowerCase()} to default settings`}
+                  >
+                    <ArrowPathRoundedSquareIcon className="w-5 h-5 md:w-6 md:h-6" />
+                  </button>
+                  <div className="text-[14px] text-gray-600 text-center leading-tight">
+                    Reset
+                    <br />
+                    this {config.labelProduct}
+                  </div>
+                </div>
+
+                {multipleBadges.length > 1 && (
+                  <div className="flex flex-col items-center gap-1">
+                    <button
+                      className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        resetAllBadges();
+                      }}
+                      title={`Reset all ${config.labelProductPlural.toLowerCase()} to default settings`}
+                    >
+                      <ArrowPathIconOutline className="w-5 h-5 md:w-6 md:h-6" />
+                    </button>
+                    <div className="text-[14px] text-gray-600 text-center leading-tight">
+                      Reset
+                      <br />
+                      All {config.labelProductPlural}
+                    </div>
                   </div>
                 )}
-              </div>
-            </div>
-          )}
 
-          {variant !== "badge" ? (
-            <div className="mb-4 flex flex-wrap items-start justify-center gap-2 border-t border-[rgba(13,27,42,0.08)] bg-[#faf8f4] -mx-4 px-4 py-3 md:-mx-5 md:px-5 md:gap-3">
-            <div className="flex flex-col items-center gap-1">
-              <button
-                className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors disabled:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleUndo();
-                }}
-                disabled={undoHistory.length === 0}
-                title="Undo last change"
-              >
-                <ArrowUturnLeftIcon className="w-5 h-5 md:w-6 md:h-6" />
-              </button>
-              <div className="text-[14px] text-gray-600 text-center leading-tight">
-                Undo
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-1">
-              <button
-                className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
-                onClick={(e) => {
-                  e.preventDefault();
-                  resetBadge();
-                }}
-                title={`Reset current ${config.labelProduct.toLowerCase()} to default settings`}
-              >
-                <ArrowPathRoundedSquareIcon className="w-5 h-5 md:w-6 md:h-6" />
-              </button>
-              <div className="text-[14px] text-gray-600 text-center leading-tight">
-                Reset
-                <br />
-                this {config.labelProduct}
-              </div>
-            </div>
-
-            {multipleBadges.length > 1 && (
-              <div className="flex flex-col items-center gap-1">
-                <button
-                  className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    resetAllBadges();
-                  }}
-                  title={`Reset all ${config.labelProductPlural.toLowerCase()} to default settings`}
-                >
-                  <ArrowPathIconOutline className="w-5 h-5 md:w-6 md:h-6" />
-                </button>
-                <div className="text-[14px] text-gray-600 text-center leading-tight">
-                  Reset
-                  <br />
-                  All {config.labelProductPlural}
-                </div>
-              </div>
-            )}
-
-            {multipleBadges.length > 1 && (
-              <div className="flex flex-col items-center gap-1">
-                <button
-                  className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-green-500 text-white hover:bg-green-600 border border-green-600 rounded transition-colors"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    applyAllFormattingToAll();
-                  }}
-                  title={`Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`}
-                >
-                  <Square2StackIcon className="w-5 h-5 md:w-6 md:h-6" />
-                </button>
-                <div className="text-[14px] text-gray-600 text-center leading-tight">
-                  Apply Format
-                  <br />
-                  to All {config.labelProductPlural}
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col items-center gap-1">
-              <button
-                className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-blue-500 text-white hover:bg-blue-600 border border-blue-600 rounded transition-colors"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setCsvText("");
-                  setCsvPreview([]);
-                  setCsvError("");
-                  setShowCsvModal(true);
-                }}
-                title={`Add multiple ${config.labelProductPlural.toLowerCase()} from CSV file or data`}
-              >
-                <SquaresPlusIcon className="w-5 h-5 md:w-6 md:h-6" />
-              </button>
-              <div className="text-[14px] text-gray-600 text-center leading-tight">
-                Add Multiple
-                <br />
-                {config.labelProductPlural}
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-1">
-              <button
-                className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setShowHelpModal(true);
-                }}
-                title="Help - Learn about all the buttons"
-              >
-                <QuestionMarkCircleIcon className="w-5 h-5 md:w-6 md:h-6" />
-              </button>
-              <div className="text-[14px] text-gray-600 text-center leading-tight">
-                Help <br></br> Center
-              </div>
-            </div>
-          </div>
-          ) : null}
-
-          {/* Save / Add to cart (non-badge; badge uses toolbar + right-panel ATC) */}
-          {variant !== "badge" ? (
-            <div
-            className="mt-2 mb-4 flex flex-wrap justify-end gap-2 border-t border-[rgba(13,27,42,0.08)] pt-4"
-          >
-            <button
-              className="rounded-lg border border-[rgba(13,27,42,0.15)] bg-white px-4 py-2 text-sm font-medium text-[#0d1b2a] shadow-sm hover:bg-[#faf8f4] transition-colors"
-              onClick={(e) => {
-                e.preventDefault();
-                saveBadge();
-              }}
-            >
-              Save Design
-            </button>
-            <button
-              type="button"
-              title="Log in to load a previous design"
-              className="rounded-lg border border-[rgba(13,27,42,0.15)] bg-white px-4 py-2 text-sm font-medium text-[#0d1b2a] shadow-sm hover:bg-[#faf8f4] transition-colors"
-              onClick={(e) => {
-                e.preventDefault();
-                onLoadDesignClick();
-              }}
-            >
-              Load Design
-            </button>
-            <button
-              className={`px-5 py-2.5 rounded-lg text-base font-bold shadow-sm transition-opacity ${
-                isAddingToCart || isGeneratingDesigns || !stepsComplete
-                  ? "bg-[#9ca3af] text-white cursor-not-allowed"
-                  : "bg-[#c8962a] text-[#0d1b2a] hover:opacity-90"
-              }`}
-              onClick={(e) => {
-                e.preventDefault();
-                if (isAddingToCart || isGeneratingDesigns) return;
-                if (!stepsComplete) {
-                  const msg = getIncompleteStepsMessage(
-                    incompleteStepsForCart(),
-                  );
-                  alert(
-                    msg
-                      ? `${msg} and finalize your design before adding to the cart.`
-                      : "Please complete your design before adding to the cart.",
-                  );
-                  return;
-                }
-                addToCart();
-              }}
-              disabled={isAddingToCart || isGeneratingDesigns}
-            >
-              {isAddingToCart
-                ? "Adding to Cart..."
-                : isGeneratingDesigns
-                ? "Generating..."
-                : "Add to Cart"}
-            </button>
-          </div>
-          ) : null}
-
-          {/* Export Options (visible for sign designer for testing; badge when SHOW_EXPORT_OPTIONS) */}
-          {(SHOW_EXPORT_OPTIONS || isSignLikeVariant(variant)) && (
-            <div className="mb-4">
-              {(() => {
-                const exportBaseName =
-                  designerId === "badge" ? "badge" : designerId;
-                return (
-                  <>
+                {multipleBadges.length > 1 && (
+                  <div className="flex flex-col items-center gap-1">
                     <button
-                      ref={exportSectionRef}
-                      type="button"
-                      onClick={() => {
-                        const willBeOpen = !sectionsOpen.export;
-                        setSectionsOpen({
-                          template: false,
-                          size: false,
-                          export: willBeOpen,
-                          background: false,
-                          textLines: false,
-                          backing: false,
-                          border: false,
-                        });
+                      className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-green-500 text-white hover:bg-green-600 border border-green-600 rounded transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        applyAllFormattingToAll();
                       }}
-                      className="flex items-center justify-between w-full mb-2 text-left"
+                      title={`Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`}
                     >
-                      <h3 className="text-lg font-semibold text-[#0D1B2A]">
-                        Export Options
-                      </h3>
-                      {sectionsOpen.export ? (
-                        <ChevronUpIcon className="w-5 h-5 text-gray-600" />
-                      ) : (
-                        <ChevronDownIcon className="w-5 h-5 text-gray-600" />
-                      )}
+                      <Square2StackIcon className="w-5 h-5 md:w-6 md:h-6" />
                     </button>
-                    <div
-                      className={`mt-4 flex flex-wrap gap-1 transition-all duration-300 overflow-hidden ${
-                        sectionsOpen.export
-                          ? "max-h-[500px] opacity-100"
-                          : "max-h-0 opacity-0"
-                      }`}
-                    >
+                    <div className="text-[14px] text-gray-600 text-center leading-tight">
+                      Apply Format
+                      <br />
+                      to All {config.labelProductPlural}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-blue-500 text-white hover:bg-blue-600 border border-blue-600 rounded transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCsvText("");
+                      setCsvPreview([]);
+                      setCsvError("");
+                      setCsvWarning("");
+                      setShowCsvModal(true);
+                    }}
+                    title={`Add multiple ${config.labelProductPlural.toLowerCase()} from CSV file or data`}
+                  >
+                    <SquaresPlusIcon className="w-5 h-5 md:w-6 md:h-6" />
+                  </button>
+                  <div className="text-[14px] text-gray-600 text-center leading-tight">
+                    Add Multiple
+                    <br />
+                    {config.labelProductPlural}
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowHelpModal(true);
+                    }}
+                    title="Help - Learn about all the buttons"
+                  >
+                    <QuestionMarkCircleIcon className="w-5 h-5 md:w-6 md:h-6" />
+                  </button>
+                  <div className="text-[14px] text-gray-600 text-center leading-tight">
+                    Help <br></br> Center
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Save / Add to cart (non-badge; badge uses toolbar + right-panel ATC) */}
+            {variant !== "badge" ? (
+              <div className="mt-2 mb-4 flex flex-wrap justify-end gap-2 border-t border-[rgba(13,27,42,0.08)] pt-4">
+                <button
+                  className="rounded-lg border border-[rgba(13,27,42,0.15)] bg-white px-4 py-2 text-sm font-medium text-[#0d1b2a] shadow-sm hover:bg-[#faf8f4] transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    saveBadge();
+                  }}
+                >
+                  Save Design
+                </button>
+                <button
+                  type="button"
+                  title="Log in to load a previous design"
+                  className="rounded-lg border border-[rgba(13,27,42,0.15)] bg-white px-4 py-2 text-sm font-medium text-[#0d1b2a] shadow-sm hover:bg-[#faf8f4] transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onLoadDesignClick();
+                  }}
+                >
+                  Load Design
+                </button>
+                <button
+                  className={`px-5 py-2.5 rounded-lg text-base font-bold shadow-sm transition-opacity ${
+                    isAddingToCart || isGeneratingDesigns || !stepsComplete
+                      ? "bg-[#9ca3af] text-white cursor-not-allowed"
+                      : "bg-[#c8962a] text-[#0d1b2a] hover:opacity-90"
+                  }`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (isAddingToCart || isGeneratingDesigns) return;
+                    if (!stepsComplete) {
+                      const msg = getIncompleteStepsMessage(
+                        incompleteStepsForCart(),
+                      );
+                      alert(
+                        msg
+                          ? `${msg} and finalize your design before adding to the cart.`
+                          : "Please complete your design before adding to the cart.",
+                      );
+                      return;
+                    }
+                    addToCart();
+                  }}
+                  disabled={isAddingToCart || isGeneratingDesigns}
+                >
+                  {isAddingToCart
+                    ? "Adding to Cart..."
+                    : isGeneratingDesigns
+                    ? "Generating..."
+                    : "Add to Cart"}
+                </button>
+              </div>
+            ) : null}
+
+            {/* Export Options (visible for sign designer for testing; badge when SHOW_EXPORT_OPTIONS) */}
+            {(SHOW_EXPORT_OPTIONS || isSignLikeVariant(variant)) && (
+              <div className="mb-4">
+                {(() => {
+                  const exportBaseName =
+                    designerId === "badge" ? "badge" : designerId;
+                  return (
+                    <>
                       <button
-                        className="px-2 py-1 text-xs border rounded"
-                        onClick={async () => {
-                          if (multipleBadges.length > 1) {
-                            const allBadges = getAllBadges(multipleBadges);
-                            const allTemplates = getAllTemplates(
-                              multipleBadges,
-                              templates,
-                            );
-                            downloadMultipleSVGs(
-                              allBadges,
-                              allTemplates,
-                              exportBaseName,
-                            );
-                          } else {
-                            const badgeToExport = badge1Data || badge;
-                            await downloadSVG(
-                              {
-                                ...badgeToExport,
-                                id: badgeToExport.id || exportBaseName,
-                                templateId:
-                                  badgeToExport.templateId ||
-                                  universalTemplateId,
-                              },
-                              activeTemplate,
-                              `${exportBaseName}.svg`,
-                            );
-                          }
+                        ref={exportSectionRef}
+                        type="button"
+                        onClick={() => {
+                          const willBeOpen = !sectionsOpen.export;
+                          setSectionsOpen({
+                            template: false,
+                            size: false,
+                            export: willBeOpen,
+                            background: false,
+                            textLines: false,
+                            backing: false,
+                            border: false,
+                          });
                         }}
+                        className="flex items-center justify-between w-full mb-2 text-left"
                       >
-                        SVG
+                        <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                          Export Options
+                        </h3>
+                        {sectionsOpen.export ? (
+                          <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+                        ) : (
+                          <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+                        )}
                       </button>
-                      <button
-                        className="px-2 py-1 text-xs border rounded"
-                        onClick={async () => {
-                          if (multipleBadges.length > 1) {
-                            const allBadges = getAllBadges(multipleBadges);
-                            const allTemplates = getAllTemplates(
-                              multipleBadges,
-                              templates,
-                            );
-                            downloadMultiplePNGs(
-                              allBadges,
-                              allTemplates,
-                              exportBaseName,
-                            );
-                          } else {
-                            const badgeToExport = badge1Data || badge;
-                            await downloadPNG(
-                              {
-                                ...badgeToExport,
-                                id: badgeToExport.id || exportBaseName,
-                                templateId:
-                                  badgeToExport.templateId ||
-                                  universalTemplateId,
-                              },
-                              activeTemplate,
-                              `${exportBaseName}.png`,
-                              2,
-                            );
-                          }
-                        }}
+                      <div
+                        className={`mt-4 flex flex-wrap gap-1 transition-all duration-300 overflow-hidden ${
+                          sectionsOpen.export
+                            ? "max-h-[500px] opacity-100"
+                            : "max-h-0 opacity-0"
+                        }`}
                       >
-                        PNG
-                      </button>
-                      <button
-                        className="px-2 py-1 text-xs border rounded"
-                        onClick={async () => {
-                          if (multipleBadges.length > 1) {
-                            const allBadges = getAllBadges(multipleBadges);
-                            const allTemplates = getAllTemplates(
-                              multipleBadges,
-                              templates,
-                            );
-                            downloadMultipleTIFFs(
-                              allBadges,
-                              allTemplates,
-                              exportBaseName,
-                            );
-                          } else {
-                            const badgeToExport = badge1Data || badge;
-                            await downloadTIFF(
-                              {
-                                ...badgeToExport,
-                                id: badgeToExport.id || exportBaseName,
-                                templateId:
-                                  badgeToExport.templateId ||
-                                  universalTemplateId,
-                              },
-                              activeTemplate,
-                              `${exportBaseName}.tiff`,
-                              4,
-                            );
-                          }
-                        }}
-                      >
-                        TIFF
-                      </button>
-                      <button
-                        className="px-2 py-1 text-xs border rounded"
-                        onClick={async () => {
-                          if (multipleBadges.length > 1) {
-                            const allBadges = getAllBadges(multipleBadges);
-                            const allTemplates = getAllTemplates(
-                              multipleBadges,
-                              templates,
-                            );
-                            downloadMultipleCDRs(
-                              allBadges,
-                              allTemplates,
-                              exportBaseName,
-                            );
-                          } else {
-                            const badgeToExport = badge1Data || badge;
-                            await downloadCDR(
-                              {
-                                ...badgeToExport,
-                                id: badgeToExport.id || exportBaseName,
-                                templateId:
-                                  badgeToExport.templateId ||
-                                  universalTemplateId,
-                              },
-                              activeTemplate,
-                              `${exportBaseName}.cdr`,
-                            );
-                          }
-                        }}
-                      >
-                        CDR (Artwork)
-                      </button>
-                      <button
-                        className="px-2 py-1 text-xs border rounded"
-                        onClick={async () => {
-                          try {
+                        <button
+                          className="px-2 py-1 text-xs border rounded"
+                          onClick={async () => {
                             if (multipleBadges.length > 1) {
                               const allBadges = getAllBadges(multipleBadges);
-                              await generatePDF(
-                                allBadges[0],
-                                allBadges.slice(1),
-                                config.labelProduct,
-                                variant,
+                              const allTemplates = getAllTemplates(
+                                multipleBadges,
+                                templates,
+                              );
+                              downloadMultipleSVGs(
+                                allBadges,
+                                allTemplates,
+                                exportBaseName,
                               );
                             } else {
                               const badgeToExport = badge1Data || badge;
-                              await generatePDF(
+                              await downloadSVG(
                                 {
                                   ...badgeToExport,
                                   id: badgeToExport.id || exportBaseName,
@@ -11373,862 +11329,1151 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                     badgeToExport.templateId ||
                                     universalTemplateId,
                                 },
-                                undefined,
-                                config.labelProduct,
-                                variant,
+                                activeTemplate,
+                                `${exportBaseName}.svg`,
                               );
                             }
-                          } catch (error) {
-                            console.error("Error generating PDF:", error);
-                            alert("Error generating PDF. Please try again.");
-                          }
-                        }}
-                      >
-                        PDF
-                      </button>
-                      <button
-                        type="button"
-                        className="px-2 py-1 text-xs border border-amber-400 rounded bg-amber-50 text-amber-800 hover:bg-amber-100"
-                        onClick={() => {
-                          const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${
-                            _shop ?? "default"
-                          }-${_productId ?? "default"}`;
-                          const message =
-                            "This will clear all saved design data and reset to a single default badge. You will need to start over. Continue?";
-                          if (!window.confirm(message)) return;
-                          try {
-                            localStorage.removeItem(cacheKey);
-                          } catch {
-                            // ignore
-                          }
-                          const defaultBadge: Badge = {
-                            ...INITIAL_BADGE,
-                            backgroundColor: initialPlateBackgroundHex,
-                            lines: INITIAL_BADGE.lines.map((line) => ({
-                              ...line,
-                            })),
-                          };
-                          setMultipleBadges([]);
-                          setBadge(defaultBadge);
-                          setSelectedBadgeIndex(0);
-                          setHasChosenBackgroundColor(false);
-                          setSectionsOpened({
-                            template: false,
-                            size: false,
-                            export: false,
-                            background: false,
-                            textLines: false,
-                            backing: false,
-                            border: false,
-                            plaqueFormat: false,
-                          });
-                          setSectionsOpen({
-                            template: true,
-                            size: false,
-                            export: false,
-                            background: false,
-                            textLines: false,
-                            backing: false,
-                            border: false,
-                            plaqueFormat: false,
-                          });
-                          setUniversalTemplateId(
-                            variant === "plaque"
-                              ? defaultPlaqueTemplateId()
-                              : isSignLikeVariant(variant)
+                          }}
+                        >
+                          SVG
+                        </button>
+                        <button
+                          className="px-2 py-1 text-xs border rounded"
+                          onClick={async () => {
+                            if (multipleBadges.length > 1) {
+                              const allBadges = getAllBadges(multipleBadges);
+                              const allTemplates = getAllTemplates(
+                                multipleBadges,
+                                templates,
+                              );
+                              downloadMultiplePNGs(
+                                allBadges,
+                                allTemplates,
+                                exportBaseName,
+                              );
+                            } else {
+                              const badgeToExport = badge1Data || badge;
+                              await downloadPNG(
+                                {
+                                  ...badgeToExport,
+                                  id: badgeToExport.id || exportBaseName,
+                                  templateId:
+                                    badgeToExport.templateId ||
+                                    universalTemplateId,
+                                },
+                                activeTemplate,
+                                `${exportBaseName}.png`,
+                                2,
+                              );
+                            }
+                          }}
+                        >
+                          PNG
+                        </button>
+                        <button
+                          className="px-2 py-1 text-xs border rounded"
+                          onClick={async () => {
+                            if (multipleBadges.length > 1) {
+                              const allBadges = getAllBadges(multipleBadges);
+                              const allTemplates = getAllTemplates(
+                                multipleBadges,
+                                templates,
+                              );
+                              downloadMultipleTIFFs(
+                                allBadges,
+                                allTemplates,
+                                exportBaseName,
+                              );
+                            } else {
+                              const badgeToExport = badge1Data || badge;
+                              await downloadTIFF(
+                                {
+                                  ...badgeToExport,
+                                  id: badgeToExport.id || exportBaseName,
+                                  templateId:
+                                    badgeToExport.templateId ||
+                                    universalTemplateId,
+                                },
+                                activeTemplate,
+                                `${exportBaseName}.tiff`,
+                                4,
+                              );
+                            }
+                          }}
+                        >
+                          TIFF
+                        </button>
+                        <button
+                          className="px-2 py-1 text-xs border rounded"
+                          onClick={async () => {
+                            if (multipleBadges.length > 1) {
+                              const allBadges = getAllBadges(multipleBadges);
+                              const allTemplates = getAllTemplates(
+                                multipleBadges,
+                                templates,
+                              );
+                              downloadMultipleCDRs(
+                                allBadges,
+                                allTemplates,
+                                exportBaseName,
+                              );
+                            } else {
+                              const badgeToExport = badge1Data || badge;
+                              await downloadCDR(
+                                {
+                                  ...badgeToExport,
+                                  id: badgeToExport.id || exportBaseName,
+                                  templateId:
+                                    badgeToExport.templateId ||
+                                    universalTemplateId,
+                                },
+                                activeTemplate,
+                                `${exportBaseName}.cdr`,
+                              );
+                            }
+                          }}
+                        >
+                          CDR (Artwork)
+                        </button>
+                        <button
+                          className="px-2 py-1 text-xs border rounded"
+                          onClick={async () => {
+                            try {
+                              if (multipleBadges.length > 1) {
+                                const allBadges = getAllBadges(multipleBadges);
+                                await generatePDF(
+                                  allBadges[0],
+                                  allBadges.slice(1),
+                                  config.labelProduct,
+                                  variant,
+                                );
+                              } else {
+                                const badgeToExport = badge1Data || badge;
+                                await generatePDF(
+                                  {
+                                    ...badgeToExport,
+                                    id: badgeToExport.id || exportBaseName,
+                                    templateId:
+                                      badgeToExport.templateId ||
+                                      universalTemplateId,
+                                  },
+                                  undefined,
+                                  config.labelProduct,
+                                  variant,
+                                );
+                              }
+                            } catch (error) {
+                              console.error("Error generating PDF:", error);
+                              alert("Error generating PDF. Please try again.");
+                            }
+                          }}
+                        >
+                          PDF
+                        </button>
+                        <button
+                          type="button"
+                          className="px-2 py-1 text-xs border border-amber-400 rounded bg-amber-50 text-amber-800 hover:bg-amber-100"
+                          onClick={() => {
+                            const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${
+                              _shop ?? "default"
+                            }-${_productId ?? "default"}`;
+                            const message =
+                              "This will clear all saved design data and reset to a single default badge. You will need to start over. Continue?";
+                            if (!window.confirm(message)) return;
+                            try {
+                              localStorage.removeItem(cacheKey);
+                            } catch {
+                              // ignore
+                            }
+                            const defaultBadge: Badge = {
+                              ...INITIAL_BADGE,
+                              backgroundColor: initialPlateBackgroundHex,
+                              lines: INITIAL_BADGE.lines.map((line) => ({
+                                ...line,
+                              })),
+                            };
+                            setMultipleBadges([]);
+                            setBadge(defaultBadge);
+                            setSelectedBadgeIndex(0);
+                            setHasChosenBackgroundColor(false);
+                            setSectionsOpened({
+                              template: false,
+                              size: false,
+                              export: false,
+                              background: false,
+                              textLines: false,
+                              backing: false,
+                              border: false,
+                              plaqueFormat: false,
+                            });
+                            setSectionsOpen({
+                              template: true,
+                              size: false,
+                              export: false,
+                              background: false,
+                              textLines: false,
+                              backing: false,
+                              border: false,
+                              plaqueFormat: false,
+                            });
+                            setUniversalTemplateId(
+                              variant === "plaque"
+                                ? defaultPlaqueTemplateId()
+                                : isSignLikeVariant(variant)
                                 ? SIGN_TEMPLATE_TYPES[0].sizes[0].templateId
                                 : "rect-1x3",
-                          );
-                          if (variant === "plaque") {
-                            setSelectedPlaqueSize(null);
-                            setSelectedPlaqueLayoutId(null);
-                          }
-                          if (variant === "sign") {
-                            setSelectedSignTemplateType(null);
-                            setSelectedSignSizeTemplateId(null);
-                          }
-                          setBadge1Data(null);
-                          sessionDesignIdRef.current = null;
-                          guidedFlowCompletedRef.current = false;
-                          templateGuidedAutoAdvanceDoneRef.current = false;
-                          signSizeGuidedAutoAdvanceDoneRef.current = false;
-                          plaqueLayoutGuidedAutoAdvanceDoneRef.current = false;
-                          restoredFromCacheRef.current = true;
-                          setUndoHistory([]);
-                        }}
-                        title="Clear localStorage cache and reset to initial state (no steps completed)"
-                      >
-                        Clear cache & reset (dev)
-                      </button>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* RIGHT COLUMN — preview, summary, checkout (desktop) */}
-      <div
-        className={`hidden md:flex flex-col gap-3 w-full md:max-w-[420px] shrink-0 min-h-0 md:self-start md:sticky md:top-4 ${
-          multipleBadges.length > 1 && variant !== "badge"
-            ? "md:max-h-[calc(100vh-32px)]"
-            : ""
-        }`}
-      >
-        <div className="rounded-xl border border-[rgba(13,27,42,0.1)] bg-white overflow-hidden shadow-[0_2px_12px_rgba(13,27,42,0.06)] w-full flex flex-col min-h-0">
-          <div className="flex items-start justify-between gap-2 border-b border-[rgba(13,27,42,0.08)] bg-[#F8F7F4] px-4 py-[11px]">
-            <div className="min-w-0 flex flex-col gap-0.5">
-              <span className="text-[13px] font-semibold text-[#0D1B2A]">
-                {variant === "badge"
-                  ? "Badge Preview"
-                  : `${config.labelProduct} preview`}
-              </span>
-              {variant === "badge" ? (
-                <p className="text-[14px] leading-snug text-[#6b7f92] pr-2">
-                  Select grid view to view more badges
-                </p>
-              ) : null}
-            </div>
-            <div className="flex items-stretch gap-1.5 shrink-0">
-              {variant !== "badge" ? cloudLibrarySaveHint : null}
-              {variant === "badge" && multipleBadges.length > 0 ? (
-                <>
-                  <button
-                    type="button"
-                    className="aqb-preview-action-btn"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      duplicateCurrentBadge();
-                    }}
-                    aria-label={`Duplicate ${config.labelProduct.toLowerCase()}`}
-                    title={`Duplicate this ${config.labelProduct.toLowerCase()}`}
-                  >
-                    <DocumentDuplicateIcon className="h-5 w-5 shrink-0" />
-                    <span className="aqb-preview-action-btn__label">Copy</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="aqb-preview-action-btn"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      deleteCurrentBadgeFromPreview();
-                    }}
-                    aria-label={`Delete ${config.labelProduct.toLowerCase()}`}
-                    title={`Delete this ${config.labelProduct.toLowerCase()}`}
-                  >
-                    <TrashIcon className="h-5 w-5 shrink-0" />
-                    <span className="aqb-preview-action-btn__label">Delete</span>
-                  </button>
-                </>
-              ) : null}
-              <button
-                type="button"
-                className={
-                  variant === "badge"
-                    ? "aqb-preview-action-btn"
-                    : "h-9 w-9 flex items-center justify-center rounded-md border border-[rgba(13,27,42,0.12)] bg-white text-[#0D1B2A] hover:bg-[#F5F2EE] transition-colors"
-                }
-                onClick={() => setShowBadgeGridModal(true)}
-                aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
-                title={`View all ${config.labelProductPlural.toLowerCase()}`}
-              >
-                <Squares2X2Icon
-                  className={variant === "badge" ? "h-5 w-5 shrink-0" : "w-5 h-5"}
-                />
-                {variant === "badge" ? (
-                  <span className="aqb-preview-action-btn__label">Grid</span>
-                ) : null}
-              </button>
-              {variant === "badge" ? (
-                <button
-                  type="button"
-                  className="aqb-preview-action-btn"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setCsvText("");
-                    setCsvPreview([]);
-                    setCsvError("");
-                    setShowCsvModal(true);
-                  }}
-                  aria-label="Add multiple badges from CSV"
-                  title="Add multiple badges from CSV"
-                >
-                  <AddMultipleGridIcon className="h-5 w-5 shrink-0 stroke-[1.75]" />
-                  <span className="aqb-preview-action-btn__label">
-                    Add
-                    <br />
-                    Multiple
-                  </span>
-                </button>
-              ) : null}
-            </div>
+                            );
+                            if (variant === "plaque") {
+                              setSelectedPlaqueSize(null);
+                              setSelectedPlaqueLayoutId(null);
+                            }
+                            if (variant === "sign") {
+                              setSelectedSignTemplateType(null);
+                              setSelectedSignSizeTemplateId(null);
+                            }
+                            setBadge1Data(null);
+                            sessionDesignIdRef.current = null;
+                            guidedFlowCompletedRef.current = false;
+                            templateGuidedAutoAdvanceDoneRef.current = false;
+                            signSizeGuidedAutoAdvanceDoneRef.current = false;
+                            plaqueLayoutGuidedAutoAdvanceDoneRef.current =
+                              false;
+                            restoredFromCacheRef.current = true;
+                            setUndoHistory([]);
+                          }}
+                          title="Clear localStorage cache and reset to initial state (no steps completed)"
+                        >
+                          Clear cache & reset (dev)
+                        </button>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
           </div>
-        <div className="aqb-preview-area bg-[#E8E4DC] px-3 py-7 md:px-5 min-h-[220px] flex flex-col items-center justify-center gap-3.5">
-          {multipleBadges.length > 0 ? (
-            <span className="aqb-pa-label">Live preview</span>
-          ) : null}
+        </div>
+
+        {/* RIGHT COLUMN — preview, summary, checkout (desktop) */}
         <div
-          className={`relative w-full ${
+          className={`hidden md:flex flex-col gap-3 w-full md:max-w-[420px] shrink-0 min-h-0 md:self-start md:sticky md:top-4 ${
             multipleBadges.length > 1 && variant !== "badge"
-              ? "flex-1 min-h-0 flex flex-col overflow-hidden"
+              ? "md:max-h-[calc(100vh-32px)]"
               : ""
           }`}
         >
-          {isGeneratingDesigns && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/85 rounded-lg border-2 border-blue-200">
-              <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-blue-600 mb-2" />
-              <span className="text-gray-700 font-medium">
-                Generating {config.labelProduct.toLowerCase()} designs
-              </span>
-              <span className="text-gray-500 text-sm mt-1">
-                Saving to database…
-              </span>
-            </div>
-          )}
-          {multipleBadges.length === 0 ? (
-            <div className="flex flex-col items-center justify-center w-full h-[200px] flex-shrink-0 text-center text-gray-500 text-sm px-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50">
-              {variant === "plaque"
-                ? "Choose a layout style below to get started"
-                : "Select a shape below to get started"}
-            </div>
-          ) : multipleBadges.length === 1 ? (
-            <div className="flex flex-col items-center justify-center w-full flex-shrink-0 min-w-0 relative">
-              {variant !== "badge" ? (
-                <div className="absolute z-20 left-2 top-2 flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      duplicateCurrentBadge();
-                    }}
-                    aria-label={`Duplicate ${config.labelProduct.toLowerCase()}`}
-                    title={`Duplicate this ${config.labelProduct.toLowerCase()}`}
-                  >
-                    <DocumentDuplicateIcon className="w-5 h-5" />
-                  </button>
-                  <button
-                    type="button"
-                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      deleteCurrentBadgeFromPreview();
-                    }}
-                    aria-label={`Delete ${config.labelProduct.toLowerCase()}`}
-                    title={`Delete this ${config.labelProduct.toLowerCase()}`}
-                  >
-                    <TrashIcon className="w-5 h-5" />
-                  </button>
-                </div>
-              ) : null}
-              {(() => {
-                const p = getBadgeForPreview(0, getSavedBadgeFor(0));
-                const tid = p.templateId;
-                const { widthPx: dimW, heightPx: dimH } =
-                  previewDimensionsForTemplate(tid);
-                return (
-                  <DesktopPreviewDimensionFrame widthPx={dimW} heightPx={dimH}>
-                    <div
-                      className={`w-full flex items-center justify-center ${
-                        variant === "plaque"
-                          ? "rounded-lg bg-gray-100 ring-1 ring-gray-300/90"
-                          : ""
-                      }`}
-                      style={{
-                        overflow: "hidden",
-                        ...desktopPreviewSlotStyle,
+          <div className="rounded-xl border border-[rgba(13,27,42,0.1)] bg-white overflow-hidden shadow-[0_2px_12px_rgba(13,27,42,0.06)] w-full flex flex-col min-h-0">
+            <div className="flex items-start justify-between gap-2 border-b border-[rgba(13,27,42,0.08)] bg-[#F8F7F4] px-4 py-[11px]">
+              <div className="min-w-0 flex flex-col gap-0.5">
+                <span className="text-[13px] font-semibold text-[#0D1B2A]">
+                  {variant === "badge"
+                    ? "Badge Preview"
+                    : `${config.labelProduct} preview`}
+                </span>
+                {variant === "badge" ? (
+                  <p className="text-[14px] leading-snug text-[#6b7f92] pr-2">
+                    Use View All to see and edit more badges
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex items-stretch gap-1.5 shrink-0">
+                {variant !== "badge" ? cloudLibrarySaveHint : null}
+                {variant === "badge" && multipleBadges.length > 0 ? (
+                  <>
+                    <button
+                      type="button"
+                      className="aqb-preview-action-btn"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        duplicateCurrentBadge();
                       }}
+                      aria-label={`Duplicate ${config.labelProduct.toLowerCase()}`}
+                      title={`Duplicate this ${config.labelProduct.toLowerCase()}`}
                     >
-                      <BadgeSvgRenderer
-                        key={`svg-desk-${tid}-${p.badge.backgroundColor ?? ""}-0`}
-                        variant={variant}
-                        badge={p.badge}
-                        templateId={tid}
-                        height="100%"
-                      />
-                    </div>
-                  </DesktopPreviewDimensionFrame>
-                );
-              })()}
-            </div>
-          ) : (
-            <div
-              className={`flex w-full flex-col items-center gap-4 ${
-                variant === "badge" ? "flex-shrink-0" : "min-h-0 flex-1"
-              }`}
-            >
-              {/* Current badge being edited */}
-              <div className="flex w-full flex-shrink-0 flex-col items-center">
-                <div
-                  className="font-semibold text-[#0d1b2a] mb-1"
-                  style={{
-                    fontSize: `${DESIGNER_UI_TYPOGRAPHY.nowEditingFontRem}rem`,
-                  }}
+                      <DocumentDuplicateIcon className="h-5 w-5 shrink-0" />
+                      <span className="aqb-preview-action-btn__label">
+                        Copy
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="aqb-preview-action-btn"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        deleteCurrentBadgeFromPreview();
+                      }}
+                      aria-label={`Delete ${config.labelProduct.toLowerCase()}`}
+                      title={`Delete this ${config.labelProduct.toLowerCase()}`}
+                    >
+                      <TrashIcon className="h-5 w-5 shrink-0" />
+                      <span className="aqb-preview-action-btn__label">
+                        Delete
+                      </span>
+                    </button>
+                  </>
+                ) : null}
+                <button
+                  type="button"
+                  className={
+                    variant === "badge"
+                      ? "aqb-preview-action-btn"
+                      : "h-9 w-9 flex items-center justify-center rounded-md border border-[rgba(13,27,42,0.12)] bg-white text-[#0D1B2A] hover:bg-[#F5F2EE] transition-colors"
+                  }
+                  onClick={() => setShowBadgeGridModal(true)}
+                  aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
+                  title={`View all ${config.labelProductPlural.toLowerCase()}`}
                 >
-                  Now editing {config.labelProduct.toLowerCase()}{" "}
-                  {selectedBadgeIndex + 1}
-                </div>
-                {(() => {
+                  <Squares2X2Icon
+                    className={
+                      variant === "badge" ? "h-5 w-5 shrink-0" : "w-5 h-5"
+                    }
+                  />
+                  {variant === "badge" ? (
+                    <span className="aqb-preview-action-btn__label">
+                      View
+                      <br />
+                      All
+                    </span>
+                  ) : null}
+                </button>
+                {variant === "badge" ? (
+                  <button
+                    type="button"
+                    className="aqb-preview-action-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCsvText("");
+                      setCsvPreview([]);
+                      setCsvError("");
+                      setCsvWarning("");
+                      setShowCsvModal(true);
+                    }}
+                    aria-label="Add multiple badges from CSV"
+                    title="Add multiple badges from CSV"
+                  >
+                    <AddMultipleGridIcon className="h-5 w-5 shrink-0 stroke-[1.75]" />
+                    <span className="aqb-preview-action-btn__label">
+                      Add
+                      <br />
+                      Multiple
+                    </span>
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            <div className="aqb-preview-area bg-[#E8E4DC] px-3 py-7 md:px-5 min-h-[220px] flex flex-col items-center justify-center gap-3.5">
+              {multipleBadges.length > 0 ? (
+                <span className="aqb-pa-label">Live preview</span>
+              ) : null}
+              <div
+                className={`relative w-full ${
+                  multipleBadges.length > 1 && variant !== "badge"
+                    ? "flex-1 min-h-0 flex flex-col overflow-hidden"
+                    : ""
+                }`}
+              >
+                {isGeneratingDesigns && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/85 rounded-lg border-2 border-blue-200">
+                    <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-blue-600 mb-2" />
+                    <span className="text-gray-700 font-medium">
+                      Generating {config.labelProduct.toLowerCase()} designs
+                    </span>
+                    <span className="text-gray-500 text-sm mt-1">
+                      Saving to database…
+                    </span>
+                  </div>
+                )}
+                {multipleBadges.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center w-full h-[200px] flex-shrink-0 text-center text-gray-500 text-sm px-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50">
+                    {variant === "plaque"
+                      ? "Choose a layout style below to get started"
+                      : "Select a shape below to get started"}
+                  </div>
+                ) : multipleBadges.length === 1 ? (
+                  <div className="flex flex-col items-center justify-center w-full flex-shrink-0 min-w-0 relative">
+                    {variant !== "badge" ? (
+                      <div className="absolute z-20 left-2 top-2 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            duplicateCurrentBadge();
+                          }}
+                          aria-label={`Duplicate ${config.labelProduct.toLowerCase()}`}
+                          title={`Duplicate this ${config.labelProduct.toLowerCase()}`}
+                        >
+                          <DocumentDuplicateIcon className="w-5 h-5" />
+                        </button>
+                        <button
+                          type="button"
+                          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            deleteCurrentBadgeFromPreview();
+                          }}
+                          aria-label={`Delete ${config.labelProduct.toLowerCase()}`}
+                          title={`Delete this ${config.labelProduct.toLowerCase()}`}
+                        >
+                          <TrashIcon className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ) : null}
+                    {(() => {
+                      const p = getBadgeForPreview(0, getSavedBadgeFor(0));
+                      const tid = p.templateId;
+                      const { widthPx: dimW, heightPx: dimH } =
+                        previewDimensionsForTemplate(tid);
+                      return (
+                        <DesktopPreviewDimensionFrame
+                          widthPx={dimW}
+                          heightPx={dimH}
+                        >
+                          <div
+                            className={`w-full flex items-center justify-center ${
+                              variant === "plaque"
+                                ? "rounded-lg bg-gray-100 ring-1 ring-gray-300/90"
+                                : ""
+                            }`}
+                            style={{
+                              overflow: "hidden",
+                              ...desktopPreviewSlotStyle,
+                            }}
+                          >
+                            <BadgeSvgRenderer
+                              key={`svg-desk-${tid}-${
+                                p.badge.backgroundColor ?? ""
+                              }-0`}
+                              variant={variant}
+                              badge={p.badge}
+                              templateId={tid}
+                              height="100%"
+                            />
+                          </div>
+                        </DesktopPreviewDimensionFrame>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <div
+                    className={`flex w-full flex-col items-center gap-4 ${
+                      variant === "badge" ? "flex-shrink-0" : "min-h-0 flex-1"
+                    }`}
+                  >
+                    {/* Current badge being edited */}
+                    <div className="flex w-full flex-shrink-0 flex-col items-center">
+                      <div
+                        className="font-semibold text-[#0d1b2a] mb-1"
+                        style={{
+                          fontSize: `${DESIGNER_UI_TYPOGRAPHY.nowEditingFontRem}rem`,
+                        }}
+                      >
+                        Now editing {config.labelProduct.toLowerCase()}{" "}
+                        {selectedBadgeIndex + 1}
+                      </div>
+                      {(() => {
+                        const p = getBadgeForPreview(
+                          selectedBadgeIndex,
+                          getSavedBadgeFor(selectedBadgeIndex),
+                        );
+                        const tid = p.templateId;
+                        const { widthPx: dimW, heightPx: dimH } =
+                          previewDimensionsForTemplate(tid);
+                        return (
+                          <div className="relative w-full border-2 border-[rgba(13,27,42,0.2)] rounded-lg bg-white/80 py-2 px-1 flex-shrink-0 shadow-sm">
+                            {variant !== "badge" ? (
+                              <div className="absolute z-20 left-2 top-2 flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    duplicateCurrentBadge();
+                                  }}
+                                  aria-label={`Duplicate ${config.labelProduct.toLowerCase()}`}
+                                  title={`Duplicate this ${config.labelProduct.toLowerCase()}`}
+                                >
+                                  <DocumentDuplicateIcon className="w-5 h-5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    deleteCurrentBadgeFromPreview();
+                                  }}
+                                  aria-label={`Delete ${config.labelProduct.toLowerCase()}`}
+                                  title={`Delete this ${config.labelProduct.toLowerCase()}`}
+                                >
+                                  <TrashIcon className="w-5 h-5" />
+                                </button>
+                              </div>
+                            ) : null}
+                            <DesktopPreviewDimensionFrame
+                              widthPx={dimW}
+                              heightPx={dimH}
+                            >
+                              <div
+                                className={`w-full flex items-center justify-center ${
+                                  variant === "plaque"
+                                    ? "rounded-lg bg-gray-100 ring-1 ring-gray-300/90"
+                                    : ""
+                                }`}
+                                style={{
+                                  overflow: "hidden",
+                                  ...desktopPreviewSlotStyle,
+                                }}
+                              >
+                                <BadgeSvgRenderer
+                                  key={`svg-desk-edit-${tid}-${
+                                    p.badge.backgroundColor ?? ""
+                                  }-${selectedBadgeIndex}`}
+                                  variant={variant}
+                                  badge={p.badge}
+                                  templateId={tid}
+                                  height="100%"
+                                />
+                              </div>
+                            </DesktopPreviewDimensionFrame>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {variant !== "badge" ? (
+                      <div className="flex min-h-0 w-full flex-1 flex-col gap-4 overflow-y-auto">
+                        {/* Other designs (sign / plaque): pick from list or use grid on badge */}
+                        {Array.from({ length: totalBadges }, (_, i) => i)
+                          .filter((i) => i !== selectedBadgeIndex)
+                          .map((i) => {
+                            const saved = getSavedBadgeFor(i);
+                            const { badge: b, templateId: tid } =
+                              getBadgeForPreview(i, saved);
+
+                            // Check if this badge has color similarity issues
+                            const hasColorIssues = b.lines.some(
+                              (l: BadgeLine) =>
+                                l.color &&
+                                areColorsSimilar(
+                                  l.color,
+                                  b.backgroundColor,
+                                  70,
+                                ),
+                            );
+
+                            return (
+                              <div
+                                key={i}
+                                className="flex flex-row items-center gap-2 w-full flex-shrink-0"
+                              >
+                                <div className="flex flex-col items-center justify-center mr-2">
+                                  <div
+                                    className="flex items-center gap-1 mb-2"
+                                    style={{
+                                      width: 32,
+                                      justifyContent: "center",
+                                    }}
+                                  >
+                                    <span className="text-lg font-bold">
+                                      {i + 1}.
+                                    </span>
+                                    {hasColorIssues && (
+                                      <div
+                                        className="relative w-4 h-4 flex items-center justify-center"
+                                        title="Some text may not show well. Please check font colors"
+                                      >
+                                        <svg
+                                          className="w-4 h-4 h-full text-red-600"
+                                          viewBox="0 0 20 20"
+                                          fill="currentColor"
+                                        >
+                                          <circle
+                                            cx="10"
+                                            cy="10"
+                                            r="9"
+                                            stroke="currentColor"
+                                            strokeWidth="1.5"
+                                            fill="none"
+                                          />
+                                          <line
+                                            x1="5"
+                                            y1="5"
+                                            x2="15"
+                                            y2="15"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                          />
+                                        </svg>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <button
+                                    className="control-button flex items-center justify-center text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      selectBadge(i);
+                                    }}
+                                  >
+                                    Edit
+                                  </button>
+                                  <div className="h-2" />
+                                  <div className="flex gap-1">
+                                    <button
+                                      type="button"
+                                      className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        duplicateBadgeAtIndex(i);
+                                      }}
+                                      title={`Duplicate ${config.labelProduct.toLowerCase()} ${
+                                        i + 1
+                                      }`}
+                                      aria-label={`Duplicate ${config.labelProduct.toLowerCase()} ${
+                                        i + 1
+                                      }`}
+                                    >
+                                      <DocumentDuplicateIcon className="w-4 h-4" />
+                                    </button>
+                                    {multipleBadges.length > 1 && (
+                                      <button
+                                        type="button"
+                                        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          const closeGridAfter =
+                                            multipleBadges.length === 2;
+                                          removeBadgeAtIndex(i);
+                                          if (closeGridAfter) {
+                                            setShowBadgeGridModal(false);
+                                          }
+                                        }}
+                                        title={`Delete ${config.labelProduct.toLowerCase()} ${
+                                          i + 1
+                                        }`}
+                                        aria-label={`Delete ${config.labelProduct.toLowerCase()} ${
+                                          i + 1
+                                        }`}
+                                      >
+                                        <TrashIcon className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                                <div
+                                  className="min-w-0 flex-1 flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    selectBadge(i);
+                                  }}
+                                  title={`Click to edit this ${config.labelProduct.toLowerCase()}`}
+                                >
+                                  {(() => {
+                                    const { widthPx: dimW, heightPx: dimH } =
+                                      previewDimensionsForTemplate(tid);
+                                    return (
+                                      <DesktopPreviewDimensionFrame
+                                        widthPx={dimW}
+                                        heightPx={dimH}
+                                        compact
+                                      >
+                                        <div
+                                          className="w-full flex items-center justify-center"
+                                          style={{
+                                            overflow: "hidden",
+                                            ...desktopPreviewSlotStyle,
+                                          }}
+                                        >
+                                          <BadgeSvgRenderer
+                                            key={`svg-row-${tid}-${
+                                              b.backgroundColor ?? ""
+                                            }-${i}`}
+                                            variant={variant}
+                                            badge={b}
+                                            templateId={tid}
+                                            height="100%"
+                                          />
+                                        </div>
+                                      </DesktopPreviewDimensionFrame>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            </div>
+            {aqbBadgeToolActions}
+            {multipleBadges.length > 0
+              ? (() => {
                   const p = getBadgeForPreview(
                     selectedBadgeIndex,
                     getSavedBadgeFor(selectedBadgeIndex),
                   );
-                  const tid = p.templateId;
-                  const { widthPx: dimW, heightPx: dimH } =
-                    previewDimensionsForTemplate(tid);
+                  const lookup = [
+                    ...BADGE_AQB_FEATURED_BACKGROUND_COLORS,
+                    ...BACKGROUND_COLORS,
+                    ...EXTENDED_BACKGROUND_COLORS,
+                    ...SMART_PALETTE_COLORS,
+                  ];
+                  const hx = (p.badge.backgroundColor || "").toUpperCase();
+                  const bgName = (() => {
+                    if (
+                      isFeaturedBrushedMetalPlateColor(p.badge.backgroundColor)
+                    ) {
+                      const norm = normalizeFeaturedBrushedMetalBaseHex(
+                        p.badge.backgroundColor!,
+                      ).toUpperCase();
+                      const brushedHit =
+                        BADGE_AQB_FEATURED_BACKGROUND_COLORS.find(
+                          (c) =>
+                            "brushed" in c &&
+                            c.brushed &&
+                            normalizeFeaturedBrushedMetalBaseHex(
+                              c.value,
+                            ).toUpperCase() === norm,
+                        );
+                      if (brushedHit) return brushedHit.name;
+                    }
+                    return (
+                      lookup.find((c) => c.value.toUpperCase() === hx)?.name ??
+                      p.badge.backgroundColor ??
+                      "—"
+                    );
+                  })();
+                  const backingNames: Record<string, string> = {
+                    magnetic: "Magnetic",
+                    pin: "Pin",
+                    adhesive: "Adhesive",
+                  };
+                  const prices = BADGE_CONSTANTS.BACKING_PRICES;
+                  const bKey = p.badge.backing;
+                  const extra = prices[bKey as keyof typeof prices] ?? 0;
+                  const backingStr =
+                    !isSignLikeVariant(variant) && variant === "badge"
+                      ? `${backingNames[bKey] ?? bKey}${
+                          extra > 0 ? ` (+$${extra.toFixed(2)})` : ""
+                        }`
+                      : backingNames[bKey] ?? bKey;
+                  const lineCount = p.badge.lines.filter((l) =>
+                    (l.text ?? "").trim(),
+                  ).length;
                   return (
-                    <div className="relative w-full border-2 border-[rgba(13,27,42,0.2)] rounded-lg bg-white/80 py-2 px-1 flex-shrink-0 shadow-sm">
-                      {variant !== "badge" ? (
-                        <div className="absolute z-20 left-2 top-2 flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              duplicateCurrentBadge();
-                            }}
-                            aria-label={`Duplicate ${config.labelProduct.toLowerCase()}`}
-                            title={`Duplicate this ${config.labelProduct.toLowerCase()}`}
-                          >
-                            <DocumentDuplicateIcon className="w-5 h-5" />
-                          </button>
-                          <button
-                            type="button"
-                            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              deleteCurrentBadgeFromPreview();
-                            }}
-                            aria-label={`Delete ${config.labelProduct.toLowerCase()}`}
-                            title={`Delete this ${config.labelProduct.toLowerCase()}`}
-                          >
-                            <TrashIcon className="w-5 h-5" />
-                          </button>
+                    <div className="border-t border-[rgba(13,27,42,0.08)] bg-white px-4 py-3 space-y-1.5 text-[14px]">
+                      <div className="flex justify-between gap-2">
+                        <span className="text-[#6b7f92]">Shape</span>
+                        <span className="font-medium text-[#0d1b2a] text-right">
+                          {activeTemplate?.name ?? "—"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-[#6b7f92]">Background</span>
+                        <span className="font-medium text-[#0d1b2a] text-right">
+                          {bgName}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-[#6b7f92]">Lines of text</span>
+                        <span className="font-medium text-[#0d1b2a]">
+                          {lineCount} line{lineCount === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-[#6b7f92]">Backing</span>
+                        <span className="font-medium text-[#0d1b2a] text-right">
+                          {backingStr}
+                        </span>
+                      </div>
+                      {variant === "badge" ? (
+                        <div className="flex justify-between gap-2">
+                          <span className="text-[#6b7f92]">
+                            Badges in order
+                          </span>
+                          <span className="font-semibold text-[#c8962a] text-right">
+                            {badgeOrderQty} badge
+                            {badgeOrderQty === 1 ? "" : "s"}
+                            {multipleBadges.length > 1
+                              ? ` · ${multipleBadges.length} designs`
+                              : ""}
+                          </span>
                         </div>
                       ) : null}
-                      <DesktopPreviewDimensionFrame
-                        widthPx={dimW}
-                        heightPx={dimH}
-                      >
-                        <div
-                          className={`w-full flex items-center justify-center ${
-                            variant === "plaque"
-                              ? "rounded-lg bg-gray-100 ring-1 ring-gray-300/90"
-                              : ""
-                          }`}
-                          style={{
-                            overflow: "hidden",
-                            ...desktopPreviewSlotStyle,
-                          }}
-                        >
-                          <BadgeSvgRenderer
-                            key={`svg-desk-edit-${tid}-${p.badge.backgroundColor ?? ""}-${selectedBadgeIndex}`}
-                            variant={variant}
-                            badge={p.badge}
-                            templateId={tid}
-                            height="100%"
-                          />
-                        </div>
-                      </DesktopPreviewDimensionFrame>
+                      <div className="h-px bg-[rgba(13,27,42,0.08)] my-1" />
+                      <div className="flex justify-between gap-2">
+                        <span className="text-[#6b7f92]">
+                          Designs in editor
+                        </span>
+                        <span className="font-semibold text-[#c8962a]">
+                          {multipleBadges.length}{" "}
+                          {multipleBadges.length === 1
+                            ? config.labelProduct.toLowerCase()
+                            : config.labelProductPlural.toLowerCase()}
+                        </span>
+                      </div>
                     </div>
                   );
-                })()}
-              </div>
-
-              {variant !== "badge" ? (
-              <div className="flex min-h-0 w-full flex-1 flex-col gap-4 overflow-y-auto">
-                {/* Other designs (sign / plaque): pick from list or use grid on badge */}
-                {Array.from({ length: totalBadges }, (_, i) => i)
-                  .filter((i) => i !== selectedBadgeIndex)
-                  .map((i) => {
-                    const saved = getSavedBadgeFor(i);
-                    const { badge: b, templateId: tid } = getBadgeForPreview(
-                      i,
-                      saved,
-                    );
-
-                    // Check if this badge has color similarity issues
-                    const hasColorIssues = b.lines.some(
-                      (l: BadgeLine) =>
-                        l.color &&
-                        areColorsSimilar(l.color, b.backgroundColor, 70),
-                    );
-
-                    return (
-                      <div
-                        key={i}
-                        className="flex flex-row items-center gap-2 w-full flex-shrink-0"
-                      >
-                        <div className="flex flex-col items-center justify-center mr-2">
-                          <div
-                            className="flex items-center gap-1 mb-2"
-                            style={{ width: 32, justifyContent: "center" }}
-                          >
-                            <span className="text-lg font-bold">{i + 1}.</span>
-                            {hasColorIssues && (
-                              <div
-                                className="relative w-4 h-4 flex items-center justify-center"
-                                title="Some text may not show well. Please check font colors"
-                              >
-                                <svg
-                                  className="w-4 h-4 h-full text-red-600"
-                                  viewBox="0 0 20 20"
-                                  fill="currentColor"
-                                >
-                                  <circle
-                                    cx="10"
-                                    cy="10"
-                                    r="9"
-                                    stroke="currentColor"
-                                    strokeWidth="1.5"
-                                    fill="none"
-                                  />
-                                  <line
-                                    x1="5"
-                                    y1="5"
-                                    x2="15"
-                                    y2="15"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                  />
-                                </svg>
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            className="control-button flex items-center justify-center text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              selectBadge(i);
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <div className="h-2" />
-                          <div className="flex gap-1">
-                            <button
-                              type="button"
-                              className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                duplicateBadgeAtIndex(i);
-                              }}
-                              title={`Duplicate ${config.labelProduct.toLowerCase()} ${
-                                i + 1
-                              }`}
-                              aria-label={`Duplicate ${config.labelProduct.toLowerCase()} ${
-                                i + 1
-                              }`}
-                            >
-                              <DocumentDuplicateIcon className="w-4 h-4" />
-                            </button>
-                            {multipleBadges.length > 1 && (
-                              <button
-                                type="button"
-                                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  const closeGridAfter =
-                                    multipleBadges.length === 2;
-                                  removeBadgeAtIndex(i);
-                                  if (closeGridAfter) {
-                                    setShowBadgeGridModal(false);
-                                  }
-                                }}
-                                title={`Delete ${config.labelProduct.toLowerCase()} ${
-                                  i + 1
-                                }`}
-                                aria-label={`Delete ${config.labelProduct.toLowerCase()} ${
-                                  i + 1
-                                }`}
-                              >
-                                <TrashIcon className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        <div
-                          className="min-w-0 flex-1 flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            selectBadge(i);
-                          }}
-                          title={`Click to edit this ${config.labelProduct.toLowerCase()}`}
-                        >
-                          {(() => {
-                            const { widthPx: dimW, heightPx: dimH } =
-                              previewDimensionsForTemplate(tid);
-                            return (
-                              <DesktopPreviewDimensionFrame
-                                widthPx={dimW}
-                                heightPx={dimH}
-                                compact
-                              >
-                                <div
-                                  className="w-full flex items-center justify-center"
-                                  style={{
-                                    overflow: "hidden",
-                                    ...desktopPreviewSlotStyle,
-                                  }}
-                                >
-                                  <BadgeSvgRenderer
-                                    key={`svg-row-${tid}-${b.backgroundColor ?? ""}-${i}`}
-                                    variant={variant}
-                                    badge={b}
-                                    templateId={tid}
-                                    height="100%"
-                                  />
-                                </div>
-                              </DesktopPreviewDimensionFrame>
-                            );
-                          })()}
-                        </div>
+                })()
+              : null}
+            <div className="px-4 pb-4 space-y-3">
+              <div className="rounded-xl bg-[#0d1b2a] px-4 py-4 text-white">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[26px] md:text-[28px] font-bold text-[#e0ac42] leading-none tracking-tight">
+                      {addToCartPriceLabel}
+                    </div>
+                    <p className="text-[14px] text-white/35 mt-2 leading-snug">
+                      {variant === "badge" && badgePriceBreakdownLine
+                        ? badgePriceBreakdownLine
+                        : multipleBadges.length > 0
+                        ? `Subtotal for ${multipleBadges.length} printed ${
+                            multipleBadges.length === 1
+                              ? config.labelProduct.toLowerCase()
+                              : config.labelProductPlural.toLowerCase()
+                          } — Shopify calculates tax & shipping at checkout.`
+                        : "Finish the steps on the left to see your total."}
+                    </p>
+                  </div>
+                  {variant === "badge" &&
+                  badgeOrderQtyUi &&
+                  multipleBadges.length > 0 ? (
+                    <div className="text-right shrink-0 pt-0.5">
+                      <div className="text-[14px] font-semibold text-[#2d9e75] leading-tight">
+                        Save ${badgeOrderQtyUi.savingAmount.toFixed(2)}
                       </div>
-                    );
-                  })}
-              </div>
-              ) : null}
-            </div>
-          )}
-        </div>
-        </div>
-        {aqbBadgeToolActions}
-        {multipleBadges.length > 0
-          ? (() => {
-              const p = getBadgeForPreview(
-                selectedBadgeIndex,
-                getSavedBadgeFor(selectedBadgeIndex),
-              );
-              const lookup = [
-                ...BADGE_AQB_FEATURED_BACKGROUND_COLORS,
-                ...BACKGROUND_COLORS,
-                ...EXTENDED_BACKGROUND_COLORS,
-                ...SMART_PALETTE_COLORS,
-              ];
-              const hx = (p.badge.backgroundColor || "").toUpperCase();
-              const bgName = (() => {
-                if (isFeaturedBrushedMetalPlateColor(p.badge.backgroundColor)) {
-                  const norm = normalizeFeaturedBrushedMetalBaseHex(
-                    p.badge.backgroundColor!,
-                  ).toUpperCase();
-                  const brushedHit = BADGE_AQB_FEATURED_BACKGROUND_COLORS.find(
-                    (c) =>
-                      "brushed" in c &&
-                      c.brushed &&
-                      normalizeFeaturedBrushedMetalBaseHex(c.value).toUpperCase() ===
-                        norm,
-                  );
-                  if (brushedHit) return brushedHit.name;
-                }
-                return (
-                  lookup.find((c) => c.value.toUpperCase() === hx)?.name ??
-                  p.badge.backgroundColor ??
-                  "—"
-                );
-              })();
-              const backingNames: Record<string, string> = {
-                magnetic: "Magnetic",
-                pin: "Pin",
-                adhesive: "Adhesive",
-              };
-              const prices = BADGE_CONSTANTS.BACKING_PRICES;
-              const bKey = p.badge.backing;
-              const extra = prices[bKey as keyof typeof prices] ?? 0;
-              const backingStr =
-                !isSignLikeVariant(variant) && variant === "badge"
-                  ? `${backingNames[bKey] ?? bKey}${
-                      extra > 0 ? ` (+$${extra.toFixed(2)})` : ""
-                    }`
-                  : backingNames[bKey] ?? bKey;
-              const lineCount = p.badge.lines.filter((l) =>
-                (l.text ?? "").trim(),
-              ).length;
-              return (
-                <div className="border-t border-[rgba(13,27,42,0.08)] bg-white px-4 py-3 space-y-1.5 text-[14px]">
-                  <div className="flex justify-between gap-2">
-                    <span className="text-[#6b7f92]">Shape</span>
-                    <span className="font-medium text-[#0d1b2a] text-right">
-                      {activeTemplate?.name ?? "—"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-[#6b7f92]">Background</span>
-                    <span className="font-medium text-[#0d1b2a] text-right">
-                      {bgName}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-[#6b7f92]">Lines of text</span>
-                    <span className="font-medium text-[#0d1b2a]">
-                      {lineCount} line{lineCount === 1 ? "" : "s"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-[#6b7f92]">Backing</span>
-                    <span className="font-medium text-[#0d1b2a] text-right">
-                      {backingStr}
-                    </span>
-                  </div>
-                  {variant === "badge" ? (
-                    <div className="flex justify-between gap-2">
-                      <span className="text-[#6b7f92]">Badges in order</span>
-                      <span className="font-semibold text-[#c8962a] text-right">
-                        {badgeOrderQty} badge{badgeOrderQty === 1 ? "" : "s"}
-                        {multipleBadges.length > 1
-                          ? ` · ${multipleBadges.length} designs`
-                          : ""}
-                      </span>
+                      <div className="text-[14px] text-white/30 mt-1 max-w-[112px] ml-auto leading-snug">
+                        vs. buying 1 at a time
+                      </div>
                     </div>
                   ) : null}
-                  <div className="h-px bg-[rgba(13,27,42,0.08)] my-1" />
-                  <div className="flex justify-between gap-2">
-                    <span className="text-[#6b7f92]">Designs in editor</span>
-                    <span className="font-semibold text-[#c8962a]">
-                      {multipleBadges.length}{" "}
-                      {multipleBadges.length === 1
-                        ? config.labelProduct.toLowerCase()
-                        : config.labelProductPlural.toLowerCase()}
+                </div>
+                <button
+                  type="button"
+                  className={`aqb-atc-btn aqb-atc-btn--panel aqb-atc-btn--panel-with-icon ${
+                    stepsComplete &&
+                    !isGeneratingDesigns &&
+                    (variant !== "badge" || multipleBadges.length > 0)
+                      ? "aqb-atc-btn--ready"
+                      : "aqb-atc-btn--inactive"
+                  }`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (isAddingToCart || isGeneratingDesigns) return;
+                    if (!stepsComplete) {
+                      const msg = getIncompleteStepsMessage(
+                        incompleteStepsForCart(),
+                      );
+                      alert(
+                        msg
+                          ? `${msg} and finalize your design before adding to the cart.`
+                          : "Please complete your design before adding to the cart.",
+                      );
+                      return;
+                    }
+                    void addToCart();
+                  }}
+                  disabled={
+                    isAddingToCart ||
+                    isGeneratingDesigns ||
+                    (variant === "badge" && multipleBadges.length === 0)
+                  }
+                >
+                  <ShoppingCartIcon
+                    className="aqb-atc-btn--panel__icon"
+                    aria-hidden
+                  />
+                  {isAddingToCart
+                    ? "Adding to Cart…"
+                    : isGeneratingDesigns
+                    ? "Generating…"
+                    : "Add to cart"}
+                </button>
+                <button
+                  type="button"
+                  className="mt-2 w-full rounded-lg border border-white/15 py-2 text-xs font-medium text-white/65 hover:border-white/35 hover:text-white transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    saveBadge();
+                  }}
+                >
+                  ♡ Save this design to your account
+                </button>
+              </div>
+              {variant !== "badge" ? (
+                <div className="rounded-lg border border-[rgba(13,27,42,0.1)] bg-white px-3 py-3 space-y-2">
+                  <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
+                    <TruckIcon className="h-4 w-4 shrink-0 text-[#2d9e75] mt-0.5" />
+                    <span>
+                      Free USA shipping on many badge orders — final rates in
+                      cart.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
+                    <BoltIcon className="h-4 w-4 shrink-0 text-[#c8962a] mt-0.5" />
+                    <span>
+                      Fast production — most custom badges ship within two
+                      business days.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
+                    <WrenchScrewdriverIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
+                    <span>
+                      Manufactured in the USA with quality-controlled materials.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
+                    <PencilSquareIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
+                    <span>
+                      Print-ready artwork is generated automatically when you
+                      check out.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
+                    <UserIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
+                    <span>
+                      Sign in on the storefront to save drafts and reorder
+                      faster.
                     </span>
                   </div>
                 </div>
-              );
-            })()
-          : null}
-        <div className="px-4 pb-4 space-y-3">
-          <div className="rounded-xl bg-[#0d1b2a] px-4 py-4 text-white">
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="min-w-0 flex-1">
-                <div className="text-[26px] md:text-[28px] font-bold text-[#e0ac42] leading-none tracking-tight">
-                  {addToCartPriceLabel}
-                </div>
-                <p className="text-[14px] text-white/35 mt-2 leading-snug">
-                  {variant === "badge" && badgePriceBreakdownLine
-                    ? badgePriceBreakdownLine
-                    : multipleBadges.length > 0
-                    ? `Subtotal for ${multipleBadges.length} printed ${multipleBadges.length === 1 ? config.labelProduct.toLowerCase() : config.labelProductPlural.toLowerCase()} — Shopify calculates tax & shipping at checkout.`
-                    : "Finish the steps on the left to see your total."}
+              ) : null}
+              {variant !== "badge" ? (
+                <p className="text-[14px] leading-snug text-[#6b7f92] px-0.5">
+                  <strong className="text-[#3a4f63]">
+                    {BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE}
+                  </strong>{" "}
+                  On-screen colors are a guide; finished badges may vary
+                  slightly from your display.
                 </p>
-              </div>
-              {variant === "badge" && badgeOrderQtyUi && multipleBadges.length > 0 ? (
-                <div className="text-right shrink-0 pt-0.5">
-                  <div className="text-[14px] font-semibold text-[#2d9e75] leading-tight">
-                    Save ${badgeOrderQtyUi.savingAmount.toFixed(2)}
-                  </div>
-                  <div className="text-[14px] text-white/30 mt-1 max-w-[112px] ml-auto leading-snug">
-                    vs. buying 1 at a time
-                  </div>
-                </div>
               ) : null}
             </div>
-            <button
-              type="button"
-              className={`aqb-atc-btn aqb-atc-btn--panel aqb-atc-btn--panel-with-icon ${
-                stepsComplete &&
-                !isGeneratingDesigns &&
-                (variant !== "badge" || multipleBadges.length > 0)
-                  ? "aqb-atc-btn--ready"
-                  : "aqb-atc-btn--inactive"
-              }`}
-              onClick={(e) => {
-                e.preventDefault();
-                if (isAddingToCart || isGeneratingDesigns) return;
-                if (!stepsComplete) {
-                  const msg = getIncompleteStepsMessage(
-                    incompleteStepsForCart(),
-                  );
-                  alert(
-                    msg
-                      ? `${msg} and finalize your design before adding to the cart.`
-                      : "Please complete your design before adding to the cart.",
-                  );
-                  return;
-                }
-                void addToCart();
-              }}
-              disabled={
-                isAddingToCart ||
-                isGeneratingDesigns ||
-                (variant === "badge" && multipleBadges.length === 0)
-              }
-            >
-              <ShoppingCartIcon
-                className="aqb-atc-btn--panel__icon"
-                aria-hidden
-              />
-              {isAddingToCart
-                ? "Adding to Cart…"
-                : isGeneratingDesigns
-                  ? "Generating…"
-                  : "Add to cart"}
-            </button>
-            <button
-              type="button"
-              className="mt-2 w-full rounded-lg border border-white/15 py-2 text-xs font-medium text-white/65 hover:border-white/35 hover:text-white transition-colors"
-              onClick={(e) => {
-                e.preventDefault();
-                saveBadge();
-              }}
-            >
-              ♡ Save this design to your account
-            </button>
           </div>
-          {variant !== "badge" ? (
-            <div className="rounded-lg border border-[rgba(13,27,42,0.1)] bg-white px-3 py-3 space-y-2">
-              <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
-                <TruckIcon className="h-4 w-4 shrink-0 text-[#2d9e75] mt-0.5" />
-                <span>Free USA shipping on many badge orders — final rates in cart.</span>
-              </div>
-              <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
-                <BoltIcon className="h-4 w-4 shrink-0 text-[#c8962a] mt-0.5" />
-                <span>Fast production — most custom badges ship within two business days.</span>
-              </div>
-              <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
-                <WrenchScrewdriverIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
-                <span>Manufactured in the USA with quality-controlled materials.</span>
-              </div>
-              <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
-                <PencilSquareIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
-                <span>Print-ready artwork is generated automatically when you check out.</span>
-              </div>
-              <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
-                <UserIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
-                <span>Sign in on the storefront to save drafts and reorder faster.</span>
-              </div>
-            </div>
-          ) : null}
-          {variant !== "badge" ? (
-            <p className="text-[14px] leading-snug text-[#6b7f92] px-0.5">
-              <strong className="text-[#3a4f63]">
-                {BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE}
-              </strong>{" "}
-              On-screen colors are a guide; finished badges may vary slightly from
-              your display.
-            </p>
-          ) : null}
         </div>
-        </div>
-      </div>
 
-      {/* MOBILE: Step progress bar as fixed footer at bottom, full width */}
-      <div className="flex-shrink-0 md:hidden w-full border-t border-[rgba(13,27,42,0.08)] bg-white px-4 py-3">
-        <div className="flex items-center justify-center gap-4 w-full">
-          {(() => {
-            const signBgReady =
-              selectedSignSizeTemplateId != null && hasChosenBackgroundColor;
-            if (variant === "plaque") {
-              const plaqueLogoOk = Boolean(badge.logo?.src?.trim());
-              const plaqueImageDone = requiresPlaqueLogo
-                ? plaqueLogoOk
-                : multipleBadges.length > 0 &&
-                  (plaqueLogoOk ||
-                    sectionsOpened.textLines ||
-                    hasStep3TextEntered);
-              const plaqueFormatDoneM =
-                !plaqueAttachedSelected ||
-                Boolean(badge.plaqueFormatId?.trim());
-              const plaqueFormatCurrentM =
-                plaqueAttachedSelected &&
-                multipleBadges.length > 0 &&
-                !plaqueFormatDoneM;
-              const plaqueMetalCurrentM =
-                multipleBadges.length > 0 &&
-                plaqueFormatDoneM &&
-                !hasChosenBackgroundColor;
-              const plaqueImageCurrent =
-                multipleBadges.length > 0 &&
-                hasChosenBackgroundColor &&
-                !plaqueLogoOk &&
-                (requiresPlaqueLogo
-                  ? true
-                  : !hasStep3TextEntered && !sectionsOpened.textLines);
-              const plaqueCanEditText = requiresPlaqueLogo
-                ? plaqueLogoOk
-                : plaqueLogoOk || sectionsOpened.textLines;
-              const plaqueImageLabel = requiresPlaqueLogo
-                ? "Image"
-                : "Image · optional";
-              const plaqueStyleDoneM =
-                selectedPlaqueLayoutId != null ||
-                multipleBadges.length > 0;
-              const plaqueSizeDoneM = multipleBadges.length > 0;
-              const plaqueMobileSteps = plaqueAttachedSelected
-                ? [
-                    {
-                      label: "Layout",
-                      done: plaqueStyleDoneM,
-                      current: !plaqueStyleDoneM,
-                    },
-                    {
-                      label: "Size",
-                      done: plaqueSizeDoneM,
-                      current: plaqueStyleDoneM && !plaqueSizeDoneM,
-                    },
-                    {
-                      label: "Format",
-                      done: plaqueFormatDoneM,
-                      current: plaqueFormatCurrentM,
-                    },
-                    {
-                      label: "Metal",
-                      done: hasChosenBackgroundColor,
-                      current: plaqueMetalCurrentM,
-                    },
-                    {
-                      label: plaqueImageLabel,
-                      done: plaqueImageDone,
-                      current: plaqueImageCurrent,
-                    },
-                    {
-                      label: "Text",
-                      done: hasStep3TextEntered,
-                      current:
-                        hasChosenBackgroundColor &&
-                        !hasStep3TextEntered &&
-                        plaqueCanEditText,
-                    },
-                  ]
-                : [
-                    {
-                      label: "Layout",
-                      done: plaqueStyleDoneM,
-                      current: !plaqueStyleDoneM,
-                    },
-                    {
-                      label: "Size",
-                      done: plaqueSizeDoneM,
-                      current: plaqueStyleDoneM && !plaqueSizeDoneM,
-                    },
-                    {
-                      label: "Metal",
-                      done: hasChosenBackgroundColor,
-                      current:
-                        multipleBadges.length > 0 &&
-                        plaqueSizeDoneM &&
-                        !hasChosenBackgroundColor,
-                    },
-                    {
-                      label: plaqueImageLabel,
-                      done: plaqueImageDone,
-                      current: plaqueImageCurrent,
-                    },
-                    {
-                      label: "Text",
-                      done: hasStep3TextEntered,
-                      current:
-                        hasChosenBackgroundColor &&
-                        !hasStep3TextEntered &&
-                        plaqueCanEditText,
-                    },
-                  ];
-              return plaqueMobileSteps.map((step, i) => (
+        {/* MOBILE: Step progress bar as fixed footer at bottom, full width */}
+        <div className="flex-shrink-0 md:hidden w-full border-t border-[rgba(13,27,42,0.08)] bg-white px-4 py-3">
+          <div className="flex items-center justify-center gap-4 w-full">
+            {(() => {
+              const signBgReady =
+                selectedSignSizeTemplateId != null && hasChosenBackgroundColor;
+              if (variant === "plaque") {
+                const plaqueLogoOk = Boolean(badge.logo?.src?.trim());
+                const plaqueImageDone = requiresPlaqueLogo
+                  ? plaqueLogoOk
+                  : multipleBadges.length > 0 &&
+                    (plaqueLogoOk ||
+                      sectionsOpened.textLines ||
+                      hasStep3TextEntered);
+                const plaqueFormatDoneM =
+                  !plaqueAttachedSelected ||
+                  Boolean(badge.plaqueFormatId?.trim());
+                const plaqueFormatCurrentM =
+                  plaqueAttachedSelected &&
+                  multipleBadges.length > 0 &&
+                  !plaqueFormatDoneM;
+                const plaqueMetalCurrentM =
+                  multipleBadges.length > 0 &&
+                  plaqueFormatDoneM &&
+                  !hasChosenBackgroundColor;
+                const plaqueImageCurrent =
+                  multipleBadges.length > 0 &&
+                  hasChosenBackgroundColor &&
+                  !plaqueLogoOk &&
+                  (requiresPlaqueLogo
+                    ? true
+                    : !hasStep3TextEntered && !sectionsOpened.textLines);
+                const plaqueCanEditText = requiresPlaqueLogo
+                  ? plaqueLogoOk
+                  : plaqueLogoOk || sectionsOpened.textLines;
+                const plaqueImageLabel = requiresPlaqueLogo
+                  ? "Image"
+                  : "Image · optional";
+                const plaqueStyleDoneM =
+                  selectedPlaqueLayoutId != null || multipleBadges.length > 0;
+                const plaqueSizeDoneM = multipleBadges.length > 0;
+                const plaqueMobileSteps = plaqueAttachedSelected
+                  ? [
+                      {
+                        label: "Layout",
+                        done: plaqueStyleDoneM,
+                        current: !plaqueStyleDoneM,
+                      },
+                      {
+                        label: "Size",
+                        done: plaqueSizeDoneM,
+                        current: plaqueStyleDoneM && !plaqueSizeDoneM,
+                      },
+                      {
+                        label: "Format",
+                        done: plaqueFormatDoneM,
+                        current: plaqueFormatCurrentM,
+                      },
+                      {
+                        label: "Metal",
+                        done: hasChosenBackgroundColor,
+                        current: plaqueMetalCurrentM,
+                      },
+                      {
+                        label: plaqueImageLabel,
+                        done: plaqueImageDone,
+                        current: plaqueImageCurrent,
+                      },
+                      {
+                        label: "Text",
+                        done: hasStep3TextEntered,
+                        current:
+                          hasChosenBackgroundColor &&
+                          !hasStep3TextEntered &&
+                          plaqueCanEditText,
+                      },
+                    ]
+                  : [
+                      {
+                        label: "Layout",
+                        done: plaqueStyleDoneM,
+                        current: !plaqueStyleDoneM,
+                      },
+                      {
+                        label: "Size",
+                        done: plaqueSizeDoneM,
+                        current: plaqueStyleDoneM && !plaqueSizeDoneM,
+                      },
+                      {
+                        label: "Metal",
+                        done: hasChosenBackgroundColor,
+                        current:
+                          multipleBadges.length > 0 &&
+                          plaqueSizeDoneM &&
+                          !hasChosenBackgroundColor,
+                      },
+                      {
+                        label: plaqueImageLabel,
+                        done: plaqueImageDone,
+                        current: plaqueImageCurrent,
+                      },
+                      {
+                        label: "Text",
+                        done: hasStep3TextEntered,
+                        current:
+                          hasChosenBackgroundColor &&
+                          !hasStep3TextEntered &&
+                          plaqueCanEditText,
+                      },
+                    ];
+                return plaqueMobileSteps.map((step, i) => (
+                  <React.Fragment key={i}>
+                    {i > 0 && (
+                      <div
+                        className={`flex-1 min-w-4 h-0.5 rounded ${
+                          plaqueMobileSteps[i - 1].done
+                            ? "bg-[#2D9E75]"
+                            : "bg-[#D4CEC6]"
+                        }`}
+                      />
+                    )}
+                    <div className="flex flex-col items-center flex-shrink-0">
+                      <div
+                        className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                          step.done
+                            ? "bg-[#2D9E75] text-white"
+                            : step.current
+                            ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
+                            : "bg-[#D4CEC6] text-white"
+                        }`}
+                      >
+                        {step.done ? (
+                          <CheckIcon className="w-4 h-4 stroke-[2.5]" />
+                        ) : (
+                          <span
+                            className={`text-xs font-semibold ${
+                              step.current ? "text-white" : "text-[#6B7F92]"
+                            }`}
+                          >
+                            {i + 1}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-600 mt-1 whitespace-nowrap">
+                        {step.label}
+                      </span>
+                    </div>
+                  </React.Fragment>
+                ));
+              }
+              const mobileSteps =
+                isSignLikeVariant(variant) && config.hasSizeStep
+                  ? [
+                      {
+                        label: "Template",
+                        done: selectedSignTemplateType != null,
+                        current: selectedSignTemplateType == null,
+                      },
+                      {
+                        label: "Size",
+                        done: selectedSignSizeTemplateId != null,
+                        current:
+                          selectedSignTemplateType != null &&
+                          selectedSignSizeTemplateId == null,
+                      },
+                      {
+                        label: "Backgrounds",
+                        done: hasChosenBackgroundColor,
+                        current:
+                          selectedSignSizeTemplateId != null &&
+                          !hasChosenBackgroundColor,
+                      },
+                      ...(signBorderStepRequired
+                        ? [
+                            {
+                              label: "Border",
+                              done: signBorderConfigured,
+                              current: signBgReady && !signBorderConfigured,
+                            },
+                          ]
+                        : []),
+                      {
+                        label: "Text",
+                        done: hasStep3TextEntered,
+                        current:
+                          (signBorderStepRequired
+                            ? signBorderConfigured
+                            : signBgReady) && !hasStep3TextEntered,
+                      },
+                    ]
+                  : [
+                      {
+                        label: "Template",
+                        done: multipleBadges.length > 0,
+                        current: multipleBadges.length === 0,
+                      },
+                      {
+                        label: "Background",
+                        done: hasChosenBackgroundColor,
+                        current:
+                          multipleBadges.length > 0 &&
+                          !hasChosenBackgroundColor,
+                      },
+                      {
+                        label: "Text",
+                        done: hasStep3TextEntered,
+                        current:
+                          hasChosenBackgroundColor && !hasStep3TextEntered,
+                      },
+                      {
+                        label: "Backing",
+                        done: sectionsOpened.backing,
+                        current: hasStep3TextEntered && !sectionsOpened.backing,
+                      },
+                    ];
+              return mobileSteps.map((step, i) => (
                 <React.Fragment key={i}>
                   {i > 0 && (
                     <div
                       className={`flex-1 min-w-4 h-0.5 rounded ${
-                        plaqueMobileSteps[i - 1].done
+                        mobileSteps[i - 1].done
                           ? "bg-[#2D9E75]"
                           : "bg-[#D4CEC6]"
                       }`}
@@ -12237,11 +12482,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   <div className="flex flex-col items-center flex-shrink-0">
                     <div
                       className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                          step.done
-                            ? "bg-[#2D9E75] text-white"
-                            : step.current
-                            ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
-                            : "bg-[#D4CEC6] text-white"
+                        step.done
+                          ? "bg-[#2D9E75] text-white"
+                          : step.current
+                          ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
+                          : "bg-[#D4CEC6] text-white"
                       }`}
                     >
                       {step.done ? (
@@ -12262,110 +12507,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   </div>
                 </React.Fragment>
               ));
-            }
-            const mobileSteps =
-              isSignLikeVariant(variant) && config.hasSizeStep
-                ? [
-                    {
-                      label: "Template",
-                      done: selectedSignTemplateType != null,
-                      current: selectedSignTemplateType == null,
-                    },
-                    {
-                      label: "Size",
-                      done: selectedSignSizeTemplateId != null,
-                      current:
-                        selectedSignTemplateType != null &&
-                        selectedSignSizeTemplateId == null,
-                    },
-                    {
-                      label: "Backgrounds",
-                      done: hasChosenBackgroundColor,
-                      current:
-                        selectedSignSizeTemplateId != null &&
-                        !hasChosenBackgroundColor,
-                    },
-                    ...(signBorderStepRequired
-                      ? [
-                          {
-                            label: "Border",
-                            done: signBorderConfigured,
-                            current: signBgReady && !signBorderConfigured,
-                          },
-                        ]
-                      : []),
-                    {
-                      label: "Text",
-                      done: hasStep3TextEntered,
-                      current:
-                        (signBorderStepRequired
-                          ? signBorderConfigured
-                          : signBgReady) && !hasStep3TextEntered,
-                    },
-                  ]
-                : [
-                    {
-                      label: "Template",
-                      done: multipleBadges.length > 0,
-                      current: multipleBadges.length === 0,
-                    },
-                    {
-                      label: "Background",
-                      done: hasChosenBackgroundColor,
-                      current:
-                        multipleBadges.length > 0 && !hasChosenBackgroundColor,
-                    },
-                    {
-                      label: "Text",
-                      done: hasStep3TextEntered,
-                      current: hasChosenBackgroundColor && !hasStep3TextEntered,
-                    },
-                    {
-                      label: "Backing",
-                      done: sectionsOpened.backing,
-                      current: hasStep3TextEntered && !sectionsOpened.backing,
-                    },
-                  ];
-            return mobileSteps.map((step, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && (
-                  <div
-                    className={`flex-1 min-w-4 h-0.5 rounded ${
-                      mobileSteps[i - 1].done ? "bg-[#2D9E75]" : "bg-[#D4CEC6]"
-                    }`}
-                  />
-                )}
-                <div className="flex flex-col items-center flex-shrink-0">
-                  <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                          step.done
-                            ? "bg-[#2D9E75] text-white"
-                            : step.current
-                            ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
-                            : "bg-[#D4CEC6] text-white"
-                    }`}
-                  >
-                    {step.done ? (
-                      <CheckIcon className="w-4 h-4 stroke-[2.5]" />
-                    ) : (
-                      <span
-                        className={`text-xs font-semibold ${
-                          step.current ? "text-white" : "text-[#6B7F92]"
-                        }`}
-                      >
-                        {i + 1}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-xs text-gray-600 mt-1 whitespace-nowrap">
-                    {step.label}
-                  </span>
-                </div>
-              </React.Fragment>
-            ));
-          })()}
+            })()}
+          </div>
         </div>
-      </div>
       </div>
 
       {/* Badge grid picker modal (mobile + desktop) */}
@@ -12398,8 +12542,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 space-y-1.5 shrink-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-gray-800">
-                    {badgeOrderQty} badge{badgeOrderQty === 1 ? "" : "s"}{" "}
-                    total
+                    {badgeOrderQty} badge{badgeOrderQty === 1 ? "" : "s"} total
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-medium text-gray-600 whitespace-nowrap">
@@ -12597,7 +12740,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         style={{ height: 80 }}
                       >
                         <BadgeSvgRenderer
-                          key={`svg-grid-${tid}-${b.backgroundColor ?? ""}-${i}`}
+                          key={`svg-grid-${tid}-${
+                            b.backgroundColor ?? ""
+                          }-${i}`}
                           variant={variant}
                           badge={b}
                           templateId={tid}
@@ -12700,10 +12845,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         );
                         return;
                       }
-                      const c = Math.min(
-                        999_999,
-                        Math.max(mn, Math.floor(v)),
-                      );
+                      const c = Math.min(999_999, Math.max(mn, Math.floor(v)));
                       setAllocationModalTargetTotal(c);
                       setAllocationDraftLineQtys(
                         splitOrderTotalAcrossDesignLines(n, c),
@@ -12769,8 +12911,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           if (raw === "") {
                             const q = allocationDraftLineQtys;
                             setAllocationSetAllFieldText(
-                              q.length > 0 &&
-                                q.every((x) => x === q[0])
+                              q.length > 0 && q.every((x) => x === q[0])
                                 ? String(q[0])
                                 : "",
                             );
@@ -12780,8 +12921,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           if (Number.isNaN(each) || each < 1) {
                             const q = allocationDraftLineQtys;
                             setAllocationSetAllFieldText(
-                              q.length > 0 &&
-                                q.every((x) => x === q[0])
+                              q.length > 0 && q.every((x) => x === q[0])
                                 ? String(q[0])
                                 : "",
                             );
@@ -14146,6 +14286,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 setCsvText("");
                 setCsvPreview([]);
                 setCsvError("");
+                setCsvWarning("");
                 setShowCsvModal(false);
               }}
               aria-label="Close"
@@ -14195,6 +14336,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 previewCsv(e.target.value);
               }}
             />
+            {csvWarning && !csvError ? (
+              <div className="text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 text-sm mb-2">
+                {csvWarning}
+              </div>
+            ) : null}
             {csvError && (
               <div className="text-red-600 text-sm mb-2">{csvError}</div>
             )}
@@ -14239,6 +14385,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   setCsvText("");
                   setCsvPreview([]);
                   setCsvError("");
+                  setCsvWarning("");
                   setShowCsvModal(false);
                 }}
               >
@@ -14261,6 +14408,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         setCsvText("");
                         setCsvPreview([]);
                         setCsvError("");
+                        setCsvWarning("");
                         setShowCsvModal(false);
                       }
                     } else {
@@ -14326,6 +14474,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     setCsvText("");
                     setCsvPreview([]);
                     setCsvError("");
+                    setCsvWarning("");
                     setShowCsvModal(false);
                   }
                   setPendingCsvAction(null);
@@ -14346,6 +14495,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     setCsvText("");
                     setCsvPreview([]);
                     setCsvError("");
+                    setCsvWarning("");
                     setShowCsvModal(false);
                   }
                   setPendingCsvAction(null);
@@ -14401,9 +14551,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               </button>
             </div>
             {designGalleryLoading && (
-              <p className="text-sm text-gray-600 py-8 text-center">
-                Loading…
-              </p>
+              <p className="text-sm text-gray-600 py-8 text-center">Loading…</p>
             )}
             {!designGalleryLoading && designGalleryError && (
               <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded p-3 mb-4">
@@ -14416,17 +14564,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   const kindLabel = item.isAutosave
                     ? "Draft (autosave)"
                     : item.save_kind === "cart"
-                      ? "Added to cart"
-                      : item.save_kind === "ordered"
-                        ? "Ordered"
-                        : item.save_kind === "manual"
-                          ? "Saved"
-                          : "Saved";
-                  const when =
-                    item.updated_at || item.created_at || "";
-                  const whenStr = when
-                    ? new Date(when).toLocaleString()
-                    : "";
+                    ? "Added to cart"
+                    : item.save_kind === "ordered"
+                    ? "Ordered"
+                    : item.save_kind === "manual"
+                    ? "Saved"
+                    : "Saved";
+                  const when = item.updated_at || item.created_at || "";
+                  const whenStr = when ? new Date(when).toLocaleString() : "";
                   const busy = galleryDetailLoadingId === item.design_id;
                   return (
                     <button
@@ -14533,14 +14678,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     item.save_kind === "cart"
                       ? "Added to cart"
                       : item.save_kind === "ordered"
-                        ? "Ordered"
-                        : item.save_kind === "manual"
-                          ? "Saved"
-                          : "Saved";
+                      ? "Ordered"
+                      : item.save_kind === "manual"
+                      ? "Saved"
+                      : "Saved";
                   const when = item.updated_at || item.created_at || "";
                   const whenStr = when ? new Date(when).toLocaleString() : "";
-                  const selected =
-                    saveSlotSelectedDesignId === item.design_id;
+                  const selected = saveSlotSelectedDesignId === item.design_id;
                   return (
                     <button
                       key={item.design_id}
@@ -14773,7 +14917,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 <p className="text-sm font-semibold mb-1">
                   {MANUFACTURING_DISCLAIMER_TITLE}
                 </p>
-                <p className="text-sm leading-snug">{MANUFACTURING_DISCLAIMER_BODY}</p>
+                <p className="text-sm leading-snug">
+                  {MANUFACTURING_DISCLAIMER_BODY}
+                </p>
               </div>
               <div className="space-y-4">
                 {/* Save Design */}
@@ -14906,19 +15052,26 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   </div>
                 </div>
 
-                {/* Grid View */}
+                {/* View All */}
                 <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
-                  <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
-                    <Squares2X2Icon className="w-6 h-6" />
+                  <div className="flex-shrink-0 w-14 h-14 flex flex-col items-center justify-center gap-0.5 bg-white text-gray-700 border border-gray-300 rounded text-center leading-tight">
+                    <Squares2X2Icon className="w-5 h-5 shrink-0" />
+                    <span className="text-[10px] font-normal text-gray-700">
+                      View
+                      <br />
+                      All
+                    </span>
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-semibold text-gray-800 mb-1">
-                      Grid View
+                    <h4 className="font-semibold text-gray-800 mb-1 leading-tight">
+                      View
+                      <br />
+                      All
                     </h4>
                     <p className="text-sm text-gray-600">
-                      Opens a grid view of all your{" "}
-                      {config.labelProductPlural.toLowerCase()}, making it easy
-                      to see and select which{" "}
+                      Use the View All button above the preview to open all of
+                      your {config.labelProductPlural.toLowerCase()} at once,
+                      making it easy to see and select which{" "}
                       {config.labelProduct.toLowerCase()} you want to edit. You
                       can also delete {config.labelProductPlural.toLowerCase()}{" "}
                       from this view.
