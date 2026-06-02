@@ -7,6 +7,7 @@ import {
   BADGE_ICON_DRAW_WIDTH_FRAC,
   BADGE_ICON_TEXT_GAP_FRAC,
   badgeIconLeftPadFrac,
+  badgeTemplateSupportsIcon,
 } from "~/constants/badgeIconLayout";
 
 function iconDrawMetrics(
@@ -33,7 +34,7 @@ export function getBadgeIconTextInsetPx(
   iconId: string | undefined,
   templateId?: string,
 ): number {
-  if (!iconId) return 0;
+  if (!iconId || !badgeTemplateSupportsIcon(templateId)) return 0;
   const m = iconDrawMetrics(designBox, iconId, templateId);
   if (!m) return 0;
   return m.edgePad + m.drawW + m.gap;
@@ -45,7 +46,7 @@ export function renderBadgeIconLayer(
   designBox: { x: number; y: number; width: number; height: number },
   templateId?: string,
 ): string {
-  if (!iconId) return "";
+  if (!iconId || !badgeTemplateSupportsIcon(templateId)) return "";
   const href = BADGE_ICON_DATA_URLS[iconId];
   const m = iconDrawMetrics(designBox, iconId, templateId);
   if (!href || !m) return "";

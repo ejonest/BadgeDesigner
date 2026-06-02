@@ -30,3 +30,10 @@ export function badgeIconLeftPadFrac(templateId?: string): number {
     ? BADGE_ICON_LEFT_PAD_FRAC_1X3
     : BADGE_ICON_LEFT_PAD_FRAC;
 }
+
+/** Badge shape with built-in decorative artwork — no optional left pictogram. */
+export const BADGE_DESIGNER_TEMPLATE_ID = "designer-1x3";
+
+export function badgeTemplateSupportsIcon(templateId?: string): boolean {
+  return templateId !== BADGE_DESIGNER_TEMPLATE_ID;
+}

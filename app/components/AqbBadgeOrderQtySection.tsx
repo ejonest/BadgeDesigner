@@ -92,7 +92,7 @@ export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
               ? `Free USA shipping on orders of ${BADGE_AQB_ORDER_FREE_SHIP_MIN}+ badges`
               : m.freeShip
                 ? "You've unlocked free USA shipping"
-                : `${pieces} badge${pieces === 1 ? "" : "s"} ordered — ${Math.max(0, BADGE_AQB_ORDER_FREE_SHIP_MIN - pieces)} more for free shipping`}
+                : `${pieces} badge${pieces === 1 ? "" : "s"} ordered — ${Math.max(0, BADGE_AQB_ORDER_FREE_SHIP_MIN - pieces)} more to get free shipping`}
           </span>
           <span>{pieces === 0 ? "—" : m.savingsBarLabel}</span>
         </div>
@@ -139,7 +139,7 @@ export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
         </span>
       </div>
       <p className="aqb-bq-editor-qty-help">
-        To change quantity, use Grid View (per design or set all), or add
+        To change quantity, use View All (per design or set all), or add
         duplicate designs in the editor.
       </p>
 

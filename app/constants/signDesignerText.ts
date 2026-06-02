@@ -22,6 +22,14 @@ export type AddMultipleDesignerCopy = {
 };
 
 function badgeAddMultipleCopy(maxLines: number): AddMultipleDesignerCopy {
+  const csvExampleRows =
+    maxLines <= 2
+      ? ["Name,Title", "John Doe,Manager", "Jane Smith,Developer"]
+      : [
+          "Name,Title,Company",
+          "John Doe,Manager,Corporate",
+          "Jane Smith,Developer,1st Division",
+        ];
   return {
     csvModalSteps: [
       "1. You can upload a CSV file or paste CSV data below.",
@@ -30,11 +38,7 @@ function badgeAddMultipleCopy(maxLines: number): AddMultipleDesignerCopy {
       `4. Add up to ${maxLines} text lines per row.`,
       "5. Add as many rows as you want.",
     ],
-    csvExampleRows: [
-      "Names,Title,Company",
-      "John Doe,Manager,Corporate",
-      "Jane Smith,Developer,1st Division",
-    ],
+    csvExampleRows,
     csvTextareaPlaceholder: "Paste CSV data here...",
     addMultipleHelpParagraph:
       "You can upload a comma-separated CSV with up to {maxLines} entries per row, with each row becoming its own badge. Don't have a file? Use the dialog box to add badges directly in the same format.",

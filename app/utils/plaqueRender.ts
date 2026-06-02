@@ -253,7 +253,7 @@ function rgbHex(r: number, g: number, b: number): string {
     .padStart(2, "0")}${clamp255(b).toString(16).padStart(2, "0")}`;
 }
 
-/** Per-stop RGB multipliers along the brush gradient axis (SVG + CSS swatches). */
+/** Per-stop RGB multipliers for gradient stroke accents (photo frames, legacy CSS). */
 const METAL_BRUSH_STREAK_MUL: readonly (readonly [number, number, number])[] = [
   [0.76, 0.78, 0.72],
   [0.92, 0.9, 0.88],
@@ -286,8 +286,7 @@ function metalBrushStopElementsXml(baseHex: string): string {
 }
 
 /**
- * CSS `linear-gradient` using the same stops as {@link plaqueMetalBrushGradientDef}
- * so picker swatches match plaque/badge preview rendering.
+ * CSS swatch: flat base color (matches SVG plate fill). Brush grain is SVG-only.
  */
 export function plaqueMetalBrushCssBackgroundImage(
   plateBackgroundHex: string,
@@ -303,10 +302,7 @@ export function plaqueMetalBrushCssBackgroundImage(
         ? `#${t}`
         : PLAQUE_DEFAULT_BRUSH_GOLD_HEX;
     })();
-  const stops = metalBrushStopColors(base);
-  return `linear-gradient(180deg, ${stops
-    .map((s) => `${s.color} ${s.offset}%`)
-    .join(", ")})`;
+  return base;
 }
 
 /**
@@ -352,6 +348,84 @@ export function applyPlaqueMetalBrushFill(
 }
 
 /**
+ * Horizontal brush grain on a flat metal base. Clipped to the plate path so no
+ * grey/silver halo outside the die; multiply keeps the original gold/silver tone.
+ */
+export function plaqueMetalBrushFilterDef(filterId: string): string {
+  return `<filter id="${filterId}" filterUnits="objectBoundingBox" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.055 0.48" numOctaves="4" seed="31" result="fineTurb"/>
+    <feColorMatrix in="fineTurb" type="saturate" values="0" result="fineGray"/>
+    <feComponentTransfer in="fineGray" result="fineBrush">
+      <feFuncR type="linear" slope="0.28" intercept="0.76"/>
+      <feFuncG type="linear" slope="0.28" intercept="0.76"/>
+      <feFuncB type="linear" slope="0.28" intercept="0.76"/>
+      <feFuncA type="linear" slope="1" intercept="0"/>
+    </feComponentTransfer>
+    <feComposite in="fineBrush" in2="SourceGraphic" operator="in" result="fineClip"/>
+    <feBlend in="SourceGraphic" in2="fineClip" mode="multiply" result="pass1"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.009 0.14" numOctaves="2" seed="83" result="macroTurb"/>
+    <feColorMatrix in="macroTurb" type="saturate" values="0" result="macroGray"/>
+    <feComponentTransfer in="macroGray" result="macroBrush">
+      <feFuncR type="linear" slope="0.18" intercept="0.84"/>
+      <feFuncG type="linear" slope="0.18" intercept="0.84"/>
+      <feFuncB type="linear" slope="0.18" intercept="0.84"/>
+      <feFuncA type="linear" slope="1" intercept="0"/>
+    </feComponentTransfer>
+    <feComposite in="macroBrush" in2="SourceGraphic" operator="in" result="macroClip"/>
+    <feBlend in="pass1" in2="macroClip" mode="multiply" result="pass2"/>
+    <feComposite in="pass2" in2="SourceGraphic" operator="in"/>
+  </filter>`;
+}
+
+/** Solid catalog plate color before the brush filter (no banded linear gradient). */
+export function applyPlaqueMetalBrushFlatFill(
+  innerPathWithFill: string,
+  baseHex: string,
+): string {
+  return innerPathWithFill.replace(
+    /fill\s*=\s*["'][^"']*["']/i,
+    `fill="${baseHex}"`,
+  );
+}
+
+export function applyPlaqueMetalBrushFilter(
+  markup: string,
+  filterId: string,
+): string {
+  if (/\bfilter\s*=/i.test(markup)) {
+    return markup.replace(
+      /\bfilter\s*=\s*["'][^"']*["']/i,
+      `filter="url(#${filterId})"`,
+    );
+  }
+  return markup.replace(
+    /^(<[a-zA-Z][^>]*)(\/?>)/,
+    `$1 filter="url(#${filterId})"$2`,
+  );
+}
+
+/**
+ * Flat base color + horizontal brush filter (badge/plaque inner plate).
+ * Gradient defs are omitted so banded linear stops do not show through.
+ */
+export function plaqueMetalBrushInnerPlateTreatment(params: {
+  innerPathWithFill: string;
+  filterId: string;
+  baseHex: string;
+}): { defsXml: string; innerPlateMarkup: string } {
+  const { innerPathWithFill, filterId, baseHex } = params;
+  let innerPlateMarkup = applyPlaqueMetalBrushFlatFill(
+    innerPathWithFill,
+    baseHex,
+  );
+  innerPlateMarkup = applyPlaqueMetalBrushFilter(innerPlateMarkup, filterId);
+  return {
+    defsXml: plaqueMetalBrushFilterDef(filterId),
+    innerPlateMarkup,
+  };
+}
+
+/**
  * Detached layout: wood opening shows preview stock art (real insert is supplied separately).
  * User-uploaded artwork renders on the metal plate beside text.
  */
@@ -382,8 +456,9 @@ export function plaqueDetachedPhotoFrameDecor(params: {
   const extent = Math.max(1, Math.round(templateHeightPx));
   const baseHex =
     finish === "silver"
-      ? normalizeFeaturedBrushedMetalBaseHex(FEATURED_BRUSHED_SILVER_PLATE_HEX) ||
-        FEATURED_BRUSHED_SILVER_PLATE_HEX
+      ? normalizeFeaturedBrushedMetalBaseHex(
+          FEATURED_BRUSHED_SILVER_PLATE_HEX,
+        ) || FEATURED_BRUSHED_SILVER_PLATE_HEX
       : normalizeFeaturedBrushedMetalBaseHex(PLAQUE_DEFAULT_BRUSH_GOLD_HEX) ||
         PLAQUE_DEFAULT_BRUSH_GOLD_HEX;
 
