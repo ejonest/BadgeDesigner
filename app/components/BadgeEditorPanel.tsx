@@ -5,7 +5,7 @@ import { BadgeLineEditor } from "./BadgeLineEditor";
 import BadgeSvgRenderer from "./BadgeSvgRenderer";
 import { autoScaleFontSize } from "../utils/textMeasurement";
 import { BADGE_AQB_TEXT_COLORS, FONT_COLORS } from "../constants/colors";
-import { FONT_FAMILIES } from "../constants/fonts";
+import { FONT_FAMILIES, DEFAULT_FONT } from "../constants/fonts";
 import { loadTemplateById } from "../utils/templates";
 import {
   getEffectiveDesignBox,
@@ -197,11 +197,10 @@ function areColorsSimilar(
   return colorDistance(color1, color2) <= threshold;
 }
 
-const AQB_BADGE_FONT_OPTIONS = [
-  { value: "Playfair Display", label: "Playfair (Serif)" },
-  { value: "DM Sans", label: "DM Sans (Clean)" },
-  { value: "Roboto Mono", label: "Monospace" },
-] as const;
+const AQB_BADGE_FONT_OPTIONS = FONT_FAMILIES.map((font) => ({
+  value: font.value,
+  label: font.label,
+}));
 
 const AQB_BADGE_SIZE_PRESETS = [
   { label: "Large", px: 22 },
@@ -433,7 +432,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   <div className="aqb-badge-trc-label">Font</div>
                   <select
                     className="aqb-badge-trc-select"
-                    value={line.fontFamily ?? AQB_BADGE_FONT_OPTIONS[1].value}
+                    value={line.fontFamily ?? DEFAULT_FONT}
                     onChange={(e) =>
                       onLineChange(idx, { fontFamily: e.target.value })
                     }
