@@ -14,6 +14,7 @@ interface PreviewActionButtonProps {
   onClick: () => void;
   icon: React.ReactNode;
   danger?: boolean;
+  duplicate?: boolean;
 }
 
 const PreviewActionButton: React.FC<PreviewActionButtonProps> = ({
@@ -22,10 +23,13 @@ const PreviewActionButton: React.FC<PreviewActionButtonProps> = ({
   onClick,
   icon,
   danger = false,
+  duplicate = false,
 }) => (
   <button
     type="button"
-    className={`aqb-ta-btn${danger ? " aqb-ta-btn--danger" : ""}`}
+    className={`aqb-ta-btn${
+      danger ? " aqb-ta-btn--danger" : duplicate ? " aqb-ta-btn--duplicate" : ""
+    }`}
     onClick={(e) => {
       e.preventDefault();
       onClick();
@@ -104,10 +108,11 @@ export const AqbPreviewActionsRow: React.FC<AqbPreviewActionsRowProps> = ({
     {hasBadges ? (
       <PreviewActionRow>
         <PreviewActionButton
-          label="Copy"
+          label="Duplicate"
           title={`Duplicate this ${labelProduct}`}
           onClick={onCopy}
-          icon={<DocumentDuplicateIcon className={iconClass} />}
+          duplicate
+          icon={<DocumentDuplicateIcon className={`${iconClass} text-current`} />}
         />
         <PreviewActionButton
           label="Delete"
