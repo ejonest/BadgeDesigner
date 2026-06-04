@@ -38,6 +38,8 @@ import {
   ExclamationTriangleIcon,
   QuestionMarkCircleIcon,
   ArrowUturnLeftIcon,
+  ArrowUpTrayIcon,
+  FolderOpenIcon,
   TrashIcon,
   TruckIcon,
   BoltIcon,
@@ -10848,7 +10850,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     buttonRef={backingSectionRef}
                     stepNumber={4}
                     visualState={aqbBadgeStepHeaderModel.backing.state}
-                    title="Step 4: Choose backing type"
+                    title="Step 4: Choose badge attachment"
                     summary={aqbBadgeStepHeaderModel.backing.summary}
                     open={sectionsOpen.backing}
                     onClick={() => {
@@ -10896,7 +10898,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-semibold text-[#0D1B2A]">
-                        Step 4: Choose backing type
+                        Step 4: Choose badge attachment
                       </h3>
                       {sectionsOpened.backing && (
                         <CheckCircleIcon className="h-5 w-5 text-green-600" />
@@ -11016,6 +11018,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 qty={badgeOrderQty}
                 backingKey={badge.backing as BadgeBackingKey}
                 designCount={multipleBadges.length}
+                onFreeShippingUpsellClick={() => setShowCsvModal(true)}
               />
             ) : null}
 
@@ -14924,8 +14927,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               <div className="space-y-4">
                 {/* Save Design */}
                 <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
-                  <div className="flex-shrink-0 flex items-center justify-center bg-white text-[#283238] border border-gray-200 rounded shadow px-2 py-1.5 text-xs font-medium whitespace-nowrap">
-                    Save Design
+                  <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
+                    <ArrowUpTrayIcon className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
                     <h4 className="font-semibold text-gray-800 mb-1">
@@ -14943,8 +14946,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
                 {/* Load Design */}
                 <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
-                  <div className="flex-shrink-0 flex items-center justify-center bg-white text-[#283238] border border-gray-200 rounded shadow px-2 py-1.5 text-xs font-medium whitespace-nowrap">
-                    Load Design
+                  <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center bg-white text-gray-700 border border-gray-300 rounded">
+                    <FolderOpenIcon className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
                     <h4 className="font-semibold text-gray-800 mb-1">

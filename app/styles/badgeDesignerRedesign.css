@@ -327,26 +327,11 @@
   cursor: not-allowed;
 }
 
-.aqb-redesign-root .aqb-ta-btn--save {
-  border-color: var(--aqb-gold);
-  color: var(--aqb-gold);
-}
-
-.aqb-redesign-root .aqb-ta-btn--save:hover:not(:disabled) {
-  border-color: var(--aqb-gold);
-  background: var(--aqb-gold-p);
-}
-
 .aqb-redesign-root .aqb-ta-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 18px;
-  line-height: 1;
-}
-
-.aqb-redesign-root .aqb-ta-icon--emoji {
-  font-size: 16px;
   line-height: 1;
 }
 
@@ -361,11 +346,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.aqb-redesign-root .aqb-ta-btn--save .aqb-ta-label {
-  color: var(--aqb-gold);
-  font-weight: 600;
 }
 
 /* Scoped visual system — matches reference HTML tokens */
@@ -1075,6 +1055,24 @@
   color: var(--aqb-gold);
 }
 
+.aqb-redesign-root .aqb-bq-free-ship-upsell-link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.aqb-redesign-root .aqb-bq-free-ship-upsell-link:hover {
+  opacity: 0.85;
+}
+
 .aqb-redesign-root .aqb-bq-shipping-notice {
   display: flex;
   align-items: center;
@@ -1434,10 +1432,18 @@
 }
 
 .aqb-redesign-root .aqb-badge-trust-disclaimer .aqb-trust-strip {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 20px;
-  row-gap: 7px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.aqb-redesign-root .aqb-badge-trust-disclaimer .aqb-trust-strip-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
 }
 
 .aqb-redesign-root .aqb-badge-trust-disclaimer .aqb-ts-item {
@@ -1516,6 +1522,7 @@
 
 @media (max-width: 640px) {
   .aqb-redesign-root .aqb-badge-trust-disclaimer .aqb-trust-strip {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    gap: 7px;
   }
 }
