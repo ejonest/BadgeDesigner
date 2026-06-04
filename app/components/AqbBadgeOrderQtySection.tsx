@@ -6,6 +6,7 @@ import {
   computeBadgeAqbOrderQtyUiModel,
 } from "../constants/badgeAqbOrderQty";
 import { AqbBadgeTrustAndDisclaimer } from "./AqbBadgeTrustAndDisclaimer";
+import { AqbTruckIcon } from "./AqbRedesignIcons";
 
 export interface AqbBadgeOrderQtySectionProps {
   /** Total physical badges = number of designs in the editor (read-only here). */
@@ -70,7 +71,7 @@ export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
 
       <div className={`aqb-bq-shipping-notice ${m.shippingVariant}`}>
         <div className="aqb-bq-sn-icon" aria-hidden>
-          🚚
+          <AqbTruckIcon />
         </div>
         <div>
           <div className="aqb-bq-sn-main">{m.shippingMain}</div>
