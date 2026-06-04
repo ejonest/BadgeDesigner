@@ -88,6 +88,7 @@ import {
 import {
   buildPaddedInitialLines,
   getAddMultipleDesignerCopy,
+  SIGN_DEFAULT_LINE_TEXTS,
 } from "../constants/signDesignerText";
 import {
   generateFullBadgeImage,
@@ -309,6 +310,20 @@ function dataURLToBlob(dataUrl: string): Blob {
 /** localStorage key prefix and version for badge designer draft cache (reload persistence). */
 const BADGE_DESIGNER_CACHE_PREFIX = "badge-designer-draft";
 const CACHE_VERSION = 1;
+
+function getDesignerDraftCacheKey(shop?: string, productId?: string): string {
+  return `${BADGE_DESIGNER_CACHE_PREFIX}-${shop ?? "default"}-${
+    productId ?? "default"
+  }`;
+}
+
+function removeDesignerDraftCache(shop?: string, productId?: string): void {
+  try {
+    localStorage.removeItem(getDesignerDraftCacheKey(shop, productId));
+  } catch {
+    // ignore quota or other storage errors
+  }
+}
 
 /** Set to true to show the Export Options section (SVG, PNG, TIFF, CDR, PDF, etc.). */
 const SHOW_EXPORT_OPTIONS = false;
@@ -652,6 +667,7 @@ function DesktopPreviewDimensionFrame({
   const tickW = compact ? "w-1.5" : "w-2";
   const tickH = compact ? "h-1.5" : "h-2";
   const sideW = compact ? "w-5" : "w-7";
+  const bottomDimPad = compact ? "pb-2" : "pb-3";
 
   const measureItemInset = useCallback(() => {
     const root = previewAreaRef.current;
@@ -824,7 +840,9 @@ function DesktopPreviewDimensionFrame({
           <div className="flex-1 min-h-0 basis-0" />
         </div>
       </div>
-      <div className="flex flex-row items-start gap-1 min-w-0 pt-1">
+      <div
+        className={`flex flex-row items-start gap-1 min-w-0 pt-1 ${bottomDimPad}`}
+      >
         <div className="flex-1 flex flex-row items-center min-w-0">
           <div
             className="shrink-0"
@@ -2854,11 +2872,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // Debounced save of badge designer state to localStorage cache (always run effect so hook count is stable)
   useEffect(() => {
-    const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${
-      _productId ?? "default"
-    }`;
+    const cacheKey = getDesignerDraftCacheKey(_shop, _productId);
     const timeoutId = window.setTimeout(() => {
-      if (multipleBadges.length === 0) return;
+      if (multipleBadges.length === 0) {
+        removeDesignerDraftCache(_shop, _productId);
+        return;
+      }
       if (skipCacheSaveRef.current) {
         skipCacheSaveRef.current = false;
         return;
@@ -3302,7 +3321,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       _productId ?? "default"
     }`;
     const handler = () => {
-      if (multipleBadges.length === 0) return;
+      if (multipleBadges.length === 0) {
+        removeDesignerDraftCache(_shop, _productId);
+        return;
+      }
       if (skipCacheSaveRef.current) return;
       const payload = {
         version: CACHE_VERSION,
@@ -4845,7 +4867,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }));
   };
 
-  // Helper function to reset lines for a badge (preserves text and number of lines)
+  // Helper function to reset lines for a badge (preserves line count, resets text to defaults)
+  const getResetLineDefaultText = (lineIndex: number): string => {
+    if (variant === "plaque") {
+      return "";
+    }
+    if (isSignLikeVariant(variant)) {
+      return lineIndex < SIGN_DEFAULT_LINE_TEXTS.length
+        ? SIGN_DEFAULT_LINE_TEXTS[lineIndex]
+        : "";
+    }
+    return getStep3DefaultText(lineIndex);
+  };
+
   const resetBadgeLines = (badgeToReset: Badge): BadgeLine[] => {
     // Get designBox height from template
     const currentTemplate = templates.find(
@@ -4859,7 +4893,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       (line, index) =>
         ({
           id: line.id || `line-${index + 1}`,
-          text: line.text, // Preserve user input text
+          text: getResetLineDefaultText(index),
           xNorm: 0.5,
           yNorm: 0.5, // Will be repositioned by calculateCenterPositions
           sizeNorm: getDefaultSizeNorm(index, designBoxHeight),
@@ -4882,7 +4916,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
     const fallbackId = templates[0]?.id || "rect-1x3";
 
-    // Preserve current number of lines and text, reset all other properties
+    // Preserve current number of lines, reset text and formatting to defaults
     const resetLines = resetBadgeLines(badge);
 
     // Apply center-based positioning
@@ -5149,6 +5183,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
     setBadge1Data(null);
     sessionDesignIdRef.current = null;
+    removeDesignerDraftCache(_shop, _productId);
+    skipCacheSaveRef.current = true;
     guidedFlowCompletedRef.current = false;
     templateGuidedAutoAdvanceDoneRef.current = false;
     signSizeGuidedAutoAdvanceDoneRef.current = false;

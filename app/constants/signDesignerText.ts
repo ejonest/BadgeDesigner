@@ -26,7 +26,7 @@ function badgeAddMultipleCopy(maxLines: number): AddMultipleDesignerCopy {
     maxLines <= 2
       ? ["Name,Title", "John Doe,Manager", "Jane Smith,Developer"]
       : [
-          "Name,Title,Company",
+          "Name,Some Title,Company",
           "John Doe,Manager,Corporate",
           "Jane Smith,Developer,1st Division",
         ];

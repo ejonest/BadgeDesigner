@@ -59,7 +59,11 @@ import { AqbBadgeBackingPicker } from "./AqbBadgeBackingPicker";
 import { AqbBadgeIconPicker } from "./AqbBadgeIconPicker";
 import { AqbBadgeOrderQtySection } from "./AqbBadgeOrderQtySection";
 import { BadgeQtyStepper } from "./BadgeQtyStepper";
-import { AddMultipleGridIcon, AqbToolActionsRow } from "./AqbToolActionsRow";
+import { AqbToolActionsRow } from "./AqbToolActionsRow";
+import {
+  AqbPreviewActionsRow,
+  AqbPreviewPanelHeader,
+} from "./AqbPreviewActionsRow";
 import {
   BADGE_AQB_BACKING_META,
   type BadgeBackingKey,
@@ -135,6 +139,7 @@ import {
 import {
   buildPaddedInitialLines,
   getAddMultipleDesignerCopy,
+  SIGN_DEFAULT_LINE_TEXTS,
 } from "../constants/signDesignerText";
 import {
   generateFullBadgeImage,
@@ -378,6 +383,20 @@ function dataURLToBlob(dataUrl: string): Blob {
 /** localStorage key prefix and version for badge designer draft cache (reload persistence). */
 const BADGE_DESIGNER_CACHE_PREFIX = "badge-designer-redesign-draft";
 const CACHE_VERSION = 1;
+
+function getDesignerDraftCacheKey(shop?: string, productId?: string): string {
+  return `${BADGE_DESIGNER_CACHE_PREFIX}-${shop ?? "default"}-${
+    productId ?? "default"
+  }`;
+}
+
+function removeDesignerDraftCache(shop?: string, productId?: string): void {
+  try {
+    localStorage.removeItem(getDesignerDraftCacheKey(shop, productId));
+  } catch {
+    // ignore quota or other storage errors
+  }
+}
 
 /** Set to true to show the Export Options section (SVG, PNG, TIFF, CDR, PDF, etc.). */
 const SHOW_EXPORT_OPTIONS = false;
@@ -784,6 +803,7 @@ function DesktopPreviewDimensionFrame({
   const tickW = compact ? "w-1.5" : "w-2";
   const tickH = compact ? "h-1.5" : "h-2";
   const sideW = compact ? "w-5" : "w-7";
+  const bottomDimPad = compact ? "pb-2" : "pb-3";
 
   const measureItemInset = useCallback(() => {
     const root = previewAreaRef.current;
@@ -956,7 +976,9 @@ function DesktopPreviewDimensionFrame({
           <div className="flex-1 min-h-0 basis-0" />
         </div>
       </div>
-      <div className="flex flex-row items-start gap-1 min-w-0 pt-1">
+      <div
+        className={`flex flex-row items-start gap-1 min-w-0 pt-1 ${bottomDimPad}`}
+      >
         <div className="flex-1 flex flex-row items-center min-w-0">
           <div
             className="shrink-0"
@@ -3204,11 +3226,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   // Debounced save of badge designer state to localStorage cache (always run effect so hook count is stable)
   useEffect(() => {
-    const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${_shop ?? "default"}-${
-      _productId ?? "default"
-    }`;
+    const cacheKey = getDesignerDraftCacheKey(_shop, _productId);
     const timeoutId = window.setTimeout(() => {
-      if (multipleBadges.length === 0) return;
+      if (multipleBadges.length === 0) {
+        removeDesignerDraftCache(_shop, _productId);
+        return;
+      }
       if (skipCacheSaveRef.current) {
         skipCacheSaveRef.current = false;
         return;
@@ -3677,7 +3700,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       _productId ?? "default"
     }`;
     const handler = () => {
-      if (multipleBadges.length === 0) return;
+      if (multipleBadges.length === 0) {
+        removeDesignerDraftCache(_shop, _productId);
+        return;
+      }
       if (skipCacheSaveRef.current) return;
       const payload = {
         version: CACHE_VERSION,
@@ -5335,7 +5361,19 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }));
   };
 
-  // Helper function to reset lines for a badge (preserves text and number of lines)
+  // Helper function to reset lines for a badge (preserves line count, resets text to defaults)
+  const getResetLineDefaultText = (lineIndex: number): string => {
+    if (variant === "plaque") {
+      return "";
+    }
+    if (isSignLikeVariant(variant)) {
+      return lineIndex < SIGN_DEFAULT_LINE_TEXTS.length
+        ? SIGN_DEFAULT_LINE_TEXTS[lineIndex]
+        : "";
+    }
+    return getStep3DefaultText(lineIndex);
+  };
+
   const resetBadgeLines = (badgeToReset: Badge): BadgeLine[] => {
     // Get designBox height from template
     const currentTemplate = templates.find(
@@ -5349,7 +5387,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       (line, index) =>
         ({
           id: line.id || `line-${index + 1}`,
-          text: line.text, // Preserve user input text
+          text: getResetLineDefaultText(index),
           xNorm: 0.5,
           yNorm: 0.5, // Will be repositioned by calculateCenterPositions
           sizeNorm: getDefaultSizeNorm(index, designBoxHeight),
@@ -5372,7 +5410,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
     const fallbackId = templates[0]?.id || "rect-1x3";
 
-    // Preserve current number of lines and text, reset all other properties
+    // Preserve current number of lines, reset text and formatting to defaults
     const resetLines = resetBadgeLines(badge);
 
     // Apply center-based positioning
@@ -5640,6 +5678,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }
     setBadge1Data(null);
     sessionDesignIdRef.current = null;
+    removeDesignerDraftCache(_shop, _productId);
+    skipCacheSaveRef.current = true;
     guidedFlowCompletedRef.current = false;
     templateGuidedAutoAdvanceDoneRef.current = false;
     signSizeGuidedAutoAdvanceDoneRef.current = false;
@@ -5736,6 +5776,43 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       return;
     }
     removeBadgeAtIndex(selectedBadgeIndex);
+  };
+
+  const deleteAllBadgesFromDesign = () => {
+    if (multipleBadges.length === 0) return;
+    const label =
+      multipleBadges.length === 1
+        ? config.labelProduct.toLowerCase()
+        : config.labelProductPlural.toLowerCase();
+    if (
+      !window.confirm(
+        `Delete all ${multipleBadges.length} ${label} from your design? All progress in the editor will be cleared.\n\nThis does not remove items already in your cart.`,
+      )
+    ) {
+      return;
+    }
+    resetDesignerToBlank();
+    setShowBadgeGridModal(false);
+  };
+
+  const openAddMultipleModal = () => {
+    setCsvText("");
+    setCsvPreview([]);
+    setCsvError("");
+    setCsvWarning("");
+    setShowCsvModal(true);
+  };
+
+  const previewActionsRowProps = {
+    labelProduct: config.labelProduct.toLowerCase(),
+    labelProductPlural: config.labelProductPlural.toLowerCase(),
+    hasBadges: multipleBadges.length > 0,
+    showAddMultiple: variant === "badge",
+    onCopy: duplicateCurrentBadge,
+    onDelete: deleteCurrentBadgeFromPreview,
+    onDeleteAll: deleteAllBadgesFromDesign,
+    onViewAll: () => setShowBadgeGridModal(true),
+    onAddMultiple: openAddMultipleModal,
   };
 
   const applyPlaqueAwardFormatSelection = useCallback(
@@ -7925,125 +8002,35 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       >
         {/* MOBILE: Header + preview fixed at top; editor scrolls below */}
         <div className="flex-shrink-0 md:hidden flex flex-col mb-2">
-          {/* Header: title left, grid picker right */}
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <div className="flex flex-col gap-1 min-w-0">
-              <h2 className="text-xl font-bold text-gray-800">
-                {multipleBadges.length === 0
-                  ? `Design Your ${config.labelProduct}`
-                  : `Customize Your ${config.labelProduct} ${
-                      selectedBadgeIndex + 1
-                    } of ${totalBadges}`}
-              </h2>
-              {multipleBadges.length > 0 && (
-                <span className="text-xl font-bold text-red-600">
-                  {activeTemplate?.name ?? ""}
-                </span>
-              )}
-            </div>
-            <div className="flex items-stretch gap-1.5 shrink-0">
-              {variant !== "badge" ? cloudLibrarySaveHint : null}
-              {variant === "badge" && multipleBadges.length > 0 ? (
-                <>
-                  <button
-                    type="button"
-                    className="aqb-preview-action-btn"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      duplicateCurrentBadge();
-                    }}
-                    aria-label={`Duplicate ${config.labelProduct.toLowerCase()}`}
-                    title={`Duplicate this ${config.labelProduct.toLowerCase()}`}
-                  >
-                    <DocumentDuplicateIcon className="h-5 w-5 shrink-0" />
-                    <span className="aqb-preview-action-btn__label">Copy</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="aqb-preview-action-btn"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      deleteCurrentBadgeFromPreview();
-                    }}
-                    aria-label={`Delete ${config.labelProduct.toLowerCase()}`}
-                    title={`Delete this ${config.labelProduct.toLowerCase()}`}
-                  >
-                    <TrashIcon className="h-5 w-5 shrink-0" />
-                    <span className="aqb-preview-action-btn__label">
-                      Delete
-                    </span>
-                  </button>
-                </>
-              ) : null}
-              <button
-                type="button"
-                className={
-                  variant === "badge"
-                    ? "aqb-preview-action-btn"
-                    : "flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                }
-                onClick={() => setShowBadgeGridModal(true)}
-                aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
-                title={`View all ${config.labelProductPlural.toLowerCase()}`}
-              >
-                <Squares2X2Icon
-                  className={
-                    variant === "badge" ? "h-5 w-5 shrink-0" : "w-6 h-6"
-                  }
-                />
-                {variant === "badge" ? (
-                  <span className="aqb-preview-action-btn__label">
-                    View
-                    <br />
-                    All
-                  </span>
-                ) : null}
-              </button>
-              {variant !== "badge" ? (
-                <div className="text-[14px] text-gray-600 text-center leading-tight">
-                  View
-                  <br />
-                  All
-                </div>
-              ) : null}
-              {variant === "badge" ? (
-                <button
-                  type="button"
-                  className="aqb-preview-action-btn"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setCsvText("");
-                    setCsvPreview([]);
-                    setCsvError("");
-                    setCsvWarning("");
-                    setShowCsvModal(true);
-                  }}
-                  aria-label="Add multiple badges from CSV"
-                  title="Add multiple badges from CSV"
-                >
-                  <AddMultipleGridIcon className="h-5 w-5 shrink-0 stroke-[1.75]" />
-                  <span className="aqb-preview-action-btn__label">
-                    Add
-                    <br />
-                    Multiple
-                  </span>
-                </button>
-              ) : null}
-            </div>
+          {/* Header: customize title */}
+          <div className="flex flex-col gap-1 min-w-0 mb-2">
+            <h2 className="text-xl font-bold text-gray-800">
+              {multipleBadges.length === 0
+                ? `Design Your ${config.labelProduct}`
+                : `Customize Your ${config.labelProduct} ${
+                    selectedBadgeIndex + 1
+                  } of ${totalBadges}`}
+            </h2>
+            {multipleBadges.length > 0 && (
+              <span className="text-xl font-bold text-red-600">
+                {activeTemplate?.name ?? ""}
+              </span>
+            )}
           </div>
 
-          <h2
-            className={`text-xl font-bold text-gray-800 w-full text-center ${
-              variant === "badge" ? "mb-1" : "mb-2"
-            }`}
-          >
-            {config.labelProduct} Preview
-          </h2>
-          {variant === "badge" ? (
-            <p className="mb-2 w-full text-center text-[14px] leading-snug text-[#6b7f92]">
-              Use View All to see and edit more badges
-            </p>
-          ) : null}
+          <div className="mb-2 overflow-hidden rounded-lg border border-[rgba(13,27,42,0.1)] bg-[#F8F7F4]">
+            <AqbPreviewPanelHeader
+              centered
+              title={`${config.labelProduct} Preview`}
+              subtitle={
+                variant === "badge"
+                  ? "Use View All to see and edit more badges"
+                  : undefined
+              }
+            />
+            <AqbPreviewActionsRow {...previewActionsRowProps} />
+          </div>
+
           <div
             className={`w-full flex items-center justify-center relative select-none rounded-lg border overflow-hidden ${
               variant === "plaque"
@@ -11566,103 +11553,21 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           }`}
         >
           <div className="rounded-xl border border-[rgba(13,27,42,0.1)] bg-white overflow-hidden shadow-[0_2px_12px_rgba(13,27,42,0.06)] w-full flex flex-col min-h-0">
-            <div className="flex items-start justify-between gap-2 border-b border-[rgba(13,27,42,0.08)] bg-[#F8F7F4] px-4 py-[11px]">
-              <div className="min-w-0 flex flex-col gap-0.5">
-                <span className="text-[13px] font-semibold text-[#0D1B2A]">
-                  {variant === "badge"
+            <div className="border-b border-[rgba(13,27,42,0.08)] bg-[#F8F7F4]">
+              <AqbPreviewPanelHeader
+                title={
+                  variant === "badge"
                     ? "Badge Preview"
-                    : `${config.labelProduct} preview`}
-                </span>
-                {variant === "badge" ? (
-                  <p className="text-[14px] leading-snug text-[#6b7f92] pr-2">
-                    Use View All to see and edit more badges
-                  </p>
-                ) : null}
-              </div>
-              <div className="flex items-stretch gap-1.5 shrink-0">
-                {variant !== "badge" ? cloudLibrarySaveHint : null}
-                {variant === "badge" && multipleBadges.length > 0 ? (
-                  <>
-                    <button
-                      type="button"
-                      className="aqb-preview-action-btn"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        duplicateCurrentBadge();
-                      }}
-                      aria-label={`Duplicate ${config.labelProduct.toLowerCase()}`}
-                      title={`Duplicate this ${config.labelProduct.toLowerCase()}`}
-                    >
-                      <DocumentDuplicateIcon className="h-5 w-5 shrink-0" />
-                      <span className="aqb-preview-action-btn__label">
-                        Copy
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      className="aqb-preview-action-btn"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        deleteCurrentBadgeFromPreview();
-                      }}
-                      aria-label={`Delete ${config.labelProduct.toLowerCase()}`}
-                      title={`Delete this ${config.labelProduct.toLowerCase()}`}
-                    >
-                      <TrashIcon className="h-5 w-5 shrink-0" />
-                      <span className="aqb-preview-action-btn__label">
-                        Delete
-                      </span>
-                    </button>
-                  </>
-                ) : null}
-                <button
-                  type="button"
-                  className={
-                    variant === "badge"
-                      ? "aqb-preview-action-btn"
-                      : "h-9 w-9 flex items-center justify-center rounded-md border border-[rgba(13,27,42,0.12)] bg-white text-[#0D1B2A] hover:bg-[#F5F2EE] transition-colors"
-                  }
-                  onClick={() => setShowBadgeGridModal(true)}
-                  aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
-                  title={`View all ${config.labelProductPlural.toLowerCase()}`}
-                >
-                  <Squares2X2Icon
-                    className={
-                      variant === "badge" ? "h-5 w-5 shrink-0" : "w-5 h-5"
-                    }
-                  />
-                  {variant === "badge" ? (
-                    <span className="aqb-preview-action-btn__label">
-                      View
-                      <br />
-                      All
-                    </span>
-                  ) : null}
-                </button>
-                {variant === "badge" ? (
-                  <button
-                    type="button"
-                    className="aqb-preview-action-btn"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setCsvText("");
-                      setCsvPreview([]);
-                      setCsvError("");
-                      setCsvWarning("");
-                      setShowCsvModal(true);
-                    }}
-                    aria-label="Add multiple badges from CSV"
-                    title="Add multiple badges from CSV"
-                  >
-                    <AddMultipleGridIcon className="h-5 w-5 shrink-0 stroke-[1.75]" />
-                    <span className="aqb-preview-action-btn__label">
-                      Add
-                      <br />
-                      Multiple
-                    </span>
-                  </button>
-                ) : null}
-              </div>
+                    : `${config.labelProduct} preview`
+                }
+                subtitle={
+                  variant === "badge"
+                    ? "Use View All to see and edit more badges"
+                    : undefined
+                }
+                extra={variant !== "badge" ? cloudLibrarySaveHint : undefined}
+              />
+              <AqbPreviewActionsRow {...previewActionsRowProps} />
             </div>
             <div className="aqb-preview-area bg-[#E8E4DC] px-3 py-7 md:px-5 min-h-[220px] flex flex-col items-center justify-center gap-3.5">
               {multipleBadges.length > 0 ? (
@@ -11783,7 +11688,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         const { widthPx: dimW, heightPx: dimH } =
                           previewDimensionsForTemplate(tid);
                         return (
-                          <div className="relative w-full border-2 border-[rgba(13,27,42,0.2)] rounded-lg bg-white/80 py-2 px-1 flex-shrink-0 shadow-sm">
+                          <div className="relative w-full border-2 border-[rgba(13,27,42,0.2)] rounded-lg bg-white/80 pt-2 pb-3 px-1 flex-shrink-0 shadow-sm">
                             {variant !== "badge" ? (
                               <div className="absolute z-20 left-2 top-2 flex items-center gap-1.5">
                                 <button
@@ -12629,6 +12534,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   Use − / + on each badge to change quantities, or set the same
                   count for all designs above.
                 </p>
+                <button
+                  type="button"
+                  className="aqb-grid-delete-all-btn"
+                  onClick={() => deleteAllBadgesFromDesign()}
+                >
+                  Delete all badges
+                </button>
               </div>
             ) : null}
             <div className="grid grid-cols-2 gap-3 p-4 overflow-y-auto flex-1 min-h-0">
@@ -12658,7 +12570,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     <div className="absolute top-1 right-1 z-10 flex gap-0.5">
                       <button
                         type="button"
-                        className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                        className="aqb-grid-action-btn aqb-grid-action-btn--duplicate"
                         onClick={(e) => {
                           e.stopPropagation();
                           duplicateBadgeAtIndex(i);
@@ -12674,7 +12586,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       {multipleBadges.length > 1 && (
                         <button
                           type="button"
-                          className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                          className="aqb-grid-action-btn aqb-grid-action-btn--delete"
                           onClick={(e) => {
                             e.stopPropagation();
                             const closeGridAfter = multipleBadges.length === 2;
