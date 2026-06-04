@@ -7,6 +7,7 @@ import {
   badgeAqbBackingOptionLabel,
   badgeAqbBackingPriceLabel,
 } from "../constants/badgeAqbBacking";
+import { AqbBackingIcon } from "./AqbRedesignIcons";
 
 interface AqbBadgeBackingPickerProps {
   value: BadgeBackingKey;
@@ -42,6 +43,10 @@ export const AqbBadgeBackingPicker: React.FC<AqbBadgeBackingPickerProps> = ({
           onClick={() => setOpen((o) => !o)}
         >
           <span className="aqb-backing-select-trigger-label">
+            <AqbBackingIcon
+              backing={value}
+              className="h-4 w-4 stroke-[1.75] text-[#3a4f63]"
+            />
             {badgeAqbBackingOptionLabel(value)}
           </span>
           <span className="aqb-backing-chevron" aria-hidden>
@@ -70,6 +75,9 @@ export const AqbBadgeBackingPicker: React.FC<AqbBadgeBackingPickerProps> = ({
                         <CheckIcon className="h-3.5 w-3.5 stroke-[2.5]" />
                       ) : null}
                     </span>
+                    <span className="aqb-backing-option-icon" aria-hidden>
+                      <AqbBackingIcon backing={key} className="h-4 w-4 stroke-[1.75]" />
+                    </span>
                     <span className="aqb-backing-option-label">
                       {badgeAqbBackingOptionLabel(key)}
                     </span>
@@ -83,7 +91,7 @@ export const AqbBadgeBackingPicker: React.FC<AqbBadgeBackingPickerProps> = ({
 
       <div className="aqb-backing-info">
         <div className="aqb-bi-icon" aria-hidden>
-          {meta.emoji}
+          <AqbBackingIcon backing={value} />
         </div>
         <div className="aqb-bi-body">
           <div className="aqb-bi-name">

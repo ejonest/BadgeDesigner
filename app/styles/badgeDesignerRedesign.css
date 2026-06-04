@@ -269,7 +269,11 @@
 }
 
 .aqb-redesign-root .aqb-ts-icon {
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
   line-height: 1;
 }
@@ -882,6 +886,9 @@
 }
 
 .aqb-redesign-root .aqb-backing-select-trigger-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   flex: 1;
   min-width: 0;
 }
@@ -941,6 +948,16 @@
   justify-content: center;
 }
 
+.aqb-redesign-root .aqb-backing-option-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: inherit;
+}
+
 .aqb-redesign-root .aqb-backing-option-label {
   flex: 1;
   min-width: 0;
@@ -958,9 +975,11 @@
 }
 
 .aqb-redesign-root .aqb-bi-icon {
-  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 28px;
-  text-align: center;
+  height: 28px;
   flex-shrink: 0;
   line-height: 1;
 }
@@ -1097,7 +1116,11 @@
 }
 
 .aqb-redesign-root .aqb-bq-sn-icon {
-  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
 }
 

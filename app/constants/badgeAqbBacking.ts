@@ -19,7 +19,6 @@ export const BADGE_AQB_BACKING_ORDER: BadgeBackingKey[] = [
 export const BADGE_AQB_BACKING_META: Record<
   BadgeBackingKey,
   {
-    emoji: string;
     shortName: string;
     fullName: string;
     description: string;
@@ -27,7 +26,6 @@ export const BADGE_AQB_BACKING_META: Record<
   }
 > = {
   magnetic: {
-    emoji: "🧲",
     shortName: "Magnetic",
     fullName: "Magnetic backing",
     description:
@@ -35,14 +33,12 @@ export const BADGE_AQB_BACKING_META: Record<
     popular: true,
   },
   pin: {
-    emoji: "📌",
     shortName: "Pin",
     fullName: "Pin backing",
     description:
       "Classic pin clutch — secure and familiar for everyday wear.",
   },
   adhesive: {
-    emoji: "🔲",
     shortName: "Adhesive",
     fullName: "Adhesive backing",
     description:
@@ -59,5 +55,5 @@ export function badgeAqbBackingPriceLabel(key: BadgeBackingKey): string {
 
 export function badgeAqbBackingOptionLabel(key: BadgeBackingKey): string {
   const meta = BADGE_AQB_BACKING_META[key];
-  return `${meta.emoji} ${meta.shortName} — ${badgeAqbBackingPriceLabel(key)}`;
+  return `${meta.shortName} — ${badgeAqbBackingPriceLabel(key)}`;
 }

@@ -4,6 +4,12 @@ import {
   BADGE_AQB_PRINT_COLOURS_DISCLAIMER_BODY,
   BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE,
 } from "../constants/manufacturingDisclaimer";
+import {
+  AqbPencilIcon,
+  AqbRepeatIcon,
+  AqbTruckIcon,
+  UsFlagIcon,
+} from "./AqbRedesignIcons";
 
 export const AqbBadgeTrustAndDisclaimer = memo(
   function AqbBadgeTrustAndDisclaimer() {
@@ -13,14 +19,14 @@ export const AqbBadgeTrustAndDisclaimer = memo(
           <div className="aqb-trust-strip-col">
             <div className="aqb-ts-item">
               <span className="aqb-ts-icon" aria-hidden>
-                🚚
+                <AqbTruckIcon />
               </span>
               Free USA shipping (on orders of {BADGE_AQB_ORDER_FREE_SHIP_MIN}{" "}
               badges or more)
             </div>
             <div className="aqb-ts-item">
               <span className="aqb-ts-icon" aria-hidden>
-                🇺🇸
+                <UsFlagIcon />
               </span>
               Made to Order in the USA
             </div>
@@ -28,7 +34,7 @@ export const AqbBadgeTrustAndDisclaimer = memo(
           <div className="aqb-trust-strip-col">
             <div className="aqb-ts-item">
               <span className="aqb-ts-icon" aria-hidden>
-                🔁
+                <AqbRepeatIcon />
               </span>
               <span>
                 <span className="text-[#c8962a] font-medium">Sign in</span> on
@@ -37,7 +43,7 @@ export const AqbBadgeTrustAndDisclaimer = memo(
             </div>
             <div className="aqb-ts-item">
               <span className="aqb-ts-icon" aria-hidden>
-                ✏️
+                <AqbPencilIcon />
               </span>
               Artwork generates automatically on order
             </div>
