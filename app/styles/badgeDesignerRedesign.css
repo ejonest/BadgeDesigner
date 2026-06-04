@@ -432,6 +432,20 @@
   color: #b91c1c;
 }
 
+.aqb-redesign-root .aqb-ta-btn--duplicate:hover:not(:disabled) {
+  border-color: #6db892;
+  background: var(--aqb-green-l);
+  color: var(--aqb-green);
+}
+
+.aqb-redesign-root .aqb-ta-btn--duplicate:hover:not(:disabled) .aqb-ta-label {
+  color: var(--aqb-green);
+}
+
+.aqb-redesign-root .aqb-ta-btn--duplicate:hover:not(:disabled) .aqb-ta-icon {
+  color: var(--aqb-green);
+}
+
 .aqb-redesign-root .aqb-ta-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
