@@ -108,14 +108,14 @@ export const AqbToolActionsRow: React.FC<AqbToolActionsRowProps> = ({
         icon={<ArrowUturnLeftIcon className={iconClass} />}
       />
       <ToolButton
-        label="Reset"
+        label="Reset Design"
         title="Reset current badge to default settings"
         onClick={onReset}
         icon={<ArrowPathIcon className={iconClass} />}
       />
       {showResetAll && onResetAll ? (
         <ToolButton
-          label="Reset all"
+          label="Reset All Designs"
           title="Reset all badges to default settings"
           onClick={onResetAll}
           icon={<ArrowPathIcon className={iconClass} />}

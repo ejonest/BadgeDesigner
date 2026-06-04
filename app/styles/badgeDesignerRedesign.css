@@ -211,6 +211,98 @@
   pointer-events: none;
 }
 
+/* Preview panel — header + toolbar-style action rows */
+.aqb-redesign-root .aqb-preview-panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 10px;
+}
+
+.aqb-redesign-root .aqb-preview-panel-header__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--aqb-navy);
+}
+
+.aqb-redesign-root .aqb-preview-panel-header__subtitle {
+  margin: 4px 0 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #6b7f92;
+}
+
+.aqb-redesign-root .aqb-preview-panel-header__extra {
+  width: 100%;
+}
+
+.aqb-redesign-root .aqb-preview-panel-header--centered .aqb-preview-panel-header__text {
+  text-align: center;
+}
+
+.aqb-redesign-root .aqb-preview-actions-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 16px 12px;
+  border-bottom: 1px solid var(--aqb-border);
+  background: #f8f7f4;
+}
+
+/* Grid modal — per-badge duplicate/delete + delete all */
+.aqb-redesign-root .aqb-grid-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.aqb-redesign-root .aqb-grid-action-btn--duplicate:hover {
+  border-color: #6db892;
+  background: var(--aqb-green-l);
+  color: var(--aqb-green);
+}
+
+.aqb-redesign-root .aqb-grid-action-btn--delete:hover {
+  border-color: #e57373;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.aqb-redesign-root .aqb-grid-delete-all-btn {
+  align-self: flex-start;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  color: #dc2626;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.aqb-redesign-root .aqb-grid-delete-all-btn:hover {
+  border-color: #e57373;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 /* Badge preview header — duplicate, delete, grid, add multiple: equal height */
 .aqb-redesign-root .aqb-preview-action-btn {
   box-sizing: border-box;
@@ -318,12 +410,26 @@
   background: #fff;
   cursor: pointer;
   font-family: inherit;
-  transition: border-color 0.15s, background 0.15s, opacity 0.15s;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, opacity 0.15s;
 }
 
 .aqb-redesign-root .aqb-ta-btn:hover:not(:disabled) {
   border-color: var(--aqb-navy);
   background: var(--aqb-cream);
+}
+
+.aqb-redesign-root .aqb-ta-btn--danger:hover:not(:disabled) {
+  border-color: #e57373;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.aqb-redesign-root .aqb-ta-btn--danger:hover:not(:disabled) .aqb-ta-label {
+  color: #b91c1c;
+}
+
+.aqb-redesign-root .aqb-ta-btn--danger:hover:not(:disabled) .aqb-ta-icon {
+  color: #b91c1c;
 }
 
 .aqb-redesign-root .aqb-ta-btn:disabled {
@@ -347,9 +453,8 @@
   line-height: 1.2;
   width: 100%;
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 /* Scoped visual system — matches reference HTML tokens */
