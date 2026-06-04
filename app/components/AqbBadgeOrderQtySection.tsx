@@ -12,12 +12,15 @@ export interface AqbBadgeOrderQtySectionProps {
   qty: number;
   designCount: number;
   backingKey: BadgeBackingKey;
+  /** Opens add-multiple when user clicks the free-shipping upsell. */
+  onFreeShippingUpsellClick?: () => void;
 }
 
 export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
   qty,
   designCount,
   backingKey,
+  onFreeShippingUpsellClick,
 }: AqbBadgeOrderQtySectionProps) {
   const pieces = Math.max(0, Math.floor(qty));
   const m = useMemo(
@@ -34,6 +37,24 @@ export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
       ? "No badge designs yet"
       : `${pieces} badge${pieces === 1 ? "" : "s"} in your order`;
 
+  const showFreeShipUpsell = pieces > 0 && !m.freeShip && m.hintWarn;
+
+  const renderFreeShipUpsell = (text: string, className?: string) => {
+    if (!showFreeShipUpsell || !onFreeShippingUpsellClick) {
+      return text;
+    }
+    return (
+      <button
+        type="button"
+        className={`aqb-bq-free-ship-upsell-link${className ? ` ${className}` : ""}`}
+        onClick={onFreeShippingUpsellClick}
+        title="Add multiple badges"
+      >
+        {text}
+      </button>
+    );
+  };
+
   return (
     <div className="aqb-bq-qty-section">
       <div className="aqb-bq-qty-header">
@@ -41,7 +62,9 @@ export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
         <div
           className={`aqb-bq-qty-hint${m.hintWarn ? " shipping-warn" : ""}`}
         >
-          {pieces === 0 ? "Add a badge design to see pricing" : m.hintText}
+          {pieces === 0
+            ? "Add a badge design to see pricing"
+            : renderFreeShipUpsell(m.hintText)}
         </div>
       </div>
 
@@ -51,7 +74,9 @@ export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
         </div>
         <div>
           <div className="aqb-bq-sn-main">{m.shippingMain}</div>
-          <div className="aqb-bq-sn-sub">{m.shippingSub}</div>
+          <div className="aqb-bq-sn-sub">
+            {renderFreeShipUpsell(m.shippingSub)}
+          </div>
         </div>
       </div>
 
@@ -135,13 +160,9 @@ export const AqbBadgeOrderQtySection = memo(function AqbBadgeOrderQtySection({
         <span className={`aqb-bq-editor-qty-tier-note ${m.tierNoteTone}`}>
           {pieces === 0
             ? "Use duplicate or add design in the editor"
-            : m.tierNoteText}
+            : renderFreeShipUpsell(m.tierNoteText)}
         </span>
       </div>
-      <p className="aqb-bq-editor-qty-help">
-        To change quantity, use View All (per design or set all), or add
-        duplicate designs in the editor.
-      </p>
 
       <div className="aqb-bq-checkout-footer">
         <AqbBadgeTrustAndDisclaimer />

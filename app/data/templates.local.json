@@ -3,7 +3,7 @@
   "templates": [
     {
       "id": "rect-1_5x3",
-      "name": "Round 1.5 x 3\"",
+      "name": "Rounded Corners 1.5 x 3\"",
       "widthInches": 3.0,
       "heightInches": 1.5,
       "svgFile": "/templates/badge/round-1.5x3.svg",
@@ -11,7 +11,7 @@
     },
     {
       "id": "rect-1x3",
-      "name": "Round 1 x 3\"",
+      "name": "Rounded Corners 1 x 3\"",
       "widthInches": 3.0,
       "heightInches": 1.0,
       "svgFile": "/templates/badge/round-1x3.svg",
@@ -19,7 +19,7 @@
     },
     {
       "id": "square-1_5x3",
-      "name": "Square 1.5 x 3\"",
+      "name": "Square Corners 1.5 x 3\"",
       "widthInches": 3.0,
       "heightInches": 1.5,
       "svgFile": "/templates/badge/square-1_5x3.svg",
@@ -27,7 +27,7 @@
     },
     {
       "id": "square-1x3",
-      "name": "Square 1 x 3\"",
+      "name": "Square Corners 1 x 3\"",
       "widthInches": 3.0,
       "heightInches": 1.0,
       "svgFile": "/templates/badge/square-1x3.svg",

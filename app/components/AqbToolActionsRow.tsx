@@ -1,7 +1,9 @@
 import React from "react";
 import {
+  ArrowUpTrayIcon,
   ArrowPathIcon,
   ArrowUturnLeftIcon,
+  FolderOpenIcon,
   QuestionMarkCircleIcon,
   Square2StackIcon,
 } from "@heroicons/react/24/outline";
@@ -48,9 +50,7 @@ interface ToolButtonProps {
   title: string;
   onClick: () => void;
   disabled?: boolean;
-  variant?: "default" | "save";
-  icon?: React.ReactNode;
-  emojiIcon?: string;
+  icon: React.ReactNode;
 }
 
 const ToolButton: React.FC<ToolButtonProps> = ({
@@ -58,13 +58,11 @@ const ToolButton: React.FC<ToolButtonProps> = ({
   title,
   onClick,
   disabled = false,
-  variant = "default",
   icon,
-  emojiIcon,
 }) => (
   <button
     type="button"
-    className={`aqb-ta-btn${variant === "save" ? " aqb-ta-btn--save" : ""}`}
+    className="aqb-ta-btn"
     onClick={(e) => {
       e.preventDefault();
       onClick();
@@ -72,11 +70,8 @@ const ToolButton: React.FC<ToolButtonProps> = ({
     disabled={disabled}
     title={title}
   >
-    <span
-      className={`aqb-ta-icon${emojiIcon ? " aqb-ta-icon--emoji" : ""}`}
-      aria-hidden
-    >
-      {emojiIcon ?? icon}
+    <span className="aqb-ta-icon" aria-hidden>
+      {icon}
     </span>
     <span className="aqb-ta-label">{label}</span>
   </button>
@@ -146,14 +141,13 @@ export const AqbToolActionsRow: React.FC<AqbToolActionsRowProps> = ({
         label="Save Design"
         title="Save design"
         onClick={onSave}
-        variant="save"
-        emojiIcon="⭐"
+        icon={<ArrowUpTrayIcon className={iconClass} />}
       />
       <ToolButton
         label="Load Design"
         title="Load a saved design"
         onClick={onLoad}
-        emojiIcon="📂"
+        icon={<FolderOpenIcon className={iconClass} />}
       />
     </ToolButtonRow>
   </div>
