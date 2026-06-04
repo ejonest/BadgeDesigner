@@ -61,6 +61,14 @@ import { AqbBadgeOrderQtySection } from "./AqbBadgeOrderQtySection";
 import { BadgeQtyStepper } from "./BadgeQtyStepper";
 import { AqbToolActionsRow } from "./AqbToolActionsRow";
 import {
+  AqbResetDesignConfirmModal,
+  type ResetDesignConfirmMode,
+} from "./AqbResetDesignConfirmModal";
+import {
+  dismissResetDesignConfirm,
+  isResetDesignConfirmDismissed,
+} from "../constants/designerConfirmations";
+import {
   AqbPreviewActionsRow,
   AqbPreviewPanelHeader,
 } from "./AqbPreviewActionsRow";
@@ -2294,6 +2302,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const [plaqueAwardFormatsExpanded, setPlaqueAwardFormatsExpanded] =
     useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [resetConfirmMode, setResetConfirmMode] =
+    useState<ResetDesignConfirmMode | null>(null);
   const [templateSortBy, setTemplateSortBy] = useState<
     "popularity" | "size" | "alphabetical"
   >("popularity");
@@ -5503,6 +5513,40 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setBadge(resetBadgeData);
   };
 
+  const promptResetBadge = () => {
+    if (isResetDesignConfirmDismissed()) {
+      resetBadge();
+      return;
+    }
+    setResetConfirmMode("single");
+  };
+
+  const promptResetAllBadges = () => {
+    if (isResetDesignConfirmDismissed()) {
+      resetAllBadges();
+      return;
+    }
+    setResetConfirmMode("all");
+  };
+
+  const closeResetConfirmModal = () => {
+    setResetConfirmMode(null);
+  };
+
+  const handleResetConfirm = () => {
+    if (resetConfirmMode === "single") {
+      resetBadge();
+    } else if (resetConfirmMode === "all") {
+      resetAllBadges();
+    }
+    closeResetConfirmModal();
+  };
+
+  const handleResetConfirmDontShowAgain = () => {
+    dismissResetDesignConfirm();
+    handleResetConfirm();
+  };
+
   // CLEAN ARCHITECTURE: Auto-save on switch (no manual save button)
 
   // UNIVERSAL PREVIEW: All badges use the same template
@@ -7907,9 +7951,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       <AqbToolActionsRow
         onUndo={handleUndo}
         undoDisabled={undoHistory.length === 0}
-        onReset={() => resetBadge()}
+        onReset={promptResetBadge}
         showResetAll={multipleBadges.length > 1}
-        onResetAll={resetAllBadges}
+        onResetAll={promptResetAllBadges}
         showApplyFormatToAll={multipleBadges.length > 1}
         onApplyFormatToAll={applyAllFormattingToAll}
         applyFormatLabel={`Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`}
@@ -11105,7 +11149,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
                     onClick={(e) => {
                       e.preventDefault();
-                      resetBadge();
+                      promptResetBadge();
                     }}
                     title={`Reset current ${config.labelProduct.toLowerCase()} to default settings`}
                   >
@@ -11124,7 +11168,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors"
                       onClick={(e) => {
                         e.preventDefault();
-                        resetAllBadges();
+                        promptResetAllBadges();
                       }}
                       title={`Reset all ${config.labelProductPlural.toLowerCase()} to default settings`}
                     >
@@ -14799,6 +14843,17 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       )}
 
       {/* Help Modal */}
+      {resetConfirmMode ? (
+        <AqbResetDesignConfirmModal
+          mode={resetConfirmMode}
+          labelProduct={config.labelProduct.toLowerCase()}
+          labelProductPlural={config.labelProductPlural.toLowerCase()}
+          onConfirm={handleResetConfirm}
+          onCancel={closeResetConfirmModal}
+          onDontShowAgain={handleResetConfirmDontShowAgain}
+        />
+      ) : null}
+
       {showHelpModal && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"

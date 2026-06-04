@@ -303,6 +303,59 @@
   color: #b91c1c;
 }
 
+/* Reset design confirmation modal */
+.aqb-reset-design-confirm-modal__btn {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 8px 14px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.aqb-reset-design-confirm-modal__btn--secondary {
+  border-color: var(--aqb-border);
+  background: #fff;
+  color: #374151;
+}
+
+.aqb-reset-design-confirm-modal__btn--secondary:hover {
+  background: var(--aqb-cream);
+  border-color: var(--aqb-navy);
+}
+
+.aqb-reset-design-confirm-modal__btn--ghost {
+  border-color: transparent;
+  background: transparent;
+  color: #6b7280;
+}
+
+.aqb-reset-design-confirm-modal__btn--ghost:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.aqb-reset-design-confirm-modal__btn--primary {
+  border-color: var(--aqb-navy);
+  background: var(--aqb-navy);
+  color: #fff;
+}
+
+.aqb-reset-design-confirm-modal__btn--primary:hover {
+  background: #1a3454;
+  border-color: #1a3454;
+}
+
+@media (min-width: 640px) {
+  .aqb-reset-design-confirm-modal__actions .aqb-reset-design-confirm-modal__btn--ghost {
+    margin-right: auto;
+  }
+}
+
 /* Badge preview header — duplicate, delete, grid, add multiple: equal height */
 .aqb-redesign-root .aqb-preview-action-btn {
   box-sizing: border-box;
