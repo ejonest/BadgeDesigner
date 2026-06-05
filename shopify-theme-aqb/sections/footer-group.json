@@ -1,0 +1,128 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "name": "t:sections.footer.name",
+  "type": "footer",
+  "sections": {
+    "aqb_footer": {
+      "type": "aqb-footer",
+      "settings": {
+        "logo_mark": "AQ",
+        "logo_text_before": "All Quality ",
+        "logo_text_accent": "Badges",
+        "brand_description": "The dedicated badge brand of the LITA family. Custom and blank name tags — designed by you, made by us, shipped from the USA.",
+        "products_heading": "Products",
+        "buyers_heading": "For buyers",
+        "lita_heading": "LITA brands",
+        "copyright": "© 2025 All Quality Badges™ — A LITA brand. All rights reserved.",
+        "portfolio_text": "<span>Part of the</span> <span>LITA <span class=\"aqb-footer__lita-dot\">◆</span> Living in the Arena</span> <span>portfolio</span>"
+      },
+      "blocks": {
+        "prod_design": {
+          "type": "link",
+          "settings": {
+            "column": "products",
+            "label": "Design Your Badge",
+            "url": "shopify://products/custom-1x3-badge"
+          }
+        },
+        "prod_blanks": {
+          "type": "link",
+          "settings": {
+            "column": "products",
+            "label": "Name Tag Blanks",
+            "url": "shopify://collections/blank-name-tags"
+          }
+        },
+        "prod_church": {
+          "type": "link",
+          "settings": {
+            "column": "products",
+            "label": "Church Collection",
+            "url": "shopify://collections/church-name-tags"
+          }
+        },
+        "prod_roles": {
+          "type": "link",
+          "settings": {
+            "column": "products",
+            "label": "Role Badges",
+            "url": "shopify://collections/all"
+          }
+        },
+        "prod_desk": {
+          "type": "link",
+          "settings": {
+            "column": "products",
+            "label": "Desk Name Plates",
+            "url": "shopify://collections/acrylic-desk-signs"
+          }
+        },
+        "buy_contact": {
+          "type": "link",
+          "settings": {
+            "column": "buyers",
+            "label": "Contact Us",
+            "url": "/pages/contact"
+          }
+        },
+        "lita_signs": {
+          "type": "link",
+          "settings": {
+            "column": "lita",
+            "label": "Signs ByLITA",
+            "url": "https://signsbylita.com/",
+            "open_new_tab": true
+          }
+        },
+        "lita_gavels": {
+          "type": "link",
+          "settings": {
+            "column": "lita",
+            "label": "Gavels Fast",
+            "url": "https://www.gavelsfast.com/",
+            "open_new_tab": true
+          }
+        },
+        "lita_designs": {
+          "type": "link",
+          "settings": {
+            "column": "lita",
+            "label": "Designs ByLITA",
+            "url": "https://www.designsbylita.com/",
+            "open_new_tab": true
+          }
+        },
+        "lita_vivid": {
+          "type": "link",
+          "settings": {
+            "column": "lita",
+            "label": "Vivid Stamp",
+            "url": "https://www.vividstamp.com/",
+            "open_new_tab": true
+          }
+        }
+      },
+      "block_order": [
+        "prod_design",
+        "prod_blanks",
+        "prod_church",
+        "prod_roles",
+        "prod_desk",
+        "buy_contact",
+        "lita_signs",
+        "lita_gavels",
+        "lita_designs",
+        "lita_vivid"
+      ]
+    }
+  },
+  "order": ["aqb_footer"]
+}

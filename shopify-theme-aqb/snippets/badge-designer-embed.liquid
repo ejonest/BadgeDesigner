@@ -1,0 +1,169 @@
+{% comment %}
+  Badge + Sign + Plaque designer iframe embed
+  - Badge: product handle custom-1x3-badge → loads app root with badge designer (default).
+  - Sign: product handle custom-sign → ?variant=sign or /sign-designer (Shape × Size variants, live price).
+  - Plaque: product handle custom-plaque → ?variant=plaque or /plaque-designer (parallel to sign).
+
+  Usage: Copy to theme snippets, then in your product template add: {% render 'badge-designer-embed' %}
+{% endcomment %}
+
+{% comment %}
+  Replace with your actual Vercel app URL. Must match exactly where the iframe loads from.
+{% endcomment %}
+{% assign badge_designer_origin = 'https://all-quality-design-tool.vercel.app' %}
+
+<script>
+  (function() {
+    var DESIGNER_ORIGIN = {{ badge_designer_origin | json }};
+
+    function isAllowedDesignerOrigin(origin) {
+      if (origin === DESIGNER_ORIGIN) return true;
+      if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+      if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return true;
+      return false;
+    }
+
+    function replyToDesigner(event, requestId, success, error) {
+      if (!requestId || !event || !event.source) return;
+      try {
+        event.source.postMessage({
+          action: 'add-to-cart-result',
+          requestId: requestId,
+          success: success,
+          error: error || null
+        }, event.origin);
+      } catch (e) {
+        console.error('Badge designer: could not ack iframe', e);
+      }
+    }
+
+    function aqbDesignerCartAdd(items, event, requestId) {
+      if (!items || !items.length) {
+        console.error('Badge designer: no cart items to add');
+        replyToDesigner(event, requestId, false, 'No cart items to add');
+        return;
+      }
+      var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) ? window.Shopify.routes.root : '/';
+      var cartAddUrl = cartRoot.replace(/\/$/, '') + '/cart/add.js';
+      var payload = {
+        items: items.map(function(item) {
+          var variantId = parseInt(String(item.variantId), 10);
+          return {
+            id: variantId,
+            quantity: item.quantity || 1,
+            properties: item.properties || {}
+          };
+        })
+      };
+      fetch(cartAddUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function(res) {
+          return res.json().then(function(body) {
+            if (!res.ok) {
+              var msg = (body && (body.description || body.message)) || ('HTTP ' + res.status);
+              throw new Error(msg);
+            }
+            return body;
+          });
+        })
+        .then(function() {
+          replyToDesigner(event, requestId, true);
+          window.location.href = cartRoot.replace(/\/$/, '') + '/cart';
+        })
+        .catch(function(err) {
+          console.error('Badge designer: cart/add.js failed', err);
+          var message = err && err.message ? err.message : String(err);
+          replyToDesigner(event, requestId, false, message);
+          alert('Could not add your design to the cart. Please try again or contact support.\n\n' + message);
+        });
+    }
+
+    window.addEventListener('message', function(event) {
+      if (!isAllowedDesignerOrigin(event.origin)) return;
+      var data = event.data;
+      if (!data || !data.action) return;
+
+      if (data.action === 'redirect-to-login') {
+        var returnTo = window.location.pathname + window.location.search;
+        window.location.href = '/customer_authentication/login?return_to=' + encodeURIComponent(returnTo);
+        return;
+      }
+
+      if (data.action === 'add-to-cart' && data.payload) {
+        aqbDesignerCartAdd([data.payload], event, data.requestId);
+        return;
+      }
+
+      if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
+        aqbDesignerCartAdd(data.payload.items, event, data.requestId);
+        return;
+      }
+
+      if (data.action === 'design-saved') {
+        console.log('Design saved:', data.payload);
+      }
+    });
+  })();
+</script>
+
+{% comment %} Custom sign product (Shape × Size variants, live price from Shopify) {% endcomment %}
+{% if product and product.handle == 'custom-sign' %}
+
+{% assign sign_v0 = product.selected_or_first_available_variant | default: product.variants[0] %}
+<div style="width:100%; min-height:900px;">
+  <iframe
+    id="sign-designer-iframe"
+    src="{{ badge_designer_origin }}?embedded=1&amp;variant=sign&amp;shop={{ shop.permanent_domain | url_param_escape }}&storeUrl={{ shop.permanent_domain | url_param_escape }}&product={{ product.id | url_param_escape }}&signProductHandle={{ product.handle | url_param_escape }}&variantIdSign={{ sign_v0.id | url_param_escape }}{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}"
+    style="width:100%; height:900px; border:0;"
+    loading="lazy"
+    allow="clipboard-read; clipboard-write"
+  ></iframe>
+</div>
+
+{% comment %} Custom plaque product {% endcomment %}
+{% elsif product and product.handle == 'custom-plaque' %}
+
+{% assign plaque_v0 = product.selected_or_first_available_variant | default: product.variants[0] %}
+<div style="width:100%; min-height:900px;">
+  <iframe
+    id="plaque-designer-iframe"
+    src="{{ badge_designer_origin }}/plaque-designer?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&storeUrl={{ shop.permanent_domain | url_param_escape }}&product={{ product.id | url_param_escape }}&plaqueProductHandle={{ product.handle | url_param_escape }}&variantIdSign={{ plaque_v0.id | url_param_escape }}{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}"
+    style="width:100%; height:900px; border:0;"
+    loading="lazy"
+    allow="clipboard-read; clipboard-write"
+  ></iframe>
+</div>
+
+{% comment %} Custom badge product (pin / magnetic / adhesive variants) {% endcomment %}
+{% elsif product and product.handle == 'custom-1x3-badge' %}
+
+{% assign badge_designer_path = '/badge-designer-redesign' %}
+
+{% assign v0 = product.variants[0] %}
+{% assign v1 = product.variants[1] | default: v0 %}
+{% assign v2 = product.variants[2] | default: v0 %}
+{% assign duplicate_product = all_products['custom-1x3-badge-duplicate'] %}
+{% if duplicate_product and duplicate_product.variants.size >= 3 %}
+  {% assign dup0 = duplicate_product.variants[0] %}
+  {% assign dup1 = duplicate_product.variants[1] %}
+  {% assign dup2 = duplicate_product.variants[2] %}
+  {% assign duplicate_params = '&variantIdPinDuplicate=' | append: dup0.id %}
+  {% assign duplicate_params = duplicate_params | append: '&variantIdMagneticDuplicate=' | append: dup1.id %}
+  {% assign duplicate_params = duplicate_params | append: '&variantIdAdhesiveDuplicate=' | append: dup2.id %}
+{% else %}
+  {% assign duplicate_params = '' %}
+{% endif %}
+<div class="aqb-designer-embed">
+  <iframe
+    id="badge-designer-iframe"
+    title="Design your custom badge"
+    src="{{ badge_designer_origin }}{{ badge_designer_path }}?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&amp;storeUrl={{ shop.permanent_domain | url_param_escape }}&amp;product={{ product.id | url_param_escape }}&amp;variantIdPin={{ v0.id | url_param_escape }}&amp;variantIdMagnetic={{ v1.id | url_param_escape }}&amp;variantIdAdhesive={{ v2.id | url_param_escape }}{{ duplicate_params }}{% if customer %}&amp;customerId={{ customer.id | url_param_escape }}{% endif %}"
+    loading="lazy"
+    allow="clipboard-read; clipboard-write"
+  ></iframe>
+</div>
+
+{% endif %}

@@ -1,0 +1,97 @@
+{% comment %}
+  Section: AQB Trust Bar
+  CSS lives in assets/base.css — search for "AQB SECTIONS CSS"
+{% endcomment %}
+
+<div class="aqb-trust-bar color-{{ section.settings.color_scheme }} gradient" style="padding-top: {{ section.settings.padding_top }}px; padding-bottom: {{ section.settings.padding_bottom }}px;">
+  <div class="page-width">
+    <ul class="aqb-trust-bar__list list-unstyled" role="list">
+      {% for block in section.blocks %}
+        {% if block.type == 'trust_item' %}
+          <li class="aqb-trust-bar__item" {{ block.shopify_attributes }}>
+            <span class="aqb-trust-bar__icon" aria-hidden="true">{{ block.settings.emoji }}</span>
+            <div class="aqb-trust-bar__text">
+              <strong class="aqb-trust-bar__headline">{{ block.settings.headline | escape }}</strong>
+              {% if block.settings.detail != blank %}
+                <span class="aqb-trust-bar__detail">{{ block.settings.detail | escape }}</span>
+              {% endif %}
+            </div>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Trust Bar",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding top",
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding bottom",
+      "default": 36
+    }
+  ],
+  "blocks": [
+    {
+      "type": "trust_item",
+      "name": "Trust Item",
+      "settings": [
+        {
+          "type": "text",
+          "id": "emoji",
+          "label": "Emoji",
+          "default": "🚚"
+        },
+        {
+          "type": "text",
+          "id": "headline",
+          "label": "Headline",
+          "default": "Free USA Shipping"
+        },
+        {
+          "type": "text",
+          "id": "detail",
+          "label": "Detail text",
+          "default": "On every order, no minimum"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Trust Bar",
+      "blocks": [
+        { "type": "trust_item", "settings": { "emoji": "🚚", "headline": "Free USA Shipping", "detail": "On every order, no minimum" } },
+        { "type": "trust_item", "settings": { "emoji": "⚡", "headline": "Ships in 2 Business Days", "detail": "Fast turnaround, guaranteed" } },
+        { "type": "trust_item", "settings": { "emoji": "🏭", "headline": "Direct Manufacturer", "detail": "Better quality, lower prices" } },
+        { "type": "trust_item", "settings": { "emoji": "📦", "headline": "No Minimum Order", "detail": "Order 1 or 10,000 badges" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

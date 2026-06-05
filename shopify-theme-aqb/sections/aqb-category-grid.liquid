@@ -1,0 +1,282 @@
+{%- liquid
+  assign layout = section.settings.layout | default: 'split'
+-%}
+
+<section class="aqb-category-grid section-pad aqb-category-grid--{{ layout }}">
+  <div class="aqb-category-grid__inner section-inner">
+    <div class="aqb-category-grid__header-row">
+      <div class="aqb-category-grid__header-copy">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="section-eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="aqb-category-grid__heading">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+      </div>
+      {%- if section.settings.view_all_label != blank -%}
+        <a href="{{ section.settings.view_all_link }}" class="view-all">
+          {{ section.settings.view_all_label | escape }}
+        </a>
+      {%- endif -%}
+    </div>
+
+    <div class="cat-grid">
+      {%- for block in section.blocks -%}
+        {%- liquid
+          assign alt_text = block.settings.title | default: 'Category' | escape
+          assign card_class = 'cat-card'
+          if layout == 'split' and block.settings.featured
+            assign card_class = card_class | append: ' cat-card--featured'
+          endif
+        -%}
+        <a href="{{ block.settings.link }}" class="{{ card_class }}" {{ block.shopify_attributes }}>
+          {%- if layout == 'split' -%}
+            <div class="cat-photo">
+              {%- if block.settings.banner_image != blank -%}
+                {{
+                  block.settings.banner_image
+                  | image_url: width: 1200
+                  | image_tag:
+                    loading: 'lazy',
+                    widths: '400,600,800,1024,1200',
+                    sizes: '(min-width: 990px) 50vw, 100vw',
+                    alt: alt_text,
+                    class: 'cat-photo__img'
+                }}
+              {%- elsif block.settings.banner_asset != blank -%}
+                <img
+                  class="cat-photo__img"
+                  src="{{ block.settings.banner_asset | asset_url }}"
+                  alt="{{ alt_text }}"
+                  width="1024"
+                  height="422"
+                  loading="lazy"
+                >
+              {%- else -%}
+                <div class="cat-photo__placeholder" aria-hidden="true"></div>
+              {%- endif -%}
+            </div>
+            <div class="cat-info">
+              <div class="cat-info__body">
+                {%- if block.settings.title != blank -%}
+                  <div class="cat-name">{{ block.settings.title | escape }}</div>
+                {%- endif -%}
+                {%- if block.settings.description != blank -%}
+                  <div class="cat-desc">{{ block.settings.description | escape }}</div>
+                {%- endif -%}
+                {%- if block.settings.cta_label != blank -%}
+                  <span class="cat-cta">{{ block.settings.cta_label | escape }}</span>
+                {%- endif -%}
+              </div>
+              {%- if block.settings.icon != 'none' -%}
+                <div class="cat-info__icon">
+                  {% render 'aqb-category-icon', icon: block.settings.icon %}
+                </div>
+              {%- endif -%}
+            </div>
+          {%- else -%}
+            {%- assign accent = block.settings.visual_accent | default: 'navy' -%}
+            <div class="cat-visual cat-visual--{{ accent }}">
+              {%- if block.settings.banner_image != blank -%}
+                {{
+                  block.settings.banner_image
+                  | image_url: width: 800
+                  | image_tag:
+                    loading: 'lazy',
+                    widths: '300,400,600,800',
+                    sizes: '(min-width: 990px) 25vw, (min-width: 750px) 50vw, 100vw',
+                    alt: alt_text,
+                    class: 'cat-visual__img'
+                }}
+              {%- endif -%}
+            </div>
+            <div class="cat-info cat-info--compact">
+              <div class="cat-name">{{ block.settings.title | escape }}</div>
+              {%- if block.settings.description != blank -%}
+                <div class="cat-desc">{{ block.settings.description | escape }}</div>
+              {%- endif -%}
+              {%- if block.settings.cta_label != blank -%}
+                <span class="cat-cta">{{ block.settings.cta_label | escape }}</span>
+              {%- endif -%}
+            </div>
+          {%- endif -%}
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "AQB Category Grid",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "split", "label": "Banner + text (2×2)" },
+        { "value": "compact", "label": "Compact grid (4 columns)" }
+      ],
+      "default": "split"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Shop by category"
+    },
+    {
+      "type": "html",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Every badge,<br>one destination."
+    },
+    {
+      "type": "text",
+      "id": "view_all_label",
+      "label": "View all link label",
+      "default": "View all products →"
+    },
+    {
+      "type": "url",
+      "id": "view_all_link",
+      "label": "View all link"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "category",
+      "name": "Category card",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "banner_image",
+          "label": "Banner image (top)",
+          "info": "Wide banner only — upload your top image here (recommended 1024×422)."
+        },
+        {
+          "type": "text",
+          "id": "banner_asset",
+          "label": "Default banner filename",
+          "info": "Theme asset used until you upload a banner (e.g. aqb-cat-banner-church.png)."
+        },
+        {
+          "type": "checkbox",
+          "id": "featured",
+          "label": "Span full width",
+          "default": false
+        },
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Footer icon",
+          "options": [
+            { "value": "church", "label": "Church" },
+            { "value": "engraved", "label": "Engraved / design" },
+            { "value": "blanks", "label": "Blanks / badge" },
+            { "value": "desk", "label": "Desk plate" },
+            { "value": "none", "label": "None" }
+          ],
+          "default": "church"
+        },
+        {
+          "type": "select",
+          "id": "visual_accent",
+          "label": "Placeholder background (compact layout)",
+          "options": [
+            { "value": "navy", "label": "Navy" },
+            { "value": "gold-pale", "label": "Gold pale" },
+            { "value": "navy-mid", "label": "Navy mid" },
+            { "value": "cream", "label": "Cream" }
+          ],
+          "default": "navy"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "Category"
+        },
+        {
+          "type": "textarea",
+          "id": "description",
+          "label": "Description"
+        },
+        {
+          "type": "text",
+          "id": "cta_label",
+          "label": "Link label",
+          "default": "Shop now →"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Category Grid",
+      "settings": {
+        "layout": "split",
+        "eyebrow": "Shop by category",
+        "heading": "Every badge,<br>one destination.",
+        "view_all_label": "View all products →",
+        "view_all_link": "/collections/all"
+      },
+      "blocks": [
+        {
+          "type": "category",
+          "settings": {
+            "banner_asset": "aqb-cat-banner-church.png",
+            "icon": "church",
+            "title": "Church & Ministry",
+            "description": "Custom badges for greeters, pastors, ushers, deacons, volunteers, and welcome teams.",
+            "cta_label": "Shop ministry badges →",
+            "link": "/collections/church-name-tags"
+          }
+        },
+        {
+          "type": "category",
+          "settings": {
+            "banner_asset": "aqb-cat-banner-custom.png",
+            "icon": "engraved",
+            "featured": false,
+            "title": "Custom Designed Badges",
+            "description": "Durable, professional name badges engraved with your text and logo. Choose colors, fonts, and backing options to match your brand.",
+            "cta_label": "Start designing →",
+            "link": "/products/custom-1x3-badge"
+          }
+        },
+        {
+          "type": "category",
+          "settings": {
+            "banner_asset": "aqb-cat-banner-blanks.png",
+            "icon": "blanks",
+            "title": "Blank Name Tags",
+            "description": "High-quality blank badges ready for customization. Available in multiple shapes, colors, and backing options — perfect for any team or event.",
+            "cta_label": "Shop blanks →",
+            "link": "/collections/blank-name-tags"
+          }
+        },
+        {
+          "type": "category",
+          "settings": {
+            "banner_asset": "aqb-cat-banner-desk.png",
+            "icon": "desk",
+            "title": "Desk Name Plates",
+            "description": "Custom desk name plates for offices, reception areas, schools, hotels, and home workspaces. Choose from engraved styles, acrylic displays, and fun novelty designs.",
+            "cta_label": "Shop desk plates →",
+            "link": "/collections/acrylic-desk-signs"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -120,7 +120,11 @@ import {
   LEGACY_BRUSHED_SILVER_HEX,
   SMART_PALETTE_COLORS,
 } from "../constants/colors";
-import { BADGE_CONSTANTS } from "../constants/badge";
+import {
+  BADGE_CONSTANTS,
+  getBadgePriceBreakdownForBacking,
+  getBadgePriceForBacking,
+} from "../constants/badge";
 import {
   type DesignerVariant,
   getDesignerVariantConfig,
@@ -3344,15 +3348,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         .toString(36)
         .slice(2, 11)}`;
 
-      let basePrice = 9.99;
-      let backingPrice = isSignLikeVariant(variant)
-        ? 0
-        : firstFin.backing === "magnetic"
-        ? 2.0
-        : firstFin.backing === "adhesive"
-        ? 1.0
-        : 0;
-      let totalPrice = basePrice + backingPrice;
+      const firstBacking = firstFin.backing;
+      let { basePrice, backingPrice, totalPrice } = isSignLikeVariant(variant)
+        ? { basePrice: 9.99, backingPrice: 0, totalPrice: 9.99 }
+        : getBadgePriceBreakdownForBacking(firstBacking);
       if (isSignLikeVariant(variant)) {
         backingPrice = 0;
         const product = signShopifyProductRef.current;
@@ -3557,15 +3556,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         setCloudAutosaveStatus("saving");
 
         const first = allFinalizedBadges[0];
-        let basePrice = 9.99;
-        let backingPrice = isSignLikeVariant(variant)
-          ? 0
-          : first.backing === "magnetic"
-          ? 2.0
-          : first.backing === "adhesive"
-          ? 1.0
-          : 0;
-        let totalPrice = basePrice + backingPrice;
+        let { basePrice, backingPrice, totalPrice } = isSignLikeVariant(variant)
+          ? { basePrice: 9.99, backingPrice: 0, totalPrice: 9.99 }
+          : getBadgePriceBreakdownForBacking(first.backing);
         if (isSignLikeVariant(variant)) {
           backingPrice = 0;
           const product = signShopifyProductRef.current;
@@ -4122,12 +4115,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const totalPriceAllBadges = useMemo(() => {
     if (multipleBadges.length === 0) return "0.00";
     if (!isSignLikeVariant(variant)) {
-      const base = 9.99;
-      const sum = multipleBadges.reduce((acc, b) => {
-        const p =
-          b.backing === "magnetic" ? 2 : b.backing === "adhesive" ? 1 : 0;
-        return acc + base + p;
-      }, 0);
+      const sum = multipleBadges.reduce(
+        (acc, b) => acc + getBadgePriceForBacking(b.backing),
+        0,
+      );
       return sum.toFixed(2);
     }
     if (!signShopifyProduct) return "—";
@@ -7394,18 +7385,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
       const cartItems = addDuplicates
         ? allBadgesForSupabase.map((b, i) => {
-            const backingP = isSignDesigner
-              ? 0
-              : b.backing === "magnetic"
-              ? 2
-              : b.backing === "adhesive"
-              ? 1
-              : 0;
             const { variantId, linePrice: itemTotalPrice } = isSignDesigner
               ? resolveSignLineVariant(b)
               : {
                   variantId: getVariantId(b.backing),
-                  linePrice: (9.99 + backingP).toFixed(2),
+                  linePrice: getBadgePriceForBacking(b.backing).toFixed(2),
                 };
             const n = allBadgesForSupabase.length;
             const lineIndexStr = String(i);
@@ -7440,18 +7424,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             };
           })
         : badgesForSupabase.map((b, i) => {
-            const backingP = isSignDesigner
-              ? 0
-              : b.backing === "magnetic"
-              ? 2
-              : b.backing === "adhesive"
-              ? 1
-              : 0;
             const { variantId, linePrice: itemTotalPrice } = isSignDesigner
               ? resolveSignLineVariant(b)
               : {
                   variantId: getVariantId(b.backing),
-                  linePrice: (9.99 + backingP).toFixed(2),
+                  linePrice: getBadgePriceForBacking(b.backing).toFixed(2),
                 };
             const lineIndexStrSingle = String(i);
             const indexPropsSingle: Record<string, string> = {
@@ -7491,15 +7468,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       if (designLibraryUserId) {
         const cid = designLibraryUserId;
         const allBadges = badgesForSupabase;
-        let basePrice = 9.99;
-        let backingPrice = isSignLikeVariant(variant)
-          ? 0
-          : allBadges[0]?.backing === "magnetic"
-          ? 2.0
-          : allBadges[0]?.backing === "adhesive"
-          ? 1.0
-          : 0;
-        let totalPrice = basePrice + backingPrice;
+        let { basePrice, backingPrice, totalPrice } = isSignLikeVariant(variant)
+          ? { basePrice: 9.99, backingPrice: 0, totalPrice: 9.99 }
+          : getBadgePriceBreakdownForBacking(allBadges[0]?.backing);
         if (isSignLikeVariant(variant)) {
           backingPrice = 0;
           const product = signShopifyProductRef.current;
@@ -12002,14 +11973,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     pin: "Pin",
                     adhesive: "Adhesive",
                   };
-                  const prices = BADGE_CONSTANTS.BACKING_PRICES;
                   const bKey = p.badge.backing;
-                  const extra = prices[bKey as keyof typeof prices] ?? 0;
                   const backingStr =
                     !isSignLikeVariant(variant) && variant === "badge"
-                      ? `${backingNames[bKey] ?? bKey}${
-                          extra > 0 ? ` (+$${extra.toFixed(2)})` : ""
-                        }`
+                      ? `${backingNames[bKey] ?? bKey} ($${getBadgePriceForBacking(bKey).toFixed(2)})`
                       : backingNames[bKey] ?? bKey;
                   const lineCount = p.badge.lines.filter((l) =>
                     (l.text ?? "").trim(),

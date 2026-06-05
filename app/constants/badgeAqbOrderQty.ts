@@ -1,4 +1,9 @@
-import type { BadgeBackingKey } from "./badgeAqbBacking";
+import {
+  type BadgeBackingKey,
+  badgeAqbOrderBackingUplift,
+} from "./badgeAqbBacking";
+
+export type { BadgeBackingKey } from "./badgeAqbBacking";
 
 /** Reference mock: volume tiers (per-badge base before backing uplift). */
 export const BADGE_AQB_ORDER_TIERS = [
@@ -49,15 +54,7 @@ export function badgeAqbFreeShipMarkerLeftPct(
 /** Tier chip anchors (display-only; quantity comes from editor designs). */
 export const BADGE_AQB_ORDER_TIER_ANCHORS = [1, 5, 10, 25, 100, 250] as const;
 
-/** Uplift used with mock tier base (reference HTML), not Shopify variant price. */
-export function badgeAqbOrderBackingUplift(key: BadgeBackingKey): number {
-  const u: Record<BadgeBackingKey, number> = {
-    magnetic: 1,
-    pin: 0.5,
-    adhesive: 0,
-  };
-  return u[key] ?? 0;
-}
+export { badgeAqbOrderBackingUplift };
 
 export function getBadgeAqbOrderTierForQty(qty: number) {
   const q = Math.max(1, Math.floor(qty));

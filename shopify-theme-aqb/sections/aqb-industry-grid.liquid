@@ -1,0 +1,129 @@
+{% comment %}
+  Section: AQB Industry Grid
+  CSS lives in assets/base.css — search for "AQB SECTIONS CSS"
+{% endcomment %}
+
+<div class="aqb-industry-grid color-{{ section.settings.color_scheme }} gradient" style="padding-top: {{ section.settings.padding_top }}px; padding-bottom: {{ section.settings.padding_bottom }}px;">
+  <div class="page-width">
+
+    {% if section.settings.heading != blank %}
+      <div class="aqb-industry-grid__header">
+        <h2 class="aqb-industry-grid__title {{ section.settings.heading_size }}">
+          {{ section.settings.heading | escape }}
+        </h2>
+        {% if section.settings.subheading != blank %}
+          <p class="aqb-industry-grid__subheading">{{ section.settings.subheading | escape }}</p>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <ul class="aqb-industry-grid__list list-unstyled" role="list">
+      {% for block in section.blocks %}
+        {% if block.type == 'industry_card' %}
+          <li class="aqb-industry-grid__item" {{ block.shopify_attributes }}>
+            <a href="{{ block.settings.link }}" class="aqb-industry-grid__card" aria-label="{{ block.settings.label | escape }}">
+              <div class="aqb-industry-grid__icon-wrap">
+                {% if block.settings.image != blank %}
+                  <div class="aqb-industry-grid__image-wrap">
+                    {{ block.settings.image | image_url: width: 120 | image_tag: loading: 'lazy', width: 60, height: 60, class: 'aqb-industry-grid__img', alt: block.settings.label }}
+                  </div>
+                {% else %}
+                  <span class="aqb-industry-grid__emoji" aria-hidden="true">{{ block.settings.emoji }}</span>
+                {% endif %}
+              </div>
+              <span class="aqb-industry-grid__label">{{ block.settings.label | escape }}</span>
+              {% if block.settings.description != blank %}
+                <span class="aqb-industry-grid__desc">{{ block.settings.description | escape }}</span>
+              {% endif %}
+              <span class="aqb-industry-grid__arrow" aria-hidden="true">→</span>
+            </a>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Industry Grid",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Shop By Industry"
+    },
+    {
+      "type": "select",
+      "id": "heading_size",
+      "options": [
+        { "value": "h2", "label": "Small" },
+        { "value": "h1", "label": "Medium" },
+        { "value": "h0", "label": "Large" }
+      ],
+      "default": "h1",
+      "label": "Heading size"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Find the perfect badge for your team"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding top",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding bottom",
+      "default": 60
+    }
+  ],
+  "blocks": [
+    {
+      "type": "industry_card",
+      "name": "Industry Card",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Industry name", "default": "Church" },
+        { "type": "text", "id": "emoji", "label": "Emoji icon", "default": "⛪" },
+        { "type": "image_picker", "id": "image", "label": "Icon image (optional)" },
+        { "type": "text", "id": "description", "label": "Short description", "default": "Visitor & member badges" },
+        { "type": "url", "id": "link", "label": "Link" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Industry Grid",
+      "blocks": [
+        { "type": "industry_card", "settings": { "label": "Church", "emoji": "⛪", "description": "Visitor & member badges" } },
+        { "type": "industry_card", "settings": { "label": "Medical", "emoji": "🏥", "description": "Staff & patient ID tags" } },
+        { "type": "industry_card", "settings": { "label": "Hospitality", "emoji": "🏨", "description": "Hotel & restaurant name tags" } },
+        { "type": "industry_card", "settings": { "label": "Volunteer", "emoji": "🤝", "description": "Event & nonprofit badges" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

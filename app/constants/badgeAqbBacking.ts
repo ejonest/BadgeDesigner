@@ -1,14 +1,9 @@
-export type BadgeBackingKey = "magnetic" | "pin" | "adhesive";
+import {
+  BADGE_CONSTANTS,
+  getBadgePriceForBacking,
+} from "./badge";
 
-/** Reference mock prices for AQB redesign UI (cart/checkout uses BADGE_CONSTANTS.BACKING_PRICES). */
-const BADGE_AQB_BACKING_DISPLAY_PRICE: Record<
-  BadgeBackingKey,
-  number | "included"
-> = {
-  magnetic: 1,
-  pin: 0.5,
-  adhesive: "included",
-};
+export type BadgeBackingKey = "magnetic" | "pin" | "adhesive";
 
 export const BADGE_AQB_BACKING_ORDER: BadgeBackingKey[] = [
   "magnetic",
@@ -46,14 +41,34 @@ export const BADGE_AQB_BACKING_META: Record<
   },
 };
 
-/** Display price for AQB redesign dropdown and info card. */
+/** Uplift above adhesive base — used by attachment picker and order qty tier UI. */
+export function badgeAqbOrderBackingUplift(key: BadgeBackingKey): number {
+  return (
+    getBadgePriceForBacking(key) -
+    BADGE_CONSTANTS.BADGE_PRICES_BY_BACKING.adhesive
+  );
+}
+
+/** Relative modifier for Step 4 attachment picker (+$X or included). */
+export function badgeAqbBackingModifierLabel(key: BadgeBackingKey): string {
+  const uplift = badgeAqbOrderBackingUplift(key);
+  if (uplift <= 0) return "included";
+  return `+$${uplift.toFixed(2)}`;
+}
+
+/** Display in attachment dropdown and info card — relative to adhesive. */
 export function badgeAqbBackingPriceLabel(key: BadgeBackingKey): string {
-  const display = BADGE_AQB_BACKING_DISPLAY_PRICE[key];
-  if (display === "included") return "included";
-  return `+$${display.toFixed(2)}`;
+  return badgeAqbBackingModifierLabel(key);
 }
 
 export function badgeAqbBackingOptionLabel(key: BadgeBackingKey): string {
   const meta = BADGE_AQB_BACKING_META[key];
-  return `${meta.shortName} — ${badgeAqbBackingPriceLabel(key)}`;
+  return `${meta.shortName} — ${badgeAqbBackingModifierLabel(key)}`;
+}
+
+/** Absolute per-badge price for cart, checkout summary, and line item properties. */
+export function badgeAqbBackingAbsolutePriceLabel(
+  key: BadgeBackingKey | string | undefined | null,
+): string {
+  return `$${getBadgePriceForBacking(key).toFixed(2)}`;
 }

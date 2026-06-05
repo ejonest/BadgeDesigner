@@ -1,0 +1,79 @@
+<section class="aqb-capabilities">
+  <div class="aqb-capabilities__inner">
+    {%- for block in section.blocks -%}
+      <div class="aqb-capabilities__item" {{ block.shopify_attributes }}>
+        <span class="aqb-capabilities__num">{{ block.settings.number | escape }}</span>
+        <div>
+          <div class="aqb-capabilities__title">{{ block.settings.title | escape }}</div>
+          <div class="aqb-capabilities__desc">{{ block.settings.description | escape }}</div>
+        </div>
+      </div>
+    {%- endfor -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "AQB Capabilities",
+  "tag": "section",
+  "class": "section",
+  "max_blocks": 6,
+  "blocks": [
+    {
+      "type": "capability",
+      "name": "Capability",
+      "settings": [
+        {
+          "type": "text",
+          "id": "number",
+          "label": "Number",
+          "default": "01"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "Any colour you want"
+        },
+        {
+          "type": "textarea",
+          "id": "description",
+          "label": "Description",
+          "default": "Choose from the full colour spectrum — not just a handful of presets."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Capabilities",
+      "blocks": [
+        {
+          "type": "capability",
+          "settings": {
+            "number": "01",
+            "title": "Any colour you want",
+            "description": "Choose from the full colour spectrum — not just a handful of presets. Navy, gold, red, green, black, white and everything in between."
+          }
+        },
+        {
+          "type": "capability",
+          "settings": {
+            "number": "02",
+            "title": "Your text, your font",
+            "description": "Name, role, department, organisation — any text you need across multiple lines, in your choice of font style."
+          }
+        },
+        {
+          "type": "capability",
+          "settings": {
+            "number": "03",
+            "title": "See it before you buy",
+            "description": "The live preview updates as you design. What you see on screen is what gets made. No surprises, no artwork fees, no back-and-forth."
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

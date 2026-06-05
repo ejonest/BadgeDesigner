@@ -1,0 +1,115 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "name": "t:sections.header.name",
+  "type": "header",
+  "sections": {
+    "announcement_ticker": {
+      "type": "aqb-announcement-ticker",
+      "blocks": {
+        "msg_1": {
+          "type": "message",
+          "settings": {
+            "text": "Free USA shipping on every order, no minimum"
+          }
+        },
+        "msg_2": {
+          "type": "message",
+          "settings": {
+            "text": "Custom name badges — design yours and see it live before you buy"
+          }
+        },
+        "msg_3": {
+          "type": "message",
+          "settings": {
+            "text": "Ships in 2 business days, direct from our US facility"
+          }
+        },
+        "msg_4": {
+          "type": "message",
+          "settings": {
+            "text": "Now serving Hispanic congregations — Ujier, Diácono, Acomodador y más"
+          }
+        }
+      },
+      "block_order": [
+        "msg_1",
+        "msg_2",
+        "msg_3",
+        "msg_4"
+      ],
+      "settings": {}
+    },
+    "header": {
+      "type": "aqb-header",
+      "blocks": {
+        "nav_design": {
+          "type": "nav_link",
+          "settings": {
+            "label": "Design Your Badge",
+            "url": "shopify://products/custom-1x3-badge",
+            "active_paths": "/products/custom-1x3-badge"
+          }
+        },
+        "nav_blanks": {
+          "type": "nav_link",
+          "settings": {
+            "label": "Name Tag Blanks",
+            "url": "shopify://collections/blank-name-tags",
+            "active_paths": "/collections/blank-name-tags"
+          }
+        },
+        "nav_church": {
+          "type": "nav_link",
+          "settings": {
+            "label": "Church & Congregation",
+            "url": "shopify://collections/church-name-tags",
+            "active_paths": "/collections/church-name-tags"
+          }
+        },
+        "nav_roles": {
+          "type": "nav_link",
+          "settings": {
+            "label": "Role Badges",
+            "url": "shopify://collections/church-name-tags",
+            "active_paths": "/collections/role"
+          }
+        },
+        "nav_bulk": {
+          "type": "nav_link",
+          "settings": {
+            "label": "Bulk Orders",
+            "url": "shopify://collections/blank-name-tags",
+            "active_paths": "/pages/bulk,/collections/blank"
+          }
+        }
+      },
+      "block_order": [
+        "nav_design",
+        "nav_blanks",
+        "nav_church",
+        "nav_roles",
+        "nav_bulk"
+      ],
+      "settings": {
+        "logo_mark": "AQ",
+        "logo_text_before": "All Quality ",
+        "logo_text_accent": "Badges",
+        "sign_in_label": "Sign In",
+        "shop_all_url": "shopify://collections/all",
+        "shop_all_label": "Shop All Badges"
+      }
+    }
+  },
+  "order": [
+    "announcement_ticker",
+    "header"
+  ]
+}
