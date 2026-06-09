@@ -24,7 +24,7 @@
           "type": "strength",
           "settings": {
             "emoji": "💰",
-            "title": "From $1.19 per badge",
+            "title": "Badges as low as $4.99",
             "description": "Volume pricing, no artwork fees"
           }
         },
@@ -84,7 +84,7 @@
           "settings": {
             "emoji": "🚚",
             "headline": "Free USA Shipping",
-            "detail": "On every order, no minimum"
+            "detail": "On orders of 5 badges or more"
           }
         },
         "trust_speed": {
@@ -170,7 +170,7 @@
             "title": "Church & Ministry",
             "description": "Custom badges for greeters, pastors, ushers, deacons, volunteers, and welcome teams.",
             "cta_label": "Shop ministry badges →",
-            "link": "shopify://collections/church-name-tags"
+            "link": "shopify://pages/church-and-congregation"
           }
         },
         "cat_engraved": {

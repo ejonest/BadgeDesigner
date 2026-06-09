@@ -1,0 +1,47 @@
+{%- if page.handle == 'church-and-congregation' or template.suffix == 'church-and-congregation' -%}
+<section class="aqb-ch-trust-bar">
+  <div class="aqb-ch-trust-bar__inner">
+    {%- for block in section.blocks -%}
+      <div class="aqb-ch-trust-bar__item" {{ block.shopify_attributes }}>
+        <span class="aqb-ch-trust-bar__icon" aria-hidden="true">{{ block.settings.emoji }}</span>
+        <div>
+          <div class="aqb-ch-trust-bar__title">{{ block.settings.title | escape }}</div>
+          {%- if block.settings.subtitle != blank -%}
+            <div class="aqb-ch-trust-bar__sub">{{ block.settings.subtitle | escape }}</div>
+          {%- endif -%}
+        </div>
+      </div>
+    {%- endfor -%}
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Church Trust Bar",
+  "tag": "section",
+  "class": "section",
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Trust item",
+      "settings": [
+        { "type": "text", "id": "emoji", "label": "Emoji", "default": "🚚" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Free USA Shipping" },
+        { "type": "text", "id": "subtitle", "label": "Subtitle", "default": "On orders of 5 badges or more" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Church Trust Bar",
+      "blocks": [
+        { "type": "item", "settings": { "emoji": "🚚", "title": "Free USA Shipping", "subtitle": "On orders of 5 badges or more" } },
+        { "type": "item", "settings": { "emoji": "⚡", "title": "Ships in 2 Business Days", "subtitle": "Fast turnaround for ministry teams and events" } },
+        { "type": "item", "settings": { "emoji": "🌎", "title": "English & Spanish Roles", "subtitle": "The only fully bilingual congregation badge collection" } },
+        { "type": "item", "settings": { "emoji": "📦", "title": "No Minimum Orders", "subtitle": "Order exactly what your church needs" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

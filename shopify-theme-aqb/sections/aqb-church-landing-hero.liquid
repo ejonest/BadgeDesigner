@@ -1,0 +1,254 @@
+{%- if page.handle == 'church-and-congregation' or template.suffix == 'church-and-congregation' -%}
+{{ 'aqb-church-landing.css' | asset_url | stylesheet_tag }}
+
+<section class="aqb-ch-hero" id="aqb-ch-hero-{{ section.id }}">
+  <div class="aqb-ch-hero__left">
+    {%- if section.settings.eyebrow != blank -%}
+      <div class="aqb-ch-hero__eyebrow">
+        {%- if section.settings.eyebrow_icon != blank -%}
+          <span class="aqb-ch-hero__eyebrow-icon" aria-hidden="true">{{ section.settings.eyebrow_icon | escape }}</span>
+        {%- endif -%}
+        <span>{{ section.settings.eyebrow | escape }}</span>
+      </div>
+    {%- endif -%}
+
+    {%- if section.settings.heading != blank -%}
+      <h1 class="aqb-ch-hero__title">{{ section.settings.heading }}</h1>
+    {%- endif -%}
+
+    {%- if section.settings.tagline != blank -%}
+      <p class="aqb-ch-hero__tagline">{{ section.settings.tagline | escape }}</p>
+    {%- endif -%}
+
+    {%- if section.settings.subheading != blank -%}
+      <p class="aqb-ch-hero__sub">{{ section.settings.subheading }}</p>
+    {%- endif -%}
+
+    <div class="aqb-ch-hero__actions">
+      {%- if section.settings.primary_label != blank -%}
+        <a href="{{ section.settings.primary_link }}" class="aqb-ch-hero__btn-primary">
+          {{ section.settings.primary_label | escape }}
+          <span aria-hidden="true">→</span>
+        </a>
+      {%- endif -%}
+      {%- if section.settings.secondary_label != blank -%}
+        <a href="{{ section.settings.secondary_link }}" class="aqb-ch-hero__btn-secondary">
+          {{ section.settings.secondary_label | escape }}
+        </a>
+      {%- endif -%}
+    </div>
+
+    <div class="aqb-ch-hero__trust">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'trust_point' -%}
+          <div class="aqb-ch-hero__trust-item" {{ block.shopify_attributes }}>
+            <span class="aqb-ch-hero__trust-check" aria-hidden="true">✓</span>
+            {{ block.settings.label | escape }}
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+
+  <div class="aqb-ch-hero__right">
+    <div class="aqb-ch-hero__photo-wrap" data-aqb-ch-hero-photos>
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'hero_photo' -%}
+          {%- liquid
+            assign photo_class = 'aqb-ch-hero__photo'
+            if forloop.first
+              assign photo_class = photo_class | append: ' is-visible'
+            endif
+            assign photo_alt = block.settings.alt | default: section.settings.heading | strip_html | escape
+          -%}
+          {%- if block.settings.image != blank -%}
+            {%- if forloop.first -%}
+              {{
+                block.settings.image
+                | image_url: width: 1200
+                | image_tag:
+                  loading: 'eager',
+                  widths: '600,900,1200',
+                  sizes: '(min-width: 990px) 50vw, 100vw',
+                  alt: photo_alt,
+                  class: photo_class
+              }}
+            {%- else -%}
+              {{
+                block.settings.image
+                | image_url: width: 1200
+                | image_tag:
+                  loading: 'lazy',
+                  widths: '600,900,1200',
+                  sizes: '(min-width: 990px) 50vw, 100vw',
+                  alt: photo_alt,
+                  class: photo_class
+              }}
+            {%- endif -%}
+          {%- elsif block.settings.image_asset != blank -%}
+            <img
+              class="{{ photo_class }}"
+              src="{{ block.settings.image_asset | asset_url }}"
+              alt="{{ block.settings.alt | default: 'Church congregation name badges' | escape }}"
+              width="1200"
+              height="800"
+              loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
+            >
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+
+    {%- assign photo_blocks = section.blocks | where: 'type', 'hero_photo' -%}
+    {%- if photo_blocks.size > 1 -%}
+      <div class="aqb-ch-hero__switcher" data-aqb-ch-hero-dots>
+        {%- for block in photo_blocks -%}
+          <button
+            type="button"
+            class="aqb-ch-hero__dot{% if forloop.first %} is-active{% endif %}"
+            aria-label="Show photo {{ forloop.index }}"
+            data-aqb-ch-hero-dot="{{ forloop.index0 }}"
+          ></button>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+<script>
+  (function () {
+    var root = document.getElementById('aqb-ch-hero-{{ section.id }}');
+    if (!root) return;
+    var photos = root.querySelectorAll('[data-aqb-ch-hero-photos] .aqb-ch-hero__photo');
+    var dots = root.querySelectorAll('[data-aqb-ch-hero-dot]');
+    if (photos.length < 2) return;
+    dots.forEach(function (dot) {
+      dot.addEventListener('click', function () {
+        var idx = parseInt(dot.getAttribute('data-aqb-ch-hero-dot'), 10);
+        photos.forEach(function (p, i) {
+          p.classList.toggle('is-visible', i === idx);
+        });
+        dots.forEach(function (d, i) {
+          d.classList.toggle('is-active', i === idx);
+        });
+      });
+    });
+  })();
+</script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Church Landing Hero",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow_icon",
+      "label": "Eyebrow icon",
+      "default": "✝"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Houses of Worship"
+    },
+    {
+      "type": "html",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Church &amp; Congregation<br><em>Name Badges</em>"
+    },
+    {
+      "type": "text",
+      "id": "tagline",
+      "label": "Tagline",
+      "default": "Built for ministry teams."
+    },
+    {
+      "type": "html",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Pre-designed engraved badges for ushers, greeters, pastors, deacons, welcome teams and more. Order in convenient multi-packs with fast US shipping and bilingual English &amp; Spanish options available."
+    },
+    {
+      "type": "text",
+      "id": "primary_label",
+      "label": "Primary button",
+      "default": "Shop Ministry Badges"
+    },
+    {
+      "type": "url",
+      "id": "primary_link",
+      "label": "Primary button link"
+    },
+    {
+      "type": "text",
+      "id": "secondary_label",
+      "label": "Secondary button",
+      "default": "Design a Custom Badge"
+    },
+    {
+      "type": "url",
+      "id": "secondary_link",
+      "label": "Secondary button link"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "trust_point",
+      "name": "Trust point",
+      "settings": [
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "Free USA shipping"
+        }
+      ]
+    },
+    {
+      "type": "hero_photo",
+      "name": "Hero photo",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image"
+        },
+        {
+          "type": "text",
+          "id": "image_asset",
+          "label": "Theme asset fallback",
+          "info": "Used when no image is uploaded (e.g. aqb-church-hero-1.png)."
+        },
+        {
+          "type": "text",
+          "id": "alt",
+          "label": "Alt text"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Church Landing Hero",
+      "blocks": [
+        { "type": "trust_point", "settings": { "label": "Free USA shipping" } },
+        { "type": "trust_point", "settings": { "label": "Multi-packs available" } },
+        { "type": "trust_point", "settings": { "label": "English & Spanish roles" } },
+        {
+          "type": "hero_photo",
+          "settings": { "image_asset": "aqb-church-hero-1.png", "alt": "Church greeters wearing name badges" }
+        },
+        {
+          "type": "hero_photo",
+          "settings": { "image_asset": "aqb-church-hero-2.png", "alt": "Congregation welcome team badges" }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

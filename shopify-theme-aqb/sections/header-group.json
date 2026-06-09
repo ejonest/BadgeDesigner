@@ -17,7 +17,7 @@
         "msg_1": {
           "type": "message",
           "settings": {
-            "text": "Free USA shipping on every order, no minimum"
+            "text": "Free USA shipping on orders of 5 badges or more"
           }
         },
         "msg_2": {
@@ -39,12 +39,7 @@
           }
         }
       },
-      "block_order": [
-        "msg_1",
-        "msg_2",
-        "msg_3",
-        "msg_4"
-      ],
+      "block_order": ["msg_1", "msg_2", "msg_3", "msg_4"],
       "settings": {}
     },
     "header": {
@@ -70,8 +65,8 @@
           "type": "nav_link",
           "settings": {
             "label": "Church & Congregation",
-            "url": "shopify://collections/church-name-tags",
-            "active_paths": "/collections/church-name-tags"
+            "url": "shopify://pages/church-and-congregation",
+            "active_paths": "/pages/church-and-congregation,/collections/church-name-tags"
           }
         },
         "nav_roles": {
@@ -89,6 +84,14 @@
             "url": "shopify://collections/blank-name-tags",
             "active_paths": "/pages/bulk,/collections/blank"
           }
+        },
+        "nav_desk": {
+          "type": "nav_link",
+          "settings": {
+            "label": "Desk Name Plates",
+            "url": "shopify://collections/acrylic-desk-signs",
+            "active_paths": "/collections/acrylic-desk-signs,/collections/desk"
+          }
         }
       },
       "block_order": [
@@ -96,6 +99,7 @@
         "nav_blanks",
         "nav_church",
         "nav_roles",
+        "nav_desk",
         "nav_bulk"
       ],
       "settings": {
@@ -108,8 +112,5 @@
       }
     }
   },
-  "order": [
-    "announcement_ticker",
-    "header"
-  ]
+  "order": ["announcement_ticker", "header"]
 }

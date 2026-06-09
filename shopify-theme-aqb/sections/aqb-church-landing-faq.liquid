@@ -1,0 +1,87 @@
+{%- if page.handle == 'church-and-congregation' or template.suffix == 'church-and-congregation' -%}
+<section class="aqb-ch-faq">
+  <div class="aqb-ch-faq__inner">
+    {%- if section.settings.heading != blank -%}
+      <h2 class="aqb-ch-section-h2">{{ section.settings.heading }}</h2>
+    {%- endif -%}
+
+    <div class="aqb-ch-faq__grid">
+      {%- for block in section.blocks -%}
+        <div class="aqb-ch-faq__card" {{ block.shopify_attributes }}>
+          {%- if block.settings.icon != blank -%}
+            <div class="aqb-ch-faq__icon" aria-hidden="true">{{ block.settings.icon | escape }}</div>
+          {%- endif -%}
+          <h3 class="aqb-ch-faq__q">{{ block.settings.question | escape }}</h3>
+          <p class="aqb-ch-faq__a">{{ block.settings.answer | escape }}</p>
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Church FAQ",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "html",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Everything you need to know."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "faq",
+      "name": "FAQ item",
+      "settings": [
+        { "type": "text", "id": "icon", "label": "Icon", "default": "🌎" },
+        { "type": "text", "id": "question", "label": "Question", "default": "Do you offer badges in Spanish?" },
+        { "type": "textarea", "id": "answer", "label": "Answer" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Church FAQ",
+      "blocks": [
+        {
+          "type": "faq",
+          "settings": {
+            "icon": "🌎",
+            "question": "Do you offer badges in Spanish?",
+            "answer": "Yes — we offer the largest bilingual church badge collection available online, including Ujier, Diácono, Acomodador and more."
+          }
+        },
+        {
+          "type": "faq",
+          "settings": {
+            "icon": "📌",
+            "question": "What backing options are available?",
+            "answer": "Choose from magnetic backing, pin backing or adhesive options depending on your preference."
+          }
+        },
+        {
+          "type": "faq",
+          "settings": {
+            "icon": "✝",
+            "question": "Can we add our church logo?",
+            "answer": "Yes — custom engraved and printed badges can include your church logo, ministry name, and branding."
+          }
+        },
+        {
+          "type": "faq",
+          "settings": {
+            "icon": "📦",
+            "question": "Do you offer bulk pricing?",
+            "answer": "Yes — discounted pricing is available for larger ministry teams and congregation orders."
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

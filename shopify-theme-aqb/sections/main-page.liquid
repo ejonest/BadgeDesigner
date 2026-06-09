@@ -1,3 +1,4 @@
+{%- unless page.handle == 'church-and-congregation' or template.suffix == 'church-and-congregation' -%}
 {{ 'section-main-page.css' | asset_url | stylesheet_tag }}
 
 {%- style -%}
@@ -22,6 +23,7 @@
     {{ page.content }}
   </div>
 </div>
+{%- endunless -%}
 
 {% schema %}
 {

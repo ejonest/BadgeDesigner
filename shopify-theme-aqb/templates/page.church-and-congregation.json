@@ -1,6 +1,6 @@
 {
   "sections": {
-    "church_hero": {
+    "hero": {
       "type": "aqb-church-landing-hero",
       "blocks": {
         "trust_1": {
@@ -55,7 +55,7 @@
         "secondary_link": "shopify://products/custom-1x3-badge"
       }
     },
-    "church_trust_bar": {
+    "trust_bar": {
       "type": "aqb-church-landing-trust-bar",
       "blocks": {
         "item_1": {
@@ -99,7 +99,7 @@
       ],
       "settings": {}
     },
-    "church_roles": {
+    "roles": {
       "type": "aqb-church-landing-roles",
       "blocks": {
         "role_greeters": {
@@ -159,7 +159,7 @@
         "description": "Browse pre-designed badges by role — each collection is ready to order in multi-packs with free US shipping."
       }
     },
-    "church_bilingual": {
+    "bilingual": {
       "type": "aqb-church-landing-bilingual",
       "blocks": {
         "bil_1": {
@@ -218,7 +218,7 @@
         "button_link": "shopify://collections/church-name-tags"
       }
     },
-    "church_multipacks": {
+    "multipacks": {
       "type": "aqb-church-landing-multipacks",
       "blocks": {
         "point_1": {
@@ -254,7 +254,7 @@
         "button_link": "shopify://collections/church-name-tags"
       }
     },
-    "church_tool_cta": {
+    "tool_cta": {
       "type": "aqb-church-landing-tool-cta",
       "settings": {
         "eyebrow": "Custom badges",
@@ -265,7 +265,7 @@
         "preview_asset": "aqb-hero-editor-preview.png"
       }
     },
-    "church_faq": {
+    "faq": {
       "type": "aqb-church-landing-faq",
       "blocks": {
         "faq_1": {
@@ -310,23 +310,15 @@
       "settings": {
         "heading": "Everything you need to know."
       }
-    },
-    "main": {
-      "type": "main-page",
-      "settings": {
-        "padding_top": 28,
-        "padding_bottom": 28
-      }
     }
   },
   "order": [
-    "church_hero",
-    "church_trust_bar",
-    "church_roles",
-    "church_bilingual",
-    "church_multipacks",
-    "church_tool_cta",
-    "church_faq",
-    "main"
+    "hero",
+    "trust_bar",
+    "roles",
+    "bilingual",
+    "multipacks",
+    "tool_cta",
+    "faq"
   ]
 }
