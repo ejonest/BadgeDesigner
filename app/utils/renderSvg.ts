@@ -47,6 +47,12 @@ import {
   getBadgeIconTextInsetPx,
   renderBadgeIconLayer,
 } from "~/utils/badgeIconRender";
+import {
+  resolveBlankBadgePhoto,
+  resolvePhotoTextRect,
+  type ResolvedBlankBadgePhoto,
+} from "~/utils/badgeBlankPhotos";
+import { inlineBadgeBlankPhotoSrc } from "~/utils/inlineBadgePhoto";
 import { signTemplateSupportsUserLogoUpload } from "~/utils/signLogoPlacement";
 import {
   isFeaturedBrushedMetalPlateColor,
@@ -87,6 +93,13 @@ import {
 
 type RenderOpts = {
   /**
+   * Badge blank previews: `photo` uses product photography; `vector` uses SVG die (production PDF/export).
+   * Default `photo` when a matching asset exists.
+   */
+  plateRenderMode?: "photo" | "vector";
+  /** Dev/calibration: use in-progress rects instead of saved JSON config. */
+  photoPlateOverride?: ResolvedBlankBadgePhoto;
+  /**
    * When true (e.g. BadgeSvgRenderer previews, template picker), shape outline uses black (#000) so thumbnails stay visible.
    * Omit/false for exports — outline follows `badge.borderColor` / template defaults.
    */
@@ -105,6 +118,8 @@ type RenderOpts = {
    */
   svgDefScopeId?: string;
 };
+
+export type { RenderOpts };
 
 const esc = (s: string) =>
   (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -218,6 +233,155 @@ export function getEffectiveDesignBox(
     return template.designBox;
   }
   return template.designBoxInnerPlate ?? template.designBox;
+}
+
+/** Photo-plate text bounds for badge preview when product photography is available. */
+export function getBadgePreviewDesignBox(
+  template: LoadedTemplate,
+  badge: Badge,
+): { x: number; y: number; width: number; height: number } {
+  const photo = resolveBlankBadgePhoto(template.id, badge.backgroundColor);
+  if (photo) {
+    return resolvePhotoTextRect(photo, badge.badgeIconId);
+  }
+  return getEffectiveDesignBox(template, badge);
+}
+
+function resolvePhotoPlateForRender(
+  template: LoadedTemplate,
+  badge: Badge,
+  opts: RenderOpts,
+): ResolvedBlankBadgePhoto | null {
+  if (opts.plateRenderMode === "vector") return null;
+  if (isPlaqueTemplateId(template.id)) return null;
+  if (template.signTextLayout) return null;
+  if (opts.photoPlateOverride) return opts.photoPlateOverride;
+  return resolveBlankBadgePhoto(template.id, badge.backgroundColor);
+}
+
+function buildRectClipPathMarkup(
+  rect: { x: number; y: number; width: number; height: number },
+): string {
+  return `<rect x="${rect.x}" y="${rect.y}" width="${rect.width}" height="${rect.height}"/>`;
+}
+
+function renderBadgePhotoPlateSvg(
+  badge: Badge,
+  template: LoadedTemplate,
+  photo: ResolvedBlankBadgePhoto,
+  opts: RenderOpts,
+  fontDefs: string[],
+  fontMappings: Map<string, string> | undefined,
+  inlinedPhotoHref?: string,
+): string {
+  const PADDING_PX = 24;
+  const canvasW = photo.canvasWidthPx;
+  const canvasH = photo.canvasHeightPx;
+  const crop = photo.previewCropRect;
+  const W = crop.width + PADDING_PX * 2;
+  const H = crop.height + PADDING_PX * 2;
+  const contentTx = PADDING_PX - crop.x;
+  const contentTy = PADDING_PX - crop.y;
+  const designBox = resolvePhotoTextRect(photo, badge.badgeIconId);
+  const clipId = clipPathIdForSvg(opts, badge);
+
+  const lineLayout = calculateTextLayout(
+    badge.lines || [],
+    designBox,
+    template,
+    fontMappings,
+    badge,
+    undefined,
+    photo.iconRect,
+  );
+
+  const badgeIconLayer = renderBadgeIconLayer(
+    badge.badgeIconId,
+    designBox,
+    template.id,
+    photo.iconRect,
+  );
+
+  const textElements = lineLayout
+    .map((item) => {
+      const line = item.line;
+      const color = line.color || "#000";
+      const textDecoration = line.underline ? "underline" : "none";
+
+      return `<text x="${item.x}" y="${item.y}" font-size="${
+        item.fontSize
+      }" text-anchor="${item.anchor}"
+              dominant-baseline="middle" font-family="${
+                item.familyEscaped
+              }" fill="${color}"
+              font-weight="${item.fontWeight}"
+              font-style="${item.fontStyle}"
+              text-decoration="${textDecoration}">${esc(
+        line.text || "",
+      )}</text>`;
+    })
+    .join("");
+
+  const textClipRect = buildRectClipPathMarkup(designBox);
+  const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
+
+  const styleBlock =
+    fontDefs.length > 0
+      ? `<style type="text/css">${fontDefs.join("\n")}</style>`
+      : "";
+
+  const photoHref = inlinedPhotoHref ?? photo.src;
+  const svgOpen = `
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="100%" height="100%"
+     viewBox="0 0 ${W} ${H}"
+     preserveAspectRatio="xMidYMid meet">`;
+
+  return `${svgOpen}
+  <defs>
+    ${styleBlock}
+  </defs>
+  <g transform="translate(${contentTx}, ${contentTy})">
+    <defs>
+      <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
+        ${textClipRect}
+      </clipPath>
+    </defs>
+    <image
+      href="${photoHref}"
+      xlink:href="${photoHref}"
+      x="0"
+      y="0"
+      width="${canvasW}"
+      height="${canvasH}"
+      preserveAspectRatio="none"
+      style="image-rendering:optimizeQuality"
+    />
+    ${badgeIconLayer}
+    ${text}
+  </g>
+</svg>`.trim();
+}
+
+async function renderBadgePhotoPlateSvgAsync(
+  badge: Badge,
+  template: LoadedTemplate,
+  photo: ResolvedBlankBadgePhoto,
+  opts: RenderOpts,
+  fontDefs: string[],
+  fontMappings: Map<string, string> | undefined,
+): Promise<string> {
+  const inlined = await inlineBadgeBlankPhotoSrc(photo.src);
+  return renderBadgePhotoPlateSvg(
+    badge,
+    template,
+    photo,
+    opts,
+    fontDefs,
+    fontMappings,
+    inlined,
+  );
 }
 
 function resolveOptsFromBadge(
@@ -730,6 +894,8 @@ function calculateTextLayout(
   badge: Badge,
   /** When already computed for clip/logo resolve; avoids duplicate expensive work per SVG render. */
   precResolvedSignLayout?: ResolvedSignTextLayout,
+  /** Calibrated icon rect on product photo — text area is separate; skip legacy icon inset. */
+  photoIconRect?: { x: number; y: number; width: number; height: number },
 ): Array<{
   line: AnyLine;
   x: number;
@@ -771,6 +937,7 @@ function calculateTextLayout(
     designBox,
     badge.badgeIconId,
     template.id,
+    photoIconRect,
   );
 
   // Available text area (with inset for padding + optional left icon)
@@ -1473,6 +1640,18 @@ export function renderBadgeToSvgString(
     return renderPlaqueBadgeSvg(badge, template, opts, [], undefined);
   }
 
+  const photoPlate = resolvePhotoPlateForRender(template, badge, opts);
+  if (photoPlate) {
+    return renderBadgePhotoPlateSvg(
+      badge,
+      template,
+      photoPlate,
+      opts,
+      [],
+      undefined,
+    );
+  }
+
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
   const PADDING_PX = 24;
   // ViewBox must match content coordinates: innerElement/designBox are in template.widthPx × template.heightPx space.
@@ -1734,6 +1913,18 @@ export async function renderBadgeToSvgStringWithFonts(
       svg = await inlinePlaqueDetachedWoodStockImagesInSvg(svg);
     }
     return svg;
+  }
+
+  const photoPlate = resolvePhotoPlateForRender(template, badge, opts);
+  if (photoPlate) {
+    return renderBadgePhotoPlateSvgAsync(
+      badge,
+      template,
+      photoPlate,
+      opts,
+      fontDefs,
+      fontMappings,
+    );
   }
 
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)

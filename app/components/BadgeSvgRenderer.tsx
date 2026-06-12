@@ -11,6 +11,7 @@ import { isPlaqueTemplateId } from "~/utils/plaqueRender";
 import { svgMarkupToImageSrc } from "~/utils/svgDataUrl";
 import { badgeWithPlaqueLogoInlinedForSvgImg } from "~/utils/plaqueLogoInline";
 import type { Badge } from "~/types/badge";
+import type { ResolvedBlankBadgePhoto } from "~/utils/badgeBlankPhotos";
 
 type Props = {
   badge: any;
@@ -21,6 +22,8 @@ type Props = {
   className?: string;
   /** When set, overrides the default 280px wrapper height. Use "100%" to fill the parent. */
   height?: number | "100%";
+  /** Dev/calibration: render with in-progress photo bounds instead of saved config. */
+  photoPlateOverride?: ResolvedBlankBadgePhoto;
 };
 
 /** Ms to wait after the last badge-only change before rebuilding SVG (coalesces rapid typing). */
@@ -40,6 +43,7 @@ export default function BadgeSvgRenderer({
   actualSize = false,
   className,
   height,
+  photoPlateOverride,
 }: Props) {
   const [svg, setSvg] = React.useState<string>("");
   const [plaqueImgSrc, setPlaqueImgSrc] = React.useState<string | null>(null);
@@ -56,9 +60,11 @@ export default function BadgeSvgRenderer({
   const badgeRef = React.useRef(badge);
   const templateIdRef = React.useRef(templateId);
   const variantRef = React.useRef(variant);
+  const photoPlateOverrideRef = React.useRef(photoPlateOverride);
   badgeRef.current = badge;
   templateIdRef.current = templateId;
   variantRef.current = variant;
+  photoPlateOverrideRef.current = photoPlateOverride;
 
   const firstPaintRef = React.useRef(true);
   const structuralRef = React.useRef({
@@ -107,6 +113,11 @@ export default function BadgeSvgRenderer({
           const s = await renderBadgeToSvgStringWithFonts(bRender, template, {
             ...baseOpts,
             svgDefScopeId: svgDefScopeRef.current,
+            plateRenderMode: v === "badge" ? "photo" : "vector",
+            ...(v === "badge" ? { showOutline: false } : {}),
+            ...(photoPlateOverrideRef.current
+              ? { photoPlateOverride: photoPlateOverrideRef.current }
+              : {}),
           });
 
           if (!cancelled) {
@@ -128,7 +139,7 @@ export default function BadgeSvgRenderer({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [badge, templateId, variant, actualSize]);
+  }, [badge, templateId, variant, actualSize, photoPlateOverride]);
 
   const signUiScale = isSignLikeVariant(variant)
     ? getSignTemplateUiContentScale(templateId)

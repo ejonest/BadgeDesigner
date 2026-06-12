@@ -7,6 +7,10 @@ import { renderBadgeToSvgString, renderBadgeToSvgStringWithFonts } from './rende
 import { loadTemplateById, type LoadedTemplate } from './templates';
 import { isPlaqueTemplateId } from './plaqueRender';
 import { badgeWithPlaqueLogoInlinedForSvgImg } from './plaqueLogoInline';
+import {
+  getPhotoPlateViewBoxSize,
+  resolveBlankBadgePhoto,
+} from './badgeBlankPhotos';
 // import UTIF encoder
 // @ts-ignore
 import * as UTIF from 'utif';
@@ -16,6 +20,36 @@ export interface BadgeThumbnailOptions {
   height?: number;
   quality?: number;
   format?: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/tiff';
+  plateRenderMode?: 'photo' | 'vector';
+}
+
+export interface FullBadgeImageOptions {
+  plateRenderMode?: 'photo' | 'vector';
+}
+
+function resolveViewBoxPx(
+  template: LoadedTemplate,
+  badge: Badge,
+  variant: DesignerVariant,
+  plateRenderMode: 'photo' | 'vector',
+): { widthPx: number; heightPx: number } {
+  const PADDING_PX = 24;
+  if (
+    plateRenderMode === 'photo' &&
+    variant === 'badge'
+  ) {
+    const photo = resolveBlankBadgePhoto(
+      badge.templateId ?? template.id,
+      badge.backgroundColor,
+    );
+    if (photo) {
+      return getPhotoPlateViewBoxSize(photo);
+    }
+  }
+  return {
+    widthPx: template.standardViewBoxWidth + PADDING_PX * 2,
+    heightPx: template.standardViewBoxHeight + PADDING_PX * 2,
+  };
 }
 
 // helper to convert RGBA → TIFF data URL
@@ -46,9 +80,18 @@ export async function generateBadgeThumbnail(
   badge: Badge, 
   options: BadgeThumbnailOptions = {}
 ): Promise<string> {
+  const plateRenderMode = options.plateRenderMode ?? 'photo';
+  const usesPhoto =
+    plateRenderMode === 'photo' &&
+    Boolean(
+      resolveBlankBadgePhoto(
+        badge.templateId || 'rect-1x3',
+        badge.backgroundColor,
+      ),
+    );
   const {
-    width = 300,
-    height = 100,
+    width = usesPhoto ? 300 : 300,
+    height = usesPhoto ? 300 : 100,
     quality = 0.9,
     format = 'image/png'
   } = options;
@@ -58,7 +101,10 @@ export async function generateBadgeThumbnail(
     const template = await loadTemplateById(badge.templateId || 'rect-1x3');
     
     // Generate SVG using font-embedding version for consistent font rendering
-    const svgString = await renderBadgeToSvgStringWithFonts(badge, template, { showOutline: false });
+    const svgString = await renderBadgeToSvgStringWithFonts(badge, template, {
+      showOutline: false,
+      plateRenderMode,
+    });
     
     // Convert SVG to canvas for rasterization
     return new Promise((resolve, reject) => {
@@ -132,7 +178,13 @@ export async function generateBadgeThumbnail(
  * @param badge The badge design data
  * @returns Promise<string> Base64 encoded image data URL
  */
-export async function generateFullBadgeImage(badge: Badge, variant: DesignerVariant = 'badge'): Promise<string> {
+export async function generateFullBadgeImage(
+  badge: Badge,
+  variant: DesignerVariant = 'badge',
+  options: FullBadgeImageOptions = {},
+): Promise<string> {
+  const plateRenderMode =
+    options.plateRenderMode ?? (variant === 'badge' ? 'photo' : 'vector');
   try {
     // Use the unified renderer for consistency
     console.log('Generating full badge image using unified renderer...');
@@ -148,13 +200,17 @@ export async function generateFullBadgeImage(badge: Badge, variant: DesignerVari
     // Generate SVG using font-embedding version for consistent font rendering
     const svgString = await renderBadgeToSvgStringWithFonts(badgeForSvg, template, {
       showOutline: false,
+      plateRenderMode,
     });
     
-    // Match SVG viewBox dimensions exactly (same as renderSvg: standardViewBox + PADDING_PX*2)
-    // so rasterization has the same aspect ratio as the SVG and no stretching occurs.
-    const PADDING_PX = 24; // must match renderSvg.ts
-    const viewBoxW = template.standardViewBoxWidth + PADDING_PX * 2;
-    const viewBoxH = template.standardViewBoxHeight + PADDING_PX * 2;
+    const viewBox = resolveViewBoxPx(
+      template,
+      badgeForSvg,
+      variant,
+      plateRenderMode,
+    );
+    const viewBoxW = viewBox.widthPx;
+    const viewBoxH = viewBox.heightPx;
 
     // Convert SVG to high-resolution PNG
     return new Promise((resolve, reject) => {
@@ -210,10 +266,11 @@ export async function generateFullBadgeImage(badge: Badge, variant: DesignerVari
     // Fallback to high-resolution canvas generation
     console.log('Falling back to canvas generation...');
     const fullImage = await generateBadgeThumbnail(badge, {
-      width: 900,  // 3x preview width for crisp text
-      height: 300, // 3x preview height for crisp text
-      quality: 1.0, // Maximum quality
-      format: 'image/png' // PNG for best quality
+      width: 900,
+      height: 900,
+      quality: 1.0,
+      format: 'image/png',
+      plateRenderMode,
     });
     return fullImage;
   }
@@ -226,9 +283,10 @@ export async function generateFullBadgeImage(badge: Badge, variant: DesignerVari
  */
 export async function generateBadgeTiff(badge: Badge): Promise<string> {
   return generateBadgeThumbnail(badge, {
-    width: 900,   // 3" @300 dpi
-    height: 300,  // 1" @300 dpi
-    format: 'image/png' // Use PNG for now, TIFF conversion happens in export.ts
+    width: 900,
+    height: 300,
+    format: 'image/png',
+    plateRenderMode: 'vector',
   });
 }
 
