@@ -169,7 +169,7 @@ import {
   MANUFACTURING_DISCLAIMER_BODY,
   MANUFACTURING_DISCLAIMER_TITLE,
 } from "../constants/manufacturingDisclaimer";
-import { svgMarkupToImageSrc } from "../utils/svgDataUrl";
+import { TemplatePreviewThumb } from "./TemplatePreviewThumb";
 import { stableAutosaveDesignId } from "../utils/stableDesignLibraryIds";
 import { createApi, type DesignLibraryListItem } from "../utils/api";
 import {
@@ -197,10 +197,19 @@ import {
   clampBadgeLinesToSignLogoPxCeilings,
   computeSignLogoLayoutSnapshot,
   negotiateSignBadgeLinesForLogoCommit,
-  renderBadgeToSvgString,
+  renderBadgeToSvgStringWithFonts,
   getEffectiveDesignBox,
+  getBadgePreviewDesignBox,
   getEffectiveSignTextLayoutForBadge,
 } from "../utils/renderSvg";
+import {
+  badgeBackgroundConflictsWithTextColor,
+  badgeTextColorConflictsWithBackground,
+} from "~/utils/badgeColorContrast";
+import {
+  badgeColorHasPhoto,
+  resolveBlankBadgePhoto,
+} from "~/utils/badgeBlankPhotos";
 import {
   PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
   isFeaturedBrushedMetalPlateColor,
@@ -716,6 +725,34 @@ function physicalRectFromInlinePreviewSvg(
   };
 }
 
+/** Map calibrated badge-face rect (photo canvas px) to on-screen guides for photo-plate SVG previews. */
+function physicalBadgeFaceRectFromPhotoPreviewSvg(
+  svg: SVGSVGElement,
+  root: HTMLElement,
+  badgeFaceRect: { x: number; y: number; width: number; height: number },
+  previewCropRect: { x: number; y: number; width: number; height: number },
+): { left: number; top: number; width: number; height: number } | null {
+  const vb = svg.viewBox?.baseVal;
+  if (!vb || vb.width <= 0 || vb.height <= 0) return null;
+  const pad = PREVIEW_SVG_VIEWBOX_PADDING_PX;
+  const sr = svg.getBoundingClientRect();
+  const rr = root.getBoundingClientRect();
+  if (sr.width <= 0 || sr.height <= 0) return null;
+
+  const scale = Math.min(sr.width / vb.width, sr.height / vb.height);
+  const ox = sr.left + (sr.width - scale * vb.width) / 2;
+  const oy = sr.top + (sr.height - scale * vb.height) / 2;
+  const faceInVbX = pad + badgeFaceRect.x - previewCropRect.x;
+  const faceInVbY = pad + badgeFaceRect.y - previewCropRect.y;
+
+  return {
+    left: ox + faceInVbX * scale - rr.left,
+    top: oy + faceInVbY * scale - rr.top,
+    width: badgeFaceRect.width * scale,
+    height: badgeFaceRect.height * scale,
+  };
+}
+
 /** Plate swatches: brushed metal uses the same stops as SVG preview (see plaqueMetalBrushCssBackgroundImage). */
 function featuredPlateBackgroundSwatchStyle(hex: string): React.CSSProperties {
   const s = hex.trim().startsWith("#") ? hex.trim() : `#${hex.trim()}`;
@@ -788,11 +825,26 @@ function isAqbBadgeBgSwatchSelected(
 function DesktopPreviewDimensionFrame({
   widthPx,
   heightPx,
+  photoBadgeFaceRect,
+  photoPreviewCropRect,
   compact = false,
   children,
 }: {
   widthPx: number;
   heightPx: number;
+  /** Photo preview: align guides to calibrated badge face on the product photo. */
+  photoBadgeFaceRect?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null;
+  photoPreviewCropRect?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null;
   compact?: boolean;
   children: React.ReactNode;
 }) {
@@ -869,6 +921,24 @@ function DesktopPreviewDimensionFrame({
 
     const svg = root.querySelector("svg");
     if (svg instanceof SVGSVGElement) {
+      if (photoBadgeFaceRect && photoPreviewCropRect) {
+        const facePhys = physicalBadgeFaceRectFromPhotoPreviewSvg(
+          svg,
+          root,
+          photoBadgeFaceRect,
+          photoPreviewCropRect,
+        );
+        if (
+          facePhys &&
+          facePhys.width >= 2 &&
+          facePhys.height >= 2 &&
+          Number.isFinite(facePhys.left) &&
+          Number.isFinite(facePhys.top)
+        ) {
+          setPreviewLayout({ inset: facePhys, previewH: rh });
+          return;
+        }
+      }
       const phys = physicalRectFromInlinePreviewSvg(
         svg,
         root,
@@ -903,7 +973,7 @@ function DesktopPreviewDimensionFrame({
     }
 
     setPreviewLayout(fillPreview);
-  }, [widthPx, heightPx]);
+  }, [widthPx, heightPx, photoBadgeFaceRect, photoPreviewCropRect]);
 
   useLayoutEffect(() => {
     const root = previewAreaRef.current;
@@ -1789,6 +1859,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   // Apply background color change (called after user confirms or if no warning needed)
   const applyBackgroundColor = (colorValue: string) => {
+    if (badgeBackgroundConflictsWithTextColor(colorValue, badge.lines)) {
+      return;
+    }
+
     // Save to undo history before making changes
     saveToUndoHistory({
       type: "background-color",
@@ -1871,6 +1945,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   // Apply background and set any text line whose color is similar to the new background to a contrasting color
   const applyBackgroundColorWithContrastUpdate = (colorValue: string) => {
+    if (badgeBackgroundConflictsWithTextColor(colorValue, badge.lines)) {
+      setShowBackgroundColorWarning(false);
+      setPendingBackgroundColor(null);
+      return;
+    }
+
     saveToUndoHistory({
       type: "background-color",
       badgeIndex: selectedBadgeIndex,
@@ -2254,8 +2334,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const [hasChosenBackgroundColor, setHasChosenBackgroundColor] =
     useState(false);
   const [templates, setTemplates] = useState<LoadedTemplate[]>([]);
-  /** Data URLs for template picker thumbnails (plate fill follows background color step). */
-  const [templatePreviewDataUrls, setTemplatePreviewDataUrls] = useState<
+  /** Raw SVG markup for template picker thumbnails (badge photos need inline SVG, not data-URL img). */
+  const [templatePreviewSvgs, setTemplatePreviewSvgs] = useState<
     Record<string, string>
   >({});
   const [templateLoadError, setTemplateLoadError] = useState<string | null>(
@@ -2989,6 +3069,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   // Load templates - refresh when templateRefreshKey changes
   useEffect(() => {
+    let cancelled = false;
     setTemplateLoadError(null);
     (async () => {
       try {
@@ -3000,6 +3081,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           ")",
         );
         const list = await loadTemplates(variant);
+        if (cancelled) return;
         setTemplates(list);
         setTemplateLoadError(null);
         console.log(
@@ -3007,76 +3089,97 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           list.map((t) => t.id),
         );
 
-        // Default universal template id (no badge yet)
+        // Only apply default when nothing valid is selected yet — never clobber a user pick
+        // when a slow/stale async load finishes (e.g. React Strict Mode double mount).
         if (list.length > 0) {
-          setUniversalTemplateId(
-            variant === "plaque" ? defaultPlaqueTemplateId() : list[0].id,
-          );
+          setUniversalTemplateId((current) => {
+            if (current && list.some((t) => t.id === current)) {
+              return current;
+            }
+            return variant === "plaque"
+              ? defaultPlaqueTemplateId()
+              : list[0].id;
+          });
         }
       } catch (error) {
+        if (cancelled) return;
         const message = error instanceof Error ? error.message : String(error);
         console.error("Failed to load templates:", error);
         setTemplateLoadError(message);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [templateRefreshKey, variant]);
 
-  // Build template picker thumbnails: plate + outline only (no trim/motifs). Plate fill mirrors the
-  // background color from step 2 so shape previews match the user's current finish choice.
+  // Build template picker thumbnails: product photos for badges (white until step 2, then chosen color).
   useEffect(() => {
     if (templates.length === 0) return;
 
     const plateColor =
-      (badge.backgroundColor || "").trim() || initialPlateBackgroundHex;
+      variant === "badge" && !hasChosenBackgroundColor
+        ? "#FFFFFF"
+        : (badge.backgroundColor || "").trim() || initialPlateBackgroundHex;
 
     const timer = window.setTimeout(() => {
-      const previewBadge: Badge = {
-        templateId: "",
-        backgroundColor: plateColor,
-        borderColor: "#000000",
-        signBorderOptionId: SIGN_BORDER_OPTION_NONE,
-        signBorderEnabled: false,
-        signBorderStyleId: "default",
-        lines: [],
-        backing: "pin",
-      };
-      const badgeTemplateThumbRenderOpts = {
-        showOutline: true as const,
-        outlineStrokeWidth: "8",
-      };
-      const templateThumbRenderOpts =
-        variant === "sign" || variant === "plaque"
-          ? SIGN_LIKE_TEMPLATE_THUMB_RENDER_OPTS
-          : badgeTemplateThumbRenderOpts;
+      void (async () => {
+        const previewBadge: Badge = {
+          templateId: "",
+          backgroundColor: plateColor,
+          borderColor: "#000000",
+          signBorderOptionId: SIGN_BORDER_OPTION_NONE,
+          signBorderEnabled: false,
+          signBorderStyleId: "default",
+          lines: [],
+          backing: "pin",
+        };
+        const badgeTemplateThumbRenderOpts = {
+          showOutline: true as const,
+          outlineStrokeWidth: "8",
+        };
+        const templateThumbRenderOpts =
+          variant === "sign" || variant === "plaque"
+            ? SIGN_LIKE_TEMPLATE_THUMB_RENDER_OPTS
+            : badgeTemplateThumbRenderOpts;
 
-      setTemplatePreviewDataUrls((prev) => {
-        const next = { ...prev };
+        const next: Record<string, string> = {};
         for (const t of templates) {
           try {
-            const svg = renderBadgeToSvgString(
+            const svg = await renderBadgeToSvgStringWithFonts(
               {
                 ...previewBadge,
                 templateId: t.id,
                 backgroundColor: plateColor,
               },
               t,
-              templateThumbRenderOpts,
+              {
+                ...templateThumbRenderOpts,
+                svgDefScopeId: `tpl-thumb-${t.id}`,
+                plateRenderMode: variant === "badge" ? "photo" : "vector",
+                ...(variant === "badge" ? { showOutline: false } : {}),
+              },
             );
-            next[t.id] = svgMarkupToImageSrc(svg);
+            next[t.id] = svg;
           } catch (e) {
             console.error(
               `[BadgeDesignerRedesign] Template thumbnail failed for ${t.id}:`,
               e,
             );
-            delete next[t.id];
           }
         }
-        return next;
-      });
+        setTemplatePreviewSvgs((prev) => ({ ...prev, ...next }));
+      })();
     }, 80);
 
     return () => window.clearTimeout(timer);
-  }, [templates, variant, badge.backgroundColor, initialPlateBackgroundHex]);
+  }, [
+    templates,
+    variant,
+    badge.backgroundColor,
+    initialPlateBackgroundHex,
+    hasChosenBackgroundColor,
+  ]);
 
   // Restore badge designer state from localStorage cache (once, after templates are loaded)
   useEffect(() => {
@@ -3816,8 +3919,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       const matched =
         templates.find((t) => t.id === prevBadge.templateId) ??
         templates.find((t) => t.id === universalTemplateId);
+      const badgeForBox = matched
+        ? { ...prevBadge, templateId: matched.id }
+        : prevBadge;
       const designBox = matched
-        ? getEffectiveDesignBox(matched, prevBadge)
+        ? variant === "badge"
+          ? getBadgePreviewDesignBox(matched, badgeForBox)
+          : getEffectiveDesignBox(matched, badgeForBox)
         : null;
       if (!designBox) {
         return prevBadge;
@@ -4148,13 +4256,27 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     if (!activeTemplate) {
       return { x: 0, y: 0, width: 288, height: 96 };
     }
+    if (variant === "badge") {
+      return getBadgePreviewDesignBox(activeTemplate, badge);
+    }
     return getEffectiveDesignBox(activeTemplate, badge);
   }, [
     activeTemplate,
     badge.signBorderOptionId,
     badge.signBorderStyleId,
     badge.templateId,
+    badge.backgroundColor,
+    badge.badgeIconId,
+    variant,
   ]);
+
+  const activeBadgePhotoPreview = useMemo(() => {
+    if (variant !== "badge" || !activeTemplate) return null;
+    return resolveBlankBadgePhoto(
+      universalTemplateId,
+      badge.backgroundColor,
+    );
+  }, [variant, activeTemplate, badge.backgroundColor, universalTemplateId]);
 
   /** Step 2: resolved layout for size list + dimension copy (fallback: attached). */
   const effectivePlaqueLayoutIdForStep2 = useMemo(() => {
@@ -4191,25 +4313,42 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         height: "auto",
       } as React.CSSProperties;
     }
+    if (variant === "badge") {
+      const aspect = activeBadgePhotoPreview
+        ? activeBadgePhotoPreview.previewCropRect.width /
+          activeBadgePhotoPreview.previewCropRect.height
+        : 3;
+      return {
+        width: `${3 * MOBILE_PREVIEW.badgeHeightVh}vh`,
+        maxWidth: "100%",
+        aspectRatio: aspect,
+        height: "auto",
+      } as React.CSSProperties;
+    }
     return {
       width: `${3 * MOBILE_PREVIEW.badgeHeightVh}vh`,
       maxWidth: "100%",
       aspectRatio: 3,
       height: "auto",
     } as React.CSSProperties;
-  }, [variant, activeTemplate, multipleBadges.length]);
+  }, [variant, activeTemplate, multipleBadges.length, activeBadgePhotoPreview]);
 
   // Right-column preview slots: size by template aspect, shrink to fit so no horizontal scroll; never overlap.
   const desktopPreviewSlotStyle = useMemo(() => {
     const aspect =
-      activeTemplate &&
-      activeTemplate.widthPx > 0 &&
-      activeTemplate.heightPx > 0
-        ? activeTemplate.widthPx / activeTemplate.heightPx
-        : 3;
+      variant === "badge" && activeBadgePhotoPreview
+        ? activeBadgePhotoPreview.previewCropRect.width /
+          activeBadgePhotoPreview.previewCropRect.height
+        : activeTemplate &&
+            activeTemplate.widthPx > 0 &&
+            activeTemplate.heightPx > 0
+          ? activeTemplate.widthPx / activeTemplate.heightPx
+          : 3;
     const multi = multipleBadges.length > 1;
     let maxHeight = "35vh";
-    if (variant === "plaque") {
+    if (variant === "badge") {
+      maxHeight = multi ? "min(40vh, 88vw)" : "min(50vh, 52vw)";
+    } else if (variant === "plaque") {
       maxHeight = multi ? "min(22vh, 42vw)" : "min(30vh, 50vw)";
     }
     return {
@@ -4218,20 +4357,35 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       maxHeight,
       aspectRatio: aspect,
     } as React.CSSProperties;
-  }, [activeTemplate, variant, multipleBadges.length]);
+  }, [activeTemplate, variant, multipleBadges.length, activeBadgePhotoPreview]);
 
-  /** Physical size in px for dimension labels (from loaded template). */
+  /** Physical template size (inches via 96dpi px) + optional photo face rect for dimension guides. */
   const previewDimensionsForTemplate = useCallback(
-    (templateId: string | undefined) => {
+    (templateId: string | undefined, backgroundColor?: string) => {
       const t =
         (templateId && templates.find((x) => x.id === templateId)) ||
         activeTemplate;
-      return {
-        widthPx: t?.widthPx ?? 288,
-        heightPx: t?.heightPx ?? 96,
-      };
+      const widthPx = t?.widthPx ?? 288;
+      const heightPx = t?.heightPx ?? 96;
+      let photoBadgeFaceRect:
+        | { x: number; y: number; width: number; height: number }
+        | undefined;
+      let photoPreviewCropRect:
+        | { x: number; y: number; width: number; height: number }
+        | undefined;
+      if (variant === "badge" && templateId) {
+        const photo = resolveBlankBadgePhoto(
+          templateId,
+          backgroundColor ?? badge.backgroundColor,
+        );
+        if (photo) {
+          photoBadgeFaceRect = photo.badgeFaceRect;
+          photoPreviewCropRect = photo.previewCropRect;
+        }
+      }
+      return { widthPx, heightPx, photoBadgeFaceRect, photoPreviewCropRect };
     },
-    [templates, activeTemplate],
+    [templates, activeTemplate, variant, badge.backgroundColor],
   );
 
   // Set session design id once when we have badges and template (for incremental draft saves)
@@ -4916,6 +5070,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     if (typeof changes.text !== "undefined") {
       sessionHadLineTextEditRef.current = true;
     }
+    if (
+      changes.color &&
+      badgeTextColorConflictsWithBackground(
+        changes.color,
+        badge.backgroundColor,
+      )
+    ) {
+      return;
+    }
     // Save to undo history before making changes (skip text content changes)
     const changedProperty = Object.keys(changes)[0];
     if (changedProperty && changedProperty !== "text") {
@@ -5590,6 +5753,41 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       }
     }
   };
+
+  const renderBadgePreviewOrPhotoNotice = useCallback(
+    (
+      p: { badge: Badge; templateId: string },
+      keyParts: string,
+      height: number | "100%" = "100%",
+    ) => {
+      if (
+        variant === "badge" &&
+        !resolveBlankBadgePhoto(p.templateId, p.badge.backgroundColor)
+      ) {
+        return (
+          <div className="flex h-full w-full flex-col items-center justify-center px-4 text-center text-xs leading-snug text-[#3A4F63]">
+            <p className="font-semibold text-[#0D1B2A]">
+              Preview photo not available for this color yet.
+            </p>
+            <p className="mt-1.5">
+              Choose White, Black, Red, Blue, or Brushed Gold/Silver to see a
+              product preview.
+            </p>
+          </div>
+        );
+      }
+      return (
+        <BadgeSvgRenderer
+          key={`svg-prev-${keyParts}`}
+          variant={variant}
+          badge={p.badge}
+          templateId={p.templateId}
+          height={height}
+        />
+      );
+    },
+    [variant],
+  );
 
   /** When editing multiple products, switching items should land on “Enter your text” — customers usually only change copy on extras. */
   const openEnterTextSectionOnly = () => {
@@ -8137,22 +8335,18 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     selectedBadgeIndex,
                     getSavedBadgeFor(selectedBadgeIndex),
                   );
-                  return (
-                    <BadgeSvgRenderer
-                      key={`svg-prev-${p.templateId}-${
-                        p.badge.backgroundColor ?? ""
-                      }-${p.badge.badgeIconId ?? "noicon"}-${
-                        p.badge.plaqueFormatId ?? ""
-                      }-${
-                        p.badge.plaqueUseDefaultAttachedAwardVisual
-                          ? "vdef"
-                          : "vno"
-                      }-${selectedBadgeIndex}`}
-                      variant={variant}
-                      badge={p.badge}
-                      templateId={p.templateId}
-                      height="100%"
-                    />
+                  return renderBadgePreviewOrPhotoNotice(
+                    p,
+                    `${p.templateId}-${
+                      p.badge.backgroundColor ?? ""
+                    }-${p.badge.badgeIconId ?? "noicon"}-${
+                      p.badge.plaqueFormatId ?? ""
+                    }-${
+                      p.badge.plaqueUseDefaultAttachedAwardVisual
+                        ? "vdef"
+                        : "vno"
+                    }-${selectedBadgeIndex}`,
+                    "100%",
                   );
                 })()
               )}
@@ -8636,8 +8830,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           : `/templates/${
                               isSignLikeVariant(variant) ? "sign/" : "badge/"
                             }${t.id}.svg`;
-                        const previewSrc =
-                          templatePreviewDataUrls[t.id] ||
+                        const previewSvg = templatePreviewSvgs[t.id];
+                        const fallbackPreviewSrc =
                           (t.svgFile
                             ? t.svgFile.includes(" ")
                               ? encodeURI(t.svgFile)
@@ -8655,7 +8849,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           e: React.SyntheticEvent<HTMLImageElement, Event>,
                         ) => {
                           const target = e.target as HTMLImageElement;
-                          if (previewSrc === thumbnailPath) {
+                          if (target.src.includes(thumbnailPath)) {
                             target.style.display = "none";
                             const svgImg = document.createElement("img");
                             svgImg.src = svgPath;
@@ -8715,15 +8909,17 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                       : "overflow-hidden"
                                   }`}
                                 >
-                                  <img
-                                    src={previewSrc}
+                                  <TemplatePreviewThumb
+                                    svgMarkup={previewSvg}
+                                    variant={variant}
                                     alt={t.name}
                                     className="max-h-[70px] w-auto max-w-full object-contain"
-                                    style={signTemplatePickerImgStyle(
+                                    imgStyle={signTemplatePickerImgStyle(
                                       t.id,
                                       isSignLikeVariant(variant),
                                     )}
-                                    onError={imgOnError}
+                                    fallbackSrc={thumbnailPath}
+                                    onImgError={imgOnError}
                                   />
                                 </div>
                                 <div className="shrink-0 bg-white px-3 pb-2.5 pt-1.5 text-center">
@@ -8792,15 +8988,17 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                   boxSizing: "border-box",
                                 }}
                               >
-                                <img
-                                  src={previewSrc}
+                                <TemplatePreviewThumb
+                                  svgMarkup={previewSvg}
+                                  variant={variant}
                                   alt={t.name}
                                   className="object-contain"
-                                  style={signTemplatePickerImgStyle(
+                                  imgStyle={signTemplatePickerImgStyle(
                                     t.id,
                                     isSignLikeVariant(variant),
                                   )}
-                                  onError={imgOnError}
+                                  fallbackSrc={fallbackPreviewSrc}
+                                  onImgError={imgOnError}
                                 />
                               </div>
                             </button>
@@ -8814,13 +9012,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             {PLAQUE_LAYOUT_OPTIONS.map((opt) => {
                               const thumbId = opt.thumbnailTemplateId;
                               const t = templates.find((x) => x.id === thumbId);
-                              const previewSrc =
-                                templatePreviewDataUrls[thumbId] ||
-                                (t?.svgFile != null
+                              const previewSvg = templatePreviewSvgs[thumbId];
+                              const fallbackPreviewSrc =
+                                t?.svgFile != null
                                   ? t.svgFile.includes(" ")
                                     ? encodeURI(t.svgFile)
                                     : t.svgFile
-                                  : "");
+                                  : "";
                               const parsed =
                                 parsePlaqueTemplateId(universalTemplateId);
                               /** Avoid double highlight during async template load: parsed id lags behind `selectedPlaqueLayoutId`. */
@@ -8910,11 +9108,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                         boxSizing: "border-box",
                                       }}
                                     >
-                                      {previewSrc ? (
-                                        <img
-                                          src={previewSrc}
+                                      {previewSvg || fallbackPreviewSrc ? (
+                                        <TemplatePreviewThumb
+                                          svgMarkup={previewSvg}
+                                          variant={variant}
                                           alt={opt.name}
-                                          className="object-contain max-w-full max-h-full"
+                                          className="max-h-full max-w-full object-contain"
+                                          fallbackSrc={fallbackPreviewSrc}
                                         />
                                       ) : (
                                         <span className="text-gray-400 text-xs px-1 text-center leading-tight">
@@ -8965,13 +9165,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                 const firstTemplate = templates.find(
                                   (t) => t.id === firstSizeId,
                                 );
-                                const previewSrc =
-                                  templatePreviewDataUrls[firstSizeId] ||
-                                  (firstTemplate?.svgFile != null
+                                const previewSvg = templatePreviewSvgs[firstSizeId];
+                                const fallbackPreviewSrc =
+                                  firstTemplate?.svgFile != null
                                     ? firstTemplate.svgFile.includes(" ")
                                       ? encodeURI(firstTemplate.svgFile)
                                       : firstTemplate.svgFile
-                                    : "");
+                                    : "";
                                 const isSelected =
                                   selectedSignTemplateType === type.id;
                                 return (
@@ -9013,18 +9213,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                           boxSizing: "border-box",
                                         }}
                                       >
-                                        {previewSrc ? (
-                                          <img
-                                            src={previewSrc}
+                                        {previewSvg || fallbackPreviewSrc ? (
+                                          <TemplatePreviewThumb
+                                            svgMarkup={previewSvg}
+                                            variant={variant}
                                             alt={type.name}
-                                            className="object-contain"
-                                            style={{
-                                              maxWidth: "100%",
-                                              maxHeight: "100%",
-                                              width: "auto",
-                                              height: "auto",
-                                              objectFit: "contain",
-                                            }}
+                                            className="max-h-full max-w-full object-contain"
+                                            fallbackSrc={fallbackPreviewSrc}
                                           />
                                         ) : (
                                           <span
@@ -9564,6 +9759,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     ];
 
                     const handleColorClick = (colorValue: string) => {
+                      if (
+                        badgeBackgroundConflictsWithTextColor(
+                          colorValue,
+                          badge.lines,
+                        )
+                      ) {
+                        return;
+                      }
                       // Check if the new background color is similar to any text line colors
                       if (checkBackgroundColorSimilarity(colorValue)) {
                         setPendingBackgroundColor(colorValue);
@@ -9651,14 +9854,32 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                 badge.backgroundColor,
                                 c.value,
                               );
+                              const hasPhoto = badgeColorHasPhoto(c.value);
+                              const blockedByText =
+                                badgeBackgroundConflictsWithTextColor(
+                                  c.value,
+                                  badge.lines,
+                                );
                               return (
                                 <button
                                   key={c.value}
                                   type="button"
-                                  className="aqb-badge-colour-swatch"
-                                  title={c.name}
+                                  className={`aqb-badge-colour-swatch ${
+                                    !hasPhoto || blockedByText
+                                      ? "cursor-not-allowed opacity-45"
+                                      : ""
+                                  }`}
+                                  title={
+                                    blockedByText
+                                      ? `${c.name} — same as text color`
+                                      : hasPhoto
+                                        ? c.name
+                                        : `${c.name} — preview photo coming soon`
+                                  }
+                                  disabled={!hasPhoto || blockedByText}
                                   onClick={(e) => {
                                     e.preventDefault();
+                                    if (!hasPhoto || blockedByText) return;
                                     handleColorClick(c.value);
                                   }}
                                 >
@@ -9795,16 +10016,26 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         <div className="flex items-start gap-3 ml-1.5 mt-1.5">
                           <div className="flex flex-col gap-2">
                             <div className="grid grid-cols-4 gap-2 w-fit">
-                              {featuredColors.map((c) => (
+                              {featuredColors.map((c) => {
+                                const blockedByText =
+                                  !c.isRainbow &&
+                                  badgeBackgroundConflictsWithTextColor(
+                                    c.value,
+                                    badge.lines,
+                                  );
+                                return (
                                 <div
                                   key={c.value}
                                   className="flex flex-col items-center gap-1"
                                 >
                                   <button
                                     className={`w-12 h-12 border rounded ${
-                                      badge.backgroundColor === c.value
+                                      badge.backgroundColor === c.value &&
+                                      !blockedByText
                                         ? "ring-2 ring-offset-1 " + c.ring
-                                        : ""
+                                        : blockedByText
+                                          ? "opacity-50 cursor-not-allowed"
+                                          : ""
                                     }`}
                                     style={
                                       c.isRainbow
@@ -9816,9 +10047,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                             c.value,
                                           )
                                     }
-                                    title={c.name}
+                                    title={
+                                      blockedByText
+                                        ? `${c.name} — same as text color`
+                                        : c.name
+                                    }
+                                    disabled={blockedByText}
                                     onClick={(e) => {
                                       e.preventDefault();
+                                      if (blockedByText) return;
                                       if (c.isRainbow) {
                                         setShowColorModal(true);
                                       } else {
@@ -9850,7 +10087,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                     )}
                                   </span>
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                             {/* Apply to All Button */}
                             {multipleBadges.length > 1 && (
@@ -11561,7 +11799,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
         {/* RIGHT COLUMN — preview, summary, checkout (desktop) */}
         <div
-          className={`hidden md:flex flex-col gap-3 w-full md:max-w-[420px] shrink-0 min-h-0 md:self-start md:sticky md:top-4 ${
+          className={`hidden md:flex flex-col gap-3 w-full shrink-0 min-h-0 md:self-start md:sticky md:top-4 ${
+            variant === "badge" ? "md:max-w-[500px]" : "md:max-w-[420px]"
+          } ${
             multipleBadges.length > 1 && variant !== "badge"
               ? "md:max-h-[calc(100vh-32px)]"
               : ""
@@ -11645,12 +11885,21 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     {(() => {
                       const p = getBadgeForPreview(0, getSavedBadgeFor(0));
                       const tid = p.templateId;
-                      const { widthPx: dimW, heightPx: dimH } =
-                        previewDimensionsForTemplate(tid);
+                      const {
+                        widthPx: dimW,
+                        heightPx: dimH,
+                        photoBadgeFaceRect,
+                        photoPreviewCropRect,
+                      } = previewDimensionsForTemplate(
+                        tid,
+                        p.badge.backgroundColor,
+                      );
                       return (
                         <DesktopPreviewDimensionFrame
                           widthPx={dimW}
                           heightPx={dimH}
+                          photoBadgeFaceRect={photoBadgeFaceRect}
+                          photoPreviewCropRect={photoPreviewCropRect}
                         >
                           <div
                             className={`w-full flex items-center justify-center ${
@@ -11663,15 +11912,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               ...desktopPreviewSlotStyle,
                             }}
                           >
-                            <BadgeSvgRenderer
-                              key={`svg-desk-${tid}-${
+                            {renderBadgePreviewOrPhotoNotice(
+                              p,
+                              `desk-${tid}-${
                                 p.badge.backgroundColor ?? ""
-                              }-0`}
-                              variant={variant}
-                              badge={p.badge}
-                              templateId={tid}
-                              height="100%"
-                            />
+                              }-0`,
+                              "100%",
+                            )}
                           </div>
                         </DesktopPreviewDimensionFrame>
                       );
@@ -11700,8 +11947,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           getSavedBadgeFor(selectedBadgeIndex),
                         );
                         const tid = p.templateId;
-                        const { widthPx: dimW, heightPx: dimH } =
-                          previewDimensionsForTemplate(tid);
+                        const {
+                          widthPx: dimW,
+                          heightPx: dimH,
+                          photoBadgeFaceRect,
+                          photoPreviewCropRect,
+                        } = previewDimensionsForTemplate(
+                          tid,
+                          p.badge.backgroundColor,
+                        );
                         return (
                           <div className="relative w-full border-2 border-[rgba(13,27,42,0.2)] rounded-lg bg-white/80 pt-2 pb-3 px-1 flex-shrink-0 shadow-sm">
                             {variant !== "badge" ? (
@@ -11735,6 +11989,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             <DesktopPreviewDimensionFrame
                               widthPx={dimW}
                               heightPx={dimH}
+                              photoBadgeFaceRect={photoBadgeFaceRect}
+                              photoPreviewCropRect={photoPreviewCropRect}
                             >
                               <div
                                 className={`w-full flex items-center justify-center ${
@@ -11747,15 +12003,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                   ...desktopPreviewSlotStyle,
                                 }}
                               >
-                                <BadgeSvgRenderer
-                                  key={`svg-desk-edit-${tid}-${
+                                {renderBadgePreviewOrPhotoNotice(
+                                  p,
+                                  `desk-edit-${tid}-${
                                     p.badge.backgroundColor ?? ""
-                                  }-${selectedBadgeIndex}`}
-                                  variant={variant}
-                                  badge={p.badge}
-                                  templateId={tid}
-                                  height="100%"
-                                />
+                                  }-${selectedBadgeIndex}`,
+                                  "100%",
+                                )}
                               </div>
                             </DesktopPreviewDimensionFrame>
                           </div>
@@ -11892,12 +12146,21 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                   title={`Click to edit this ${config.labelProduct.toLowerCase()}`}
                                 >
                                   {(() => {
-                                    const { widthPx: dimW, heightPx: dimH } =
-                                      previewDimensionsForTemplate(tid);
+                                    const {
+                                      widthPx: dimW,
+                                      heightPx: dimH,
+                                      photoBadgeFaceRect,
+                                      photoPreviewCropRect,
+                                    } = previewDimensionsForTemplate(
+                                      tid,
+                                      b.backgroundColor,
+                                    );
                                     return (
                                       <DesktopPreviewDimensionFrame
                                         widthPx={dimW}
                                         heightPx={dimH}
+                                        photoBadgeFaceRect={photoBadgeFaceRect}
+                                        photoPreviewCropRect={photoPreviewCropRect}
                                         compact
                                       >
                                         <div
@@ -11907,15 +12170,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                             ...desktopPreviewSlotStyle,
                                           }}
                                         >
-                                          <BadgeSvgRenderer
-                                            key={`svg-row-${tid}-${
+                                          {renderBadgePreviewOrPhotoNotice(
+                                            { badge: b, templateId: tid },
+                                            `row-${tid}-${
                                               b.backgroundColor ?? ""
-                                            }-${i}`}
-                                            variant={variant}
-                                            badge={b}
-                                            templateId={tid}
-                                            height="100%"
-                                          />
+                                            }-${i}`,
+                                            "100%",
+                                          )}
                                         </div>
                                       </DesktopPreviewDimensionFrame>
                                     );
@@ -12665,15 +12926,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         className="w-full flex items-center justify-center"
                         style={{ height: 80 }}
                       >
-                        <BadgeSvgRenderer
-                          key={`svg-grid-${tid}-${
-                            b.backgroundColor ?? ""
-                          }-${i}`}
-                          variant={variant}
-                          badge={b}
-                          templateId={tid}
-                          height={80}
-                        />
+                        {renderBadgePreviewOrPhotoNotice(
+                          { badge: b, templateId: tid },
+                          `grid-${tid}-${b.backgroundColor ?? ""}-${i}`,
+                          80,
+                        )}
                       </div>
                     </button>
                     {variant === "badge" ? (
@@ -12893,12 +13150,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         className="flex items-center gap-3 rounded-lg border border-gray-100 bg-white p-2"
                       >
                         <div className="w-16 h-10 shrink-0 flex items-center justify-center overflow-hidden rounded border border-gray-100 bg-gray-50">
-                          <BadgeSvgRenderer
-                            variant={variant}
-                            badge={b}
-                            templateId={tid}
-                            height={40}
-                          />
+                          {renderBadgePreviewOrPhotoNotice(
+                            { badge: b, templateId: tid },
+                            `alloc-${tid}-${b.backgroundColor ?? ""}-${i}`,
+                            40,
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-semibold text-gray-800">
@@ -13053,17 +13309,17 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         const configSvgFile = signConfigs.find(
                           (c) => c.id === firstSizeId,
                         )?.svgFile;
-                        const previewSrc =
-                          templatePreviewDataUrls[firstSizeId] ||
-                          (firstTemplate?.svgFile != null
+                        const previewSvg = templatePreviewSvgs[firstSizeId];
+                        const fallbackPreviewSrc =
+                          firstTemplate?.svgFile != null
                             ? firstTemplate.svgFile.includes(" ")
                               ? encodeURI(firstTemplate.svgFile)
                               : firstTemplate.svgFile
                             : configSvgFile != null
-                            ? configSvgFile.includes(" ")
-                              ? encodeURI(configSvgFile)
-                              : configSvgFile
-                            : "");
+                              ? configSvgFile.includes(" ")
+                                ? encodeURI(configSvgFile)
+                                : configSvgFile
+                              : "";
                         const isSelected = selectedSignTemplateType === type.id;
                         const modalSignThumbBoost =
                           getSignTemplateUiContentScale(firstSizeId) !== 1;
@@ -13114,15 +13370,17 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                   boxSizing: "border-box",
                                 }}
                               >
-                                {previewSrc ? (
-                                  <img
-                                    src={previewSrc}
+                                {previewSvg || fallbackPreviewSrc ? (
+                                  <TemplatePreviewThumb
+                                    svgMarkup={previewSvg}
+                                    variant={variant}
                                     alt={type.name}
                                     className="object-contain"
-                                    style={signTemplatePickerImgStyle(
+                                    imgStyle={signTemplatePickerImgStyle(
                                       firstSizeId,
                                       true,
                                     )}
+                                    fallbackSrc={fallbackPreviewSrc}
                                   />
                                 ) : (
                                   <span
@@ -13194,13 +13452,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         ? encodeURI(t.svgFile)
                         : t.svgFile
                       : `/templates/badge/${t.id}.svg`;
-                    const previewSrc =
-                      templatePreviewDataUrls[t.id] ||
-                      (t.svgFile
+                    const previewSvg = templatePreviewSvgs[t.id];
+                    const fallbackPreviewSrc =
+                      t.svgFile
                         ? t.svgFile.includes(" ")
                           ? encodeURI(t.svgFile)
                           : t.svgFile
-                        : thumbnailPath);
+                        : thumbnailPath;
                     const isSelected =
                       multipleBadges.length > 0 && universalTemplateId === t.id;
 
@@ -13250,20 +13508,22 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               boxSizing: "border-box",
                             }}
                           >
-                            <img
-                              src={previewSrc}
+                            <TemplatePreviewThumb
+                              svgMarkup={previewSvg}
+                              variant={variant}
                               alt={t.name}
                               className="object-contain"
-                              style={{
+                              imgStyle={{
                                 maxWidth: "100%",
                                 maxHeight: "100%",
                                 width: "auto",
                                 height: "auto",
                                 objectFit: "contain",
                               }}
-                              onError={(e) => {
+                              fallbackSrc={fallbackPreviewSrc}
+                              onImgError={(e) => {
                                 const target = e.target as HTMLImageElement;
-                                if (previewSrc === thumbnailPath) {
+                                if (target.src.includes(thumbnailPath)) {
                                   target.style.display = "none";
                                   const svgImg = document.createElement("img");
                                   svgImg.src = svgPath;
@@ -13377,21 +13637,34 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 value: string;
                 name: string;
                 ring: string;
-              }) => (
+              }) => {
+                const blockedByText = badgeBackgroundConflictsWithTextColor(
+                  c.value,
+                  badge.lines,
+                );
+                return (
                 <div
                   key={c.value}
                   className="relative flex items-center justify-center"
                 >
                   <button
                     className={`w-8 h-8 md:w-12 md:h-12 border-2 rounded transition-all ${
-                      badge.backgroundColor === c.value
+                      badge.backgroundColor === c.value && !blockedByText
                         ? "ring-2 ring-offset-1 " + c.ring + " scale-110"
-                        : "border-gray-300 hover:scale-105"
+                        : blockedByText
+                          ? "border-gray-400 opacity-50 cursor-not-allowed"
+                          : "border-gray-300 hover:scale-105"
                     }`}
                     style={{ backgroundColor: c.value }}
-                    title={c.name}
+                    title={
+                      blockedByText
+                        ? "Same as text color — choose a different background"
+                        : c.name
+                    }
+                    disabled={blockedByText}
                     onClick={(e) => {
                       e.preventDefault();
+                      if (blockedByText) return;
                       // Check if the new background color is similar to any text line colors
                       if (checkBackgroundColorSimilarity(c.value)) {
                         setPendingBackgroundColor(c.value);
@@ -13404,7 +13677,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     }}
                   />
                 </div>
-              );
+                );
+              };
 
               return (
                 <>
@@ -13465,10 +13739,16 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 };
 
                 const previewColor = parseColorInput(customColorInput);
-                const isValidColor = previewColor !== null;
+                const blockedByText =
+                  previewColor !== null &&
+                  badgeBackgroundConflictsWithTextColor(
+                    previewColor,
+                    badge.lines,
+                  );
+                const isValidColor = previewColor !== null && !blockedByText;
 
                 const handleApplyCustomColor = () => {
-                  if (previewColor) {
+                  if (previewColor && !blockedByText) {
                     // Check if the new background color is similar to any text line colors
                     if (checkBackgroundColorSimilarity(previewColor)) {
                       setPendingBackgroundColor(previewColor);
@@ -13834,11 +14114,17 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   ? c.value.trim()
                   : `#${c.value.trim()}`;
 
-                const isDisabled = areColorsSimilar(
+                const isExactConflict = badgeTextColorConflictsWithBackground(
                   normalizedColorValue,
-                  normalizedBackgroundColor,
-                  70,
+                  badge.backgroundColor,
                 );
+                const isDisabled =
+                  isExactConflict ||
+                  areColorsSimilar(
+                    normalizedColorValue,
+                    normalizedBackgroundColor,
+                    70,
+                  );
                 const isRed = isRedColor(normalizedColorValue);
 
                 return (
@@ -13858,7 +14144,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         backgroundColor: c.value,
                       }}
                       title={
-                        isDisabled ? "Too similar to background color" : c.name
+                        isExactConflict
+                          ? "Same as background color"
+                          : isDisabled
+                            ? "Too similar to background color"
+                            : c.name
                       }
                       onClick={(e) => {
                         e.preventDefault();
@@ -13962,10 +14252,21 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 };
 
                 const previewColor = parseColorInput(customTextColorInput);
-                const isValidColor = previewColor !== null;
+                const conflictsBackground =
+                  previewColor !== null &&
+                  badgeTextColorConflictsWithBackground(
+                    previewColor,
+                    badge.backgroundColor,
+                  );
+                const isValidColor =
+                  previewColor !== null && !conflictsBackground;
 
                 const handleApplyCustomTextColor = () => {
-                  if (previewColor && textColorModalLineIndex !== null) {
+                  if (
+                    previewColor &&
+                    textColorModalLineIndex !== null &&
+                    !conflictsBackground
+                  ) {
                     updateLine(textColorModalLineIndex, {
                       color: previewColor,
                     });

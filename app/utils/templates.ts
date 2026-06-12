@@ -23,6 +23,10 @@ import {
   resolveSignTextLayout,
   type SignPlateCircle,
 } from "~/utils/signTextLayout";
+import {
+  getBlankPhotoPlateConfig,
+  type BlankPhotoPlateConfig,
+} from "~/utils/badgeBlankPhotos";
 
 const DPI = 96;
 const toPx = (inches: number) => Math.round(inches * DPI);
@@ -70,6 +74,8 @@ export type LoadedTemplate = {
   signTextLayout?: ResolvedSignTextLayout;
   /** Plaque detached: pixel rect for the photo on wood (template space). */
   plaquePhotoRectPx?: { x: number; y: number; width: number; height: number };
+  /** Badge blank product photo layout (text + icon rects on 1500×1500 canvas). */
+  blankPhotoPlate?: BlankPhotoPlateConfig;
 };
 
 type TemplatesFile = { version: number; templates: TemplateConfig[] };
@@ -1420,6 +1426,9 @@ async function loadOne(
     };
   }
 
+  const blankPhotoPlate =
+    variant === "badge" ? getBlankPhotoPlateConfig(c.id) ?? undefined : undefined;
+
   const t: LoadedTemplate = {
     id: c.id,
     name: c.name,
@@ -1437,6 +1446,7 @@ async function loadOne(
     svgFile: c.svgFile,
     signTextLayout,
     ...(plaquePhotoRectPx ? { plaquePhotoRectPx } : {}),
+    ...(blankPhotoPlate ? { blankPhotoPlate } : {}),
   };
 
   console.log(

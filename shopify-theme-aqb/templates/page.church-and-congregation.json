@@ -24,14 +24,12 @@
         "photo_1": {
           "type": "hero_photo",
           "settings": {
-            "image_asset": "aqb-church-hero-1.png",
             "alt": "Church greeters wearing name badges"
           }
         },
         "photo_2": {
           "type": "hero_photo",
           "settings": {
-            "image_asset": "aqb-church-hero-2.png",
             "alt": "Congregation welcome team badges"
           }
         }
@@ -109,8 +107,7 @@
             "description": "Classic engraved badges for welcome teams, hospitality volunteers, greeters and ushers.",
             "tag": "★ Top seller",
             "cta_label": "Shop collection →",
-            "collection": "church-name-tags",
-            "image_asset": "aqb-church-role-greeters.jpg"
+            "collection": "church-name-tags"
           }
         },
         "role_pastors": {
@@ -120,8 +117,7 @@
             "description": "Professional engraved name badges for pastors, elders, ministry leaders and church staff.",
             "tag": "Multi-packs available",
             "cta_label": "Shop Leadership →",
-            "collection": "engraved-name-badges",
-            "image_asset": "aqb-church-role-pastors.jpg"
+            "collection": "engraved-name-badges"
           }
         },
         "role_welcome": {
@@ -131,8 +127,7 @@
             "description": "Friendly, easy-to-read badges that help guests feel welcomed from the moment they arrive.",
             "tag": "Multi-packs available",
             "cta_label": "Shop Welcome Team →",
-            "collection": "hospitality-name-tags",
-            "image_asset": "aqb-church-role-welcome.jpg"
+            "collection": "hospitality-name-tags"
           }
         },
         "role_spanish": {
@@ -142,8 +137,7 @@
             "description": "The only complete bilingual congregation badge collection for Hispanic ministries and Spanish-speaking congregations.",
             "tag": "🌎 En Español",
             "cta_label": "Shop Spanish Collection →",
-            "collection": "church-name-tags",
-            "image_asset": "aqb-church-role-spanish.jpg"
+            "collection": "church-name-tags"
           }
         }
       },
@@ -168,8 +162,7 @@
             "title": "Ujier",
             "badge_type": "Engraved Badge",
             "tag": "Multi-packs available",
-            "link": "shopify://products/ujier-1-x-3-name-tag-3-pack",
-            "image_asset": "aqb-church-bil-ujier.jpg"
+            "link": "shopify://products/ujier-1-x-3-name-tag-3-pack"
           }
         },
         "bil_2": {
@@ -178,8 +171,7 @@
             "title": "Diácono",
             "badge_type": "Engraved Badge",
             "tag": "Multi-packs available",
-            "link": "shopify://products/deacon-1-x-3-name-tag-3-pack",
-            "image_asset": "aqb-church-bil-diacono.jpg"
+            "link": "shopify://products/deacon-1-x-3-name-tag-3-pack"
           }
         },
         "bil_3": {
@@ -188,8 +180,7 @@
             "title": "Acomodador",
             "badge_type": "Printed Badge",
             "tag": "Multi-packs available",
-            "link": "shopify://products/greeter-1-x-3-name-tag-3-pack",
-            "image_asset": "aqb-church-bil-acomodador.jpg"
+            "link": "shopify://products/greeter-1-x-3-name-tag-3-pack"
           }
         },
         "bil_4": {
@@ -198,8 +189,7 @@
             "title": "Jr. Usher",
             "badge_type": "Engraved Badge",
             "tag": "Youth Ministry",
-            "link": "shopify://products/jr-usher-1-x-3-name-tag-3-pack",
-            "image_asset": "aqb-church-bil-jr-usher.jpg"
+            "link": "shopify://products/jr-usher-1-x-3-name-tag-3-pack"
           }
         }
       },
@@ -249,7 +239,6 @@
         "eyebrow": "Multi-packs",
         "heading": "Multi-packs built<br><em>for congregations.</em>",
         "description": "Most ministry roles ship in convenient 3-packs — order exactly what your team needs without overbuying.",
-        "image_asset": "aqb-church-multipack.png",
         "button_label": "Shop All Ministry Badges →",
         "button_link": "shopify://collections/church-name-tags"
       }
@@ -261,8 +250,7 @@
         "heading": "Need a custom badge<br><em>for your church?</em>",
         "description": "Design yours live — pick a shape, set your colours, type every line of text, and see exactly what you'll get before you order.",
         "button_label": "Start Designing →",
-        "button_link": "shopify://products/custom-1x3-badge",
-        "preview_asset": "aqb-hero-editor-preview.png"
+        "button_link": "shopify://products/custom-1x3-badge"
       }
     },
     "faq": {

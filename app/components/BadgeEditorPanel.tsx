@@ -7,6 +7,7 @@ import { autoScaleFontSize } from "../utils/textMeasurement";
 import { BADGE_AQB_TEXT_COLORS, FONT_COLORS } from "../constants/colors";
 import { FONT_FAMILIES, DEFAULT_FONT } from "../constants/fonts";
 import { loadTemplateById } from "../utils/templates";
+import { badgeTextColorConflictsWithBackground } from "~/utils/badgeColorContrast";
 import {
   getEffectiveDesignBox,
   getEffectiveSignTextLayoutForBadge,
@@ -473,11 +474,16 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
               <div className="aqb-badge-text-colour-row">
                 <span className="aqb-badge-tc-lbl">Color:</span>
                 {BADGE_AQB_TEXT_COLORS.map((tc, tcIdx) => {
-                  const disabled = areColorsSimilar(
-                    tc.value,
-                    badge.backgroundColor,
-                    70,
-                  );
+                  const disabled =
+                    badgeTextColorConflictsWithBackground(
+                      tc.value,
+                      badge.backgroundColor,
+                    ) ||
+                    areColorsSimilar(
+                      tc.value,
+                      badge.backgroundColor,
+                      70,
+                    );
                   const selected =
                     lineColor === normalizeTextColorHex(tc.value);
                   return (
@@ -495,7 +501,12 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                       }}
                       title={
                         disabled
-                          ? "May not show on this background"
+                          ? badgeTextColorConflictsWithBackground(
+                              tc.value,
+                              badge.backgroundColor,
+                            )
+                            ? "Same as background color"
+                            : "May not show on this background"
                           : tc.value
                       }
                       disabled={disabled || !editable}
@@ -516,9 +527,18 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
               </div>
 
               {line.color &&
-              areColorsSimilar(line.color, badge.backgroundColor, 70) ? (
+              (badgeTextColorConflictsWithBackground(
+                line.color,
+                badge.backgroundColor,
+              ) ||
+                areColorsSimilar(line.color, badge.backgroundColor, 70)) ? (
                 <p className="mt-1.5 text-[10px] font-medium text-red-600">
-                  Similar colors may not show well on this background.
+                  {badgeTextColorConflictsWithBackground(
+                    line.color,
+                    badge.backgroundColor,
+                  )
+                    ? "Text color matches the background and will not be visible."
+                    : "Similar colors may not show well on this background."}
                 </p>
               ) : null}
 
@@ -603,7 +623,11 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                       const isRainbow = (fc as any).isRainbow === true;
                       const isDisabled =
                         !isRainbow &&
-                        areColorsSimilar(fc.value, badge.backgroundColor, 70);
+                        (badgeTextColorConflictsWithBackground(
+                          fc.value,
+                          badge.backgroundColor,
+                        ) ||
+                          areColorsSimilar(fc.value, badge.backgroundColor, 70));
                       const isRed = !isRainbow && isRedColor(fc.value);
                       return (
                         <div
@@ -651,7 +675,12 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                                 isRainbow
                                   ? "More Colors"
                                   : isDisabled
-                                  ? "Cannot match background"
+                                  ? badgeTextColorConflictsWithBackground(
+                                      fc.value,
+                                      badge.backgroundColor,
+                                    )
+                                    ? "Same as background color"
+                                    : "Cannot match background"
                                   : fc.name
                               }
                             />

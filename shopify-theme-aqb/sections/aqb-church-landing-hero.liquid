@@ -85,22 +85,21 @@
                   class: photo_class
               }}
             {%- endif -%}
-          {%- elsif block.settings.image_asset != blank -%}
-            <img
-              class="{{ photo_class }}"
-              src="{{ block.settings.image_asset | asset_url }}"
-              alt="{{ block.settings.alt | default: 'Church congregation name badges' | escape }}"
-              width="1200"
-              height="800"
-              loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
-            >
+          {%- else -%}
+            <div class="aqb-ch-hero__photo aqb-ch-photo-placeholder{% if forloop.first %} is-visible{% endif %}" aria-hidden="true"></div>
           {%- endif -%}
         {%- endif -%}
       {%- endfor -%}
     </div>
 
     {%- assign photo_blocks = section.blocks | where: 'type', 'hero_photo' -%}
-    {%- if photo_blocks.size > 1 -%}
+    {%- assign hero_uploaded_photos = 0 -%}
+    {%- for block in photo_blocks -%}
+      {%- if block.settings.image != blank -%}
+        {%- assign hero_uploaded_photos = hero_uploaded_photos | plus: 1 -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- if hero_uploaded_photos > 1 -%}
       <div class="aqb-ch-hero__switcher" data-aqb-ch-hero-dots>
         {%- for block in photo_blocks -%}
           <button
@@ -220,12 +219,6 @@
         },
         {
           "type": "text",
-          "id": "image_asset",
-          "label": "Theme asset fallback",
-          "info": "Used when no image is uploaded (e.g. aqb-church-hero-1.png)."
-        },
-        {
-          "type": "text",
           "id": "alt",
           "label": "Alt text"
         }
@@ -241,11 +234,11 @@
         { "type": "trust_point", "settings": { "label": "English & Spanish roles" } },
         {
           "type": "hero_photo",
-          "settings": { "image_asset": "aqb-church-hero-1.png", "alt": "Church greeters wearing name badges" }
+          "settings": { "alt": "Church greeters wearing name badges" }
         },
         {
           "type": "hero_photo",
-          "settings": { "image_asset": "aqb-church-hero-2.png", "alt": "Congregation welcome team badges" }
+          "settings": { "alt": "Congregation welcome team badges" }
         }
       ]
     }
