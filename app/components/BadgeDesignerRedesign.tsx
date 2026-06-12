@@ -170,6 +170,7 @@ import {
   MANUFACTURING_DISCLAIMER_TITLE,
 } from "../constants/manufacturingDisclaimer";
 import { TemplatePreviewThumb } from "./TemplatePreviewThumb";
+import { BadgeTemplatePhotoPreview } from "./BadgeTemplatePhotoPreview";
 import { stableAutosaveDesignId } from "../utils/stableDesignLibraryIds";
 import { createApi, type DesignLibraryListItem } from "../utils/api";
 import {
@@ -3113,15 +3114,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     };
   }, [templateRefreshKey, variant]);
 
-  // Build template picker thumbnails: product photos for badges (white until step 2, then chosen color).
+  // Build template picker thumbnails for sign/plaque (badge uses per-card BadgeTemplatePhotoPreview).
   useEffect(() => {
-    if (templates.length === 0) return;
+    if (templates.length === 0 || variant === "badge") return;
 
     const plateColor =
-      variant === "badge" && !hasChosenBackgroundColor
-        ? "#FFFFFF"
-        : (badge.backgroundColor || "").trim() || initialPlateBackgroundHex;
+      (badge.backgroundColor || "").trim() || initialPlateBackgroundHex;
 
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       void (async () => {
         const previewBadge: Badge = {
@@ -3134,14 +3134,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           lines: [],
           backing: "pin",
         };
-        const badgeTemplateThumbRenderOpts = {
-          showOutline: true as const,
-          outlineStrokeWidth: "8",
-        };
-        const templateThumbRenderOpts =
-          variant === "sign" || variant === "plaque"
-            ? SIGN_LIKE_TEMPLATE_THUMB_RENDER_OPTS
-            : badgeTemplateThumbRenderOpts;
+        const templateThumbRenderOpts = SIGN_LIKE_TEMPLATE_THUMB_RENDER_OPTS;
 
         const next: Record<string, string> = {};
         for (const t of templates) {
@@ -3156,8 +3149,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               {
                 ...templateThumbRenderOpts,
                 svgDefScopeId: `tpl-thumb-${t.id}`,
-                plateRenderMode: variant === "badge" ? "photo" : "vector",
-                ...(variant === "badge" ? { showOutline: false } : {}),
+                plateRenderMode: "vector",
               },
             );
             next[t.id] = svg;
@@ -3168,17 +3160,21 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             );
           }
         }
-        setTemplatePreviewSvgs((prev) => ({ ...prev, ...next }));
+        if (!cancelled) {
+          setTemplatePreviewSvgs((prev) => ({ ...prev, ...next }));
+        }
       })();
     }, 80);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [
     templates,
     variant,
     badge.backgroundColor,
     initialPlateBackgroundHex,
-    hasChosenBackgroundColor,
   ]);
 
   // Restore badge designer state from localStorage cache (once, after templates are loaded)
@@ -8820,6 +8816,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         "house-1_5x3": "House profile · Stand-out shape",
                       };
 
+                      const templatePlateColor =
+                        variant === "badge" && !hasChosenBackgroundColor
+                          ? "#FFFFFF"
+                          : (badge.backgroundColor || "").trim() ||
+                            initialPlateBackgroundHex;
+
                       const renderTemplateButton = (t: LoadedTemplate) => {
                         const thumbnailFilename = getThumbnailFilename(t.id);
                         const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
@@ -8909,17 +8911,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                       : "overflow-hidden"
                                   }`}
                                 >
-                                  <TemplatePreviewThumb
-                                    svgMarkup={previewSvg}
-                                    variant={variant}
+                                  <BadgeTemplatePhotoPreview
+                                    templateId={t.id}
+                                    backgroundColor={templatePlateColor}
                                     alt={t.name}
-                                    className="max-h-[70px] w-auto max-w-full object-contain"
-                                    imgStyle={signTemplatePickerImgStyle(
-                                      t.id,
-                                      isSignLikeVariant(variant),
-                                    )}
-                                    fallbackSrc={thumbnailPath}
-                                    onImgError={imgOnError}
                                   />
                                 </div>
                                 <div className="shrink-0 bg-white px-3 pb-2.5 pt-1.5 text-center">
@@ -13428,6 +13423,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     }
                   });
 
+                  const templatePlateColor =
+                    !hasChosenBackgroundColor
+                      ? "#FFFFFF"
+                      : (badge.backgroundColor || "").trim() ||
+                        initialPlateBackgroundHex;
+
                   return sortedTemplates.map((t): JSX.Element => {
                     const getThumbnailFilename = (
                       templateId: string,
@@ -13446,19 +13447,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     };
 
                     const thumbnailFilename = getThumbnailFilename(t.id);
-                    const thumbnailPath = `/templates/${thumbnailFilename}.jpg`;
-                    const svgPath = t.svgFile
-                      ? t.svgFile.includes(" ")
-                        ? encodeURI(t.svgFile)
-                        : t.svgFile
-                      : `/templates/badge/${t.id}.svg`;
-                    const previewSvg = templatePreviewSvgs[t.id];
-                    const fallbackPreviewSrc =
-                      t.svgFile
-                        ? t.svgFile.includes(" ")
-                          ? encodeURI(t.svgFile)
-                          : t.svgFile
-                        : thumbnailPath;
                     const isSelected =
                       multipleBadges.length > 0 && universalTemplateId === t.id;
 
@@ -13508,35 +13496,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               boxSizing: "border-box",
                             }}
                           >
-                            <TemplatePreviewThumb
-                              svgMarkup={previewSvg}
-                              variant={variant}
+                            <BadgeTemplatePhotoPreview
+                              templateId={t.id}
+                              backgroundColor={templatePlateColor}
                               alt={t.name}
-                              className="object-contain"
-                              imgStyle={{
-                                maxWidth: "100%",
-                                maxHeight: "100%",
-                                width: "auto",
-                                height: "auto",
-                                objectFit: "contain",
-                              }}
-                              fallbackSrc={fallbackPreviewSrc}
-                              onImgError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                if (target.src.includes(thumbnailPath)) {
-                                  target.style.display = "none";
-                                  const svgImg = document.createElement("img");
-                                  svgImg.src = svgPath;
-                                  svgImg.className = "object-contain";
-                                  svgImg.style.maxWidth = "100%";
-                                  svgImg.style.maxHeight = "100%";
-                                  svgImg.style.width = "auto";
-                                  svgImg.style.height = "auto";
-                                  svgImg.style.objectFit = "contain";
-                                  svgImg.alt = t.name;
-                                  target.parentElement?.appendChild(svgImg);
-                                }
-                              }}
                             />
                           </div>
                         </button>

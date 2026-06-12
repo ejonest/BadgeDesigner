@@ -205,6 +205,57 @@ export function buildBlankBadgePhotoSrc(
   return `/badge-blanks/${plate.assetFolder}/${fileName}`;
 }
 
+/**
+ * Template picker: cropped product photo only (no text).
+ * Uses the photo URL in inline SVG — do not base64-inline (400KB+ breaks SVG attrs and hangs UI).
+ */
+export function buildBadgeTemplatePhotoThumbSvg(
+  templateId: string,
+  backgroundColor: string,
+): string | null {
+  const photo = resolveBlankBadgePhoto(templateId, backgroundColor);
+  if (!photo) return null;
+
+  const PADDING_PX = 12;
+  const canvasW = photo.canvasWidthPx;
+  const canvasH = photo.canvasHeightPx;
+  const crop = photo.previewCropRect;
+  const W = crop.width + PADDING_PX * 2;
+  const H = crop.height + PADDING_PX * 2;
+  const contentTx = PADDING_PX - crop.x;
+  const contentTy = PADDING_PX - crop.y;
+  const href = photo.src
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;");
+
+  return `<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="100%" height="100%"
+     viewBox="0 0 ${W} ${H}"
+     preserveAspectRatio="xMidYMid meet">
+  <g transform="translate(${contentTx}, ${contentTy})">
+    <image
+      href="${href}"
+      xlink:href="${href}"
+      x="0"
+      y="0"
+      width="${canvasW}"
+      height="${canvasH}"
+      preserveAspectRatio="none"
+      style="image-rendering:optimizeQuality"
+    />
+  </g>
+</svg>`;
+}
+
+/** @deprecated Prefer sync {@link buildBadgeTemplatePhotoThumbSvg} */
+export async function renderBadgeTemplatePhotoThumbSvg(
+  templateId: string,
+  backgroundColor: string,
+): Promise<string | null> {
+  return buildBadgeTemplatePhotoThumbSvg(templateId, backgroundColor);
+}
+
 /** Build resolved photo plate from pixel rects (calibration live preview). */
 export function buildResolvedBlankBadgePhotoFromPixelRects(
   src: string,
