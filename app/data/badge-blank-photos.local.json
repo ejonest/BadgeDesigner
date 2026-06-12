@@ -1,0 +1,289 @@
+{
+  "version": 1,
+  "canvasWidthPx": 1500,
+  "canvasHeightPx": 1500,
+  "templates": {
+    "rect-1x3": {
+      "assetFolder": "3x1-Rounded-Corners-Blank-Name-Tags-WEB-IMAGES",
+      "filePrefix": "3x1-Rounded-Corners-Blank-Name-Tags",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    "rect-1_5x3": {
+      "assetFolder": "3x1.5-Rounded-Corners-Blank-Name-Tags-WEB-IMAGES",
+      "filePrefix": "3x1.5-Rounded-Corners-Blank-Name-Tags",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    "square-1x3": {
+      "assetFolder": "Square-1x3-Blank-Name-Tags-WEB-IMAGES",
+      "filePrefix": "Square-1x3-Blank-Name-Tags",
+      "textRectNorm": {
+        "xNorm": 0.15827921123404776,
+        "yNorm": 0.3944321877045157,
+        "widthNorm": 0.688819062397742,
+        "heightNorm": 0.21151914011371073
+      },
+      "iconRectNorm": {
+        "xNorm": 0.1744323187223904,
+        "yNorm": 0.43934479622566264,
+        "widthNorm": 0.11832762393651833,
+        "heightNorm": 0.12009191127597349
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.13712055014725127,
+        "yNorm": 0.3763673066559637,
+        "widthNorm": 0.7306087979589332,
+        "heightNorm": 0.24501879954392997
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3068684833626472,
+        "yNorm": 0.3966556974880359,
+        "widthNorm": 0.5381870298695188,
+        "heightNorm": 0.20648649589179074
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.12155307612483643,
+        "yNorm": 0.35144999674922284,
+        "widthNorm": 0.7643287572562173,
+        "heightNorm": 0.29852104106982164
+      }
+    },
+    "square-1_5x3": {
+      "assetFolder": "Square-1.5x3-Blank-Name-Tags-WEB-IMAGES",
+      "filePrefix": "Square-1.5x3-Blank-Name-Tags",
+      "textRectNorm": {
+        "xNorm": 0.14988048613383506,
+        "yNorm": 0.32288586281981146,
+        "widthNorm": 0.7,
+        "heightNorm": 0.35
+      },
+      "iconRectNorm": {
+        "xNorm": 0.19103460022292215,
+        "yNorm": 0.3244428944213228,
+        "widthNorm": 0.11,
+        "heightNorm": 0.35
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.129,
+        "yNorm": 0.304,
+        "widthNorm": 0.742,
+        "heightNorm": 0.392
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3236333388723004,
+        "yNorm": 0.3239673155140502,
+        "widthNorm": 0.5249681252045156,
+        "heightNorm": 0.348174697316754
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10917279869518988,
+        "yNorm": 0.2863417059422039,
+        "widthNorm": 0.7827340993639561,
+        "heightNorm": 0.43144069527670975
+      }
+    },
+    "house-1_5x3": {
+      "assetFolder": "House-Blank-Name-Tags-WEB-IMAGES",
+      "filePrefix": "House-Blank-Name-Tags",
+      "textRectNorm": {
+        "xNorm": 0.20812793991328532,
+        "yNorm": 0.4193116975954065,
+        "widthNorm": 0.597264206172284,
+        "heightNorm": 0.23497770778795807
+      },
+      "iconRectNorm": {
+        "xNorm": 0.21183450908561027,
+        "yNorm": 0.4605399398404267,
+        "widthNorm": 0.1,
+        "heightNorm": 0.17284959084076407
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.10586676159604057,
+        "yNorm": 0.3072855861164513,
+        "widthNorm": 0.7876548470222512,
+        "heightNorm": 0.3877499212614527
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.33936376186191103,
+        "yNorm": 0.4204452946048757,
+        "widthNorm": 0.46373253563686195,
+        "heightNorm": 0.23257261106481103
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.08669644500572649,
+        "yNorm": 0.2914377324730041,
+        "widthNorm": 0.8272569266913449,
+        "heightNorm": 0.427056488843668
+      }
+    },
+    "oval-1_5x3": {
+      "assetFolder": "Oval-Blank-Name-Tags-WEB-IMAGES",
+      "filePrefix": "Oval-Blank-Name-Tags",
+      "textRectNorm": {
+        "xNorm": 0.2581961267281577,
+        "yNorm": 0.3949867895635634,
+        "widthNorm": 0.4663116039655596,
+        "heightNorm": 0.2117656959413858
+      },
+      "iconRectNorm": {
+        "xNorm": 0.25773434304442083,
+        "yNorm": 0.3953845166910381,
+        "widthNorm": 0.0999564605233557,
+        "heightNorm": 0.21240888186150197
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.16084710482452555,
+        "yNorm": 0.3357108238659604,
+        "widthNorm": 0.67310358183696,
+        "heightNorm": 0.32813920272108155
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.387767235561191,
+        "yNorm": 0.39366490708595786,
+        "widthNorm": 0.33711422841336725,
+        "heightNorm": 0.21244650955599642
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.1398428075251555,
+        "yNorm": 0.3176407274035709,
+        "widthNorm": 0.7160440011248362,
+        "heightNorm": 0.3689509817674247
+      }
+    },
+    "designer-1x3": {
+      "assetFolder": "Designer-Blank-Name-Tags-WEB-IMAGES",
+      "filePrefix": "Designer-Blank-Name-Tags",
+      "textRectNorm": {
+        "xNorm": 0.2166468755112893,
+        "yNorm": 0.4200604337522496,
+        "widthNorm": 0.569750816784604,
+        "heightNorm": 0.15966514132035342
+      },
+      "iconRectNorm": {
+        "xNorm": 0.17,
+        "yNorm": 0.383,
+        "widthNorm": 0.11,
+        "heightNorm": 0.233
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.13602,
+        "yNorm": 0.36901999999999996,
+        "widthNorm": 0.72796,
+        "heightNorm": 0.26096
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.2888,
+        "yNorm": 0.383,
+        "widthNorm": 0.5611999999999999,
+        "heightNorm": 0.233
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.13615142813522577,
+        "yNorm": 0.3511972488889684,
+        "widthNorm": 0.7311267762659521,
+        "heightNorm": 0.29280031174124677
+      }
+    },
+    "fancy-1_5x3": {
+      "assetFolder": "Fancy-Blank-Name-Tags-WEB-IMAGES",
+      "filePrefix": "Fancy-Blank-Name-Tags",
+      "textRectNorm": {
+        "xNorm": 0.19931590774296468,
+        "yNorm": 0.36525791507740907,
+        "widthNorm": 0.589823592420648,
+        "heightNorm": 0.26525466199944786
+      },
+      "iconRectNorm": {
+        "xNorm": 0.1998323514449035,
+        "yNorm": 0.3886835851219937,
+        "widthNorm": 0.0994776061692163,
+        "heightNorm": 0.2263453490571826
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.1396,
+        "yNorm": 0.3096,
+        "widthNorm": 0.7208,
+        "heightNorm": 0.3808
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3284375485724803,
+        "yNorm": 0.36700527970079355,
+        "widthNorm": 0.4608673217134327,
+        "heightNorm": 0.2634876782482208
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.12610536287221857,
+        "yNorm": 0.2984896289624918,
+        "widthNorm": 0.7507159259755399,
+        "heightNorm": 0.4067237545913776
+      }
+    }
+  },
+  "colorSuffixByHex": {
+    "#FFFFFF": "white",
+    "#F2D678": "brushed-gold",
+    "#E2E2E2": "brushed-silver",
+    "#2C2C2C": "black",
+    "#C0392B": "red",
+    "#1A5C8E": "blue",
+    "#EAC10C": "brushed-gold",
+    "#C0C0C0": "brushed-silver"
+  }
+}
