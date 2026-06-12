@@ -166,7 +166,9 @@ export const generatePDFNew = async (
 
       // Generate high-resolution image
       console.log(`Generating ${designLabel.toLowerCase()} image...`);
-      const imageDataUrl = await generateFullBadgeImage(badge, variant);
+      const imageDataUrl = await generateFullBadgeImage(badge, variant, {
+        plateRenderMode: "vector",
+      });
       console.log("Image generated successfully");
 
       // Convert to Uint8Array and embed
@@ -491,7 +493,9 @@ export const generatePDFAsBlob = async (
 
       // Generate high-resolution image
       console.log(`Generating ${designLabel.toLowerCase()} image...`);
-      const imageDataUrl = await generateFullBadgeImage(badge, variant);
+      const imageDataUrl = await generateFullBadgeImage(badge, variant, {
+        plateRenderMode: "vector",
+      });
       console.log("Image generated successfully");
 
       // Convert to Uint8Array and embed

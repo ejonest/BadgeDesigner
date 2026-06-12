@@ -18,21 +18,13 @@
         </a>
       {%- endif -%}
     </div>
-    <div class="aqb-ch-tool-cta__preview">
+    <div class="aqb-ch-tool-cta__preview{% if section.settings.preview_image == blank %} aqb-ch-photo-placeholder{% endif %}">
       {%- if section.settings.preview_image != blank -%}
         {{
           section.settings.preview_image
           | image_url: width: 1200
           | image_tag: loading: 'lazy', widths: '640,800,1024,1200', sizes: '(min-width: 990px) 40vw, 100vw', alt: 'Badge design tool preview'
         }}
-      {%- elsif section.settings.preview_asset != blank -%}
-        <img
-          src="{{ section.settings.preview_asset | asset_url }}"
-          alt="Badge design tool preview"
-          width="1024"
-          height="634"
-          loading="lazy"
-        >
       {%- endif -%}
     </div>
   </div>
@@ -60,8 +52,7 @@
     },
     { "type": "text", "id": "button_label", "label": "Button label", "default": "Start Designing →" },
     { "type": "url", "id": "button_link", "label": "Button link" },
-    { "type": "image_picker", "id": "preview_image", "label": "Tool screenshot" },
-    { "type": "text", "id": "preview_asset", "label": "Theme asset screenshot", "default": "aqb-hero-editor-preview.png" }
+    { "type": "image_picker", "id": "preview_image", "label": "Tool screenshot" }
   ],
   "presets": [{ "name": "AQB Church Design CTA" }]
 }

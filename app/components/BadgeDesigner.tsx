@@ -141,6 +141,10 @@ import {
   getEffectiveSignTextLayoutForBadge,
 } from "../utils/renderSvg";
 import {
+  badgeBackgroundConflictsWithTextColor,
+  badgeTextColorConflictsWithBackground,
+} from "~/utils/badgeColorContrast";
+import {
   PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
   isFeaturedBrushedMetalPlateColor,
   isPlaqueAttachedTemplateId,
@@ -1558,6 +1562,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // Apply background color change (called after user confirms or if no warning needed)
   const applyBackgroundColor = (colorValue: string) => {
+    if (badgeBackgroundConflictsWithTextColor(colorValue, badge.lines)) {
+      return;
+    }
+
     // Save to undo history before making changes
     saveToUndoHistory({
       type: "background-color",
@@ -1640,6 +1648,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // Apply background and set any text line whose color is similar to the new background to a contrasting color
   const applyBackgroundColorWithContrastUpdate = (colorValue: string) => {
+    if (badgeBackgroundConflictsWithTextColor(colorValue, badge.lines)) {
+      setShowBackgroundColorWarning(false);
+      setPendingBackgroundColor(null);
+      return;
+    }
+
     saveToUndoHistory({
       type: "background-color",
       badgeIndex: selectedBadgeIndex,
@@ -2653,6 +2667,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // Load templates - refresh when templateRefreshKey changes
   useEffect(() => {
+    let cancelled = false;
     setTemplateLoadError(null);
     (async () => {
       try {
@@ -2664,6 +2679,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           ")",
         );
         const list = await loadTemplates(variant);
+        if (cancelled) return;
         setTemplates(list);
         setTemplateLoadError(null);
         console.log(
@@ -2671,18 +2687,26 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           list.map((t) => t.id),
         );
 
-        // Default universal template id (no badge yet)
         if (list.length > 0) {
-          setUniversalTemplateId(
-            variant === "plaque" ? defaultPlaqueTemplateId() : list[0].id,
-          );
+          setUniversalTemplateId((current) => {
+            if (current && list.some((t) => t.id === current)) {
+              return current;
+            }
+            return variant === "plaque"
+              ? defaultPlaqueTemplateId()
+              : list[0].id;
+          });
         }
       } catch (error) {
+        if (cancelled) return;
         const message = error instanceof Error ? error.message : String(error);
         console.error("Failed to load templates:", error);
         setTemplateLoadError(message);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [templateRefreshKey, variant]);
 
   // Build template picker thumbnails: plate + outline only (no trim/motifs). Users add frame, color, and
@@ -4411,6 +4435,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const updateLine = (index: number, changes: Partial<BadgeLine>) => {
     if (typeof changes.text !== "undefined") {
       sessionHadLineTextEditRef.current = true;
+    }
+    if (
+      changes.color &&
+      badgeTextColorConflictsWithBackground(
+        changes.color,
+        badge.backgroundColor,
+      )
+    ) {
+      return;
     }
     // Save to undo history before making changes (skip text content changes)
     const changedProperty = Object.keys(changes)[0];
@@ -8541,6 +8574,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     ];
 
                     const handleColorClick = (colorValue: string) => {
+                      if (
+                        badgeBackgroundConflictsWithTextColor(
+                          colorValue,
+                          badge.lines,
+                        )
+                      ) {
+                        return;
+                      }
                       // Check if the new background color is similar to any text line colors
                       if (checkBackgroundColorSimilarity(colorValue)) {
                         setPendingBackgroundColor(colorValue);
@@ -8601,16 +8642,26 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                         <div className="flex items-start gap-3 ml-1.5 mt-1.5">
                           <div className="flex flex-col gap-2">
                             <div className="grid grid-cols-4 gap-2 w-fit">
-                              {featuredColors.map((c) => (
+                              {featuredColors.map((c) => {
+                                const blockedByText =
+                                  !c.isRainbow &&
+                                  badgeBackgroundConflictsWithTextColor(
+                                    c.value,
+                                    badge.lines,
+                                  );
+                                return (
                                 <div
                                   key={c.value}
                                   className="flex flex-col items-center gap-1"
                                 >
                                   <button
                                     className={`w-12 h-12 border rounded ${
-                                      badge.backgroundColor === c.value
+                                      badge.backgroundColor === c.value &&
+                                      !blockedByText
                                         ? "ring-2 ring-offset-1 " + c.ring
-                                        : ""
+                                        : blockedByText
+                                          ? "opacity-50 cursor-not-allowed"
+                                          : ""
                                     }`}
                                     style={
                                       c.isRainbow
@@ -8622,9 +8673,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                             c.value,
                                           )
                                     }
-                                    title={c.name}
+                                    title={
+                                      blockedByText
+                                        ? `${c.name} — same as text color`
+                                        : c.name
+                                    }
+                                    disabled={blockedByText}
                                     onClick={(e) => {
                                       e.preventDefault();
+                                      if (blockedByText) return;
                                       if (c.isRainbow) {
                                         setShowColorModal(true);
                                       } else {
@@ -8656,7 +8713,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                     )}
                                   </span>
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                             {/* Apply to All Button */}
                             {multipleBadges.length > 1 && (
@@ -11423,21 +11481,34 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   value: string;
                   name: string;
                   ring: string;
-                }) => (
+                }) => {
+                  const blockedByText = badgeBackgroundConflictsWithTextColor(
+                    c.value,
+                    badge.lines,
+                  );
+                  return (
                   <div
                     key={c.value}
                     className="relative flex items-center justify-center"
                   >
                     <button
                       className={`w-8 h-8 md:w-12 md:h-12 border-2 rounded transition-all ${
-                        badge.backgroundColor === c.value
+                        badge.backgroundColor === c.value && !blockedByText
                           ? "ring-2 ring-offset-1 " + c.ring + " scale-110"
-                          : "border-gray-300 hover:scale-105"
+                          : blockedByText
+                            ? "border-gray-400 opacity-50 cursor-not-allowed"
+                            : "border-gray-300 hover:scale-105"
                       }`}
                       style={{ backgroundColor: c.value }}
-                      title={c.name}
+                      title={
+                        blockedByText
+                          ? "Same as text color — choose a different background"
+                          : c.name
+                      }
+                      disabled={blockedByText}
                       onClick={(e) => {
                         e.preventDefault();
+                        if (blockedByText) return;
                         // Check if the new background color is similar to any text line colors
                         if (checkBackgroundColorSimilarity(c.value)) {
                           setPendingBackgroundColor(c.value);
@@ -11450,7 +11521,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       }}
                     />
                   </div>
-                );
+                  );
+                };
 
                 return (
                   <>
@@ -11511,10 +11583,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   };
 
                   const previewColor = parseColorInput(customColorInput);
-                  const isValidColor = previewColor !== null;
+                  const blockedByText =
+                    previewColor !== null &&
+                    badgeBackgroundConflictsWithTextColor(
+                      previewColor,
+                      badge.lines,
+                    );
+                  const isValidColor = previewColor !== null && !blockedByText;
 
                   const handleApplyCustomColor = () => {
-                    if (previewColor) {
+                    if (previewColor && !blockedByText) {
                       // Check if the new background color is similar to any text line colors
                       if (checkBackgroundColorSimilarity(previewColor)) {
                         setPendingBackgroundColor(previewColor);
@@ -11896,11 +11974,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     ? c.value.trim()
                     : `#${c.value.trim()}`;
 
-                  const isDisabled = areColorsSimilar(
+                  const isExactConflict = badgeTextColorConflictsWithBackground(
                     normalizedColorValue,
-                    normalizedBackgroundColor,
-                    70,
+                    badge.backgroundColor,
                   );
+                  const isDisabled =
+                    isExactConflict ||
+                    areColorsSimilar(
+                      normalizedColorValue,
+                      normalizedBackgroundColor,
+                      70,
+                    );
                   const isRed = isRedColor(normalizedColorValue);
 
                   return (
@@ -11920,9 +12004,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                           backgroundColor: c.value,
                         }}
                         title={
-                          isDisabled
-                            ? "Too similar to background color"
-                            : c.name
+                          isExactConflict
+                            ? "Same as background color"
+                            : isDisabled
+                              ? "Too similar to background color"
+                              : c.name
                         }
                         onClick={(e) => {
                           e.preventDefault();
@@ -12026,10 +12112,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   };
 
                   const previewColor = parseColorInput(customTextColorInput);
-                  const isValidColor = previewColor !== null;
+                  const conflictsBackground =
+                    previewColor !== null &&
+                    badgeTextColorConflictsWithBackground(
+                      previewColor,
+                      badge.backgroundColor,
+                    );
+                  const isValidColor =
+                    previewColor !== null && !conflictsBackground;
 
                   const handleApplyCustomTextColor = () => {
-                    if (previewColor && textColorModalLineIndex !== null) {
+                    if (
+                      previewColor &&
+                      textColorModalLineIndex !== null &&
+                      !conflictsBackground
+                    ) {
                       updateLine(textColorModalLineIndex, {
                         color: previewColor,
                       });

@@ -12,7 +12,9 @@ export function downloadBlob(data: Blob, filename: string) {
 }
 
 export async function downloadSVG(badge: Badge, template: LoadedTemplate, filename = "badge.svg") {
-  const svg = await renderBadgeToSvgStringWithFonts(badge, template);
+  const svg = await renderBadgeToSvgStringWithFonts(badge, template, {
+    plateRenderMode: "vector",
+  });
   const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
   downloadBlob(blob, filename);
 }
@@ -20,14 +22,18 @@ export async function downloadSVG(badge: Badge, template: LoadedTemplate, filena
 
 export async function downloadCDR(badge: Badge, template: LoadedTemplate, filename = "badge.cdr") {
   // CorelDRAW opens SVGs. This is the same SVG with a .cdr filename for now.
-  const svg = await renderBadgeToSvgStringWithFonts(badge, template);
+  const svg = await renderBadgeToSvgStringWithFonts(badge, template, {
+    plateRenderMode: "vector",
+  });
   const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
   downloadBlob(blob, filename);
 }
 
 
 export async function rasterizeToPNGDataUrl(badge: Badge, template: LoadedTemplate, scale = 2): Promise<string> {
-  const svg = await renderBadgeToSvgStringWithFonts(badge, template);
+  const svg = await renderBadgeToSvgStringWithFonts(badge, template, {
+    plateRenderMode: "vector",
+  });
   const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
   const svgUrl = URL.createObjectURL(svgBlob);
 
@@ -112,7 +118,9 @@ export async function downloadMultiPageCDR(badges: Badge[], templates: LoadedTem
       const template = templates[i] || templates[0];
       
       // Generate SVG for this badge with font embedding
-      const badgeSvg = await renderBadgeToSvgStringWithFonts(badge, template);
+      const badgeSvg = await renderBadgeToSvgStringWithFonts(badge, template, {
+        plateRenderMode: "vector",
+      });
       
       // Extract the content from the badge SVG (remove the outer svg tags)
       const svgContent = badgeSvg.replace(/<svg[^>]*>/, '').replace(/<\/svg>$/, '');
@@ -193,7 +201,9 @@ export async function downloadMultipleSVGs(badges: Badge[], templates: LoadedTem
  * Generate SVG as a Blob (for upload, not download)
  */
 export async function generateSVGAsBlob(badge: Badge, template: LoadedTemplate): Promise<Blob> {
-  const svg = await renderBadgeToSvgStringWithFonts(badge, template);
+  const svg = await renderBadgeToSvgStringWithFonts(badge, template, {
+    plateRenderMode: "vector",
+  });
   return new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
 }
 

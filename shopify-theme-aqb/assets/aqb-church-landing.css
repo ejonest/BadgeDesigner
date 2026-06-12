@@ -367,6 +367,16 @@
   border-color: rgba(200, 150, 42, 0.3);
 }
 
+.aqb-ch-photo-placeholder {
+  background: rgba(13, 27, 42, 0.05);
+  border: 1px dashed rgba(13, 27, 42, 0.16);
+}
+
+.aqb-ch-hero__photo.aqb-ch-photo-placeholder {
+  background: rgba(255, 255, 255, 0.04);
+  border: none;
+}
+
 .aqb-ch-role-card__photo {
   position: relative;
   overflow: hidden;
@@ -374,10 +384,34 @@
   background: #1a2f44;
 }
 
+.aqb-ch-role-card__photo.aqb-ch-photo-placeholder {
+  border: none;
+  background: #1a2f44;
+}
+
+.aqb-ch-bil-card__photo.aqb-ch-photo-placeholder {
+  min-height: 140px;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.aqb-ch-multipacks__img.aqb-ch-photo-placeholder {
+  min-height: 280px;
+  border-radius: 12px;
+}
+
+.aqb-ch-tool-cta__preview.aqb-ch-photo-placeholder {
+  min-height: 320px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
 .aqb-ch-role-card__photo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center center;
   display: block;
   transition: transform 0.35s;
 }
@@ -625,11 +659,27 @@
   align-items: center;
 }
 
-.aqb-ch-multipacks__img img {
+.aqb-ch-multipacks__img {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+}
+
+.aqb-ch-multipacks__copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.aqb-ch-multipacks__img img,
+.aqb-ch-multipacks__photo {
   width: 100%;
+  height: auto;
   border-radius: 12px;
   box-shadow: 0 16px 48px rgba(13, 27, 42, 0.14);
   display: block;
+  position: relative;
+  z-index: 1;
 }
 
 .aqb-ch-multipacks__points {
