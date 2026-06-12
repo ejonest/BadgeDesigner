@@ -26,17 +26,24 @@ export const BADGE_CONSTANTS = {
 
   // Backing options (order: magnet, pin, adhesive; magnet default)
   BACKING_OPTIONS: [
-    { value: 'magnetic', label: 'Magnetic (+$2.00)' },
-    { value: 'pin', label: 'Pin (Included)' },
-    { value: 'adhesive', label: 'Adhesive (+$1.00)' }
+    { value: 'magnetic', label: 'Magnetic (+$1.00)' },
+    { value: 'pin', label: 'Pin (+$0.50)' },
+    { value: 'adhesive', label: 'Adhesive (included)' }
   ] as const,
 
-  // Pricing
-  BASE_PRICE: 9.99,
+  // Per-badge price by backing (matches Shopify variant prices)
+  BADGE_PRICES_BY_BACKING: {
+    adhesive: 4.99,
+    pin: 5.49,
+    magnetic: 5.99,
+  } as const,
+
+  // Pricing — adhesive base + backing uplift (legacy save/API fields)
+  BASE_PRICE: 4.99,
   BACKING_PRICES: {
-    magnetic: 2.00,
-    adhesive: 1.00,
-    pin: 0.00
+    magnetic: 1.0,
+    pin: 0.5,
+    adhesive: 0,
   } as const,
 
   // Text formatting
@@ -86,4 +93,29 @@ export const BADGE_CONSTANTS = {
     backgroundColor: '#FFFFFF',
     backing: 'magnetic'
   }
-} as const; 
+} as const;
+
+export type BadgeBackingPriceKey = keyof typeof BADGE_CONSTANTS.BADGE_PRICES_BY_BACKING;
+
+/** Total per-badge price for a backing type (Shopify variant price). */
+export function getBadgePriceForBacking(
+  backing: string | undefined | null,
+): number {
+  const prices = BADGE_CONSTANTS.BADGE_PRICES_BY_BACKING;
+  if (backing === "magnetic") return prices.magnetic;
+  if (backing === "pin") return prices.pin;
+  return prices.adhesive;
+}
+
+/** Split total into base + backing uplift for APIs that store both fields. */
+export function getBadgePriceBreakdownForBacking(
+  backing: string | undefined | null,
+): { basePrice: number; backingPrice: number; totalPrice: number } {
+  const totalPrice = getBadgePriceForBacking(backing);
+  const basePrice = BADGE_CONSTANTS.BASE_PRICE;
+  return {
+    basePrice,
+    backingPrice: totalPrice - basePrice,
+    totalPrice,
+  };
+} 

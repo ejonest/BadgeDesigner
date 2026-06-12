@@ -1,0 +1,318 @@
+{{ 'aqb-header.css' | asset_url | stylesheet_tag }}
+
+{%- liquid
+  assign sign_in_url = routes.account_login_url
+  if shop.customer_accounts_enabled
+    assign return_to_encoded = request.path | url_encode
+    assign sign_in_url = '/customer_authentication/login?return_to=' | append: return_to_encoded
+  endif
+
+  assign shop_all_url = section.settings.shop_all_url
+  if shop_all_url == blank
+    assign shop_all_url = routes.all_products_collection_url
+  endif
+  assign home_url = routes.root_url
+  assign cart_url = routes.cart_url
+  assign cart_count = cart.item_count
+  assign cart_active = false
+  if request.path == cart_url or request.path contains '/cart'
+    assign cart_active = true
+  endif
+-%}
+
+<nav class="aqb-store-nav" aria-label="Main navigation" data-aqb-nav>
+  <div class="aqb-store-nav__inner">
+    <a href="{{ home_url }}" class="aqb-store-nav__logo">
+      <span class="aqb-store-nav__logo-mark" aria-hidden="true">{{ section.settings.logo_mark | escape }}</span>
+      <span class="aqb-store-nav__logo-text">
+        {{- section.settings.logo_text_before | escape -}}
+        <span>{{ section.settings.logo_text_accent | escape }}</span>
+      </span>
+    </a>
+
+    <ul class="aqb-store-nav__links" role="list">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'nav_link' -%}
+          {%- liquid
+            assign link_url = block.settings.url
+            assign is_active = false
+            if block.settings.active_paths != blank
+              assign path_checks = block.settings.active_paths | split: ','
+              for path_part in path_checks
+                assign path_trim = path_part | strip
+                if path_trim != blank and request.path contains path_trim
+                  assign is_active = true
+                  break
+                endif
+              endfor
+            endif
+          -%}
+          <li {{ block.shopify_attributes }}>
+            <a
+              href="{{ link_url }}"
+              class="{% if is_active %}is-active{% endif %}"
+              {% if is_active %}aria-current="page"{% endif %}
+            >
+              {{ block.settings.label | escape }}
+            </a>
+          </li>
+        {%- endif -%}
+      {%- endfor -%}
+    </ul>
+
+    <div class="aqb-store-nav__right">
+      <a href="{{ sign_in_url }}" class="aqb-store-nav__btn-ghost">
+        {{ section.settings.sign_in_label | escape }}
+      </a>
+      <a
+        href="{{ cart_url }}"
+        class="aqb-store-nav__btn-cart{% if cart_active %} is-active{% endif %}"
+        {% if cart_active %}aria-current="page"{% endif %}
+        aria-label="{{ section.settings.cart_label | escape }}{% if cart_count > 0 %} ({{ cart_count }} items){% endif %}"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+        </svg>
+        <span>{{ section.settings.cart_label | escape }}</span>
+        {%- if cart_count > 0 -%}
+          <span class="aqb-store-nav__cart-count">{{ cart_count }}</span>
+        {%- endif -%}
+      </a>
+      <a href="{{ shop_all_url }}" class="aqb-store-nav__btn-gold">
+        {{ section.settings.shop_all_label | escape }}
+      </a>
+      <button
+        type="button"
+        class="aqb-store-nav__menu-btn"
+        aria-label="Open menu"
+        aria-expanded="false"
+        aria-controls="aqb-nav-drawer-{{ section.id }}"
+        data-aqb-nav-open
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div
+    id="aqb-nav-drawer-{{ section.id }}"
+    class="aqb-store-nav__drawer"
+    data-aqb-nav-drawer
+    hidden
+  >
+    <div class="aqb-store-nav__drawer-backdrop" data-aqb-nav-close tabindex="-1" aria-hidden="true"></div>
+    <div class="aqb-store-nav__drawer-panel" role="dialog" aria-modal="true" aria-label="Menu">
+      <button type="button" class="aqb-store-nav__drawer-close" data-aqb-nav-close aria-label="Close menu">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <ul class="aqb-store-nav__drawer-links" role="list">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'nav_link' -%}
+            {%- liquid
+              assign link_url = block.settings.url
+              assign is_active = false
+              if block.settings.active_paths != blank
+                assign path_checks = block.settings.active_paths | split: ','
+                for path_part in path_checks
+                  assign path_trim = path_part | strip
+                  if path_trim != blank and request.path contains path_trim
+                    assign is_active = true
+                    break
+                  endif
+                endfor
+              endif
+            -%}
+            <li>
+              <a href="{{ link_url }}" class="{% if is_active %}is-active{% endif %}">
+                {{ block.settings.label | escape }}
+              </a>
+            </li>
+          {%- endif -%}
+        {%- endfor -%}
+      </ul>
+      <div class="aqb-store-nav__drawer-actions">
+        <a href="{{ sign_in_url }}" class="aqb-store-nav__btn-ghost">{{ section.settings.sign_in_label | escape }}</a>
+        <a
+          href="{{ cart_url }}"
+          class="aqb-store-nav__btn-cart{% if cart_active %} is-active{% endif %}"
+          {% if cart_active %}aria-current="page"{% endif %}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+          </svg>
+          <span>{{ section.settings.cart_label | escape }}</span>
+          {%- if cart_count > 0 -%}
+            <span class="aqb-store-nav__cart-count">{{ cart_count }}</span>
+          {%- endif -%}
+        </a>
+        <a href="{{ shop_all_url }}" class="aqb-store-nav__btn-gold">{{ section.settings.shop_all_label | escape }}</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<script>
+  (function () {
+    var root = document.querySelector('[data-aqb-nav]');
+    if (!root) return;
+    var drawer = root.querySelector('[data-aqb-nav-drawer]');
+    var openBtn = root.querySelector('[data-aqb-nav-open]');
+    var closeEls = root.querySelectorAll('[data-aqb-nav-close]');
+
+    function openDrawer() {
+      drawer.hidden = false;
+      drawer.classList.add('is-open');
+      openBtn.setAttribute('aria-expanded', 'true');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeDrawer() {
+      drawer.classList.remove('is-open');
+      drawer.hidden = true;
+      openBtn.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
+    }
+
+    openBtn.addEventListener('click', openDrawer);
+    closeEls.forEach(function (el) {
+      el.addEventListener('click', closeDrawer);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && drawer.classList.contains('is-open')) closeDrawer();
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "AQB Header",
+  "class": "aqb-header-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "logo_mark",
+      "label": "Logo mark text",
+      "default": "AQ"
+    },
+    {
+      "type": "text",
+      "id": "logo_text_before",
+      "label": "Logo text (before accent)",
+      "default": "All Quality "
+    },
+    {
+      "type": "text",
+      "id": "logo_text_accent",
+      "label": "Logo accent word",
+      "default": "Badges"
+    },
+    {
+      "type": "text",
+      "id": "sign_in_label",
+      "label": "Sign in button label",
+      "default": "Sign In"
+    },
+    {
+      "type": "url",
+      "id": "shop_all_url",
+      "label": "Shop all badges link"
+    },
+    {
+      "type": "text",
+      "id": "shop_all_label",
+      "label": "Shop all button label",
+      "default": "Shop All Badges"
+    },
+    {
+      "type": "text",
+      "id": "cart_label",
+      "label": "Cart button label",
+      "default": "Cart"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "nav_link",
+      "name": "Nav link",
+      "settings": [
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "Link"
+        },
+        {
+          "type": "url",
+          "id": "url",
+          "label": "Link"
+        },
+        {
+          "type": "text",
+          "id": "active_paths",
+          "label": "Active when URL contains (comma-separated)",
+          "info": "Example: /products/custom-1x3-badge"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Header",
+      "blocks": [
+        {
+          "type": "nav_link",
+          "settings": {
+            "label": "Design Your Badge",
+            "url": "/products/custom-1x3-badge",
+            "active_paths": "/products/custom-1x3-badge"
+          }
+        },
+        {
+          "type": "nav_link",
+          "settings": {
+            "label": "Name Tag Blanks",
+            "url": "/collections/blank-name-tags",
+            "active_paths": "/collections/blank-name-tags"
+          }
+        },
+        {
+          "type": "nav_link",
+          "settings": {
+            "label": "Church & Congregation",
+            "url": "/pages/church-and-congregation",
+            "active_paths": "/pages/church-and-congregation,/collections/church-name-tags"
+          }
+        },
+        {
+          "type": "nav_link",
+          "settings": {
+            "label": "Role Badges",
+            "url": "/collections/all",
+            "active_paths": "/collections/role"
+          }
+        },
+        {
+          "type": "nav_link",
+          "settings": {
+            "label": "Desk Name Plates",
+            "url": "/collections/acrylic-desk-signs",
+            "active_paths": "/collections/acrylic-desk-signs,/collections/desk"
+          }
+        },
+        {
+          "type": "nav_link",
+          "settings": {
+            "label": "Bulk Orders",
+            "url": "/collections/blank-name-tags",
+            "active_paths": "/pages/bulk"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,120 @@
+{% comment %}
+  Section: AQB Testimonials
+  CSS lives in assets/base.css — search for "AQB SECTIONS CSS"
+{% endcomment %}
+
+<div class="aqb-testimonials color-{{ section.settings.color_scheme }} gradient" style="padding-top: {{ section.settings.padding_top }}px; padding-bottom: {{ section.settings.padding_bottom }}px;">
+  <div class="page-width">
+
+    {% if section.settings.heading != blank %}
+      <div class="aqb-testimonials__header">
+        <h2 class="aqb-testimonials__title {{ section.settings.heading_size }}">
+          {{ section.settings.heading | escape }}
+        </h2>
+      </div>
+    {% endif %}
+
+    <ul class="aqb-testimonials__grid list-unstyled" role="list">
+      {% for block in section.blocks %}
+        {% if block.type == 'testimonial' %}
+          <li class="aqb-testimonials__item" {{ block.shopify_attributes }}>
+            <figure class="aqb-testimonials__card">
+              <div class="aqb-testimonials__stars" aria-label="{{ block.settings.rating }} out of 5 stars">
+                {% assign rating = block.settings.rating | plus: 0 %}
+                {% for i in (1..5) %}
+                  <span class="aqb-testimonials__star{% if i > rating %} aqb-testimonials__star--empty{% endif %}" aria-hidden="true">★</span>
+                {% endfor %}
+              </div>
+              <blockquote class="aqb-testimonials__quote">
+                <p>{{ block.settings.quote | escape }}</p>
+              </blockquote>
+              <figcaption class="aqb-testimonials__author">
+                <strong class="aqb-testimonials__name">{{ block.settings.name | escape }}</strong>
+                {% if block.settings.role != blank %}
+                  <span class="aqb-testimonials__role">{{ block.settings.role | escape }}</span>
+                {% endif %}
+              </figcaption>
+            </figure>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Testimonials",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "What Our Customers Say"
+    },
+    {
+      "type": "select",
+      "id": "heading_size",
+      "options": [
+        { "value": "h2", "label": "Small" },
+        { "value": "h1", "label": "Medium" },
+        { "value": "h0", "label": "Large" }
+      ],
+      "default": "h1",
+      "label": "Heading size"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding top",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding bottom",
+      "default": 60
+    }
+  ],
+  "blocks": [
+    {
+      "type": "testimonial",
+      "name": "Testimonial",
+      "limit": 6,
+      "settings": [
+        { "type": "range", "id": "rating", "min": 1, "max": 5, "step": 1, "label": "Star rating", "default": 5 },
+        { "type": "textarea", "id": "quote", "label": "Quote", "default": "Ordered 200 badges for our church welcome team. They arrived in two days and looked absolutely professional. Everyone loves them!" },
+        { "type": "text", "id": "name", "label": "Customer name", "default": "Sarah M." },
+        { "type": "text", "id": "role", "label": "Role or organization", "default": "Volunteer Coordinator, Grace Community Church" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Testimonials",
+      "blocks": [
+        { "type": "testimonial", "settings": { "rating": 5, "quote": "Ordered 200 badges for our church welcome team. They arrived in two days and looked absolutely professional. Everyone loves them!", "name": "Sarah M.", "role": "Volunteer Coordinator, Grace Community Church" } },
+        { "type": "testimonial", "settings": { "rating": 5, "quote": "As a hospital administrator, I need badges that look sharp and arrive fast. All Quality Badges delivers every time. We've reordered 4 times now.", "name": "David R.", "role": "Operations Director, Regional Medical Center" } },
+        { "type": "testimonial", "settings": { "rating": 5, "quote": "Great price, no minimum order, and free shipping? Couldn't believe it. Our hotel staff name tags came out perfectly. Will be ordering again.", "name": "Jessica T.", "role": "General Manager, Sunset Boutique Hotel" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

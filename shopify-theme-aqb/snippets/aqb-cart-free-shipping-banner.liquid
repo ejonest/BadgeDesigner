@@ -1,0 +1,91 @@
+{% comment %}
+  Cart upsell: free shipping at 5 custom badge pieces (sum of line quantities).
+{% endcomment %}
+
+{{ 'aqb-cart-free-shipping.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'aqb-cart-free-shipping.js' | asset_url }}" defer="defer"></script>
+
+{%- liquid
+  assign aqb_badge_piece_count = 0
+  for item in cart.items
+    assign aqb_designer = item.properties['Designer'] | default: '' | strip | downcase
+    assign aqb_is_custom_badge = false
+    if item.product.handle == 'custom-1x3-badge'
+      assign aqb_is_custom_badge = true
+    elsif item.properties['Custom Badge Design'] == 'Yes' and aqb_designer != 'sign' and aqb_designer != 'plaque'
+      assign aqb_is_custom_badge = true
+    endif
+    if aqb_is_custom_badge
+      assign aqb_badge_piece_count = aqb_badge_piece_count | plus: item.quantity
+    endif
+  endfor
+
+  assign aqb_free_ship_goal = 5
+  assign aqb_to_free = aqb_free_ship_goal | minus: aqb_badge_piece_count
+  if aqb_badge_piece_count <= 0
+    assign aqb_banner_hidden = true
+  else
+    assign aqb_banner_hidden = false
+  endif
+
+  if aqb_badge_piece_count >= aqb_free_ship_goal
+    assign aqb_banner_unlocked = true
+    assign aqb_headline = 'Free shipping unlocked!'
+    assign aqb_detail = 'Your custom badge order ships free within the USA.'
+    assign aqb_progress_pct = 100
+  else
+    assign aqb_banner_unlocked = false
+    if aqb_to_free == 1
+      assign aqb_headline = "You're 1 badge away from FREE shipping!"
+    else
+      assign aqb_headline = "You're " | append: aqb_to_free | append: ' badges away from FREE shipping!'
+    endif
+    assign aqb_detail = 'Add more custom badges to your cart — free shipping kicks in at 5.'
+    assign aqb_progress_pct = aqb_badge_piece_count | times: 100 | divided_by: aqb_free_ship_goal
+  endif
+-%}
+
+<div
+  class="aqb-cart-free-shipping{% if aqb_banner_unlocked %} is-unlocked{% endif %}"
+  data-aqb-cart-free-shipping
+  data-badge-pieces="{{ aqb_badge_piece_count }}"
+  data-free-ship-goal="{{ aqb_free_ship_goal }}"
+  {% if aqb_banner_hidden %}hidden{% endif %}
+  role="status"
+  aria-live="polite"
+>
+  <div class="aqb-cart-free-shipping__inner">
+    <div class="aqb-cart-free-shipping__icon" aria-hidden="true">
+      {%- if aqb_banner_unlocked -%}✓{%- else -%}🚚{%- endif -%}
+    </div>
+    <div class="aqb-cart-free-shipping__copy">
+      <p class="aqb-cart-free-shipping__headline" data-aqb-cart-free-shipping-headline>
+        {{ aqb_headline }}
+      </p>
+      <p class="aqb-cart-free-shipping__detail" data-aqb-cart-free-shipping-detail>
+        {{ aqb_detail }}
+      </p>
+      <div class="aqb-cart-free-shipping__progress">
+        <div class="aqb-cart-free-shipping__progress-meta">
+          <span data-aqb-cart-free-shipping-progress-label>
+            {{ aqb_badge_piece_count }} of {{ aqb_free_ship_goal }} badges
+          </span>
+          <span class="aqb-cart-free-shipping__goal">Free at {{ aqb_free_ship_goal }}</span>
+        </div>
+        <div
+          class="aqb-cart-free-shipping__track"
+          role="progressbar"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="{{ aqb_progress_pct }}"
+        >
+          <div
+            class="aqb-cart-free-shipping__fill"
+            data-aqb-cart-free-shipping-fill
+            style="width: {{ aqb_progress_pct }}%;"
+          ></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

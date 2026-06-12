@@ -1,0 +1,212 @@
+<style>
+  .aqb-hiw {
+    padding: 80px 0;
+    background: #ffffff;
+  }
+
+  .aqb-hiw__container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  .aqb-hiw__header {
+    text-align: center;
+    max-width: 520px;
+    margin: 0 auto 56px;
+  }
+
+  .aqb-hiw__kicker {
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--aqb-blue);
+    margin-bottom: 10px;
+  }
+
+  .aqb-hiw__title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 3.5vw, 42px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--aqb-ink);
+  }
+
+  .aqb-hiw__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+    position: relative;
+  }
+
+  .aqb-hiw__grid::before {
+    content: '';
+    position: absolute;
+    top: 27px;
+    left: calc(12.5% + 28px);
+    right: calc(12.5% + 28px);
+    height: 2px;
+    background: repeating-linear-gradient(
+      to right,
+      var(--aqb-blue) 0,
+      var(--aqb-blue) 12px,
+      transparent 12px,
+      transparent 24px
+    );
+  }
+
+  .aqb-hiw__step {
+    text-align: center;
+    position: relative;
+  }
+
+  .aqb-hiw__num {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--aqb-navy);
+    color: #ffffff;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .aqb-hiw__step-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--aqb-ink);
+    margin-bottom: 10px;
+  }
+
+  .aqb-hiw__step-body {
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    color: var(--aqb-mid);
+    line-height: 1.7;
+  }
+
+  .aqb-hiw__cta {
+    text-align: center;
+    margin-top: 56px;
+  }
+
+  .aqb-hiw__cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--aqb-orange);
+    color: #ffffff;
+    padding: 16px 36px;
+    border-radius: var(--aqb-radius);
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.25s var(--aqb-ease);
+  }
+
+  .aqb-hiw__cta-btn:hover {
+    background: var(--aqb-orange-light);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(249, 115, 22, 0.4);
+    color: #ffffff;
+  }
+
+  @media screen and (max-width: 989px) {
+    .aqb-hiw__grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 40px;
+    }
+
+    .aqb-hiw__grid::before {
+      display: none;
+    }
+  }
+
+  @media screen and (max-width: 749px) {
+    .aqb-hiw {
+      padding: 48px 0;
+    }
+
+    .aqb-hiw__container {
+      padding: 0 16px;
+    }
+
+    .aqb-hiw__grid {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+  }
+</style>
+
+<section class="aqb-hiw">
+  <div class="aqb-hiw__container">
+    <div class="aqb-hiw__header">
+      <p class="aqb-hiw__kicker">The Process</p>
+      <h2 class="aqb-hiw__title">From Your List to Their Lanyards</h2>
+    </div>
+
+    <div class="aqb-hiw__grid">
+      <div class="aqb-hiw__step">
+        <div class="aqb-hiw__num">1</div>
+        <div class="aqb-hiw__step-title">Choose Your Style</div>
+        <p class="aqb-hiw__step-body">Pick a badge size, shape, color scheme, and backing. We have over 20 combinations to match any brand or event.</p>
+      </div>
+      <div class="aqb-hiw__step">
+        <div class="aqb-hiw__num">2</div>
+        <div class="aqb-hiw__step-title">Send Your Names</div>
+        <p class="aqb-hiw__step-body">Upload a spreadsheet or type names directly. Add titles, departments, logos — whatever you need on each badge.</p>
+      </div>
+      <div class="aqb-hiw__step">
+        <div class="aqb-hiw__num">3</div>
+        <div class="aqb-hiw__step-title">Approve Your Proof</div>
+        <p class="aqb-hiw__step-body">Receive a free digital preview within 24 hours. Request edits until it's perfect — we don't charge for revisions.</p>
+      </div>
+      <div class="aqb-hiw__step">
+        <div class="aqb-hiw__num">4</div>
+        <div class="aqb-hiw__step-title">Receive in Days</div>
+        <p class="aqb-hiw__step-body">Standard delivery in 3–5 business days. Rush options available. Every order inspected before it ships.</p>
+      </div>
+    </div>
+
+    <div class="aqb-hiw__cta">
+      <a href="{{ section.settings.cta_link }}" class="aqb-hiw__cta-btn">
+        {{ section.settings.cta_text }} →
+      </a>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "AQB How It Works",
+  "settings": [
+    {
+      "type": "text",
+      "id": "cta_text",
+      "label": "Button text",
+      "default": "Start Your Order Today"
+    },
+    {
+      "type": "url",
+      "id": "cta_link",
+      "label": "Button link"
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB How It Works"
+    }
+  ]
+}
+{% endschema %}

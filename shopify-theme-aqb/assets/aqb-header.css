@@ -1,0 +1,347 @@
+/* AQB storefront nav — matches aqb_homepage_photo mock */
+
+.shopify-section.aqb-header-section {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.aqb-store-nav {
+  background: #fff;
+  border-bottom: 1px solid rgba(13, 27, 42, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.aqb-store-nav__inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 48px;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.aqb-store-nav__logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.aqb-store-nav__logo-mark {
+  width: 38px;
+  height: 38px;
+  background: #0d1b2a;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e0ac42;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.aqb-store-nav__logo-text {
+  font-family: 'Lora', serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0d1b2a;
+  line-height: 1.1;
+}
+
+.aqb-store-nav__logo-text span {
+  color: #c8962a;
+}
+
+.aqb-store-nav__links {
+  display: none;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  justify-content: center;
+}
+
+@media screen and (min-width: 990px) {
+  .aqb-store-nav__links {
+    display: flex;
+  }
+}
+
+.aqb-store-nav__links a {
+  font-size: 13px;
+  font-weight: 500;
+  color: #3a4f63;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.aqb-store-nav__links a:hover {
+  background: #faf8f4;
+  color: #0d1b2a;
+}
+
+.aqb-store-nav__links a.is-active {
+  color: #0d1b2a;
+  font-weight: 600;
+}
+
+.aqb-store-nav__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.aqb-store-nav__btn-ghost {
+  display: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #3a4f63;
+  background: none;
+  border: 1px solid rgba(13, 27, 42, 0.1);
+  padding: 7px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+@media screen and (min-width: 750px) {
+  .aqb-store-nav__btn-ghost {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+.aqb-store-nav__btn-ghost:hover {
+  border-color: #0d1b2a;
+  color: #0d1b2a;
+}
+
+.aqb-store-nav__btn-gold {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0d1b2a;
+  background: #c8962a;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
+}
+
+.aqb-store-nav__btn-gold:hover {
+  opacity: 0.88;
+  color: #0d1b2a;
+}
+
+.aqb-store-nav__btn-cart {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #3a4f63;
+  background: none;
+  border: 1px solid rgba(13, 27, 42, 0.1);
+  padding: 7px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.aqb-store-nav__btn-cart svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.aqb-store-nav__btn-cart:hover,
+.aqb-store-nav__btn-cart.is-active {
+  border-color: #0d1b2a;
+  color: #0d1b2a;
+  background: #faf8f4;
+}
+
+.aqb-store-nav__cart-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #0d1b2a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* Mobile menu toggle */
+.aqb-store-nav__menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid rgba(13, 27, 42, 0.1);
+  border-radius: 6px;
+  background: #fff;
+  color: #0d1b2a;
+  cursor: pointer;
+}
+
+@media screen and (min-width: 990px) {
+  .aqb-store-nav__menu-btn {
+    display: none;
+  }
+}
+
+.aqb-store-nav__menu-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.aqb-store-nav__drawer {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+}
+
+.aqb-store-nav__drawer.is-open {
+  display: block;
+}
+
+.aqb-store-nav__drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 27, 42, 0.45);
+}
+
+.aqb-store-nav__drawer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(320px, 88vw);
+  height: 100%;
+  background: #fff;
+  padding: 24px 20px;
+  overflow-y: auto;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.12);
+}
+
+.aqb-store-nav__drawer-close {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  width: 100%;
+  color: #3a4f63;
+}
+
+.aqb-store-nav__drawer-links {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aqb-store-nav__drawer-links a {
+  display: block;
+  font-size: 15px;
+  font-weight: 500;
+  color: #3a4f63;
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
+.aqb-store-nav__drawer-links a.is-active,
+.aqb-store-nav__drawer-links a:hover {
+  background: #faf8f4;
+  color: #0d1b2a;
+}
+
+.aqb-store-nav__drawer-links a.is-active {
+  font-weight: 600;
+}
+
+.aqb-store-nav__drawer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(13, 27, 42, 0.1);
+}
+
+.aqb-store-nav__drawer-actions .aqb-store-nav__btn-ghost {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.aqb-store-nav__drawer-actions .aqb-store-nav__btn-gold {
+  justify-content: center;
+  width: 100%;
+}
+
+.aqb-store-nav__drawer-actions .aqb-store-nav__btn-cart {
+  justify-content: center;
+  width: 100%;
+}
+
+@media screen and (max-width: 749px) {
+  .aqb-store-nav__btn-cart span:not(.aqb-store-nav__cart-count) {
+    display: none;
+  }
+
+  .aqb-store-nav__btn-cart {
+    padding: 8px 10px;
+  }
+}
+
+@media screen and (max-width: 989px) {
+  .aqb-store-nav__inner {
+    padding: 0 16px;
+    height: 64px;
+    gap: 12px;
+  }
+
+  .aqb-store-nav__logo-text {
+    font-size: 15px;
+  }
+
+  .aqb-store-nav__logo-mark {
+    width: 34px;
+    height: 34px;
+    font-size: 11px;
+  }
+}

@@ -1,0 +1,146 @@
+{%- if page.handle == 'church-and-congregation' or template.suffix == 'church-and-congregation' -%}
+<section class="aqb-ch-bilingual">
+  <div class="aqb-ch-bilingual__inner">
+    <div class="aqb-ch-bilingual__copy">
+      {%- if section.settings.eyebrow != blank -%}
+        <div class="aqb-ch-bilingual__pill">
+          <span class="aqb-ch-bilingual__pill-dot" aria-hidden="true"></span>
+          <span class="aqb-ch-bilingual__pill-text">{{ section.settings.eyebrow | escape }}</span>
+        </div>
+      {%- endif -%}
+
+      {%- if section.settings.heading != blank -%}
+        <h2 class="aqb-ch-bilingual__title">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+
+      {%- if section.settings.description != blank -%}
+        <p class="aqb-ch-bilingual__desc">{{ section.settings.description | escape }}</p>
+      {%- endif -%}
+
+      {%- if section.settings.roles_text != blank -%}
+        <p class="aqb-ch-bilingual__roles-text">{{ section.settings.roles_text | escape }}</p>
+      {%- endif -%}
+
+      {%- if section.settings.button_label != blank -%}
+        <a href="{{ section.settings.button_link }}" class="aqb-ch-bilingual__btn">
+          {{ section.settings.button_label | escape }}
+          <span aria-hidden="true">→</span>
+        </a>
+      {%- endif -%}
+    </div>
+
+    <div class="aqb-ch-bilingual__grid">
+      {%- for block in section.blocks -%}
+        {%- liquid
+          assign card_link = block.settings.link
+          if block.settings.collection != blank
+            assign card_link = block.settings.collection.url
+          endif
+          if card_link == blank
+            assign card_link = '#'
+          endif
+        -%}
+        <a href="{{ card_link }}" class="aqb-ch-bil-card" {{ block.shopify_attributes }}>
+          <div class="aqb-ch-bil-card__photo">
+            {%- if block.settings.image != blank -%}
+              {{
+                block.settings.image
+                | image_url: width: 400
+                | image_tag: loading: 'lazy', widths: '200,400', sizes: '(min-width: 990px) 20vw, 45vw', alt: block.settings.title
+              }}
+            {%- elsif block.settings.image_asset != blank -%}
+              <img
+                src="{{ block.settings.image_asset | asset_url }}"
+                alt="{{ block.settings.title | escape }}"
+                width="400"
+                height="240"
+                loading="lazy"
+              >
+            {%- endif -%}
+          </div>
+          <div class="aqb-ch-bil-card__info">
+            <div class="aqb-ch-bil-card__name">{{ block.settings.title | escape }}</div>
+            {%- if block.settings.badge_type != blank -%}
+              <div class="aqb-ch-bil-card__type">{{ block.settings.badge_type | escape }}</div>
+            {%- endif -%}
+            {%- if block.settings.tag != blank -%}
+              <div class="aqb-ch-bil-card__tag">{{ block.settings.tag | escape }}</div>
+            {%- endif -%}
+          </div>
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Church Bilingual",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "En Español"
+    },
+    {
+      "type": "html",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Badges for your<br><em>congregation.</em>"
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "The only complete collection of bilingual church badges for Hispanic congregations. Designed, engraved and shipped from the United States."
+    },
+    {
+      "type": "textarea",
+      "id": "roles_text",
+      "label": "Roles list",
+      "default": "Ujier · Diácono · Acomodador · Jr Ujier · Bienvenidos and more — every role your Spanish-speaking ministry needs."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label",
+      "default": "Shop Spanish Collection →"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button link"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "badge",
+      "name": "Badge card",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Ujier" },
+        { "type": "text", "id": "badge_type", "label": "Badge type", "default": "Engraved Badge" },
+        { "type": "text", "id": "tag", "label": "Tag", "default": "Multi-packs available" },
+        { "type": "collection", "id": "collection", "label": "Collection" },
+        { "type": "url", "id": "link", "label": "Link (overrides collection)" },
+        { "type": "image_picker", "id": "image", "label": "Photo" },
+        { "type": "text", "id": "image_asset", "label": "Theme asset photo" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Church Bilingual",
+      "blocks": [
+        { "type": "badge", "settings": { "title": "Ujier", "badge_type": "Engraved Badge", "tag": "Multi-packs available", "image_asset": "aqb-church-bil-ujier.jpg" } },
+        { "type": "badge", "settings": { "title": "Diácono", "badge_type": "Engraved Badge", "tag": "Multi-packs available", "image_asset": "aqb-church-bil-diacono.jpg" } },
+        { "type": "badge", "settings": { "title": "Acomodador", "badge_type": "Printed Badge", "tag": "Multi-packs available", "image_asset": "aqb-church-bil-acomodador.jpg" } },
+        { "type": "badge", "settings": { "title": "Jr. Usher", "badge_type": "Engraved Badge", "tag": "Youth Ministry", "image_asset": "aqb-church-bil-jr-usher.jpg" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

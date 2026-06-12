@@ -1,0 +1,286 @@
+{%- liquid
+  assign is_homepage = false
+  if section.settings.layout == 'homepage'
+    assign is_homepage = true
+  endif
+-%}
+
+{%- if is_homepage -%}
+<section class="dual-cta-section section-pad">
+  <div class="section-inner">
+    <div class="dual-cta-grid">
+      <div class="cta-card gold-card">
+        <div class="cta-eyebrow">{{ section.settings.left_eyebrow | escape }}</div>
+        <h3>{{ section.settings.left_title | escape }}</h3>
+        <p>{{ section.settings.left_description | escape }}</p>
+        <a href="{{ section.settings.link_custom }}" class="cta-btn">
+          {{ section.settings.left_button_label | escape }}
+        </a>
+      </div>
+      <div class="cta-card navy-card">
+        <div class="cta-eyebrow">{{ section.settings.right_eyebrow | escape }}</div>
+        <h3>{{ section.settings.right_title | escape }}</h3>
+        <p>{{ section.settings.right_description | escape }}</p>
+        <a href="{{ section.settings.link_blank }}" class="cta-btn">
+          {{ section.settings.right_button_label | escape }}
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+{%- else -%}
+<style>
+  .aqb-dual-cta {
+    padding: 80px 0;
+    background: var(--aqb-off, #f8f9fc);
+  }
+
+  .aqb-dual-cta__container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  .aqb-dual-cta__header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+
+  .aqb-dual-cta__kicker {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--aqb-gold, #c8962a);
+    margin-bottom: 10px;
+  }
+
+  .aqb-dual-cta__title {
+    font-family: 'Lora', serif;
+    font-size: clamp(28px, 3.5vw, 42px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--aqb-navy, #0d1b2a);
+  }
+
+  .aqb-dual-cta__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .aqb-dual-cta__card {
+    border-radius: 16px;
+    padding: 56px 48px;
+    position: relative;
+    overflow: hidden;
+    min-height: 360px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  .aqb-dual-cta__card--custom {
+    background: var(--aqb-navy, #0d1b2a);
+  }
+
+  .aqb-dual-cta__card--blank {
+    background: #1e3347;
+  }
+
+  .aqb-dual-cta__card-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--aqb-gold-light, #e0ac42);
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .aqb-dual-cta__card-title {
+    font-family: 'Lora', serif;
+    font-size: clamp(26px, 3vw, 34px);
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.1;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .aqb-dual-cta__card-desc {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 28px;
+    line-height: 1.6;
+    max-width: 400px;
+    position: relative;
+    z-index: 1;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .aqb-dual-cta__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    width: fit-content;
+    position: relative;
+    z-index: 1;
+  }
+
+  .aqb-dual-cta__btn--orange {
+    background: var(--aqb-gold, #c8962a);
+    color: var(--aqb-navy, #0d1b2a);
+  }
+
+  .aqb-dual-cta__btn--outline {
+    background: transparent;
+    color: #ffffff;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+  }
+
+  @media screen and (max-width: 989px) {
+    .aqb-dual-cta__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<section class="aqb-dual-cta">
+  <div class="aqb-dual-cta__container">
+    <div class="aqb-dual-cta__header">
+      <p class="aqb-dual-cta__kicker">{{ section.settings.header_kicker | escape }}</p>
+      <h2 class="aqb-dual-cta__title">{{ section.settings.header_title | escape }}</h2>
+    </div>
+
+    <div class="aqb-dual-cta__grid">
+      <div class="aqb-dual-cta__card aqb-dual-cta__card--custom">
+        <p class="aqb-dual-cta__card-label">{{ section.settings.left_eyebrow | escape }}</p>
+        <h3 class="aqb-dual-cta__card-title">{{ section.settings.left_title | escape }}</h3>
+        <p class="aqb-dual-cta__card-desc">{{ section.settings.left_description | escape }}</p>
+        <a href="{{ section.settings.link_custom }}" class="aqb-dual-cta__btn aqb-dual-cta__btn--orange">
+          {{ section.settings.left_button_label | escape }}
+        </a>
+      </div>
+
+      <div class="aqb-dual-cta__card aqb-dual-cta__card--blank">
+        <p class="aqb-dual-cta__card-label">{{ section.settings.right_eyebrow | escape }}</p>
+        <h3 class="aqb-dual-cta__card-title">{{ section.settings.right_title | escape }}</h3>
+        <p class="aqb-dual-cta__card-desc">{{ section.settings.right_description | escape }}</p>
+        <a href="{{ section.settings.link_blank }}" class="aqb-dual-cta__btn aqb-dual-cta__btn--outline">
+          {{ section.settings.right_button_label | escape }}
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Dual CTA",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "homepage", "label": "Homepage (gold + navy)" },
+        { "value": "default", "label": "Default (navy cards)" }
+      ],
+      "default": "homepage"
+    },
+    {
+      "type": "text",
+      "id": "header_kicker",
+      "label": "Header kicker (default layout)",
+      "default": "Two Ways to Buy"
+    },
+    {
+      "type": "text",
+      "id": "header_title",
+      "label": "Header title (default layout)",
+      "default": "Personalized or DIY — You Choose"
+    },
+    {
+      "type": "text",
+      "id": "left_eyebrow",
+      "label": "Left card eyebrow",
+      "default": "New visitor"
+    },
+    {
+      "type": "text",
+      "id": "left_title",
+      "label": "Left card title",
+      "default": "Try the design tool."
+    },
+    {
+      "type": "textarea",
+      "id": "left_description",
+      "label": "Left card description",
+      "default": "No account needed. Pick a shape, set your colours, type your text — and see your badge live before you buy. Takes under two minutes."
+    },
+    {
+      "type": "text",
+      "id": "left_button_label",
+      "label": "Left button label",
+      "default": "Start Designing →"
+    },
+    {
+      "type": "url",
+      "id": "link_custom",
+      "label": "Left button link"
+    },
+    {
+      "type": "text",
+      "id": "right_eyebrow",
+      "label": "Right card eyebrow",
+      "default": "Returning customer"
+    },
+    {
+      "type": "text",
+      "id": "right_title",
+      "label": "Right card title",
+      "default": "Already a customer?"
+    },
+    {
+      "type": "textarea",
+      "id": "right_description",
+      "label": "Right card description",
+      "default": "Create an account and your orders are saved. Reorder the same badge — same colour, same text, same everything — in four steps next time."
+    },
+    {
+      "type": "text",
+      "id": "right_button_label",
+      "label": "Right button label",
+      "default": "Create Your Account →"
+    },
+    {
+      "type": "url",
+      "id": "link_blank",
+      "label": "Right button link"
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Dual CTA",
+      "settings": {
+        "layout": "homepage"
+      }
+    }
+  ]
+}
+{% endschema %}

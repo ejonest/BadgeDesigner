@@ -1,0 +1,68 @@
+{%- if page.handle == 'church-and-congregation' or template.suffix == 'church-and-congregation' -%}
+<section class="aqb-ch-tool-cta">
+  <div class="aqb-ch-tool-cta__inner">
+    <div class="aqb-ch-tool-cta__copy">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="aqb-ch-section-eyebrow" style="color: var(--aqb-gold-light, #e0ac42);">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h2 class="aqb-ch-tool-cta__title">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.description != blank -%}
+        <p class="aqb-ch-tool-cta__desc">{{ section.settings.description | escape }}</p>
+      {%- endif -%}
+      {%- if section.settings.button_label != blank -%}
+        <a href="{{ section.settings.button_link }}" class="aqb-ch-hero__btn-primary">
+          {{ section.settings.button_label | escape }}
+          <span aria-hidden="true">→</span>
+        </a>
+      {%- endif -%}
+    </div>
+    <div class="aqb-ch-tool-cta__preview">
+      {%- if section.settings.preview_image != blank -%}
+        {{
+          section.settings.preview_image
+          | image_url: width: 1200
+          | image_tag: loading: 'lazy', widths: '640,800,1024,1200', sizes: '(min-width: 990px) 40vw, 100vw', alt: 'Badge design tool preview'
+        }}
+      {%- elsif section.settings.preview_asset != blank -%}
+        <img
+          src="{{ section.settings.preview_asset | asset_url }}"
+          alt="Badge design tool preview"
+          width="1024"
+          height="634"
+          loading="lazy"
+        >
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Church Design CTA",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Custom badges" },
+    {
+      "type": "html",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Need a custom badge<br><em>for your church?</em>"
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "Design yours live — pick a shape, set your colours, type every line of text, and see exactly what you'll get before you order."
+    },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "Start Designing →" },
+    { "type": "url", "id": "button_link", "label": "Button link" },
+    { "type": "image_picker", "id": "preview_image", "label": "Tool screenshot" },
+    { "type": "text", "id": "preview_asset", "label": "Theme asset screenshot", "default": "aqb-hero-editor-preview.png" }
+  ],
+  "presets": [{ "name": "AQB Church Design CTA" }]
+}
+{% endschema %}

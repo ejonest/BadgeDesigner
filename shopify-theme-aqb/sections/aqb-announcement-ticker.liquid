@@ -1,0 +1,88 @@
+{{ 'aqb-announcement-ticker.css' | asset_url | stylesheet_tag }}
+{% comment %}
+  Scrolling announcement bar matching the homepage mock.
+{% endcomment %}
+
+{%- if section.blocks.size > 0 -%}
+  <div class="aqb-announce-ticker" role="region" aria-label="{{ 'sections.header.announcement' | t }}">
+    <div class="aqb-announce-ticker__track">
+      {%- for block in section.blocks -%}
+        <div class="aqb-announce-ticker__item" {{ block.shopify_attributes }}>
+          <span class="aqb-announce-ticker__dot" aria-hidden="true"></span>
+          {%- if block.settings.link != blank -%}
+            <a href="{{ block.settings.link }}" style="color: inherit; text-decoration: none;">
+              {{ block.settings.text | escape }}
+            </a>
+          {%- else -%}
+            {{ block.settings.text | escape }}
+          {%- endif -%}
+        </div>
+      {%- endfor -%}
+      {%- comment -%} Duplicate for seamless ticker loop {%- endcomment -%}
+      {%- for block in section.blocks -%}
+        <div class="aqb-announce-ticker__item" aria-hidden="true">
+          <span class="aqb-announce-ticker__dot"></span>
+          {{ block.settings.text | escape }}
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Announcement Ticker",
+  "class": "aqb-announcement-ticker-section",
+  "max_blocks": 8,
+  "blocks": [
+    {
+      "type": "message",
+      "name": "Message",
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Text",
+          "default": "Free USA shipping on orders of 5 badges or more"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Announcement Ticker",
+      "blocks": [
+        {
+          "type": "message",
+          "settings": {
+            "text": "Free USA shipping on orders of 5 badges or more"
+          }
+        },
+        {
+          "type": "message",
+          "settings": {
+            "text": "Custom name badges — design yours and see it live before you buy"
+          }
+        },
+        {
+          "type": "message",
+          "settings": {
+            "text": "Ships in 2 business days, direct from our US facility"
+          }
+        },
+        {
+          "type": "message",
+          "settings": {
+            "text": "Now serving Hispanic congregations — Ujier, Diácono, Acomodador y más"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

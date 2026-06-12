@@ -1,0 +1,324 @@
+{
+  "sections": {
+    "hero": {
+      "type": "aqb-church-landing-hero",
+      "blocks": {
+        "trust_1": {
+          "type": "trust_point",
+          "settings": {
+            "label": "Free USA shipping"
+          }
+        },
+        "trust_2": {
+          "type": "trust_point",
+          "settings": {
+            "label": "Multi-packs available"
+          }
+        },
+        "trust_3": {
+          "type": "trust_point",
+          "settings": {
+            "label": "English & Spanish roles"
+          }
+        },
+        "photo_1": {
+          "type": "hero_photo",
+          "settings": {
+            "image_asset": "aqb-church-hero-1.png",
+            "alt": "Church greeters wearing name badges"
+          }
+        },
+        "photo_2": {
+          "type": "hero_photo",
+          "settings": {
+            "image_asset": "aqb-church-hero-2.png",
+            "alt": "Congregation welcome team badges"
+          }
+        }
+      },
+      "block_order": [
+        "trust_1",
+        "trust_2",
+        "trust_3",
+        "photo_1",
+        "photo_2"
+      ],
+      "settings": {
+        "eyebrow_icon": "✝",
+        "eyebrow": "Houses of Worship",
+        "heading": "Church &amp; Congregation<br><em>Name Badges</em>",
+        "tagline": "Built for ministry teams.",
+        "subheading": "Pre-designed engraved badges for ushers, greeters, pastors, deacons, welcome teams and more. Order in convenient multi-packs with fast US shipping and bilingual English &amp; Spanish options available.",
+        "primary_label": "Shop Ministry Badges",
+        "primary_link": "#church-ministry-roles",
+        "secondary_label": "Design a Custom Badge",
+        "secondary_link": "shopify://products/custom-1x3-badge"
+      }
+    },
+    "trust_bar": {
+      "type": "aqb-church-landing-trust-bar",
+      "blocks": {
+        "item_1": {
+          "type": "item",
+          "settings": {
+            "emoji": "🚚",
+            "title": "Free USA Shipping",
+            "subtitle": "On orders of 5 badges or more"
+          }
+        },
+        "item_2": {
+          "type": "item",
+          "settings": {
+            "emoji": "⚡",
+            "title": "Ships in 2 Business Days",
+            "subtitle": "Fast turnaround for ministry teams and events"
+          }
+        },
+        "item_3": {
+          "type": "item",
+          "settings": {
+            "emoji": "🌎",
+            "title": "English & Spanish Roles",
+            "subtitle": "The only fully bilingual congregation badge collection"
+          }
+        },
+        "item_4": {
+          "type": "item",
+          "settings": {
+            "emoji": "📦",
+            "title": "No Minimum Orders",
+            "subtitle": "Order exactly what your church needs"
+          }
+        }
+      },
+      "block_order": [
+        "item_1",
+        "item_2",
+        "item_3",
+        "item_4"
+      ],
+      "settings": {}
+    },
+    "roles": {
+      "type": "aqb-church-landing-roles",
+      "blocks": {
+        "role_greeters": {
+          "type": "role",
+          "settings": {
+            "title": "Greeters & Ushers",
+            "description": "Classic engraved badges for welcome teams, hospitality volunteers, greeters and ushers.",
+            "tag": "★ Top seller",
+            "cta_label": "Shop collection →",
+            "collection": "church-name-tags",
+            "image_asset": "aqb-church-role-greeters.jpg"
+          }
+        },
+        "role_pastors": {
+          "type": "role",
+          "settings": {
+            "title": "Pastors & Leadership",
+            "description": "Professional engraved name badges for pastors, elders, ministry leaders and church staff.",
+            "tag": "Multi-packs available",
+            "cta_label": "Shop Leadership →",
+            "collection": "engraved-name-badges",
+            "image_asset": "aqb-church-role-pastors.jpg"
+          }
+        },
+        "role_welcome": {
+          "type": "role",
+          "settings": {
+            "title": "Welcome Ministry",
+            "description": "Friendly, easy-to-read badges that help guests feel welcomed from the moment they arrive.",
+            "tag": "Multi-packs available",
+            "cta_label": "Shop Welcome Team →",
+            "collection": "hospitality-name-tags",
+            "image_asset": "aqb-church-role-welcome.jpg"
+          }
+        },
+        "role_spanish": {
+          "type": "role",
+          "settings": {
+            "title": "Spanish Ministry Collection",
+            "description": "The only complete bilingual congregation badge collection for Hispanic ministries and Spanish-speaking congregations.",
+            "tag": "🌎 En Español",
+            "cta_label": "Shop Spanish Collection →",
+            "collection": "church-name-tags",
+            "image_asset": "aqb-church-role-spanish.jpg"
+          }
+        }
+      },
+      "block_order": [
+        "role_greeters",
+        "role_pastors",
+        "role_welcome",
+        "role_spanish"
+      ],
+      "settings": {
+        "eyebrow": "Shop by ministry role",
+        "heading": "Everything your ministry <em>needs.</em>",
+        "description": "Browse pre-designed badges by role — each collection is ready to order in multi-packs with free US shipping."
+      }
+    },
+    "bilingual": {
+      "type": "aqb-church-landing-bilingual",
+      "blocks": {
+        "bil_1": {
+          "type": "badge",
+          "settings": {
+            "title": "Ujier",
+            "badge_type": "Engraved Badge",
+            "tag": "Multi-packs available",
+            "link": "shopify://products/ujier-1-x-3-name-tag-3-pack",
+            "image_asset": "aqb-church-bil-ujier.jpg"
+          }
+        },
+        "bil_2": {
+          "type": "badge",
+          "settings": {
+            "title": "Diácono",
+            "badge_type": "Engraved Badge",
+            "tag": "Multi-packs available",
+            "link": "shopify://products/deacon-1-x-3-name-tag-3-pack",
+            "image_asset": "aqb-church-bil-diacono.jpg"
+          }
+        },
+        "bil_3": {
+          "type": "badge",
+          "settings": {
+            "title": "Acomodador",
+            "badge_type": "Printed Badge",
+            "tag": "Multi-packs available",
+            "link": "shopify://products/greeter-1-x-3-name-tag-3-pack",
+            "image_asset": "aqb-church-bil-acomodador.jpg"
+          }
+        },
+        "bil_4": {
+          "type": "badge",
+          "settings": {
+            "title": "Jr. Usher",
+            "badge_type": "Engraved Badge",
+            "tag": "Youth Ministry",
+            "link": "shopify://products/jr-usher-1-x-3-name-tag-3-pack",
+            "image_asset": "aqb-church-bil-jr-usher.jpg"
+          }
+        }
+      },
+      "block_order": [
+        "bil_1",
+        "bil_2",
+        "bil_3",
+        "bil_4"
+      ],
+      "settings": {
+        "eyebrow": "En Español",
+        "heading": "Badges for your<br><em>congregation.</em>",
+        "description": "The only complete collection of bilingual church badges for Hispanic congregations. Designed, engraved and shipped from the United States.",
+        "roles_text": "Ujier · Diácono · Acomodador · Jr Ujier · Bienvenidos and more — every role your Spanish-speaking ministry needs.",
+        "button_label": "Shop Spanish Collection →",
+        "button_link": "shopify://collections/church-name-tags"
+      }
+    },
+    "multipacks": {
+      "type": "aqb-church-landing-multipacks",
+      "blocks": {
+        "point_1": {
+          "type": "point",
+          "settings": {
+            "text": "<strong>3-pack minimum</strong> on most pre-made church role badges"
+          }
+        },
+        "point_2": {
+          "type": "point",
+          "settings": {
+            "text": "<strong>Mix and match</strong> roles across your welcome team, ushers, and deacons"
+          }
+        },
+        "point_3": {
+          "type": "point",
+          "settings": {
+            "text": "<strong>Free USA shipping</strong> on every order — no minimum"
+          }
+        }
+      },
+      "block_order": [
+        "point_1",
+        "point_2",
+        "point_3"
+      ],
+      "settings": {
+        "eyebrow": "Multi-packs",
+        "heading": "Multi-packs built<br><em>for congregations.</em>",
+        "description": "Most ministry roles ship in convenient 3-packs — order exactly what your team needs without overbuying.",
+        "image_asset": "aqb-church-multipack.png",
+        "button_label": "Shop All Ministry Badges →",
+        "button_link": "shopify://collections/church-name-tags"
+      }
+    },
+    "tool_cta": {
+      "type": "aqb-church-landing-tool-cta",
+      "settings": {
+        "eyebrow": "Custom badges",
+        "heading": "Need a custom badge<br><em>for your church?</em>",
+        "description": "Design yours live — pick a shape, set your colours, type every line of text, and see exactly what you'll get before you order.",
+        "button_label": "Start Designing →",
+        "button_link": "shopify://products/custom-1x3-badge",
+        "preview_asset": "aqb-hero-editor-preview.png"
+      }
+    },
+    "faq": {
+      "type": "aqb-church-landing-faq",
+      "blocks": {
+        "faq_1": {
+          "type": "faq",
+          "settings": {
+            "icon": "🌎",
+            "question": "Do you offer badges in Spanish?",
+            "answer": "Yes — we offer the largest bilingual church badge collection available online, including Ujier, Diácono, Acomodador and more."
+          }
+        },
+        "faq_2": {
+          "type": "faq",
+          "settings": {
+            "icon": "📌",
+            "question": "What backing options are available?",
+            "answer": "Choose from magnetic backing, pin backing or adhesive options depending on your preference."
+          }
+        },
+        "faq_3": {
+          "type": "faq",
+          "settings": {
+            "icon": "✝",
+            "question": "Can we add our church logo?",
+            "answer": "Yes — custom engraved and printed badges can include your church logo, ministry name, and branding."
+          }
+        },
+        "faq_4": {
+          "type": "faq",
+          "settings": {
+            "icon": "📦",
+            "question": "Do you offer bulk pricing?",
+            "answer": "Yes — discounted pricing is available for larger ministry teams and congregation orders."
+          }
+        }
+      },
+      "block_order": [
+        "faq_1",
+        "faq_2",
+        "faq_3",
+        "faq_4"
+      ],
+      "settings": {
+        "heading": "Everything you need to know."
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "trust_bar",
+    "roles",
+    "bilingual",
+    "multipacks",
+    "tool_cta",
+    "faq"
+  ]
+}
