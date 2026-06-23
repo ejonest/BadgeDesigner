@@ -433,6 +433,13 @@ const MOBILE_PREVIEW = {
   badgeHeightVh: 20,
 } as const;
 
+/** Tighter preview when embedded in Shopify (store header already shows page title). */
+const MOBILE_PREVIEW_EMBEDDED = {
+  boxMarginYRem: 0.25,
+  badgeMarginXRem: 1,
+  badgeHeightVh: 9,
+} as const;
+
 /**
  * Typography for badge + sign designers (template cards and multi-preview label).
  * - `templateNameFontPx`: title bar on each template card (main grid + “more templates” modal).
@@ -2851,6 +2858,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const mobileEditorScrollRef = useRef<HTMLDivElement | null>(null);
   const [mobileEditorScrollEl, setMobileEditorScrollEl] =
     useState<HTMLDivElement | null>(null);
+  const [mobileChromeScrollEl, setMobileChromeScrollEl] =
+    useState<HTMLDivElement | null>(null);
 
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   useEffect(() => {
@@ -2865,7 +2874,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const embeddedMobileBadgeShell =
     storeChromeless && variant === "badge" && isMobileViewport;
 
-  useEmbeddedMobileStoreChrome(embeddedMobileBadgeShell, mobileEditorScrollEl);
+  useEmbeddedMobileStoreChrome(
+    embeddedMobileBadgeShell,
+    embeddedMobileBadgeShell ? mobileChromeScrollEl : mobileEditorScrollEl,
+  );
 
   /** Stable design id for this session; used for incremental draft saves and add-to-cart. */
   const sessionDesignIdRef = useRef<string | null>(null);
@@ -4357,8 +4369,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         ? activeBadgePhotoPreview.previewCropRect.width /
           activeBadgePhotoPreview.previewCropRect.height
         : 3;
+      const previewVh = embeddedMobileBadgeShell
+        ? MOBILE_PREVIEW_EMBEDDED.badgeHeightVh
+        : MOBILE_PREVIEW.badgeHeightVh;
       return {
-        width: `${3 * MOBILE_PREVIEW.badgeHeightVh}vh`,
+        width: `${3 * previewVh}vh`,
         maxWidth: "100%",
         aspectRatio: aspect,
         height: "auto",
@@ -4370,7 +4385,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       aspectRatio: 3,
       height: "auto",
     } as React.CSSProperties;
-  }, [variant, activeTemplate, multipleBadges.length, activeBadgePhotoPreview]);
+  }, [
+    variant,
+    activeTemplate,
+    multipleBadges.length,
+    activeBadgePhotoPreview,
+    embeddedMobileBadgeShell,
+  ]);
 
   // Right-column preview slots: size by template aspect, shrink to fit so no horizontal scroll; never overlap.
   const desktopPreviewSlotStyle = useMemo(() => {
@@ -8191,7 +8212,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   const aqbBadgeMobileCheckoutBar =
     variant === "badge" ? (
-      <div className="aqb-mobile-checkout-bar md:hidden shrink-0">
+      <div className="aqb-mobile-checkout-bar aqb-mobile-checkout-bar--in-flow md:hidden shrink-0">
         <div className="aqb-mobile-checkout-bar__inner">
           <div className="aqb-mobile-checkout-bar__price-block min-w-0 flex-1">
             <div className="aqb-mobile-checkout-bar__price">
@@ -8304,33 +8325,44 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         </div>
       ) : null}
       <div
+        ref={(node) => {
+          if (embeddedMobileBadgeShell) {
+            setMobileChromeScrollEl(node);
+          }
+        }}
         className={`aqb-tool-shell flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_420px] md:items-start mx-auto max-w-[1320px] w-full min-h-0 overflow-hidden md:h-auto md:min-h-[560px] md:overflow-visible ${
           variant === "badge"
             ? storeChromeless
               ? embeddedMobileBadgeShell
-                ? "max-md:gap-2 max-md:h-full max-md:flex-1 gap-5 px-4 md:px-10 max-md:pt-2 pt-4 pb-0 md:pb-8 lg:pb-10"
+                ? "aqb-tool-shell--embedded-mobile max-md:gap-2 max-md:h-full max-md:flex-1 max-md:overflow-y-auto max-md:overflow-x-hidden gap-5 px-4 md:px-10 max-md:pt-2 pt-4 pb-0 md:pb-8 lg:pb-10"
                 : "max-md:gap-2 gap-5 px-4 md:px-10 max-md:pt-2 pt-4 pb-0 md:pb-8 lg:pb-10 h-screen"
               : "max-md:gap-2 gap-5 px-4 md:px-10 max-md:pt-2 pt-5 pb-0 md:pb-10 lg:pb-12 h-screen"
             : "gap-5 px-4 md:px-8 h-screen md:h-auto"
         }`}
       >
-        {/* MOBILE: Header + preview fixed at top; editor scrolls below */}
-        <div className="flex-shrink-0 md:hidden flex flex-col">
-          {/* Header: page title */}
-          <div className="flex flex-col gap-1 min-w-0 mb-2">
-            <h2 className="text-xl font-bold text-gray-800">
-              {multipleBadges.length === 0
-                ? `Design Your ${config.labelProduct}`
-                : `Customize Your ${config.labelProduct} ${
-                    selectedBadgeIndex + 1
-                  } of ${totalBadges}`}
-            </h2>
-            {multipleBadges.length > 0 && (
-              <span className="text-xl font-bold text-red-600">
-                {activeTemplate?.name ?? ""}
-              </span>
-            )}
-          </div>
+        {/* MOBILE: Header + preview fixed at top; editor scrolls below (embedded: all scroll together) */}
+        <div
+          className={`md:hidden flex flex-col ${
+            embeddedMobileBadgeShell ? "" : "flex-shrink-0"
+          }`}
+        >
+          {/* Header: page title (hidden when Shopify store chrome shows it) */}
+          {!storeChromeless ? (
+            <div className="flex flex-col gap-1 min-w-0 mb-2">
+              <h2 className="text-xl font-bold text-gray-800">
+                {multipleBadges.length === 0
+                  ? `Design Your ${config.labelProduct}`
+                  : `Customize Your ${config.labelProduct} ${
+                      selectedBadgeIndex + 1
+                    } of ${totalBadges}`}
+              </h2>
+              {multipleBadges.length > 0 && (
+                <span className="text-xl font-bold text-red-600">
+                  {activeTemplate?.name ?? ""}
+                </span>
+              )}
+            </div>
+          ) : null}
 
           <div className="overflow-hidden rounded-lg border border-[rgba(13,27,42,0.1)] bg-white">
             {variant !== "badge" ? (
@@ -8353,7 +8385,17 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   : "bg-white/60"
               }`}
               style={{
-                padding: `${MOBILE_PREVIEW.boxMarginYRem}rem ${MOBILE_PREVIEW.badgeMarginXRem}rem`,
+                padding: `${
+                  (embeddedMobileBadgeShell
+                    ? MOBILE_PREVIEW_EMBEDDED
+                    : MOBILE_PREVIEW
+                  ).boxMarginYRem
+                }rem ${
+                  (embeddedMobileBadgeShell
+                    ? MOBILE_PREVIEW_EMBEDDED
+                    : MOBILE_PREVIEW
+                  ).badgeMarginXRem
+                }rem`,
               }}
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
@@ -8464,7 +8506,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         <div
           className={`aqb-left-panel w-full md:min-w-0 flex-1 min-h-0 md:max-h-[calc(100vh-48px)] md:self-start rounded-xl border border-[rgba(13,27,42,0.1)] bg-white shadow-[0_2px_12px_rgba(13,27,42,0.06)] flex flex-col ${
             variant === "badge"
-              ? "max-md:overflow-hidden overflow-y-auto md:overflow-y-auto"
+              ? embeddedMobileBadgeShell
+                ? "max-md:overflow-visible overflow-y-auto md:overflow-y-auto"
+                : "max-md:overflow-hidden overflow-y-auto md:overflow-y-auto"
               : "overflow-y-auto"
           }`}
         >
@@ -8868,7 +8912,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             }}
             className={`section-container flex-1 min-h-0 ${
               variant === "badge"
-                ? "mb-0 min-w-0 max-md:overflow-y-auto px-0 md:overflow-visible"
+                ? embeddedMobileBadgeShell
+                  ? "mb-0 min-w-0 max-md:overflow-visible px-0 md:overflow-visible"
+                  : "mb-0 min-w-0 max-md:overflow-y-auto px-0 md:overflow-visible"
                 : "mb-4 px-4 md:px-5"
             }`}
           >
@@ -11969,6 +12015,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 })()}
               </div>
             )}
+            {aqbBadgeMobileCheckoutBar}
           </div>
         </div>
 
@@ -12861,7 +12908,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           </div>
         </div>
         ) : null}
-        {aqbBadgeMobileCheckoutBar}
       </div>
 
       {/* Badge grid picker modal (mobile + desktop) */}
