@@ -65,11 +65,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({
 }) => (
   <button
     type="button"
-    className={
-      mobileLabel
-        ? "aqb-ta-btn aqb-ta-btn--mobile-inline"
-        : "aqb-ta-btn aqb-ta-btn--icon-only"
-    }
+    className="aqb-ta-btn"
     onClick={(e) => {
       e.preventDefault();
       onClick();
@@ -81,9 +77,10 @@ const ToolButton: React.FC<ToolButtonProps> = ({
     <span className="aqb-ta-icon" aria-hidden>
       {icon}
     </span>
-    {mobileLabel ? (
-      <span className="aqb-ta-label aqb-ta-label--mobile">{mobileLabel}</span>
-    ) : null}
+    <span className="aqb-ta-label aqb-ta-label--desktop">{label}</span>
+    <span className="aqb-ta-label aqb-ta-label--mobile">
+      {mobileLabel ?? label}
+    </span>
   </button>
 );
 

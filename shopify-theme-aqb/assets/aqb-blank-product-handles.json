@@ -1,0 +1,58 @@
+{
+  "rounded": {
+    "1h5x3": {
+      "white": "rounded-rectangle-1-5x3-white-copy",
+      "gold": "rounded-rectangle-1-5x3-white-copy-1",
+      "silv": "rounded-rectangle-1-5x3-brushed-silver",
+      "black": "rounded-rectangle-1-5x3-black",
+      "red": "rounded-rectangle-1-5x3-red",
+      "blue": "rounded-rectangle-1-5x3-blue"
+    },
+    "1x3": {
+      "white": "rounded-rectangle-1x3-white-1",
+      "gold": "rounded-rectangle-1x3-brushed-gold",
+      "silv": "rounded-rectangle-1x3-brushed-silver",
+      "black": "rounded-rectangle-1x3-black",
+      "red": "rounded-rectangle-1x3-red",
+      "blue": "rounded-rectangle-1x3-blue"
+    }
+  },
+  "oval": {
+    "1x3": {
+      "white": "oval-2-5x3-5-white",
+      "gold": "oval-1-5x3-5-brushed-gold",
+      "silv": "oval-1-5x3-5-brushed-silver",
+      "black": "oval-1-5x3-5-black",
+      "red": "oval-1-5x3-5-red",
+      "blue": "oval-1-5x3-5-blue"
+    }
+  },
+  "square": {
+    "1x3": {
+      "white": "square-corners-1x3-white",
+      "gold": "square-corners-1x3-brushed-gold",
+      "silv": "square-corners-1x3-brushed-gold-copy",
+      "black": "square-corners-1x3-black",
+      "red": "square-corners-1x3-black-copy",
+      "blue": "square-corners-1x3-red-copy"
+    },
+    "1h5x3": {
+      "blue": "square-corners-1-5x3-blue-copy",
+      "red": "square-corners-1-5x3-red",
+      "black": "square-corners-1-5x3-black",
+      "silv": "square-corners-1-5x3-brushed-silver",
+      "gold": "square-corners-1-5x3-brushed-silver-copy",
+      "white": "square-corners-1-5x3-white"
+    }
+  },
+  "designer": {
+    "1x3": {
+      "white": "designer-white",
+      "gold": "designer-brushed-gold",
+      "silv": "designer-brushed-silver",
+      "black": "designer-black",
+      "red": "designer-red",
+      "blue": "designer-blue"
+    }
+  }
+}
