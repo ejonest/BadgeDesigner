@@ -86,7 +86,7 @@ export default function BadgeDesignerRedesignRoute() {
   } = useLoaderData<typeof loader>();
 
   return (
-    <div className="min-h-screen bg-[#F0EDE6]">
+    <div className="min-h-screen h-full bg-[#F0EDE6]">
       <BadgeDesignerRedesign
         variant={designerVariant}
         productId={productId}

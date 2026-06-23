@@ -1873,3 +1873,20 @@
     gap: 7px;
   }
 }
+
+/* Shopify iframe embed — badge designer fills mobile viewport */
+@media (max-width: 767px) {
+  .aqb-redesign-root.aqb-embedded-mobile-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .aqb-redesign-root.aqb-embedded-mobile-shell .aqb-tool-shell {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
