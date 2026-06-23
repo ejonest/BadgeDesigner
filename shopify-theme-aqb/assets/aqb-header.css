@@ -52,7 +52,6 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  overflow: hidden;
 }
 
 .aqb-store-nav__logo {
@@ -101,7 +100,6 @@
   padding: 0;
   flex: 0 1 auto;
   min-width: 0;
-  overflow: hidden;
 }
 
 .aqb-store-nav__links > li {
@@ -167,6 +165,16 @@
 
 .aqb-store-nav__dropdown {
   position: relative;
+}
+
+/* overflow-x: clip on ancestors computes overflow-y to auto and hides panels below the bar */
+.shopify-section.aqb-header-section:has(.aqb-store-nav__dropdown.is-open),
+.aqb-store-nav:has(.aqb-store-nav__dropdown.is-open) {
+  overflow: visible;
+}
+
+.aqb-store-nav__dropdown.is-open {
+  z-index: 220;
 }
 
 /* Invisible bridge so the cursor can reach the panel without leaving the hover zone */
