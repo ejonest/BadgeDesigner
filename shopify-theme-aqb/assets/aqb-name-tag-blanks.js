@@ -1,10 +1,11 @@
 (function () {
   var shapeGrid = document.getElementById('blanks-shape-grid');
   var configPanel = document.getElementById('blanks-config');
-  var dataEl = document.getElementById('blanks-shape-data');
   var photoBaseEl = document.getElementById('blanks-photo-base');
   var photoConfigUrlEl = document.getElementById('blanks-photo-config-url');
-  if (!shapeGrid || !configPanel || !dataEl) return;
+  var handlesUrlEl = document.getElementById('blanks-handles-url');
+  var pricesUrlEl = document.getElementById('blanks-prices-url');
+  if (!shapeGrid || !configPanel) return;
 
   var assetBase = '';
   if (photoBaseEl && photoBaseEl.dataset.url) {
@@ -12,28 +13,21 @@
   }
 
   var photoCfg = null;
-
-  var shapes = [];
-  try {
-    shapes = JSON.parse(dataEl.textContent || '[]');
-  } catch (e) {
-    shapes = [];
-  }
-
-  var shapeMap = {};
-  shapes.forEach(function (entry) {
-    shapeMap[entry.shapeId] = entry;
-  });
+  var handlesCatalog = null;
+  var priceCatalog = null;
+  var productCache = {};
+  var productRequestId = 0;
 
   var state = {
     shapeId: 'rounded',
     shapeName: 'Rounded Rectangle',
-    product: shapeMap.rounded || null,
+    product: null,
     color: 'white',
     size: '1x3',
     back: 'adhesive',
     qty: 10,
-    variantId: null
+    variantId: null,
+    loading: false
   };
 
   var els = {
@@ -49,19 +43,6 @@
     change: document.getElementById('blanks-config-change'),
     addBtn: document.getElementById('blanks-add-btn'),
     addForm: document.getElementById('blanks-add-form')
-  };
-
-  var PRICES = {
-    '1x3': {
-      adhesive: { 10: 1.299, 25: 1.19, 50: 1.19, 100: 1.09, 250: 0.9 },
-      pin: { 10: 1.499, 25: 1.28, 50: 1.29, 100: 1.19, 250: 0.996 },
-      magnetic: { 10: 2.299, 25: 1.35, 50: 1.59, 100: 1.49, 250: 1.196 }
-    },
-    '1h5x3': {
-      adhesive: { 10: 1.499, 25: 1.3, 50: 1.29, 100: 1.19, 250: 0.98 },
-      pin: { 10: 1.699, 25: 1.4, 50: 1.39, 100: 1.29, 250: 1.076 },
-      magnetic: { 10: 2.499, 25: 1.46, 50: 1.69, 100: 1.59, 250: 1.276 }
-    }
   };
 
   var ALL_COLORS = [
@@ -94,32 +75,85 @@
     }
   };
 
-  var QTY_TIERS = [10, 25, 50, 100, 250];
-
-  var PACK_MAP = {
-    10: ['10 pack', '10-pack', '10 pk', 'pack of 10', '10 badges', '10 badge', '10 count'],
-    25: ['25 pack', '25-pack', '25 pk', 'pack of 25', '25 badges', '25 badge', '25 count'],
-    50: ['50 pack', '50-pack', '50 pk', 'pack of 50', '50 badges', '50 badge', '50 count'],
-    100: ['100 pack', '100-pack', '100 pk', 'pack of 100', '100 badges', '100 badge', '100 count'],
-    250: ['250 pack', '250-pack', '250 pk', 'pack of 250', '250 badges', '250 badge', '250 count']
-  };
-
-  function sizeKey() {
-    return state.size === '1h5x3' ? '1h5x3' : '1x3';
-  }
-
-  function tiersForState() {
-    var key = sizeKey();
-    return (PRICES[key] && PRICES[key][state.back]) || PRICES['1x3'].adhesive;
-  }
-
-  function unitPriceAmount() {
-    var tiers = tiersForState();
-    var unit = tiers[10];
-    QTY_TIERS.forEach(function (q) {
-      if (state.qty >= q) unit = tiers[q];
+  function displaySizeForShape(shapeId) {
+    var cfg = SHAPE_CONFIG[shapeId];
+    if (!cfg || !cfg.sizes.length) return '1x3';
+    var supported = cfg.sizes.some(function (s) {
+      return s.id === state.size;
     });
-    return unit;
+    return supported ? state.size : cfg.sizes[0].id;
+  }
+
+  function priceTier() {
+    var size = displaySizeForShape(state.shapeId);
+    if (state.shapeId === 'oval' || state.shapeId === 'designer' || size === '1h5x3') {
+      return 'large';
+    }
+    return 'standard';
+  }
+
+  function backingSlug(back) {
+    return (back || state.back) === 'magnetic' ? 'magnet' : (back || state.back);
+  }
+
+  function variantKeyFor(qty, back) {
+    return String(qty) + '-pack-' + backingSlug(back);
+  }
+
+  function resolveHandle() {
+    if (!handlesCatalog) return null;
+    var shapeEntry = handlesCatalog[state.shapeId];
+    if (!shapeEntry) return null;
+    var size = displaySizeForShape(state.shapeId);
+    var sizeEntry = shapeEntry[size];
+    if (!sizeEntry) return null;
+    return sizeEntry[state.color] || null;
+  }
+
+  function loadProduct(handle) {
+    if (!handle) return Promise.resolve(null);
+    if (productCache[handle]) return Promise.resolve(productCache[handle]);
+    return fetch('/products/' + encodeURIComponent(handle) + '.js')
+      .then(function (res) {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .then(function (product) {
+        if (product) productCache[handle] = product;
+        return product;
+      })
+      .catch(function () {
+        return null;
+      });
+  }
+
+  function findVariantForOptions(product, qty, back) {
+    var key = variantKeyFor(qty, back);
+    if (product && product.variants) {
+      var match = product.variants.find(function (variant) {
+        return variant.title === key || variant.public_title === key;
+      });
+      if (match) return match;
+    }
+
+    var tier = priceCatalog && priceCatalog[priceTier()];
+    if (tier && tier[key] != null) {
+      return {
+        title: key,
+        price: Math.round(Number(tier[key]) * 100),
+        available: true
+      };
+    }
+
+    return null;
+  }
+
+  function findVariant() {
+    return findVariantForOptions(state.product, state.qty, state.back);
+  }
+
+  function formatMoney(amount) {
+    return '$' + amount.toFixed(2);
   }
 
   function templateIdForShape(shapeId, size) {
@@ -147,8 +181,7 @@
     var wrap = img.parentElement;
     if (!wrap) return;
 
-    var aspect = c.widthNorm / c.heightNorm;
-    wrap.style.aspectRatio = String(aspect);
+    wrap.style.aspectRatio = String(c.widthNorm / c.heightNorm);
     wrap.style.width = '100%';
     wrap.style.height = 'auto';
     wrap.style.maxHeight = '100%';
@@ -158,98 +191,6 @@
     img.style.left = (-c.xNorm / c.widthNorm * 100) + '%';
     img.style.top = (-c.yNorm / c.heightNorm * 100) + '%';
     img.style.position = 'absolute';
-  }
-
-  function variantText(variant) {
-    return (variant.title + ' ' + (variant.options || []).join(' ')).toLowerCase();
-  }
-
-  function matchOption(variant, keywords) {
-    var text = variantText(variant);
-    return keywords.some(function (kw) {
-      return text.indexOf(kw) !== -1;
-    });
-  }
-
-  function packKeywords(packSize) {
-    var keywords = (PACK_MAP[packSize] || []).slice();
-    keywords.push(String(packSize));
-    return keywords;
-  }
-
-  function variantMatchesPack(variant, packSize) {
-    if (!variant || !packSize) return false;
-    return matchOption(variant, packKeywords(packSize));
-  }
-
-  function findVariant() {
-    if (!state.product || !state.product.variants.length) return null;
-    var variants = state.product.variants.filter(function (v) {
-      return v.available;
-    });
-    if (!variants.length) return state.product.variants[0];
-
-    var colorMap = {
-      white: ['white'],
-      gold: ['gold', 'brushed gold'],
-      silv: ['silver', 'brushed silver'],
-      black: ['black'],
-      blue: ['blue'],
-      red: ['red']
-    };
-    var backMap = {
-      adhesive: ['adhesive', 'stick'],
-      pin: ['pin'],
-      magnetic: ['magnetic', 'mag']
-    };
-    var sizeMap = {
-      '1x3': ['1 x 3', '1x3', '1" x 3', 'standard'],
-      '1h5x3': ['1.5', '1.5 x 3', '1.5x3', 'large']
-    };
-
-    var filtered = variants.slice();
-    if (state.color && colorMap[state.color]) {
-      var byColor = filtered.filter(function (v) {
-        return matchOption(v, colorMap[state.color]);
-      });
-      if (byColor.length) filtered = byColor;
-    }
-    if (state.back && backMap[state.back]) {
-      var byBack = filtered.filter(function (v) {
-        return matchOption(v, backMap[state.back]);
-      });
-      if (byBack.length) filtered = byBack;
-    }
-    if (state.size && sizeMap[state.size]) {
-      var bySize = filtered.filter(function (v) {
-        return matchOption(v, sizeMap[state.size]);
-      });
-      if (bySize.length) filtered = bySize;
-    }
-    if (state.qty) {
-      var byPack = filtered.filter(function (v) {
-        return variantMatchesPack(v, state.qty);
-      });
-      if (byPack.length) filtered = byPack;
-    }
-    return filtered[0] || variants[0];
-  }
-
-  function findVariantForPack(packSize) {
-    var prevQty = state.qty;
-    state.qty = packSize;
-    var variant = findVariant();
-    state.qty = prevQty;
-    return variant;
-  }
-
-  function displaySizeForShape(shapeId) {
-    var cfg = SHAPE_CONFIG[shapeId];
-    if (!cfg || !cfg.sizes.length) return '1x3';
-    var supported = cfg.sizes.some(function (s) {
-      return s.id === state.size;
-    });
-    return supported ? state.size : cfg.sizes[0].id;
   }
 
   function updateAllShapePhotos() {
@@ -274,56 +215,68 @@
     });
   }
 
+  function setBackingSelection(back) {
+    if (!els.backOpts) return;
+    els.backOpts.querySelectorAll('.aqb-bl-back-opt').forEach(function (el) {
+      el.classList.toggle('sel', el.dataset.back === back);
+    });
+  }
+
+  function setQtySelection(qty) {
+    if (!els.qtyOpts) return;
+    els.qtyOpts.querySelectorAll('.aqb-bl-qty-opt').forEach(function (el) {
+      el.classList.toggle('sel', parseInt(el.dataset.qty, 10) === qty);
+    });
+  }
+
   function updateQtyLabels() {
     if (!els.qtyOpts) return;
-    var tiers = tiersForState();
-    QTY_TIERS.forEach(function (q) {
-      var btn = els.qtyOpts.querySelector('[data-qty="' + q + '"]');
-      if (!btn) return;
+    els.qtyOpts.querySelectorAll('.aqb-bl-qty-opt').forEach(function (btn) {
+      var qty = parseInt(btn.dataset.qty, 10);
       var label = btn.querySelector('.aqb-bl-qty-opt__e');
-      if (!label) return;
-      var packVariant = findVariantForPack(q);
-      if (packVariant && packVariant.price && variantMatchesPack(packVariant, q)) {
-        var unit = packVariant.price / 100 / q;
-        label.textContent = '$' + unit.toFixed(2) + ' ea';
-      } else if (tiers[q]) {
-        label.textContent = '$' + tiers[q].toFixed(2) + ' ea';
+      if (!label || !qty) return;
+      var variant = findVariantForOptions(state.product, qty, state.back);
+      if (variant && variant.price) {
+        label.textContent = formatMoney(variant.price / 100 / qty) + ' ea';
       }
     });
   }
 
   function refreshPrice() {
     var variant = findVariant();
-    var packVariant = variant && variantMatchesPack(variant, state.qty);
-    state.variantId = variant ? variant.id : null;
-    if (els.variantId) els.variantId.value = state.variantId || '';
-    if (els.cartQty) els.cartQty.value = packVariant ? '1' : String(state.qty);
+    var expectedKey = variantKeyFor(state.qty, state.back);
+    var hasPackVariant = !!(variant && variant.title === expectedKey && variant.id);
+    state.variantId = hasPackVariant ? variant.id : null;
 
-    var unit;
-    var total;
-    if (packVariant && variant.price) {
+    if (els.variantId) els.variantId.value = state.variantId || '';
+    if (els.cartQty) els.cartQty.value = '1';
+
+    var total = 0;
+    var unit = 0;
+    if (variant && variant.price) {
       total = variant.price / 100;
       unit = total / state.qty;
-    } else {
-      unit = unitPriceAmount();
-      total = unit * state.qty;
     }
 
-    if (els.price) els.price.textContent = '$' + total.toFixed(2);
+    if (els.price) {
+      els.price.textContent = state.loading ? '…' : (total ? formatMoney(total) : '—');
+    }
 
     updateQtyLabels();
     updateAllShapePhotos();
 
     if (els.saving) {
-      if (state.qty >= 25) {
-        var tiers = tiersForState();
-        var base = packVariant && findVariantForPack(10) && variantMatchesPack(findVariantForPack(10), 10)
-          ? findVariantForPack(10).price / 100 / 10
-          : tiers[10];
-        var saved = ((base - unit) * state.qty).toFixed(2);
-        if (parseFloat(saved) > 0) {
-          els.saving.textContent = 'Saving $' + saved + ' vs 10-pack pricing';
-          els.saving.hidden = false;
+      if (variant && variant.price && state.qty > 10) {
+        var tenVariant = findVariantForOptions(state.product, 10, state.back);
+        if (tenVariant && tenVariant.price) {
+          var tenUnit = tenVariant.price / 100 / 10;
+          var saved = ((tenUnit * state.qty) - total).toFixed(2);
+          if (parseFloat(saved) > 0) {
+            els.saving.textContent = 'Saving $' + saved + ' vs 10-pack pricing';
+            els.saving.hidden = false;
+          } else {
+            els.saving.hidden = true;
+          }
         } else {
           els.saving.hidden = true;
         }
@@ -333,11 +286,30 @@
     }
 
     if (els.addBtn) {
-      els.addBtn.disabled = !state.variantId;
-      els.addBtn.textContent = packVariant
-        ? 'Add ' + state.qty + '-Pack to Cart →'
-        : 'Add to Cart →';
+      var ready = !!state.variantId && !state.loading;
+      els.addBtn.disabled = !ready;
+      if (state.loading) {
+        els.addBtn.textContent = 'Loading…';
+      } else if (ready) {
+        els.addBtn.textContent = 'Add ' + state.qty + '-Pack to Cart →';
+      } else {
+        els.addBtn.textContent = 'Add to Cart →';
+      }
     }
+  }
+
+  function syncProduct() {
+    var handle = resolveHandle();
+    var requestId = ++productRequestId;
+    state.loading = true;
+    refreshPrice();
+
+    return loadProduct(handle).then(function (product) {
+      if (requestId !== productRequestId) return;
+      state.product = product;
+      state.loading = false;
+      refreshPrice();
+    });
   }
 
   function renderColors() {
@@ -362,7 +334,7 @@
         });
         btn.classList.add('sel');
         state.color = c.id;
-        refreshPrice();
+        syncProduct();
       });
       els.colOpts.appendChild(btn);
     });
@@ -388,7 +360,7 @@
         });
         btn.classList.add('sel');
         state.size = s.id;
-        refreshPrice();
+        syncProduct();
       });
       els.sizeOpts.appendChild(btn);
     });
@@ -397,7 +369,6 @@
   function selectShape(shapeId, shapeName) {
     state.shapeId = shapeId;
     state.shapeName = shapeName;
-    state.product = shapeMap[shapeId] || null;
     if (els.name) els.name.textContent = shapeName;
 
     var cfg = SHAPE_CONFIG[shapeId] || SHAPE_CONFIG.rounded;
@@ -409,7 +380,7 @@
     });
 
     configPanel.classList.remove('aqb-bl-hidden');
-    refreshPrice();
+    syncProduct();
   }
 
   function clearShape() {
@@ -441,11 +412,8 @@
     if (els.backOpts) {
       els.backOpts.querySelectorAll('.aqb-bl-back-opt').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          els.backOpts.querySelectorAll('.aqb-bl-back-opt').forEach(function (el) {
-            el.classList.remove('sel');
-          });
-          btn.classList.add('sel');
           state.back = btn.dataset.back;
+          setBackingSelection(state.back);
           refreshPrice();
         });
       });
@@ -454,11 +422,8 @@
     if (els.qtyOpts) {
       els.qtyOpts.querySelectorAll('.aqb-bl-qty-opt').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          els.qtyOpts.querySelectorAll('.aqb-bl-qty-opt').forEach(function (el) {
-            el.classList.remove('sel');
-          });
-          btn.classList.add('sel');
           state.qty = parseInt(btn.dataset.qty, 10) || 10;
+          setQtySelection(state.qty);
           refreshPrice();
         });
       });
@@ -466,11 +431,8 @@
 
     if (els.addForm) {
       els.addForm.addEventListener('submit', function (e) {
-        if (!state.variantId) {
+        if (!state.variantId || state.loading) {
           e.preventDefault();
-          if (state.product && state.product.url) {
-            window.location.href = state.product.url;
-          }
         }
       });
     }
@@ -484,19 +446,27 @@
     }
   }
 
-  var configUrl = photoConfigUrlEl && photoConfigUrlEl.dataset.url;
-  if (configUrl) {
-    fetch(configUrl)
+  function loadConfig(url) {
+    return fetch(url)
       .then(function (res) {
         return res.json();
       })
-      .then(function (cfg) {
-        photoCfg = cfg;
-        boot();
-      })
       .catch(function () {
-        boot();
+        return null;
       });
+  }
+
+  var handlesUrl = handlesUrlEl && handlesUrlEl.dataset.url;
+  var photoUrlConfig = photoConfigUrlEl && photoConfigUrlEl.dataset.url;
+  var pricesUrl = pricesUrlEl && pricesUrlEl.dataset.url;
+  var pending = [];
+
+  if (handlesUrl) pending.push(loadConfig(handlesUrl).then(function (cfg) { handlesCatalog = cfg; }));
+  if (photoUrlConfig) pending.push(loadConfig(photoUrlConfig).then(function (cfg) { photoCfg = cfg; }));
+  if (pricesUrl) pending.push(loadConfig(pricesUrl).then(function (cfg) { priceCatalog = cfg; }));
+
+  if (pending.length) {
+    Promise.all(pending).then(boot);
   } else {
     boot();
   }

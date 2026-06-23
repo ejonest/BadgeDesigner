@@ -1,0 +1,36 @@
+{
+  "standard": {
+    "10-pack-pin": 14.99,
+    "10-pack-adhesive": 12.99,
+    "10-pack-magnet": 22.99,
+    "25-pack-pin": 32.0,
+    "25-pack-adhesive": 29.75,
+    "25-pack-magnet": 33.75,
+    "50-pack-pin": 64.5,
+    "50-pack-adhesive": 59.5,
+    "50-pack-magnet": 79.5,
+    "100-pack-pin": 119.0,
+    "100-pack-adhesive": 109.0,
+    "100-pack-magnet": 149.0,
+    "250-pack-pin": 249.0,
+    "250-pack-adhesive": 225.0,
+    "250-pack-magnet": 299.0
+  },
+  "large": {
+    "10-pack-pin": 16.99,
+    "10-pack-adhesive": 14.99,
+    "10-pack-magnet": 24.99,
+    "25-pack-pin": 35.0,
+    "25-pack-adhesive": 32.5,
+    "25-pack-magnet": 36.5,
+    "50-pack-pin": 69.5,
+    "50-pack-adhesive": 64.5,
+    "50-pack-magnet": 84.5,
+    "100-pack-pin": 129.0,
+    "100-pack-adhesive": 119.0,
+    "100-pack-magnet": 159.0,
+    "250-pack-pin": 269.0,
+    "250-pack-adhesive": 245.0,
+    "250-pack-magnet": 319.0
+  }
+}

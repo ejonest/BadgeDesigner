@@ -31,8 +31,6 @@ const PreviewActionButton: React.FC<PreviewActionButtonProps> = ({
   <button
     type="button"
     className={`aqb-ta-btn${
-      mobileLabel ? " aqb-ta-btn--mobile-inline" : " aqb-ta-btn--icon-only"
-    }${
       danger ? " aqb-ta-btn--danger" : duplicate ? " aqb-ta-btn--duplicate" : ""
     }`}
     onClick={(e) => {
@@ -45,9 +43,10 @@ const PreviewActionButton: React.FC<PreviewActionButtonProps> = ({
     <span className="aqb-ta-icon" aria-hidden>
       {icon}
     </span>
-    {mobileLabel ? (
-      <span className="aqb-ta-label aqb-ta-label--mobile">{mobileLabel}</span>
-    ) : null}
+    <span className="aqb-ta-label aqb-ta-label--desktop">{label}</span>
+    <span className="aqb-ta-label aqb-ta-label--mobile">
+      {mobileLabel ?? label}
+    </span>
   </button>
 );
 

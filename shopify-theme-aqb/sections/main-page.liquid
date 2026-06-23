@@ -20,7 +20,24 @@
     {{ page.title | escape }}
   </h1>
   <div class="rte{% if settings.animations_reveal_on_scroll %} scroll-trigger animate--slide-in{% endif %}">
-    {{ page.content }}
+    {%- if page.handle == 'shipping-delivery-1' -%}
+      {%- capture aqb_intl_customers_block -%}
+<div class="vc_column_container col-md-6">
+<div class="wpb_wrapper vc_column-inner">
+<div class="porto-u-heading" data-hspacer="no_spacer" data-halign="left">
+<div class="porto-u-main-heading">
+<h3></h3>
+<h3>INTERNATIONAL CUSTOMERS</h3>
+</div>
+<div class="porto-u-sub-heading">We charge a flat rate of $22.50 for international shipping.</div>
+</div>
+</div>
+</div>
+      {%- endcapture -%}
+      {{ page.content | remove: aqb_intl_customers_block }}
+    {%- else -%}
+      {{ page.content }}
+    {%- endif -%}
   </div>
 </div>
 {%- endunless -%}

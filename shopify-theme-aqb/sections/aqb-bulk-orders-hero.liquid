@@ -45,10 +45,12 @@
         <p>{{ section.settings.panel_text | escape }}</p>
       {%- endif -%}
       <div class="aqb-bo-hero__panel-steps">
+        {%- assign step_num = 0 -%}
         {%- for block in section.blocks -%}
           {%- if block.type == 'step' -%}
+            {%- assign step_num = step_num | plus: 1 -%}
             <div class="aqb-bo-hero__panel-step" {{ block.shopify_attributes }}>
-              <span class="aqb-bo-hero__panel-num">{{ forloop.index }}</span>
+              <span class="aqb-bo-hero__panel-num">{{ step_num }}</span>
               <span>{{ block.settings.text | escape }}</span>
             </div>
           {%- endif -%}

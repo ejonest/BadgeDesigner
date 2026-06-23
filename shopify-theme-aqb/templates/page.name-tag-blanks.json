@@ -1,14 +1,48 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
   "sections": {
     "hero": {
       "type": "aqb-blanks-hero",
       "blocks": {
-        "trust_1": { "type": "trust_point", "settings": { "label": "From $0.28 per badge" } },
-        "trust_2": { "type": "trust_point", "settings": { "label": "Packs of 10–250" } },
-        "trust_3": { "type": "trust_point", "settings": { "label": "Free USA shipping" } },
-        "trust_4": { "type": "trust_point", "settings": { "label": "Ships in 2 days" } }
+        "trust_1": {
+          "type": "trust_point",
+          "settings": {
+            "label": "From $0.28 per badge"
+          }
+        },
+        "trust_2": {
+          "type": "trust_point",
+          "settings": {
+            "label": "Packs of 10–250"
+          }
+        },
+        "trust_3": {
+          "type": "trust_point",
+          "settings": {
+            "label": "Free USA shipping"
+          }
+        },
+        "trust_4": {
+          "type": "trust_point",
+          "settings": {
+            "label": "Ships in 2 days"
+          }
+        }
       },
-      "block_order": ["trust_1", "trust_2", "trust_3", "trust_4"],
+      "block_order": [
+        "trust_1",
+        "trust_2",
+        "trust_3",
+        "trust_4"
+      ],
       "settings": {
         "eyebrow": "Blank Name Tags & Badge Blanks",
         "heading": "High-quality blanks,<br><em>ready to personalize.</em>",
@@ -17,6 +51,7 @@
         "primary_link": "#shop",
         "secondary_label": "Bulk Orders",
         "secondary_link": "#bulk",
+        "hero_image": "shopify://shop_images/download_7.jpg",
         "hero_image_asset": "aqb-cat-banner-blanks.png",
         "hero_image_alt": "Blank name tag badges in multiple colors"
       }
@@ -24,12 +59,45 @@
     "trust_bar": {
       "type": "aqb-blanks-trust-bar",
       "blocks": {
-        "item_1": { "type": "item", "settings": { "emoji": "🎨", "title": "6 Colors", "subtitle": "White, gold, silver, black, blue, red" } },
-        "item_2": { "type": "item", "settings": { "emoji": "📐", "title": "4 Shapes", "subtitle": "Rounded, oval, square corners, designer" } },
-        "item_3": { "type": "item", "settings": { "emoji": "🧲", "title": "3 Backing Types", "subtitle": "Magnetic, pin or adhesive" } },
-        "item_4": { "type": "item", "settings": { "emoji": "📦", "title": "Pack sizes", "subtitle": "10, 25, 50, 100 or 250 badges per pack" } }
+        "item_1": {
+          "type": "item",
+          "settings": {
+            "emoji": "🎨",
+            "title": "6 Colors",
+            "subtitle": "White, gold, silver, black, blue, red"
+          }
+        },
+        "item_2": {
+          "type": "item",
+          "settings": {
+            "emoji": "📐",
+            "title": "4 Shapes",
+            "subtitle": "Rounded, oval, square corners, designer"
+          }
+        },
+        "item_3": {
+          "type": "item",
+          "settings": {
+            "emoji": "🧲",
+            "title": "3 Backing Types",
+            "subtitle": "Magnetic, pin or adhesive"
+          }
+        },
+        "item_4": {
+          "type": "item",
+          "settings": {
+            "emoji": "📦",
+            "title": "Pack sizes",
+            "subtitle": "10, 25, 50, 100 or 250 badges per pack"
+          }
+        }
       },
-      "block_order": ["item_1", "item_2", "item_3", "item_4"],
+      "block_order": [
+        "item_1",
+        "item_2",
+        "item_3",
+        "item_4"
+      ],
       "settings": {}
     },
     "shop": {
@@ -42,6 +110,7 @@
             "title": "Rounded Rectangle",
             "description": "The classic name tag. Clean, professional, fits any setting.",
             "from_price": "From $12.99 / 10-pack",
+            "product": "",
             "image_asset": "aqb-blank-shape-rounded.jpg"
           }
         },
@@ -52,6 +121,7 @@
             "title": "Oval",
             "description": "Elegant and distinctive. Popular for hospitality and premium brands.",
             "from_price": "From $12.99 / 10-pack",
+            "product": "",
             "image_asset": "aqb-blank-shape-oval.jpg"
           }
         },
@@ -62,6 +132,7 @@
             "title": "Square Corners",
             "description": "Sharp, modern look. Great for corporate teams and trade shows.",
             "from_price": "From $12.99 / 10-pack",
+            "product": "",
             "image_asset": "aqb-blank-shape-square.jpg"
           }
         },
@@ -72,11 +143,17 @@
             "title": "Designer",
             "description": "Decorative flourished shape. Ideal for hospitality and events.",
             "from_price": "From $12.99 / 10-pack",
+            "product": "",
             "image_asset": "aqb-blank-shape-designer.jpg"
           }
         }
       },
-      "block_order": ["shape_rounded", "shape_oval", "shape_square", "shape_designer"],
+      "block_order": [
+        "shape_rounded",
+        "shape_oval",
+        "shape_square",
+        "shape_designer"
+      ],
       "settings": {
         "eyebrow": "Blank badges in minutes",
         "heading": "Stock up fast. <em>No design needed.</em>",
@@ -86,11 +163,39 @@
     "lifestyle": {
       "type": "aqb-blanks-lifestyle",
       "blocks": {
-        "photo_1": { "type": "photo", "settings": { "image_asset": "aqb-cat-banner-blanks.png", "label": "Designer shape", "title": "Professional & distinctive" } },
-        "photo_2": { "type": "photo", "settings": { "image_asset": "aqb-tile-blank-name-tags.png", "label": "Oval · Brushed Gold", "title": "Elegant for hospitality & hotels" } },
-        "photo_3": { "type": "photo", "settings": { "image_asset": "aqb-cat-banner-blanks.png", "label": "Oval · Red", "title": "Events & conference registration" } }
+        "photo_1": {
+          "type": "photo",
+          "settings": {
+            "image": "shopify://shop_images/download_4.jpg",
+            "image_asset": "aqb-cat-banner-blanks.png",
+            "label": "Designer shape",
+            "title": "Professional & distinctive"
+          }
+        },
+        "photo_2": {
+          "type": "photo",
+          "settings": {
+            "image": "shopify://shop_images/download_5.jpg",
+            "image_asset": "aqb-tile-blank-name-tags.png",
+            "label": "Oval · Brushed Gold",
+            "title": "Elegant for hospitality & hotels"
+          }
+        },
+        "photo_3": {
+          "type": "photo",
+          "settings": {
+            "image": "shopify://shop_images/download_6.jpg",
+            "image_asset": "aqb-cat-banner-blanks.png",
+            "label": "Oval · Red",
+            "title": "Events & conference registration"
+          }
+        }
       },
-      "block_order": ["photo_1", "photo_2", "photo_3"],
+      "block_order": [
+        "photo_1",
+        "photo_2",
+        "photo_3"
+      ],
       "settings": {
         "eyebrow": "In use",
         "heading": "Blanks in the <em>real world.</em>"
@@ -99,11 +204,42 @@
     "backing": {
       "type": "aqb-blanks-backing",
       "blocks": {
-        "back_1": { "type": "backing", "settings": { "emoji": "🔲", "title": "Adhesive", "description": "Peel-and-stick. Ideal for events, conferences and one-time use.", "price_note": "Included in base price", "badge": "Best for events" } },
-        "back_2": { "type": "backing", "settings": { "emoji": "📌", "title": "Pin Backing", "description": "Classic metal pin. Works on thicker fabrics and lapels. Long-lasting and reusable.", "price_note": "+$0.50 per badge", "badge": "Best for daily wear" } },
-        "back_3": { "type": "backing", "settings": { "emoji": "🧲", "title": "Magnetic Backing", "description": "Strong neodymium magnets. No holes in uniforms, scrubs or delicate fabrics.", "price_note": "From +$0.30 per badge", "badge": "Best for uniforms" } }
+        "back_1": {
+          "type": "backing",
+          "settings": {
+            "emoji": "🔲",
+            "title": "Adhesive",
+            "description": "Peel-and-stick. Ideal for events, conferences and one-time use.",
+            "price_note": "Included in base price",
+            "badge": "Best for events"
+          }
+        },
+        "back_2": {
+          "type": "backing",
+          "settings": {
+            "emoji": "📌",
+            "title": "Pin Backing",
+            "description": "Classic metal pin. Works on thicker fabrics and lapels. Long-lasting and reusable.",
+            "price_note": "+$0.50 per badge",
+            "badge": "Best for daily wear"
+          }
+        },
+        "back_3": {
+          "type": "backing",
+          "settings": {
+            "emoji": "🧲",
+            "title": "Magnetic Backing",
+            "description": "Strong neodymium magnets. No holes in uniforms, scrubs or delicate fabrics.",
+            "price_note": "From +$0.30 per badge",
+            "badge": "Best for uniforms"
+          }
+        }
       },
-      "block_order": ["back_1", "back_2", "back_3"],
+      "block_order": [
+        "back_1",
+        "back_2",
+        "back_3"
+      ],
       "settings": {
         "eyebrow": "Backing options",
         "heading": "Choose how they <em>attach.</em>"
@@ -112,12 +248,37 @@
     "bulk": {
       "type": "aqb-blanks-bulk",
       "blocks": {
-        "point_1": { "type": "point", "settings": { "text": "From $0.28 per badge at 250+ (adhesive)" } },
-        "point_2": { "type": "point", "settings": { "text": "Same batch quality every order — US manufactured" } },
-        "point_3": { "type": "point", "settings": { "text": "All colors, shapes and backing options available" } },
-        "point_4": { "type": "point", "settings": { "text": "Free USA shipping on every order" } }
+        "point_1": {
+          "type": "point",
+          "settings": {
+            "text": "From $0.28 per badge at 250+ (adhesive)"
+          }
+        },
+        "point_2": {
+          "type": "point",
+          "settings": {
+            "text": "Same batch quality every order — US manufactured"
+          }
+        },
+        "point_3": {
+          "type": "point",
+          "settings": {
+            "text": "All colors, shapes and backing options available"
+          }
+        },
+        "point_4": {
+          "type": "point",
+          "settings": {
+            "text": "Free USA shipping on every order"
+          }
+        }
       },
-      "block_order": ["point_1", "point_2", "point_3", "point_4"],
+      "block_order": [
+        "point_1",
+        "point_2",
+        "point_3",
+        "point_4"
+      ],
       "settings": {
         "eyebrow": "Trade & bulk orders",
         "heading": "Ordering 250<br><em>or more?</em>",
@@ -132,5 +293,12 @@
       }
     }
   },
-  "order": ["hero", "trust_bar", "shop", "lifestyle", "backing", "bulk"]
+  "order": [
+    "hero",
+    "trust_bar",
+    "shop",
+    "lifestyle",
+    "backing",
+    "bulk"
+  ]
 }
