@@ -1895,18 +1895,20 @@
     min-height: 0;
   }
 
-  .aqb-redesign-root.aqb-embedded-mobile-shell .aqb-tool-shell--embedded-mobile {
-    -webkit-overflow-scrolling: touch;
+  .aqb-redesign-root .aqb-mobile-badge-preview-dock {
+    flex-shrink: 0;
+    z-index: 20;
   }
 
-  .aqb-redesign-root.aqb-embedded-mobile-shell
-    .aqb-tool-shell--embedded-mobile
-    .aqb-left-panel,
-  .aqb-redesign-root.aqb-embedded-mobile-shell
-    .aqb-tool-shell--embedded-mobile
-    .section-container {
-    flex: none;
-    min-height: auto;
-    overflow: visible;
+  .aqb-redesign-root .aqb-mobile-badge-preview-dock > .overflow-hidden.rounded-lg {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: none;
+  }
+
+  .aqb-redesign-root .aqb-mobile-badge-editor-tools {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: none;
   }
 }

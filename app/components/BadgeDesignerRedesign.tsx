@@ -2858,8 +2858,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const mobileEditorScrollRef = useRef<HTMLDivElement | null>(null);
   const [mobileEditorScrollEl, setMobileEditorScrollEl] =
     useState<HTMLDivElement | null>(null);
-  const [mobileChromeScrollEl, setMobileChromeScrollEl] =
-    useState<HTMLDivElement | null>(null);
 
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   useEffect(() => {
@@ -2876,7 +2874,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   useEmbeddedMobileStoreChrome(
     embeddedMobileBadgeShell,
-    embeddedMobileBadgeShell ? mobileChromeScrollEl : mobileEditorScrollEl,
+    mobileEditorScrollEl,
   );
 
   /** Stable design id for this session; used for incremental draft saves and add-to-cart. */
@@ -2970,6 +2968,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     delay: number = 350,
   ) => {
     if (!element) return;
+    if (isMobileViewport && variant === "badge") return;
 
     setTimeout(() => {
       if (!element) return;
@@ -8325,25 +8324,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         </div>
       ) : null}
       <div
-        ref={(node) => {
-          if (embeddedMobileBadgeShell) {
-            setMobileChromeScrollEl(node);
-          }
-        }}
         className={`aqb-tool-shell flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_420px] md:items-start mx-auto max-w-[1320px] w-full min-h-0 overflow-hidden md:h-auto md:min-h-[560px] md:overflow-visible ${
           variant === "badge"
             ? storeChromeless
               ? embeddedMobileBadgeShell
-                ? "aqb-tool-shell--embedded-mobile max-md:gap-2 max-md:h-full max-md:flex-1 max-md:overflow-y-auto max-md:overflow-x-hidden gap-5 px-4 md:px-10 max-md:pt-2 pt-4 pb-0 md:pb-8 lg:pb-10"
+                ? "max-md:gap-2 max-md:h-full max-md:flex-1 max-md:overflow-hidden gap-5 px-4 md:px-10 max-md:pt-2 pt-4 pb-0 md:pb-8 lg:pb-10"
                 : "max-md:gap-2 gap-5 px-4 md:px-10 max-md:pt-2 pt-4 pb-0 md:pb-8 lg:pb-10 h-screen"
               : "max-md:gap-2 gap-5 px-4 md:px-10 max-md:pt-2 pt-5 pb-0 md:pb-10 lg:pb-12 h-screen"
             : "gap-5 px-4 md:px-8 h-screen md:h-auto"
         }`}
       >
-        {/* MOBILE: Header + preview fixed at top; editor scrolls below (embedded: all scroll together) */}
+        {/* MOBILE: badge preview docked at top; editor scrolls below */}
         <div
-          className={`md:hidden flex flex-col ${
-            embeddedMobileBadgeShell ? "" : "flex-shrink-0"
+          className={`md:hidden flex flex-col flex-shrink-0 ${
+            variant === "badge" ? "aqb-mobile-badge-preview-dock" : ""
           }`}
         >
           {/* Header: page title (hidden when Shopify store chrome shows it) */}
@@ -8376,7 +8370,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 }
               />
             ) : null}
-            <AqbPreviewActionsRow {...previewActionsRowProps} />
+            {variant !== "badge" ? (
+              <AqbPreviewActionsRow {...previewActionsRowProps} />
+            ) : null}
 
             <div
               className={`w-full flex items-center justify-center relative select-none overflow-hidden ${
@@ -8496,7 +8492,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               )}
             </div>
             </div>
-            {aqbBadgeToolActions ? (
+            {aqbBadgeToolActions && variant !== "badge" ? (
               <div className="shrink-0 md:hidden">{aqbBadgeToolActions}</div>
             ) : null}
           </div>
@@ -8506,9 +8502,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         <div
           className={`aqb-left-panel w-full md:min-w-0 flex-1 min-h-0 md:max-h-[calc(100vh-48px)] md:self-start rounded-xl border border-[rgba(13,27,42,0.1)] bg-white shadow-[0_2px_12px_rgba(13,27,42,0.06)] flex flex-col ${
             variant === "badge"
-              ? embeddedMobileBadgeShell
-                ? "max-md:overflow-visible overflow-y-auto md:overflow-y-auto"
-                : "max-md:overflow-hidden overflow-y-auto md:overflow-y-auto"
+              ? "max-md:overflow-hidden overflow-y-auto md:overflow-y-auto"
               : "overflow-y-auto"
           }`}
         >
@@ -8912,12 +8906,19 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             }}
             className={`section-container flex-1 min-h-0 ${
               variant === "badge"
-                ? embeddedMobileBadgeShell
-                  ? "mb-0 min-w-0 max-md:overflow-visible px-0 md:overflow-visible"
-                  : "mb-0 min-w-0 max-md:overflow-y-auto px-0 md:overflow-visible"
+                ? "mb-0 min-w-0 max-md:overflow-y-auto px-0 md:overflow-visible"
                 : "mb-4 px-4 md:px-5"
             }`}
           >
+            {variant === "badge" ? (
+              <div className="aqb-mobile-badge-editor-tools md:hidden overflow-hidden rounded-lg border border-[rgba(13,27,42,0.1)] bg-white mb-2">
+                <AqbPreviewActionsRow {...previewActionsRowProps} />
+                {aqbBadgeToolActions ? (
+                  <div className="shrink-0">{aqbBadgeToolActions}</div>
+                ) : null}
+              </div>
+            ) : null}
+
             {/* <button
               className="px-2 py-1 text-xs border rounded bg-gray-100 hover:bg-gray-200"
               onClick={() => {
