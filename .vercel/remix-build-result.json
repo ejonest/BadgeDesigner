@@ -11,6 +11,7 @@
     },
     "routeIdToServerBundleId": {
       "routes/api.delete-plaque-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.dev.badge-photo-calibrate.save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.delete-badge-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-plaque-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.delete-sign-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -22,6 +23,7 @@
       "routes/api.link-order-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.supabase-update-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/dev.badge-photo-calibrate": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-plaque-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -82,6 +84,15 @@
         "file": "app/routes/api.delete-plaque-design-milestone.tsx",
         "id": "routes/api.delete-plaque-design-milestone",
         "path": "api/delete-plaque-design-milestone",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.dev.badge-photo-calibrate.save": {
+        "file": "app/routes/api.dev.badge-photo-calibrate.save.tsx",
+        "id": "routes/api.dev.badge-photo-calibrate.save",
+        "path": "api/dev/badge-photo-calibrate/save",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -181,6 +192,15 @@
         "file": "app/routes/api.supabase-update-badge.tsx",
         "id": "routes/api.supabase-update-badge",
         "path": "api/supabase-update-badge",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/dev.badge-photo-calibrate": {
+        "file": "app/routes/dev.badge-photo-calibrate.tsx",
+        "id": "routes/dev.badge-photo-calibrate",
+        "path": "dev/badge-photo-calibrate",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -647,6 +667,12 @@
         "path": "api/delete-plaque-design-milestone",
         "parentId": "root"
       },
+      "routes/api.dev.badge-photo-calibrate.save": {
+        "file": "routes/api.dev.badge-photo-calibrate.save.tsx",
+        "id": "routes/api.dev.badge-photo-calibrate.save",
+        "path": "api/dev/badge-photo-calibrate/save",
+        "parentId": "root"
+      },
       "routes/api.delete-badge-design-milestone": {
         "file": "routes/api.delete-badge-design-milestone.tsx",
         "id": "routes/api.delete-badge-design-milestone",
@@ -711,6 +737,12 @@
         "file": "routes/api.supabase-update-badge.tsx",
         "id": "routes/api.supabase-update-badge",
         "path": "api/supabase-update-badge",
+        "parentId": "root"
+      },
+      "routes/dev.badge-photo-calibrate": {
+        "file": "routes/dev.badge-photo-calibrate.tsx",
+        "id": "routes/dev.badge-photo-calibrate",
+        "path": "dev/badge-photo-calibrate",
         "parentId": "root"
       },
       "routes/api.autosave-sign-design": {

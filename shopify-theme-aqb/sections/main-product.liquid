@@ -46,12 +46,14 @@
       padding-top: 0 !important;
       padding-bottom: 0 !important;
     }
-    .main-product--badge-designer .badge-designer-iframe-outer iframe,
-    .main-product--badge-designer .badge-designer-iframe-outer > div {
-      min-height: 100vh !important;
-    }
-    .main-product--badge-designer .badge-designer-iframe-outer iframe {
-      height: 100vh !important;
+    @media screen and (min-width: 990px) {
+      .main-product--badge-designer .badge-designer-iframe-outer iframe,
+      .main-product--badge-designer .badge-designer-iframe-outer > div {
+        min-height: 100vh !important;
+      }
+      .main-product--badge-designer .badge-designer-iframe-outer iframe {
+        height: 100vh !important;
+      }
     }
     {%- endif -%}
   {%- endstyle -%}

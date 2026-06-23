@@ -104,6 +104,17 @@
 
       if (data.action === 'design-saved') {
         console.log('Design saved:', data.payload);
+        return;
+      }
+
+      if (data.action === 'designer-chrome') {
+        if (document.documentElement.classList.contains('aqb-nav-drawer-open')) {
+          return;
+        }
+        document.documentElement.classList.toggle(
+          'aqb-designer-chrome-collapsed',
+          !!data.collapsed
+        );
       }
     });
   })();

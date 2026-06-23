@@ -157,6 +157,7 @@ import {
   generateThumbnailFromFullImage,
 } from "../utils/badgeThumbnail";
 import { getCurrentShop, type ShopAuthData } from "../utils/shopAuth";
+import { useEmbeddedMobileStoreChrome } from "../utils/embeddedStoreChrome";
 import { getDesignLibraryDummyAuth } from "../utils/designLibraryDummyAuth";
 import {
   CLOUD_LIBRARY_LOGIN_HINT_DISMISSED_KEY,
@@ -2847,6 +2848,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const textLinesSectionRef = useRef<HTMLDivElement | null>(null);
   const backingSectionRef = useRef<HTMLDivElement | null>(null);
   const borderSectionRef = useRef<HTMLButtonElement | null>(null);
+  const mobileEditorScrollRef = useRef<HTMLDivElement | null>(null);
+  const [mobileEditorScrollEl, setMobileEditorScrollEl] =
+    useState<HTMLDivElement | null>(null);
 
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   useEffect(() => {
@@ -2857,6 +2861,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
+
+  const embeddedMobileBadgeShell =
+    storeChromeless && variant === "badge" && isMobileViewport;
+
+  useEmbeddedMobileStoreChrome(embeddedMobileBadgeShell, mobileEditorScrollEl);
 
   /** Stable design id for this session; used for incremental draft saves and add-to-cart. */
   const sessionDesignIdRef = useRef<string | null>(null);
@@ -8230,7 +8239,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     <div
       className={`aqb-redesign-root min-h-screen bg-[#F0EDE6] overflow-x-hidden text-sm leading-[1.55] text-[#0d1b2a] ${
         storeChromeless ? "pb-0" : "pb-8"
-      }`}
+      }${embeddedMobileBadgeShell ? " aqb-embedded-mobile-shell" : ""}`}
     >
       {designLibraryDummy.enabled ? (
         <div
@@ -8295,12 +8304,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         </div>
       ) : null}
       <div
-        className={`aqb-tool-shell flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_420px] md:items-start mx-auto max-w-[1320px] w-full min-h-0 h-screen overflow-hidden md:h-auto md:min-h-[560px] md:overflow-visible ${
+        className={`aqb-tool-shell flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_420px] md:items-start mx-auto max-w-[1320px] w-full min-h-0 overflow-hidden md:h-auto md:min-h-[560px] md:overflow-visible ${
           variant === "badge"
             ? storeChromeless
-              ? "max-md:gap-2 gap-5 px-4 md:px-10 max-md:pt-2 pt-4 pb-0 md:pb-8 lg:pb-10"
-              : "max-md:gap-2 gap-5 px-4 md:px-10 max-md:pt-2 pt-5 pb-0 md:pb-10 lg:pb-12"
-            : "gap-5 px-4 md:px-8"
+              ? embeddedMobileBadgeShell
+                ? "max-md:gap-2 max-md:h-full max-md:flex-1 gap-5 px-4 md:px-10 max-md:pt-2 pt-4 pb-0 md:pb-8 lg:pb-10"
+                : "max-md:gap-2 gap-5 px-4 md:px-10 max-md:pt-2 pt-4 pb-0 md:pb-8 lg:pb-10 h-screen"
+              : "max-md:gap-2 gap-5 px-4 md:px-10 max-md:pt-2 pt-5 pb-0 md:pb-10 lg:pb-12 h-screen"
+            : "gap-5 px-4 md:px-8 h-screen md:h-auto"
         }`}
       >
         {/* MOBILE: Header + preview fixed at top; editor scrolls below */}
@@ -8851,6 +8862,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           </div>
 
           <div
+            ref={(node) => {
+              mobileEditorScrollRef.current = node;
+              setMobileEditorScrollEl(node);
+            }}
             className={`section-container flex-1 min-h-0 ${
               variant === "badge"
                 ? "mb-0 min-w-0 max-md:overflow-y-auto px-0 md:overflow-visible"
