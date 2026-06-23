@@ -4,7 +4,7 @@
 }
 .aqb-announce-ticker {
   background: #0d1b2a;
-  height: 34px;
+  height: var(--aqb-announce-bar-height, 34px);
   overflow: hidden;
   display: flex;
   align-items: center;

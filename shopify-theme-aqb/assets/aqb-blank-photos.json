@@ -1,0 +1,134 @@
+{
+  "canvasWidthPx": 1500,
+  "canvasHeightPx": 1500,
+  "colorSuffixById": {
+    "white": "white",
+    "gold": "brushed-gold",
+    "silv": "brushed-silver",
+    "black": "black",
+    "blue": "blue",
+    "red": "red"
+  },
+  "shapeTemplates": {
+    "rounded": {
+      "1x3": "rect-1x3",
+      "1h5x3": "rect-1_5x3"
+    },
+    "oval": {
+      "1x3": "oval-1_5x3"
+    },
+    "square": {
+      "1x3": "square-1x3",
+      "1h5x3": "square-1_5x3"
+    },
+    "designer": {
+      "1x3": "designer-1x3"
+    }
+  },
+  "templates": {
+    "rect-1x3": {
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    "rect-1_5x3": {
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    "oval-1_5x3": {
+      "previewCropRectNorm": {
+        "xNorm": 0.1398428075251555,
+        "yNorm": 0.3176407274035709,
+        "widthNorm": 0.7160440011248362,
+        "heightNorm": 0.3689509817674247
+      }
+    },
+    "square-1x3": {
+      "previewCropRectNorm": {
+        "xNorm": 0.12155307612483643,
+        "yNorm": 0.35144999674922284,
+        "widthNorm": 0.7643287572562173,
+        "heightNorm": 0.29852104106982164
+      }
+    },
+    "square-1_5x3": {
+      "previewCropRectNorm": {
+        "xNorm": 0.10917279869518988,
+        "yNorm": 0.2863417059422039,
+        "widthNorm": 0.7827340993639561,
+        "heightNorm": 0.43144069527670975
+      }
+    },
+    "designer-1x3": {
+      "previewCropRectNorm": {
+        "xNorm": 0.13615142813522577,
+        "yNorm": 0.3511972488889684,
+        "widthNorm": 0.7311267762659521,
+        "heightNorm": 0.29280031174124677
+      }
+    }
+  },
+  "assetFiles": {
+    "rect-1x3": {
+      "white": "aqb-blank-rect-1x3-white.jpg",
+      "gold": "aqb-blank-rect-1x3-gold.jpg",
+      "silv": "aqb-blank-rect-1x3-silv.jpg",
+      "black": "aqb-blank-rect-1x3-black.jpg",
+      "blue": "aqb-blank-rect-1x3-blue.jpg",
+      "red": "aqb-blank-rect-1x3-red.jpg"
+    },
+    "rect-1_5x3": {
+      "white": "aqb-blank-rect-1h5x3-white.jpg",
+      "gold": "aqb-blank-rect-1h5x3-gold.jpg",
+      "silv": "aqb-blank-rect-1h5x3-silv.jpg",
+      "black": "aqb-blank-rect-1h5x3-black.jpg",
+      "blue": "aqb-blank-rect-1h5x3-blue.jpg",
+      "red": "aqb-blank-rect-1h5x3-red.jpg"
+    },
+    "oval-1_5x3": {
+      "white": "aqb-blank-oval-white.jpg",
+      "gold": "aqb-blank-oval-gold.jpg",
+      "silv": "aqb-blank-oval-silv.jpg",
+      "black": "aqb-blank-oval-black.jpg",
+      "blue": "aqb-blank-oval-blue.jpg",
+      "red": "aqb-blank-oval-red.jpg"
+    },
+    "square-1x3": {
+      "white": "aqb-blank-square-white.jpg",
+      "gold": "aqb-blank-square-gold.jpg",
+      "silv": "aqb-blank-square-silv.jpg",
+      "black": "aqb-blank-square-black.jpg",
+      "blue": "aqb-blank-square-blue.jpg",
+      "red": "aqb-blank-square-red.jpg"
+    },
+    "square-1_5x3": {
+      "white": "aqb-blank-square-1h5x3-white.jpg",
+      "gold": "aqb-blank-square-1h5x3-gold.jpg",
+      "silv": "aqb-blank-square-1h5x3-silv.jpg",
+      "black": "aqb-blank-square-1h5x3-black.jpg",
+      "blue": "aqb-blank-square-1h5x3-blue.jpg",
+      "red": "aqb-blank-square-1h5x3-red.jpg"
+    },
+    "designer-1x3": {
+      "white": "aqb-blank-designer-white.jpg",
+      "gold": "aqb-blank-designer-gold.jpg",
+      "silv": "aqb-blank-designer-silv.jpg",
+      "black": "aqb-blank-designer-black.jpg",
+      "blue": "aqb-blank-designer-blue.jpg",
+      "red": "aqb-blank-designer-red.jpg"
+    }
+  },
+  "shapeDefaults": {
+    "rounded": "aqb-blank-rect-1x3-white.jpg",
+    "oval": "aqb-blank-oval-white.jpg",
+    "square": "aqb-blank-square-white.jpg",
+    "designer": "aqb-blank-designer-white.jpg"
+  }
+}

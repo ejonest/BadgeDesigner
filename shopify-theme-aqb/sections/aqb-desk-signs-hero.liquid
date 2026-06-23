@@ -1,0 +1,99 @@
+{%- if page.handle == 'desk-signs' or template.suffix == 'desk-signs' -%}
+{{ 'aqb-desk-signs.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'aqb-desk-signs-v2.js' | asset_url }}" defer="defer"></script>
+
+<section class="aqb-ds-hero" id="aqb-ds-hero-{{ section.id }}">
+  <div class="aqb-ds-hero__inner">
+    <div>
+      {%- if section.settings.eyebrow != blank -%}
+        <div class="aqb-ds-hero__eyebrow">{{ section.settings.eyebrow | escape }}</div>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h1>{{ section.settings.heading }}</h1>
+      {%- endif -%}
+      {%- if section.settings.subheading != blank -%}
+        <p class="aqb-ds-hero__sub">{{ section.settings.subheading | escape }}</p>
+      {%- endif -%}
+
+      <div class="aqb-ds-hero__stats">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'stat' -%}
+            <div {{ block.shopify_attributes }}>
+              <div class="aqb-ds-hero__stat-val">{{ block.settings.value | escape }}</div>
+              <div class="aqb-ds-hero__stat-label">{{ block.settings.label | escape }}</div>
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+
+      <div class="aqb-ds-hero__actions">
+        {%- if section.settings.primary_label != blank -%}
+          <a href="{{ section.settings.primary_link }}" class="aqb-ds-btn-primary">{{ section.settings.primary_label | escape }}</a>
+        {%- endif -%}
+        {%- if section.settings.secondary_label != blank -%}
+          <a href="{{ section.settings.secondary_link }}" class="aqb-ds-btn-ghost">{{ section.settings.secondary_label | escape }}</a>
+        {%- endif -%}
+      </div>
+    </div>
+
+    <div class="aqb-ds-hero__visual">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'photo' -%}
+          <div class="aqb-ds-hero__photo{% if block.settings.layout == 'tall' %} tall{% else %} short{% endif %}" {{ block.shopify_attributes }}>
+            {%- if block.settings.image != blank -%}
+              {{
+                block.settings.image
+                | image_url: width: 800
+                | image_tag: loading: 'eager', widths: '400,600,800', sizes: '25vw', alt: block.settings.alt
+              }}
+            {%- elsif block.settings.image_asset != blank -%}
+              <img src="{{ block.settings.image_asset | asset_url }}" alt="{{ block.settings.alt | escape }}" loading="eager" width="800" height="600">
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Desk Signs Hero",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Desk Signs — 666 Designs" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "From funny to formal.<br><em>A desk sign for every workplace.</em>" },
+    { "type": "textarea", "id": "subheading", "label": "Subheading", "default": "Personalized acrylic & rosewood signs for professionals, functional business signage for any industry, and novelty signs for the office personality. All made in the USA." },
+    { "type": "text", "id": "primary_label", "label": "Primary button", "default": "Shop Custom Signs" },
+    { "type": "url", "id": "primary_link", "label": "Primary link" },
+    { "type": "text", "id": "secondary_label", "label": "Secondary button", "default": "Browse All →" },
+    { "type": "url", "id": "secondary_link", "label": "Secondary link" }
+  ],
+  "blocks": [
+    {
+      "type": "stat",
+      "name": "Stat",
+      "settings": [
+        { "type": "text", "id": "value", "label": "Value", "default": "70+" },
+        { "type": "text", "id": "label", "label": "Label", "default": "Custom professions" }
+      ]
+    },
+    {
+      "type": "photo",
+      "name": "Photo",
+      "settings": [
+        { "type": "select", "id": "layout", "label": "Layout", "options": [
+          { "value": "tall", "label": "Tall" },
+          { "value": "short", "label": "Short" }
+        ], "default": "short" },
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "image_asset", "label": "Image asset filename", "default": "aqb-cat-banner-desk.png" },
+        { "type": "text", "id": "alt", "label": "Alt text", "default": "Desk sign on office desk" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB Desk Signs Hero" }]
+}
+{% endschema %}

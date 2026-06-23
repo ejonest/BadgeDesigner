@@ -1,0 +1,123 @@
+{%- if page.handle == 'role-badges' or template.suffix == 'role-badges' or page.handle == 'church-religious-catalog' or template.suffix == 'church-religious-catalog' -%}
+<section class="aqb-rb-crosssell">
+  <div class="aqb-rb-crosssell-inner">
+    <div>
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="aqb-rb-section-eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h2>{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.description != blank -%}
+        <p>{{ section.settings.description | escape }}</p>
+      {%- endif -%}
+      {%- if section.settings.button_label != blank -%}
+        <a href="{{ section.settings.button_link }}" class="aqb-rb-btn-gold">
+          {{ section.settings.button_label | escape }}
+        </a>
+      {%- endif -%}
+    </div>
+
+    <div class="aqb-rb-crosssell-cards">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'card' -%}
+          <a href="{{ block.settings.link }}" class="aqb-rb-crosssell-card" {{ block.shopify_attributes }}>
+            <span class="aqb-rb-crosssell-icon" aria-hidden="true">{{ block.settings.emoji }}</span>
+            <div>
+              <div class="aqb-rb-crosssell-card-title">{{ block.settings.title | escape }}</div>
+              {%- if block.settings.description != blank -%}
+                <div class="aqb-rb-crosssell-card-desc">{{ block.settings.description | escape }}</div>
+              {%- endif -%}
+            </div>
+          </a>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB RB Cross-sell",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Don't see your role?"
+    },
+    {
+      "type": "html",
+      "id": "heading",
+      "label": "Heading",
+      "default": "We'll print <em>exactly</em><br>what you need."
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "Our custom badge tool lets you type any name, title, or role — and see your badge before you order. Perfect for unique positions, branded titles, or names alongside a role."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label",
+      "default": "Start designing →"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button link"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "card",
+      "name": "Card",
+      "settings": [
+        { "type": "text", "id": "emoji", "label": "Emoji", "default": "✏️" },
+        { "type": "text", "id": "title", "label": "Title" },
+        { "type": "text", "id": "description", "label": "Description" },
+        { "type": "url", "id": "link", "label": "Link" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB RB Cross-sell",
+      "blocks": [
+        {
+          "type": "card",
+          "settings": {
+            "emoji": "✏️",
+            "title": "Custom printed badges",
+            "description": "Any name, any title. Preview before you order.",
+            "link": "shopify://products/custom-1x3-badge"
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "emoji": "⬜",
+            "title": "Blank name badges",
+            "description": "Inserts included. Ideal for name tags that rotate.",
+            "link": "shopify://collections/blank-name-tags"
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "emoji": "✝️",
+            "title": "Church & ministry collection",
+            "description": "Role badges in English and Spanish for your congregation.",
+            "link": "shopify://pages/church-and-congregation"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

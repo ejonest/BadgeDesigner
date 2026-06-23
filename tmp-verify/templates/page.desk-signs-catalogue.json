@@ -1,0 +1,63 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "hero": {
+      "type": "aqb-desk-signs-catalogue-hero",
+      "blocks": {
+        "stat_1": { "type": "stat", "settings": { "value": "666+", "label": "Total designs" } },
+        "stat_2": { "type": "stat", "settings": { "value": "3", "label": "Materials" } },
+        "stat_3": { "type": "stat", "settings": { "value": "48 hrs", "label": "Ships within" } }
+      },
+      "block_order": ["stat_1", "stat_2", "stat_3"],
+      "settings": {
+        "back_label": "Desk Signs overview",
+        "back_link": "shopify://pages/desk-signs",
+        "eyebrow": "Shop All Desk Signs",
+        "heading": "Find your <em>perfect sign.</em>",
+        "subheading": "Filter by material, category, and style — acrylic, rosewood, plastic insert, profession, novelty, and gift packs."
+      }
+    },
+    "catalogue": {
+      "type": "aqb-desk-signs-catalogue",
+      "blocks": {
+        "prof_retail": { "type": "profession_category", "settings": { "category_id": "retail", "label": "Retail", "tag": "retail" } },
+        "prof_health": { "type": "profession_category", "settings": { "category_id": "healthcare", "label": "Healthcare", "tag": "healthcare" } },
+        "prof_hosp": { "type": "profession_category", "settings": { "category_id": "hospitality", "label": "Hospitality", "tag": "hospitality" } },
+        "prof_office": { "type": "profession_category", "settings": { "category_id": "office", "label": "Office", "tag": "office" } },
+        "nov_funny": { "type": "novelty_category", "settings": { "category_id": "funny", "label": "Funny", "tag": "funny" } },
+        "nov_boss": { "type": "novelty_category", "settings": { "category_id": "boss", "label": "Boss / Leader", "tag": "boss" } },
+        "nov_office": { "type": "novelty_category", "settings": { "category_id": "office", "label": "Office life", "tag": "office" } }
+      },
+      "block_order": ["prof_retail", "prof_health", "prof_hosp", "prof_office", "nov_funny", "nov_boss", "nov_office"],
+      "settings": {
+        "collection": "acrylic-desk-signs",
+        "catalogue_base": "/pages/desk-signs-catalogue",
+        "eyebrow": "Full Catalogue",
+        "heading": "Browse all <em>desk signs</em>",
+        "products_per_page": 12,
+        "add_label": "Add to cart",
+        "load_more_label": "Show more signs"
+      }
+    },
+    "trust_bar": {
+      "type": "aqb-desk-signs-trust-bar",
+      "blocks": {
+        "item_1": { "type": "item", "settings": { "emoji": "🏷️", "title": "Range of Personalised Desk Signs", "subtitle": "Acrylic, rosewood & plastic" } },
+        "item_2": { "type": "item", "settings": { "emoji": "⚡", "title": "Ships within 48 hours", "subtitle": "Fast turnaround on every order" } },
+        "item_3": { "type": "item", "settings": { "emoji": "📦", "title": "Free Shipping", "subtitle": "On qualifying orders" } },
+        "item_4": { "type": "item", "settings": { "emoji": "⭐", "title": "4.8 star average", "subtitle": "Thousands of verified reviews" } }
+      },
+      "block_order": ["item_1", "item_2", "item_3", "item_4"],
+      "settings": {}
+    }
+  },
+  "order": ["hero", "catalogue", "trust_bar"]
+}

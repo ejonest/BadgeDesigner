@@ -1,0 +1,276 @@
+{
+  "sections": {
+    "hero": {
+      "type": "aqb-church-religious-hero",
+      "blocks": {
+        "stat_1": {
+          "type": "stat",
+          "settings": {
+            "value": "50+",
+            "label": "Ministry products"
+          }
+        },
+        "stat_2": {
+          "type": "stat",
+          "settings": {
+            "value": "48 hrs",
+            "label": "Ships within"
+          }
+        },
+        "stat_3": {
+          "type": "stat",
+          "settings": {
+            "value": "EN & ES",
+            "label": "Bilingual options"
+          }
+        },
+        "main_photo": {
+          "type": "main_photo",
+          "settings": {
+            "image_asset": "aqb-church-role-pastors.jpg",
+            "alt": "Pastor wearing a church name badge",
+            "tag": "Pastor"
+          }
+        },
+        "stack_1": {
+          "type": "stack_photo",
+          "settings": {
+            "image_asset": "aqb-church-role-greeters.jpg",
+            "alt": "Church greeter wearing name badge",
+            "tag": "Greeter",
+            "tag_style": "white-tag"
+          }
+        },
+        "stack_2": {
+          "type": "stack_photo",
+          "settings": {
+            "image_asset": "aqb-church-role-welcome.jpg",
+            "alt": "Welcome team member with badge",
+            "tag": "Welcome",
+            "tag_style": "gold-tag"
+          }
+        },
+        "stack_3": {
+          "type": "stack_photo",
+          "settings": {
+            "image_asset": "aqb-church-role-spanish.jpg",
+            "alt": "Spanish ministry badge",
+            "tag": "Diácono",
+            "tag_style": "white-tag"
+          }
+        }
+      },
+      "block_order": [
+        "stat_1",
+        "stat_2",
+        "stat_3",
+        "main_photo",
+        "stack_1",
+        "stack_2",
+        "stack_3"
+      ],
+      "settings": {
+        "eyebrow": "Church & Ministry · Badges, Desk Signs & Blanks",
+        "heading": "Everything for your<br><em>ministry.</em>",
+        "subheading": "Role badges, desk name plates, and name tag blanks for greeters, pastors, welcome teams, deacons, and more — including bilingual Spanish options.",
+        "primary_label": "Browse Ministry Products",
+        "primary_link": "#church-religious-catalogue",
+        "secondary_label": "Design a Custom Badge →",
+        "secondary_link": "shopify://products/custom-1x3-badge"
+      }
+    },
+    "catalogue": {
+      "type": "aqb-church-religious-catalogue",
+      "blocks": {
+        "cat_greeters": {
+          "type": "category",
+          "settings": {
+            "category_id": "greeters-ushers",
+            "label": "Greeters & Ushers",
+            "tags": "greeter"
+          }
+        },
+        "cat_pastors": {
+          "type": "category",
+          "settings": {
+            "category_id": "pastors-leadership",
+            "label": "Pastors & Leadership",
+            "tags": "pastor, leadership"
+          }
+        },
+        "cat_welcome": {
+          "type": "category",
+          "settings": {
+            "category_id": "welcome",
+            "label": "Welcome",
+            "tags": "welcome"
+          }
+        },
+        "cat_spanish": {
+          "type": "category",
+          "settings": {
+            "category_id": "spanish",
+            "label": "Spanish",
+            "tags": "spanish"
+          }
+        },
+        "cat_deacon": {
+          "type": "category",
+          "settings": {
+            "category_id": "deacon",
+            "label": "Deacon",
+            "tags": "deacon"
+          }
+        }
+      },
+      "block_order": [
+        "cat_greeters",
+        "cat_pastors",
+        "cat_welcome",
+        "cat_spanish",
+        "cat_deacon"
+      ],
+      "settings": {
+        "catalogue_base": "/pages/church-religious-catalog",
+        "eyebrow": "Church & Religious",
+        "heading": "Shop by <em>ministry role</em>",
+        "products_per_page": 12,
+        "pack_label": "3-Pack",
+        "price_subtext": "per 3-pack + shipping",
+        "add_label": "Add to cart",
+        "load_more_label": "Show more products"
+      }
+    },
+    "lifestyle": {
+      "type": "aqb-role-badges-lifestyle",
+      "blocks": {
+        "photo_1": {
+          "type": "photo",
+          "settings": {
+            "image_asset": "aqb-church-role-pastors.jpg",
+            "label": "Pastor"
+          }
+        },
+        "photo_2": {
+          "type": "photo",
+          "settings": {
+            "image_asset": "aqb-church-role-greeters.jpg",
+            "label": "Greeter"
+          }
+        },
+        "photo_3": {
+          "type": "photo",
+          "settings": {
+            "image_asset": "aqb-church-role-welcome.jpg",
+            "label": "Welcome Team"
+          }
+        }
+      },
+      "block_order": [
+        "photo_1",
+        "photo_2",
+        "photo_3"
+      ],
+      "settings": {
+        "eyebrow": "Built for Ministry",
+        "heading": "Products that serve<br><em>your congregation.</em>",
+        "description": "Badges, desk signs, and blanks — ready to order for every ministry role."
+      }
+    },
+    "trust_bar": {
+      "type": "aqb-role-badges-trust-bar",
+      "blocks": {
+        "item_1": {
+          "type": "item",
+          "settings": {
+            "emoji": "🚚",
+            "title": "Free USA shipping",
+            "subtitle": "On orders of 5 badges or more"
+          }
+        },
+        "item_2": {
+          "type": "item",
+          "settings": {
+            "emoji": "⚡",
+            "title": "Ships in 2 business days",
+            "subtitle": "Fast turnaround for ministry teams and events"
+          }
+        },
+        "item_3": {
+          "type": "item",
+          "settings": {
+            "emoji": "🌎",
+            "title": "English & Spanish roles",
+            "subtitle": "Bilingual congregation badge options"
+          }
+        },
+        "item_4": {
+          "type": "item",
+          "settings": {
+            "emoji": "📦",
+            "title": "No minimum orders",
+            "subtitle": "Order exactly what your church needs"
+          }
+        }
+      },
+      "block_order": [
+        "item_1",
+        "item_2",
+        "item_3",
+        "item_4"
+      ],
+      "settings": {}
+    },
+    "crosssell": {
+      "type": "aqb-role-badges-crosssell",
+      "blocks": {
+        "card_custom": {
+          "type": "card",
+          "settings": {
+            "emoji": "✏️",
+            "title": "Custom printed badges",
+            "description": "Add your church logo, ministry name, or custom title.",
+            "link": "shopify://products/custom-1x3-badge"
+          }
+        },
+        "card_blanks": {
+          "type": "card",
+          "settings": {
+            "emoji": "⬜",
+            "title": "Blank name badges",
+            "description": "Inserts included. Ideal for rotating name tags.",
+            "link": "shopify://pages/name-tag-blanks"
+          }
+        },
+        "card_all_roles": {
+          "type": "card",
+          "settings": {
+            "emoji": "🏷️",
+            "title": "All role badges",
+            "description": "Browse 250+ pre-printed roles across every industry.",
+            "link": "shopify://pages/role-badges"
+          }
+        }
+      },
+      "block_order": [
+        "card_custom",
+        "card_blanks",
+        "card_all_roles"
+      ],
+      "settings": {
+        "eyebrow": "Need something specific?",
+        "heading": "We'll print <em>exactly</em><br>what your ministry needs.",
+        "description": "Custom badges let you add church logos, ministry names, or unique titles — preview before you order.",
+        "button_label": "Start designing →",
+        "button_link": "shopify://products/custom-1x3-badge"
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "catalogue",
+    "lifestyle",
+    "trust_bar",
+    "crosssell"
+  ]
+}

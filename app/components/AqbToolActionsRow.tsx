@@ -51,6 +51,8 @@ interface ToolButtonProps {
   onClick: () => void;
   disabled?: boolean;
   icon: React.ReactNode;
+  /** Short label beside icon on mobile */
+  mobileLabel?: string;
 }
 
 const ToolButton: React.FC<ToolButtonProps> = ({
@@ -59,21 +61,29 @@ const ToolButton: React.FC<ToolButtonProps> = ({
   onClick,
   disabled = false,
   icon,
+  mobileLabel,
 }) => (
   <button
     type="button"
-    className="aqb-ta-btn"
+    className={
+      mobileLabel
+        ? "aqb-ta-btn aqb-ta-btn--mobile-inline"
+        : "aqb-ta-btn aqb-ta-btn--icon-only"
+    }
     onClick={(e) => {
       e.preventDefault();
       onClick();
     }}
     disabled={disabled}
     title={title}
+    aria-label={label}
   >
     <span className="aqb-ta-icon" aria-hidden>
       {icon}
     </span>
-    <span className="aqb-ta-label">{label}</span>
+    {mobileLabel ? (
+      <span className="aqb-ta-label aqb-ta-label--mobile">{mobileLabel}</span>
+    ) : null}
   </button>
 );
 
@@ -102,6 +112,7 @@ export const AqbToolActionsRow: React.FC<AqbToolActionsRowProps> = ({
     <ToolButtonRow>
       <ToolButton
         label="Undo"
+        mobileLabel="Undo"
         title="Undo last change"
         onClick={onUndo}
         disabled={undoDisabled}
@@ -109,6 +120,7 @@ export const AqbToolActionsRow: React.FC<AqbToolActionsRowProps> = ({
       />
       <ToolButton
         label="Reset Design"
+        mobileLabel="Reset Design"
         title="Reset current badge to default settings"
         onClick={onReset}
         icon={<ArrowPathIcon className={iconClass} />}
@@ -116,6 +128,7 @@ export const AqbToolActionsRow: React.FC<AqbToolActionsRowProps> = ({
       {showResetAll && onResetAll ? (
         <ToolButton
           label="Reset All Designs"
+          mobileLabel="Reset All"
           title="Reset all badges to default settings"
           onClick={onResetAll}
           icon={<ArrowPathIcon className={iconClass} />}
@@ -124,6 +137,7 @@ export const AqbToolActionsRow: React.FC<AqbToolActionsRowProps> = ({
       {showApplyFormatToAll && onApplyFormatToAll ? (
         <ToolButton
           label="Apply all"
+          mobileLabel="Apply"
           title={applyFormatLabel}
           onClick={onApplyFormatToAll}
           icon={<Square2StackIcon className={iconClass} />}
@@ -133,18 +147,21 @@ export const AqbToolActionsRow: React.FC<AqbToolActionsRowProps> = ({
     <ToolButtonRow>
       <ToolButton
         label="Help Center"
+        mobileLabel="Help"
         title="Help — learn about the designer"
         onClick={onHelp}
         icon={<QuestionMarkCircleIcon className={iconClass} />}
       />
       <ToolButton
         label="Save Design"
+        mobileLabel="Save"
         title="Save design"
         onClick={onSave}
         icon={<ArrowUpTrayIcon className={iconClass} />}
       />
       <ToolButton
         label="Load Design"
+        mobileLabel="Load"
         title="Load a saved design"
         onClick={onLoad}
         icon={<FolderOpenIcon className={iconClass} />}

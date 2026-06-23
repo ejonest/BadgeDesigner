@@ -1,0 +1,78 @@
+{%- if page.handle == 'name-tag-blanks' or template.suffix == 'name-tag-blanks' -%}
+<section class="aqb-bl-bulk" id="bulk">
+  <div class="aqb-bl-bulk__inner">
+    <div>
+      {%- if section.settings.eyebrow != blank -%}
+        <div class="aqb-bl-bulk__eyebrow">{{ section.settings.eyebrow | escape }}</div>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h2>{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.description != blank -%}
+        <p class="aqb-bl-bulk__desc">{{ section.settings.description | escape }}</p>
+      {%- endif -%}
+
+      <div class="aqb-bl-bulk__points">
+        {%- for block in section.blocks -%}
+          <div class="aqb-bl-bulk__point" {{ block.shopify_attributes }}>
+            <span class="aqb-bl-bulk__check" aria-hidden="true">✓</span>
+            {{ block.settings.text | escape }}
+          </div>
+        {%- endfor -%}
+      </div>
+    </div>
+
+    <div class="aqb-bl-bulk__right">
+      <div class="aqb-bl-bulk__cta">
+        {%- if section.settings.cta_heading != blank -%}
+          <h3>{{ section.settings.cta_heading | escape }}</h3>
+        {%- endif -%}
+        {%- if section.settings.cta_text != blank -%}
+          <p>{{ section.settings.cta_text | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.cta_label != blank -%}
+          <a href="{{ section.settings.cta_link }}" class="aqb-bl-btn-bulk">{{ section.settings.cta_label | escape }}</a>
+        {%- endif -%}
+      </div>
+      <div class="aqb-bl-bulk__cta-secondary">
+        {%- if section.settings.secondary_text != blank -%}
+          <p>{{ section.settings.secondary_text | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.secondary_label != blank -%}
+          <a href="{{ section.settings.secondary_link }}" class="aqb-bl-btn-bulk-secondary">{{ section.settings.secondary_label | escape }}</a>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Blanks Bulk",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Trade & bulk orders" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "Ordering 250<br><em>or more?</em>" },
+    { "type": "textarea", "id": "description", "label": "Description", "default": "We supply engravers, print shops, hotels and resellers across the USA. Volume pricing, consistent quality, reliable lead times." },
+    { "type": "text", "id": "cta_heading", "label": "CTA heading", "default": "Get a bulk quote" },
+    { "type": "textarea", "id": "cta_text", "label": "CTA text", "default": "Tell us your quantity, color, shape and backing — we reply the same day." },
+    { "type": "text", "id": "cta_label", "label": "CTA button", "default": "Request a Bulk Quote →" },
+    { "type": "url", "id": "cta_link", "label": "CTA link" },
+    { "type": "textarea", "id": "secondary_text", "label": "Secondary text", "default": "Smaller order? Configure and order above — volume pricing applies automatically." },
+    { "type": "text", "id": "secondary_label", "label": "Secondary button", "default": "Configure your order →" },
+    { "type": "url", "id": "secondary_link", "label": "Secondary link" }
+  ],
+  "blocks": [
+    {
+      "type": "point",
+      "name": "Bullet point",
+      "settings": [
+        { "type": "text", "id": "text", "label": "Text", "default": "From $0.28 per badge at 250+ (adhesive)" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB Blanks Bulk" }]
+}
+{% endschema %}

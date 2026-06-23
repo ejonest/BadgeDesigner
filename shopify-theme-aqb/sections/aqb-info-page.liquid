@@ -1,0 +1,287 @@
+{%- liquid
+  assign aqb_is_info_page = false
+  if page.handle == 'how-it-works' or template.suffix == 'how-it-works'
+    assign aqb_is_info_page = true
+  elsif page.handle == 'faq' or template.suffix == 'faq'
+    assign aqb_is_info_page = true
+  elsif page.handle == 'shipping-delivery' or template.suffix == 'shipping-delivery'
+    assign aqb_is_info_page = true
+  endif
+-%}
+{%- if aqb_is_info_page -%}
+{{ 'aqb-info-pages.css' | asset_url | stylesheet_tag }}
+
+<section class="aqb-info-page" id="aqb-info-page-{{ section.id }}">
+  <div class="aqb-ip-hero">
+    <div class="aqb-ip-hero__inner">
+      {%- if section.settings.eyebrow != blank -%}
+        <div class="aqb-ip-hero__eyebrow">{{ section.settings.eyebrow | escape }}</div>
+      {%- endif -%}
+
+      {%- if section.settings.heading != blank -%}
+        <h1>{{ section.settings.heading }}</h1>
+      {%- endif -%}
+
+      {%- if section.settings.subheading != blank -%}
+        <p class="aqb-ip-hero__sub">{{ section.settings.subheading | escape }}</p>
+      {%- endif -%}
+    </div>
+  </div>
+
+  <div class="aqb-ip-body">
+    <div class="aqb-ip-body__inner">
+      {%- assign in_table = false -%}
+      {%- assign in_steps = false -%}
+
+      {%- for block in section.blocks -%}
+        {%- case block.type -%}
+          {%- when 'step' -%}
+            {%- unless in_steps -%}
+              <div class="aqb-ip-steps">
+              {%- assign in_steps = true -%}
+            {%- endunless -%}
+            <div class="aqb-ip-step" {{ block.shopify_attributes }}>
+              <div class="aqb-ip-step__num">{{ block.settings.step_number | escape }}</div>
+              <div>
+                {%- if block.settings.title != blank -%}
+                  <h2 class="aqb-ip-step__title">{{ block.settings.title | escape }}</h2>
+                {%- endif -%}
+                {%- if block.settings.text != blank -%}
+                  <p class="aqb-ip-step__text">{{ block.settings.text | escape | newline_to_br }}</p>
+                {%- endif -%}
+              </div>
+            </div>
+
+          {%- when 'section_heading' -%}
+            {%- if in_steps -%}
+              </div>
+              {%- assign in_steps = false -%}
+            {%- endif -%}
+            {%- if in_table -%}
+              </tbody></table></div>
+              {%- assign in_table = false -%}
+            {%- endif -%}
+            <h2 class="aqb-ip-section-heading" {{ block.shopify_attributes }}>{{ block.settings.heading | escape }}</h2>
+
+          {%- when 'faq' -%}
+            {%- if in_steps -%}
+              </div>
+              {%- assign in_steps = false -%}
+            {%- endif -%}
+            {%- if in_table -%}
+              </tbody></table></div>
+              {%- assign in_table = false -%}
+            {%- endif -%}
+            <div class="aqb-ip-faq" {{ block.shopify_attributes }}>
+              {%- if block.settings.question != blank -%}
+                <p class="aqb-ip-faq__q">{{ block.settings.question | escape }}</p>
+              {%- endif -%}
+              {%- if block.settings.answer != blank -%}
+                <p class="aqb-ip-faq__a">{{ block.settings.answer | escape | newline_to_br }}</p>
+              {%- endif -%}
+            </div>
+
+          {%- when 'paragraph' -%}
+            {%- if in_steps -%}
+              </div>
+              {%- assign in_steps = false -%}
+            {%- endif -%}
+            {%- if in_table -%}
+              </tbody></table></div>
+              {%- assign in_table = false -%}
+            {%- endif -%}
+            <div class="aqb-ip-paragraph" {{ block.shopify_attributes }}>
+              {%- if block.settings.title != blank -%}
+                <p class="aqb-ip-paragraph__title">{{ block.settings.title | escape }}</p>
+              {%- endif -%}
+              {%- if block.settings.text != blank -%}
+                <p class="aqb-ip-paragraph__text">{{ block.settings.text | escape | newline_to_br }}</p>
+              {%- endif -%}
+            </div>
+
+          {%- when 'table_row' -%}
+            {%- if in_steps -%}
+              </div>
+              {%- assign in_steps = false -%}
+            {%- endif -%}
+            {%- unless in_table -%}
+              <div class="aqb-ip-table-wrap">
+                <table class="aqb-ip-table">
+                  <thead>
+                    <tr>
+                      <th>{{ section.settings.table_col_1 | default: 'Method' | escape }}</th>
+                      <th>{{ section.settings.table_col_2 | default: 'Estimated Delivery' | escape }}</th>
+                      <th>{{ section.settings.table_col_3 | default: 'Notes' | escape }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+              {%- assign in_table = true -%}
+            {%- endunless -%}
+            <tr {{ block.shopify_attributes }}>
+              <td>{{ block.settings.col_1 | escape }}</td>
+              <td>{{ block.settings.col_2 | escape }}</td>
+              <td>{{ block.settings.col_3 | escape }}</td>
+            </tr>
+
+          {%- when 'note' -%}
+            {%- if in_table -%}
+              </tbody></table></div>
+              {%- assign in_table = false -%}
+            {%- endif -%}
+            {%- if block.settings.text != blank -%}
+              <p class="aqb-ip-note" {{ block.shopify_attributes }}>{{ block.settings.text | escape }}</p>
+            {%- endif -%}
+
+          {%- when 'cta' -%}
+            {%- if in_steps -%}
+              </div>
+              {%- assign in_steps = false -%}
+            {%- endif -%}
+            {%- if in_table -%}
+              </tbody></table></div>
+              {%- assign in_table = false -%}
+            {%- endif -%}
+            <div class="aqb-ip-cta-wrap" {{ block.shopify_attributes }}>
+              {%- if block.settings.prefix != blank -%}
+                <span class="aqb-ip-cta-wrap__label">{{ block.settings.prefix | escape }}</span>
+              {%- endif -%}
+              {%- if block.settings.label != blank and block.settings.url != blank -%}
+                <a
+                  class="aqb-ip-cta aqb-ip-cta--{{ block.settings.style | default: 'gold' }}"
+                  href="{{ block.settings.url }}"
+                >
+                  {{ block.settings.label | escape }}
+                </a>
+              {%- endif -%}
+            </div>
+        {%- endcase -%}
+      {%- endfor -%}
+
+      {%- if in_steps -%}
+        </div>
+      {%- endif -%}
+      {%- if in_table -%}
+        </tbody></table></div>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Info page",
+  "tag": "section",
+  "class": "aqb-info-page-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow"
+    },
+    {
+      "type": "html",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Page title"
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading"
+    },
+    {
+      "type": "text",
+      "id": "table_col_1",
+      "label": "Table column 1 header",
+      "default": "Method"
+    },
+    {
+      "type": "text",
+      "id": "table_col_2",
+      "label": "Table column 2 header",
+      "default": "Estimated Delivery"
+    },
+    {
+      "type": "text",
+      "id": "table_col_3",
+      "label": "Table column 3 header",
+      "default": "Notes"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "step",
+      "name": "Step",
+      "settings": [
+        { "type": "text", "id": "step_number", "label": "Step number", "default": "1" },
+        { "type": "text", "id": "title", "label": "Title" },
+        { "type": "textarea", "id": "text", "label": "Text" }
+      ]
+    },
+    {
+      "type": "section_heading",
+      "name": "Section heading",
+      "settings": [
+        { "type": "text", "id": "heading", "label": "Heading" }
+      ]
+    },
+    {
+      "type": "faq",
+      "name": "FAQ item",
+      "settings": [
+        { "type": "text", "id": "question", "label": "Question" },
+        { "type": "textarea", "id": "answer", "label": "Answer" }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "name": "Paragraph",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title (optional)" },
+        { "type": "textarea", "id": "text", "label": "Text" }
+      ]
+    },
+    {
+      "type": "table_row",
+      "name": "Table row",
+      "settings": [
+        { "type": "text", "id": "col_1", "label": "Column 1" },
+        { "type": "text", "id": "col_2", "label": "Column 2" },
+        { "type": "text", "id": "col_3", "label": "Column 3" }
+      ]
+    },
+    {
+      "type": "note",
+      "name": "Note",
+      "settings": [
+        { "type": "textarea", "id": "text", "label": "Text" }
+      ]
+    },
+    {
+      "type": "cta",
+      "name": "Call to action",
+      "settings": [
+        { "type": "text", "id": "prefix", "label": "Prefix text" },
+        { "type": "text", "id": "label", "label": "Button label" },
+        { "type": "url", "id": "url", "label": "Button URL" },
+        {
+          "type": "select",
+          "id": "style",
+          "label": "Button style",
+          "options": [
+            { "value": "gold", "label": "Gold" },
+            { "value": "outline", "label": "Outline" }
+          ],
+          "default": "gold"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Info page"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,443 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "hero": {
+      "type": "aqb-role-badges-hero",
+      "blocks": {
+        "stat_1": {
+          "type": "stat",
+          "settings": {
+            "value": "250+",
+            "label": "Roles stocked"
+          }
+        },
+        "stat_2": {
+          "type": "stat",
+          "settings": {
+            "value": "48 hrs",
+            "label": "Ships within"
+          }
+        },
+        "stat_3": {
+          "type": "stat",
+          "settings": {
+            "value": "1×3\"",
+            "label": "Industry standard"
+          }
+        },
+        "main_photo": {
+          "type": "main_photo",
+          "settings": {
+            "image": "shopify://shop_images/download_4.jpg",
+            "image_asset": "aqb-church-role-pastors.jpg",
+            "alt": "Hotel manager wearing a gold role badge",
+            "tag": "Hotel Manager"
+          }
+        },
+        "stack_1": {
+          "type": "stack_photo",
+          "settings": {
+            "image": "shopify://shop_images/84de4d7d-45e8-5509-9870-57e54db66634.png",
+            "image_asset": "aqb-church-role-welcome.jpg",
+            "alt": "Flight attendant with gold badge",
+            "tag": "Flight Attendant",
+            "tag_style": "gold-tag"
+          }
+        },
+        "stack_2": {
+          "type": "stack_photo",
+          "settings": {
+            "image": "shopify://shop_images/03-roles-greeters-and-ushers_b44412f9-875c-4b10-b6e5-c75809c579a7.jpg",
+            "image_asset": "aqb-church-role-greeters.jpg",
+            "alt": "Church greeter wearing name badge",
+            "tag": "Greeter",
+            "tag_style": "white-tag"
+          }
+        },
+        "stack_3": {
+          "type": "stack_photo",
+          "settings": {
+            "image": "shopify://shop_images/2bea0015-76df-585a-b661-3106f03adfcd.jpg",
+            "image_asset": "aqb-church-role-spanish.jpg",
+            "alt": "Security professional with badge",
+            "tag": "Security",
+            "tag_style": "white-tag"
+          }
+        }
+      },
+      "block_order": [
+        "stat_1",
+        "stat_2",
+        "stat_3",
+        "main_photo",
+        "stack_1",
+        "stack_2",
+        "stack_3"
+      ],
+      "settings": {
+        "eyebrow": "250+ Pre-Printed Roles · Ships Within 48 Hours",
+        "heading": "The right badge,<br><em>right away.</em>",
+        "subheading": "Every role, professionally printed and ready to ship. Pick your role, choose your color, add your backing — done in minutes.",
+        "primary_label": "Browse All Roles",
+        "primary_link": "#role-badges-catalogue",
+        "secondary_label": "Bulk Pricing →",
+        "secondary_link": "shopify://collections/blank-name-tags"
+      }
+    },
+    "catalogue": {
+      "type": "aqb-role-badges-catalogue",
+      "blocks": {
+        "cat_healthcare": {
+          "type": "category",
+          "settings": {
+            "category_id": "healthcare",
+            "label": "Healthcare",
+            "tag": "healthcare"
+          }
+        },
+        "cat_church": {
+          "type": "category",
+          "settings": {
+            "category_id": "church",
+            "label": "Church & Religious",
+            "tag": "church"
+          }
+        },
+        "church_greeters": {
+          "type": "church_subcategory",
+          "settings": {
+            "subcategory_id": "greeters-ushers",
+            "label": "Greeters & Ushers",
+            "tags": "greeter"
+          }
+        },
+        "church_pastors": {
+          "type": "church_subcategory",
+          "settings": {
+            "subcategory_id": "pastors-leadership",
+            "label": "Pastors & Leadership",
+            "tags": "pastor, leadership"
+          }
+        },
+        "church_welcome": {
+          "type": "church_subcategory",
+          "settings": {
+            "subcategory_id": "welcome",
+            "label": "Welcome",
+            "tags": "welcome"
+          }
+        },
+        "church_spanish": {
+          "type": "church_subcategory",
+          "settings": {
+            "subcategory_id": "spanish",
+            "label": "Spanish",
+            "tags": "spanish"
+          }
+        },
+        "church_deacon": {
+          "type": "church_subcategory",
+          "settings": {
+            "subcategory_id": "deacon",
+            "label": "Deacon",
+            "tags": "deacon"
+          }
+        },
+        "church_usher": {
+          "type": "church_subcategory",
+          "settings": {
+            "subcategory_id": "usher",
+            "label": "Usher",
+            "tags": "usher"
+          }
+        },
+        "cat_corporate": {
+          "type": "category",
+          "settings": {
+            "category_id": "corporate",
+            "label": "Corporate & Office",
+            "tag": "corporate"
+          }
+        },
+        "cat_fitness": {
+          "type": "category",
+          "settings": {
+            "category_id": "fitness",
+            "label": "Fitness & Wellness",
+            "tag": "fitness"
+          }
+        },
+        "cat_hospitality": {
+          "type": "category",
+          "settings": {
+            "category_id": "hospitality",
+            "label": "Hospitality",
+            "tag": "hospitality"
+          }
+        },
+        "cat_security": {
+          "type": "category",
+          "settings": {
+            "category_id": "security",
+            "label": "Security",
+            "tag": "security"
+          }
+        },
+        "cat_retail": {
+          "type": "category",
+          "settings": {
+            "category_id": "retail",
+            "label": "Retail & Service",
+            "tag": "retail"
+          }
+        },
+        "cat_novelty": {
+          "type": "category",
+          "settings": {
+            "category_id": "novelty",
+            "label": "Novelty",
+            "tag": "novelty"
+          }
+        },
+        "cat_education": {
+          "type": "category",
+          "settings": {
+            "category_id": "education",
+            "label": "Education",
+            "tag": "education"
+          }
+        },
+        "cat_airfare": {
+          "type": "category",
+          "settings": {
+            "category_id": "airfare",
+            "label": "Airfare",
+            "tag": "airfare"
+          }
+        },
+        "cat_first_responders": {
+          "type": "category",
+          "settings": {
+            "category_id": "first-responders",
+            "label": "First Responders",
+            "tag": "first_responders"
+          }
+        },
+        "cat_trades": {
+          "type": "category",
+          "settings": {
+            "category_id": "trades",
+            "label": "Trades",
+            "tag": "trades"
+          }
+        },
+        "cat_government": {
+          "type": "category",
+          "settings": {
+            "category_id": "government",
+            "label": "Government",
+            "tag": "government"
+          }
+        },
+        "cat_events": {
+          "type": "category",
+          "settings": {
+            "category_id": "events",
+            "label": "Events",
+            "tag": "events"
+          }
+        },
+        "cat_other": {
+          "type": "category",
+          "settings": {
+            "category_id": "other",
+            "label": "Other",
+            "tag": "other"
+          }
+        },
+        "cat_blanks": {
+          "type": "category",
+          "settings": {
+            "category_id": "blanks",
+            "label": "Blanks",
+            "tag": "blanks"
+          }
+        }
+      },
+      "block_order": [
+        "cat_healthcare",
+        "cat_church",
+        "church_greeters",
+        "church_pastors",
+        "church_welcome",
+        "church_spanish",
+        "church_deacon",
+        "church_usher",
+        "cat_corporate",
+        "cat_fitness",
+        "cat_hospitality",
+        "cat_security",
+        "cat_retail",
+        "cat_novelty",
+        "cat_education",
+        "cat_airfare",
+        "cat_first_responders",
+        "cat_trades",
+        "cat_government",
+        "cat_events",
+        "cat_other",
+        "cat_blanks"
+      ],
+      "settings": {
+        "collection": "role-badges",
+        "catalogue_base": "/pages/role-badges",
+        "eyebrow": "Pre-Printed Badges",
+        "heading": "Find your <em>role</em>",
+        "products_per_page": 12,
+        "pack_label": "3-Pack",
+        "price_subtext": "per 3-pack + shipping",
+        "add_label": "Add to cart",
+        "load_more_label": "Show more badges"
+      }
+    },
+    "lifestyle": {
+      "type": "aqb-role-badges-lifestyle",
+      "blocks": {
+        "photo_1": {
+          "type": "photo",
+          "settings": {
+            "image_asset": "aqb-church-role-pastors.jpg",
+            "label": "Team Leader"
+          }
+        },
+        "photo_2": {
+          "type": "photo",
+          "settings": {
+            "image_asset": "aqb-church-role-welcome.jpg",
+            "label": "Steward"
+          }
+        },
+        "photo_3": {
+          "type": "photo",
+          "settings": {
+            "image_asset": "aqb-church-role-greeters.jpg",
+            "label": "Valet"
+          }
+        }
+      },
+      "block_order": [
+        "photo_1",
+        "photo_2",
+        "photo_3"
+      ],
+      "settings": {
+        "eyebrow": "Worn Every Day",
+        "heading": "Badges that look<br><em>the part.</em>",
+        "description": "Pre-printed and professional — ready to pin on and walk out the door."
+      }
+    },
+    "trust_bar": {
+      "type": "aqb-role-badges-trust-bar",
+      "blocks": {
+        "item_1": {
+          "type": "item",
+          "settings": {
+            "emoji": "⚡",
+            "title": "Ships same day",
+            "subtitle": "Orders placed before 2 PM Eastern leave the same day, Monday–Friday."
+          }
+        },
+        "item_2": {
+          "type": "item",
+          "settings": {
+            "emoji": "📦",
+            "title": "Free shipping at 5+",
+            "subtitle": "Order 5 or more packs and shipping is always on us."
+          }
+        },
+        "item_3": {
+          "type": "item",
+          "settings": {
+            "emoji": "✓",
+            "title": "Professional finish",
+            "subtitle": "Clear, durable printing on standard 1×3\" badge blanks."
+          }
+        },
+        "item_4": {
+          "type": "item",
+          "settings": {
+            "emoji": "📉",
+            "title": "Volume discounts",
+            "subtitle": "Pricing drops automatically as you add more packs to your cart."
+          }
+        }
+      },
+      "block_order": [
+        "item_1",
+        "item_2",
+        "item_3",
+        "item_4"
+      ],
+      "settings": {}
+    },
+    "crosssell": {
+      "type": "aqb-role-badges-crosssell",
+      "blocks": {
+        "card_custom": {
+          "type": "card",
+          "settings": {
+            "emoji": "✏️",
+            "title": "Custom printed badges",
+            "description": "Any name, any title. Preview before you order.",
+            "link": "shopify://products/custom-1x3-badge"
+          }
+        },
+        "card_blanks": {
+          "type": "card",
+          "settings": {
+            "emoji": "⬜",
+            "title": "Blank name badges",
+            "description": "Inserts included. Ideal for name tags that rotate.",
+            "link": "shopify://collections/blank-name-tags"
+          }
+        },
+        "card_church": {
+          "type": "card",
+          "settings": {
+            "emoji": "✝️",
+            "title": "Church & ministry collection",
+            "description": "Role badges in English and Spanish for your congregation.",
+            "link": "shopify://pages/church-and-congregation"
+          }
+        }
+      },
+      "block_order": [
+        "card_custom",
+        "card_blanks",
+        "card_church"
+      ],
+      "settings": {
+        "eyebrow": "Don't see your role?",
+        "heading": "We'll print <em>exactly</em><br>what you need.",
+        "description": "Our custom badge tool lets you type any name, title, or role — and see your badge before you order. Perfect for unique positions, branded titles, or names alongside a role.",
+        "button_label": "Start designing →",
+        "button_link": "shopify://products/custom-1x3-badge"
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "catalogue",
+    "lifestyle",
+    "trust_bar",
+    "crosssell"
+  ]
+}

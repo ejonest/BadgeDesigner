@@ -1,0 +1,60 @@
+{%- if page.handle == 'desk-signs-catalogue' or template.suffix == 'desk-signs-catalogue' -%}
+{{ 'aqb-desk-signs.css' | asset_url | stylesheet_tag }}
+
+<section class="aqb-ds-cat-hero" id="desk-signs-catalogue-hero">
+  <div class="aqb-ds-cat-hero__inner">
+    <div class="aqb-ds-cat-hero__content">
+      {%- if section.settings.back_label != blank -%}
+        <a href="{{ section.settings.back_link | default: '/pages/desk-signs' }}" class="aqb-ds-cat-hero__back">
+          ← {{ section.settings.back_label | escape }}
+        </a>
+      {%- endif -%}
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="aqb-ds-cat-hero__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h1>{{ section.settings.heading }}</h1>
+      {%- endif -%}
+      {%- if section.settings.subheading != blank -%}
+        <p class="aqb-ds-cat-hero__sub">{{ section.settings.subheading | escape }}</p>
+      {%- endif -%}
+    </div>
+    <div class="aqb-ds-cat-hero__stats">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'stat' -%}
+          <div class="aqb-ds-cat-hero__stat" {{ block.shopify_attributes }}>
+            <div class="aqb-ds-cat-hero__stat-val">{{ block.settings.value | escape }}</div>
+            <div class="aqb-ds-cat-hero__stat-label">{{ block.settings.label | escape }}</div>
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "DS Catalog Hero",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "text", "id": "back_label", "label": "Back link label", "default": "Desk Signs overview" },
+    { "type": "url", "id": "back_link", "label": "Back link" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Shop All Desk Signs" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "Find your <em>perfect sign.</em>" },
+    { "type": "textarea", "id": "subheading", "label": "Subheading", "default": "Filter by material, category, and style — acrylic, rosewood, plastic insert, profession, novelty, and gift packs." }
+  ],
+  "blocks": [
+    {
+      "type": "stat",
+      "name": "Stat",
+      "settings": [
+        { "type": "text", "id": "value", "label": "Value", "default": "666+" },
+        { "type": "text", "id": "label", "label": "Label", "default": "Designs" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB Desk Signs Catalog Hero" }]
+}
+{% endschema %}

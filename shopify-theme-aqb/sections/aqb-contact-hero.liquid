@@ -1,0 +1,48 @@
+{%- if page.handle == 'contact' or template.suffix == 'contact' -%}
+{{ 'aqb-contact.css' | asset_url | stylesheet_tag }}
+
+<section class="aqb-ct-hero" id="aqb-contact-hero-{{ section.id }}">
+  <div class="aqb-ct-hero__inner">
+    <div>
+      {%- if section.settings.eyebrow != blank -%}
+        <div class="aqb-ct-hero__eyebrow">{{ section.settings.eyebrow | escape }}</div>
+      {%- endif -%}
+
+      {%- if section.settings.heading != blank -%}
+        <h1>{{ section.settings.heading }}</h1>
+      {%- endif -%}
+
+      {%- if section.settings.subheading != blank -%}
+        <p class="aqb-ct-hero__sub">{{ section.settings.subheading | escape }}</p>
+      {%- endif -%}
+    </div>
+
+    {%- if section.settings.hours_label != blank or section.settings.hours_text != blank -%}
+      <div class="aqb-ct-hero__hours">
+        {%- if section.settings.hours_label != blank -%}
+          <div class="aqb-ct-hero__hours-label">{{ section.settings.hours_label | escape }}</div>
+        {%- endif -%}
+        {%- if section.settings.hours_text != blank -%}
+          <div class="aqb-ct-hero__hours-text">{{ section.settings.hours_text | escape }}</div>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Contact Hero",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Customer support" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "Ask us <em>anything.</em>" },
+    { "type": "textarea", "id": "subheading", "label": "Subheading", "default": "Use the form below to reach our team — it's the fastest way to get help. We usually reply the same business day." },
+    { "type": "text", "id": "hours_label", "label": "Hours label", "default": "Support hours" },
+    { "type": "text", "id": "hours_text", "label": "Hours text", "default": "Monday – Friday · 9 AM – 6 PM Pacific" }
+  ],
+  "presets": [{ "name": "AQB Contact Hero" }]
+}
+{% endschema %}

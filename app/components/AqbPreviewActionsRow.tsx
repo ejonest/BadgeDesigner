@@ -15,6 +15,8 @@ interface PreviewActionButtonProps {
   icon: React.ReactNode;
   danger?: boolean;
   duplicate?: boolean;
+  /** Short label beside icon on mobile */
+  mobileLabel?: string;
 }
 
 const PreviewActionButton: React.FC<PreviewActionButtonProps> = ({
@@ -24,10 +26,13 @@ const PreviewActionButton: React.FC<PreviewActionButtonProps> = ({
   icon,
   danger = false,
   duplicate = false,
+  mobileLabel,
 }) => (
   <button
     type="button"
     className={`aqb-ta-btn${
+      mobileLabel ? " aqb-ta-btn--mobile-inline" : " aqb-ta-btn--icon-only"
+    }${
       danger ? " aqb-ta-btn--danger" : duplicate ? " aqb-ta-btn--duplicate" : ""
     }`}
     onClick={(e) => {
@@ -35,11 +40,14 @@ const PreviewActionButton: React.FC<PreviewActionButtonProps> = ({
       onClick();
     }}
     title={title}
+    aria-label={label}
   >
     <span className="aqb-ta-icon" aria-hidden>
       {icon}
     </span>
-    <span className="aqb-ta-label">{label}</span>
+    {mobileLabel ? (
+      <span className="aqb-ta-label aqb-ta-label--mobile">{mobileLabel}</span>
+    ) : null}
   </button>
 );
 
@@ -109,6 +117,7 @@ export const AqbPreviewActionsRow: React.FC<AqbPreviewActionsRowProps> = ({
       <PreviewActionRow>
         <PreviewActionButton
           label="Duplicate"
+          mobileLabel="Copy"
           title={`Duplicate this ${labelProduct}`}
           onClick={onCopy}
           duplicate
@@ -116,6 +125,7 @@ export const AqbPreviewActionsRow: React.FC<AqbPreviewActionsRowProps> = ({
         />
         <PreviewActionButton
           label="Delete"
+          mobileLabel="Delete"
           title={`Delete this ${labelProduct}`}
           onClick={onDelete}
           danger
@@ -123,6 +133,7 @@ export const AqbPreviewActionsRow: React.FC<AqbPreviewActionsRowProps> = ({
         />
         <PreviewActionButton
           label="Delete all"
+          mobileLabel="Delete All"
           title={`Delete all ${labelProductPlural} from your design`}
           onClick={onDeleteAll}
           danger
@@ -133,6 +144,7 @@ export const AqbPreviewActionsRow: React.FC<AqbPreviewActionsRowProps> = ({
     <PreviewActionRow>
       <PreviewActionButton
         label="View all"
+        mobileLabel="View All"
         title={`View all ${labelProductPlural}`}
         onClick={onViewAll}
         icon={<Squares2X2Icon className={iconClass} />}
@@ -140,6 +152,7 @@ export const AqbPreviewActionsRow: React.FC<AqbPreviewActionsRowProps> = ({
       {showAddMultiple ? (
         <PreviewActionButton
           label="Add multiple"
+          mobileLabel="Add"
           title={`Add multiple ${labelProductPlural} from CSV file or data`}
           onClick={onAddMultiple}
           icon={<AddMultipleGridIcon className={iconClass} />}

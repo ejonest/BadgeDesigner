@@ -1,0 +1,201 @@
+{%- if page.handle == 'desk-signs' or template.suffix == 'desk-signs' -%}
+{%- liquid
+  assign ds_collection = section.settings.collection
+  if ds_collection == blank
+    assign ds_collection = collections['acrylic-desk-signs']
+  endif
+  assign tag_filter = section.settings.product_tag | downcase
+  assign products_per_page = section.settings.products_per_page | default: 12
+  assign cat_base = section.settings.catalogue_base | default: '/pages/desk-signs-catalogue'
+-%}
+
+<section class="aqb-ds-business" id="section-business">
+  <div class="aqb-ds-business__inner">
+    <div class="aqb-ds-business__header">
+      <div class="aqb-ds-business__header-left">
+        {%- if section.settings.eyebrow != blank -%}
+          <div class="aqb-ds-eyebrow">{{ section.settings.eyebrow | escape }}</div>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="aqb-ds-h2">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+        {%- if section.settings.description != blank -%}
+          <p class="aqb-ds-desc">{{ section.settings.description | escape }}</p>
+        {%- endif -%}
+
+        <div class="aqb-ds-industries" id="desk-signs-industries" role="tablist" aria-label="Industries">
+          <a href="{{ cat_base }}?type=profession" class="aqb-ds-ind-chip aqb-ds-ind-chip--link active" data-industry="all" role="tab" aria-selected="true">All</a>
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'industry' -%}
+              <a
+                href="{{ cat_base }}?type=profession&category={{ block.settings.industry_id | escape }}"
+                class="aqb-ds-ind-chip aqb-ds-ind-chip--link"
+                data-industry="{{ block.settings.industry_id | escape }}"
+                data-tag="{{ block.settings.tag | downcase | escape }}"
+                role="tab"
+                aria-selected="false"
+                {{ block.shopify_attributes }}
+              >
+                {{ block.settings.label | escape }}
+              </a>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      </div>
+
+      <div class="aqb-ds-business__photos">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'photo' -%}
+            <div class="aqb-ds-business__photo" {{ block.shopify_attributes }}>
+              {%- if block.settings.image != blank -%}
+                {{ block.settings.image | image_url: width: 500 | image_tag: loading: 'lazy', widths: '250,400,500', sizes: '20vw', alt: block.settings.alt }}
+              {%- elsif block.settings.image_asset != blank -%}
+                <img src="{{ block.settings.image_asset | asset_url }}" alt="{{ block.settings.alt | escape }}" loading="lazy" width="500" height="260">
+              {%- endif -%}
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+
+    <div class="aqb-ds-business__layout">
+      <aside class="aqb-ds-filters">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'filter_group' -%}
+            <div class="aqb-ds-filter-group" {{ block.shopify_attributes }}>
+              <div class="aqb-ds-filter-group__title">{{ block.settings.title | escape }}</div>
+              {%- assign options = block.settings.options | split: '|' -%}
+              {%- for option in options -%}
+                {%- assign option_trim = option | strip -%}
+                {%- if option_trim != blank -%}
+                  <label class="aqb-ds-filter-opt">
+                    <input type="checkbox" value="{{ option_trim | handleize }}" data-filter-group="{{ block.settings.group_id | escape }}">
+                    {{ option_trim | escape }}
+                  </label>
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+
+        {%- if section.settings.bulk_callout != blank -%}
+          <div class="aqb-ds-bulk-callout">{{ section.settings.bulk_callout | escape }}</div>
+        {%- endif -%}
+      </aside>
+
+      <div>
+        <div
+          class="aqb-ds-biz-grid"
+          id="desk-signs-business-grid"
+          data-page-size="{{ products_per_page }}"
+        >
+          {%- if ds_collection != blank -%}
+            {%- paginate ds_collection.products by 250 -%}
+              {%- for product in ds_collection.products -%}
+                {%- liquid
+                  assign tags_joined = product.tags | join: ',' | downcase
+                  assign show_product = false
+                  assign industries = ''
+                  if tag_filter == blank or tags_joined contains tag_filter or tags_joined contains 'business'
+                    assign show_product = true
+                  endif
+                  for block in section.blocks
+                    if block.type == 'industry'
+                      assign ind_tag = block.settings.tag | downcase
+                      if tags_joined contains ind_tag
+                        assign industries = industries | append: block.settings.industry_id | append: ' '
+                      endif
+                    endif
+                  endfor
+                -%}
+                {%- if show_product -%}
+                  {%- assign variant = product.selected_or_first_available_variant -%}
+                  <article
+                    class="aqb-ds-biz-card"
+                    data-industries="{{ industries | strip }}"
+                    data-product-index="{{ forloop.index0 }}"
+                  >
+                    <a href="{{ product.url }}" class="aqb-ds-biz-card__img" tabindex="-1" aria-hidden="true">
+                      {%- if product.featured_image -%}
+                        {{ product.featured_image | image_url: width: 500 | image_tag: loading: 'lazy', widths: '250,400,500', sizes: '30vw', alt: product.title }}
+                      {%- else -%}
+                        <div class="aqb-ds-biz-card__placeholder">
+                          <span class="aqb-ds-biz-card__mock">{{ product.title | escape }}</span>
+                        </div>
+                      {%- endif -%}
+                    </a>
+                    <div class="aqb-ds-biz-card__body">
+                      <a href="{{ product.url }}" class="aqb-ds-biz-card__name">{{ product.title | escape }}</a>
+                      <div class="aqb-ds-biz-card__meta">{{ section.settings.card_meta | escape }}</div>
+                      <div class="aqb-ds-biz-card__footer">
+                        <span class="aqb-ds-biz-card__size">{{ section.settings.size_label | escape }}</span>
+                        <span class="aqb-ds-biz-card__price">{% if variant %}{{ variant.price | money }}{% endif %}</span>
+                        {%- if variant and variant.available -%}
+                          <form method="post" action="{{ routes.cart_add_url }}">
+                            <input type="hidden" name="id" value="{{ variant.id }}">
+                            <button type="submit" class="aqb-ds-biz-card__add">{{ section.settings.add_label | escape }}</button>
+                          </form>
+                        {%- else -%}
+                          <a href="{{ product.url }}" class="aqb-ds-biz-card__add">{{ section.settings.add_label | escape }}</a>
+                        {%- endif -%}
+                      </div>
+                    </div>
+                  </article>
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endpaginate -%}
+          {%- endif -%}
+        </div>
+
+        <div class="aqb-ds-load-more" id="desk-signs-business-load-more" hidden>
+          <button type="button" class="aqb-ds-btn-load" id="desk-signs-business-load-btn">{{ section.settings.load_more_label | escape }}</button>
+          {%- if section.settings.load_more_note != blank -%}
+            <p class="aqb-ds-load-note">{{ section.settings.load_more_note | escape }}</p>
+          {%- endif -%}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Desk Signs Business",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "collection", "id": "collection", "label": "Collection" },
+    { "type": "text", "id": "catalogue_base", "label": "Catalog page path", "default": "/pages/desk-signs-catalogue" },
+    { "type": "text", "id": "product_tag", "label": "Product tag filter", "default": "business" },
+    { "type": "range", "id": "products_per_page", "label": "Products per page", "min": 6, "max": 24, "step": 3, "default": 12 },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Business & Professional" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "Functional signage that looks <em>the part.</em>" },
+    { "type": "textarea", "id": "description", "label": "Description", "default": "Pre-printed desk signs for reception desks, checkout counters, offices and facilities. Clear, professional, and ready to ship." },
+    { "type": "text", "id": "card_meta", "label": "Card meta", "default": "Plastic · 2×8\" · Gold on Navy" },
+    { "type": "text", "id": "size_label", "label": "Size label", "default": "2×8\"" },
+    { "type": "text", "id": "add_label", "label": "Add button", "default": "Add" },
+    { "type": "text", "id": "load_more_label", "label": "Load more", "default": "Show more signs" },
+    { "type": "text", "id": "load_more_note", "label": "Load more note", "default": "Showing the most popular business signs first" },
+    { "type": "textarea", "id": "bulk_callout", "label": "Bulk callout", "default": "Ordering for multiple locations? Contact us for volume pricing on business desk signs." }
+  ],
+  "blocks": [
+    { "type": "industry", "name": "Industry chip", "settings": [
+      { "type": "text", "id": "industry_id", "label": "Industry ID", "default": "retail" },
+      { "type": "text", "id": "label", "label": "Label", "default": "Retail" },
+      { "type": "text", "id": "tag", "label": "Product tag", "default": "retail" }
+    ]},
+    { "type": "photo", "name": "Header photo", "settings": [
+      { "type": "image_picker", "id": "image", "label": "Image" },
+      { "type": "text", "id": "image_asset", "label": "Image asset filename", "default": "aqb-cat-banner-desk.png" },
+      { "type": "text", "id": "alt", "label": "Alt text", "default": "Business desk sign in office" }
+    ]},
+    { "type": "filter_group", "name": "Filter group", "settings": [
+      { "type": "text", "id": "group_id", "label": "Group ID", "default": "industry" },
+      { "type": "text", "id": "title", "label": "Title", "default": "Industry" },
+      { "type": "textarea", "id": "options", "label": "Options (pipe-separated)", "default": "Retail|Healthcare|Hospitality|Office" }
+    ]}
+  ],
+  "presets": [{ "name": "AQB Desk Signs Business" }]
+}
+{% endschema %}

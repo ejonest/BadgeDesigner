@@ -1,0 +1,397 @@
+<section class="aqb-home-hero" id="aqb-home-hero-{{ section.id }}">
+  <div class="aqb-home-hero__left">
+    {%- if section.settings.eyebrow != blank -%}
+      <div class="aqb-home-hero__eyebrow">
+        <span class="aqb-home-hero__pulse" aria-hidden="true"></span>
+        <span class="aqb-home-hero__eyebrow-text">{{ section.settings.eyebrow | escape }}</span>
+      </div>
+    {%- endif -%}
+
+    {%- if section.settings.heading != blank -%}
+      <h1 class="aqb-home-hero__title">{{ section.settings.heading }}</h1>
+    {%- endif -%}
+
+    {%- if section.settings.subheading != blank -%}
+      <p class="aqb-home-hero__sub">{{ section.settings.subheading }}</p>
+    {%- endif -%}
+
+    <div class="aqb-home-hero__actions">
+      {%- if section.settings.primary_label != blank -%}
+        <a href="{{ section.settings.primary_link }}" class="aqb-home-hero__btn-primary">
+          {{ section.settings.primary_label | escape }}
+          <span aria-hidden="true">→</span>
+        </a>
+      {%- endif -%}
+      {%- if section.settings.secondary_label != blank -%}
+        <a href="{{ section.settings.secondary_link }}" class="aqb-home-hero__btn-secondary">
+          {{ section.settings.secondary_label | escape }}
+        </a>
+      {%- endif -%}
+    </div>
+
+    <div class="aqb-home-hero__strengths">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'strength' -%}
+          <div class="aqb-home-hero__sb" {{ block.shopify_attributes }}>
+            <span class="aqb-home-hero__sb-icon" aria-hidden="true">{{ block.settings.emoji }}</span>
+            <div>
+              <div class="aqb-home-hero__sb-title">{{ block.settings.title | escape }}</div>
+              <div class="aqb-home-hero__sb-desc">{{ block.settings.description | escape }}</div>
+            </div>
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+
+  <div class="aqb-home-hero__right">
+    {%- liquid
+      assign hero_alt = 'Custom name badge examples'
+      if section.settings.hero_image != blank and section.settings.hero_image.alt != blank
+        assign hero_alt = section.settings.hero_image.alt
+      endif
+      assign has_uploaded_hero = false
+      if section.settings.hero_image != blank
+        assign has_uploaded_hero = true
+      endif
+    -%}
+    {%- if has_uploaded_hero or section.settings.hero_image_asset != blank -%}
+      <div class="aqb-home-hero__photo">
+        {%- if has_uploaded_hero -%}
+          {{
+            section.settings.hero_image
+            | image_url: width: 1200
+            | image_tag:
+              loading: 'eager',
+              widths: '600,900,1200',
+              sizes: '(min-width: 990px) 50vw, 100vw',
+              alt: hero_alt,
+              class: 'aqb-home-hero__photo-img'
+          }}
+        {%- else -%}
+          <img
+            class="aqb-home-hero__photo-img"
+            src="{{ section.settings.hero_image_asset | asset_url }}"
+            alt="{{ hero_alt | escape }}"
+            width="1024"
+            height="1024"
+            loading="eager"
+          >
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    {%- liquid
+      assign show_editor_screenshot = false
+      unless section.settings.editor_preview_mode == 'built_in'
+        if section.settings.editor_preview_image != blank or section.settings.editor_preview_asset != blank
+          assign show_editor_screenshot = true
+        endif
+      endunless
+      assign has_editor_upload = false
+      if section.settings.editor_preview_image != blank
+        assign has_editor_upload = true
+      endif
+    -%}
+
+    {%- if show_editor_screenshot -%}
+      <div class="aqb-home-hero__tool-wrap">
+        <a
+          href="{{ section.settings.primary_link }}"
+          class="aqb-home-hero__tool-preview"
+          aria-label="{{ section.settings.primary_label | escape }}"
+        >
+          {%- if section.settings.editor_preview_cta_label != blank -%}
+            <span class="aqb-home-hero__tool-cta">
+              {{- section.settings.editor_preview_cta_label | escape -}}
+            </span>
+          {%- endif -%}
+          <span class="aqb-home-hero__tool aqb-home-hero__tool--screenshot">
+            <span class="aqb-home-hero__tool-frame">
+              {%- if has_editor_upload -%}
+                {{
+                  section.settings.editor_preview_image
+                  | image_url: width: 1400
+                  | image_tag:
+                    loading: 'eager',
+                    widths: '640,800,1024,1200,1400',
+                    sizes: '(min-width: 990px) min(720px, 50vw), 94vw',
+                    alt: 'Badge customizer — live preview and design controls',
+                    class: 'aqb-home-hero__tool-screenshot'
+                }}
+              {%- else -%}
+                <img
+                  class="aqb-home-hero__tool-screenshot"
+                  src="{{ section.settings.editor_preview_asset | asset_url }}"
+                  alt="Badge customizer — live preview and design controls"
+                  width="1024"
+                  height="634"
+                  loading="eager"
+                >
+              {%- endif -%}
+            </span>
+          </span>
+        </a>
+      </div>
+    {%- else -%}
+      <div class="aqb-home-hero__tool">
+        <div class="aqb-home-hero__tool-chrome">
+          <div class="aqb-home-hero__dots" aria-hidden="true">
+            <span class="aqb-home-hero__dot aqb-home-hero__dot--r"></span>
+            <span class="aqb-home-hero__dot aqb-home-hero__dot--y"></span>
+            <span class="aqb-home-hero__dot aqb-home-hero__dot--g"></span>
+          </div>
+          <div class="aqb-home-hero__url">{{ section.settings.tool_url_label | escape }}</div>
+        </div>
+        <div class="aqb-home-hero__tool-body">
+          <div class="aqb-home-hero__preview">
+            <span class="aqb-home-hero__preview-label">Live preview</span>
+            <div class="aqb-home-hero__badge">
+              <div class="aqb-home-hero__badge-org">{{ section.settings.preview_org_1 | escape }}</div>
+              <div class="aqb-home-hero__badge-name">{{ section.settings.preview_name_1 | escape }}</div>
+              <div class="aqb-home-hero__badge-role">{{ section.settings.preview_role_1 | escape }}</div>
+            </div>
+            <div class="aqb-home-hero__badge aqb-home-hero__badge--dark">
+              <div class="aqb-home-hero__badge-org">{{ section.settings.preview_org_2 | escape }}</div>
+              <div class="aqb-home-hero__badge-name">{{ section.settings.preview_name_2 | escape }}</div>
+              <div class="aqb-home-hero__badge-role">{{ section.settings.preview_role_2 | escape }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="aqb-home-hero__tool-footer">
+          <span class="aqb-home-hero__qty">Qty {{ section.settings.preview_qty | escape }}</span>
+          <span class="aqb-home-hero__price">
+            {{- section.settings.preview_price | escape -}}
+            <span>{{ section.settings.preview_price_note | escape }}</span>
+          </span>
+          <a href="{{ section.settings.primary_link }}" class="aqb-home-hero__add">
+            {{ section.settings.tool_cta_label | escape }}
+          </a>
+        </div>
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "AQB Home Hero",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Custom Badge Tool — Live Now"
+    },
+    {
+      "type": "html",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Personalized name badges<br><em>direct from the manufacturer.</em>"
+    },
+    {
+      "type": "html",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Design yours live in minutes — shape, colour, every line of text. <strong>See exactly what you'll get</strong> before you order. No artwork fees. Shipped free from our US facility."
+    },
+    {
+      "type": "text",
+      "id": "primary_label",
+      "label": "Primary button label",
+      "default": "Start Designing"
+    },
+    {
+      "type": "url",
+      "id": "primary_link",
+      "label": "Primary button link"
+    },
+    {
+      "type": "text",
+      "id": "secondary_label",
+      "label": "Secondary button label",
+      "default": "Shop All Badges"
+    },
+    {
+      "type": "url",
+      "id": "secondary_link",
+      "label": "Secondary button link"
+    },
+    {
+      "type": "image_picker",
+      "id": "hero_image",
+      "label": "Hero background image",
+      "info": "Badge variations photo behind the editor. Upload here, or rely on the theme asset below (survives theme push)."
+    },
+    {
+      "type": "text",
+      "id": "hero_image_asset",
+      "label": "Default hero image (theme asset)",
+      "default": "aqb-hero-badge-variations.png",
+      "info": "Used when no hero image is uploaded in the picker above."
+    },
+    {
+      "type": "select",
+      "id": "editor_preview_mode",
+      "label": "Editor preview style",
+      "options": [
+        { "value": "screenshot", "label": "Screenshot (accurate — recommended)" },
+        { "value": "built_in", "label": "Built-in simplified mock" }
+      ],
+      "default": "screenshot"
+    },
+    {
+      "type": "image_picker",
+      "id": "editor_preview_image",
+      "label": "Editor preview screenshot",
+      "info": "Full customizer UI (wide screenshot). Overrides aqb-hero-editor-preview.png when uploaded."
+    },
+    {
+      "type": "text",
+      "id": "editor_preview_asset",
+      "label": "Default editor preview (theme asset)",
+      "default": "aqb-hero-editor-preview.png"
+    },
+    {
+      "type": "text",
+      "id": "editor_preview_cta_label",
+      "label": "Editor preview CTA label",
+      "default": "Click here to design now →",
+      "info": "Shown above the design tool screenshot. Links to the primary button URL."
+    },
+    {
+      "type": "text",
+      "id": "tool_url_label",
+      "label": "Design studio URL label",
+      "default": "allqualitybadges.com — Design Studio"
+    },
+    {
+      "type": "text",
+      "id": "preview_org_1",
+      "default": "Grace Community Church",
+      "label": "Preview badge 1 — organization"
+    },
+    {
+      "type": "text",
+      "id": "preview_name_1",
+      "default": "Sarah",
+      "label": "Preview badge 1 — name"
+    },
+    {
+      "type": "text",
+      "id": "preview_role_1",
+      "default": "Greeter",
+      "label": "Preview badge 1 — role"
+    },
+    {
+      "type": "text",
+      "id": "preview_org_2",
+      "default": "Iglesia Nueva Vida",
+      "label": "Preview badge 2 — organization"
+    },
+    {
+      "type": "text",
+      "id": "preview_name_2",
+      "default": "Carlos",
+      "label": "Preview badge 2 — name"
+    },
+    {
+      "type": "text",
+      "id": "preview_role_2",
+      "default": "Ujier",
+      "label": "Preview badge 2 — role"
+    },
+    {
+      "type": "text",
+      "id": "preview_qty",
+      "default": "25",
+      "label": "Preview quantity"
+    },
+    {
+      "type": "text",
+      "id": "preview_price",
+      "default": "$47.25",
+      "label": "Preview price"
+    },
+    {
+      "type": "text",
+      "id": "preview_price_note",
+      "default": "($1.89 each)",
+      "label": "Preview price note"
+    },
+    {
+      "type": "text",
+      "id": "tool_cta_label",
+      "default": "Add to Cart",
+      "label": "Tool footer CTA label"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "strength",
+      "name": "Strength",
+      "settings": [
+        {
+          "type": "text",
+          "id": "emoji",
+          "label": "Emoji",
+          "default": "🏭"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "Direct from our US facility"
+        },
+        {
+          "type": "text",
+          "id": "description",
+          "label": "Description",
+          "default": "We manufacture — not a reseller"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Home Hero",
+      "blocks": [
+        {
+          "type": "strength",
+          "settings": {
+            "emoji": "🏭",
+            "title": "Direct from our US facility",
+            "description": "We manufacture — not a reseller"
+          }
+        },
+        {
+          "type": "strength",
+          "settings": {
+            "emoji": "💰",
+            "title": "Badges as low as $4.99",
+            "description": "Volume pricing, no artwork fees"
+          }
+        },
+        {
+          "type": "strength",
+          "settings": {
+            "emoji": "✏️",
+            "title": "Design it live in minutes",
+            "description": "See exactly what you get before you buy"
+          }
+        },
+        {
+          "type": "strength",
+          "settings": {
+            "emoji": "🔁",
+            "title": "Reorder in one click",
+            "description": "Designs saved to your account"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

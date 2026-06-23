@@ -1,0 +1,201 @@
+{%- liquid
+  assign tags_joined = product.tags | join: ',' | downcase
+  assign product_type = 'other'
+  assign product_type_label = 'Product'
+  assign card_add_label = add_label | default: 'Add to cart'
+  assign product_roles = ''
+  assign product_church_subs = ''
+  assign desk_material = 'acrylic'
+  assign desk_sign_type = 'profession'
+  assign desk_categories = ''
+
+  if tags_joined contains 'desk-sign' or tags_joined contains 'desk sign'
+    assign product_type = 'desk-plates'
+    assign product_type_label = 'Desk Name Plates'
+
+    if tags_joined contains 'gift-pack' or tags_joined contains 'giftpack' or tags_joined contains 'gift pack' or tags_joined contains 'gift-packs'
+      assign desk_sign_type = 'gifts'
+    elsif tags_joined contains 'novelty' or tags_joined contains 'humor' or tags_joined contains 'humour'
+      assign desk_sign_type = 'novelty'
+      if tags_joined contains 'funny'
+        assign desk_categories = desk_categories | append: 'funny '
+      endif
+      if tags_joined contains 'boss'
+        assign desk_categories = desk_categories | append: 'boss '
+      endif
+      if tags_joined contains 'office'
+        assign desk_categories = desk_categories | append: 'office '
+      endif
+    else
+      if tags_joined contains 'retail'
+        assign desk_categories = desk_categories | append: 'retail '
+      endif
+      if tags_joined contains 'healthcare'
+        assign desk_categories = desk_categories | append: 'healthcare '
+      endif
+      if tags_joined contains 'hospitality'
+        assign desk_categories = desk_categories | append: 'hospitality '
+      endif
+      if tags_joined contains 'office'
+        assign desk_categories = desk_categories | append: 'office '
+      endif
+    endif
+
+    if tags_joined contains 'rosewood'
+      assign desk_material = 'rosewood'
+    elsif tags_joined contains 'plastic' or tags_joined contains 'insert'
+      assign desk_material = 'plastic'
+    endif
+
+    if desk_material == 'plastic'
+      assign desk_material_label = 'Traditional'
+    else
+      assign desk_material_label = desk_material | capitalize
+    endif
+  elsif tags_joined contains 'role-badge'
+    assign product_type = 'role-badges'
+    assign product_type_label = 'Role Badges'
+
+    assign role_tags = 'healthcare:healthcare,church:church,corporate:corporate,fitness:fitness,hospitality:hospitality,security:security,retail:retail,novelty:novelty,education:education,airfare:airfare,first-responders:first_responders,trades:trades,government:government,events:events,other:other,blanks:blanks' | split: ','
+    for role_pair in role_tags
+      assign role_parts = role_pair | split: ':'
+      assign role_id = role_parts[0]
+      assign role_tag = role_parts[1]
+      if tags_joined contains role_tag
+        assign product_roles = product_roles | append: role_id | append: ' '
+      endif
+    endfor
+
+    assign church_sub_tags = 'greeters-ushers:greeter,pastors-leadership:pastor|leadership,welcome:welcome,spanish:spanish,deacon:deacon,usher:usher' | split: ','
+    for sub_pair in church_sub_tags
+      assign sub_parts = sub_pair | split: ':'
+      assign sub_id = sub_parts[0]
+      assign sub_tag_list = sub_parts[1] | split: '|'
+      assign sub_matched = false
+      for sub_tag in sub_tag_list
+        assign sub_tag_clean = sub_tag | strip
+        if tags_joined contains sub_tag_clean
+          assign sub_matched = true
+          break
+        endif
+      endfor
+      if sub_matched
+        assign product_church_subs = product_church_subs | append: sub_id | append: ' '
+      endif
+    endfor
+
+    if product_roles contains 'church'
+      if product_church_subs contains 'greeters-ushers'
+        assign product_type_label = 'Greeters & Ushers'
+      elsif product_church_subs contains 'pastors-leadership'
+        assign product_type_label = 'Pastors & Leadership'
+      elsif product_church_subs contains 'welcome'
+        assign product_type_label = 'Welcome'
+      elsif product_church_subs contains 'spanish'
+        assign product_type_label = 'Spanish'
+      elsif product_church_subs contains 'deacon'
+        assign product_type_label = 'Deacon'
+      elsif product_church_subs contains 'usher'
+        assign product_type_label = 'Usher'
+      else
+        assign product_type_label = 'Church & Religious'
+      endif
+    elsif tags_joined contains 'healthcare'
+      assign product_type_label = 'Healthcare'
+    elsif tags_joined contains 'corporate'
+      assign product_type_label = 'Corporate & Office'
+    elsif tags_joined contains 'fitness'
+      assign product_type_label = 'Fitness & Wellness'
+    elsif tags_joined contains 'hospitality'
+      assign product_type_label = 'Hospitality'
+    elsif tags_joined contains 'security'
+      assign product_type_label = 'Security'
+    elsif tags_joined contains 'retail'
+      assign product_type_label = 'Retail & Service'
+    elsif tags_joined contains 'education'
+      assign product_type_label = 'Education'
+    elsif tags_joined contains 'airfare'
+      assign product_type_label = 'Airfare'
+    elsif tags_joined contains 'first_responders'
+      assign product_type_label = 'First Responders'
+    elsif tags_joined contains 'trades'
+      assign product_type_label = 'Trades'
+    elsif tags_joined contains 'government'
+      assign product_type_label = 'Government'
+    elsif tags_joined contains 'events'
+      assign product_type_label = 'Events'
+    endif
+  elsif tags_joined contains 'name-tag-blank' or tags_joined contains 'blank-name-tag' or tags_joined contains 'type_blank'
+    assign product_type = 'name-tag-blanks'
+    assign product_type_label = 'Name Tag Blanks'
+  elsif product.handle contains 'custom'
+    assign product_type = 'custom-badges'
+    assign product_type_label = 'Custom Badges'
+  endif
+
+  assign variant = product.selected_or_first_available_variant
+  assign is_bestseller = 0
+  if product.tags contains 'bestseller'
+    assign is_bestseller = 1
+  endif
+  assign is_adult = 0
+  if tags_joined contains '18+' or tags_joined contains '18plus' or tags_joined contains 'adult'
+    assign is_adult = 1
+  endif
+-%}
+<article
+  class="aqb-ap-card is-filtered-out"
+  data-product-type="{{ product_type }}"
+  data-roles="{{ product_roles | strip }}"
+  data-church-subs="{{ product_church_subs | strip }}"
+  data-desk-material="{{ desk_material }}"
+  data-desk-sign-type="{{ desk_sign_type }}"
+  data-desk-categories="{{ desk_categories | strip }}"
+  data-product-id="{{ product.id }}"
+  data-product-index="{{ product_index }}"
+  data-title="{{ product.title | escape }}"
+  data-price="{% if variant %}{{ variant.price }}{% else %}0{% endif %}"
+  data-bestseller="{{ is_bestseller }}"
+  data-adult="{{ is_adult }}"
+>
+  <a href="{{ product.url }}" class="aqb-ap-card__image" tabindex="-1" aria-hidden="true">
+    {%- if product.featured_image -%}
+      {{
+        product.featured_image
+        | image_url: width: 600
+        | image_tag: loading: 'lazy', widths: '300,400,600', sizes: '(min-width: 990px) 25vw, 50vw', alt: product.title
+      }}
+    {%- else -%}
+      <div class="aqb-ap-card__placeholder">{{ product.title | escape }}</div>
+    {%- endif -%}
+    {%- if product.tags contains 'new' -%}
+      <span class="aqb-ap-card__badge">New</span>
+    {%- elsif product.tags contains 'bestseller' -%}
+      <span class="aqb-ap-card__badge">Bestseller</span>
+    {%- endif -%}
+  </a>
+  <div class="aqb-ap-card__body">
+    <div class="aqb-ap-card__type">
+      {{ product_type_label | escape }}
+      {%- if product_type == 'desk-plates' -%}
+        · {{ desk_material_label | escape }}
+        {%- if desk_sign_type == 'profession' -%} · Profession
+        {%- elsif desk_sign_type == 'novelty' -%} · Novelty
+        {%- else -%} · Gift Pack
+        {%- endif -%}
+      {%- endif -%}
+    </div>
+    <a href="{{ product.url }}" class="aqb-ap-card__title">{{ product.title | escape }}</a>
+    <div class="aqb-ap-card__footer">
+      <span class="aqb-ap-card__price">{% if variant %}{{ variant.price | money }}{% endif %}</span>
+      {%- if variant and variant.available -%}
+        <form method="post" action="{{ routes.cart_add_url }}">
+          <input type="hidden" name="id" value="{{ variant.id }}">
+          <button type="submit" class="aqb-ap-card__add">{{ card_add_label | escape }}</button>
+        </form>
+      {%- else -%}
+        <a href="{{ product.url }}" class="aqb-ap-card__add">{{ card_add_label | escape }}</a>
+      {%- endif -%}
+    </div>
+  </div>
+</article>

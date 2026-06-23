@@ -1,0 +1,96 @@
+{
+  "sections": {
+    "hero": {
+      "type": "aqb-all-products-hero",
+      "blocks": {
+        "stat_products": {
+          "type": "stat",
+          "settings": {
+            "value": "1000+",
+            "label": "Products",
+            "use_collection_count": true
+          }
+        },
+        "stat_types": {
+          "type": "stat",
+          "settings": {
+            "value": "4",
+            "label": "Product types"
+          }
+        },
+        "stat_shipping": {
+          "type": "stat",
+          "settings": {
+            "value": "48 hrs",
+            "label": "Ships within"
+          }
+        }
+      },
+      "block_order": [
+        "stat_products",
+        "stat_types",
+        "stat_shipping"
+      ],
+      "settings": {
+        "eyebrow": "Full Catalog",
+        "heading": "Shop <em>everything.</em>",
+        "subheading": "Browse role badges, desk name plates, name tag blanks, and custom badges — filter by product type, sort, and price."
+      }
+    },
+    "catalogue": {
+      "type": "aqb-all-products-catalogue",
+      "blocks": {
+        "type_role_badges": {
+          "type": "product_type",
+          "settings": {
+            "type_id": "role-badges",
+            "label": "Role Badges",
+            "tags": "role-badge"
+          }
+        },
+        "type_desk_plates": {
+          "type": "product_type",
+          "settings": {
+            "type_id": "desk-plates",
+            "label": "Desk Name Plates",
+            "tags": "desk-sign"
+          }
+        },
+        "type_blanks": {
+          "type": "product_type",
+          "settings": {
+            "type_id": "name-tag-blanks",
+            "label": "Name Tag Blanks",
+            "tags": "name-tag-blank, blank-name-tag, type_blank"
+          }
+        },
+        "type_custom": {
+          "type": "product_type",
+          "settings": {
+            "type_id": "custom-badges",
+            "label": "Custom Badges",
+            "tags": "custom"
+          }
+        }
+      },
+      "block_order": [
+        "type_role_badges",
+        "type_desk_plates",
+        "type_blanks",
+        "type_custom"
+      ],
+      "settings": {
+        "catalogue_base": "/collections/all",
+        "eyebrow": "Shop All",
+        "heading": "Browse all <em>products</em>",
+        "products_per_page": 12,
+        "add_label": "Add to cart",
+        "load_more_label": "Show more products"
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "catalogue"
+  ]
+}

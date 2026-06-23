@@ -1,0 +1,286 @@
+{%- if page.handle == 'desk-signs-catalogue' or template.suffix == 'desk-signs-catalogue' -%}
+{%- liquid
+  assign ds_collection = section.settings.collection
+  if ds_collection == blank
+    assign ds_collection = collections['acrylic-desk-signs']
+  endif
+  assign products_per_page = section.settings.products_per_page | default: 12
+  assign catalogue_base = section.settings.catalogue_base | default: '/pages/desk-signs-catalogue'
+-%}
+
+<section class="aqb-ds-cat-catalogue" id="desk-signs-catalogue">
+  <div class="aqb-ds-cat-catalogue__inner">
+    <div class="aqb-ds-cat-layout">
+      <aside class="aqb-ds-cat-sidebar" id="desk-signs-catalogue-filters" aria-label="Filter desk signs">
+        <button type="button" class="aqb-ds-cat-sidebar__toggle" id="desk-signs-filter-toggle" aria-expanded="false" aria-controls="desk-signs-filter-panel">
+          <span>Filters</span>
+          <span class="aqb-ds-cat-sidebar__toggle-icon" aria-hidden="true"></span>
+        </button>
+
+        <div class="aqb-ds-cat-sidebar__panel" id="desk-signs-filter-panel">
+          <div class="aqb-ds-cat-filter-section">
+            <h3 class="aqb-ds-cat-filter-section__title">Material</h3>
+            <ul class="aqb-ds-cat-filter-list" id="desk-signs-filter-material">
+              <li>
+                <label class="aqb-ds-cat-filter-check">
+                  <input type="checkbox" name="material" value="acrylic" data-material="acrylic">
+                  <span>Acrylic</span>
+                </label>
+              </li>
+              <li>
+                <label class="aqb-ds-cat-filter-check">
+                  <input type="checkbox" name="material" value="rosewood" data-material="rosewood">
+                  <span>Rosewood</span>
+                </label>
+              </li>
+              <li>
+                <label class="aqb-ds-cat-filter-check">
+                  <input type="checkbox" name="material" value="plastic" data-material="plastic">
+                  <span>Traditional</span>
+                </label>
+              </li>
+            </ul>
+          </div>
+
+          <div class="aqb-ds-cat-filter-section">
+            <h3 class="aqb-ds-cat-filter-section__title">Category</h3>
+            <ul class="aqb-ds-cat-filter-list" id="desk-signs-filter-type">
+              <li>
+                <label class="aqb-ds-cat-filter-check">
+                  <input type="checkbox" name="type" value="profession" data-type="profession">
+                  <span>Profession</span>
+                </label>
+              </li>
+              <li>
+                <label class="aqb-ds-cat-filter-check">
+                  <input type="checkbox" name="type" value="novelty" data-type="novelty">
+                  <span>Novelty</span>
+                </label>
+              </li>
+            </ul>
+          </div>
+
+          <div class="aqb-ds-cat-filter-section aqb-ds-cat-subfilter-group" data-for-type="profession" id="desk-signs-subfilter-profession" hidden>
+            <h3 class="aqb-ds-cat-filter-section__title">Sub Category</h3>
+            <ul class="aqb-ds-cat-filter-list">
+              {%- for block in section.blocks -%}
+                {%- if block.type == 'profession_category' -%}
+                  <li>
+                    <label class="aqb-ds-cat-filter-check">
+                      <input
+                        type="checkbox"
+                        name="subcategory"
+                        value="{{ block.settings.category_id | escape }}"
+                        data-category="{{ block.settings.category_id | escape }}"
+                        data-tag="{{ block.settings.tag | downcase | escape }}"
+                        data-for-type="profession"
+                      >
+                      <span>{{ block.settings.label | escape }}</span>
+                    </label>
+                  </li>
+                {%- endif -%}
+              {%- endfor -%}
+            </ul>
+          </div>
+
+          <div class="aqb-ds-cat-filter-section aqb-ds-cat-subfilter-group" data-for-type="novelty" id="desk-signs-subfilter-novelty" hidden>
+            <h3 class="aqb-ds-cat-filter-section__title">Sub Category</h3>
+            <ul class="aqb-ds-cat-filter-list">
+              {%- for block in section.blocks -%}
+                {%- if block.type == 'novelty_category' -%}
+                  <li>
+                    <label class="aqb-ds-cat-filter-check">
+                      <input
+                        type="checkbox"
+                        name="subcategory"
+                        value="{{ block.settings.category_id | escape }}"
+                        data-category="{{ block.settings.category_id | escape }}"
+                        data-tag="{{ block.settings.tag | downcase | escape }}"
+                        data-for-type="novelty"
+                      >
+                      <span>{{ block.settings.label | escape }}</span>
+                    </label>
+                  </li>
+                {%- endif -%}
+              {%- endfor -%}
+            </ul>
+          </div>
+
+          <div class="aqb-ds-cat-filter-section">
+            <h3 class="aqb-ds-cat-filter-section__title">Sort &amp; Filters</h3>
+
+            <label class="aqb-ds-cat-filter-field" for="desk-signs-sort">
+              <span class="aqb-ds-cat-filter-field__label">Sort by</span>
+              <select id="desk-signs-sort" class="aqb-ds-cat-filter-select">
+                <option value="featured">Featured</option>
+                <option value="price-asc">Price: low to high</option>
+                <option value="price-desc">Price: high to low</option>
+                <option value="bestseller">Best sellers</option>
+                <option value="alpha-asc">Alphabetical (A–Z)</option>
+                <option value="alpha-desc">Alphabetical (Z–A)</option>
+              </select>
+            </label>
+
+            <div class="aqb-ds-cat-filter-field">
+              <span class="aqb-ds-cat-filter-field__label">Price range</span>
+              <div class="aqb-ds-cat-price-range">
+                <label class="aqb-ds-cat-price-range__field">
+                  <span class="visually-hidden">Minimum price</span>
+                  <span class="aqb-ds-cat-price-range__prefix">$</span>
+                  <input type="number" id="desk-signs-price-min" class="aqb-ds-cat-price-input" min="0" step="0.01" placeholder="Min">
+                </label>
+                <span class="aqb-ds-cat-price-range__sep" aria-hidden="true">–</span>
+                <label class="aqb-ds-cat-price-range__field">
+                  <span class="visually-hidden">Maximum price</span>
+                  <span class="aqb-ds-cat-price-range__prefix">$</span>
+                  <input type="number" id="desk-signs-price-max" class="aqb-ds-cat-price-input" min="0" step="0.01" placeholder="Max">
+                </label>
+              </div>
+            </div>
+
+            <ul class="aqb-ds-cat-filter-list">
+              <li>
+                <label class="aqb-ds-cat-filter-check">
+                  <input type="checkbox" id="desk-signs-adult" value="1">
+                  <span>Include 18+ signs</span>
+                </label>
+              </li>
+            </ul>
+
+            <button type="button" class="aqb-ds-cat-filter-clear" id="desk-signs-filter-clear">Clear all filters</button>
+          </div>
+        </div>
+      </aside>
+
+      <div class="aqb-ds-cat-main">
+        <div class="aqb-ds-cat-catalogue__header">
+          <div>
+            {%- if section.settings.eyebrow != blank -%}
+              <p class="aqb-ds-eyebrow">{{ section.settings.eyebrow | escape }}</p>
+            {%- endif -%}
+            {%- if section.settings.heading != blank -%}
+              <h2 class="aqb-ds-h2">{{ section.settings.heading }}</h2>
+            {%- endif -%}
+          </div>
+          <div class="aqb-ds-cat-count" id="desk-signs-catalogue-count">Showing signs</div>
+        </div>
+
+        <div
+          class="aqb-ds-cat-grid"
+          id="desk-signs-catalogue-grid"
+          data-page-size="{{ products_per_page }}"
+          data-catalogue-base="{{ catalogue_base | escape }}"
+          data-collection-handle="{{ ds_collection.handle | escape }}"
+          data-total-products="{{ ds_collection.products_count | default: 0 }}"
+          data-add-label="{{ section.settings.add_label | escape }}"
+          data-cart-add-url="{{ routes.cart_add_url }}"
+        >
+          {%- if ds_collection != blank -%}
+            {%- paginate ds_collection.products by 250 -%}
+              {%- for product in ds_collection.products -%}
+                {%- render 'aqb-desk-signs-catalogue-card',
+                  product: product,
+                  section: section,
+                  product_index: forloop.index0
+                -%}
+              {%- endfor -%}
+            {%- endpaginate -%}
+          {%- endif -%}
+        </div>
+
+        <div class="aqb-ds-cat-load-more" id="desk-signs-catalogue-load-more" hidden>
+          <button type="button" class="aqb-ds-btn-load" id="desk-signs-catalogue-load-btn">
+            {{ section.settings.load_more_label | escape }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="aqb-ds-cat-scroll-controls" id="desk-signs-scroll-controls" aria-label="Scroll navigation">
+  <button type="button" class="aqb-ds-cat-scroll-btn" id="desk-signs-scroll-top" aria-label="Scroll to top">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3L3 9h10L8 3z" fill="currentColor"/></svg>
+  </button>
+  <button type="button" class="aqb-ds-cat-scroll-btn" id="desk-signs-scroll-bottom" aria-label="Scroll to bottom">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 13L3 7h10l-5 6z" fill="currentColor"/></svg>
+  </button>
+</div>
+
+<script type="application/json" id="desk-signs-filter-config">
+{
+  "professionCategories": [
+    {%- assign prof_first = true -%}
+    {%- for block in section.blocks -%}
+      {%- if block.type == 'profession_category' -%}
+        {%- unless prof_first -%},{%- endunless -%}
+        {"id":{{ block.settings.category_id | json }},"tag":{{ block.settings.tag | downcase | json }}}
+        {%- assign prof_first = false -%}
+      {%- endif -%}
+    {%- endfor -%}
+  ],
+  "noveltyCategories": [
+    {%- assign nov_first = true -%}
+    {%- for block in section.blocks -%}
+      {%- if block.type == 'novelty_category' -%}
+        {%- unless nov_first -%},{%- endunless -%}
+        {"id":{{ block.settings.category_id | json }},"tag":{{ block.settings.tag | downcase | json }}}
+        {%- assign nov_first = false -%}
+      {%- endif -%}
+    {%- endfor -%}
+  ]
+}
+</script>
+<script src="{{ 'aqb-desk-signs-catalogue.js' | asset_url }}" defer="defer"></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Desk Signs Catalog",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "collection", "id": "collection", "label": "Product collection" },
+    { "type": "text", "id": "catalogue_base", "label": "Catalog page path", "default": "/pages/desk-signs-catalogue" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Full Catalog" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "Browse all <em>desk signs</em>" },
+    { "type": "range", "id": "products_per_page", "label": "Products shown initially", "min": 4, "max": 24, "step": 4, "default": 12 },
+    { "type": "text", "id": "add_label", "label": "Add to cart label", "default": "Add to cart" },
+    { "type": "text", "id": "load_more_label", "label": "Load more label", "default": "Show more signs" }
+  ],
+  "blocks": [
+    {
+      "type": "profession_category",
+      "name": "Profession filter",
+      "settings": [
+        { "type": "text", "id": "category_id", "label": "Category ID", "default": "retail" },
+        { "type": "text", "id": "label", "label": "Label", "default": "Retail" },
+        { "type": "text", "id": "tag", "label": "Product tag", "default": "retail" }
+      ]
+    },
+    {
+      "type": "novelty_category",
+      "name": "Novelty filter",
+      "settings": [
+        { "type": "text", "id": "category_id", "label": "Category ID", "default": "funny" },
+        { "type": "text", "id": "label", "label": "Label", "default": "Funny" },
+        { "type": "text", "id": "tag", "label": "Product tag", "default": "funny" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Desk Signs Catalog",
+      "blocks": [
+        { "type": "profession_category", "settings": { "category_id": "retail", "label": "Retail", "tag": "retail" } },
+        { "type": "profession_category", "settings": { "category_id": "healthcare", "label": "Healthcare", "tag": "healthcare" } },
+        { "type": "profession_category", "settings": { "category_id": "hospitality", "label": "Hospitality", "tag": "hospitality" } },
+        { "type": "profession_category", "settings": { "category_id": "office", "label": "Office", "tag": "office" } },
+        { "type": "novelty_category", "settings": { "category_id": "funny", "label": "Funny", "tag": "funny" } },
+        { "type": "novelty_category", "settings": { "category_id": "boss", "label": "Boss / Leader", "tag": "boss" } },
+        { "type": "novelty_category", "settings": { "category_id": "office", "label": "Office life", "tag": "office" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

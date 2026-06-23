@@ -1,0 +1,192 @@
+{%- if page.handle == 'desk-signs' or template.suffix == 'desk-signs' -%}
+{%- liquid
+  assign ds_collection = section.settings.collection
+  if ds_collection == blank
+    assign ds_collection = collections['acrylic-desk-signs']
+  endif
+  assign tag_filter = section.settings.product_tag | downcase
+  assign products_per_page = section.settings.products_per_page | default: 8
+  assign cat_base = section.settings.catalogue_base | default: '/pages/desk-signs-catalogue'
+-%}
+
+<section class="aqb-ds-novelty" id="section-novelty">
+  <div class="aqb-ds-novelty__inner">
+    <div class="aqb-ds-novelty__header">
+      <div class="aqb-ds-novelty__header-left">
+        {%- if section.settings.eyebrow != blank -%}
+          <div class="aqb-ds-eyebrow">{{ section.settings.eyebrow | escape }}</div>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="aqb-ds-h2">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+        {%- if section.settings.description != blank -%}
+          <p class="aqb-ds-desc">{{ section.settings.description | escape }}</p>
+        {%- endif -%}
+      </div>
+      {%- if section.settings.see_all_label != blank -%}
+        <a href="{{ section.settings.see_all_link }}" class="aqb-ds-btn-see-all">{{ section.settings.see_all_label | escape }}</a>
+      {%- endif -%}
+    </div>
+
+    {%- if section.settings.gift_heading != blank -%}
+      <div class="aqb-ds-gift-strip">
+        <div class="aqb-ds-gift-strip__icon" aria-hidden="true">{{ section.settings.gift_emoji }}</div>
+        <div class="aqb-ds-gift-strip__text">
+          <h3>{{ section.settings.gift_heading | escape }}</h3>
+          {%- if section.settings.gift_text != blank -%}
+            <p>{{ section.settings.gift_text | escape }}</p>
+          {%- endif -%}
+        </div>
+        {%- if section.settings.gift_cta_label != blank -%}
+          <a href="{{ section.settings.gift_cta_link }}" class="aqb-ds-gift-strip__cta">{{ section.settings.gift_cta_label | escape }}</a>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    <div class="aqb-ds-filter-chips" id="desk-signs-novelty-chips" role="tablist" aria-label="Novelty filters">
+      <span class="aqb-ds-filter-chips__label">Filter</span>
+      <a href="{{ cat_base }}?type=novelty" class="aqb-ds-chip aqb-ds-chip--link active" data-chip="all" role="tab" aria-selected="true">All</a>
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'chip' -%}
+          <a
+            href="{{ cat_base }}?type=novelty&category={{ block.settings.chip_id | escape }}"
+            class="aqb-ds-chip aqb-ds-chip--link"
+            data-chip="{{ block.settings.chip_id | escape }}"
+            data-tag="{{ block.settings.tag | downcase | escape }}"
+            role="tab"
+            aria-selected="false"
+            {{ block.shopify_attributes }}
+          >
+            {{ block.settings.label | escape }}
+          </a>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+
+    <div
+      class="aqb-ds-nov-grid"
+      id="desk-signs-novelty-grid"
+      data-page-size="{{ products_per_page }}"
+    >
+      {%- if ds_collection != blank -%}
+        {%- paginate ds_collection.products by 250 -%}
+          {%- for product in ds_collection.products -%}
+            {%- liquid
+              assign tags_joined = product.tags | join: ',' | downcase
+              assign show_product = false
+              assign chips = ''
+              if tag_filter == blank or tags_joined contains tag_filter or tags_joined contains 'novelty' or tags_joined contains 'humor' or tags_joined contains 'humour'
+                assign show_product = true
+              endif
+              for block in section.blocks
+                if block.type == 'chip'
+                  assign chip_tag = block.settings.tag | downcase
+                  if tags_joined contains chip_tag
+                    assign chips = chips | append: block.settings.chip_id | append: ' '
+                  endif
+                endif
+              endfor
+              assign badge_class = ''
+              assign badge_label = ''
+              if product.tags contains 'bestseller'
+                assign badge_class = 'bestseller'
+                assign badge_label = 'Bestseller'
+              elsif product.tags contains 'gift'
+                assign badge_class = 'gift'
+                assign badge_label = 'Gift pick'
+              endif
+            -%}
+            {%- if show_product -%}
+              {%- assign variant = product.selected_or_first_available_variant -%}
+              <article
+                class="aqb-ds-nov-card"
+                data-chips="{{ chips | strip }}"
+                data-product-index="{{ forloop.index0 }}"
+              >
+                <a href="{{ product.url }}" class="aqb-ds-nov-card__img" tabindex="-1" aria-hidden="true">
+                  {%- if product.featured_image -%}
+                    {{ product.featured_image | image_url: width: 500 | image_tag: loading: 'lazy', widths: '250,400,500', sizes: '25vw', alt: product.title }}
+                  {%- else -%}
+                    <div class="aqb-ds-nov-card__placeholder">
+                      <span class="aqb-ds-nov-card__mock">{{ product.title | escape }}</span>
+                    </div>
+                  {%- endif -%}
+                  {%- if badge_label != blank -%}
+                    <span class="aqb-ds-nov-card__badge {{ badge_class }}">{{ badge_label | escape }}</span>
+                  {%- endif -%}
+                </a>
+                <div class="aqb-ds-nov-card__body">
+                  <a href="{{ product.url }}" class="aqb-ds-nov-card__name">{{ product.title | escape }}</a>
+                  <div class="aqb-ds-nov-card__meta">{{ section.settings.card_meta | escape }}</div>
+                  <div class="aqb-ds-nov-card__footer">
+                    <div>
+                      <span class="aqb-ds-nov-card__price">{% if variant %}{{ variant.price | money }}{% endif %}</span>
+                      {%- if section.settings.price_subtext != blank -%}
+                        <span class="aqb-ds-nov-card__price-sub">{{ section.settings.price_subtext | escape }}</span>
+                      {%- endif -%}
+                    </div>
+                    {%- if variant and variant.available -%}
+                      <form method="post" action="{{ routes.cart_add_url }}">
+                        <input type="hidden" name="id" value="{{ variant.id }}">
+                        <button type="submit" class="aqb-ds-nov-card__add">{{ section.settings.add_label | escape }}</button>
+                      </form>
+                    {%- else -%}
+                      <a href="{{ product.url }}" class="aqb-ds-nov-card__add">{{ section.settings.add_label | escape }}</a>
+                    {%- endif -%}
+                  </div>
+                </div>
+              </article>
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endpaginate -%}
+      {%- endif -%}
+    </div>
+
+    <div class="aqb-ds-load-more" id="desk-signs-novelty-load-more" hidden>
+      <button type="button" class="aqb-ds-btn-load" id="desk-signs-novelty-load-btn">{{ section.settings.load_more_label | escape }}</button>
+    </div>
+  </div>
+</section>
+
+<script src="{{ 'aqb-desk-signs-v2.js' | asset_url }}" defer="defer"></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Desk Signs Novelty",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "collection", "id": "collection", "label": "Collection" },
+    { "type": "text", "id": "catalogue_base", "label": "Catalog page path", "default": "/pages/desk-signs-catalogue" },
+    { "type": "text", "id": "product_tag", "label": "Product tag filter", "default": "novelty" },
+    { "type": "range", "id": "products_per_page", "label": "Products per page", "min": 4, "max": 16, "step": 4, "default": 8 },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Novelty & Humorous" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "Signs that make the whole office <em>laugh.</em>" },
+    { "type": "textarea", "id": "description", "label": "Description", "default": "Funny, bold, and conversation-starting desk signs for the office personality. Perfect gifts for coworkers." },
+    { "type": "text", "id": "see_all_label", "label": "See all button", "default": "See all novelty signs" },
+    { "type": "url", "id": "see_all_link", "label": "See all link" },
+    { "type": "text", "id": "gift_emoji", "label": "Gift strip emoji", "default": "🎁" },
+    { "type": "text", "id": "gift_heading", "label": "Gift strip heading", "default": "Great coworker gifts" },
+    { "type": "textarea", "id": "gift_text", "label": "Gift strip text", "default": "Funny desk signs make easy office gifts — ships fast, always gets a laugh." },
+    { "type": "text", "id": "gift_cta_label", "label": "Gift CTA", "default": "Shop gift picks" },
+    { "type": "url", "id": "gift_cta_link", "label": "Gift CTA link" },
+    { "type": "text", "id": "card_meta", "label": "Card meta", "default": "Plastic · 2×8\" · Gold on Navy" },
+    { "type": "text", "id": "price_subtext", "label": "Price subtext" },
+    { "type": "text", "id": "add_label", "label": "Add button", "default": "Add" },
+    { "type": "text", "id": "load_more_label", "label": "Load more", "default": "Show more novelty signs" }
+  ],
+  "blocks": [
+    {
+      "type": "chip",
+      "name": "Filter chip",
+      "settings": [
+        { "type": "text", "id": "chip_id", "label": "Chip ID", "default": "funny" },
+        { "type": "text", "id": "label", "label": "Label", "default": "Funny" },
+        { "type": "text", "id": "tag", "label": "Product tag", "default": "funny" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB Desk Signs Novelty" }]
+}
+{% endschema %}

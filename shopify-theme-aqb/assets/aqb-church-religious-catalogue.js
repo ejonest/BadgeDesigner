@@ -1,0 +1,613 @@
+(function () {
+  var grid = document.getElementById('church-religious-product-grid');
+  var filterBar = document.getElementById('church-religious-catalogue-filters');
+  if (!grid || !filterBar) return;
+
+  var countEl = document.getElementById('church-religious-product-count');
+  var loadWrap = document.getElementById('church-religious-load-more-wrap');
+  var loadBtn = document.getElementById('church-religious-load-more');
+  var sortSelect = document.getElementById('church-religious-sort');
+  var priceMinInput = document.getElementById('church-religious-price-min');
+  var priceMaxInput = document.getElementById('church-religious-price-max');
+  var adultCheckbox = document.getElementById('church-religious-adult');
+  var clearBtn = document.getElementById('church-religious-filter-clear');
+  var filterToggle = document.getElementById('church-religious-filter-toggle');
+  var filterPanel = document.getElementById('church-religious-filter-panel');
+
+  var pageSize = parseInt(grid.getAttribute('data-page-size'), 10) || 12;
+  var catalogueBase = grid.getAttribute('data-catalogue-base') || '/pages/church-religious-catalog';
+  var collectionHandle = grid.getAttribute('data-collection-handle') || 'all';
+  var totalProducts = parseInt(grid.getAttribute('data-total-products'), 10) || 0;
+  var addLabel = grid.getAttribute('data-add-label') || 'Add to cart';
+  var packLabel = grid.getAttribute('data-pack-label') || '3-Pack';
+  var priceSubtext = grid.getAttribute('data-price-subtext') || '';
+  var cartAddUrl = grid.getAttribute('data-cart-add-url') || '/cart/add';
+
+  var filterConfig = { categories: [] };
+  var configEl = document.getElementById('church-religious-filter-config');
+  if (configEl) {
+    try {
+      filterConfig = JSON.parse(configEl.textContent);
+    } catch (e) {
+      filterConfig = { categories: [] };
+    }
+  }
+
+  var religiousTitleKeywords = [
+    'church',
+    'religion',
+    'prayer',
+    'faith',
+    'bible',
+    'pastor',
+    'deacon',
+    'usher',
+    'greeter',
+    'welcome',
+    'ministry',
+    'congregation',
+    'thessalonians',
+  ];
+
+  var religiousTags = [
+    'church',
+    'religious',
+    'greeter',
+    'pastor',
+    'leadership',
+    'welcome',
+    'spanish',
+    'deacon',
+    'usher',
+    'ministry',
+    'congregation',
+  ];
+
+  var selectedCategories = [];
+  var sortBy = 'featured';
+  var priceMin = null;
+  var priceMax = null;
+  var showAdult = false;
+  var currentPage = 1;
+  var collectionPage = 1;
+  var collectionPageSize = 250;
+  var loadingCollection = false;
+  var allCollectionLoaded = false;
+
+  function refreshCards() {
+    return Array.prototype.slice.call(grid.querySelectorAll('.aqb-rb-product-card'));
+  }
+
+  var cards = refreshCards();
+
+  function tagList(tags) {
+    if (typeof tags === 'string') return tags.toLowerCase();
+    return (tags || []).join(',').toLowerCase();
+  }
+
+  function tagContains(tagsJoined, tag) {
+    if (!tag) return false;
+    return tagsJoined.indexOf(tag.toLowerCase()) !== -1;
+  }
+
+  function titleMatchesReligious(title) {
+    var titleDown = String(title || '').toLowerCase();
+    return religiousTitleKeywords.some(function (keyword) {
+      return titleDown.indexOf(keyword) !== -1;
+    });
+  }
+
+  function isAdultTagged(tagsJoined) {
+    return (
+      tagContains(tagsJoined, '18+') ||
+      tagContains(tagsJoined, '18plus') ||
+      tagContains(tagsJoined, 'adult')
+    );
+  }
+
+  function tagsMatchAny(tagsJoined, tagListToMatch) {
+    return (tagListToMatch || []).some(function (tag) {
+      return tagContains(tagsJoined, tag);
+    });
+  }
+
+  function isReligiousProduct(tags, title, productType) {
+    var tagsJoined = tagList(tags);
+    if (tagsMatchAny(tagsJoined, religiousTags)) return true;
+    if (titleMatchesReligious(title)) return true;
+    var typeDown = String(productType || '').toLowerCase();
+    return typeDown.indexOf('church') !== -1 || typeDown.indexOf('religious') !== -1;
+  }
+
+  function classifyProduct(tags, title, productType) {
+    var tagsJoined = tagList(tags);
+    if (!isReligiousProduct(tags, title, productType)) {
+      return { valid: false };
+    }
+
+    var subcategories = [];
+    var categoryLabel = 'Church & Religious';
+
+    (filterConfig.categories || []).forEach(function (cat) {
+      var catTags = (cat.tags || []).map(function (tag) {
+        return String(tag).trim().toLowerCase();
+      }).filter(Boolean);
+      var matched = tagsMatchAny(tagsJoined, catTags);
+      if (!matched && cat.id === 'greeters-ushers' && String(title || '').toLowerCase().indexOf('usher') !== -1) {
+        matched = true;
+      }
+      if (matched) {
+        subcategories.push(cat.id);
+        if (categoryLabel === 'Church & Religious') {
+          categoryLabel = cat.label;
+        }
+      }
+    });
+
+    var productKind = 'other';
+    if (tagContains(tagsJoined, 'role-badge')) {
+      productKind = 'role-badge';
+    } else if (tagContains(tagsJoined, 'desk-sign') || tagContains(tagsJoined, 'desk sign')) {
+      productKind = 'desk-sign';
+      categoryLabel = 'Desk Name Plate';
+      if (tagContains(tagsJoined, 'rosewood')) {
+        categoryLabel += ' · Rosewood';
+      } else if (tagContains(tagsJoined, 'plastic') || tagContains(tagsJoined, 'insert')) {
+        categoryLabel += ' · Traditional';
+      } else {
+        categoryLabel += ' · Acrylic';
+      }
+    } else if (
+      tagContains(tagsJoined, 'name-tag-blank') ||
+      tagContains(tagsJoined, 'blank-name-tag') ||
+      tagContains(tagsJoined, 'type_blank')
+    ) {
+      productKind = 'name-tag-blank';
+      categoryLabel = 'Name Tag Blank';
+    }
+
+    return {
+      valid: true,
+      subcategories: subcategories,
+      categoryLabel: categoryLabel,
+      productKind: productKind,
+      adult: isAdultTagged(tagsJoined) ? 1 : 0,
+      bestseller: tagContains(tagsJoined, 'bestseller') ? 1 : 0,
+    };
+  }
+
+  function formatMoney(price) {
+    if (price == null || price === '') return '';
+    if (typeof price === 'string') {
+      var parsed = parseFloat(price);
+      return isNaN(parsed) ? '' : '$' + parsed.toFixed(2);
+    }
+    return '$' + (price / 100).toFixed(2);
+  }
+
+  function productUrl(product) {
+    if (product.url) return product.url;
+    if (product.handle) return '/products/' + product.handle;
+    return '#';
+  }
+
+  function productImageSrc(product) {
+    if (product.featured_image) return product.featured_image;
+    if (product.images && product.images.length && product.images[0].src) {
+      return product.images[0].src;
+    }
+    if (product.image && product.image.src) return product.image.src;
+    return '';
+  }
+
+  function variantPriceCents(product) {
+    var variant = product.variants && product.variants[0];
+    if (!variant || variant.price == null) return 0;
+    if (typeof variant.price === 'string') {
+      return Math.round(parseFloat(variant.price) * 100);
+    }
+    return parseInt(variant.price, 10) || 0;
+  }
+
+  function buildCardElement(product, index) {
+    var tags = product.tags;
+    if (typeof tags === 'string') {
+      tags = tags.split(',').map(function (t) {
+        return t.trim();
+      }).filter(Boolean);
+    } else if (!Array.isArray(tags)) {
+      tags = [];
+    }
+
+    var info = classifyProduct(tags, product.title, product.product_type);
+    if (!info.valid) return null;
+
+    var variant = product.variants && product.variants[0];
+    var article = document.createElement('article');
+    article.className = 'aqb-rb-product-card is-filtered-out';
+    article.setAttribute('data-subcategories', info.subcategories.join(' '));
+    article.setAttribute('data-product-kind', info.productKind);
+    article.setAttribute('data-product-id', String(product.id));
+    article.setAttribute('data-product-index', String(index));
+    article.setAttribute('data-title', product.title || '');
+    article.setAttribute('data-price', String(variantPriceCents(product)));
+    article.setAttribute('data-bestseller', String(info.bestseller));
+    article.setAttribute('data-adult', String(info.adult));
+
+    var url = productUrl(product);
+    var imageSrc = productImageSrc(product);
+    var imageHtml = '';
+    if (imageSrc) {
+      imageHtml =
+        '<img src="' +
+        imageSrc +
+        '" alt="' +
+        (product.title || '').replace(/"/g, '&quot;') +
+        '" loading="lazy">';
+    } else {
+      imageHtml =
+        '<div class="aqb-rb-card-badge-render white-badge"><span class="aqb-rb-card-badge-text">' +
+        (product.title || '') +
+        '</span></div>';
+    }
+
+    var newPill = tagContains(tagList(tags), 'new')
+      ? '<span class="aqb-rb-card-new-pill">New</span>'
+      : '';
+    var packPill =
+      info.productKind === 'role-badge'
+        ? '<span class="aqb-rb-card-pack-pill">' + packLabel + '</span>'
+        : '';
+
+    var footerHtml = '';
+    if (variant && variant.available) {
+      footerHtml =
+        '<form method="post" action="' +
+        cartAddUrl +
+        '" class="aqb-rb-card-add-form"><input type="hidden" name="id" value="' +
+        variant.id +
+        '"><button type="submit" class="aqb-rb-card-add">' +
+        addLabel +
+        '</button></form>';
+    } else {
+      footerHtml = '<a href="' + url + '" class="aqb-rb-card-add">' + addLabel + '</a>';
+    }
+
+    var priceSubHtml =
+      info.productKind === 'role-badge' && priceSubtext
+        ? '<span class="aqb-rb-card-price-sub">' + priceSubtext + '</span>'
+        : '';
+
+    article.innerHTML =
+      '<a href="' +
+      url +
+      '" class="aqb-rb-card-image" tabindex="-1" aria-hidden="true">' +
+      imageHtml +
+      newPill +
+      packPill +
+      '</a><div class="aqb-rb-card-body"><div class="aqb-rb-card-category-label">' +
+      info.categoryLabel +
+      '</div><a href="' +
+      url +
+      '" class="aqb-rb-card-role">' +
+      (product.title || '') +
+      '</a><div class="aqb-rb-card-footer"><div>' +
+      (variant ? '<span class="aqb-rb-card-price">' + formatMoney(variant.price) + '</span>' : '') +
+      priceSubHtml +
+      '</div>' +
+      footerHtml +
+      '</div></div>';
+
+    return article;
+  }
+
+  function totalCollectionPages() {
+    return Math.max(1, Math.ceil(totalProducts / collectionPageSize));
+  }
+
+  function existingProductIds() {
+    var ids = {};
+    refreshCards().forEach(function (card) {
+      ids[card.getAttribute('data-product-id')] = true;
+    });
+    return ids;
+  }
+
+  function loadNextCollectionPage() {
+    if (!collectionHandle || loadingCollection || allCollectionLoaded) {
+      return Promise.resolve(false);
+    }
+
+    var nextPage = collectionPage + 1;
+    if (nextPage > totalCollectionPages()) {
+      allCollectionLoaded = true;
+      return Promise.resolve(false);
+    }
+
+    loadingCollection = true;
+    return fetch(
+      '/collections/' +
+        encodeURIComponent(collectionHandle) +
+        '/products.json?limit=' +
+        collectionPageSize +
+        '&page=' +
+        nextPage
+    )
+      .then(function (res) {
+        return res.json();
+      })
+      .then(function (data) {
+        var products = data.products || [];
+        if (!products.length) {
+          allCollectionLoaded = true;
+          return false;
+        }
+
+        var ids = existingProductIds();
+        var startIndex = refreshCards().length;
+        products.forEach(function (product, i) {
+          if (ids[String(product.id)]) return;
+          var card = buildCardElement(product, startIndex + i);
+          if (card) grid.appendChild(card);
+        });
+
+        collectionPage = nextPage;
+        if (collectionPage >= totalCollectionPages()) {
+          allCollectionLoaded = true;
+        }
+
+        cards = refreshCards();
+        return true;
+      })
+      .catch(function () {
+        return false;
+      })
+      .finally(function () {
+        loadingCollection = false;
+      });
+  }
+
+  function readCheckboxGroup(container, attr) {
+    if (!container) return [];
+    return Array.prototype.slice
+      .call(container.querySelectorAll('input[type="checkbox"]:checked'))
+      .map(function (input) {
+        return input.getAttribute(attr) || input.value;
+      })
+      .filter(Boolean);
+  }
+
+  function readStateFromUi() {
+    selectedCategories = readCheckboxGroup(
+      document.getElementById('church-religious-filter-categories'),
+      'data-category'
+    );
+    sortBy = sortSelect ? sortSelect.value : 'featured';
+    priceMin = priceMinInput && priceMinInput.value !== '' ? parseFloat(priceMinInput.value) : null;
+    priceMax = priceMaxInput && priceMaxInput.value !== '' ? parseFloat(priceMaxInput.value) : null;
+    showAdult = !!(adultCheckbox && adultCheckbox.checked);
+  }
+
+  function parseUrlState() {
+    var params = new URLSearchParams(window.location.search);
+    selectedCategories = (params.get('sub') || '')
+      .split(',')
+      .map(function (v) {
+        return v.trim();
+      })
+      .filter(Boolean);
+    sortBy = params.get('sort') || 'featured';
+    if (
+      ['featured', 'price-asc', 'price-desc', 'bestseller', 'alpha-asc', 'alpha-desc'].indexOf(sortBy) === -1
+    ) {
+      sortBy = 'featured';
+    }
+    priceMin = params.get('min') ? parseFloat(params.get('min')) : null;
+    priceMax = params.get('max') ? parseFloat(params.get('max')) : null;
+    showAdult = params.get('adult') === '1';
+  }
+
+  function applyUrlStateToUi() {
+    filterBar.querySelectorAll('input[data-category]').forEach(function (input) {
+      input.checked = selectedCategories.indexOf(input.getAttribute('data-category')) !== -1;
+    });
+    if (sortSelect) sortSelect.value = sortBy;
+    if (priceMinInput) priceMinInput.value = priceMin != null && !isNaN(priceMin) ? String(priceMin) : '';
+    if (priceMaxInput) priceMaxInput.value = priceMax != null && !isNaN(priceMax) ? String(priceMax) : '';
+    if (adultCheckbox) adultCheckbox.checked = showAdult;
+  }
+
+  function updateUrl() {
+    var params = new URLSearchParams();
+    if (selectedCategories.length) params.set('sub', selectedCategories.join(','));
+    if (sortBy !== 'featured') params.set('sort', sortBy);
+    if (priceMin != null && !isNaN(priceMin)) params.set('min', String(priceMin));
+    if (priceMax != null && !isNaN(priceMax)) params.set('max', String(priceMax));
+    if (showAdult) params.set('adult', '1');
+
+    var query = params.toString();
+    var next = catalogueBase + (query ? '?' + query : '');
+    window.history.replaceState({}, '', next);
+  }
+
+  function cardMatches(card) {
+    var subcategories = (card.getAttribute('data-subcategories') || '').split(/\s+/).filter(Boolean);
+    var priceCents = parseInt(card.getAttribute('data-price'), 10) || 0;
+    var isAdult = card.getAttribute('data-adult') === '1';
+
+    if (!showAdult && isAdult) return false;
+
+    if (selectedCategories.length) {
+      var categoryMatch = selectedCategories.some(function (cat) {
+        return subcategories.indexOf(cat) !== -1;
+      });
+      if (!categoryMatch) return false;
+    }
+
+    if (priceMin != null && !isNaN(priceMin) && priceCents < Math.round(priceMin * 100)) return false;
+    if (priceMax != null && !isNaN(priceMax) && priceCents > Math.round(priceMax * 100)) return false;
+
+    return true;
+  }
+
+  function compareCards(a, b) {
+    var indexA = parseInt(a.getAttribute('data-product-index'), 10) || 0;
+    var indexB = parseInt(b.getAttribute('data-product-index'), 10) || 0;
+    var priceA = parseInt(a.getAttribute('data-price'), 10) || 0;
+    var priceB = parseInt(b.getAttribute('data-price'), 10) || 0;
+    var titleA = (a.getAttribute('data-title') || '').toLowerCase();
+    var titleB = (b.getAttribute('data-title') || '').toLowerCase();
+    var bestA = a.getAttribute('data-bestseller') === '1' ? 1 : 0;
+    var bestB = b.getAttribute('data-bestseller') === '1' ? 1 : 0;
+
+    if (sortBy === 'price-asc') return priceA - priceB || indexA - indexB;
+    if (sortBy === 'price-desc') return priceB - priceA || indexA - indexB;
+    if (sortBy === 'alpha-asc') return titleA.localeCompare(titleB) || indexA - indexB;
+    if (sortBy === 'alpha-desc') return titleB.localeCompare(titleA) || indexA - indexB;
+    if (sortBy === 'bestseller') {
+      if (bestA !== bestB) return bestB - bestA;
+      return indexA - indexB;
+    }
+    return indexA - indexB;
+  }
+
+  function filteredCards() {
+    return refreshCards().filter(cardMatches).sort(compareCards);
+  }
+
+  function reorderGrid(filtered) {
+    filtered.forEach(function (card) {
+      grid.appendChild(card);
+    });
+  }
+
+  function renderGrid() {
+    cards = refreshCards();
+    var filtered = filteredCards();
+    reorderGrid(filtered);
+    var visibleCount = pageSize * currentPage;
+
+    cards.forEach(function (card) {
+      card.classList.add('is-filtered-out');
+    });
+
+    filtered.slice(0, visibleCount).forEach(function (card) {
+      card.classList.remove('is-filtered-out');
+    });
+
+    var shown = Math.min(visibleCount, filtered.length);
+    if (countEl) {
+      countEl.textContent = 'Showing ' + shown + ' of ' + filtered.length + ' products';
+    }
+
+    if (loadWrap) {
+      var canShowMoreFiltered = shown < filtered.length;
+      var canLoadMoreCollection = !allCollectionLoaded && collectionHandle;
+      loadWrap.hidden = !canShowMoreFiltered && !canLoadMoreCollection;
+    }
+  }
+
+  function resetAndRender() {
+    currentPage = 1;
+    readStateFromUi();
+    updateUrl();
+    renderGrid();
+  }
+
+  function clearAllFilters() {
+    selectedCategories = [];
+    sortBy = 'featured';
+    priceMin = null;
+    priceMax = null;
+    showAdult = false;
+    applyUrlStateToUi();
+    currentPage = 1;
+    updateUrl();
+    renderGrid();
+  }
+
+  function handleLoadMore() {
+    var filtered = filteredCards();
+    var visibleCount = pageSize * currentPage;
+
+    if (visibleCount < filtered.length) {
+      currentPage += 1;
+      renderGrid();
+      return;
+    }
+
+    loadNextCollectionPage().then(function (loaded) {
+      if (loaded) {
+        currentPage += 1;
+      }
+      renderGrid();
+    });
+  }
+
+  filterBar.addEventListener('change', function (e) {
+    if (e.target.matches('input[type="checkbox"], select')) {
+      resetAndRender();
+    }
+  });
+
+  if (priceMinInput) priceMinInput.addEventListener('change', resetAndRender);
+  if (priceMaxInput) priceMaxInput.addEventListener('change', resetAndRender);
+  if (sortSelect) sortSelect.addEventListener('change', resetAndRender);
+  if (clearBtn) clearBtn.addEventListener('click', clearAllFilters);
+
+  if (filterToggle && filterPanel) {
+    filterToggle.addEventListener('click', function () {
+      var expanded = filterToggle.getAttribute('aria-expanded') === 'true';
+      filterToggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      filterPanel.classList.toggle('is-open', !expanded);
+    });
+  }
+
+  if (loadBtn) loadBtn.addEventListener('click', handleLoadMore);
+
+  function loadAllRemainingPages() {
+    return loadNextCollectionPage().then(function (loaded) {
+      if (loaded && !allCollectionLoaded) {
+        return loadAllRemainingPages();
+      }
+      return loaded;
+    });
+  }
+
+  var scrollControls = document.getElementById('church-religious-scroll-controls');
+  var scrollTopBtn = document.getElementById('church-religious-scroll-top');
+  var scrollBottomBtn = document.getElementById('church-religious-scroll-bottom');
+
+  function updateScrollButtons() {
+    if (!scrollControls) return;
+    var scrollY = window.scrollY || document.documentElement.scrollTop;
+    var maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+    scrollControls.classList.toggle('is-at-top', scrollY < 80);
+    scrollControls.classList.toggle('is-at-bottom', scrollY >= maxScroll - 80);
+  }
+
+  if (scrollTopBtn) {
+    scrollTopBtn.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+  if (scrollBottomBtn) {
+    scrollBottomBtn.addEventListener('click', function () {
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+    });
+  }
+  if (scrollControls) {
+    window.addEventListener('scroll', updateScrollButtons, { passive: true });
+    updateScrollButtons();
+  }
+
+  parseUrlState();
+  applyUrlStateToUi();
+  renderGrid();
+
+  if (collectionHandle && totalProducts > cards.length) {
+    loadAllRemainingPages().then(function () {
+      renderGrid();
+    });
+  }
+})();

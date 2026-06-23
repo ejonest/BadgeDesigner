@@ -1,0 +1,61 @@
+{%- if page.handle == 'name-tag-blanks' or template.suffix == 'name-tag-blanks' -%}
+<section class="aqb-bl-lifestyle">
+  <div class="aqb-bl-lifestyle__inner">
+    {%- if section.settings.eyebrow != blank -%}
+      <div class="aqb-bl-eyebrow">{{ section.settings.eyebrow | escape }}</div>
+    {%- endif -%}
+    {%- if section.settings.heading != blank -%}
+      <h2>{{ section.settings.heading }}</h2>
+    {%- endif -%}
+
+    <div class="aqb-bl-lifestyle__grid">
+      {%- for block in section.blocks -%}
+        <div class="aqb-bl-lifestyle__card" {{ block.shopify_attributes }}>
+          {%- if block.settings.image != blank -%}
+            {{
+              block.settings.image
+              | image_url: width: 800
+              | image_tag: loading: 'lazy', widths: '400,600,800', sizes: '(min-width: 990px) 33vw, 100vw', alt: block.settings.title
+            }}
+          {%- elsif block.settings.image_asset != blank -%}
+            <img src="{{ block.settings.image_asset | asset_url }}" alt="{{ block.settings.title | escape }}" loading="lazy" width="800" height="520">
+          {%- endif -%}
+          <div class="aqb-bl-lifestyle__cap">
+            {%- if block.settings.label != blank -%}
+              <div class="aqb-bl-lifestyle__label">{{ block.settings.label | escape }}</div>
+            {%- endif -%}
+            {%- if block.settings.title != blank -%}
+              <div class="aqb-bl-lifestyle__title">{{ block.settings.title | escape }}</div>
+            {%- endif -%}
+          </div>
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Blanks Lifestyle",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "In use" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "Blanks in the <em>real world.</em>" }
+  ],
+  "blocks": [
+    {
+      "type": "photo",
+      "name": "Photo",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "image_asset", "label": "Image asset filename" },
+        { "type": "text", "id": "label", "label": "Label", "default": "Designer shape" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Professional & distinctive" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB Blanks Lifestyle" }]
+}
+{% endschema %}

@@ -1,4 +1,11 @@
 {% comment %}theme-check-disable ImgLazyLoading{% endcomment %}
+{%- liquid
+  assign is_all_catalogue = false
+  if collection.handle == 'all' or request.path contains '/collections/all'
+    assign is_all_catalogue = true
+  endif
+-%}
+{%- unless is_all_catalogue -%}
 {{ 'component-collection-hero.css' | asset_url | stylesheet_tag }}
 
 {%- style -%}
@@ -44,6 +51,8 @@
     {%- endif -%}
   </div>
 </div>
+
+{%- endunless -%}
 
 {% schema %}
 {

@@ -369,7 +369,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
     };
 
     const linePlaceholder = (idx: number) => {
-      if (idx === 0) return "Enter name or organisation...";
+      if (idx === 0) return "Enter name or organization...";
       if (idx === 1) return "Enter role or title...";
       const ph = linePlaceholders?.[idx]?.trim();
       return ph || `Insert line ${idx + 1} text here`;

@@ -1,0 +1,54 @@
+{%- if page.handle == 'name-tag-blanks' or template.suffix == 'name-tag-blanks' -%}
+<section class="aqb-bl-backing">
+  <div class="aqb-bl-backing__inner">
+    {%- if section.settings.eyebrow != blank -%}
+      <div class="aqb-bl-eyebrow">{{ section.settings.eyebrow | escape }}</div>
+    {%- endif -%}
+    {%- if section.settings.heading != blank -%}
+      <h2>{{ section.settings.heading }}</h2>
+    {%- endif -%}
+
+    <div class="aqb-bl-backing__grid">
+      {%- for block in section.blocks -%}
+        <div class="aqb-bl-backing__card" {{ block.shopify_attributes }}>
+          <div class="aqb-bl-backing__icon" aria-hidden="true">{{ block.settings.emoji }}</div>
+          <div class="aqb-bl-backing__name">{{ block.settings.title | escape }}</div>
+          <div class="aqb-bl-backing__desc">{{ block.settings.description | escape }}</div>
+          {%- if block.settings.price_note != blank -%}
+            <div class="aqb-bl-backing__price">{{ block.settings.price_note | escape }}</div>
+          {%- endif -%}
+          {%- if block.settings.badge != blank -%}
+            <span class="aqb-bl-backing__best">{{ block.settings.badge | escape }}</span>
+          {%- endif -%}
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Blanks Backing",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Backing options" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "Choose how they <em>attach.</em>" }
+  ],
+  "blocks": [
+    {
+      "type": "backing",
+      "name": "Backing option",
+      "settings": [
+        { "type": "text", "id": "emoji", "label": "Emoji", "default": "🔲" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Adhesive" },
+        { "type": "textarea", "id": "description", "label": "Description", "default": "Peel-and-stick. Ideal for events, conferences and one-time use." },
+        { "type": "text", "id": "price_note", "label": "Price note", "default": "Included in base price" },
+        { "type": "text", "id": "badge", "label": "Badge", "default": "Best for events" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB Blanks Backing" }]
+}
+{% endschema %}
