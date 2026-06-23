@@ -1,0 +1,235 @@
+{%- if page.handle == 'church-religious-catalog' or template.suffix == 'church-religious-catalog' -%}
+{{ 'aqb-role-badges.css' | asset_url | stylesheet_tag }}
+
+<section class="aqb-rb-hero" id="aqb-ch-religious-hero-{{ section.id }}">
+  <div class="aqb-rb-hero-inner">
+    <div class="aqb-rb-hero-content">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="aqb-rb-hero-eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+
+      {%- if section.settings.heading != blank -%}
+        <h1>{{ section.settings.heading }}</h1>
+      {%- endif -%}
+
+      {%- if section.settings.subheading != blank -%}
+        <p class="aqb-rb-hero-sub">{{ section.settings.subheading | escape }}</p>
+      {%- endif -%}
+
+      <div class="aqb-rb-hero-actions">
+        {%- if section.settings.primary_label != blank -%}
+          <a href="{{ section.settings.primary_link }}" class="aqb-rb-btn-gold">
+            {{ section.settings.primary_label | escape }}
+          </a>
+        {%- endif -%}
+        {%- if section.settings.secondary_label != blank -%}
+          <a href="{{ section.settings.secondary_link }}" class="aqb-rb-btn-ghost">
+            {{ section.settings.secondary_label | escape }}
+          </a>
+        {%- endif -%}
+      </div>
+
+      <div class="aqb-rb-hero-stats">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'stat' -%}
+            <div {{ block.shopify_attributes }}>
+              <div class="aqb-rb-hero-stat-val">{{ block.settings.value | escape }}</div>
+              <div class="aqb-rb-hero-stat-label">{{ block.settings.label | escape }}</div>
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+
+    <div class="aqb-rb-hero-visual">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'main_photo' -%}
+          <div class="aqb-rb-hero-img-main" {{ block.shopify_attributes }}>
+            {%- if block.settings.image != blank -%}
+              {{
+                block.settings.image
+                | image_url: width: 900
+                | image_tag: loading: 'eager', widths: '450,600,900', sizes: '(min-width: 990px) 40vw, 100vw', alt: block.settings.alt
+              }}
+            {%- elsif block.settings.image_asset != blank -%}
+              <img
+                src="{{ block.settings.image_asset | asset_url }}"
+                alt="{{ block.settings.alt | escape }}"
+                loading="eager"
+                width="900"
+                height="600"
+              >
+            {%- endif -%}
+            {%- if block.settings.tag != blank -%}
+              <span class="aqb-rb-hero-img-tag gold-tag">{{ block.settings.tag | escape }}</span>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+
+      <div class="aqb-rb-hero-img-stack">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'stack_photo' -%}
+            <div class="aqb-rb-hero-img-small" {{ block.shopify_attributes }}>
+              {%- if block.settings.image != blank -%}
+                {{
+                  block.settings.image
+                  | image_url: width: 500
+                  | image_tag: loading: 'lazy', widths: '250,400,500', sizes: '20vw', alt: block.settings.alt
+                }}
+              {%- elsif block.settings.image_asset != blank -%}
+                <img
+                  src="{{ block.settings.image_asset | asset_url }}"
+                  alt="{{ block.settings.alt | escape }}"
+                  loading="lazy"
+                  width="500"
+                  height="333"
+                >
+              {%- endif -%}
+              {%- if block.settings.tag != blank -%}
+                <span class="aqb-rb-hero-img-tag {{ block.settings.tag_style }} small">{{ block.settings.tag | escape }}</span>
+              {%- endif -%}
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Church Religious Hero",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Church & Ministry · Badges, Desk Signs & Blanks"
+    },
+    {
+      "type": "html",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Everything for your<br><em>ministry.</em>"
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Role badges, desk name plates, and name tag blanks for greeters, pastors, welcome teams, deacons, and more — including bilingual Spanish options."
+    },
+    {
+      "type": "text",
+      "id": "primary_label",
+      "label": "Primary button",
+      "default": "Browse Ministry Products"
+    },
+    {
+      "type": "url",
+      "id": "primary_link",
+      "label": "Primary button link"
+    },
+    {
+      "type": "text",
+      "id": "secondary_label",
+      "label": "Secondary button",
+      "default": "Design a Custom Badge →"
+    },
+    {
+      "type": "url",
+      "id": "secondary_link",
+      "label": "Secondary button link"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "stat",
+      "name": "Stat",
+      "settings": [
+        { "type": "text", "id": "value", "label": "Value", "default": "50+" },
+        { "type": "text", "id": "label", "label": "Label", "default": "Ministry products" }
+      ]
+    },
+    {
+      "type": "main_photo",
+      "name": "Main hero photo",
+      "limit": 1,
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "image_asset", "label": "Theme asset filename (fallback)", "default": "aqb-church-role-pastors.jpg" },
+        { "type": "text", "id": "alt", "label": "Alt text", "default": "Pastor wearing a church name badge" },
+        { "type": "text", "id": "tag", "label": "Badge tag", "default": "Pastor" }
+      ]
+    },
+    {
+      "type": "stack_photo",
+      "name": "Stack photo",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "image_asset", "label": "Theme asset filename (fallback)" },
+        { "type": "text", "id": "alt", "label": "Alt text" },
+        { "type": "text", "id": "tag", "label": "Badge tag" },
+        {
+          "type": "select",
+          "id": "tag_style",
+          "label": "Tag style",
+          "options": [
+            { "value": "gold-tag", "label": "Gold" },
+            { "value": "white-tag", "label": "White" }
+          ],
+          "default": "gold-tag"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Church Religious Hero",
+      "blocks": [
+        { "type": "stat", "settings": { "value": "50+", "label": "Ministry products" } },
+        { "type": "stat", "settings": { "value": "48 hrs", "label": "Ships within" } },
+        { "type": "stat", "settings": { "value": "EN & ES", "label": "Bilingual options" } },
+        {
+          "type": "main_photo",
+          "settings": {
+            "image_asset": "aqb-church-role-pastors.jpg",
+            "alt": "Pastor wearing a church name badge",
+            "tag": "Pastor"
+          }
+        },
+        {
+          "type": "stack_photo",
+          "settings": {
+            "image_asset": "aqb-church-role-greeters.jpg",
+            "alt": "Church greeter wearing name badge",
+            "tag": "Greeter",
+            "tag_style": "white-tag"
+          }
+        },
+        {
+          "type": "stack_photo",
+          "settings": {
+            "image_asset": "aqb-church-role-welcome.jpg",
+            "alt": "Welcome team member with badge",
+            "tag": "Welcome",
+            "tag_style": "gold-tag"
+          }
+        },
+        {
+          "type": "stack_photo",
+          "settings": {
+            "image_asset": "aqb-church-role-spanish.jpg",
+            "alt": "Spanish ministry badge",
+            "tag": "Diácono",
+            "tag_style": "white-tag"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

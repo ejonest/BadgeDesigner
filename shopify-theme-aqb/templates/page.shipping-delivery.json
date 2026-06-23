@@ -1,0 +1,171 @@
+{
+  "sections": {
+    "main": {
+      "type": "aqb-info-page",
+      "blocks": {
+        "heading_production": {
+          "type": "section_heading",
+          "settings": { "heading": "Production Time" }
+        },
+        "para_production_1": {
+          "type": "paragraph",
+          "settings": {
+            "text": "Every badge is made to order. Once your order is placed, our team begins production immediately. Most custom badge orders are engraved or printed, quality-checked, and shipped within 2 business days."
+          }
+        },
+        "para_production_2": {
+          "type": "paragraph",
+          "settings": {
+            "text": "Large bulk orders may require additional production time. If your order has special timing requirements, contact us before placing your order and we'll do our best to accommodate you."
+          }
+        },
+        "heading_shipping": {
+          "type": "section_heading",
+          "settings": { "heading": "Shipping Options" }
+        },
+        "row_standard": {
+          "type": "table_row",
+          "settings": {
+            "col_1": "Standard Shipping",
+            "col_2": "3–5 business days",
+            "col_3": "Available on all orders"
+          }
+        },
+        "row_expedited": {
+          "type": "table_row",
+          "settings": {
+            "col_1": "Expedited Shipping",
+            "col_2": "2 business days",
+            "col_3": "Available at checkout"
+          }
+        },
+        "row_overnight": {
+          "type": "table_row",
+          "settings": {
+            "col_1": "Overnight Shipping",
+            "col_2": "Next business day",
+            "col_3": "Available at checkout"
+          }
+        },
+        "note_shipping": {
+          "type": "note",
+          "settings": {
+            "text": "Shipping times are estimates from the date of shipment, not the date of order. Production time is separate."
+          }
+        },
+        "heading_costs": {
+          "type": "section_heading",
+          "settings": { "heading": "Shipping Costs" }
+        },
+        "para_costs": {
+          "type": "paragraph",
+          "settings": {
+            "text": "Shipping costs are calculated at checkout based on your order size, weight, and destination. Free standard shipping is available on qualifying orders — the threshold will be shown at checkout."
+          }
+        },
+        "heading_tracking": {
+          "type": "section_heading",
+          "settings": { "heading": "Order Tracking" }
+        },
+        "para_tracking_1": {
+          "type": "paragraph",
+          "settings": {
+            "text": "Once your order ships, you'll receive a confirmation email with a tracking number. Use that number to track your package directly with the carrier."
+          }
+        },
+        "para_tracking_2": {
+          "type": "paragraph",
+          "settings": {
+            "text": "If you haven't received a shipping confirmation within 3 business days of your order, check your spam folder first — then contact us and we'll look into it right away."
+          }
+        },
+        "heading_delivery": {
+          "type": "section_heading",
+          "settings": { "heading": "Delivery Area" }
+        },
+        "para_delivery": {
+          "type": "paragraph",
+          "settings": {
+            "text": "We currently ship to all 50 U.S. states. We do not currently offer international shipping. If you are outside the U.S. and need badges, contact us to discuss options."
+          }
+        },
+        "heading_damaged": {
+          "type": "section_heading",
+          "settings": { "heading": "Damaged or Lost Packages" }
+        },
+        "para_damaged": {
+          "type": "paragraph",
+          "settings": {
+            "title": "Damaged on arrival?",
+            "text": "Contact us within 7 days of delivery with a photo of the damage and we'll arrange a replacement."
+          }
+        },
+        "para_lost": {
+          "type": "paragraph",
+          "settings": {
+            "title": "Package lost in transit?",
+            "text": "Contact us and we'll work with the carrier to locate your shipment or arrange a replacement if needed."
+          }
+        },
+        "heading_bulk": {
+          "type": "section_heading",
+          "settings": { "heading": "Bulk & Corporate Orders" }
+        },
+        "para_bulk": {
+          "type": "paragraph",
+          "settings": {
+            "text": "For large volume orders that require freight shipping, custom delivery scheduling, or drop-shipping to multiple locations, please contact us directly to arrange fulfillment."
+          }
+        },
+        "cta_bulk": {
+          "type": "cta",
+          "settings": {
+            "prefix": "",
+            "label": "Contact Us for Bulk Shipping Options",
+            "url": "shopify://pages/contact",
+            "style": "outline"
+          }
+        },
+        "cta_design": {
+          "type": "cta",
+          "settings": {
+            "prefix": "Ready to order?",
+            "label": "Design Your Badge Now",
+            "url": "shopify://products/custom-1x3-badge",
+            "style": "gold"
+          }
+        }
+      },
+      "block_order": [
+        "heading_production",
+        "para_production_1",
+        "para_production_2",
+        "heading_shipping",
+        "row_standard",
+        "row_expedited",
+        "row_overnight",
+        "note_shipping",
+        "heading_costs",
+        "para_costs",
+        "heading_tracking",
+        "para_tracking_1",
+        "para_tracking_2",
+        "heading_delivery",
+        "para_delivery",
+        "heading_damaged",
+        "para_damaged",
+        "para_lost",
+        "heading_bulk",
+        "para_bulk",
+        "cta_bulk",
+        "cta_design"
+      ],
+      "settings": {
+        "eyebrow": "Fulfillment",
+        "heading": "Shipping & <em>Delivery</em>",
+        "subheading": "Fast production. Reliable delivery. No surprises."
+      }
+    }
+  },
+  "order": ["main"]
+}

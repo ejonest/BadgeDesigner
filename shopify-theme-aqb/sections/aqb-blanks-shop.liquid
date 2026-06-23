@@ -1,0 +1,200 @@
+{%- if page.handle == 'name-tag-blanks' or template.suffix == 'name-tag-blanks' -%}
+{%- liquid
+  assign shape_products_json = ''
+-%}
+
+<section class="aqb-bl-shop" id="shop">
+  <div class="aqb-bl-shop__inner">
+    {%- if section.settings.eyebrow != blank -%}
+      <div class="aqb-bl-eyebrow">{{ section.settings.eyebrow | escape }}</div>
+    {%- endif -%}
+    {%- if section.settings.heading != blank -%}
+      <h2>{{ section.settings.heading }}</h2>
+    {%- endif -%}
+    {%- if section.settings.description != blank -%}
+      <p class="aqb-bl-shop__desc">{{ section.settings.description | escape }}</p>
+    {%- endif -%}
+
+    <div class="aqb-bl-shape-grid" id="blanks-shape-grid">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'shape' -%}
+          {%- assign shape_product = block.settings.product -%}
+          <button
+            type="button"
+            class="aqb-bl-shape-card{% if forloop.first %} active{% endif %}"
+            data-shape="{{ block.settings.shape_id | escape }}"
+            data-shape-name="{{ block.settings.title | escape }}"
+            {% if shape_product != blank %}
+              data-product-id="{{ shape_product.id }}"
+              data-product-handle="{{ shape_product.handle }}"
+            {% endif %}
+            {{ block.shopify_attributes }}
+          >
+            <div class="aqb-bl-shape-card__img">
+              <div class="aqb-bl-shape-card__photo-crop">
+              {%- if block.settings.image != blank -%}
+                {{
+                  block.settings.image
+                  | image_url: width: 600
+                  | image_tag: loading: 'lazy', widths: '300,450,600', sizes: '25vw', alt: block.settings.title, class: 'aqb-bl-shape-card__photo'
+                }}
+              {%- elsif block.settings.image_asset != blank -%}
+                <img
+                  class="aqb-bl-shape-card__photo"
+                  src="{{ block.settings.image_asset | asset_url }}"
+                  alt="{{ block.settings.title | escape }}"
+                  loading="lazy"
+                  width="1500"
+                  height="1500"
+                >
+              {%- endif -%}
+              </div>
+            </div>
+            <div class="aqb-bl-shape-card__info">
+              <div class="aqb-bl-shape-card__name">{{ block.settings.title | escape }}</div>
+              <div class="aqb-bl-shape-card__desc">{{ block.settings.description | escape }}</div>
+              <div class="aqb-bl-shape-card__from">{{ block.settings.from_price | escape }}</div>
+            </div>
+          </button>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+
+    <div class="aqb-bl-config" id="blanks-config">
+      <div class="aqb-bl-config__hd">
+        <div class="aqb-bl-config__hd-left">
+          <div class="aqb-bl-config__name" id="blanks-config-name">Rounded Rectangle</div>
+          <span class="aqb-bl-config__change" id="blanks-config-change" role="button" tabindex="0">Change shape</span>
+        </div>
+        <div class="aqb-bl-config__price" id="blanks-config-price">$12.99</div>
+      </div>
+      <div class="aqb-bl-config__body">
+        <div class="aqb-bl-config__col">
+          <div class="aqb-bl-config__label">1 · Color</div>
+          <div class="aqb-bl-col-opts" id="blanks-col-opts"></div>
+        </div>
+        <div class="aqb-bl-config__col">
+          <div class="aqb-bl-config__label">2 · Size</div>
+          <div class="aqb-bl-size-opts" id="blanks-size-opts"></div>
+        </div>
+        <div class="aqb-bl-config__aligned">
+          <div class="aqb-bl-aligned-grid">
+            <div class="aqb-bl-config__label aqb-bl-aligned-grid__label-back">3 · Backing</div>
+            <div class="aqb-bl-config__label aqb-bl-aligned-grid__label-pack">4 · Pack size</div>
+
+            <button type="button" class="aqb-bl-back-opt sel" data-back="adhesive">
+              <span class="aqb-bl-back-opt__icon" aria-hidden="true">🔲</span>
+              <span class="aqb-bl-back-opt__body">
+                <span class="aqb-bl-back-opt__name">Adhesive</span>
+                <span class="aqb-bl-back-opt__up">Included in base price</span>
+              </span>
+            </button>
+            <div class="aqb-bl-qty-row">
+              <button type="button" class="aqb-bl-qty-opt sel" data-qty="10"><span class="aqb-bl-qty-opt__n">10-pack</span><span class="aqb-bl-qty-opt__e">$1.30 ea</span></button>
+              <button type="button" class="aqb-bl-qty-opt" data-qty="25"><span class="aqb-bl-qty-opt__n">25-pack</span><span class="aqb-bl-qty-opt__e">$1.19 ea</span></button>
+            </div>
+
+            <button type="button" class="aqb-bl-back-opt" data-back="pin">
+              <span class="aqb-bl-back-opt__icon" aria-hidden="true">📌</span>
+              <span class="aqb-bl-back-opt__body">
+                <span class="aqb-bl-back-opt__name">Pin</span>
+                <span class="aqb-bl-back-opt__up">+$0.50 per badge</span>
+              </span>
+            </button>
+            <div class="aqb-bl-qty-row">
+              <button type="button" class="aqb-bl-qty-opt" data-qty="50"><span class="aqb-bl-qty-opt__n">50-pack</span><span class="aqb-bl-qty-opt__e">$1.19 ea</span></button>
+              <button type="button" class="aqb-bl-qty-opt" data-qty="100"><span class="aqb-bl-qty-opt__n">100-pack</span><span class="aqb-bl-qty-opt__e">$1.09 ea</span></button>
+            </div>
+
+            <button type="button" class="aqb-bl-back-opt" data-back="magnetic">
+              <span class="aqb-bl-back-opt__icon" aria-hidden="true">🧲</span>
+              <span class="aqb-bl-back-opt__body">
+                <span class="aqb-bl-back-opt__name">Magnetic</span>
+                <span class="aqb-bl-back-opt__up">From +$0.30 per badge</span>
+              </span>
+            </button>
+            <div class="aqb-bl-qty-row" id="blanks-qty-opts">
+              <button type="button" class="aqb-bl-qty-opt" data-qty="250"><span class="aqb-bl-qty-opt__n">250-pack</span><span class="aqb-bl-qty-opt__e">$0.90 ea</span></button>
+            </div>
+          </div>
+
+          <div class="aqb-bl-config__order">
+            <div class="aqb-bl-config__saving" id="blanks-config-saving" hidden></div>
+            <form method="post" action="{{ routes.cart_add_url }}" id="blanks-add-form">
+              <input type="hidden" name="id" id="blanks-variant-id" value="">
+              <input type="hidden" name="quantity" id="blanks-cart-qty" value="1">
+              <button type="submit" class="aqb-bl-btn-atc" id="blanks-add-btn">Add to Cart →</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<span id="blanks-photo-base" data-url="{{ 'aqb-blank-shape-rounded.jpg' | asset_url }}" hidden></span>
+<span id="blanks-photo-config-url" data-url="{{ 'aqb-blank-photos.json' | asset_url }}" hidden></span>
+
+<script type="application/json" id="blanks-shape-data">
+[
+{%- assign first_shape = true -%}
+{%- for block in section.blocks -%}
+  {%- if block.type == 'shape' and block.settings.product != blank -%}
+    {%- unless first_shape -%},{%- endunless -%}
+    {%- assign p = block.settings.product -%}
+    {
+      "shapeId": {{ block.settings.shape_id | json }},
+      "shapeName": {{ block.settings.title | json }},
+      "productId": {{ p.id | json }},
+      "handle": {{ p.handle | json }},
+      "url": {{ p.url | json }},
+      "variants": [
+        {%- for variant in p.variants -%}
+          {
+            "id": {{ variant.id | json }},
+            "title": {{ variant.title | json }},
+            "price": {{ variant.price | json }},
+            "available": {{ variant.available | json }},
+            "options": {{ variant.options | json }}
+          }{%- unless forloop.last -%},{%- endunless -%}
+        {%- endfor -%}
+      ],
+      "options": {{ p.options | json }}
+    }
+    {%- assign first_shape = false -%}
+  {%- endif -%}
+{%- endfor -%}
+]
+</script>
+
+<script src="{{ 'aqb-name-tag-blanks.js' | asset_url }}" defer="defer"></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Blanks Shop",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Blank badges in minutes" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "Stock up fast. <em>No design needed.</em>" },
+    { "type": "textarea", "id": "description", "label": "Description", "default": "Choose color, shape, size, backing and pack size — your price updates instantly. Ready to order in under a minute." }
+  ],
+  "blocks": [
+    {
+      "type": "shape",
+      "name": "Shape",
+      "settings": [
+        { "type": "text", "id": "shape_id", "label": "Shape ID", "default": "rounded" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Rounded Rectangle" },
+        { "type": "textarea", "id": "description", "label": "Description", "default": "The classic name tag. Clean, professional, fits any setting." },
+        { "type": "text", "id": "from_price", "label": "From price label", "default": "From $12.99 / 10-pack" },
+        { "type": "product", "id": "product", "label": "Linked product" },
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "image_asset", "label": "Image asset filename", "default": "aqb-blank-shape-rounded.jpg", "info": "Use aqb-blank-shape-rounded.jpg, aqb-blank-shape-oval.jpg, aqb-blank-shape-square.jpg, or aqb-blank-shape-designer.jpg for realistic product photos." }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB Blanks Shop" }]
+}
+{% endschema %}

@@ -1,0 +1,118 @@
+{%- liquid
+  assign tags_joined = product.tags | join: ',' | downcase
+  assign is_role_badge = false
+  assign is_desk_sign = false
+  if product.tags contains 'role-badge'
+    assign is_role_badge = true
+  endif
+  if tags_joined contains 'desk-sign' or tags_joined contains 'desk sign'
+    assign is_desk_sign = true
+  endif
+-%}
+{%- if is_role_badge and is_desk_sign == false -%}
+{%- liquid
+  assign product_categories = ''
+  assign product_subcategories = ''
+  assign product_cat_label = ''
+  assign church_sub_label = ''
+
+  for block in section.blocks
+    if block.type == 'category'
+      assign tag_check = block.settings.tag | downcase
+      if tags_joined contains tag_check
+        assign product_categories = product_categories | append: block.settings.category_id | append: ' '
+        if product_cat_label == blank
+          assign product_cat_label = block.settings.label
+        endif
+      endif
+    endif
+  endfor
+
+  for block in section.blocks
+    if block.type == 'church_subcategory'
+      assign sub_tags = block.settings.tags | split: ','
+      assign sub_matched = false
+      for sub_tag in sub_tags
+        assign sub_tag_clean = sub_tag | strip | downcase
+        if sub_tag_clean != blank and tags_joined contains sub_tag_clean
+          assign sub_matched = true
+          break
+        endif
+      endfor
+      if sub_matched
+        assign product_subcategories = product_subcategories | append: block.settings.subcategory_id | append: ' '
+        if product_categories contains 'church' and church_sub_label == blank
+          assign church_sub_label = block.settings.label
+        endif
+      endif
+    endif
+  endfor
+
+  if church_sub_label != blank
+    assign product_cat_label = church_sub_label
+  endif
+
+  assign variant = product.selected_or_first_available_variant
+  assign is_bestseller = 0
+  if product.tags contains 'bestseller'
+    assign is_bestseller = 1
+  endif
+  assign is_adult = 0
+  if tags_joined contains '18+' or tags_joined contains '18plus' or tags_joined contains 'adult'
+    assign is_adult = 1
+  endif
+-%}
+<article
+  class="aqb-rb-product-card is-filtered-out"
+  data-categories="{{ product_categories | strip }}"
+  data-subcategories="{{ product_subcategories | strip }}"
+  data-product-id="{{ product.id }}"
+  data-product-index="{{ product_index }}"
+  data-title="{{ product.title | escape }}"
+  data-price="{% if variant %}{{ variant.price }}{% else %}0{% endif %}"
+  data-bestseller="{{ is_bestseller }}"
+  data-adult="{{ is_adult }}"
+>
+  <a href="{{ product.url }}" class="aqb-rb-card-image" tabindex="-1" aria-hidden="true">
+    {%- if product.featured_image -%}
+      {{
+        product.featured_image
+        | image_url: width: 600
+        | image_tag: loading: 'lazy', widths: '300,400,600', sizes: '(min-width: 990px) 25vw, 50vw', alt: product.title
+      }}
+    {%- else -%}
+      <div class="aqb-rb-card-badge-render white-badge">
+        <span class="aqb-rb-card-badge-text">{{ product.title | escape }}</span>
+      </div>
+    {%- endif -%}
+    {%- if product.tags contains 'new' -%}
+      <span class="aqb-rb-card-new-pill">New</span>
+    {%- endif -%}
+    <span class="aqb-rb-card-pack-pill">{{ section.settings.pack_label | escape }}</span>
+  </a>
+  <div class="aqb-rb-card-body">
+    {%- if product_cat_label != blank -%}
+      <div class="aqb-rb-card-category-label">{{ product_cat_label | escape }}</div>
+    {%- endif -%}
+    <a href="{{ product.url }}" class="aqb-rb-card-role">{{ product.title | escape }}</a>
+    <div class="aqb-rb-card-footer">
+      <div>
+        {%- if variant -%}
+          <span class="aqb-rb-card-price">{{ variant.price | money }}</span>
+        {%- endif -%}
+        {%- if section.settings.price_subtext != blank -%}
+          <span class="aqb-rb-card-price-sub">{{ section.settings.price_subtext | escape }}</span>
+        {%- endif -%}
+      </div>
+      {%- if variant and variant.available -%}
+        <form method="post" action="{{ routes.cart_add_url }}" class="aqb-rb-card-add-form">
+          <input type="hidden" name="id" value="{{ variant.id }}">
+          <button type="submit" class="aqb-rb-card-add">{{ section.settings.add_label | escape }}</button>
+        </form>
+      {%- else -%}
+        <a href="{{ product.url }}" class="aqb-rb-card-add">{{ section.settings.add_label | escape }}</a>
+      {%- endif -%}
+    </div>
+  </div>
+</article>
+{%- endif -%}

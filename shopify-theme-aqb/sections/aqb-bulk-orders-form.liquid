@@ -1,0 +1,201 @@
+{%- if page.handle == 'bulk' or page.handle == 'bulk-orders' or template.suffix == 'bulk-orders' -%}
+<section class="aqb-bo-form-section" id="bulk-quote-form">
+  <div class="aqb-bo-form-section__inner">
+    <div>
+      {%- if section.settings.eyebrow != blank -%}
+        <div class="aqb-bo-eyebrow">{{ section.settings.eyebrow | escape }}</div>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h2>{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.intro != blank -%}
+        <p class="aqb-bo-form-section__intro">{{ section.settings.intro | escape }}</p>
+      {%- endif -%}
+
+      <div class="aqb-bo-form-perks">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'perk' -%}
+            <div class="aqb-bo-form-perk" {{ block.shopify_attributes }}>
+              <span class="aqb-bo-form-perk__check" aria-hidden="true">✓</span>
+              {{ block.settings.text | escape }}
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+
+      <div class="aqb-bo-rep-card">
+        {%- if section.settings.rep_heading != blank -%}
+          <h3>{{ section.settings.rep_heading | escape }}</h3>
+        {%- endif -%}
+        {%- if section.settings.rep_text != blank -%}
+          <p>{{ section.settings.rep_text | escape }}</p>
+        {%- endif -%}
+      </div>
+    </div>
+
+    <div class="aqb-bo-form-card">
+      {%- if section.settings.form_note != blank -%}
+        <p class="aqb-bo-form-card__note">{{ section.settings.form_note | escape }}</p>
+      {%- endif -%}
+
+      {%- form 'contact', id: 'BulkQuoteForm', class: 'aqb-bo-form' -%}
+        <input type="hidden" name="contact[Subject]" value="{{ section.settings.email_subject | escape }}">
+
+        {%- if form.posted_successfully? -%}
+          <div class="aqb-bo-form-status aqb-bo-form-status--success" tabindex="-1" autofocus>
+            {{ section.settings.success_message | escape }}
+          </div>
+        {%- elsif form.errors -%}
+          <div class="aqb-bo-form-status aqb-bo-form-status--error" role="alert" tabindex="-1" autofocus>
+            {{ section.settings.error_message | escape }}
+          </div>
+        {%- endif -%}
+
+        <div class="aqb-bo-form-grid">
+          <div class="aqb-bo-field">
+            <label for="BulkQuoteForm-name">{{ section.settings.name_label | escape }} <span>*</span></label>
+            <input
+              type="text"
+              id="BulkQuoteForm-name"
+              name="contact[Name]"
+              autocomplete="name"
+              required
+              value="{% if form.name %}{{ form.name }}{% elsif customer %}{{ customer.name }}{% endif %}"
+            >
+          </div>
+
+          <div class="aqb-bo-field">
+            <label for="BulkQuoteForm-company">{{ section.settings.company_label | escape }}</label>
+            <input
+              type="text"
+              id="BulkQuoteForm-company"
+              name="contact[Company]"
+              autocomplete="organization"
+              value="{{ form.company }}"
+            >
+          </div>
+
+          <div class="aqb-bo-field">
+            <label for="BulkQuoteForm-email">{{ section.settings.email_label | escape }} <span>*</span></label>
+            <input
+              type="email"
+              id="BulkQuoteForm-email"
+              name="contact[email]"
+              autocomplete="email"
+              required
+              spellcheck="false"
+              autocapitalize="off"
+              value="{% if form.email %}{{ form.email }}{% elsif customer %}{{ customer.email }}{% endif %}"
+            >
+          </div>
+
+          <div class="aqb-bo-field">
+            <label for="BulkQuoteForm-phone">{{ section.settings.phone_label | escape }}</label>
+            <input
+              type="tel"
+              id="BulkQuoteForm-phone"
+              name="contact[Phone]"
+              autocomplete="tel"
+              value="{% if form.phone %}{{ form.phone }}{% elsif customer %}{{ customer.phone }}{% endif %}"
+            >
+          </div>
+
+          <div class="aqb-bo-field">
+            <label for="BulkQuoteForm-product">{{ section.settings.product_label | escape }} <span>*</span></label>
+            <select id="BulkQuoteForm-product" name="contact[Product Type]" required>
+              <option value="" disabled selected>{{ section.settings.product_placeholder | escape }}</option>
+              {%- for block in section.blocks -%}
+                {%- if block.type == 'product_option' -%}
+                  <option value="{{ block.settings.value | escape }}">{{ block.settings.label | escape }}</option>
+                {%- endif -%}
+              {%- endfor -%}
+            </select>
+          </div>
+
+          <div class="aqb-bo-field">
+            <label for="BulkQuoteForm-quantity">{{ section.settings.quantity_label | escape }} <span>*</span></label>
+            <select id="BulkQuoteForm-quantity" name="contact[Estimated Quantity]" required>
+              <option value="" disabled selected>{{ section.settings.quantity_placeholder | escape }}</option>
+              {%- for block in section.blocks -%}
+                {%- if block.type == 'quantity_option' -%}
+                  <option value="{{ block.settings.value | escape }}">{{ block.settings.label | escape }}</option>
+                {%- endif -%}
+              {%- endfor -%}
+            </select>
+          </div>
+
+          <div class="aqb-bo-field aqb-bo-field--full">
+            <label for="BulkQuoteForm-details">{{ section.settings.details_label | escape }} <span>*</span></label>
+            <textarea
+              id="BulkQuoteForm-details"
+              name="contact[Order Details]"
+              required
+              placeholder="{{ section.settings.details_placeholder | escape }}"
+            >{{- form.body -}}</textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="aqb-bo-form-submit">{{ section.settings.submit_label | escape }}</button>
+        {%- if section.settings.fine_print != blank -%}
+          <p class="aqb-bo-form-fine">{{ section.settings.fine_print | escape }}</p>
+        {%- endif -%}
+      {%- endform -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Bulk Quote Form",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Request a quote" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "Tell us what<br><em>you need.</em>" },
+    { "type": "textarea", "id": "intro", "label": "Intro", "default": "Fill out the form and a representative will reach out with volume pricing, lead times, and any questions about your order." },
+    { "type": "text", "id": "rep_heading", "label": "Rep card heading", "default": "A real person reviews every request" },
+    { "type": "textarea", "id": "rep_text", "label": "Rep card text", "default": "Bulk pricing depends on product type, quantity, colors, and backing options. Our team will confirm the details and send you a quote — no commitment required." },
+    { "type": "textarea", "id": "form_note", "label": "Form note", "default": "All fields marked with * are required. We typically respond within one business day." },
+    { "type": "text", "id": "email_subject", "label": "Email subject line", "default": "Bulk Order Quote Request" },
+    { "type": "text", "id": "name_label", "label": "Name label", "default": "Your name" },
+    { "type": "text", "id": "company_label", "label": "Company label", "default": "Company / organization" },
+    { "type": "text", "id": "email_label", "label": "Email label", "default": "Email address" },
+    { "type": "text", "id": "phone_label", "label": "Phone label", "default": "Phone number" },
+    { "type": "text", "id": "product_label", "label": "Product label", "default": "Product type" },
+    { "type": "text", "id": "product_placeholder", "label": "Product placeholder", "default": "Select a product..." },
+    { "type": "text", "id": "quantity_label", "label": "Quantity label", "default": "Estimated quantity" },
+    { "type": "text", "id": "quantity_placeholder", "label": "Quantity placeholder", "default": "Select a range..." },
+    { "type": "text", "id": "details_label", "label": "Details label", "default": "Order details" },
+    { "type": "textarea", "id": "details_placeholder", "label": "Details placeholder", "default": "Tell us the shapes, colors, backing types, desk sign finishes, or any other specifics..." },
+    { "type": "text", "id": "submit_label", "label": "Submit button", "default": "Submit Quote Request →" },
+    { "type": "text", "id": "fine_print", "label": "Fine print", "default": "By submitting, you agree to be contacted about your bulk order request." },
+    { "type": "textarea", "id": "success_message", "label": "Success message", "default": "Thank you — your bulk quote request has been received. A representative will contact you shortly." },
+    { "type": "textarea", "id": "error_message", "label": "Error message", "default": "Please check your email address and required fields, then try again." }
+  ],
+  "blocks": [
+    {
+      "type": "perk",
+      "name": "Perk",
+      "settings": [{ "type": "text", "id": "text", "label": "Text", "default": "Volume discounts on blanks, desk signs & custom badges" }]
+    },
+    {
+      "type": "product_option",
+      "name": "Product option",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Label", "default": "Blank name tags" },
+        { "type": "text", "id": "value", "label": "Value", "default": "Blank name tags" }
+      ]
+    },
+    {
+      "type": "quantity_option",
+      "name": "Quantity option",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Label", "default": "50 – 99" },
+        { "type": "text", "id": "value", "label": "Value", "default": "50-99" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB Bulk Quote Form" }]
+}
+{% endschema %}

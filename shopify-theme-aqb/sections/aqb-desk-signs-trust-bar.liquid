@@ -1,0 +1,33 @@
+{%- if page.handle == 'desk-signs' or template.suffix == 'desk-signs' -%}
+<section class="aqb-ds-trust-bar">
+  <div class="aqb-ds-trust-bar__inner">
+    {%- for block in section.blocks -%}
+      <div class="aqb-ds-trust-bar__item" {{ block.shopify_attributes }}>
+        <div class="aqb-ds-trust-bar__icon" aria-hidden="true">{{ block.settings.emoji }}</div>
+        <div class="aqb-ds-trust-bar__title">{{ block.settings.title | escape }}</div>
+        <div class="aqb-ds-trust-bar__sub">{{ block.settings.subtitle | escape }}</div>
+      </div>
+    {%- endfor -%}
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Desk Signs Trust",
+  "tag": "section",
+  "class": "section",
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Trust item",
+      "settings": [
+        { "type": "text", "id": "emoji", "label": "Emoji", "default": "🏷️" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Range of Personalized Desk Signs" },
+        { "type": "text", "id": "subtitle", "label": "Subtitle", "default": "Acrylic, rosewood & plastic" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB Desk Signs Trust" }]
+}
+{% endschema %}

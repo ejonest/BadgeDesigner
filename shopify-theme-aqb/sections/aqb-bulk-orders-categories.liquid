@@ -1,0 +1,55 @@
+{%- if page.handle == 'bulk' or page.handle == 'bulk-orders' or template.suffix == 'bulk-orders' -%}
+<section class="aqb-bo-categories" id="bulk-products">
+  <div class="aqb-bo-categories__inner">
+    {%- if section.settings.eyebrow != blank -%}
+      <div class="aqb-bo-eyebrow">{{ section.settings.eyebrow | escape }}</div>
+    {%- endif -%}
+    {%- if section.settings.heading != blank -%}
+      <h2>{{ section.settings.heading }}</h2>
+    {%- endif -%}
+    {%- if section.settings.description != blank -%}
+      <p class="aqb-bo-categories__desc">{{ section.settings.description | escape }}</p>
+    {%- endif -%}
+
+    <div class="aqb-bo-cat-grid">
+      {%- for block in section.blocks -%}
+        <a href="{{ block.settings.link }}" class="aqb-bo-cat-card" {{ block.shopify_attributes }}>
+          <span class="aqb-bo-cat-card__emoji" aria-hidden="true">{{ block.settings.emoji }}</span>
+          <div class="aqb-bo-cat-card__title">{{ block.settings.title | escape }}</div>
+          <div class="aqb-bo-cat-card__desc">{{ block.settings.description | escape }}</div>
+          {%- if block.settings.tag != blank -%}
+            <div class="aqb-bo-cat-card__tag">{{ block.settings.tag | escape }}</div>
+          {%- endif -%}
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Bulk Categories",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "What we bulk-quote" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "Products available<br><em>at volume pricing.</em>" },
+    { "type": "textarea", "id": "description", "label": "Description", "default": "Select your product type in the quote form below, or browse the categories to see what we offer before you request pricing." }
+  ],
+  "blocks": [
+    {
+      "type": "category",
+      "name": "Category",
+      "settings": [
+        { "type": "text", "id": "emoji", "label": "Emoji", "default": "⬜" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Blank name tags" },
+        { "type": "textarea", "id": "description", "label": "Description", "default": "Rounded, oval, square & designer shapes in 6 colors. Magnetic, pin or adhesive backing." },
+        { "type": "text", "id": "tag", "label": "Tag", "default": "From 250+ units" },
+        { "type": "url", "id": "link", "label": "Link" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB Bulk Categories" }]
+}
+{% endschema %}

@@ -1,0 +1,37 @@
+{%- if page.handle == 'bulk' or page.handle == 'bulk-orders' or template.suffix == 'bulk-orders' -%}
+<section class="aqb-bo-trust-bar">
+  <div class="aqb-bo-trust-bar__inner">
+    {%- for block in section.blocks -%}
+      <div class="aqb-bo-trust-bar__item" {{ block.shopify_attributes }}>
+        <span class="aqb-bo-trust-bar__icon" aria-hidden="true">{{ block.settings.emoji }}</span>
+        <div>
+          <div class="aqb-bo-trust-bar__title">{{ block.settings.title | escape }}</div>
+          {%- if block.settings.subtitle != blank -%}
+            <div class="aqb-bo-trust-bar__sub">{{ block.settings.subtitle | escape }}</div>
+          {%- endif -%}
+        </div>
+      </div>
+    {%- endfor -%}
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Bulk Trust Bar",
+  "tag": "section",
+  "class": "section",
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Trust item",
+      "settings": [
+        { "type": "text", "id": "emoji", "label": "Emoji", "default": "📞" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Rep-reviewed quotes" },
+        { "type": "text", "id": "subtitle", "label": "Subtitle", "default": "Every request handled personally" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB Bulk Trust Bar" }]
+}
+{% endschema %}

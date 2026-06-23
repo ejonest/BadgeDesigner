@@ -1,0 +1,249 @@
+{%- if page.handle == 'church-religious-catalog' or template.suffix == 'church-religious-catalog' -%}
+{%- liquid
+  assign source_collection = section.settings.collection
+  if source_collection == blank
+    assign source_collection = collections.all
+  endif
+  assign products_per_page = section.settings.products_per_page | default: 12
+  assign catalogue_base = section.settings.catalogue_base | default: '/pages/church-religious-catalog'
+-%}
+
+<section class="aqb-rb-catalogue" id="church-religious-catalogue">
+  <div class="aqb-rb-catalogue__inner">
+    <div class="aqb-rb-layout">
+      <aside class="aqb-rb-sidebar" id="church-religious-catalogue-filters" aria-label="Filter church and religious products">
+        <button type="button" class="aqb-rb-sidebar__toggle" id="church-religious-filter-toggle" aria-expanded="false" aria-controls="church-religious-filter-panel">
+          <span>Filters</span>
+          <span class="aqb-rb-sidebar__toggle-icon" aria-hidden="true"></span>
+        </button>
+
+        <div class="aqb-rb-sidebar__panel" id="church-religious-filter-panel">
+          <div class="aqb-rb-filter-section">
+            <h3 class="aqb-rb-filter-section__title">Ministry Role</h3>
+            <ul class="aqb-rb-filter-list" id="church-religious-filter-categories">
+              {%- for block in section.blocks -%}
+                {%- if block.type == 'category' -%}
+                  <li>
+                    <label class="aqb-rb-filter-check">
+                      <input
+                        type="checkbox"
+                        name="ministry-role"
+                        value="{{ block.settings.category_id | escape }}"
+                        data-category="{{ block.settings.category_id | escape }}"
+                        data-tags="{{ block.settings.tags | downcase | escape }}"
+                      >
+                      <span>{{ block.settings.label | escape }}</span>
+                    </label>
+                  </li>
+                {%- endif -%}
+              {%- endfor -%}
+            </ul>
+          </div>
+
+          <div class="aqb-rb-filter-section">
+            <label class="aqb-rb-filter-field" for="church-religious-sort">
+              <span class="aqb-rb-filter-field__label">Sort by</span>
+              <select id="church-religious-sort" class="aqb-rb-filter-select">
+                <option value="featured">Featured</option>
+                <option value="price-asc">Price: low to high</option>
+                <option value="price-desc">Price: high to low</option>
+                <option value="bestseller">Best sellers</option>
+                <option value="alpha-asc">Alphabetical (A–Z)</option>
+                <option value="alpha-desc">Alphabetical (Z–A)</option>
+              </select>
+            </label>
+
+            <div class="aqb-rb-filter-field">
+              <span class="aqb-rb-filter-field__label">Price range</span>
+              <div class="aqb-rb-price-range">
+                <label class="aqb-rb-price-range__field">
+                  <span class="visually-hidden">Minimum price</span>
+                  <span class="aqb-rb-price-range__prefix">$</span>
+                  <input type="number" id="church-religious-price-min" class="aqb-rb-price-input" min="0" step="0.01" placeholder="Min">
+                </label>
+                <span class="aqb-rb-price-range__sep" aria-hidden="true">–</span>
+                <label class="aqb-rb-price-range__field">
+                  <span class="visually-hidden">Maximum price</span>
+                  <span class="aqb-rb-price-range__prefix">$</span>
+                  <input type="number" id="church-religious-price-max" class="aqb-rb-price-input" min="0" step="0.01" placeholder="Max">
+                </label>
+              </div>
+            </div>
+
+            <ul class="aqb-rb-filter-list">
+              <li>
+                <label class="aqb-rb-filter-check">
+                  <input type="checkbox" id="church-religious-adult" value="1">
+                  <span>Include 18+ products</span>
+                </label>
+              </li>
+            </ul>
+
+            <button type="button" class="aqb-rb-filter-clear" id="church-religious-filter-clear">Clear all filters</button>
+          </div>
+        </div>
+      </aside>
+
+      <div class="aqb-rb-main">
+        <div class="aqb-rb-section-header">
+          <div>
+            {%- if section.settings.eyebrow != blank -%}
+              <p class="aqb-rb-section-eyebrow">{{ section.settings.eyebrow | escape }}</p>
+            {%- endif -%}
+            {%- if section.settings.heading != blank -%}
+              <h2>{{ section.settings.heading }}</h2>
+            {%- endif -%}
+          </div>
+          <div class="aqb-rb-section-count" id="church-religious-product-count">Showing products</div>
+        </div>
+
+        <div
+          class="aqb-rb-product-grid"
+          id="church-religious-product-grid"
+          data-page-size="{{ products_per_page }}"
+          data-catalogue-base="{{ catalogue_base | escape }}"
+          data-collection-handle="{{ source_collection.handle | escape }}"
+          data-total-products="{{ source_collection.products_count | default: 0 }}"
+          data-add-label="{{ section.settings.add_label | escape }}"
+          data-pack-label="{{ section.settings.pack_label | escape }}"
+          data-price-subtext="{{ section.settings.price_subtext | escape }}"
+          data-cart-add-url="{{ routes.cart_add_url }}"
+        >
+          {%- if source_collection != blank -%}
+            {%- paginate source_collection.products by 250 -%}
+              {%- for product in source_collection.products -%}
+                {%- render 'aqb-church-religious-catalogue-card',
+                  product: product,
+                  section: section,
+                  product_index: forloop.index0
+                -%}
+              {%- endfor -%}
+            {%- endpaginate -%}
+          {%- endif -%}
+        </div>
+
+        <div class="aqb-rb-load-more-wrap" id="church-religious-load-more-wrap" hidden>
+          <button type="button" class="aqb-rb-btn-outline" id="church-religious-load-more">
+            {{ section.settings.load_more_label | escape }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="aqb-rb-scroll-controls" id="church-religious-scroll-controls" aria-label="Scroll navigation">
+  <button type="button" class="aqb-rb-scroll-btn" id="church-religious-scroll-top" aria-label="Scroll to top">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3L3 9h10L8 3z" fill="currentColor"/></svg>
+  </button>
+  <button type="button" class="aqb-rb-scroll-btn" id="church-religious-scroll-bottom" aria-label="Scroll to bottom">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 13L3 7h10l-5 6z" fill="currentColor"/></svg>
+  </button>
+</div>
+
+<script type="application/json" id="church-religious-filter-config">
+{
+  "categories": [
+    {%- assign cat_first = true -%}
+    {%- for block in section.blocks -%}
+      {%- if block.type == 'category' -%}
+        {%- unless cat_first -%},{%- endunless -%}
+        {"id":{{ block.settings.category_id | json }},"tags":{{ block.settings.tags | downcase | split: ',' | json }},"label":{{ block.settings.label | json }}}
+        {%- assign cat_first = false -%}
+      {%- endif -%}
+    {%- endfor -%}
+  ]
+}
+</script>
+<script src="{{ 'aqb-church-religious-catalogue.js' | asset_url }}" defer="defer"></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Church Catalog",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Product collection",
+      "info": "Uses all products by default; only church and religious items are shown."
+    },
+    {
+      "type": "text",
+      "id": "catalogue_base",
+      "label": "Catalog page path",
+      "default": "/pages/church-religious-catalog"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Church & Religious"
+    },
+    {
+      "type": "html",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Shop by <em>ministry role</em>"
+    },
+    {
+      "type": "range",
+      "id": "products_per_page",
+      "min": 4,
+      "max": 24,
+      "step": 4,
+      "label": "Products shown initially",
+      "default": 12
+    },
+    {
+      "type": "text",
+      "id": "pack_label",
+      "label": "Pack pill label",
+      "default": "3-Pack"
+    },
+    {
+      "type": "text",
+      "id": "price_subtext",
+      "label": "Price subtext",
+      "default": "per 3-pack + shipping"
+    },
+    {
+      "type": "text",
+      "id": "add_label",
+      "label": "Add to cart label",
+      "default": "Add to cart"
+    },
+    {
+      "type": "text",
+      "id": "load_more_label",
+      "label": "Load more label",
+      "default": "Show more products"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "category",
+      "name": "Ministry role filter",
+      "settings": [
+        { "type": "text", "id": "category_id", "label": "Category ID", "default": "greeters-ushers" },
+        { "type": "text", "id": "label", "label": "Label", "default": "Greeters & Ushers" },
+        { "type": "text", "id": "tags", "label": "Product tags (comma-separated)", "default": "greeter" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Church Catalog",
+      "blocks": [
+        { "type": "category", "settings": { "category_id": "greeters-ushers", "label": "Greeters & Ushers", "tags": "greeter" } },
+        { "type": "category", "settings": { "category_id": "pastors-leadership", "label": "Pastors & Leadership", "tags": "pastor, leadership" } },
+        { "type": "category", "settings": { "category_id": "welcome", "label": "Welcome", "tags": "welcome" } },
+        { "type": "category", "settings": { "category_id": "spanish", "label": "Spanish", "tags": "spanish" } },
+        { "type": "category", "settings": { "category_id": "deacon", "label": "Deacon", "tags": "deacon" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

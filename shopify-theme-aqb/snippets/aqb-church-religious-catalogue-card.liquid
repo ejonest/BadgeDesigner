@@ -1,0 +1,153 @@
+{%- liquid
+  assign tags_joined = product.tags | join: ',' | downcase
+  assign title_down = product.title | downcase
+  assign product_kind = ''
+  assign is_religious = false
+
+  if tags_joined contains 'church' or tags_joined contains 'religious'
+    assign is_religious = true
+  endif
+
+  assign religious_tags = 'greeter,pastor,leadership,welcome,spanish,deacon,usher,ministry,congregation' | split: ','
+  for rel_tag in religious_tags
+    if tags_joined contains rel_tag
+      assign is_religious = true
+      break
+    endif
+  endfor
+
+  unless is_religious
+    assign title_keywords = 'church,religion,prayer,faith,bible,pastor,deacon,usher,greeter,welcome,ministry,congregation,thessalonians' | split: ','
+    for keyword in title_keywords
+      if title_down contains keyword
+        assign is_religious = true
+        break
+      endif
+    endfor
+  endunless
+
+  unless is_religious
+    assign product_type_down = product.type | downcase
+    if product_type_down contains 'church' or product_type_down contains 'religious'
+      assign is_religious = true
+    endif
+  endunless
+-%}
+{%- if is_religious -%}
+{%- liquid
+  if tags_joined contains 'role-badge'
+    assign product_kind = 'role-badge'
+  elsif tags_joined contains 'desk-sign' or tags_joined contains 'desk sign'
+    assign product_kind = 'desk-sign'
+  elsif tags_joined contains 'name-tag-blank' or tags_joined contains 'blank-name-tag' or tags_joined contains 'type_blank'
+    assign product_kind = 'name-tag-blank'
+  else
+    assign product_kind = 'other'
+  endif
+
+  assign product_subcategories = ''
+  assign category_label = 'Church & Religious'
+
+  for block in section.blocks
+    if block.type == 'category'
+      assign sub_tags = block.settings.tags | split: ','
+      assign sub_matched = false
+      for sub_tag in sub_tags
+        assign sub_tag_clean = sub_tag | strip | downcase
+        if sub_tag_clean != blank and tags_joined contains sub_tag_clean
+          assign sub_matched = true
+          break
+        endif
+      endfor
+      unless sub_matched
+        assign sub_id = block.settings.category_id | downcase
+        if sub_id == 'greeters-ushers' and title_down contains 'usher'
+          assign sub_matched = true
+        endif
+      endunless
+      if sub_matched
+        assign product_subcategories = product_subcategories | append: block.settings.category_id | append: ' '
+        if category_label == 'Church & Religious'
+          assign category_label = block.settings.label
+        endif
+      endif
+    endif
+  endfor
+
+  if product_kind == 'desk-sign'
+    assign category_label = 'Desk Name Plate'
+    if tags_joined contains 'rosewood'
+      assign category_label = category_label | append: ' · Rosewood'
+    elsif tags_joined contains 'plastic' or tags_joined contains 'insert'
+      assign category_label = category_label | append: ' · Traditional'
+    else
+      assign category_label = category_label | append: ' · Acrylic'
+    endif
+  elsif product_kind == 'name-tag-blank'
+    assign category_label = 'Name Tag Blank'
+  endif
+
+  assign variant = product.selected_or_first_available_variant
+  assign is_bestseller = 0
+  if product.tags contains 'bestseller'
+    assign is_bestseller = 1
+  endif
+  assign is_adult = 0
+  if tags_joined contains '18+' or tags_joined contains '18plus' or tags_joined contains 'adult'
+    assign is_adult = 1
+  endif
+-%}
+<article
+  class="aqb-rb-product-card is-filtered-out"
+  data-subcategories="{{ product_subcategories | strip }}"
+  data-product-kind="{{ product_kind }}"
+  data-product-id="{{ product.id }}"
+  data-product-index="{{ product_index }}"
+  data-title="{{ product.title | escape }}"
+  data-price="{% if variant %}{{ variant.price }}{% else %}0{% endif %}"
+  data-bestseller="{{ is_bestseller }}"
+  data-adult="{{ is_adult }}"
+>
+  <a href="{{ product.url }}" class="aqb-rb-card-image" tabindex="-1" aria-hidden="true">
+    {%- if product.featured_image -%}
+      {{
+        product.featured_image
+        | image_url: width: 600
+        | image_tag: loading: 'lazy', widths: '300,400,600', sizes: '(min-width: 990px) 25vw, 50vw', alt: product.title
+      }}
+    {%- else -%}
+      <div class="aqb-rb-card-badge-render white-badge">
+        <span class="aqb-rb-card-badge-text">{{ product.title | escape }}</span>
+      </div>
+    {%- endif -%}
+    {%- if product.tags contains 'new' -%}
+      <span class="aqb-rb-card-new-pill">New</span>
+    {%- endif -%}
+    {%- if product_kind == 'role-badge' -%}
+      <span class="aqb-rb-card-pack-pill">{{ section.settings.pack_label | escape }}</span>
+    {%- endif -%}
+  </a>
+  <div class="aqb-rb-card-body">
+    <div class="aqb-rb-card-category-label">{{ category_label | escape }}</div>
+    <a href="{{ product.url }}" class="aqb-rb-card-role">{{ product.title | escape }}</a>
+    <div class="aqb-rb-card-footer">
+      <div>
+        {%- if variant -%}
+          <span class="aqb-rb-card-price">{{ variant.price | money }}</span>
+        {%- endif -%}
+        {%- if product_kind == 'role-badge' and section.settings.price_subtext != blank -%}
+          <span class="aqb-rb-card-price-sub">{{ section.settings.price_subtext | escape }}</span>
+        {%- endif -%}
+      </div>
+      {%- if variant and variant.available -%}
+        <form method="post" action="{{ routes.cart_add_url }}" class="aqb-rb-card-add-form">
+          <input type="hidden" name="id" value="{{ variant.id }}">
+          <button type="submit" class="aqb-rb-card-add">{{ section.settings.add_label | escape }}</button>
+        </form>
+      {%- else -%}
+        <a href="{{ product.url }}" class="aqb-rb-card-add">{{ section.settings.add_label | escape }}</a>
+      {%- endif -%}
+    </div>
+  </div>
+</article>
+{%- endif -%}

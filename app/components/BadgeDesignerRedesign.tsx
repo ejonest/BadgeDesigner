@@ -43,7 +43,6 @@ import {
   TrashIcon,
   TruckIcon,
   BoltIcon,
-  WrenchScrewdriverIcon,
   PencilSquareIcon,
   UserIcon,
   ShoppingCartIcon,
@@ -1132,7 +1131,7 @@ const AqbBadgeStepSectionToggle: React.FC<AqbBadgeStepSectionToggleProps> = ({
     ref={buttonRef}
     type="button"
     onClick={onClick}
-    className="aqb-step-toggle group flex h-auto min-h-0 w-full items-center justify-between gap-2 border-0 bg-transparent text-left transition-colors hover:bg-[#faf8f4]"
+    className="aqb-step-toggle group hidden h-auto min-h-0 w-full items-center justify-between gap-2 border-0 bg-transparent text-left transition-colors hover:bg-[#faf8f4] md:flex"
   >
     <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-2.5 overflow-hidden pr-1">
       <div
@@ -2841,13 +2840,23 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       ? 5
       : 3;
 
-  // Refs for section headers to enable scroll-into-view
-  const templateSectionRef = useRef<HTMLButtonElement | null>(null);
+  // Refs for step sections to enable scroll-into-view
+  const templateSectionRef = useRef<HTMLDivElement | null>(null);
   const exportSectionRef = useRef<HTMLButtonElement | null>(null);
-  const backgroundSectionRef = useRef<HTMLButtonElement | null>(null);
-  const textLinesSectionRef = useRef<HTMLButtonElement | null>(null);
-  const backingSectionRef = useRef<HTMLButtonElement | null>(null);
+  const backgroundSectionRef = useRef<HTMLDivElement | null>(null);
+  const textLinesSectionRef = useRef<HTMLDivElement | null>(null);
+  const backingSectionRef = useRef<HTMLDivElement | null>(null);
   const borderSectionRef = useRef<HTMLButtonElement | null>(null);
+
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsMobileViewport(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   /** Stable design id for this session; used for incremental draft saves and add-to-cart. */
   const sessionDesignIdRef = useRef<string | null>(null);
@@ -2968,9 +2977,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           const elementRect = element.getBoundingClientRect();
           const scrollTop = scrollableParent.scrollTop;
           const elementTop = elementRect.top - containerRect.top + scrollTop;
+          const scrollOffset = 20;
 
           scrollableParent.scrollTo({
-            top: Math.max(0, elementTop - 20), // 20px offset from top, ensure non-negative
+            top: Math.max(0, elementTop - scrollOffset),
             behavior: "smooth",
           });
         } else {
@@ -2982,6 +2992,30 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         }
       });
     }, delay);
+  };
+
+  const openBadgeStepSection = (
+    section: "template" | "background" | "textLines" | "backing",
+    forStep?: 2 | 3 | 4,
+  ) => {
+    if (forStep != null) {
+      const msg = getIncompleteStepsMessage(forStep);
+      if (msg) {
+        alert(msg);
+        return;
+      }
+    }
+    setSectionsOpen({
+      template: section === "template",
+      size: false,
+      export: false,
+      background: section === "background",
+      textLines: section === "textLines",
+      backing: section === "backing",
+      border: false,
+      plaqueFormat: false,
+    });
+    setSectionsOpened((prev) => ({ ...prev, [section]: true }));
   };
 
   // Track previous open section to determine scroll direction
@@ -8132,6 +8166,66 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       />
     ) : null;
 
+  const promptAddToCart = () => {
+    if (isAddingToCart || isGeneratingDesigns) return;
+    if (!stepsComplete) {
+      const msg = getIncompleteStepsMessage(incompleteStepsForCart());
+      alert(
+        msg
+          ? `${msg} and finalize your design before adding to the cart.`
+          : "Please complete your design before adding to the cart.",
+      );
+      return;
+    }
+    void addToCart();
+  };
+
+  const aqbBadgeMobileCheckoutBar =
+    variant === "badge" ? (
+      <div className="aqb-mobile-checkout-bar md:hidden shrink-0">
+        <div className="aqb-mobile-checkout-bar__inner">
+          <div className="aqb-mobile-checkout-bar__price-block min-w-0 flex-1">
+            <div className="aqb-mobile-checkout-bar__price">
+              {addToCartPriceLabel}
+            </div>
+            <p className="aqb-mobile-checkout-bar__meta">
+              {badgePriceBreakdownLine ??
+                "Finish the steps above to see your total."}
+            </p>
+          </div>
+          <button
+            type="button"
+            className={`aqb-atc-btn aqb-atc-btn--mobile aqb-atc-btn--mobile-with-icon ${
+              stepsComplete &&
+              !isGeneratingDesigns &&
+              multipleBadges.length > 0
+                ? "aqb-atc-btn--ready"
+                : "aqb-atc-btn--inactive"
+            }`}
+            onClick={(e) => {
+              e.preventDefault();
+              promptAddToCart();
+            }}
+            disabled={
+              isAddingToCart ||
+              isGeneratingDesigns ||
+              multipleBadges.length === 0
+            }
+          >
+            <ShoppingCartIcon
+              className="aqb-atc-btn--mobile__icon"
+              aria-hidden
+            />
+            {isAddingToCart
+              ? "Adding…"
+              : isGeneratingDesigns
+              ? "Generating…"
+              : "Add to cart"}
+          </button>
+        </div>
+      </div>
+    ) : null;
+
   return (
     <div
       className={`aqb-redesign-root min-h-screen bg-[#F0EDE6] overflow-x-hidden text-sm leading-[1.55] text-[#0d1b2a] ${
@@ -8204,14 +8298,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         className={`aqb-tool-shell flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_420px] md:items-start mx-auto max-w-[1320px] w-full min-h-0 h-screen overflow-hidden md:h-auto md:min-h-[560px] md:overflow-visible ${
           variant === "badge"
             ? storeChromeless
-              ? "gap-5 px-4 md:px-10 pt-4 pb-8 lg:pb-10"
-              : "gap-5 px-4 md:px-10 pt-5 pb-10 lg:pb-12"
+              ? "max-md:gap-2 gap-5 px-4 md:px-10 max-md:pt-2 pt-4 pb-0 md:pb-8 lg:pb-10"
+              : "max-md:gap-2 gap-5 px-4 md:px-10 max-md:pt-2 pt-5 pb-0 md:pb-10 lg:pb-12"
             : "gap-5 px-4 md:px-8"
         }`}
       >
         {/* MOBILE: Header + preview fixed at top; editor scrolls below */}
-        <div className="flex-shrink-0 md:hidden flex flex-col mb-2">
-          {/* Header: customize title */}
+        <div className="flex-shrink-0 md:hidden flex flex-col">
+          {/* Header: page title */}
           <div className="flex flex-col gap-1 min-w-0 mb-2">
             <h2 className="text-xl font-bold text-gray-800">
               {multipleBadges.length === 0
@@ -8227,31 +8321,32 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             )}
           </div>
 
-          <div className="mb-2 overflow-hidden rounded-lg border border-[rgba(13,27,42,0.1)] bg-[#F8F7F4]">
-            <AqbPreviewPanelHeader
-              centered
-              title={`${config.labelProduct} Preview`}
-              subtitle={
-                variant === "badge"
-                  ? "Use View All to see and edit more badges"
-                  : undefined
-              }
-            />
+          <div className="overflow-hidden rounded-lg border border-[rgba(13,27,42,0.1)] bg-white">
+            {variant !== "badge" ? (
+              <AqbPreviewPanelHeader
+                centered
+                title={`${config.labelProduct} Preview`}
+                subtitle={
+                  variant === "badge"
+                    ? "Use View All to see and edit more badges"
+                    : undefined
+                }
+              />
+            ) : null}
             <AqbPreviewActionsRow {...previewActionsRowProps} />
-          </div>
 
-          <div
-            className={`w-full flex items-center justify-center relative select-none rounded-lg border overflow-hidden ${
-              variant === "plaque"
-                ? "bg-gray-100 border-gray-300"
-                : "bg-white/60 border-gray-200"
-            }`}
-            style={{
-              padding: `${MOBILE_PREVIEW.boxMarginYRem}rem ${MOBILE_PREVIEW.badgeMarginXRem}rem`,
-            }}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-          >
+            <div
+              className={`w-full flex items-center justify-center relative select-none overflow-hidden ${
+                variant === "plaque"
+                  ? "bg-gray-100"
+                  : "bg-white/60"
+              }`}
+              style={{
+                padding: `${MOBILE_PREVIEW.boxMarginYRem}rem ${MOBILE_PREVIEW.badgeMarginXRem}rem`,
+              }}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
             {isGeneratingDesigns && (
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/85 rounded-lg">
                 <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-blue-600 mb-2" />
@@ -8347,24 +8442,33 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 })()
               )}
             </div>
+            </div>
+            {aqbBadgeToolActions ? (
+              <div className="shrink-0 md:hidden">{aqbBadgeToolActions}</div>
+            ) : null}
           </div>
-          {aqbBadgeToolActions ? (
-            <div className="shrink-0 md:hidden">{aqbBadgeToolActions}</div>
-          ) : null}
         </div>
 
         {/* LEFT COLUMN - Controls */}
-        <div className="aqb-left-panel w-full md:min-w-0 overflow-y-auto flex-1 min-h-0 md:max-h-[calc(100vh-48px)] md:self-start rounded-xl border border-[rgba(13,27,42,0.1)] bg-white shadow-[0_2px_12px_rgba(13,27,42,0.06)] flex flex-col">
+        <div
+          className={`aqb-left-panel w-full md:min-w-0 flex-1 min-h-0 md:max-h-[calc(100vh-48px)] md:self-start rounded-xl border border-[rgba(13,27,42,0.1)] bg-white shadow-[0_2px_12px_rgba(13,27,42,0.06)] flex flex-col ${
+            variant === "badge"
+              ? "max-md:overflow-hidden overflow-y-auto md:overflow-y-auto"
+              : "overflow-y-auto"
+          }`}
+        >
           <div
             className={`w-full shrink-0 flex-col border-b border-[rgba(13,27,42,0.1)] bg-[#F8F7F4] flex ${
               variant === "badge"
-                ? "gap-0 px-6 py-[14px]"
+                ? "gap-0 px-0 py-0 md:py-[14px]"
                 : "hidden gap-3 px-5 py-4 sm:px-6 md:flex"
             }`}
           >
             <div
               className={`flex w-full min-w-0 items-center justify-between gap-3 ${
-                variant === "badge" ? "mb-[10px]" : ""
+                variant === "badge"
+                  ? "mb-[10px] hidden px-6 md:flex"
+                  : ""
               }`}
             >
               <div className="min-w-0 flex-1">
@@ -8383,7 +8487,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               </div>
               {variant === "badge" ? cloudLibrarySaveHint : null}
             </div>
-            <div className="flex w-full min-w-0 flex-wrap items-center gap-y-2 gap-x-0.5 sm:flex-nowrap sm:justify-between sm:gap-0">
+            <div
+              className={`flex w-full min-w-0 items-center gap-y-2 gap-x-0.5 sm:flex-nowrap sm:justify-between sm:gap-0 ${
+                variant === "badge"
+                  ? "aqb-badge-mobile-step-nav shrink-0 z-10 flex-nowrap border-b border-[rgba(13,27,42,0.1)] bg-[#F8F7F4] py-2.5 md:static md:border-0 md:bg-transparent md:py-0"
+                  : "flex-wrap"
+              }`}
+            >
               {(() => {
                 if (variant === "plaque") {
                   const plaqueLogoOk = Boolean(badge.logo?.src?.trim());
@@ -8618,30 +8728,45 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     : []),
                 ];
                 const doneStates = steps.map((s) => s.done);
-                return steps.map((step, i) => (
-                  <React.Fragment key={i}>
-                    {i > 0 && (
-                      <div
-                        className={`h-0.5 min-w-2 flex-1 rounded ${
-                          variant === "badge" ? "mx-[6px]" : ""
-                        } ${
-                          doneStates[i - 1] ? "bg-[#2D9E75]" : "bg-[#D4CEC6]"
-                        }`}
-                      />
-                    )}
-                    <div className="flex flex-shrink-0 flex-col items-center">
+                const badgeMobileStepKeys = [
+                  "template",
+                  "background",
+                  "textLines",
+                  "backing",
+                ] as const;
+                const badgeMobileStepGuards: (2 | 3 | 4 | undefined)[] = [
+                  undefined,
+                  2,
+                  3,
+                  4,
+                ];
+                return steps.map((step, i) => {
+                  const badgeSectionKey =
+                    variant === "badge" ? badgeMobileStepKeys[i] : undefined;
+                  const isNavSelected =
+                    variant === "badge" &&
+                    isMobileViewport &&
+                    badgeSectionKey != null &&
+                    sectionsOpen[badgeSectionKey];
+                  const circleDone = step.done && !isNavSelected;
+                  const circleActive =
+                    isNavSelected || (!isMobileViewport && step.current);
+                  const stepIndicator = (
+                    <>
                       <div
                         className={`${
-                          variant === "badge" ? "w-[26px] h-[26px]" : "w-5 h-5"
+                          variant === "badge"
+                            ? "h-[26px] w-[26px] max-md:h-[22px] max-md:w-[22px]"
+                            : "w-5 h-5"
                         } rounded-full flex items-center justify-center ${
-                          step.done
+                          circleDone
                             ? "bg-[#2D9E75] text-white"
-                            : step.current
+                            : circleActive
                             ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
                             : "bg-[#D4CEC6] text-white"
                         }`}
                       >
-                        {step.done ? (
+                        {circleDone ? (
                           <CheckIcon
                             className={`${
                               variant === "badge" ? "w-3.5 h-3.5" : "w-3 h-3"
@@ -8654,7 +8779,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                 ? "text-[12px] font-bold"
                                 : "text-[11px] font-semibold"
                             } ${
-                              step.current ? "text-white" : "text-[#6B7F92]"
+                              circleActive ? "text-white" : "text-[#6B7F92]"
                             }`}
                           >
                             {i + 1}
@@ -8662,30 +8787,74 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         )}
                       </div>
                       <span
-                        className={`whitespace-nowrap text-[14px] leading-tight ${
-                          variant === "badge" ? "mt-[3px]" : "mt-0.5"
+                        className={`w-full text-center leading-tight ${
+                          variant === "badge"
+                            ? "mt-[3px] text-[14px] max-md:mt-0.5 max-md:text-[11px]"
+                            : "mt-0.5 whitespace-nowrap text-[14px]"
                         } ${
                           variant === "badge"
-                            ? step.done
+                            ? circleDone
                               ? "font-medium text-[#2d9e75]"
-                              : step.current
+                              : circleActive
                               ? "font-semibold text-[#0d1b2a]"
                               : "font-medium text-[#6b7f92]"
                             : "text-gray-600"
                         }`}
+                        style={
+                          variant === "badge"
+                            ? { whiteSpace: "nowrap" }
+                            : undefined
+                        }
                       >
                         {step.label}
                       </span>
-                    </div>
+                    </>
+                  );
+
+                  return (
+                  <React.Fragment key={i}>
+                    {i > 0 && (
+                      <div
+                        aria-hidden
+                        className={`aqb-badge-step-connector h-0.5 min-w-2 flex-1 rounded self-center ${
+                          variant === "badge" ? "mx-[6px]" : ""
+                        } ${
+                          doneStates[i - 1] ? "bg-[#2D9E75]" : "bg-[#D4CEC6]"
+                        }`}
+                      />
+                    )}
+                    {variant === "badge" && isMobileViewport && badgeSectionKey ? (
+                      <button
+                        type="button"
+                        className="aqb-badge-step-item flex shrink-0 touch-manipulation flex-col items-center rounded-md px-0 py-0.5"
+                        onClick={() =>
+                          openBadgeStepSection(
+                            badgeSectionKey,
+                            badgeMobileStepGuards[i],
+                          )
+                        }
+                        aria-current={isNavSelected ? "step" : undefined}
+                        aria-label={`Step ${i + 1}: ${step.label}`}
+                      >
+                        {stepIndicator}
+                      </button>
+                    ) : (
+                      <div className="aqb-badge-step-item flex shrink-0 flex-col items-center">
+                        {stepIndicator}
+                      </div>
+                    )}
                   </React.Fragment>
-                ));
+                  );
+                });
               })()}
             </div>
           </div>
 
           <div
             className={`section-container flex-1 min-h-0 ${
-              variant === "badge" ? "mb-0 min-w-0 px-0" : "mb-4 px-4 md:px-5"
+              variant === "badge"
+                ? "mb-0 min-w-0 max-md:overflow-y-auto px-0 md:overflow-visible"
+                : "mb-4 px-4 md:px-5"
             }`}
           >
             {/* <button
@@ -8701,15 +8870,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
             {/* Template Selector - Image Swatches */}
             <div
+              ref={templateSectionRef}
               className={
                 variant === "badge"
-                  ? "w-full min-w-0 border-b border-[rgba(13,27,42,0.1)]"
+                  ? "w-full min-w-0 border-b border-[rgba(13,27,42,0.1)] md:scroll-mt-0"
                   : "mb-4"
               }
             >
               {variant === "badge" && aqbBadgeStepHeaderModel ? (
                 <AqbBadgeStepSectionToggle
-                  buttonRef={templateSectionRef}
                   stepNumber={1}
                   visualState={aqbBadgeStepHeaderModel.template.state}
                   title="Step 1: Pick a template"
@@ -8731,7 +8900,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 />
               ) : (
                 <button
-                  ref={templateSectionRef}
                   type="button"
                   onClick={() => {
                     const willBeOpen = !sectionsOpen.template;
@@ -8921,7 +9089,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                   <div className="text-[14px] font-semibold leading-tight text-[#0d1b2a]">
                                     {t.name}
                                   </div>
-                                  <div className="mt-0.5 text-[14px] leading-snug text-[#6b7f92]">
+                                  <div className="mt-0.5 hidden text-[14px] leading-snug text-[#6b7f92] md:block">
                                     {subtitle}
                                   </div>
                                 </div>
@@ -9615,6 +9783,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
             {/* Background Color / Backgrounds */}
             <div
+              ref={backgroundSectionRef}
               className={
                 variant === "badge"
                   ? "flex w-full min-w-0 flex-col border-b border-[rgba(13,27,42,0.1)]"
@@ -9625,7 +9794,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               <div className="flex w-full flex-col">
                 {variant === "badge" && aqbBadgeStepHeaderModel ? (
                   <AqbBadgeStepSectionToggle
-                    buttonRef={backgroundSectionRef}
                     stepNumber={2}
                     visualState={aqbBadgeStepHeaderModel.background.state}
                     title="Step 2: Pick a background color"
@@ -9656,7 +9824,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   />
                 ) : (
                   <button
-                    ref={backgroundSectionRef}
                     type="button"
                     onClick={() => {
                       const msg = getIncompleteStepsMessage(
@@ -10683,6 +10850,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
             {/* Text Lines */}
             <div
+              ref={textLinesSectionRef}
               className={
                 variant === "badge"
                   ? "w-full min-w-0 border-b border-[rgba(13,27,42,0.1)]"
@@ -10691,7 +10859,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             >
               {variant === "badge" && aqbBadgeStepHeaderModel ? (
                 <AqbBadgeStepSectionToggle
-                  buttonRef={textLinesSectionRef}
                   stepNumber={3}
                   visualState={aqbBadgeStepHeaderModel.text.state}
                   title="Step 3: Enter your text"
@@ -10741,7 +10908,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 />
               ) : (
                 <button
-                  ref={textLinesSectionRef}
                   type="button"
                   onClick={() => {
                     const msg = getIncompleteStepsMessage(
@@ -11072,6 +11238,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             {config.hasBacking && (
               /* Step 4: Backing Type */
               <div
+                ref={backingSectionRef}
                 className={
                   variant === "badge"
                     ? `w-full min-w-0 border-b border-[rgba(13,27,42,0.1)]${
@@ -11082,7 +11249,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               >
                 {variant === "badge" && aqbBadgeStepHeaderModel ? (
                   <AqbBadgeStepSectionToggle
-                    buttonRef={backingSectionRef}
                     stepNumber={4}
                     visualState={aqbBadgeStepHeaderModel.backing.state}
                     title="Step 4: Choose badge attachment"
@@ -11109,7 +11275,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   />
                 ) : (
                   <button
-                    ref={backingSectionRef}
                     type="button"
                     onClick={() => {
                       const msg = getIncompleteStepsMessage(4);
@@ -12394,12 +12559,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     </span>
                   </div>
                   <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
-                    <WrenchScrewdriverIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
-                    <span>
-                      Manufactured in the USA with quality-controlled materials.
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
                     <PencilSquareIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
                     <span>
                       Print-ready artwork is generated automatically when you
@@ -12428,7 +12587,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           </div>
         </div>
 
-        {/* MOBILE: Step progress bar as fixed footer at bottom, full width */}
+        {/* MOBILE: Step progress bar (non-badge variants only; badge uses steps in editor header) */}
+        {variant !== "badge" ? (
         <div className="flex-shrink-0 md:hidden w-full border-t border-[rgba(13,27,42,0.08)] bg-white px-4 py-3">
           <div className="flex items-center justify-center gap-4 w-full">
             {(() => {
@@ -12685,6 +12845,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             })()}
           </div>
         </div>
+        ) : null}
+        {aqbBadgeMobileCheckoutBar}
       </div>
 
       {/* Badge grid picker modal (mobile + desktop) */}

@@ -1,0 +1,87 @@
+{%- if page.handle == 'name-tag-blanks' or template.suffix == 'name-tag-blanks' -%}
+{{ 'aqb-name-tag-blanks.css' | asset_url | stylesheet_tag }}
+
+<section class="aqb-bl-hero" id="aqb-bl-hero-{{ section.id }}">
+  <div class="aqb-bl-hero__left">
+    {%- if section.settings.eyebrow != blank -%}
+      <div class="aqb-bl-hero__eyebrow">{{ section.settings.eyebrow | escape }}</div>
+    {%- endif -%}
+
+    {%- if section.settings.heading != blank -%}
+      <h1>{{ section.settings.heading }}</h1>
+    {%- endif -%}
+
+    {%- if section.settings.subheading != blank -%}
+      <p class="aqb-bl-hero__sub">{{ section.settings.subheading }}</p>
+    {%- endif -%}
+
+    <div class="aqb-bl-hero__actions">
+      {%- if section.settings.primary_label != blank -%}
+        <a href="{{ section.settings.primary_link }}" class="aqb-bl-btn-gold">{{ section.settings.primary_label | escape }}</a>
+      {%- endif -%}
+      {%- if section.settings.secondary_label != blank -%}
+        <a href="{{ section.settings.secondary_link }}" class="aqb-bl-btn-ghost">{{ section.settings.secondary_label | escape }}</a>
+      {%- endif -%}
+    </div>
+
+    <div class="aqb-bl-hero__trust">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'trust_point' -%}
+          <div class="aqb-bl-hero__trust-item" {{ block.shopify_attributes }}>
+            <span class="aqb-bl-hero__trust-check" aria-hidden="true">✓</span>
+            {{ block.settings.label | escape }}
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+
+  <div class="aqb-bl-hero__right">
+    {%- if section.settings.hero_image != blank -%}
+      {{
+        section.settings.hero_image
+        | image_url: width: 1200
+        | image_tag: loading: 'eager', widths: '600,900,1200', sizes: '(min-width: 990px) 50vw, 100vw', alt: section.settings.hero_image_alt
+      }}
+    {%- elsif section.settings.hero_image_asset != blank -%}
+      <img
+        src="{{ section.settings.hero_image_asset | asset_url }}"
+        alt="{{ section.settings.hero_image_alt | escape }}"
+        loading="eager"
+        width="1200"
+        height="800"
+      >
+    {%- endif -%}
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Blanks Hero",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Blank Name Tags & Badge Blanks" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "High-quality blanks,<br><em>ready to personalize.</em>" },
+    { "type": "html", "id": "subheading", "label": "Subheading", "default": "Six colors. Four shapes. <strong>Magnetic, pin or adhesive backing.</strong> Perfect for engraving, laser printing or marker pen. Ships from our US facility in 2 days." },
+    { "type": "text", "id": "primary_label", "label": "Primary button", "default": "Shop All Blanks →" },
+    { "type": "url", "id": "primary_link", "label": "Primary link" },
+    { "type": "text", "id": "secondary_label", "label": "Secondary button", "default": "Bulk Orders" },
+    { "type": "url", "id": "secondary_link", "label": "Secondary link" },
+    { "type": "image_picker", "id": "hero_image", "label": "Hero image" },
+    { "type": "text", "id": "hero_image_asset", "label": "Hero image asset filename", "default": "aqb-cat-banner-blanks.png" },
+    { "type": "text", "id": "hero_image_alt", "label": "Hero image alt", "default": "Blank name tag badges in multiple colors" }
+  ],
+  "blocks": [
+    {
+      "type": "trust_point",
+      "name": "Trust point",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Label", "default": "From $0.28 per badge" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB Blanks Hero" }]
+}
+{% endschema %}

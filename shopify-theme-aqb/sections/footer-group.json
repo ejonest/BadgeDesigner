@@ -13,24 +13,14 @@
   "sections": {
     "aqb_footer": {
       "type": "aqb-footer",
-      "settings": {
-        "logo_mark": "AQ",
-        "logo_text_before": "All Quality ",
-        "logo_text_accent": "Badges",
-        "brand_description": "The dedicated badge brand of the LITA family. Custom and blank name tags — designed by you, made by us, shipped from the USA.",
-        "products_heading": "Products",
-        "buyers_heading": "For buyers",
-        "lita_heading": "LITA brands",
-        "copyright": "© 2025 All Quality Badges™ — A LITA brand. All rights reserved.",
-        "portfolio_text": "<span>Part of the</span> <span>LITA <span class=\"aqb-footer__lita-dot\">◆</span> Living in the Arena</span> <span>portfolio</span>"
-      },
       "blocks": {
         "prod_design": {
           "type": "link",
           "settings": {
             "column": "products",
             "label": "Design Your Badge",
-            "url": "shopify://products/custom-1x3-badge"
+            "url": "shopify://products/custom-1x3-badge",
+            "open_new_tab": false
           }
         },
         "prod_blanks": {
@@ -38,7 +28,8 @@
           "settings": {
             "column": "products",
             "label": "Name Tag Blanks",
-            "url": "shopify://collections/blank-name-tags"
+            "url": "shopify://pages/badge-blank",
+            "open_new_tab": false
           }
         },
         "prod_church": {
@@ -46,7 +37,8 @@
           "settings": {
             "column": "products",
             "label": "Church Collection",
-            "url": "shopify://collections/church-name-tags"
+            "url": "shopify://pages/church-and-congregation",
+            "open_new_tab": false
           }
         },
         "prod_roles": {
@@ -54,7 +46,8 @@
           "settings": {
             "column": "products",
             "label": "Role Badges",
-            "url": "shopify://collections/all"
+            "url": "shopify://pages/role-badges",
+            "open_new_tab": false
           }
         },
         "prod_desk": {
@@ -62,7 +55,35 @@
           "settings": {
             "column": "products",
             "label": "Desk Name Plates",
-            "url": "shopify://collections/acrylic-desk-signs"
+            "url": "shopify://pages/desk-signs",
+            "open_new_tab": false
+          }
+        },
+        "buy_how_it_works": {
+          "type": "link",
+          "settings": {
+            "column": "buyers",
+            "label": "How It Works",
+            "url": "shopify://pages/how-it-works",
+            "open_new_tab": false
+          }
+        },
+        "buy_faq": {
+          "type": "link",
+          "settings": {
+            "column": "buyers",
+            "label": "FAQ",
+            "url": "shopify://pages/faq",
+            "open_new_tab": false
+          }
+        },
+        "buy_shipping": {
+          "type": "link",
+          "settings": {
+            "column": "buyers",
+            "label": "Shipping & Delivery",
+            "url": "shopify://pages/shipping-delivery",
+            "open_new_tab": false
           }
         },
         "buy_contact": {
@@ -70,7 +91,8 @@
           "settings": {
             "column": "buyers",
             "label": "Contact Us",
-            "url": "/pages/contact"
+            "url": "shopify://pages/contact",
+            "open_new_tab": false
           }
         },
         "lita_signs": {
@@ -116,13 +138,29 @@
         "prod_church",
         "prod_roles",
         "prod_desk",
+        "buy_how_it_works",
+        "buy_faq",
+        "buy_shipping",
         "buy_contact",
         "lita_signs",
         "lita_gavels",
         "lita_designs",
         "lita_vivid"
-      ]
+      ],
+      "settings": {
+        "logo_mark": "AQ",
+        "logo_text_before": "All Quality",
+        "logo_text_accent": "Badges",
+        "brand_description": "The dedicated badge brand of the LITA family. Custom and blank name tags — designed by you, made to order.",
+        "products_heading": "Products",
+        "buyers_heading": "For buyers",
+        "lita_heading": "LITA brands",
+        "copyright": "© 2025 All Quality Badges™ — A LITA brand. All rights reserved.",
+        "portfolio_text": "<span>Part of the</span> <span>LITA <span class=\"aqb-footer__lita-dot\">◆</span> Living in the Arena</span> <span>portfolio</span>"
+      }
     }
   },
-  "order": ["aqb_footer"]
+  "order": [
+    "aqb_footer"
+  ]
 }

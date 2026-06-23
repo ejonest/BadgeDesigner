@@ -1,0 +1,334 @@
+{%- if page.handle == 'desk-signs' or template.suffix == 'desk-signs' -%}
+{%- liquid
+  assign ds_collection = section.settings.collection
+  if ds_collection == blank
+    assign ds_collection = collections['acrylic-desk-signs']
+  endif
+  assign tag_filter = section.settings.product_tag | downcase
+  assign rosewood_tag = section.settings.rosewood_tag | downcase
+-%}
+
+<section class="aqb-ds-custom" id="section-custom">
+  <div class="aqb-ds-custom__inner">
+    <div class="aqb-ds-custom__intro">
+      <div>
+        {%- if section.settings.eyebrow != blank -%}
+          <div class="aqb-ds-custom__eyebrow">{{ section.settings.eyebrow | escape }}</div>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2>{{ section.settings.heading }}</h2>
+        {%- endif -%}
+        {%- if section.settings.description != blank -%}
+          <p class="aqb-ds-custom__desc">{{ section.settings.description | escape }}</p>
+        {%- endif -%}
+
+        <div class="aqb-ds-finish-toggle" id="desk-signs-finish-toggle">
+          <button type="button" class="aqb-ds-finish-btn active" data-finish="acrylic">
+            <div class="aqb-ds-finish-btn__icon" aria-hidden="true">💎</div>
+            <div class="aqb-ds-finish-btn__name">Acrylic</div>
+            <div class="aqb-ds-finish-btn__tag">Crystal-clear · Modern · Laser engraved</div>
+            <div class="aqb-ds-finish-btn__price">{{ section.settings.acrylic_price | escape }}</div>
+          </button>
+          <button type="button" class="aqb-ds-finish-btn" data-finish="rosewood">
+            <div class="aqb-ds-finish-btn__icon" aria-hidden="true">🪵</div>
+            <div class="aqb-ds-finish-btn__name">Rosewood</div>
+            <div class="aqb-ds-finish-btn__tag">Piano finish · Gold engraving · Premium gift</div>
+            <div class="aqb-ds-finish-btn__price">{{ section.settings.rosewood_price | escape }}</div>
+          </button>
+        </div>
+
+        {%- if section.settings.cta_label != blank -%}
+          <a href="{{ section.settings.cta_link }}" class="aqb-ds-cta-full">{{ section.settings.cta_label | escape }}</a>
+        {%- endif -%}
+
+        <div class="aqb-ds-cta-perks">
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'perk' -%}
+              <span {{ block.shopify_attributes }}>✓ {{ block.settings.text | escape }}</span>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      </div>
+
+      <div class="aqb-ds-lifestyle-pair">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'lifestyle_photo' -%}
+            <div class="aqb-ds-lifestyle-img{% if block.settings.size == 'large' %} lg{% else %} sm{% endif %}" {{ block.shopify_attributes }}>
+              {%- if block.settings.image != blank -%}
+                {{
+                  block.settings.image
+                  | image_url: width: 800
+                  | image_tag: loading: 'lazy', widths: '400,600,800', sizes: '40vw', alt: block.settings.alt
+                }}
+              {%- elsif block.settings.image_asset != blank -%}
+                <img src="{{ block.settings.image_asset | asset_url }}" alt="{{ block.settings.alt | escape }}" loading="lazy" width="800" height="500">
+              {%- endif -%}
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+
+    <div class="aqb-ds-grid-label" id="desk-signs-acrylic-label">{{ section.settings.acrylic_grid_label | escape }}</div>
+    <div class="aqb-ds-prod-grid" id="desk-signs-acrylic-grid" data-finish-panel="acrylic">
+      {%- liquid
+        assign acrylic_from_blocks = false
+        assign acrylic_cards_rendered = 0
+        for block in section.blocks
+          if block.type == 'acrylic_profession'
+            assign acrylic_from_blocks = true
+            break
+          endif
+        endfor
+      -%}
+
+      {%- if acrylic_from_blocks -%}
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'acrylic_profession' -%}
+            {%- liquid
+              assign card_title = block.settings.title
+              assign card_meta = block.settings.meta
+              assign card_price = block.settings.price
+              assign card_link = block.settings.link
+              assign card_image = block.settings.image
+              assign card_image_url = block.settings.image_url
+
+              if block.settings.product != blank
+                assign card_product = block.settings.product
+                assign card_title = card_product.title
+                assign card_link = card_product.url
+                assign card_variant = card_product.selected_or_first_available_variant
+                if card_variant
+                  assign card_price = card_variant.price | money
+                endif
+                if card_product.featured_image
+                  assign card_image = card_product.featured_image
+                  assign card_image_url = blank
+                endif
+              endif
+            -%}
+            <a href="{{ card_link | default: section.settings.cta_link }}" class="aqb-ds-prod-card" data-finish="acrylic" {{ block.shopify_attributes }}>
+              <div class="aqb-ds-prod-card__img">
+                {%- if card_image != blank -%}
+                  {{ card_image | image_url: width: 500 | image_tag: loading: 'lazy', widths: '250,400,500', sizes: '25vw', alt: card_title }}
+                {%- elsif card_image_url != blank -%}
+                  <img src="{{ card_image_url }}" alt="{{ card_title | escape }}" loading="lazy" width="500" height="120">
+                {%- else -%}
+                  <div class="aqb-ds-prod-card__placeholder">{{ card_title | escape }}</div>
+                {%- endif -%}
+              </div>
+              <div class="aqb-ds-prod-card__body">
+                <div class="aqb-ds-prod-card__title">{{ card_title | escape }}</div>
+                <div class="aqb-ds-prod-card__meta">{{ card_meta | escape }}</div>
+                <div class="aqb-ds-prod-card__footer">
+                  <span class="aqb-ds-prod-card__price">{{ card_price | escape }}</span>
+                  <span class="aqb-ds-prod-card__add">{{ section.settings.card_cta | escape }}</span>
+                </div>
+              </div>
+            </a>
+            {%- assign acrylic_cards_rendered = acrylic_cards_rendered | plus: 1 -%}
+          {%- endif -%}
+        {%- endfor -%}
+
+        {%- if section.settings.view_all_show -%}
+          <a href="{{ section.settings.view_all_link | default: section.settings.cta_link }}" class="aqb-ds-prod-card aqb-ds-prod-card--view-all">
+            <div class="aqb-ds-prod-card__view-all-icon" aria-hidden="true">+</div>
+            <div class="aqb-ds-prod-card__view-all-title">{{ section.settings.view_all_heading | escape }}</div>
+            <div class="aqb-ds-prod-card__view-all-sub">{{ section.settings.view_all_subtext | escape }}</div>
+            <span class="aqb-ds-prod-card__add aqb-ds-prod-card__add--view-all">{{ section.settings.view_all_label | escape }}</span>
+          </a>
+        {%- endif -%}
+      {%- elsif ds_collection != blank -%}
+        {%- for product in ds_collection.products limit: section.settings.products_limit -%}
+          {%- liquid
+            assign show_acrylic = false
+            assign tags_joined = product.tags | join: ',' | downcase
+            if rosewood_tag != blank and tags_joined contains rosewood_tag
+              assign show_acrylic = false
+            elsif tag_filter == blank or tags_joined contains tag_filter or tags_joined contains 'acrylic' or tags_joined contains 'custom' or tags_joined contains 'personal'
+              assign show_acrylic = true
+            endif
+          -%}
+          {%- if show_acrylic -%}
+            {%- assign variant = product.selected_or_first_available_variant -%}
+            <a href="{{ product.url }}" class="aqb-ds-prod-card" data-finish="acrylic">
+              <div class="aqb-ds-prod-card__img">
+                {%- if product.featured_image -%}
+                  {{ product.featured_image | image_url: width: 500 | image_tag: loading: 'lazy', widths: '250,400,500', sizes: '25vw', alt: product.title }}
+                {%- else -%}
+                  <div class="aqb-ds-prod-card__placeholder">{{ product.title | escape }}</div>
+                {%- endif -%}
+              </div>
+              <div class="aqb-ds-prod-card__body">
+                <div class="aqb-ds-prod-card__title">{{ product.title | escape }}</div>
+                <div class="aqb-ds-prod-card__meta">{{ section.settings.acrylic_meta | escape }}</div>
+                <div class="aqb-ds-prod-card__footer">
+                  <span class="aqb-ds-prod-card__price">{% if variant %}{{ variant.price | money }}{% endif %}</span>
+                  <span class="aqb-ds-prod-card__add">{{ section.settings.card_cta | escape }}</span>
+                </div>
+              </div>
+            </a>
+            {%- assign acrylic_cards_rendered = acrylic_cards_rendered | plus: 1 -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endif -%}
+
+      {%- if acrylic_cards_rendered == 0 -%}
+        {% render 'aqb-desk-signs-acrylic-fallback', section: section %}
+      {%- endif -%}
+    </div>
+
+    <div class="aqb-ds-rosewood">
+      <div class="aqb-ds-rosewood__intro">
+        <div class="aqb-ds-rosewood__photo">
+          {%- if section.settings.rosewood_image != blank -%}
+            {{ section.settings.rosewood_image | image_url: width: 900 | image_tag: loading: 'lazy', widths: '450,700,900', sizes: '40vw', alt: section.settings.rosewood_heading }}
+          {%- elsif section.settings.rosewood_image_asset != blank -%}
+            <img src="{{ section.settings.rosewood_image_asset | asset_url }}" alt="{{ section.settings.rosewood_heading | escape }}" loading="lazy" width="900" height="560">
+          {%- endif -%}
+        </div>
+        <div class="aqb-ds-rosewood__text">
+          {%- if section.settings.rosewood_eyebrow != blank -%}
+            <div class="aqb-ds-eyebrow">{{ section.settings.rosewood_eyebrow | escape }}</div>
+          {%- endif -%}
+          {%- if section.settings.rosewood_heading != blank -%}
+            <h3>{{ section.settings.rosewood_heading }}</h3>
+          {%- endif -%}
+          {%- if section.settings.rosewood_description != blank -%}
+            <p class="aqb-ds-rosewood__desc">{{ section.settings.rosewood_description | escape }}</p>
+          {%- endif -%}
+          <div class="aqb-ds-rosewood__specs">
+            {%- for block in section.blocks -%}
+              {%- if block.type == 'rosewood_spec' -%}
+                <div class="aqb-ds-rosewood__spec" {{ block.shopify_attributes }}>
+                  <span class="aqb-ds-rosewood__spec-dot" aria-hidden="true"></span>
+                  {{ block.settings.text | escape }}
+                </div>
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+          {%- if section.settings.rosewood_cta_label != blank -%}
+            <a href="{{ section.settings.rosewood_cta_link }}" class="aqb-ds-btn-rw">{{ section.settings.rosewood_cta_label | escape }}</a>
+          {%- endif -%}
+        </div>
+      </div>
+
+      <div class="aqb-ds-grid-label" id="desk-signs-rosewood-label">{{ section.settings.rosewood_grid_label | escape }}</div>
+      <div class="aqb-ds-rw-grid" id="desk-signs-rosewood-grid" data-finish-panel="rosewood">
+        {%- if ds_collection != blank -%}
+          {%- for product in ds_collection.products limit: section.settings.rosewood_limit -%}
+            {%- liquid
+              assign tags_joined = product.tags | join: ',' | downcase
+              assign show_rosewood = false
+              if rosewood_tag != blank and tags_joined contains rosewood_tag
+                assign show_rosewood = true
+              elsif tags_joined contains 'rosewood'
+                assign show_rosewood = true
+              endif
+            -%}
+            {%- if show_rosewood -%}
+              {%- assign variant = product.selected_or_first_available_variant -%}
+              <a href="{{ product.url }}" class="aqb-ds-rw-card" data-finish="rosewood">
+                <div class="aqb-ds-rw-card__img">
+                  {%- if product.featured_image -%}
+                    {{ product.featured_image | image_url: width: 500 | image_tag: loading: 'lazy', widths: '250,400,500', sizes: '25vw', alt: product.title }}
+                  {%- endif -%}
+                </div>
+                <div class="aqb-ds-rw-card__body">
+                  <div class="aqb-ds-rw-card__name">{{ product.title | escape }}</div>
+                  <div class="aqb-ds-rw-card__meta">{{ section.settings.rosewood_meta | escape }}</div>
+                  <div class="aqb-ds-rw-card__price">{% if variant %}{{ variant.price | money }}{% endif %}</div>
+                </div>
+              </a>
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Desk Signs Custom",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "collection", "id": "collection", "label": "Collection" },
+    { "type": "text", "id": "product_tag", "label": "Acrylic product tag filter", "default": "custom" },
+    { "type": "text", "id": "rosewood_tag", "label": "Rosewood product tag filter", "default": "rosewood" },
+    { "type": "range", "id": "products_limit", "label": "Acrylic products shown", "min": 4, "max": 24, "step": 4, "default": 8 },
+    { "type": "range", "id": "rosewood_limit", "label": "Rosewood products shown", "min": 4, "max": 24, "step": 4, "default": 8 },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Custom & Personalised" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "Engraved with your name.<br><em>Built for your profession.</em>" },
+    { "type": "textarea", "id": "description", "label": "Description", "default": "Acrylic and rosewood desk signs personalised with a buyer's name and title. Vector art by profession — Doctor, Legal Secretary, Financial Planner, and 70+ more." },
+    { "type": "text", "id": "acrylic_price", "label": "Acrylic from price", "default": "From $24.99" },
+    { "type": "text", "id": "rosewood_price", "label": "Rosewood from price", "default": "From $24.99" },
+    { "type": "text", "id": "cta_label", "label": "CTA button", "default": "Personalise Your Sign →" },
+    { "type": "url", "id": "cta_link", "label": "CTA link" },
+    { "type": "text", "id": "acrylic_grid_label", "label": "Acrylic grid label", "default": "Acrylic — Personalised by profession (44 designs)" },
+    { "type": "text", "id": "acrylic_meta", "label": "Acrylic card meta", "default": "Acrylic · Profession vector · 2×10\"" },
+    { "type": "text", "id": "card_cta", "label": "Card CTA", "default": "Personalise" },
+    { "type": "checkbox", "id": "view_all_show", "label": "Show view-all card", "default": true },
+    { "type": "text", "id": "view_all_heading", "label": "View-all heading", "default": "36 more professions" },
+    { "type": "text", "id": "view_all_subtext", "label": "View-all subtext", "default": "Nurse · Principal · Realtor · Engineer & more" },
+    { "type": "text", "id": "view_all_label", "label": "View-all button", "default": "View All" },
+    { "type": "url", "id": "view_all_link", "label": "View-all link" },
+    { "type": "text", "id": "rosewood_eyebrow", "label": "Rosewood eyebrow", "default": "Rosewood & Piano Finish" },
+    { "type": "html", "id": "rosewood_heading", "label": "Rosewood heading", "default": "Premium rosewood.<br><em>Gold-engraved elegance.</em>" },
+    { "type": "textarea", "id": "rosewood_description", "label": "Rosewood description", "default": "Piano-finish rosewood with a black and gold engraved plate. A premium gift for executives, pastors, and office leaders." },
+    { "type": "text", "id": "rosewood_cta_label", "label": "Rosewood CTA", "default": "Shop Rosewood Signs →" },
+    { "type": "url", "id": "rosewood_cta_link", "label": "Rosewood CTA link" },
+    { "type": "text", "id": "rosewood_grid_label", "label": "Rosewood grid label", "default": "Rosewood — Pre-designed titles" },
+    { "type": "text", "id": "rosewood_meta", "label": "Rosewood card meta", "default": "Rosewood · Black & gold plate · 2×10\"" },
+    { "type": "image_picker", "id": "rosewood_image", "label": "Rosewood lifestyle image" },
+    { "type": "text", "id": "rosewood_image_asset", "label": "Rosewood image asset", "default": "aqb-cat-banner-desk.png" }
+  ],
+  "blocks": [
+    { "type": "perk", "name": "Perk", "settings": [{ "type": "text", "id": "text", "label": "Text", "default": "Ships in 2–3 business days" }] },
+    { "type": "lifestyle_photo", "name": "Lifestyle photo", "settings": [
+      { "type": "select", "id": "size", "label": "Size", "options": [{ "value": "large", "label": "Large" }, { "value": "small", "label": "Small" }], "default": "large" },
+      { "type": "image_picker", "id": "image", "label": "Image" },
+      { "type": "text", "id": "image_asset", "label": "Image asset filename", "default": "aqb-cat-banner-desk.png" },
+      { "type": "text", "id": "alt", "label": "Alt text", "default": "Acrylic desk sign on office desk" }
+    ]},
+    { "type": "rosewood_spec", "name": "Rosewood spec", "settings": [{ "type": "text", "id": "text", "label": "Text", "default": "Piano-finish rosewood base" }] },
+    {
+      "type": "acrylic_profession",
+      "name": "Acrylic profession card",
+      "settings": [
+        { "type": "product", "id": "product", "label": "Product (optional)" },
+        { "type": "text", "id": "title", "label": "Profession title", "default": "Doctor / Physician" },
+        { "type": "text", "id": "meta", "label": "Card meta", "default": "Acrylic · Medical Cross vector · 2×10\"" },
+        { "type": "text", "id": "price", "label": "Price label", "default": "$24.99" },
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "image_url", "label": "Image URL (fallback)" },
+        { "type": "url", "id": "link", "label": "Link" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Desk Signs Custom",
+      "blocks": [
+        { "type": "perk", "settings": { "text": "Ships in 2–3 business days" } },
+        { "type": "perk", "settings": { "text": "Gift wrapping available" } },
+        { "type": "perk", "settings": { "text": "Bulk office quotes" } },
+        { "type": "lifestyle_photo", "settings": { "size": "large", "image_asset": "aqb-cat-banner-desk.png", "alt": "Acrylic desk sign on office desk" } },
+        { "type": "lifestyle_photo", "settings": { "size": "small", "image_asset": "aqb-tile-desk-signs.png", "alt": "Rosewood desk sign gift" } },
+        { "type": "rosewood_spec", "settings": { "text": "Piano-finish rosewood base" } },
+        { "type": "rosewood_spec", "settings": { "text": "Black & gold engraved plate" } },
+        { "type": "rosewood_spec", "settings": { "text": "Premium gift-ready packaging available" } },
+        { "type": "acrylic_profession", "settings": { "title": "Doctor / Physician", "meta": "Acrylic · Medical Cross vector · 2×10\"", "price": "$24.99", "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/db215041-2a6a-5d18-85df-d4710b032b44_1df6a4fd-fb47-4601-84b7-bc673241c4ab.jpg?v=1781185001" } },
+        { "type": "acrylic_profession", "settings": { "title": "Financial Planner", "meta": "Acrylic · Profession vector · 2×10\"", "price": "$24.99", "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/6ceb5aa3-8db4-5a32-9113-ee20fd789cd3.jpg?v=1781178030" } },
+        { "type": "acrylic_profession", "settings": { "title": "Legal Secretary", "meta": "Acrylic · Scales of justice vector · 2×10\"", "price": "$24.99", "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/cdebe738-1413-51e2-af78-d2f65c95c191.jpg?v=1781178019" } },
+        { "type": "acrylic_profession", "settings": { "title": "Media Planner", "meta": "Acrylic · Profession vector · 2×10\"", "price": "$24.99", "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/e70b969e-25d8-58d5-9c57-0dedbacac9c1.jpg?v=1781178039" } },
+        { "type": "acrylic_profession", "settings": { "title": "Account Manager", "meta": "Acrylic · Profession vector · 2×10\"", "price": "$24.99", "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/9628df1b-f141-5ac5-91cd-029e78178352.jpg?v=1781177980" } },
+        { "type": "acrylic_profession", "settings": { "title": "Customer Service Mgr", "meta": "Acrylic · Profession vector · 2×10\"", "price": "$24.99", "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/553039e7-b65d-5e9e-82f8-d4cfda4f9608.jpg?v=1781177971" } },
+        { "type": "acrylic_profession", "settings": { "title": "Business Reporter", "meta": "Acrylic · Gavel vector · 2×10\"", "price": "$24.99", "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/f8fb3e72-3c2f-55f9-a4a1-532520ebde33.jpg?v=1781178010" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

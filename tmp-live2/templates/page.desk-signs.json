@@ -1,0 +1,214 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "hero": {
+      "type": "aqb-desk-signs-hero",
+      "blocks": {
+        "stat_1": { "type": "stat", "settings": { "value": "70+", "label": "Custom professions" } },
+        "stat_2": { "type": "stat", "settings": { "value": "100+", "label": "Business titles" } },
+        "stat_3": { "type": "stat", "settings": { "value": "345", "label": "Novelty designs" } },
+        "photo_1": { "type": "photo", "settings": { "layout": "tall", "image_asset": "aqb-cat-banner-desk.png", "alt": "Rosewood desk sign on executive desk" } },
+        "photo_2": { "type": "photo", "settings": { "layout": "short", "image_asset": "aqb-tile-desk-signs.png", "alt": "Acrylic personalised desk sign" } },
+        "photo_3": { "type": "photo", "settings": { "layout": "short", "image_asset": "aqb-cat-banner-desk.png", "alt": "Business desk sign on counter" } }
+      },
+      "block_order": ["stat_1", "stat_2", "stat_3", "photo_1", "photo_2", "photo_3"],
+      "settings": {
+        "eyebrow": "Desk Signs — 666 Designs",
+        "heading": "From funny to formal.<br><em>A desk sign for every workplace.</em>",
+        "subheading": "Personalised acrylic & rosewood signs for professionals, functional business signage for any industry, and novelty signs for the office personality. All made in the USA.",
+        "primary_label": "Shop Custom Signs",
+        "primary_link": "#section-custom",
+        "secondary_label": "Browse All →",
+        "secondary_link": "#section-business"
+      }
+    },
+    "nav": {
+      "type": "aqb-desk-signs-nav",
+      "blocks": {
+        "anchor_custom": { "type": "anchor", "settings": { "section_id": "custom", "title": "Custom & Personalised", "subtitle": "Acrylic & rosewood", "link": "#section-custom" } },
+        "anchor_business": { "type": "anchor", "settings": { "section_id": "business", "title": "Business & Professional", "subtitle": "Functional signage", "link": "#section-business" } },
+        "anchor_novelty": { "type": "anchor", "settings": { "section_id": "novelty", "title": "Novelty & Humorous", "subtitle": "345 funny designs", "link": "#section-novelty" } }
+      },
+      "block_order": ["anchor_custom", "anchor_business", "anchor_novelty"],
+      "settings": {}
+    },
+    "trust_bar": {
+      "type": "aqb-desk-signs-trust-bar",
+      "blocks": {
+        "item_1": { "type": "item", "settings": { "emoji": "🏷️", "title": "Range of Personalised Desk Signs", "subtitle": "Acrylic, rosewood & plastic" } },
+        "item_2": { "type": "item", "settings": { "emoji": "⚡", "title": "Ships within 48 hours", "subtitle": "Fast turnaround on every order" } },
+        "item_3": { "type": "item", "settings": { "emoji": "📦", "title": "Free Shipping", "subtitle": "On qualifying orders" } },
+        "item_4": { "type": "item", "settings": { "emoji": "⭐", "title": "4.8 star average", "subtitle": "Thousands of verified reviews" } }
+      },
+      "block_order": ["item_1", "item_2", "item_3", "item_4"],
+      "settings": {}
+    },
+    "custom": {
+      "type": "aqb-desk-signs-custom",
+      "blocks": {
+        "perk_1": { "type": "perk", "settings": { "text": "Ships in 2–3 business days" } },
+        "perk_2": { "type": "perk", "settings": { "text": "Gift wrapping available" } },
+        "perk_3": { "type": "perk", "settings": { "text": "Bulk office quotes" } },
+        "life_1": { "type": "lifestyle_photo", "settings": { "size": "large", "image_asset": "aqb-cat-banner-desk.png", "alt": "Acrylic desk sign on office desk" } },
+        "life_2": { "type": "lifestyle_photo", "settings": { "size": "small", "image_asset": "aqb-tile-desk-signs.png", "alt": "Rosewood desk sign gift" } },
+        "spec_1": { "type": "rosewood_spec", "settings": { "text": "Piano-finish rosewood base" } },
+        "spec_2": { "type": "rosewood_spec", "settings": { "text": "Black & gold engraved plate" } },
+        "spec_3": { "type": "rosewood_spec", "settings": { "text": "Premium gift-ready packaging available" } },
+        "acrylic_1": {
+          "type": "acrylic_profession",
+          "settings": {
+            "title": "Doctor / Physician",
+            "meta": "Acrylic · Medical Cross vector · 2×10\"",
+            "price": "$24.99",
+            "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/db215041-2a6a-5d18-85df-d4710b032b44_1df6a4fd-fb47-4601-84b7-bc673241c4ab.jpg?v=1781185001",
+            "link": "shopify://collections/acrylic-desk-signs"
+          }
+        },
+        "acrylic_2": {
+          "type": "acrylic_profession",
+          "settings": {
+            "title": "Financial Planner",
+            "meta": "Acrylic · Profession vector · 2×10\"",
+            "price": "$24.99",
+            "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/6ceb5aa3-8db4-5a32-9113-ee20fd789cd3.jpg?v=1781178030",
+            "link": "shopify://collections/acrylic-desk-signs"
+          }
+        },
+        "acrylic_3": {
+          "type": "acrylic_profession",
+          "settings": {
+            "title": "Legal Secretary",
+            "meta": "Acrylic · Scales of justice vector · 2×10\"",
+            "price": "$24.99",
+            "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/cdebe738-1413-51e2-af78-d2f65c95c191.jpg?v=1781178019",
+            "link": "shopify://collections/acrylic-desk-signs"
+          }
+        },
+        "acrylic_4": {
+          "type": "acrylic_profession",
+          "settings": {
+            "title": "Media Planner",
+            "meta": "Acrylic · Profession vector · 2×10\"",
+            "price": "$24.99",
+            "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/e70b969e-25d8-58d5-9c57-0dedbacac9c1.jpg?v=1781178039",
+            "link": "shopify://collections/acrylic-desk-signs"
+          }
+        },
+        "acrylic_5": {
+          "type": "acrylic_profession",
+          "settings": {
+            "title": "Account Manager",
+            "meta": "Acrylic · Profession vector · 2×10\"",
+            "price": "$24.99",
+            "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/9628df1b-f141-5ac5-91cd-029e78178352.jpg?v=1781177980",
+            "link": "shopify://collections/acrylic-desk-signs"
+          }
+        },
+        "acrylic_6": {
+          "type": "acrylic_profession",
+          "settings": {
+            "title": "Customer Service Mgr",
+            "meta": "Acrylic · Profession vector · 2×10\"",
+            "price": "$24.99",
+            "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/553039e7-b65d-5e9e-82f8-d4cfda4f9608.jpg?v=1781177971",
+            "link": "shopify://collections/acrylic-desk-signs"
+          }
+        },
+        "acrylic_7": {
+          "type": "acrylic_profession",
+          "settings": {
+            "title": "Business Reporter",
+            "meta": "Acrylic · Gavel vector · 2×10\"",
+            "price": "$24.99",
+            "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/f8fb3e72-3c2f-55f9-a4a1-532520ebde33.jpg?v=1781178010",
+            "link": "shopify://collections/acrylic-desk-signs"
+          }
+        }
+      },
+      "block_order": [
+        "perk_1",
+        "perk_2",
+        "perk_3",
+        "life_1",
+        "life_2",
+        "spec_1",
+        "spec_2",
+        "spec_3",
+        "acrylic_1",
+        "acrylic_2",
+        "acrylic_3",
+        "acrylic_4",
+        "acrylic_5",
+        "acrylic_6",
+        "acrylic_7"
+      ],
+      "settings": {
+        "collection": "acrylic-desk-signs",
+        "product_tag": "custom",
+        "rosewood_tag": "rosewood",
+        "eyebrow": "Custom & Personalised",
+        "heading": "Engraved with your name.<br><em>Built for your profession.</em>",
+        "description": "Acrylic and rosewood desk signs personalised with a buyer's name and title. Vector art by profession — Doctor, Legal Secretary, Financial Planner, and 70+ more.",
+        "cta_label": "Personalise Your Sign →",
+        "cta_link": "shopify://collections/acrylic-desk-signs",
+        "acrylic_grid_label": "Acrylic — Personalised by profession (44 designs)",
+        "view_all_show": true,
+        "view_all_heading": "36 more professions",
+        "view_all_subtext": "Nurse · Principal · Realtor · Engineer & more",
+        "view_all_label": "View All",
+        "view_all_link": "shopify://collections/acrylic-desk-signs",
+        "rosewood_heading": "Premium rosewood.<br><em>Gold-engraved elegance.</em>",
+        "rosewood_description": "Piano-finish rosewood with a black and gold engraved plate. A premium gift for executives, pastors, and office leaders.",
+        "rosewood_cta_label": "Shop Rosewood Signs →",
+        "rosewood_cta_link": "shopify://collections/acrylic-desk-signs",
+        "rosewood_image_asset": "aqb-cat-banner-desk.png"
+      }
+    },
+    "business": {
+      "type": "aqb-desk-signs-business",
+      "blocks": {
+        "ind_retail": { "type": "industry", "settings": { "industry_id": "retail", "label": "Retail", "tag": "retail" } },
+        "ind_health": { "type": "industry", "settings": { "industry_id": "healthcare", "label": "Healthcare", "tag": "healthcare" } },
+        "ind_hosp": { "type": "industry", "settings": { "industry_id": "hospitality", "label": "Hospitality", "tag": "hospitality" } },
+        "ind_office": { "type": "industry", "settings": { "industry_id": "office", "label": "Office", "tag": "office" } },
+        "photo_1": { "type": "photo", "settings": { "image_asset": "aqb-cat-banner-desk.png", "alt": "Retail desk sign" } },
+        "photo_2": { "type": "photo", "settings": { "image_asset": "aqb-tile-desk-signs.png", "alt": "Healthcare desk sign" } },
+        "photo_3": { "type": "photo", "settings": { "image_asset": "aqb-cat-banner-desk.png", "alt": "Office desk sign" } }
+      },
+      "block_order": ["ind_retail", "ind_health", "ind_hosp", "ind_office", "photo_1", "photo_2", "photo_3"],
+      "settings": {
+        "collection": "acrylic-desk-signs",
+        "product_tag": "business",
+        "heading": "Functional signage that looks <em>the part.</em>",
+        "description": "Pre-printed desk signs for reception desks, checkout counters, offices and facilities. Clear, professional, and ready to ship."
+      }
+    },
+    "novelty": {
+      "type": "aqb-desk-signs-novelty",
+      "blocks": {
+        "chip_funny": { "type": "chip", "settings": { "chip_id": "funny", "label": "Funny", "tag": "funny" } },
+        "chip_gift": { "type": "chip", "settings": { "chip_id": "gift", "label": "Gift picks", "tag": "gift" } },
+        "chip_boss": { "type": "chip", "settings": { "chip_id": "boss", "label": "Boss / Leader", "tag": "boss" } },
+        "chip_office": { "type": "chip", "settings": { "chip_id": "office", "label": "Office life", "tag": "office" } }
+      },
+      "block_order": ["chip_funny", "chip_gift", "chip_boss", "chip_office"],
+      "settings": {
+        "collection": "acrylic-desk-signs",
+        "product_tag": "novelty",
+        "heading": "Signs that make the whole office <em>laugh.</em>",
+        "description": "Funny, bold, and conversation-starting desk signs for the office personality. Perfect gifts for coworkers.",
+        "see_all_link": "shopify://collections/acrylic-desk-signs",
+        "gift_cta_link": "shopify://collections/acrylic-desk-signs"
+      }
+    }
+  },
+  "order": ["hero", "nav", "trust_bar", "custom", "business", "novelty"]
+}

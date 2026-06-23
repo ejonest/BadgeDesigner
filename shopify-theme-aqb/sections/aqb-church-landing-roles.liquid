@@ -15,7 +15,7 @@
       {%- for block in section.blocks -%}
         {%- liquid
           assign card_link = block.settings.link
-          if block.settings.collection != blank
+          if card_link == blank and block.settings.collection != blank
             assign card_link = block.settings.collection.url
           endif
           if card_link == blank
@@ -99,18 +99,20 @@
           "type": "role",
           "settings": {
             "title": "Greeters & Ushers",
-            "description": "Classic engraved badges for welcome teams, hospitality volunteers, greeters and ushers.",
+            "description": "Classic printed badges for welcome teams, hospitality volunteers, greeters and ushers.",
             "tag": "★ Top seller",
-            "cta_label": "Shop collection →"
+            "cta_label": "Shop collection →",
+            "link": "/pages/church-religious-catalog?sub=greeters-ushers#church-religious-catalogue"
           }
         },
         {
           "type": "role",
           "settings": {
             "title": "Pastors & Leadership",
-            "description": "Professional engraved name badges for pastors, elders, ministry leaders and church staff.",
+            "description": "Professional printed name badges for pastors, elders, ministry leaders and church staff.",
             "tag": "Multi-packs available",
-            "cta_label": "Shop Leadership →"
+            "cta_label": "Shop Leadership →",
+            "link": "/pages/church-religious-catalog?sub=pastors-leadership#church-religious-catalogue"
           }
         },
         {
@@ -119,7 +121,8 @@
             "title": "Welcome Ministry",
             "description": "Friendly, easy-to-read badges that help guests feel welcomed from the moment they arrive.",
             "tag": "Multi-packs available",
-            "cta_label": "Shop Welcome Team →"
+            "cta_label": "Shop Welcome Team →",
+            "link": "/pages/church-religious-catalog?sub=welcome#church-religious-catalogue"
           }
         },
         {
@@ -128,7 +131,8 @@
             "title": "Spanish Ministry Collection",
             "description": "The only complete bilingual congregation badge collection for Hispanic ministries and Spanish-speaking congregations.",
             "tag": "🌎 En Español",
-            "cta_label": "Shop Spanish Collection →"
+            "cta_label": "Shop Spanish Collection →",
+            "link": "/pages/church-religious-catalog?sub=spanish#church-religious-catalogue"
           }
         }
       ]

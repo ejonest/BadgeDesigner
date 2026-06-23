@@ -246,12 +246,12 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
   box-sizing: border-box;
-  padding: 0 16px 12px;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--aqb-border);
-  background: #f8f7f4;
+  background: #fff;
 }
 
 /* Grid modal — per-badge duplicate/delete + delete all */
@@ -430,15 +430,44 @@
   line-height: 1.2;
 }
 
+/* Mobile badge designer — evenly spaced step nav with connector lines */
+@media (max-width: 767px) {
+  .aqb-redesign-root .aqb-badge-mobile-step-nav {
+    display: grid !important;
+    grid-template-columns:
+      auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    align-items: start;
+    width: 100%;
+    box-sizing: border-box;
+    padding-inline: 1.5rem;
+  }
+
+  .aqb-redesign-root .aqb-badge-mobile-step-nav .aqb-badge-step-item {
+    justify-self: center;
+    flex: none !important;
+    min-width: 0;
+  }
+
+  .aqb-redesign-root .aqb-badge-mobile-step-nav .aqb-badge-step-connector {
+    align-self: start;
+    width: 100%;
+    min-width: 0;
+    height: 2px;
+    flex: none !important;
+    margin-inline: 0 !important;
+    margin-top: 10px;
+  }
+}
+
 /* Tool toolbar under preview — two full-width rows, equal button widths per row */
 .aqb-redesign-root .aqb-tool-actions-row {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
   box-sizing: border-box;
-  padding: 10px 24px;
+  padding: 8px 16px;
   border-top: 1px solid var(--aqb-border);
   background: #fff;
 }
@@ -465,6 +494,77 @@
   cursor: pointer;
   font-family: inherit;
   transition: border-color 0.15s, background 0.15s, color 0.15s, opacity 0.15s;
+}
+
+.aqb-redesign-root .aqb-ta-btn--icon-only {
+  flex-direction: row;
+  gap: 0;
+  padding: 7px 8px;
+  min-height: 36px;
+}
+
+.aqb-redesign-root .aqb-ta-btn--mobile-inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 7px 8px;
+  min-height: 36px;
+}
+
+.aqb-redesign-root .aqb-ta-label--mobile {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .aqb-redesign-root .aqb-ta-btn--mobile-inline {
+    gap: 3px;
+    padding: 6px 4px;
+    min-height: 32px;
+  }
+
+  .aqb-redesign-root .aqb-ta-label--mobile {
+    display: block;
+    width: auto;
+    max-width: none;
+    font-size: 10px;
+    font-weight: 500;
+    color: #6b7f92;
+    white-space: nowrap;
+    line-height: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .aqb-redesign-root .aqb-ta-btn--mobile-inline .aqb-ta-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .aqb-redesign-root .aqb-tool-actions-row,
+  .aqb-redesign-root .aqb-preview-actions-row {
+    padding-inline: 10px;
+  }
+
+  .aqb-redesign-root .aqb-tool-actions-row__row {
+    gap: 4px;
+  }
+}
+
+.aqb-redesign-root .aqb-ta-btn--inline-label {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 10px;
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+.aqb-redesign-root .aqb-ta-btn--inline-label .aqb-ta-label {
+  width: auto;
+  max-width: none;
+  white-space: nowrap;
 }
 
 .aqb-redesign-root .aqb-ta-btn:hover:not(:disabled) {
@@ -1601,6 +1701,22 @@
   width: 100%;
 }
 
+@media (max-width: 767px) {
+  .aqb-redesign-root .aqb-bq-editor-qty-note,
+  .aqb-redesign-root .aqb-bq-qty-hint,
+  .aqb-redesign-root .aqb-badge-trust-disclaimer .aqb-trust-strip {
+    display: none;
+  }
+
+  .aqb-redesign-root .aqb-bq-checkout-footer {
+    margin-top: 8px;
+  }
+
+  .aqb-redesign-root .aqb-badge-trust-disclaimer .aqb-print-colours-disclaimer {
+    margin-top: 0;
+  }
+}
+
 .aqb-redesign-root .aqb-badge-trust-disclaimer {
   width: 100%;
   min-width: 0;
@@ -1695,6 +1811,59 @@
 .aqb-redesign-root .aqb-atc-btn--panel__icon {
   width: 22px;
   height: 22px;
+  flex-shrink: 0;
+}
+
+/* Mobile badge — pinned checkout bar (desktop uses right panel) */
+.aqb-redesign-root .aqb-mobile-checkout-bar {
+  background: var(--aqb-navy);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+.aqb-redesign-root .aqb-mobile-checkout-bar__inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.aqb-redesign-root .aqb-mobile-checkout-bar__price {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--aqb-gold-l);
+  letter-spacing: -0.02em;
+}
+
+.aqb-redesign-root .aqb-mobile-checkout-bar__meta {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.aqb-redesign-root .aqb-atc-btn--mobile {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  min-width: 132px;
+}
+
+.aqb-redesign-root .aqb-atc-btn--mobile-with-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.aqb-redesign-root .aqb-atc-btn--mobile__icon {
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 

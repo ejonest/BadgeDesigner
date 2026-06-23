@@ -1,0 +1,37 @@
+{%- if page.handle == 'contact' or template.suffix == 'contact' -%}
+<div class="aqb-ct-trust-bar">
+  <div class="aqb-ct-trust-bar__inner">
+    {%- for block in section.blocks -%}
+      <div class="aqb-ct-trust-bar__item" {{ block.shopify_attributes }}>
+        <span class="aqb-ct-trust-bar__icon" aria-hidden="true">{{ block.settings.emoji }}</span>
+        <div>
+          <div class="aqb-ct-trust-bar__title">{{ block.settings.title | escape }}</div>
+          {%- if block.settings.subtitle != blank -%}
+            <div class="aqb-ct-trust-bar__sub">{{ block.settings.subtitle | escape }}</div>
+          {%- endif -%}
+        </div>
+      </div>
+    {%- endfor -%}
+  </div>
+</div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Contact Trust",
+  "tag": "section",
+  "class": "section",
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Trust item",
+      "settings": [
+        { "type": "text", "id": "emoji", "label": "Emoji", "default": "⚡" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Same-day replies" },
+        { "type": "text", "id": "subtitle", "label": "Subtitle" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB Contact Trust" }]
+}
+{% endschema %}

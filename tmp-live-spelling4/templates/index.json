@@ -1,0 +1,343 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "home_hero": {
+      "type": "aqb-home-hero",
+      "blocks": {
+        "strength_1": {
+          "type": "strength",
+          "settings": {
+            "emoji": "👁️",
+            "title": "See it before you buy",
+            "description": "Live preview updates as you design"
+          }
+        },
+        "strength_2": {
+          "type": "strength",
+          "settings": {
+            "emoji": "💰",
+            "title": "Badges as low as $4.99",
+            "description": "Volume pricing, no artwork fees"
+          }
+        },
+        "strength_3": {
+          "type": "strength",
+          "settings": {
+            "emoji": "✏️",
+            "title": "Design it live in minutes",
+            "description": "See exactly what you get before you buy"
+          }
+        },
+        "strength_4": {
+          "type": "strength",
+          "settings": {
+            "emoji": "🔁",
+            "title": "Reorder in one click",
+            "description": "Designs saved to your account"
+          }
+        }
+      },
+      "block_order": [
+        "strength_1",
+        "strength_2",
+        "strength_3",
+        "strength_4"
+      ],
+      "settings": {
+        "eyebrow": "Custom Badge Tool — Live Now",
+        "heading": "Personalized name badges<br><em>designed live in minutes.</em>",
+        "subheading": "Design yours live in minutes — shape, colour, every line of text. <strong>See exactly what you'll get</strong> before you order. No artwork fees. Free shipping on qualifying orders.",
+        "primary_label": "Start Designing",
+        "primary_link": "shopify://products/custom-1x3-badge",
+        "secondary_label": "Shop All Products",
+        "secondary_link": "shopify://collections/all",
+        "hero_image_asset": "aqb-hero-badge-variations.png",
+        "editor_preview_mode": "screenshot",
+        "editor_preview_asset": "aqb-hero-editor-preview.png",
+        "editor_preview_cta_label": "Click here to design now →",
+        "tool_url_label": "allqualitybadges.com — Design Studio",
+        "preview_org_1": "Grace Community Church",
+        "preview_name_1": "Sarah",
+        "preview_role_1": "Greeter",
+        "preview_org_2": "Iglesia Nueva Vida",
+        "preview_name_2": "Carlos",
+        "preview_role_2": "Ujier",
+        "preview_qty": "25",
+        "preview_price": "$47.25",
+        "preview_price_note": "($1.89 each)",
+        "tool_cta_label": "Add to Cart"
+      }
+    },
+    "trust_bar": {
+      "type": "aqb-trust-bar",
+      "blocks": {
+        "trust_shipping": {
+          "type": "trust_item",
+          "settings": {
+            "emoji": "🚚",
+            "headline": "Free USA Shipping",
+            "detail": "On orders of 5 badges or more"
+          }
+        },
+        "trust_speed": {
+          "type": "trust_item",
+          "settings": {
+            "emoji": "⚡",
+            "headline": "Fast Production",
+            "detail": "Fast turnaround on most orders"
+          }
+        },
+        "trust_manufacturer": {
+          "type": "trust_item",
+          "settings": {
+            "emoji": "✏️",
+            "headline": "No Artwork Fees",
+            "detail": "Design free — preview before you buy"
+          }
+        },
+        "trust_minimum": {
+          "type": "trust_item",
+          "settings": {
+            "emoji": "📦",
+            "headline": "No Minimum Order",
+            "detail": "Order 1 or 10,000 badges"
+          }
+        }
+      },
+      "block_order": [
+        "trust_shipping",
+        "trust_speed",
+        "trust_manufacturer",
+        "trust_minimum"
+      ],
+      "settings": {
+        "color_scheme": "scheme-1",
+        "padding_top": 0,
+        "padding_bottom": 0
+      }
+    },
+    "capabilities": {
+      "type": "aqb-capabilities",
+      "blocks": {
+        "cap_1": {
+          "type": "capability",
+          "settings": {
+            "number": "01",
+            "title": "Any colour you want",
+            "description": "Choose from the full colour spectrum — not just a handful of presets. Navy, gold, red, green, black, white and everything in between."
+          }
+        },
+        "cap_2": {
+          "type": "capability",
+          "settings": {
+            "number": "02",
+            "title": "Your text, your font",
+            "description": "Name, role, department, organisation — any text you need across multiple lines, in your choice of font style."
+          }
+        },
+        "cap_3": {
+          "type": "capability",
+          "settings": {
+            "number": "03",
+            "title": "See it before you buy",
+            "description": "The live preview updates as you design. What you see on screen is what gets made. No surprises, no artwork fees, no back-and-forth."
+          }
+        }
+      },
+      "block_order": [
+        "cap_1",
+        "cap_2",
+        "cap_3"
+      ],
+      "settings": {}
+    },
+    "category_grid": {
+      "type": "aqb-category-grid",
+      "blocks": {
+        "cat_church": {
+          "type": "category",
+          "settings": {
+            "banner_asset": "aqb-cat-banner-church.png",
+            "featured": false,
+            "icon": "church",
+            "visual_accent": "navy",
+            "title": "Church & Ministry",
+            "description": "Custom badges for greeters, pastors, ushers, deacons, volunteers, and welcome teams.",
+            "cta_label": "Shop ministry badges →",
+            "link": "shopify://pages/church-and-congregation"
+          }
+        },
+        "cat_engraved": {
+          "type": "category",
+          "settings": {
+            "banner_asset": "aqb-cat-banner-custom.png",
+            "featured": false,
+            "icon": "engraved",
+            "visual_accent": "navy",
+            "title": "Custom Designed Badges",
+            "description": "Durable, professional name badges printed with your text and logo. Choose colors, fonts, and backing options to match your brand.",
+            "cta_label": "Start designing →",
+            "link": "shopify://products/custom-1x3-badge"
+          }
+        },
+        "cat_blanks": {
+          "type": "category",
+          "settings": {
+            "banner_asset": "aqb-cat-banner-blanks.png",
+            "featured": false,
+            "icon": "blanks",
+            "visual_accent": "navy",
+            "title": "Blank Name Tags",
+            "description": "High-quality blank badges ready for customization. Available in multiple shapes, colors, and backing options — perfect for any team or event.",
+            "cta_label": "Shop blanks →",
+            "link": "shopify://pages/badge-blank"
+          }
+        },
+        "cat_desk": {
+          "type": "category",
+          "settings": {
+            "banner_asset": "aqb-cat-banner-desk.png",
+            "featured": false,
+            "icon": "desk",
+            "visual_accent": "navy",
+            "title": "Desk Name Plates",
+            "description": "Custom desk name plates for offices, reception areas, schools, hotels, and home workspaces. Choose from classic styles, acrylic displays, and fun novelty designs.",
+            "cta_label": "Shop desk plates →",
+            "link": "shopify://pages/desk-signs"
+          }
+        }
+      },
+      "block_order": [
+        "cat_church",
+        "cat_engraved",
+        "cat_blanks",
+        "cat_desk"
+      ],
+      "settings": {
+        "layout": "split",
+        "eyebrow": "Shop by category",
+        "heading": "Every badge,<br>one destination.",
+        "view_all_label": "View all products →",
+        "view_all_link": "shopify://collections/all"
+      }
+    },
+    "church_spotlight": {
+      "type": "aqb-church-spotlight",
+      "blocks": {
+        "trust_1": {
+          "type": "trust_point",
+          "settings": {
+            "label": "Premium materials"
+          }
+        },
+        "trust_2": {
+          "type": "trust_point",
+          "settings": {
+            "label": "Built to last"
+          }
+        },
+        "trust_3": {
+          "type": "trust_point",
+          "settings": {
+            "label": "Bulk discounts"
+          }
+        },
+        "trust_4": {
+          "type": "trust_point",
+          "settings": {
+            "label": "English & Spanish"
+          }
+        },
+        "badge_1": {
+          "type": "badge_card",
+          "settings": {
+            "title": "Greeter",
+            "badge_type": "Printed Badge",
+            "tag": "Multi-packs available",
+            "link": "shopify://collections/church-name-tags"
+          }
+        },
+        "badge_2": {
+          "type": "badge_card",
+          "settings": {
+            "title": "Ujier",
+            "badge_type": "Printed Badge",
+            "tag": "Multi-packs available",
+            "link": "shopify://collections/church-name-tags"
+          }
+        },
+        "badge_3": {
+          "type": "badge_card",
+          "settings": {
+            "title": "Diácono",
+            "badge_type": "Printed Badge",
+            "tag": "Multi-packs available",
+            "link": "shopify://collections/church-name-tags"
+          }
+        },
+        "badge_4": {
+          "type": "badge_card",
+          "settings": {
+            "title": "Deaconess",
+            "badge_type": "Printed Badge",
+            "tag": "Multi-packs available",
+            "link": "shopify://collections/church-name-tags"
+          }
+        }
+      },
+      "block_order": [
+        "trust_1",
+        "trust_2",
+        "trust_3",
+        "trust_4",
+        "badge_1",
+        "badge_2",
+        "badge_3",
+        "badge_4"
+      ],
+      "settings": {
+        "eyebrow": "✝ Houses of Worship",
+        "heading": "The badge collection built for your congregation.",
+        "description": "From Sunday greeters to Wednesday deacons — every ministry role, ready to order in multi-packs. We're the only badge supplier with a full Spanish-language congregation collection.",
+        "bilingual_title": "Fully bilingual — English & Spanish.",
+        "bilingual_text": "Ujier, Diácono, Acomodador, Jr Ujier and more. Your congregation deserves to see their roles in their own language.",
+        "button_label": "Shop the Congregation Collection →",
+        "button_link": "shopify://pages/church-and-congregation"
+      }
+    },
+    "dual_cta": {
+      "type": "aqb-dual-cta",
+      "settings": {
+        "layout": "homepage",
+        "header_kicker": "Two Ways to Buy",
+        "header_title": "Personalized or DIY — You Choose",
+        "left_eyebrow": "New visitor",
+        "left_title": "Try the design tool.",
+        "left_description": "No account needed. Pick a shape, set your colours, type your text — and see your badge live before you buy. Takes under two minutes.",
+        "left_button_label": "Start Designing →",
+        "link_custom": "shopify://products/custom-1x3-badge",
+        "right_eyebrow": "Returning customer",
+        "right_title": "Already a customer?",
+        "right_description": "Create an account and your orders are saved. Reorder the same badge — same colour, same text, same everything — in four steps next time.",
+        "right_button_label": "Create Your Account →",
+        "link_blank": "/account/register"
+      }
+    }
+  },
+  "order": [
+    "home_hero",
+    "trust_bar",
+    "capabilities",
+    "category_grid",
+    "church_spotlight",
+    "dual_cta"
+  ]
+}

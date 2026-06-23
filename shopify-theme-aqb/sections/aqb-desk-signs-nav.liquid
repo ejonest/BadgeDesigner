@@ -1,0 +1,38 @@
+{%- if page.handle == 'desk-signs' or template.suffix == 'desk-signs' -%}
+<nav class="aqb-ds-anchor-bar" aria-label="Desk sign categories">
+  <div class="aqb-ds-anchor-bar__inner" id="desk-signs-anchor-bar">
+    {%- for block in section.blocks -%}
+      <a
+        href="{{ block.settings.link }}"
+        class="aqb-ds-anchor-btn{% if forloop.first %} active{% endif %}"
+        data-sec="{{ block.settings.section_id | escape }}"
+        {{ block.shopify_attributes }}
+      >
+        <span class="aqb-ds-anchor-btn__title">{{ block.settings.title | escape }}</span>
+        <span class="aqb-ds-anchor-btn__sub">{{ block.settings.subtitle | escape }}</span>
+      </a>
+    {%- endfor -%}
+  </div>
+</nav>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Desk Signs Nav",
+  "tag": "section",
+  "class": "section",
+  "blocks": [
+    {
+      "type": "anchor",
+      "name": "Anchor link",
+      "settings": [
+        { "type": "text", "id": "section_id", "label": "Section ID", "default": "custom" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Custom & Personalized" },
+        { "type": "text", "id": "subtitle", "label": "Subtitle", "default": "Acrylic & rosewood" },
+        { "type": "url", "id": "link", "label": "Link" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB Desk Signs Nav" }]
+}
+{% endschema %}

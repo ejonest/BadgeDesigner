@@ -4,7 +4,6 @@ import {
   BADGE_AQB_PRINT_COLOURS_DISCLAIMER_BODY,
   BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE,
 } from "../constants/manufacturingDisclaimer";
-import { UsFlagIcon } from "./AqbRedesignIcons";
 
 export const AqbBadgeTrustAndDisclaimer = memo(
   function AqbBadgeTrustAndDisclaimer() {
@@ -18,12 +17,6 @@ export const AqbBadgeTrustAndDisclaimer = memo(
               </span>
               Free USA shipping (on orders of {BADGE_AQB_ORDER_FREE_SHIP_MIN}{" "}
               badges or more)
-            </div>
-            <div className="aqb-ts-item">
-              <span className="aqb-ts-icon" aria-hidden>
-                <UsFlagIcon />
-              </span>
-              Made to Order in the USA
             </div>
           </div>
           <div className="aqb-trust-strip-col">

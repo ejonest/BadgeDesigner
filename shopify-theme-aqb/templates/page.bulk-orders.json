@@ -1,0 +1,140 @@
+{
+  "sections": {
+    "hero": {
+      "type": "aqb-bulk-orders-hero",
+      "blocks": {
+        "trust_1": { "type": "trust_point", "settings": { "label": "Same-day response" } },
+        "trust_2": { "type": "trust_point", "settings": { "label": "US manufactured" } },
+        "trust_3": { "type": "trust_point", "settings": { "label": "No commitment required" } },
+        "step_1": { "type": "step", "settings": { "text": "Submit your request with product type, quantity, and details" } },
+        "step_2": { "type": "step", "settings": { "text": "A representative reviews and prepares your volume quote" } },
+        "step_3": { "type": "step", "settings": { "text": "You receive pricing and lead time — place your order when ready" } }
+      },
+      "block_order": ["trust_1", "trust_2", "trust_3", "step_1", "step_2", "step_3"],
+      "settings": {
+        "eyebrow": "Volume & trade pricing",
+        "heading": "Bulk orders,<br><em>handled by a real person.</em>",
+        "subheading": "Request a quote for blank badges, desk signs, custom badges, and more. A representative will review your order and follow up with discounted pricing — usually the same business day.",
+        "primary_label": "Request a Quote →",
+        "primary_link": "#bulk-quote-form",
+        "secondary_label": "Browse name tag blanks",
+        "secondary_link": "shopify://pages/name-tag-blanks"
+      }
+    },
+    "trust_bar": {
+      "type": "aqb-bulk-orders-trust-bar",
+      "blocks": {
+        "item_1": { "type": "item", "settings": { "emoji": "📞", "title": "Rep-reviewed quotes", "subtitle": "Every request handled personally" } },
+        "item_2": { "type": "item", "settings": { "emoji": "📉", "title": "Volume discounts", "subtitle": "Pricing drops at higher quantities" } },
+        "item_3": { "type": "item", "settings": { "emoji": "🇺🇸", "title": "Made in the USA", "subtitle": "Consistent quality every batch" } },
+        "item_4": { "type": "item", "settings": { "emoji": "🚚", "title": "Free USA shipping", "subtitle": "On qualifying bulk orders" } }
+      },
+      "block_order": ["item_1", "item_2", "item_3", "item_4"],
+      "settings": {}
+    },
+    "categories": {
+      "type": "aqb-bulk-orders-categories",
+      "blocks": {
+        "cat_blanks": {
+          "type": "category",
+          "settings": {
+            "emoji": "⬜",
+            "title": "Blank name tags",
+            "description": "Rounded, oval, square & designer shapes in 6 colors. Magnetic, pin or adhesive backing.",
+            "tag": "Best for engravers & resellers",
+            "link": "shopify://pages/name-tag-blanks"
+          }
+        },
+        "cat_desk": {
+          "type": "category",
+          "settings": {
+            "emoji": "🏷️",
+            "title": "Desk signs",
+            "description": "Acrylic, rosewood, business, and novelty desk signs for offices and facilities.",
+            "tag": "Office & facility orders",
+            "link": "shopify://pages/desk-signs"
+          }
+        },
+        "cat_custom": {
+          "type": "category",
+          "settings": {
+            "emoji": "✏️",
+            "title": "Custom printed badges",
+            "description": "Any name, title, or branding. Design live and order in volume for your whole team.",
+            "tag": "Team & event orders",
+            "link": "shopify://products/custom-1x3-badge"
+          }
+        },
+        "cat_roles": {
+          "type": "category",
+          "settings": {
+            "emoji": "👔",
+            "title": "Pre-printed role badges",
+            "description": "250+ stocked roles across healthcare, hospitality, security, and more.",
+            "tag": "Multi-pack pricing",
+            "link": "shopify://pages/role-badges"
+          }
+        },
+        "cat_church": {
+          "type": "category",
+          "settings": {
+            "emoji": "✝️",
+            "title": "Church & ministry badges",
+            "description": "English and Spanish congregation roles. Greeters, ushers, deacons, and more.",
+            "tag": "Congregation multi-packs",
+            "link": "shopify://pages/church-and-congregation"
+          }
+        },
+        "cat_other": {
+          "type": "category",
+          "settings": {
+            "emoji": "📦",
+            "title": "Mixed / other products",
+            "description": "Need a combination of products or something not listed? Tell us in the form.",
+            "tag": "We'll figure it out",
+            "link": "#bulk-quote-form"
+          }
+        }
+      },
+      "block_order": ["cat_blanks", "cat_desk", "cat_custom", "cat_roles", "cat_church", "cat_other"],
+      "settings": {
+        "eyebrow": "What we bulk-quote",
+        "heading": "Products available<br><em>at volume pricing.</em>",
+        "description": "Select your product type in the quote form below, or browse the categories to see what we offer before you request pricing."
+      }
+    },
+    "form": {
+      "type": "aqb-bulk-orders-form",
+      "blocks": {
+        "perk_1": { "type": "perk", "settings": { "text": "Volume discounts on blanks, desk signs & custom badges" } },
+        "perk_2": { "type": "perk", "settings": { "text": "Mix shapes, colors, and backing types in one order" } },
+        "perk_3": { "type": "perk", "settings": { "text": "Ideal for engravers, hotels, churches, schools & resellers" } },
+        "prod_blanks": { "type": "product_option", "settings": { "label": "Blank name tags", "value": "Blank name tags" } },
+        "prod_desk": { "type": "product_option", "settings": { "label": "Desk signs", "value": "Desk signs" } },
+        "prod_custom": { "type": "product_option", "settings": { "label": "Custom printed badges", "value": "Custom printed badges" } },
+        "prod_roles": { "type": "product_option", "settings": { "label": "Pre-printed role badges", "value": "Pre-printed role badges" } },
+        "prod_church": { "type": "product_option", "settings": { "label": "Church & ministry badges", "value": "Church & ministry badges" } },
+        "prod_mixed": { "type": "product_option", "settings": { "label": "Mixed / multiple products", "value": "Mixed / multiple products" } },
+        "prod_other": { "type": "product_option", "settings": { "label": "Other / not sure", "value": "Other" } },
+        "qty_50": { "type": "quantity_option", "settings": { "label": "50 – 99", "value": "50-99" } },
+        "qty_100": { "type": "quantity_option", "settings": { "label": "100 – 249", "value": "100-249" } },
+        "qty_250": { "type": "quantity_option", "settings": { "label": "250 – 499", "value": "250-499" } },
+        "qty_500": { "type": "quantity_option", "settings": { "label": "500 – 999", "value": "500-999" } },
+        "qty_1000": { "type": "quantity_option", "settings": { "label": "1,000+", "value": "1000+" } }
+      },
+      "block_order": [
+        "perk_1", "perk_2", "perk_3",
+        "prod_blanks", "prod_desk", "prod_custom", "prod_roles", "prod_church", "prod_mixed", "prod_other",
+        "qty_50", "qty_100", "qty_250", "qty_500", "qty_1000"
+      ],
+      "settings": {
+        "eyebrow": "Request a quote",
+        "heading": "Tell us what<br><em>you need.</em>",
+        "intro": "Fill out the form and a representative will reach out with volume pricing, lead times, and any questions about your order.",
+        "rep_heading": "A real person reviews every request",
+        "rep_text": "Bulk pricing depends on product type, quantity, colors, and backing options. Our team will confirm the details and send you a quote — no commitment required."
+      }
+    }
+  },
+  "order": ["hero", "trust_bar", "categories", "form"]
+}

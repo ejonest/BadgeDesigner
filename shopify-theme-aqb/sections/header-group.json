@@ -17,29 +17,38 @@
         "msg_1": {
           "type": "message",
           "settings": {
-            "text": "Free USA shipping on orders of 5 badges or more"
+            "text": "Free USA shipping on orders of 5 badges or more",
+            "link": ""
           }
         },
         "msg_2": {
           "type": "message",
           "settings": {
-            "text": "Custom name badges — design yours and see it live before you buy"
+            "text": "Custom name badges — design yours and see it live before you buy",
+            "link": ""
           }
         },
         "msg_3": {
           "type": "message",
           "settings": {
-            "text": "Ships in 2 business days, direct from our US facility"
+            "text": "Ships in 2 business days on most custom badge orders",
+            "link": ""
           }
         },
         "msg_4": {
           "type": "message",
           "settings": {
-            "text": "Now serving Hispanic congregations — Ujier, Diácono, Acomodador y más"
+            "text": "Now serving Hispanic congregations — Ujier, Diácono, Acomodador y más",
+            "link": ""
           }
         }
       },
-      "block_order": ["msg_1", "msg_2", "msg_3", "msg_4"],
+      "block_order": [
+        "msg_1",
+        "msg_2",
+        "msg_3",
+        "msg_4"
+      ],
       "settings": {}
     },
     "header": {
@@ -57,40 +66,262 @@
           "type": "nav_link",
           "settings": {
             "label": "Name Tag Blanks",
-            "url": "shopify://collections/blank-name-tags",
-            "active_paths": "/collections/blank-name-tags"
+            "url": "shopify://pages/badge-blank",
+            "active_paths": "/pages/name-tag-blanks,/collections/badge-blank"
           }
         },
         "nav_church": {
-          "type": "nav_link",
+          "type": "nav_dropdown",
           "settings": {
             "label": "Church & Congregation",
             "url": "shopify://pages/church-and-congregation",
-            "active_paths": "/pages/church-and-congregation,/collections/church-name-tags"
+            "active_paths": "/pages/church-and-congregation,/pages/church-religious-catalog,/collections/church-name-tags",
+            "menu_id": "church",
+            "columns": "1"
+          }
+        },
+        "church_item_full": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "church",
+            "label": "Shop full collection",
+            "url": "/pages/church-religious-catalog#church-religious-catalogue"
+          }
+        },
+        "church_item_greeters": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "church",
+            "label": "Greeters & Ushers",
+            "url": "/pages/church-religious-catalog?sub=greeters-ushers#church-religious-catalogue"
+          }
+        },
+        "church_item_pastors": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "church",
+            "label": "Pastors & Leadership",
+            "url": "/pages/church-religious-catalog?sub=pastors-leadership#church-religious-catalogue"
+          }
+        },
+        "church_item_welcome": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "church",
+            "label": "Welcome",
+            "url": "/pages/church-religious-catalog?sub=welcome#church-religious-catalogue"
+          }
+        },
+        "church_item_spanish": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "church",
+            "label": "Spanish",
+            "url": "/pages/church-religious-catalog?sub=spanish#church-religious-catalogue"
+          }
+        },
+        "church_item_deacon": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "church",
+            "label": "Deacon",
+            "url": "/pages/church-religious-catalog?sub=deacon#church-religious-catalogue"
           }
         },
         "nav_roles": {
-          "type": "nav_link",
+          "type": "nav_dropdown",
           "settings": {
             "label": "Role Badges",
-            "url": "shopify://collections/church-name-tags",
-            "active_paths": "/collections/role"
+            "url": "shopify://pages/role-badges",
+            "active_paths": "/pages/role-badges",
+            "menu_id": "roles",
+            "columns": "2"
+          }
+        },
+        "roles_item_full": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Shop full collection",
+            "url": "/pages/role-badges#role-badges-catalogue"
+          }
+        },
+        "roles_item_healthcare": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Healthcare",
+            "url": "/pages/role-badges?role=healthcare#role-badges-catalogue"
+          }
+        },
+        "roles_item_church": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Church & Religious",
+            "url": "/pages/role-badges?role=church#role-badges-catalogue"
+          }
+        },
+        "roles_item_corporate": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Corporate & Office",
+            "url": "/pages/role-badges?role=corporate#role-badges-catalogue"
+          }
+        },
+        "roles_item_fitness": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Fitness & Wellness",
+            "url": "/pages/role-badges?role=fitness#role-badges-catalogue"
+          }
+        },
+        "roles_item_hospitality": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Hospitality",
+            "url": "/pages/role-badges?role=hospitality#role-badges-catalogue"
+          }
+        },
+        "roles_item_security": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Security",
+            "url": "/pages/role-badges?role=security#role-badges-catalogue"
+          }
+        },
+        "roles_item_retail": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Retail & Service",
+            "url": "/pages/role-badges?role=retail#role-badges-catalogue"
+          }
+        },
+        "roles_item_novelty": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Novelty",
+            "url": "/pages/role-badges?role=novelty#role-badges-catalogue"
+          }
+        },
+        "roles_item_education": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Education",
+            "url": "/pages/role-badges?role=education#role-badges-catalogue"
+          }
+        },
+        "roles_item_airfare": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Airfare",
+            "url": "/pages/role-badges?role=airfare#role-badges-catalogue"
+          }
+        },
+        "roles_item_first_responders": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "First Responders",
+            "url": "/pages/role-badges?role=first-responders#role-badges-catalogue"
+          }
+        },
+        "roles_item_trades": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Trades",
+            "url": "/pages/role-badges?role=trades#role-badges-catalogue"
+          }
+        },
+        "roles_item_government": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Government",
+            "url": "/pages/role-badges?role=government#role-badges-catalogue"
+          }
+        },
+        "roles_item_events": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Events",
+            "url": "/pages/role-badges?role=events#role-badges-catalogue"
+          }
+        },
+        "roles_item_other": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Other",
+            "url": "/pages/role-badges?role=other#role-badges-catalogue"
+          }
+        },
+        "roles_item_blanks": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "roles",
+            "label": "Blanks",
+            "url": "/pages/role-badges?role=blanks#role-badges-catalogue"
+          }
+        },
+        "nav_desk": {
+          "type": "nav_dropdown",
+          "settings": {
+            "label": "Desk Name Plates",
+            "url": "shopify://pages/desk-signs",
+            "active_paths": "/pages/desk-signs,/pages/desk-signs-catalogue,/collections/acrylic-desk-signs,/collections/desk",
+            "menu_id": "desk",
+            "columns": "1"
+          }
+        },
+        "desk_item_full": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "desk",
+            "label": "Shop full collection",
+            "url": "/pages/desk-signs-catalogue#desk-signs-catalogue"
+          }
+        },
+        "desk_item_custom": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "desk",
+            "label": "Custom Desk Signs",
+            "url": "/pages/desk-signs#section-custom"
+          }
+        },
+        "desk_item_professional": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "desk",
+            "label": "Professional",
+            "url": "/pages/desk-signs-catalogue?type=profession#desk-signs-catalogue"
+          }
+        },
+        "desk_item_novelty": {
+          "type": "nav_dropdown_item",
+          "settings": {
+            "menu_id": "desk",
+            "label": "Novelty",
+            "url": "/pages/desk-signs-catalogue?type=novelty#desk-signs-catalogue"
           }
         },
         "nav_bulk": {
           "type": "nav_link",
           "settings": {
             "label": "Bulk Orders",
-            "url": "shopify://collections/blank-name-tags",
+            "url": "shopify://pages/bulk-orders",
             "active_paths": "/pages/bulk,/collections/blank"
-          }
-        },
-        "nav_desk": {
-          "type": "nav_link",
-          "settings": {
-            "label": "Desk Name Plates",
-            "url": "shopify://collections/acrylic-desk-signs",
-            "active_paths": "/collections/acrylic-desk-signs,/collections/desk"
           }
         }
       },
@@ -98,19 +329,50 @@
         "nav_design",
         "nav_blanks",
         "nav_church",
+        "church_item_full",
+        "church_item_greeters",
+        "church_item_pastors",
+        "church_item_welcome",
+        "church_item_spanish",
+        "church_item_deacon",
         "nav_roles",
+        "roles_item_full",
+        "roles_item_healthcare",
+        "roles_item_church",
+        "roles_item_corporate",
+        "roles_item_fitness",
+        "roles_item_hospitality",
+        "roles_item_security",
+        "roles_item_retail",
+        "roles_item_novelty",
+        "roles_item_education",
+        "roles_item_airfare",
+        "roles_item_first_responders",
+        "roles_item_trades",
+        "roles_item_government",
+        "roles_item_events",
+        "roles_item_other",
+        "roles_item_blanks",
         "nav_desk",
+        "desk_item_full",
+        "desk_item_custom",
+        "desk_item_professional",
+        "desk_item_novelty",
         "nav_bulk"
       ],
       "settings": {
         "logo_mark": "AQ",
-        "logo_text_before": "All Quality ",
+        "logo_text_before": "All Quality",
         "logo_text_accent": "Badges",
         "sign_in_label": "Sign In",
         "shop_all_url": "shopify://collections/all",
-        "shop_all_label": "Shop All Badges"
+        "shop_all_label": "Shop All Products",
+        "cart_label": "Cart"
       }
     }
   },
-  "order": ["announcement_ticker", "header"]
+  "order": [
+    "announcement_ticker",
+    "header"
+  ]
 }

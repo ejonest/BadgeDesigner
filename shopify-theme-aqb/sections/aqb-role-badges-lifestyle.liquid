@@ -1,0 +1,93 @@
+{%- if page.handle == 'role-badges' or template.suffix == 'role-badges' or page.handle == 'church-religious-catalog' or template.suffix == 'church-religious-catalog' -%}
+<section class="aqb-rb-lifestyle-strip">
+  <div class="aqb-rb-lifestyle-inner">
+    {%- for block in section.blocks -%}
+      {%- if block.type == 'photo' -%}
+        <div class="aqb-rb-lifestyle-item" {{ block.shopify_attributes }}>
+          {%- if block.settings.image != blank -%}
+            {{
+              block.settings.image
+              | image_url: width: 600
+              | image_tag: loading: 'lazy', widths: '300,450,600', sizes: '25vw', alt: block.settings.label
+            }}
+          {%- elsif block.settings.image_asset != blank -%}
+            <img
+              src="{{ block.settings.image_asset | asset_url }}"
+              alt="{{ block.settings.label | escape }}"
+              loading="lazy"
+              width="600"
+              height="400"
+            >
+          {%- endif -%}
+          {%- if block.settings.label != blank -%}
+            <span class="aqb-rb-lifestyle-label">{{ block.settings.label | escape }}</span>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    {%- endfor -%}
+
+    <div class="aqb-rb-lifestyle-divider">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="aqb-rb-section-eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h2>{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.description != blank -%}
+        <p style="font-size:14px;color:var(--aqb-rb-text-mid);line-height:1.6;max-width:260px;">
+          {{ section.settings.description | escape }}
+        </p>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB Role Badges Lifestyle",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Worn Every Day"
+    },
+    {
+      "type": "html",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Badges that look<br><em>the part.</em>"
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "Pre-printed and professional — ready to pin on and walk out the door."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "photo",
+      "name": "Photo",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "image_asset", "label": "Theme asset filename (fallback)" },
+        { "type": "text", "id": "label", "label": "Label", "default": "Team Leader" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Role Badges Lifestyle",
+      "blocks": [
+        { "type": "photo", "settings": { "image_asset": "aqb-church-role-pastors.jpg", "label": "Team Leader" } },
+        { "type": "photo", "settings": { "image_asset": "aqb-church-role-welcome.jpg", "label": "Steward" } },
+        { "type": "photo", "settings": { "image_asset": "aqb-church-role-greeters.jpg", "label": "Valet" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

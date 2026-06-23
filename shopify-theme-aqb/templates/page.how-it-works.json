@@ -1,0 +1,118 @@
+{
+  "sections": {
+    "main": {
+      "type": "aqb-info-page",
+      "blocks": {
+        "step_1": {
+          "type": "step",
+          "settings": {
+            "step_number": "1",
+            "title": "Design It Live",
+            "text": "Use our custom badge tool to build your badge in real time. Choose your shape, size, background color, and material. Type in your name, title, or any text you want — and watch your badge come to life on screen before you commit to anything.\n\nNo guesswork. No waiting on proofs. What you see is exactly what you get."
+          }
+        },
+        "step_2": {
+          "type": "step",
+          "settings": {
+            "step_number": "2",
+            "title": "Pick Your Quantity",
+            "text": "Badges are priced by volume — the more you order, the less you pay per badge. Whether you need 1 badge for a new hire or 500 for a full team rollout, our pricing scales with you. See exactly what you'll pay before you check out."
+          }
+        },
+        "step_3": {
+          "type": "step",
+          "settings": {
+            "step_number": "3",
+            "title": "We Make Your Badges & Ship",
+            "text": "Once your order is placed, our team gets to work. Most custom badge orders ship within 2 business days. We engrave or print every badge in-house in our US facility using professional laser engraving equipment or UV Printing — no outsourcing, no delays."
+          }
+        },
+        "step_4": {
+          "type": "step",
+          "settings": {
+            "step_number": "4",
+            "title": "Reorder Anytime in One Click",
+            "text": "Your designs are saved to your account. When a new hire joins or you need a replacement badge, just pull up your saved design and reorder — no starting from scratch."
+          }
+        },
+        "heading_faq": {
+          "type": "section_heading",
+          "settings": {
+            "heading": "Design Tool FAQ"
+          }
+        },
+        "faq_artwork": {
+          "type": "faq",
+          "settings": {
+            "question": "Do I need to send artwork or a logo file?",
+            "answer": "No. Everything is designed directly in the tool using text, fonts, and layout options. No external files needed."
+          }
+        },
+        "faq_minimum": {
+          "type": "faq",
+          "settings": {
+            "question": "Is there a minimum order?",
+            "answer": "No minimum. You can order a single badge or hundreds — your choice."
+          }
+        },
+        "faq_shipping": {
+          "type": "faq",
+          "settings": {
+            "question": "How long does shipping take?",
+            "answer": "Most orders ship within 2 business days. Standard delivery after that is typically 3–5 business days depending on your location."
+          }
+        },
+        "faq_team": {
+          "type": "faq",
+          "settings": {
+            "question": "Can I order badges for my whole team at once?",
+            "answer": "Yes. Use the \"Add Multiple\" feature in the design tool to build out multiple badges in one session, or contact us for bulk order assistance."
+          }
+        },
+        "faq_help": {
+          "type": "faq",
+          "settings": {
+            "question": "What if I need help designing?",
+            "answer": "Our design tool is built for non-designers — but if you get stuck, reach out via our contact page and we'll help you get sorted."
+          }
+        },
+        "faq_returns": {
+          "type": "faq",
+          "settings": {
+            "question": "Do you offer returns?",
+            "answer": "Because every badge is custom-made to order, we don't accept returns on personalized items. However, if there's an error on our end, we'll make it right — no questions asked."
+          }
+        },
+        "cta_design": {
+          "type": "cta",
+          "settings": {
+            "prefix": "Ready to get started?",
+            "label": "Design Your Badge Now",
+            "url": "shopify://products/custom-1x3-badge",
+            "style": "gold"
+          }
+        }
+      },
+      "block_order": [
+        "step_1",
+        "step_2",
+        "step_3",
+        "step_4",
+        "heading_faq",
+        "faq_artwork",
+        "faq_minimum",
+        "faq_shipping",
+        "faq_team",
+        "faq_help",
+        "faq_returns",
+        "cta_design"
+      ],
+      "settings": {
+        "eyebrow": "Custom badges",
+        "heading": "How It <em>Works</em>",
+        "subheading": "Designing and ordering your custom name badges is simple — no design experience needed, no back-and-forth with a salesperson, no artwork fees."
+      }
+    }
+  },
+  "order": ["main"]
+}

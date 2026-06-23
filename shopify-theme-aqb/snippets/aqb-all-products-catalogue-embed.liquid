@@ -1,0 +1,283 @@
+{%- liquid
+  assign products_per_page = 12
+  assign catalogue_base = '/collections/all'
+  assign add_label = 'Add to cart'
+  assign load_more_label = 'Show more products'
+-%}
+{{ 'aqb-all-products-catalogue.css' | asset_url | stylesheet_tag }}
+
+<section class="aqb-ap-hero" id="all-products-hero">
+  <div class="aqb-ap-hero__inner">
+    <div class="aqb-ap-hero__content">
+      <p class="aqb-ap-hero__eyebrow">Full Catalog</p>
+      <h1>Shop <em>everything.</em></h1>
+      <p class="aqb-ap-hero__sub">Browse role badges, desk name plates, name tag blanks, and custom badges — filter by product type, sort, and price.</p>
+    </div>
+    <div class="aqb-ap-hero__stats">
+      <div class="aqb-ap-hero__stat">
+        <div class="aqb-ap-hero__stat-val">{{ collection.products_count }}+</div>
+        <div class="aqb-ap-hero__stat-label">Products</div>
+      </div>
+      <div class="aqb-ap-hero__stat">
+        <div class="aqb-ap-hero__stat-val">4</div>
+        <div class="aqb-ap-hero__stat-label">Product types</div>
+      </div>
+      <div class="aqb-ap-hero__stat">
+        <div class="aqb-ap-hero__stat-val">48 hrs</div>
+        <div class="aqb-ap-hero__stat-label">Ships within</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="aqb-ap-catalogue" id="all-products-catalogue">
+  <div class="aqb-ap-catalogue__inner">
+    <div class="aqb-ap-layout">
+      <aside class="aqb-ap-sidebar" id="all-products-catalogue-filters" aria-label="Filter products">
+        <button type="button" class="aqb-ap-sidebar__toggle" id="all-products-filter-toggle" aria-expanded="false" aria-controls="all-products-filter-panel">
+          <span>Filters</span>
+          <span class="aqb-ap-sidebar__toggle-icon" aria-hidden="true"></span>
+        </button>
+
+        <div class="aqb-ap-sidebar__panel" id="all-products-filter-panel">
+          <div class="aqb-ap-filter-section">
+            <h3 class="aqb-ap-filter-section__title">Product Type</h3>
+            <ul class="aqb-ap-filter-list" id="all-products-filter-types">
+              <li>
+                <label class="aqb-ap-filter-check">
+                  <input type="checkbox" name="product-type" value="role-badges" data-product-type="role-badges">
+                  <span>Role Badges</span>
+                </label>
+              </li>
+              <li>
+                <label class="aqb-ap-filter-check">
+                  <input type="checkbox" name="product-type" value="desk-plates" data-product-type="desk-plates">
+                  <span>Desk Name Plates</span>
+                </label>
+              </li>
+              <li>
+                <label class="aqb-ap-filter-check">
+                  <input type="checkbox" name="product-type" value="name-tag-blanks" data-product-type="name-tag-blanks">
+                  <span>Name Tag Blanks</span>
+                </label>
+              </li>
+              <li>
+                <label class="aqb-ap-filter-check">
+                  <input type="checkbox" name="product-type" value="custom-badges" data-product-type="custom-badges">
+                  <span>Custom Badges</span>
+                </label>
+              </li>
+            </ul>
+          </div>
+
+          <div class="aqb-ap-filter-section aqb-ap-subfilter-group" data-for-type="role-badges" id="all-products-role-filters" hidden>
+            <h3 class="aqb-ap-filter-section__title">Role</h3>
+            <ul class="aqb-ap-filter-list" id="all-products-filter-roles">
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="healthcare" value="healthcare"><span>Healthcare</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="church" value="church"><span>Church & Religious</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="corporate" value="corporate"><span>Corporate & Office</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="fitness" value="fitness"><span>Fitness & Wellness</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="hospitality" value="hospitality"><span>Hospitality</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="security" value="security"><span>Security</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="retail" value="retail"><span>Retail & Service</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="novelty" value="novelty"><span>Novelty</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="education" value="education"><span>Education</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="airfare" value="airfare"><span>Airfare</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="first-responders" value="first-responders"><span>First Responders</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="trades" value="trades"><span>Trades</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="government" value="government"><span>Government</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="events" value="events"><span>Events</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="other" value="other"><span>Other</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-role="blanks" value="blanks"><span>Blanks</span></label></li>
+            </ul>
+          </div>
+
+          <div class="aqb-ap-filter-section aqb-ap-subfilter-group" data-for-role="church" id="all-products-church-subfilters" hidden>
+            <h3 class="aqb-ap-filter-section__title">Church Sub Category</h3>
+            <ul class="aqb-ap-filter-list">
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-church-sub="greeters-ushers" data-for-role="church" value="greeters-ushers"><span>Greeters & Ushers</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-church-sub="pastors-leadership" data-for-role="church" value="pastors-leadership"><span>Pastors & Leadership</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-church-sub="welcome" data-for-role="church" value="welcome"><span>Welcome</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-church-sub="spanish" data-for-role="church" value="spanish"><span>Spanish</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-church-sub="deacon" data-for-role="church" value="deacon"><span>Deacon</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-church-sub="usher" data-for-role="church" value="usher"><span>Usher</span></label></li>
+            </ul>
+          </div>
+
+          <div class="aqb-ap-filter-section aqb-ap-subfilter-group" data-for-type="desk-plates" id="all-products-desk-filters" hidden>
+            <h3 class="aqb-ap-filter-section__title">Desk Sign Material</h3>
+            <ul class="aqb-ap-filter-list" id="all-products-filter-material">
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-material="acrylic" value="acrylic"><span>Acrylic</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-material="rosewood" value="rosewood"><span>Rosewood</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-material="plastic" value="plastic"><span>Traditional</span></label></li>
+            </ul>
+
+            <h3 class="aqb-ap-filter-section__title">Desk Sign Category</h3>
+            <ul class="aqb-ap-filter-list" id="all-products-filter-sign-type">
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-sign-type="profession" value="profession"><span>Profession</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-sign-type="novelty" value="novelty"><span>Novelty</span></label></li>
+            </ul>
+          </div>
+
+          <div class="aqb-ap-filter-section aqb-ap-subfilter-group" data-for-sign="profession" id="all-products-desk-sub-profession" hidden>
+            <h3 class="aqb-ap-filter-section__title">Profession Sub Category</h3>
+            <ul class="aqb-ap-filter-list">
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-desk-category="retail" data-for-sign="profession" value="retail"><span>Retail</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-desk-category="healthcare" data-for-sign="profession" value="healthcare"><span>Healthcare</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-desk-category="hospitality" data-for-sign="profession" value="hospitality"><span>Hospitality</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-desk-category="office" data-for-sign="profession" value="office"><span>Office</span></label></li>
+            </ul>
+          </div>
+
+          <div class="aqb-ap-filter-section aqb-ap-subfilter-group" data-for-sign="novelty" id="all-products-desk-sub-novelty" hidden>
+            <h3 class="aqb-ap-filter-section__title">Novelty Sub Category</h3>
+            <ul class="aqb-ap-filter-list">
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-desk-category="funny" data-for-sign="novelty" value="funny"><span>Funny</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-desk-category="boss" data-for-sign="novelty" value="boss"><span>Boss / Leader</span></label></li>
+              <li><label class="aqb-ap-filter-check"><input type="checkbox" data-desk-category="office" data-for-sign="novelty" value="office"><span>Office life</span></label></li>
+            </ul>
+          </div>
+
+          <div class="aqb-ap-filter-section">
+            <h3 class="aqb-ap-filter-section__title">Sort &amp; Filters</h3>
+
+            <label class="aqb-ap-filter-field" for="all-products-sort">
+              <span class="aqb-ap-filter-field__label">Sort by</span>
+              <select id="all-products-sort" class="aqb-ap-filter-select">
+                <option value="featured">Featured</option>
+                <option value="price-asc">Price: low to high</option>
+                <option value="price-desc">Price: high to low</option>
+                <option value="bestseller">Best sellers</option>
+                <option value="alpha-asc">Alphabetical (A–Z)</option>
+                <option value="alpha-desc">Alphabetical (Z–A)</option>
+              </select>
+            </label>
+
+            <div class="aqb-ap-filter-field">
+              <span class="aqb-ap-filter-field__label">Price range</span>
+              <div class="aqb-ap-price-range">
+                <label class="aqb-ap-price-range__field">
+                  <span class="visually-hidden">Minimum price</span>
+                  <span class="aqb-ap-price-range__prefix">$</span>
+                  <input type="number" id="all-products-price-min" class="aqb-ap-price-input" min="0" step="0.01" placeholder="Min">
+                </label>
+                <span class="aqb-ap-price-range__sep" aria-hidden="true">–</span>
+                <label class="aqb-ap-price-range__field">
+                  <span class="visually-hidden">Maximum price</span>
+                  <span class="aqb-ap-price-range__prefix">$</span>
+                  <input type="number" id="all-products-price-max" class="aqb-ap-price-input" min="0" step="0.01" placeholder="Max">
+                </label>
+              </div>
+            </div>
+
+            <ul class="aqb-ap-filter-list">
+              <li>
+                <label class="aqb-ap-filter-check">
+                  <input type="checkbox" id="all-products-adult" value="1">
+                  <span>Include 18+ products</span>
+                </label>
+              </li>
+            </ul>
+
+            <button type="button" class="aqb-ap-filter-clear" id="all-products-filter-clear">Clear all filters</button>
+          </div>
+        </div>
+      </aside>
+
+      <div class="aqb-ap-main">
+        <div class="aqb-ap-section-header">
+          <div>
+            <p class="aqb-ap-section-eyebrow">Shop All</p>
+            <h2>Browse all <em>products</em></h2>
+          </div>
+          <div class="aqb-ap-section-count" id="all-products-product-count">Showing products</div>
+        </div>
+
+        <div
+          class="aqb-ap-product-grid"
+          id="all-products-product-grid"
+          data-page-size="{{ products_per_page }}"
+          data-catalogue-base="{{ catalogue_base | escape }}"
+          data-collection-handle="{{ collection.handle | escape }}"
+          data-total-products="{{ collection.products_count | default: 0 }}"
+          data-add-label="{{ add_label | escape }}"
+          data-cart-add-url="{{ routes.cart_add_url }}"
+        >
+          {%- paginate collection.products by 250 -%}
+            {%- for product in collection.products -%}
+              {%- render 'aqb-all-products-catalogue-card',
+                product: product,
+                product_index: forloop.index0,
+                add_label: add_label
+              -%}
+            {%- endfor -%}
+          {%- endpaginate -%}
+        </div>
+
+        <div class="aqb-ap-load-more-wrap" id="all-products-load-more-wrap" hidden>
+          <button type="button" class="aqb-ap-btn-outline" id="all-products-load-more">
+            {{ load_more_label | escape }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="aqb-ap-scroll-controls" id="all-products-scroll-controls" aria-label="Scroll navigation">
+  <button type="button" class="aqb-ap-scroll-btn" id="all-products-scroll-top" aria-label="Scroll to top">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3L3 9h10L8 3z" fill="currentColor"/></svg>
+  </button>
+  <button type="button" class="aqb-ap-scroll-btn" id="all-products-scroll-bottom" aria-label="Scroll to bottom">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 13L3 7h10l-5 6z" fill="currentColor"/></svg>
+  </button>
+</div>
+
+<script type="application/json" id="all-products-filter-config">
+{
+  "productTypes": [
+    {"id":"role-badges","label":"Role Badges","tags":["role-badge"]},
+    {"id":"desk-plates","label":"Desk Name Plates","tags":["desk-sign"]},
+    {"id":"name-tag-blanks","label":"Name Tag Blanks","tags":["name-tag-blank","blank-name-tag","type_blank"]},
+    {"id":"custom-badges","label":"Custom Badges","tags":["custom"]}
+  ],
+  "roles": [
+    {"id":"healthcare","tag":"healthcare","label":"Healthcare"},
+    {"id":"church","tag":"church","label":"Church & Religious"},
+    {"id":"corporate","tag":"corporate","label":"Corporate & Office"},
+    {"id":"fitness","tag":"fitness","label":"Fitness & Wellness"},
+    {"id":"hospitality","tag":"hospitality","label":"Hospitality"},
+    {"id":"security","tag":"security","label":"Security"},
+    {"id":"retail","tag":"retail","label":"Retail & Service"},
+    {"id":"novelty","tag":"novelty","label":"Novelty"},
+    {"id":"education","tag":"education","label":"Education"},
+    {"id":"airfare","tag":"airfare","label":"Airfare"},
+    {"id":"first-responders","tag":"first_responders","label":"First Responders"},
+    {"id":"trades","tag":"trades","label":"Trades"},
+    {"id":"government","tag":"government","label":"Government"},
+    {"id":"events","tag":"events","label":"Events"},
+    {"id":"other","tag":"other","label":"Other"},
+    {"id":"blanks","tag":"blanks","label":"Blanks"}
+  ],
+  "churchSubcategories": [
+    {"id":"greeters-ushers","tags":["greeter"],"label":"Greeters & Ushers"},
+    {"id":"pastors-leadership","tags":["pastor","leadership"],"label":"Pastors & Leadership"},
+    {"id":"welcome","tags":["welcome"],"label":"Welcome"},
+    {"id":"spanish","tags":["spanish"],"label":"Spanish"},
+    {"id":"deacon","tags":["deacon"],"label":"Deacon"},
+    {"id":"usher","tags":["usher"],"label":"Usher"}
+  ],
+  "professionCategories": [
+    {"id":"retail","tag":"retail"},
+    {"id":"healthcare","tag":"healthcare"},
+    {"id":"hospitality","tag":"hospitality"},
+    {"id":"office","tag":"office"}
+  ],
+  "noveltyCategories": [
+    {"id":"funny","tag":"funny"},
+    {"id":"boss","tag":"boss"},
+    {"id":"office","tag":"office"}
+  ]
+}
+</script>
+<script src="{{ 'aqb-all-products-catalogue.js' | asset_url }}" defer="defer"></script>

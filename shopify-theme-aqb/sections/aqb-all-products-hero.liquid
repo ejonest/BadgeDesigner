@@ -1,0 +1,65 @@
+{%- if collection.handle == 'all' -%}
+{{ 'aqb-all-products-catalogue.css' | asset_url | stylesheet_tag }}
+
+<section class="aqb-ap-hero" id="all-products-hero">
+  <div class="aqb-ap-hero__inner">
+    <div class="aqb-ap-hero__content">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="aqb-ap-hero__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h1>{{ section.settings.heading }}</h1>
+      {%- endif -%}
+      {%- if section.settings.subheading != blank -%}
+        <p class="aqb-ap-hero__sub">{{ section.settings.subheading | escape }}</p>
+      {%- endif -%}
+    </div>
+    <div class="aqb-ap-hero__stats">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'stat' -%}
+          <div class="aqb-ap-hero__stat" {{ block.shopify_attributes }}>
+            <div class="aqb-ap-hero__stat-val">
+              {%- if block.settings.use_collection_count -%}
+                {{ collection.products_count }}+
+              {%- else -%}
+                {{ block.settings.value | escape }}
+              {%- endif -%}
+            </div>
+            <div class="aqb-ap-hero__stat-label">{{ block.settings.label | escape }}</div>
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "AQB All Products Hero",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Full Catalog" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "Shop <em>everything.</em>" },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Browse role badges, desk name plates, name tag blanks, and custom badges — filter by product type, sort, and price."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "stat",
+      "name": "Stat",
+      "settings": [
+        { "type": "text", "id": "value", "label": "Value", "default": "1000+" },
+        { "type": "text", "id": "label", "label": "Label", "default": "Products" },
+        { "type": "checkbox", "id": "use_collection_count", "label": "Use collection product count for value", "default": false }
+      ]
+    }
+  ],
+  "presets": [{ "name": "AQB All Products Hero" }]
+}
+{% endschema %}

@@ -6,7 +6,7 @@ export const BACKGROUND_COLORS = [
   { value: "#00FF00", name: "Green", ring: "ring-indigo-500" },
 
   // Row 2: Secondary colors
-  { value: "#808080", name: "Grey", ring: "ring-gray-500" },
+  { value: "#808080", name: "Gray", ring: "ring-gray-500" },
   { value: "#FF7F00", name: "Orange", ring: "ring-indigo-500" },
   { value: "#FFFF00", name: "Yellow", ring: "ring-indigo-500" },
   { value: "#00FFFF", name: "Cyan", ring: "ring-indigo-500" },
@@ -206,7 +206,7 @@ export const ALL_COLORS = [
   { value: "#FF00FF", name: "Magenta", ring: "ring-pink-500" },
   { value: "#00FFFF", name: "Cyan", ring: "ring-cyan-500" },
   { value: "#FF7F00", name: "Orange", ring: "ring-orange-500" },
-  { value: "#808080", name: "Grey", ring: "ring-gray-500" },
+  { value: "#808080", name: "Gray", ring: "ring-gray-500" },
   { value: "#4B0082", name: "Indigo", ring: "ring-indigo-500" },
   { value: "#8B00FF", name: "Violet", ring: "ring-purple-500" },
 ] as const;
