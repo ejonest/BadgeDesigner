@@ -1814,11 +1814,16 @@
   flex-shrink: 0;
 }
 
-/* Mobile badge — pinned checkout bar (desktop uses right panel) */
+/* Mobile badge — checkout bar (in document flow on mobile; desktop uses right panel) */
 .aqb-redesign-root .aqb-mobile-checkout-bar {
   background: var(--aqb-navy);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+.aqb-redesign-root .aqb-mobile-checkout-bar--in-flow {
+  margin-top: 16px;
+  border-radius: 8px;
 }
 
 .aqb-redesign-root .aqb-mobile-checkout-bar__inner {
@@ -1888,5 +1893,20 @@
   .aqb-redesign-root.aqb-embedded-mobile-shell .aqb-tool-shell {
     flex: 1 1 auto;
     min-height: 0;
+  }
+
+  .aqb-redesign-root.aqb-embedded-mobile-shell .aqb-tool-shell--embedded-mobile {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .aqb-redesign-root.aqb-embedded-mobile-shell
+    .aqb-tool-shell--embedded-mobile
+    .aqb-left-panel,
+  .aqb-redesign-root.aqb-embedded-mobile-shell
+    .aqb-tool-shell--embedded-mobile
+    .section-container {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
   }
 }

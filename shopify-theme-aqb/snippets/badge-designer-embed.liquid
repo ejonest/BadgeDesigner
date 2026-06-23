@@ -108,15 +108,19 @@
       }
 
       if (data.action === 'designer-chrome') {
-        if (document.documentElement.classList.contains('aqb-nav-drawer-open')) {
-          return;
-        }
-        document.documentElement.classList.toggle(
-          'aqb-designer-chrome-collapsed',
-          !!data.collapsed
-        );
+        setDesignerChromeCollapsed(!!data.collapsed);
       }
     });
+
+    function setDesignerChromeCollapsed(collapsed) {
+      if (document.documentElement.classList.contains('aqb-nav-drawer-open')) {
+        return;
+      }
+      document.documentElement.classList.toggle(
+        'aqb-designer-chrome-collapsed',
+        !!collapsed
+      );
+    }
   })();
 </script>
 

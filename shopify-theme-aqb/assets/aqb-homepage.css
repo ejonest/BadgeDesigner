@@ -1492,13 +1492,11 @@
     max-height: var(--aqb-nav-bar-height, 64px);
   }
 
-  html.aqb-designer-product.aqb-designer-chrome-collapsed:not(
-      .aqb-nav-drawer-open
-    )
+  html.aqb-designer-chrome-collapsed:not(.aqb-nav-drawer-open)
+    body.aqb-designer-product
     .shopify-section.aqb-announcement-ticker-section,
-  html.aqb-designer-product.aqb-designer-chrome-collapsed:not(
-      .aqb-nav-drawer-open
-    )
+  html.aqb-designer-chrome-collapsed:not(.aqb-nav-drawer-open)
+    body.aqb-designer-product
     .shopify-section.aqb-header-section {
     max-height: 0;
     opacity: 0;
@@ -1512,16 +1510,12 @@
     transition: height 0.28s ease;
   }
 
-  html.aqb-designer-product.aqb-designer-chrome-collapsed:not(
-      .aqb-nav-drawer-open
-    )
-    .aqb-designer-product
+  html.aqb-designer-chrome-collapsed:not(.aqb-nav-drawer-open)
+    body.aqb-designer-product
     .aqb-designer-embed
     iframe,
-  html.aqb-designer-product.aqb-designer-chrome-collapsed:not(
-      .aqb-nav-drawer-open
-    )
-    .aqb-designer-product
+  html.aqb-designer-chrome-collapsed:not(.aqb-nav-drawer-open)
+    body.aqb-designer-product
     .badge-designer-iframe-outer
     iframe {
     height: 100dvh !important;
