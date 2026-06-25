@@ -14,10 +14,15 @@ import {
   getEffectiveSignTextLayoutForBadge,
 } from "../utils/renderSvg";
 import {
+  AQB_LINE_CHAR_LIMIT_MESSAGE,
+  aqbBadgeMaxTextWidth,
+  aqbLineTypography,
   aqbPresetToSizeNorm,
   aqbSizeNormToPx,
   getAqbPresetAvailabilityForLine,
   nearestAqbSizePreset,
+  aqbLineTextInputWasTruncated,
+  truncateAqbLineTextToFit,
 } from "~/utils/aqbBadgeTextSize";
 import { SIGN_TEXT_MIN_FONT_PX } from "~/utils/signTextLayout";
 import {
@@ -300,6 +305,33 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   const [fontMetricsHeight, setFontMetricsHeight] = React.useState(
     designBox.height,
   );
+  /** Set when the user tries to type/paste more text than fits at the current size. */
+  const [charLimitRejectedByLine, setCharLimitRejectedByLine] = React.useState<
+    Record<number, boolean>
+  >({});
+
+  const clearCharLimitRejected = (lineIndex: number) => {
+    setCharLimitRejectedByLine((prev) => {
+      if (!prev[lineIndex]) return prev;
+      const next = { ...prev };
+      delete next[lineIndex];
+      return next;
+    });
+  };
+
+  const markCharLimitRejected = (lineIndex: number, rejected: boolean) => {
+    setCharLimitRejectedByLine((prev) => {
+      if (typeof lineIndex !== "number") return prev;
+      if (rejected) {
+        if (prev[lineIndex]) return prev;
+        return { ...prev, [lineIndex]: true };
+      }
+      if (!prev[lineIndex]) return prev;
+      const next = { ...prev };
+      delete next[lineIndex];
+      return next;
+    });
+  };
 
   React.useEffect(() => {
     if (badge.templateId) {
@@ -393,6 +425,15 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
             badge,
             badge.templateId,
           );
+          const displayText = lineInputValue(line, idx);
+          const presetPx = sizePreset.px;
+          const typography = aqbLineTypography(line);
+          const maxTextWidth = aqbBadgeMaxTextWidth(
+            designBox,
+            badge,
+            badge.templateId,
+          );
+          const showCharLimitError = Boolean(charLimitRejectedByLine[idx]);
 
           return (
             <div key={line.id ?? idx} className="aqb-badge-text-line">
@@ -405,7 +446,10 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                     <button
                       type="button"
                       className="aqb-badge-tl-action"
-                      onClick={() => onResetLineToDefault(idx)}
+                      onClick={() => {
+                        clearCharLimitRejected(idx);
+                        onResetLineToDefault(idx);
+                      }}
                     >
                       <ArrowPathIcon
                         className="h-3.5 w-3.5 shrink-0"
@@ -427,14 +471,42 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 </div>
               </div>
 
-              <input
-                type="text"
-                className="aqb-badge-text-input"
-                value={lineInputValue(line, idx)}
-                onChange={(e) => onLineChange(idx, { text: e.target.value })}
-                placeholder={linePlaceholder(idx)}
-                disabled={!editable}
-              />
+              <div className="aqb-badge-text-input-wrap">
+                <input
+                  type="text"
+                  className={`aqb-badge-text-input${
+                    showCharLimitError ? " aqb-badge-text-input--at-limit" : ""
+                  }`}
+                  value={displayText}
+                  onChange={(e) => {
+                    const attempted = e.target.value;
+                    const fitted = truncateAqbLineTextToFit(
+                      attempted,
+                      presetPx,
+                      typography.fontFamily,
+                      typography.bold,
+                      typography.italic,
+                      maxTextWidth,
+                    );
+                    markCharLimitRejected(
+                      idx,
+                      aqbLineTextInputWasTruncated(attempted, fitted),
+                    );
+                    onLineChange(idx, { text: fitted });
+                  }}
+                  placeholder={linePlaceholder(idx)}
+                  disabled={!editable}
+                  aria-invalid={showCharLimitError}
+                />
+                {showCharLimitError ? (
+                  <p
+                    className="aqb-badge-text-input-limit-error"
+                    role="alert"
+                  >
+                    {AQB_LINE_CHAR_LIMIT_MESSAGE}
+                  </p>
+                ) : null}
+              </div>
 
               <div className="aqb-badge-text-row-controls">
                 <div className="aqb-badge-trc-group">
@@ -442,9 +514,10 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   <select
                     className="aqb-badge-trc-select"
                     value={line.fontFamily ?? DEFAULT_FONT}
-                    onChange={(e) =>
-                      onLineChange(idx, { fontFamily: e.target.value })
-                    }
+                    onChange={(e) => {
+                      clearCharLimitRejected(idx);
+                      onLineChange(idx, { fontFamily: e.target.value });
+                    }}
                     disabled={!editable}
                   >
                     {fontOptionsForLine(line).map((font) => (
@@ -467,6 +540,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                         (item) => item.preset.label === label,
                       );
                       if (!entry?.available) return;
+                      clearCharLimitRejected(idx);
                       onLineChange(idx, {
                         sizeNorm: aqbPresetToSizeNorm(
                           entry.preset.px,

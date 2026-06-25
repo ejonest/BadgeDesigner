@@ -16,6 +16,95 @@ export type AqbBadgeSizeLabel = AqbBadgeSizePreset["label"];
 export const AQB_PRESET_TOO_LARGE_TOOLTIP =
   "Text size is too large for the current design";
 
+/** Shown under the line input when no more text fits at the current size. */
+export const AQB_LINE_CHAR_LIMIT_MESSAGE =
+  "You have reached the text limit for this line.";
+
+export function aqbLineTypography(line: BadgeLine): {
+  fontFamily: string;
+  bold: boolean;
+  italic: boolean;
+} {
+  return {
+    fontFamily: line.fontFamily || "Arial",
+    bold: line.bold || false,
+    italic: line.italic || false,
+  };
+}
+
+export function aqbLineTextFitsAtPresetPx(
+  text: string,
+  presetPx: number,
+  fontFamily: string,
+  bold: boolean,
+  italic: boolean,
+  maxTextWidth: number,
+): boolean {
+  if (typeof document === "undefined") return true;
+  return lineFitsAtPresetPx({
+    text,
+    fontFamily,
+    bold,
+    italic,
+    presetPx,
+    maxTextWidth,
+  });
+}
+
+/** Trim text to the longest prefix that fits at the current preset width. */
+export function truncateAqbLineTextToFit(
+  text: string,
+  presetPx: number,
+  fontFamily: string,
+  bold: boolean,
+  italic: boolean,
+  maxTextWidth: number,
+): string {
+  if (!text || typeof document === "undefined") return text;
+  if (
+    aqbLineTextFitsAtPresetPx(
+      text,
+      presetPx,
+      fontFamily,
+      bold,
+      italic,
+      maxTextWidth,
+    )
+  ) {
+    return text;
+  }
+
+  let lo = 0;
+  let hi = text.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    const candidate = text.slice(0, mid);
+    if (
+      aqbLineTextFitsAtPresetPx(
+        candidate,
+        presetPx,
+        fontFamily,
+        bold,
+        italic,
+        maxTextWidth,
+      )
+    ) {
+      lo = mid;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return text.slice(0, lo);
+}
+
+/** True when typed/pasted input had to be shortened to fit at the preset width. */
+export function aqbLineTextInputWasTruncated(
+  attempted: string,
+  fitted: string,
+): boolean {
+  return attempted !== fitted;
+}
+
 export function aqbPresetToSizeNorm(
   px: number,
   designBoxHeight: number,
