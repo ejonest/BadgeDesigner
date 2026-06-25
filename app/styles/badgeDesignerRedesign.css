@@ -1046,6 +1046,68 @@
   border-color: var(--aqb-navy);
 }
 
+.aqb-redesign-root .aqb-badge-size-select-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.aqb-redesign-root .aqb-badge-size-select-trigger {
+  display: block;
+  text-align: left;
+}
+
+.aqb-redesign-root .aqb-badge-size-select-wrap.is-open .aqb-badge-size-select-trigger {
+  border-color: var(--aqb-navy);
+}
+
+.aqb-redesign-root .aqb-badge-size-select-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1.5px solid var(--aqb-border);
+  border-radius: 5px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(13, 27, 42, 0.12);
+}
+
+.aqb-redesign-root .aqb-badge-size-select-option {
+  display: block;
+  width: 100%;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 7px 9px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--aqb-navy);
+  text-align: left;
+  cursor: pointer;
+}
+
+.aqb-redesign-root .aqb-badge-size-select-option:hover:not(:disabled) {
+  background: #f0f3f6;
+}
+
+.aqb-redesign-root .aqb-badge-size-select-option.selected {
+  background: #eef2f6;
+  font-weight: 600;
+}
+
+.aqb-redesign-root .aqb-badge-size-select-option.unavailable {
+  color: #8a9aab;
+  cursor: not-allowed;
+}
+
+.aqb-redesign-root .aqb-badge-size-select-option:disabled {
+  opacity: 0.55;
+}
+
 .aqb-redesign-root .aqb-badge-text-colour-row {
   display: flex;
   flex-wrap: wrap;

@@ -1,0 +1,65 @@
+{%- liquid
+  assign search_results_url = results_url
+  if search_results_url == blank
+    assign search_results_url = routes.all_products_collection_url
+  endif
+-%}
+
+<div class="aqb-nav-search{% if compact %} aqb-nav-search--compact{% endif %}" data-aqb-nav-search>
+  <button
+    type="button"
+    class="aqb-nav-search__toggle aqb-store-nav__btn-ghost"
+    aria-label="Search products"
+    aria-expanded="false"
+    aria-controls="aqb-nav-search-panel-{{ context_id }}"
+    data-aqb-nav-search-open
+    {% unless compact %}data-nav-collapsible data-nav-priority="83"{% endunless %}
+  >
+    <svg class="aqb-nav-search__icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+    </svg>
+    {%- unless compact -%}
+      <span class="aqb-nav-search__toggle-label">Search</span>
+    {%- endunless -%}
+  </button>
+
+  <div
+    id="aqb-nav-search-panel-{{ context_id }}"
+    class="aqb-nav-search__panel"
+    data-aqb-nav-search-panel
+    hidden
+  >
+    <form
+      class="aqb-nav-search__form"
+      action="{{ search_results_url }}"
+      method="get"
+      role="search"
+      data-aqb-nav-search-form
+      data-results-url="{{ search_results_url }}"
+    >
+      <label class="visually-hidden" for="aqb-nav-search-input-{{ context_id }}">Search products</label>
+      <input
+        id="aqb-nav-search-input-{{ context_id }}"
+        class="aqb-nav-search__input"
+        type="search"
+        name="q"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        placeholder="Search products…"
+        data-aqb-nav-search-input
+      >
+      <button type="submit" class="aqb-nav-search__submit" aria-label="Search">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+        </svg>
+      </button>
+      <button type="button" class="aqb-nav-search__close" aria-label="Close search" data-aqb-nav-search-close>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </form>
+    <div class="aqb-nav-search__results" data-aqb-nav-search-results hidden></div>
+  </div>
+</div>

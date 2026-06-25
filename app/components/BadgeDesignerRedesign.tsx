@@ -212,6 +212,14 @@ import {
   resolveBlankBadgePhoto,
 } from "~/utils/badgeBlankPhotos";
 import {
+  aqbPresetIndex,
+  aqbPresetToSizeNorm,
+  fitAqbBadgeLinesToPresets,
+  getDefaultAqbSizePresetForLine,
+  nearestAqbSizePreset,
+  aqbSizeNormToPx,
+} from "~/utils/aqbBadgeTextSize";
+import {
   PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
   isFeaturedBrushedMetalPlateColor,
   isPlaqueAttachedTemplateId,
@@ -5204,6 +5212,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         typeof document !== "undefined";
       if (
         !useSignSync &&
+        variant !== "badge" &&
         (typeof changes.sizeNorm !== "undefined" ||
           typeof changes.text !== "undefined" ||
           typeof changes.fontFamily !== "undefined" ||
@@ -5220,7 +5229,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
         const maxTextWidth = maxTextWidthDefault;
 
-        // Measure text width and auto-scale down if it exceeds badge width
+        // Measure text width and auto-scale down if it exceeds badge boundaries
         if (text) {
           let textWidth = measureTextWidth(
             text,
@@ -5251,7 +5260,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         }
       }
 
-      if (typeof changes.text !== "undefined") {
+      if (typeof changes.text !== "undefined" && variant !== "badge") {
         // Legacy auto-scaling for text changes (keeping for backward compatibility)
         let fontSize = updated.fontSize || 18;
         let textWidth = measureTextWidth(
@@ -5287,6 +5296,32 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       return updated;
     });
 
+    const badgePresetFitEligible =
+      variant === "badge" &&
+      (typeof changes.sizeNorm !== "undefined" ||
+        typeof changes.text !== "undefined" ||
+        typeof changes.fontFamily !== "undefined" ||
+        typeof changes.bold !== "undefined" ||
+        typeof changes.italic !== "undefined");
+
+    const newLinesAfterBadgePresets =
+      badgePresetFitEligible
+        ? fitAqbBadgeLinesToPresets(
+            newLines,
+            designBox,
+            badge,
+            badge.templateId ?? universalTemplateId,
+            index,
+            typeof changes.sizeNorm === "number"
+              ? aqbPresetIndex(
+                  nearestAqbSizePreset(
+                    aqbSizeNormToPx(changes.sizeNorm, designBox.height),
+                  ).label,
+                )
+              : undefined,
+          )
+        : newLines;
+
     const signHasLayout =
       isSignLikeVariant(variant) &&
       !!lineTemplate?.signTextLayout &&
@@ -5314,7 +5349,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     let fittedLines: BadgeLine[];
 
     if (debounceSignTextSync && typeof window !== "undefined") {
-      fittedLines = newLines;
+      fittedLines = newLinesAfterBadgePresets;
       window.clearTimeout(signTextSyncTimerRef.current ?? undefined);
       signTextSyncTimerRef.current = window.setTimeout(() => {
         const tid =
@@ -5341,7 +5376,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         lineTemplate?.signTextLayout && isSignLikeVariant(variant)
           ? getEffectiveSignTextLayoutForBadge(lineTemplate, {
               ...badge,
-              lines: newLines,
+              lines: newLinesAfterBadgePresets,
             })
           : undefined;
 
@@ -5350,8 +5385,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
       fittedLines =
         signSyncEligible && effectiveSignLayout
-          ? syncSignBadgeLinesSizeNorm(newLines, effectiveSignLayout)
-          : newLines;
+          ? syncSignBadgeLinesSizeNorm(newLinesAfterBadgePresets, effectiveSignLayout)
+          : newLinesAfterBadgePresets;
     }
 
     // Apply center-based positioning
@@ -5367,7 +5402,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       // Get the current template's designBox for positioning new lines
       const currentTemplate = templates.find((t) => t.id === badge.templateId);
       const designBox = currentTemplate
-        ? getEffectiveDesignBox(currentTemplate, badge)
+        ? variant === "badge"
+          ? getBadgePreviewDesignBox(currentTemplate, badge)
+          : getEffectiveDesignBox(currentTemplate, badge)
         : effectiveDesignBox;
 
       const newLineIndex = badge.lines.length;
@@ -5517,6 +5554,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     lineIndex: number,
     designBoxHeight: number = 96,
   ): number => {
+    if (variant === "badge") {
+      return aqbPresetToSizeNorm(
+        getDefaultAqbSizePresetForLine(lineIndex).px,
+        designBoxHeight,
+      );
+    }
     const basePx = lineIndex === 0 ? 25 : 17;
     if (isSignLikeVariant(variant)) {
       // sizeNorm = (basePx * (h/96)) / h = basePx/96 → scales with design box height in px
@@ -5552,6 +5595,19 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             }) ?? signTextLayout
           : signTextLayout;
       return syncSignBadgeLinesSizeNorm(lines, eff);
+    }
+
+    if (variant === "badge" && layoutBadge) {
+      const box =
+        layoutTemplate && layoutBadge
+          ? getBadgePreviewDesignBox(layoutTemplate, layoutBadge)
+          : { width: 288, ...designBox };
+      return fitAqbBadgeLinesToPresets(
+        lines,
+        box,
+        layoutBadge,
+        layoutTemplate?.id ?? layoutBadge.templateId,
+      );
     }
 
     const designBoxHeight = designBox.height;
@@ -6516,10 +6572,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           );
         }
       }
-      const box = getEffectiveDesignBox(newTemplate, proto);
+      const box =
+        variant === "badge"
+          ? getBadgePreviewDesignBox(newTemplate, proto)
+          : getEffectiveDesignBox(newTemplate, proto);
       const scaledLines = isSignLikeVariant(variant)
         ? applySignTemplateLineSizes(linesSource, box, proto)
-        : autoScaleLinesForNewTemplate(linesSource, box, prevB.templateId);
+        : variant === "badge"
+          ? fitAqbBadgeLinesToPresets(
+              linesSource,
+              box,
+              proto,
+              newTemplateId,
+            )
+          : autoScaleLinesForNewTemplate(linesSource, box, prevB.templateId);
       if (
         isSignLikeVariant(variant) &&
         newTemplate.signTextLayout &&

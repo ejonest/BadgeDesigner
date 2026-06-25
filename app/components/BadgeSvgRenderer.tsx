@@ -114,7 +114,9 @@ export default function BadgeSvgRenderer({
             ...baseOpts,
             svgDefScopeId: svgDefScopeRef.current,
             plateRenderMode: v === "badge" ? "photo" : "vector",
-            ...(v === "badge" ? { showOutline: false } : {}),
+            ...(v === "badge"
+              ? { showOutline: false, aqbPresetTextLayout: true }
+              : {}),
             ...(photoPlateOverrideRef.current
               ? { photoPlateOverride: photoPlateOverrideRef.current }
               : {}),

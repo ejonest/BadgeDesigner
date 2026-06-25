@@ -152,6 +152,7 @@
   data-desk-sign-type="{{ desk_sign_type }}"
   data-desk-categories="{{ desk_categories | strip }}"
   data-product-id="{{ product.id }}"
+  data-product-handle="{{ product.handle | escape }}"
   data-product-index="{{ product_index }}"
   data-title="{{ product.title | escape }}"
   data-price="{% if variant %}{{ variant.price }}{% else %}0{% endif %}"
