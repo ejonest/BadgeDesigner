@@ -1,5 +1,5 @@
 import type { Badge, BadgeLine } from "~/types/badge";
-import { resolveBlankBadgePhoto } from "~/utils/badgeBlankPhotos";
+import { resolveBadgePlatePhoto } from "~/utils/badgeCustomBackgrounds";
 import { getBadgeIconTextInsetPx } from "~/utils/badgeIconRender";
 import { measureTextWidth } from "~/utils/textMeasurement";
 
@@ -145,12 +145,12 @@ export function getDefaultAqbSizePresetForLine(
  */
 export function aqbBadgeTextBounds(
   designBox: { width: number; height: number },
-  badge: Pick<Badge, "backgroundColor" | "badgeIconId">,
+  badge: Pick<Badge, "backgroundColor" | "badgeIconId" | "customBadgeBackgroundId">,
   templateId?: string,
 ): { maxTextWidth: number; maxTextHeight: number } {
   const photo =
     templateId != null
-      ? resolveBlankBadgePhoto(templateId, badge.backgroundColor)
+      ? resolveBadgePlatePhoto(templateId, badge)
       : null;
 
   if (photo) {
@@ -173,7 +173,7 @@ export function aqbBadgeTextBounds(
 
 export function aqbBadgeMaxTextWidth(
   designBox: { width: number; height: number },
-  badge: Pick<Badge, "backgroundColor" | "badgeIconId">,
+  badge: Pick<Badge, "backgroundColor" | "badgeIconId" | "customBadgeBackgroundId">,
   templateId?: string,
 ): number {
   return aqbBadgeTextBounds(designBox, badge, templateId).maxTextWidth;
@@ -229,7 +229,7 @@ export function canUseAqbPresetForLine(
   lineIndex: number,
   presetIndex: number,
   designBox: { width: number; height: number },
-  badge: Pick<Badge, "backgroundColor" | "badgeIconId">,
+  badge: Pick<Badge, "backgroundColor" | "badgeIconId" | "customBadgeBackgroundId">,
   templateId?: string,
 ): boolean {
   const preset = AQB_BADGE_SIZE_PRESETS[presetIndex];
@@ -270,7 +270,7 @@ export function getAqbPresetAvailabilityForLine(
   lines: BadgeLine[],
   lineIndex: number,
   designBox: { width: number; height: number },
-  badge: Pick<Badge, "backgroundColor" | "badgeIconId">,
+  badge: Pick<Badge, "backgroundColor" | "badgeIconId" | "customBadgeBackgroundId">,
   templateId?: string,
 ): Array<{ preset: AqbBadgeSizePreset; available: boolean }> {
   return AQB_BADGE_SIZE_PRESETS.map((preset, index) => ({
@@ -369,7 +369,7 @@ function fitAqbLinesToHeight(
 export function fitAqbBadgeLinesToPresets(
   lines: BadgeLine[],
   designBox: { width: number; height: number },
-  badge: Pick<Badge, "backgroundColor" | "badgeIconId">,
+  badge: Pick<Badge, "backgroundColor" | "badgeIconId" | "customBadgeBackgroundId">,
   templateId?: string,
   changedLineIndex?: number,
   explicitPresetIndex?: number,
@@ -410,6 +410,91 @@ export function fitAqbBadgeLinesToPresets(
   });
 
   return fitAqbLinesToHeight(widthFitted, designBox, maxTextHeight);
+}
+
+/** True when any non-empty line is wider than its current preset allows. */
+export function aqbBadgeHasTextOverflow(
+  lines: BadgeLine[],
+  designBox: { width: number; height: number },
+  badge: Pick<Badge, "backgroundColor" | "badgeIconId" | "customBadgeBackgroundId">,
+  templateId?: string,
+): boolean {
+  const maxTextWidth = aqbBadgeMaxTextWidth(designBox, badge, templateId);
+  for (const line of lines) {
+    const text = line.text || "";
+    if (!text.trim()) continue;
+    const typography = aqbLineTypography(line);
+    const presetPx = aqbSizeNormToPx(line.sizeNorm ?? 0.15, designBox.height);
+    if (
+      !aqbLineTextFitsAtPresetPx(
+        text,
+        presetPx,
+        typography.fontFamily,
+        typography.bold,
+        typography.italic,
+        maxTextWidth,
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Refit lines after layout changes (e.g. icon added): step presets down, then
+ * truncate at the fitted preset when text still exceeds width at Small.
+ */
+export function refitAqbBadgeLinesForLayoutChange(
+  lines: BadgeLine[],
+  designBox: { width: number; height: number },
+  badge: Pick<Badge, "backgroundColor" | "badgeIconId" | "customBadgeBackgroundId">,
+  templateId?: string,
+): { lines: BadgeLine[]; charLimitLineIndices: number[] } {
+  const fitted = fitAqbBadgeLinesToPresets(
+    lines,
+    designBox,
+    badge,
+    templateId,
+  );
+  const maxTextWidth = aqbBadgeMaxTextWidth(designBox, badge, templateId);
+  const charLimitLineIndices: number[] = [];
+
+  const result = fitted.map((line, index) => {
+    const text = line.text || "";
+    if (!text.trim()) return line;
+
+    const typography = aqbLineTypography(line);
+    const presetPx = aqbSizeNormToPx(line.sizeNorm ?? 0.15, designBox.height);
+
+    if (
+      aqbLineTextFitsAtPresetPx(
+        text,
+        presetPx,
+        typography.fontFamily,
+        typography.bold,
+        typography.italic,
+        maxTextWidth,
+      )
+    ) {
+      return line;
+    }
+
+    const truncated = truncateAqbLineTextToFit(
+      text,
+      presetPx,
+      typography.fontFamily,
+      typography.bold,
+      typography.italic,
+      maxTextWidth,
+    );
+    if (truncated.length < text.length) {
+      charLimitLineIndices.push(index);
+    }
+    return truncated !== text ? { ...line, text: truncated } : line;
+  });
+
+  return { lines: result, charLimitLineIndices };
 }
 
 export type AqbPresetTextLayoutItem = {

@@ -49,10 +49,10 @@ import {
   renderBadgeIconLayer,
 } from "~/utils/badgeIconRender";
 import {
-  resolveBlankBadgePhoto,
   resolvePhotoTextRect,
   type ResolvedBlankBadgePhoto,
 } from "~/utils/badgeBlankPhotos";
+import { resolveBadgePlatePhoto } from "~/utils/badgeCustomBackgrounds";
 import { inlineBadgeBlankPhotoSrc } from "~/utils/inlineBadgePhoto";
 import { signTemplateSupportsUserLogoUpload } from "~/utils/signLogoPlacement";
 import {
@@ -246,7 +246,7 @@ export function getBadgePreviewDesignBox(
   template: LoadedTemplate,
   badge: Badge,
 ): { x: number; y: number; width: number; height: number } {
-  const photo = resolveBlankBadgePhoto(template.id, badge.backgroundColor);
+  const photo = resolveBadgePlatePhoto(template.id, badge);
   if (photo) {
     return resolvePhotoTextRect(photo, badge.badgeIconId);
   }
@@ -262,7 +262,7 @@ function resolvePhotoPlateForRender(
   if (isPlaqueTemplateId(template.id)) return null;
   if (template.signTextLayout) return null;
   if (opts.photoPlateOverride) return opts.photoPlateOverride;
-  return resolveBlankBadgePhoto(template.id, badge.backgroundColor);
+  return resolveBadgePlatePhoto(template.id, badge);
 }
 
 function buildRectClipPathMarkup(

@@ -11,6 +11,7 @@ import {
   getPhotoPlateViewBoxSize,
   resolveBlankBadgePhoto,
 } from './badgeBlankPhotos';
+import { resolveBadgePlatePhoto } from './badgeCustomBackgrounds';
 // import UTIF encoder
 // @ts-ignore
 import * as UTIF from 'utif';
@@ -38,9 +39,9 @@ function resolveViewBoxPx(
     plateRenderMode === 'photo' &&
     variant === 'badge'
   ) {
-    const photo = resolveBlankBadgePhoto(
+    const photo = resolveBadgePlatePhoto(
       badge.templateId ?? template.id,
-      badge.backgroundColor,
+      badge,
     );
     if (photo) {
       return getPhotoPlateViewBoxSize(photo);
@@ -84,9 +85,9 @@ export async function generateBadgeThumbnail(
   const usesPhoto =
     plateRenderMode === 'photo' &&
     Boolean(
-      resolveBlankBadgePhoto(
+      resolveBadgePlatePhoto(
         badge.templateId || 'rect-1x3',
-        badge.backgroundColor,
+        badge,
       ),
     );
   const {

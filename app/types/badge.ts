@@ -104,6 +104,8 @@ export interface Badge {
   backing: 'pin' | 'magnetic' | 'adhesive';
   /** Name badge tool: optional left-side pictogram id from {@link BADGE_ICON_IDS}. Omit = none. */
   badgeIconId?: string;
+  /** Rounded 1×3 / 1.5×3: pre-designed photo background from custom catalog. Omit = plain color blank. */
+  customBadgeBackgroundId?: string;
   backgroundImage?: BadgeImage;
   logo?: BadgeImage;
   /**

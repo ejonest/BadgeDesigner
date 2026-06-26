@@ -877,6 +877,192 @@
   line-height: 1.2;
 }
 
+/* Step 1b: custom badge style picker */
+.aqb-redesign-root .aqb-badge-style-picker__hint {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: #3a4f63;
+  line-height: 1.45;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__card--plain {
+  max-width: 220px;
+  margin-bottom: 4px;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__categories {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__category {
+  border: 1px solid rgba(13, 27, 42, 0.1);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__category.has-selection:not(.is-open)
+  .aqb-badge-style-picker__category-toggle {
+  border-left: 3px solid var(--aqb-navy, #0d1b2a);
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__category-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background-color 0.15s;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__category-toggle:hover {
+  background: #faf8f4;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__category.is-open
+  .aqb-badge-style-picker__category-toggle {
+  background: #faf8f4;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__category-toggle-label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0d1b2a;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__category-count {
+  display: inline-flex;
+  min-width: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(13, 27, 42, 0.08);
+  font-size: 11px;
+  font-weight: 700;
+  color: #3a4f63;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__category-chevron {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(13, 27, 42, 0.06);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  color: #0d1b2a;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__category-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__category-panel.is-open {
+  grid-template-rows: 1fr;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__category-panel > .aqb-badge-style-picker__grid {
+  overflow: hidden;
+  min-height: 0;
+  padding: 0 12px;
+}
+
+.aqb-redesign-root
+  .aqb-badge-style-picker__category-panel.is-open
+  > .aqb-badge-style-picker__grid {
+  padding: 0 12px 12px;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .aqb-redesign-root .aqb-badge-style-picker__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 8px;
+  border: 2px solid rgba(13, 27, 42, 0.12);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__card:hover {
+  border-color: #3a4f63;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__card.is-selected {
+  border-color: var(--aqb-navy, #0d1b2a);
+  box-shadow: 0 0 0 2px rgba(13, 27, 42, 0.08);
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__thumb {
+  aspect-ratio: 3 / 1;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #f3f4f6;
+  margin-bottom: 8px;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__thumb-inner {
+  width: 100%;
+  height: 100%;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__thumb-inner--plain {
+  background: linear-gradient(180deg, #ffffff 0%, #ececec 100%);
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0d1b2a;
+  line-height: 1.25;
+}
+
+.aqb-redesign-root .aqb-badge-style-picker__custom-active {
+  padding: 4px 0 8px;
+}
+
 .aqb-redesign-root .aqb-badge-icon-picker__check {
   position: absolute;
   top: 4px;

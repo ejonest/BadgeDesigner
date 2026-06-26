@@ -16,6 +16,7 @@ import {
 import {
   AQB_LINE_CHAR_LIMIT_MESSAGE,
   aqbBadgeMaxTextWidth,
+  aqbLineTextFitsAtPresetPx,
   aqbLineTypography,
   aqbPresetToSizeNorm,
   aqbSizeNormToPx,
@@ -268,6 +269,8 @@ export interface BadgeEditorPanelProps {
   linePlaceholders?: (string | undefined)[];
   /** Badge redesign: reference-style text line cards. */
   panelLayout?: "default" | "aqb-badge";
+  /** Lines flagged after layout refit (e.g. icon added) truncated text to fit. */
+  layoutCharLimitByLine?: Record<number, boolean>;
 }
 
 export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
@@ -290,6 +293,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   lineLabels,
   linePlaceholders,
   panelLayout = "default",
+  layoutCharLimitByLine,
 }) => {
   const { labelProductPlural } = getDesignerVariantConfig(variant);
   const allItemsLabel = labelProductPlural.toLowerCase();
@@ -433,7 +437,18 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
             badge,
             badge.templateId,
           );
-          const showCharLimitError = Boolean(charLimitRejectedByLine[idx]);
+          const showCharLimitError =
+            Boolean(charLimitRejectedByLine[idx]) ||
+            Boolean(layoutCharLimitByLine?.[idx]) ||
+            (displayText.trim().length > 0 &&
+              !aqbLineTextFitsAtPresetPx(
+                displayText,
+                presetPx,
+                typography.fontFamily,
+                typography.bold,
+                typography.italic,
+                maxTextWidth,
+              ));
 
           return (
             <div key={line.id ?? idx} className="aqb-badge-text-line">

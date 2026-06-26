@@ -1,0 +1,2227 @@
+{
+  "version": 1,
+  "canvasWidthPx": 1500,
+  "canvasHeightPx": 1500,
+  "backgrounds": [
+    {
+      "id": "airlines-travel-coast-rect-1-5x3",
+      "name": "Coast",
+      "category": "Airlines Travel",
+      "templateId": "rect-1_5x3",
+      "fileName": "Airlines-Travel-Badges-Coast-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.14904420685116257,
+        "yNorm": 0.3340305702359068,
+        "widthNorm": 0.6881017191700592,
+        "heightNorm": 0.34186946773734644
+      },
+      "iconRectNorm": {
+        "xNorm": 0.09062393907477097,
+        "yNorm": 0.33400308499161485,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0,
+        "yNorm": 0.27742134645472033,
+        "widthNorm": 1,
+        "heightNorm": 0.44315401183123365
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.2882606659527665,
+        "yNorm": 0.33360409060612234,
+        "widthNorm": 0.6027017739983139,
+        "heightNorm": 0.3413248651967469
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.04124304048388418,
+        "yNorm": 0.26406588729139396,
+        "widthNorm": 0.9208820370786976,
+        "heightNorm": 0.4730454245746073
+      }
+    },
+    {
+      "id": "airlines-travel-coast-rect-1x3",
+      "name": "Coast",
+      "category": "Airlines Travel",
+      "templateId": "rect-1x3",
+      "fileName": "Airlines-Travel-Badges-Coast-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.15869204410842383,
+        "yNorm": 0.3895775729872113,
+        "widthNorm": 0.7040045240578643,
+        "heightNorm": 0.22845155418068866
+      },
+      "iconRectNorm": {
+        "xNorm": 0.21856942223844983,
+        "yNorm": 0.4501193248604013,
+        "widthNorm": 0.09147163470741153,
+        "heightNorm": 0.1028641595167207
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.06088236397867529,
+        "yNorm": 0.34524648243769823,
+        "widthNorm": 0.8855217746459474,
+        "heightNorm": 0.3093173626130651
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.3935693679160538,
+        "widthNorm": 0.5583402937564026,
+        "heightNorm": 0.22109672543201603
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.04754575366410608,
+        "yNorm": 0.33718175839689357,
+        "widthNorm": 0.9112030500276163,
+        "heightNorm": 0.32327039055030493
+      }
+    },
+    {
+      "id": "airlines-travel-escape-rect-1-5x3",
+      "name": "Escape",
+      "category": "Airlines Travel",
+      "templateId": "rect-1_5x3",
+      "fileName": "Airlines-Travel-Badges-Escape-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12892776372818363,
+        "yNorm": 0.34319000092717133,
+        "widthNorm": 0.743326966821203,
+        "heightNorm": 0.31458699224715037
+      },
+      "iconRectNorm": {
+        "xNorm": 0.1506260871580444,
+        "yNorm": 0.4438137999404298,
+        "widthNorm": 0.12211668123590444,
+        "heightNorm": 0.12472024550857441
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.05503195739209324,
+        "yNorm": 0.27054570759376845,
+        "widthNorm": 0.8921812668742166,
+        "heightNorm": 0.4550417305068127
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3306506590593841,
+        "yNorm": 0.3430719597850439,
+        "widthNorm": 0.519547157985242,
+        "heightNorm": 0.31895400441753935
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.03837813143338911,
+        "yNorm": 0.25588684222869723,
+        "widthNorm": 0.9283563127539068,
+        "heightNorm": 0.4845384182240604
+      }
+    },
+    {
+      "id": "airlines-travel-escape-rect-1x3",
+      "name": "Escape",
+      "category": "Airlines Travel",
+      "templateId": "rect-1x3",
+      "fileName": "Airlines-Travel-Badges-Escape-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.16239601537570472,
+        "yNorm": 0.45574676626665134,
+        "widthNorm": 0.07915290513224811,
+        "heightNorm": 0.08435207694931873
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.05586184340065241,
+        "yNorm": 0.3522165377124123,
+        "widthNorm": 0.8838917769437415,
+        "heightNorm": 0.2965412283963576
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.28740025164454697,
+        "yNorm": 0.3933750128302695,
+        "widthNorm": 0.6010444782948013,
+        "heightNorm": 0.2244423296242138
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.04527652240389367,
+        "yNorm": 0.3401607527290014,
+        "widthNorm": 0.9072269087898712,
+        "heightNorm": 0.32228824313404675
+      }
+    },
+    {
+      "id": "airlines-travel-explore-rect-1-5x3",
+      "name": "Explore",
+      "category": "Airlines Travel",
+      "templateId": "rect-1_5x3",
+      "fileName": "Airlines-Travel-Badges-Explore-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.09581894402842871,
+        "yNorm": 0.31641080617635425,
+        "widthNorm": 0.8099601239903207,
+        "heightNorm": 0.3631374671246013
+      },
+      "iconRectNorm": {
+        "xNorm": 0.10865847328958038,
+        "yNorm": 0.4232345802968432,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.05698316756366187,
+        "yNorm": 0.2756611717481802,
+        "widthNorm": 0.8867747487982364,
+        "heightNorm": 0.45058927569676366
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.30190493550954756,
+        "yNorm": 0.33465453356976604,
+        "widthNorm": 0.5830466984264185,
+        "heightNorm": 0.34519449410299685
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.03841148136190218,
+        "yNorm": 0.2651120866884603,
+        "widthNorm": 0.9214575050537436,
+        "heightNorm": 0.4731950543811274
+      }
+    },
+    {
+      "id": "airlines-travel-explore-rect-1x3",
+      "name": "Explore",
+      "category": "Airlines Travel",
+      "templateId": "rect-1x3",
+      "fileName": "Airlines-Travel-Badges-Explore-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1052930640737016,
+        "yNorm": 0.3869675022662146,
+        "widthNorm": 0.7912651705039426,
+        "heightNorm": 0.22411542519784552
+      },
+      "iconRectNorm": {
+        "xNorm": 0.10928713184833547,
+        "yNorm": 0.43451602624929025,
+        "widthNorm": 0.12233100970741151,
+        "heightNorm": 0.12586731260087103
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.05936550072295633,
+        "yNorm": 0.35274183897875216,
+        "widthNorm": 0.8855819321724995,
+        "heightNorm": 0.293823927283204
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.27191615110328876,
+        "yNorm": 0.3850131964240196,
+        "widthNorm": 0.6089477730762556,
+        "heightNorm": 0.22928485094263695
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.04830322787774987,
+        "yNorm": 0.3380029804403985,
+        "widthNorm": 0.9073818503237764,
+        "heightNorm": 0.3230750780503049
+      }
+    },
+    {
+      "id": "airlines-travel-transit-rect-1-5x3",
+      "name": "Transit",
+      "category": "Airlines Travel",
+      "templateId": "rect-1_5x3",
+      "fileName": "Airlines-Travel-Badges-Transit-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "airlines-travel-transit-rect-1x3",
+      "name": "Transit",
+      "category": "Airlines Travel",
+      "templateId": "rect-1x3",
+      "fileName": "Airlines-Travel-Badges-Transit-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "airlines-travel-voyage-rect-1-5x3",
+      "name": "Voyage",
+      "category": "Airlines Travel",
+      "templateId": "rect-1_5x3",
+      "fileName": "Airlines-Travel-Badges-Voyage-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "airlines-travel-voyage-rect-1x3",
+      "name": "Voyage",
+      "category": "Airlines Travel",
+      "templateId": "rect-1x3",
+      "fileName": "Airlines-Travel-Badges-Voyage-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "coffee-shop-caf-aroma-rect-1-5x3",
+      "name": "Aroma",
+      "category": "Coffee Shop Café",
+      "templateId": "rect-1_5x3",
+      "fileName": "Coffee-Shop-Café-Badges-Aroma-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "coffee-shop-caf-aroma-rect-1x3",
+      "name": "Aroma",
+      "category": "Coffee Shop Café",
+      "templateId": "rect-1x3",
+      "fileName": "Coffee-Shop-Café-Badges-Aroma-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "coffee-shop-caf-brew-rect-1-5x3",
+      "name": "Brew",
+      "category": "Coffee Shop Café",
+      "templateId": "rect-1_5x3",
+      "fileName": "Coffee-Shop-Café-Badges-Brew-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "coffee-shop-caf-brew-rect-1x3",
+      "name": "Brew",
+      "category": "Coffee Shop Café",
+      "templateId": "rect-1x3",
+      "fileName": "Coffee-Shop-Café-Badges-Brew-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "coffee-shop-caf-caf-rect-1-5x3",
+      "name": "Café",
+      "category": "Coffee Shop Café",
+      "templateId": "rect-1_5x3",
+      "fileName": "Coffee-Shop-Café-Badges-Café-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "coffee-shop-caf-caf-rect-1x3",
+      "name": "Café",
+      "category": "Coffee Shop Café",
+      "templateId": "rect-1x3",
+      "fileName": "Coffee-Shop-Café-Badges-Café-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "coffee-shop-caf-chill-rect-1-5x3",
+      "name": "Chill",
+      "category": "Coffee Shop Café",
+      "templateId": "rect-1_5x3",
+      "fileName": "Coffee-Shop-Café-Badges-Chill-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "coffee-shop-caf-chill-rect-1x3",
+      "name": "Chill",
+      "category": "Coffee Shop Café",
+      "templateId": "rect-1x3",
+      "fileName": "Coffee-Shop-Café-Badges-Chill-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "coffee-shop-caf-roast-rect-1-5x3",
+      "name": "Roast",
+      "category": "Coffee Shop Café",
+      "templateId": "rect-1_5x3",
+      "fileName": "Coffee-Shop-Café-Badges-Roast-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "coffee-shop-caf-roast-rect-1x3",
+      "name": "Roast",
+      "category": "Coffee Shop Café",
+      "templateId": "rect-1x3",
+      "fileName": "Coffee-Shop-Café-Badges-Roast-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "custom-name-badge-qr-code-1-5-x-3-floral-corner-design-badge-rect-1x3",
+      "name": "QR Code 1.5 x 3 (floral corner design) Badge",
+      "category": "Custom Name Badge",
+      "templateId": "rect-1x3",
+      "fileName": "Custom-Name-Badge-QR-Code-1.5-x-3-(floral-corner-design)-Badge-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "education-class-rect-1-5x3",
+      "name": "Class",
+      "category": "Education",
+      "templateId": "rect-1_5x3",
+      "fileName": "Education-Badges-Class-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "education-class-rect-1x3",
+      "name": "Class",
+      "category": "Education",
+      "templateId": "rect-1x3",
+      "fileName": "Education-Badges-Class-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "education-learn-rect-1-5x3",
+      "name": "Learn",
+      "category": "Education",
+      "templateId": "rect-1_5x3",
+      "fileName": "Education-Badges-Learn-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "education-learn-rect-1x3",
+      "name": "Learn",
+      "category": "Education",
+      "templateId": "rect-1x3",
+      "fileName": "Education-Badges-Learn-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "education-scholar-rect-1-5x3",
+      "name": "Scholar",
+      "category": "Education",
+      "templateId": "rect-1_5x3",
+      "fileName": "Education-Badges-Scholar-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "education-scholar-rect-1x3",
+      "name": "Scholar",
+      "category": "Education",
+      "templateId": "rect-1x3",
+      "fileName": "Education-Badges-Scholar-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "education-study-rect-1-5x3",
+      "name": "Study",
+      "category": "Education",
+      "templateId": "rect-1_5x3",
+      "fileName": "Education-Badges-Study-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "education-study-rect-1x3",
+      "name": "Study",
+      "category": "Education",
+      "templateId": "rect-1x3",
+      "fileName": "Education-Badges-Study-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "hello-my-name-is-medical-field-design-rect-1-5x3",
+      "name": "Medical field design",
+      "category": "Hello My Name Is",
+      "templateId": "rect-1_5x3",
+      "fileName": "Hello-My-Name-Is-(Medical-field-design)-1.5x3-Badge-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "hello-my-name-is-medical-field-design-rect-1x3",
+      "name": "Medical field design",
+      "category": "Hello My Name Is",
+      "templateId": "rect-1x3",
+      "fileName": "Hello-My-Name-Is-(Medical-field-design)-1x3-Badge-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "hello-my-name-is-floral-corner-design-rect-1-5x3",
+      "name": "floral corner design",
+      "category": "Hello My Name Is",
+      "templateId": "rect-1_5x3",
+      "fileName": "Hello-My-Name-Is-(floral-corner-design)-1.5x3-Badge-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "hello-my-name-is-floral-corner-design-rect-1x3",
+      "name": "floral corner design",
+      "category": "Hello My Name Is",
+      "templateId": "rect-1x3",
+      "fileName": "Hello-My-Name-Is-(floral-corner-design)-1x3-Badge-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "hello-my-name-is-floral-design-rect-1-5x3",
+      "name": "floral design",
+      "category": "Hello My Name Is",
+      "templateId": "rect-1_5x3",
+      "fileName": "Hello-My-Name-Is-(floral-design)-1.5x3-Badge-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "hello-my-name-is-floral-design-rect-1x3",
+      "name": "floral design",
+      "category": "Hello My Name Is",
+      "templateId": "rect-1x3",
+      "fileName": "Hello-My-Name-Is-(floral-design)-1x3-Badge-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "hello-my-name-is-church-religious-designs-rect-1-5x3",
+      "name": "Church Religious Designs",
+      "category": "Hello My Name Is",
+      "templateId": "rect-1_5x3",
+      "fileName": "Hello-My-Name-is-(Church-Religious-Designs)-1.5x3-Badge-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "hello-my-name-is-church-religious-designs-rect-1x3",
+      "name": "Church Religious Designs",
+      "category": "Hello My Name Is",
+      "templateId": "rect-1x3",
+      "fileName": "Hello-My-Name-is-(Church-Religious-Designs)-1x3-Badge-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "hello-my-name-is-house-keeping-janitors-cleaning-vectors-design-rect-1-5x3",
+      "name": "House Keeping Janitors Cleaning Vectors Design",
+      "category": "Hello My Name Is",
+      "templateId": "rect-1_5x3",
+      "fileName": "Hello-My-Name-is-(House-Keeping-Janitors-Cleaning-Vectors-Design)-1.5x3-Badge-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "hello-my-name-is-house-keeping-janitors-cleaning-vectors-design-rect-1x3",
+      "name": "House Keeping Janitors Cleaning Vectors Design",
+      "category": "Hello My Name Is",
+      "templateId": "rect-1x3",
+      "fileName": "Hello-My-Name-is-(House-Keeping-Janitors-Cleaning-Vectors-Design)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "nursing-homes-assisted-living-hearth-rect-1-5x3",
+      "name": "Hearth",
+      "category": "Nursing Homes Assisted Living",
+      "templateId": "rect-1_5x3",
+      "fileName": "Nursing-Homes-Assisted-Living-Badges-Hearth-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "nursing-homes-assisted-living-hearth-rect-1x3",
+      "name": "Hearth",
+      "category": "Nursing Homes Assisted Living",
+      "templateId": "rect-1x3",
+      "fileName": "Nursing-Homes-Assisted-Living-Badges-Hearth-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "nursing-homes-assisted-living-willow-rect-1-5x3",
+      "name": "Willow",
+      "category": "Nursing Homes Assisted Living",
+      "templateId": "rect-1_5x3",
+      "fileName": "Nursing-Homes-Assisted-Living-Badges-Willow-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "nursing-homes-assisted-living-willow-rect-1x3",
+      "name": "Willow",
+      "category": "Nursing Homes Assisted Living",
+      "templateId": "rect-1x3",
+      "fileName": "Nursing-Homes-Assisted-Living-Badges-Willow-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "restaurant-specific-asian-rect-1-5x3",
+      "name": "Asian",
+      "category": "Restaurant Specific",
+      "templateId": "rect-1_5x3",
+      "fileName": "Restaurant-Specific-Badges-Asian-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "restaurant-specific-asian-rect-1x3",
+      "name": "Asian",
+      "category": "Restaurant Specific",
+      "templateId": "rect-1x3",
+      "fileName": "Restaurant-Specific-Badges-Asian-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "restaurant-specific-bbq-rect-1-5x3",
+      "name": "BBQ",
+      "category": "Restaurant Specific",
+      "templateId": "rect-1_5x3",
+      "fileName": "Restaurant-Specific-Badges-BBQ-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "restaurant-specific-bbq-rect-1x3",
+      "name": "BBQ",
+      "category": "Restaurant Specific",
+      "templateId": "rect-1x3",
+      "fileName": "Restaurant-Specific-Badges-BBQ-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "restaurant-specific-burger-rect-1-5x3",
+      "name": "Burger",
+      "category": "Restaurant Specific",
+      "templateId": "rect-1_5x3",
+      "fileName": "Restaurant-Specific-Badges-Burger-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "restaurant-specific-burger-rect-1x3",
+      "name": "Burger",
+      "category": "Restaurant Specific",
+      "templateId": "rect-1x3",
+      "fileName": "Restaurant-Specific-Badges-Burger-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "restaurant-specific-mexican-rect-1-5x3",
+      "name": "Mexican",
+      "category": "Restaurant Specific",
+      "templateId": "rect-1_5x3",
+      "fileName": "Restaurant-Specific-Badges-Mexican-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "restaurant-specific-mexican-rect-1x3",
+      "name": "Mexican",
+      "category": "Restaurant Specific",
+      "templateId": "rect-1x3",
+      "fileName": "Restaurant-Specific-Badges-Mexican-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "restaurant-specific-pizza-rect-1-5x3",
+      "name": "Pizza",
+      "category": "Restaurant Specific",
+      "templateId": "rect-1_5x3",
+      "fileName": "Restaurant-Specific-Badges-Pizza-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "restaurant-specific-pizza-rect-1x3",
+      "name": "Pizza",
+      "category": "Restaurant Specific",
+      "templateId": "rect-1x3",
+      "fileName": "Restaurant-Specific-Badges-Pizza-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "restaurant-specific-sushi-rect-1-5x3",
+      "name": "Sushi",
+      "category": "Restaurant Specific",
+      "templateId": "rect-1_5x3",
+      "fileName": "Restaurant-Specific-Sushi-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "restaurant-specific-sushi-rect-1x3",
+      "name": "Sushi",
+      "category": "Restaurant Specific",
+      "templateId": "rect-1x3",
+      "fileName": "Restaurant-Specific-Sushi-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "retail-customer-service-market-rect-1-5x3",
+      "name": "Market",
+      "category": "Retail Customer Service",
+      "templateId": "rect-1_5x3",
+      "fileName": "Retail-Customer-Service-Badges-Market-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "retail-customer-service-market-rect-1x3",
+      "name": "Market",
+      "category": "Retail Customer Service",
+      "templateId": "rect-1x3",
+      "fileName": "Retail-Customer-Service-Badges-Market-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "retail-customer-service-retail-rect-1x3",
+      "name": "Retail",
+      "category": "Retail Customer Service",
+      "templateId": "rect-1x3",
+      "fileName": "Retail-Customer-Service-Badges-Retail-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    },
+    {
+      "id": "retail-customer-service-service-rect-1-5x3",
+      "name": "Service",
+      "category": "Retail Customer Service",
+      "templateId": "rect-1_5x3",
+      "fileName": "Retail-Customer-Service-Badges-Service-(1.5x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.1648100528417457,
+        "yNorm": 0.3428409436610357,
+        "widthNorm": 0.6741091104078043,
+        "heightNorm": 0.32283080735131703
+      },
+      "iconRectNorm": {
+        "xNorm": 0.18123206652895946,
+        "yNorm": 0.41415119271003764,
+        "widthNorm": 0.14641202437315937,
+        "heightNorm": 0.16613918124693225
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.12828627213882526,
+        "yNorm": 0.3055825201703616,
+        "widthNorm": 0.745659393150769,
+        "heightNorm": 0.38851612286792375
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.35893650464761945,
+        "yNorm": 0.3424015304805096,
+        "widthNorm": 0.47765964777282377,
+        "heightNorm": 0.3229579106675393
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.10306662076141199,
+        "yNorm": 0.28088317214087044,
+        "widthNorm": 0.7966619129887925,
+        "heightNorm": 0.43754884765624996
+      }
+    },
+    {
+      "id": "retail-customer-service-service-rect-1x3",
+      "name": "Service",
+      "category": "Retail Customer Service",
+      "templateId": "rect-1x3",
+      "fileName": "Retail-Customer-Service-Badges-Service-(1x3)-main-preview.jpg",
+      "textRectNorm": {
+        "xNorm": 0.12448698513170814,
+        "yNorm": 0.38920856959158223,
+        "widthNorm": 0.7529628573911976,
+        "heightNorm": 0.22615623338309881
+      },
+      "iconRectNorm": {
+        "xNorm": 0.15434336397660345,
+        "yNorm": 0.4239246314882608,
+        "widthNorm": 0.14563941835732983,
+        "heightNorm": 0.14517700099445763
+      },
+      "badgeFaceRectNorm": {
+        "xNorm": 0.09713469368660013,
+        "yNorm": 0.3598608519485234,
+        "widthNorm": 0.8120340103996238,
+        "heightNorm": 0.2821744302448053
+      },
+      "textWithIconRectNorm": {
+        "xNorm": 0.3211175080783705,
+        "yNorm": 0.38998369210927275,
+        "widthNorm": 0.556019840835651,
+        "heightNorm": 0.22581087346101933
+      },
+      "previewCropRectNorm": {
+        "xNorm": 0.06122225616614856,
+        "yNorm": 0.3303833994048593,
+        "widthNorm": 0.8800256539389725,
+        "heightNorm": 0.34651704598331146
+      }
+    }
+  ]
+}
