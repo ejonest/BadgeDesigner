@@ -6,7 +6,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { AddMultipleGridIcon } from "./AqbToolActionsRow";
 
-const iconClass = "h-[18px] w-[18px] stroke-[1.75] text-[#0d1b2a]";
+const iconClass = "h-[18px] w-[18px] stroke-[1.75] text-[#02132B]";
 
 interface PreviewActionButtonProps {
   label: string;

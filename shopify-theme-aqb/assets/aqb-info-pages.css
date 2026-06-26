@@ -1,12 +1,12 @@
 :root,
 .aqb-info-page {
-  --aqb-ip-navy: #0d1b2a;
-  --aqb-ip-gold: #c8962a;
-  --aqb-ip-gold-l: #e0ac42;
+  --aqb-ip-navy: #02132B;
+  --aqb-ip-gold: #ED8918;
+  --aqb-ip-gold-l: #F3A248;
   --aqb-ip-cream: #faf8f4;
   --aqb-ip-white: #fefcf9;
-  --aqb-ip-border: rgba(13, 27, 42, 0.1);
-  --aqb-ip-text: #0d1b2a;
+  --aqb-ip-border: rgba(2, 19, 43, 0.1);
+  --aqb-ip-text: #02132B;
   --aqb-ip-text-m: #3a4f63;
   --aqb-ip-max: 900px;
 }
@@ -44,7 +44,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 80% 60% at 100% 0%, rgba(200, 150, 42, 0.12), transparent 55%);
+  background: radial-gradient(ellipse 80% 60% at 100% 0%, rgba(237, 137, 24, 0.12), transparent 55%);
   pointer-events: none;
 }
 
@@ -228,7 +228,7 @@
 .aqb-ip-table th {
   font-weight: 600;
   color: var(--aqb-ip-text);
-  background: rgba(13, 27, 42, 0.03);
+  background: rgba(2, 19, 43, 0.03);
 }
 
 .aqb-ip-table tr:last-child td {

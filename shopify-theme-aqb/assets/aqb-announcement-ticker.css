@@ -3,7 +3,7 @@
   to { transform: translateX(-50%); }
 }
 .aqb-announce-ticker {
-  background: #0d1b2a;
+  background: #02132B;
   height: var(--aqb-announce-bar-height, 34px);
   overflow: hidden;
   display: flex;
@@ -29,7 +29,7 @@
 .aqb-announce-ticker__dot {
   width: 4px;
   height: 4px;
-  background: #c9a84c;
+  background: #ED8918;
   border-radius: 50%;
   flex-shrink: 0;
 }

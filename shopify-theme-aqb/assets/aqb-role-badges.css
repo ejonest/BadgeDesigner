@@ -18,23 +18,23 @@
 
 .aqb-role-badges-page {
   background: var(--aqb-rb-cream, #faf8f4);
-  color: var(--aqb-rb-text, #0d1b2a);
+  color: var(--aqb-rb-text, #02132B);
 }
 
 :root,
 .aqb-role-badges-page {
-  --aqb-rb-navy: #0d1b2a;
-  --aqb-rb-navy2: #1a2f44;
-  --aqb-rb-gold: #c8962a;
-  --aqb-rb-gold-light: #e0ac42;
-  --aqb-rb-gold-pale: #f5e6c0;
-  --aqb-rb-gold-pp: #fbf2de;
+  --aqb-rb-navy: #02132B;
+  --aqb-rb-navy2: #163356;
+  --aqb-rb-gold: #ED8918;
+  --aqb-rb-gold-light: #F3A248;
+  --aqb-rb-gold-pale: #FFF3E5;
+  --aqb-rb-gold-pp: #FFF9EF;
   --aqb-rb-cream: #faf8f4;
   --aqb-rb-cream2: #f0ede6;
   --aqb-rb-cream3: #e5dfd6;
   --aqb-rb-white: #fefcf9;
-  --aqb-rb-border: rgba(13, 27, 42, 0.1);
-  --aqb-rb-text: #0d1b2a;
+  --aqb-rb-border: rgba(2, 19, 43, 0.1);
+  --aqb-rb-text: #02132B;
   --aqb-rb-text-mid: #3a4f63;
   --aqb-rb-text-light: #7a8ea0;
   --aqb-rb-green: #2a9e72;
@@ -70,7 +70,7 @@
   inset: 0;
   background: radial-gradient(
     ellipse 60% 80% at 80% 50%,
-    rgba(200, 150, 42, 0.12) 0%,
+    rgba(237, 137, 24, 0.12) 0%,
     transparent 70%
   );
   pointer-events: none;
@@ -409,7 +409,7 @@
   display: none !important;
 }
 .aqb-rb-product-card:hover {
-  box-shadow: 0 8px 28px rgba(13, 27, 42, 0.1);
+  box-shadow: 0 8px 28px rgba(2, 19, 43, 0.1);
   transform: translateY(-2px);
 }
 
@@ -445,7 +445,7 @@
 }
 .aqb-rb-card-badge-render.white-badge {
   background: #fefcf9;
-  border: 1px solid rgba(13, 27, 42, 0.12);
+  border: 1px solid rgba(2, 19, 43, 0.12);
 }
 .aqb-rb-card-badge-render.gold-badge {
   background: var(--aqb-rb-gold);
@@ -658,14 +658,14 @@ a.aqb-rb-card-add {
   background: var(--aqb-rb-white);
   border: 1px solid var(--aqb-rb-border);
   border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(13, 27, 42, 0.12);
+  box-shadow: 0 4px 16px rgba(2, 19, 43, 0.12);
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
 }
 .aqb-rb-scroll-btn:hover {
   background: var(--aqb-rb-gold);
   border-color: var(--aqb-rb-gold);
-  box-shadow: 0 6px 20px rgba(13, 27, 42, 0.16);
+  box-shadow: 0 6px 20px rgba(2, 19, 43, 0.16);
 }
 .aqb-rb-scroll-controls.is-at-top #role-badges-scroll-top {
   opacity: 0.35;
@@ -786,7 +786,7 @@ a.aqb-rb-card-add {
   transition: box-shadow 0.2s, transform 0.2s;
 }
 .aqb-rb-crosssell-card:hover {
-  box-shadow: 0 4px 16px rgba(13, 27, 42, 0.08);
+  box-shadow: 0 4px 16px rgba(2, 19, 43, 0.08);
   transform: translateY(-1px);
 }
 .aqb-rb-crosssell-icon {
@@ -1016,7 +1016,7 @@ a.aqb-rb-card-add {
   position: absolute;
   bottom: 14px;
   left: 14px;
-  background: rgba(13, 27, 42, 0.72);
+  background: rgba(2, 19, 43, 0.72);
   color: var(--aqb-rb-white);
   font-family: "DM Sans", sans-serif;
   font-size: 11px;

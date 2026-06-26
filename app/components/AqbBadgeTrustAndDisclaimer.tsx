@@ -25,7 +25,7 @@ export const AqbBadgeTrustAndDisclaimer = memo(
                 🔁
               </span>
               <span>
-                <span className="text-[#c8962a] font-medium">Sign in</span> on
+                <span className="text-[#ED8918] font-medium">Sign in</span> on
                 the storefront to save and reorder in one click
               </span>
             </div>

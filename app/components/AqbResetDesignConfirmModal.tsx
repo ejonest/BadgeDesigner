@@ -43,7 +43,7 @@ export const AqbResetDesignConfirmModal: React.FC<
         <div className="flex items-start justify-between gap-3 p-5 pb-3">
           <h3
             id="aqb-reset-design-confirm-title"
-            className="text-lg font-semibold text-[#0d1b2a]"
+            className="text-lg font-semibold text-[#02132B]"
           >
             {title}
           </h3>
@@ -59,7 +59,7 @@ export const AqbResetDesignConfirmModal: React.FC<
         <p className="px-5 pb-5 text-sm leading-relaxed text-gray-700">
           {body}
         </p>
-        <div className="aqb-reset-design-confirm-modal__actions flex flex-col-reverse gap-2 border-t border-[rgba(13,27,42,0.08)] p-4 sm:flex-row sm:flex-wrap sm:justify-end">
+        <div className="aqb-reset-design-confirm-modal__actions flex flex-col-reverse gap-2 border-t border-[rgba(2, 19, 43,0.08)] p-4 sm:flex-row sm:flex-wrap sm:justify-end">
           <button
             type="button"
             className="aqb-reset-design-confirm-modal__btn aqb-reset-design-confirm-modal__btn--secondary"

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Step 2 Customize Icon — Library Options</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f5f5;
+      padding: 40px;
+      color: #02132B;
+      max-width: 960px;
+    }
+    h1 { font-size: 18px; margin-bottom: 8px; }
+    p, .note { margin: 0 0 16px; color: #555; font-size: 14px; line-height: 1.5; }
+    .note { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px 16px; margin-bottom: 28px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    .card.recommended {
+      border-color: #ED8918;
+      box-shadow: 0 0 0 2px rgba(237, 137, 24, 0.25);
+    }
+    .card img { display: block; margin: 0 auto; }
+    .card .label {
+      margin-top: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #02132B;
+    }
+    .card .meta {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #888;
+    }
+    .badge {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #ED8918;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .sizes {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    .sizes img { opacity: 0.9; }
+    h2 {
+      font-size: 15px;
+      margin: 32px 0 16px;
+      color: #02132B;
+    }
+  </style>
+</head>
+<body>
+  <h1>Step 2 — Customize icon options</h1>
+  <p>Not uploaded to Shopify. Open via dev server: <a href="http://localhost:5173/icon-previews/customize-icon-preview.html">localhost:5173/icon-previews/customize-icon-preview.html</a> (refresh after updates).</p>
+  <div class="note">
+  <strong>Approach:</strong> Hand-drawn SVG wasn’t working, so these use professional open-source icon sets recolored to match your style — navy <code>#02132B</code>, orange <code>#ED8918</code>, white fills. All are free for commercial use (MIT / ISC).
+  </div>
+
+  <h2>Reference &amp; previous attempt</h2>
+  <div class="grid">
+    <div class="card">
+      <img src="customize-icon-reference.png" width="76" height="76" alt="">
+      <div class="label">Original PNG</div>
+      <div class="meta">Current site asset</div>
+    </div>
+    <div class="card">
+      <img src="aqb-step-icon-customize-v2.svg" width="76" height="76" alt="">
+      <div class="label">Hand-drawn v2</div>
+      <div class="meta">Previous attempt</div>
+    </div>
+    <div class="card">
+      <img src="aqb-step-icon-template-v2.svg" width="76" height="76" alt="">
+      <div class="label">Template v2</div>
+      <div class="meta">Approved style reference</div>
+    </div>
+  </div>
+
+  <h2>New options (pick one)</h2>
+  <div class="grid">
+    <div class="card recommended">
+      <img src="aqb-step-icon-customize-tabler-brush.svg" width="76" height="76" alt="">
+      <div class="label">Tabler palette + brush</div>
+      <div class="meta">MIT — closest to original layout</div>
+      <span class="badge">Recommended</span>
+      <div class="sizes">
+        <img src="aqb-step-icon-customize-tabler-brush.svg" width="38" height="38" alt="">
+        <img src="aqb-step-icon-customize-tabler-brush.svg" width="76" height="76" alt="">
+        <img src="aqb-step-icon-customize-tabler-brush.svg" width="152" height="152" alt="">
+      </div>
+    </div>
+    <div class="card">
+      <img src="aqb-step-icon-customize-tabler.svg" width="76" height="76" alt="">
+      <div class="label">Tabler palette only</div>
+      <div class="meta">MIT — clean, no brush</div>
+    </div>
+    <div class="card">
+      <img src="aqb-step-icon-customize-lucide.svg" width="76" height="76" alt="">
+      <div class="label">Lucide palette</div>
+      <div class="meta">ISC — rounder shape</div>
+    </div>
+  </div>
+</body>
+</html>

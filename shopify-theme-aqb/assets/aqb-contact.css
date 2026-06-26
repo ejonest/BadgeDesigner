@@ -1,17 +1,17 @@
 /* Contact page */
 :root,
 .aqb-contact-page {
-  --aqb-ct-navy: #0d1b2a;
-  --aqb-ct-navy2: #1a2f44;
-  --aqb-ct-gold: #c8962a;
-  --aqb-ct-gold-l: #e0ac42;
-  --aqb-ct-gold-p: #f5e6c0;
-  --aqb-ct-gold-pp: #fbf2de;
+  --aqb-ct-navy: #02132B;
+  --aqb-ct-navy2: #163356;
+  --aqb-ct-gold: #ED8918;
+  --aqb-ct-gold-l: #F3A248;
+  --aqb-ct-gold-p: #FFF3E5;
+  --aqb-ct-gold-pp: #FFF9EF;
   --aqb-ct-cream: #faf8f4;
   --aqb-ct-cream2: #f0ede6;
   --aqb-ct-white: #fefcf9;
-  --aqb-ct-border: rgba(13, 27, 42, 0.1);
-  --aqb-ct-text: #0d1b2a;
+  --aqb-ct-border: rgba(2, 19, 43, 0.1);
+  --aqb-ct-text: #02132B;
   --aqb-ct-text-m: #3a4f63;
   --aqb-ct-text-l: #7a8ea0;
   --aqb-ct-green: #2a9e72;
@@ -49,7 +49,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 80% 60% at 100% 0%, rgba(200, 150, 42, 0.12), transparent 55%);
+  background: radial-gradient(ellipse 80% 60% at 100% 0%, rgba(237, 137, 24, 0.12), transparent 55%);
   pointer-events: none;
 }
 
@@ -396,7 +396,7 @@
   border-top: 3px solid var(--aqb-ct-gold);
   border-radius: 16px;
   padding: 36px 36px 32px;
-  box-shadow: 0 8px 32px rgba(13, 27, 42, 0.07);
+  box-shadow: 0 8px 32px rgba(2, 19, 43, 0.07);
 }
 
 .aqb-ct-form-card__badge {

@@ -15,6 +15,30 @@
       <p class="aqb-home-hero__sub">{{ section.settings.subheading }}</p>
     {%- endif -%}
 
+    {%- if section.blocks.size > 0 -%}
+      <div class="aqb-home-hero__perks">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'strength' -%}
+            <div class="aqb-home-hero__perk" {{ block.shopify_attributes }}>
+              <span class="aqb-home-hero__perk-icon" aria-hidden="true">
+                {%- case block.settings.icon -%}
+                  {%- when 'price-tag' -%}
+                    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 12.5 8.5 19c.2.2.52.2.72 0l8.5-8.6a.5.5 0 0 0 .15-.36V2.5A.5.5 0 0 0 17.32 2H10.5a.5.5 0 0 0-.36.15L2 10.5a.5.5 0 0 0 0 .72Z" stroke="currentColor" stroke-width="1.2"/><circle cx="13.5" cy="6.5" r="1.5" stroke="currentColor" stroke-width="1.2"/></svg>
+                  {%- when 'edit' -%}
+                    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13.5 3.5 16.5 6.5 7 16H4V13L13.5 3.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M11.5 5.5 14.5 8.5" stroke="currentColor" stroke-width="1.2"/></svg>
+                  {%- when 'reorder' -%}
+                    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.5 7.5H5.5a4 4 0 0 0 0 8h1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M13.5 4.5 16.5 7.5 13.5 10.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  {%- else -%}
+                    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 10s2.8-5.5 7.5-5.5S17.5 10 17.5 10s-2.8 5.5-7.5 5.5S2.5 10 2.5 10Z" stroke="currentColor" stroke-width="1.2"/><circle cx="10" cy="10" r="2.2" stroke="currentColor" stroke-width="1.2"/></svg>
+                {%- endcase -%}
+              </span>
+              <span class="aqb-home-hero__perk-label">{{ block.settings.title | escape }}</span>
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+
     <div class="aqb-home-hero__actions">
       {%- if section.settings.primary_label != blank -%}
         <a href="{{ section.settings.primary_link }}" class="aqb-home-hero__btn-primary">
@@ -29,19 +53,45 @@
       {%- endif -%}
     </div>
 
-    <div class="aqb-home-hero__strengths">
-      {%- for block in section.blocks -%}
-        {%- if block.type == 'strength' -%}
-          <div class="aqb-home-hero__sb" {{ block.shopify_attributes }}>
-            <span class="aqb-home-hero__sb-icon" aria-hidden="true">{{ block.settings.emoji }}</span>
-            <div>
-              <div class="aqb-home-hero__sb-title">{{ block.settings.title | escape }}</div>
-              <div class="aqb-home-hero__sb-desc">{{ block.settings.description | escape }}</div>
-            </div>
+    {%- if section.settings.show_amazon_review -%}
+      <div class="aqb-home-hero__amazon">
+        <div class="aqb-home-hero__amazon-copy">
+          <div class="aqb-home-hero__amazon-rating-row">
+            <span class="aqb-home-hero__amazon-stars" aria-hidden="true">
+              {%- for i in (1..5) -%}<span class="aqb-home-hero__amazon-star">★</span>{%- endfor -%}
+            </span>
+            <span class="aqb-home-hero__amazon-rating">{{ section.settings.amazon_rating | escape }}</span>
           </div>
-        {%- endif -%}
-      {%- endfor -%}
-    </div>
+          {%- if section.settings.amazon_subtitle != blank -%}
+            <p class="aqb-home-hero__amazon-headline">{{ section.settings.amazon_subtitle | escape }}</p>
+          {%- endif -%}
+        </div>
+
+        <div class="aqb-home-hero__amazon-avatars">
+          {%- if section.settings.amazon_avatars != blank -%}
+            {{
+              section.settings.amazon_avatars
+              | image_url: width: 160
+              | image_tag:
+                loading: 'lazy',
+                widths: '80,120,160',
+                sizes: '120px',
+                alt: '',
+                class: 'aqb-home-hero__amazon-avatars-img'
+            }}
+          {%- else -%}
+            <img
+              class="aqb-home-hero__amazon-avatars-img"
+              src="{{ section.settings.amazon_avatars_asset | default: 'aqb-hero-amazon-avatars.png' | asset_url }}"
+              alt=""
+              width="340"
+              height="140"
+              loading="lazy"
+            >
+          {%- endif -%}
+        </div>
+      </div>
+    {%- endif -%}
   </div>
 
   <div class="aqb-home-hero__right">
@@ -195,13 +245,13 @@
       "type": "html",
       "id": "subheading",
       "label": "Subheading",
-      "default": "Design yours live in minutes — shape, color, every line of text. <strong>See exactly what you'll get</strong> before you order. No artwork fees. Free shipping on qualifying orders."
+      "default": "Design online, preview instantly and order with confidence. Perfect for businesses, schools, churches, and organizations of any size."
     },
     {
       "type": "text",
       "id": "primary_label",
       "label": "Primary button label",
-      "default": "Start Designing"
+      "default": "Start Designing Now"
     },
     {
       "type": "url",
@@ -326,30 +376,64 @@
       "id": "tool_cta_label",
       "default": "Add to Cart",
       "label": "Tool footer CTA label"
+    },
+    {
+      "type": "header",
+      "content": "Amazon review"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_amazon_review",
+      "label": "Show Amazon review",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "amazon_rating",
+      "label": "Amazon rating text",
+      "default": "4.8/5 from 6,000+ reviews"
+    },
+    {
+      "type": "text",
+      "id": "amazon_subtitle",
+      "label": "Amazon headline",
+      "default": "Millions of badges sold on Amazon"
+    },
+    {
+      "type": "image_picker",
+      "id": "amazon_avatars",
+      "label": "Customer avatars image",
+      "info": "Optional. Overrides the default avatar strip shown to the right of the rating."
+    },
+    {
+      "type": "text",
+      "id": "amazon_avatars_asset",
+      "label": "Default avatars (theme asset)",
+      "default": "aqb-hero-amazon-avatars.png"
     }
   ],
   "blocks": [
     {
       "type": "strength",
-      "name": "Strength",
+      "name": "Perk",
       "settings": [
         {
-          "type": "text",
-          "id": "emoji",
-          "label": "Emoji",
-          "default": "🏭"
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "eye", "label": "Eye" },
+            { "value": "price-tag", "label": "Price tag" },
+            { "value": "edit", "label": "Pencil / edit" },
+            { "value": "reorder", "label": "Reorder" }
+          ],
+          "default": "eye"
         },
         {
           "type": "text",
           "id": "title",
-          "label": "Title",
+          "label": "Label",
           "default": "See it before you buy"
-        },
-        {
-          "type": "text",
-          "id": "description",
-          "label": "Description",
-          "default": "Live preview updates as you design"
         }
       ]
     }
@@ -361,33 +445,29 @@
         {
           "type": "strength",
           "settings": {
-            "emoji": "👁️",
-            "title": "See it before you buy",
-            "description": "Live preview updates as you design"
+            "icon": "eye",
+            "title": "See it before you buy"
           }
         },
         {
           "type": "strength",
           "settings": {
-            "emoji": "💰",
-            "title": "Badges as low as $4.99",
-            "description": "Volume pricing, no artwork fees"
+            "icon": "price-tag",
+            "title": "Badges as low as $4.99"
           }
         },
         {
           "type": "strength",
           "settings": {
-            "emoji": "✏️",
-            "title": "Design it live in minutes",
-            "description": "See exactly what you get before you buy"
+            "icon": "edit",
+            "title": "Design it live in minutes"
           }
         },
         {
           "type": "strength",
           "settings": {
-            "emoji": "🔁",
-            "title": "Reorder in one click",
-            "description": "Designs saved to your account"
+            "icon": "reorder",
+            "title": "Reorder in one click"
           }
         }
       ]

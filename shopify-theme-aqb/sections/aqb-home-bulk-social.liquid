@@ -1,0 +1,288 @@
+<section class="aqb-home-bs" id="aqb-home-bs-{{ section.id }}">
+  <div class="aqb-home-bs__inner">
+    <div class="aqb-home-bs__cards">
+      <article class="aqb-home-bs__card aqb-home-bs__card--bulk">
+        <div class="aqb-home-bs__card-body">
+          {%- if section.settings.bulk_heading != blank -%}
+            <h2 class="aqb-home-bs__card-title">{{ section.settings.bulk_heading | escape }}</h2>
+          {%- endif -%}
+
+          <ul class="aqb-home-bs__features list-unstyled" role="list">
+            {%- for block in section.blocks -%}
+              {%- if block.type == 'bulk_feature' -%}
+                <li class="aqb-home-bs__feature" {{ block.shopify_attributes }}>
+                  <span class="aqb-home-bs__check" aria-hidden="true">✓</span>
+                  {{ block.settings.text | escape }}
+                </li>
+              {%- endif -%}
+            {%- endfor -%}
+          </ul>
+
+          {%- if section.settings.bulk_button_label != blank -%}
+            <a href="{{ section.settings.bulk_button_link }}" class="aqb-home-bs__btn">
+              {{ section.settings.bulk_button_label | escape }}
+            </a>
+          {%- endif -%}
+        </div>
+
+        <div class="aqb-home-bs__card-media">
+          {%- if section.settings.bulk_image != blank -%}
+            {{
+              section.settings.bulk_image
+              | image_url: width: 900
+              | image_tag: loading: 'lazy', widths: '400,600,900', sizes: '(min-width: 990px) 280px, 45vw', alt: section.settings.bulk_image_alt
+            }}
+          {%- elsif section.settings.bulk_image_asset != blank -%}
+            <img
+              src="{{ section.settings.bulk_image_asset | asset_url }}"
+              alt="{{ section.settings.bulk_image_alt | escape }}"
+              width="560"
+              height="420"
+              loading="lazy"
+            >
+          {%- endif -%}
+        </div>
+      </article>
+
+      <article class="aqb-home-bs__card aqb-home-bs__card--reviews">
+        <div class="aqb-home-bs__card-body">
+          {%- if section.settings.reviews_heading != blank -%}
+            <h2 class="aqb-home-bs__card-title aqb-home-bs__card-title--navy">{{ section.settings.reviews_heading | escape }}</h2>
+          {%- endif -%}
+
+          {%- if section.settings.reviews_rating != blank -%}
+            <div class="aqb-home-bs__rating">
+              <span class="aqb-home-bs__stars" aria-hidden="true">★★★★★</span>
+              <span class="aqb-home-bs__rating-text">{{ section.settings.reviews_rating | escape }}</span>
+            </div>
+          {%- endif -%}
+
+          {%- if section.settings.reviews_quote != blank -%}
+            <blockquote class="aqb-home-bs__quote">
+              <p>{{ section.settings.reviews_quote | escape }}</p>
+            </blockquote>
+          {%- endif -%}
+
+          {%- if section.settings.reviews_attribution != blank -%}
+            <p class="aqb-home-bs__attribution">{{ section.settings.reviews_attribution | escape }}</p>
+          {%- endif -%}
+        </div>
+
+        <div class="aqb-home-bs__card-media">
+          {%- if section.settings.reviews_image != blank -%}
+            {{
+              section.settings.reviews_image
+              | image_url: width: 900
+              | image_tag: loading: 'lazy', widths: '400,600,900', sizes: '(min-width: 990px) 280px, 45vw', alt: section.settings.reviews_image_alt
+            }}
+          {%- elsif section.settings.reviews_image_asset != blank -%}
+            <img
+              src="{{ section.settings.reviews_image_asset | asset_url }}"
+              alt="{{ section.settings.reviews_image_alt | escape }}"
+              width="560"
+              height="420"
+              loading="lazy"
+            >
+          {%- endif -%}
+        </div>
+      </article>
+    </div>
+
+    {%- assign faq_blocks = section.blocks | where: 'type', 'faq' -%}
+    {%- if faq_blocks.size > 0 -%}
+      <div class="aqb-home-bs__faq">
+        {%- for block in faq_blocks -%}
+          <details class="aqb-home-bs__faq-item" {{ block.shopify_attributes }}>
+            <summary class="aqb-home-bs__faq-q">
+              <span>{{ block.settings.question | escape }}</span>
+              <span class="aqb-home-bs__faq-icon" aria-hidden="true">+</span>
+            </summary>
+            {%- if block.settings.answer != blank -%}
+              <div class="aqb-home-bs__faq-a">
+                <p>{{ block.settings.answer | escape }}</p>
+              </div>
+            {%- endif -%}
+          </details>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "AQB Bulk & Reviews",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Bulk ordering card"
+    },
+    {
+      "type": "text",
+      "id": "bulk_heading",
+      "label": "Heading",
+      "default": "Bulk Ordering Made Easy"
+    },
+    {
+      "type": "text",
+      "id": "bulk_button_label",
+      "label": "Button label",
+      "default": "Get Started with Bulk Ordering →"
+    },
+    {
+      "type": "url",
+      "id": "bulk_button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "image_picker",
+      "id": "bulk_image",
+      "label": "Bulk image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "bulk_image_asset",
+      "label": "Bulk image theme asset (fallback)",
+      "default": "aqb-home-bulk-order-form.png"
+    },
+    {
+      "type": "text",
+      "id": "bulk_image_alt",
+      "label": "Bulk image alt text",
+      "default": "Bulk order quote request form"
+    },
+    {
+      "type": "header",
+      "content": "Customer reviews card"
+    },
+    {
+      "type": "text",
+      "id": "reviews_heading",
+      "label": "Heading",
+      "default": "What our customers say"
+    },
+    {
+      "type": "text",
+      "id": "reviews_rating",
+      "label": "Rating line",
+      "default": "4.8/5 from 6,000+ reviews"
+    },
+    {
+      "type": "textarea",
+      "id": "reviews_quote",
+      "label": "Quote",
+      "default": "The live preview made it so easy to get exactly what we needed. Fast shipping and great quality!"
+    },
+    {
+      "type": "text",
+      "id": "reviews_attribution",
+      "label": "Attribution",
+      "default": "— Mark R., Business Owner"
+    },
+    {
+      "type": "image_picker",
+      "id": "reviews_image",
+      "label": "Reviews image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "reviews_image_asset",
+      "label": "Reviews image theme asset (fallback)",
+      "default": "aqb-home-reviews-badges.png"
+    },
+    {
+      "type": "text",
+      "id": "reviews_image_alt",
+      "label": "Reviews image alt text",
+      "default": "Assortment of custom name badges"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "bulk_feature",
+      "name": "Bulk feature",
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Text",
+          "default": "Upload employee lists"
+        }
+      ]
+    },
+    {
+      "type": "faq",
+      "name": "FAQ item",
+      "settings": [
+        {
+          "type": "text",
+          "id": "question",
+          "label": "Question",
+          "default": "What backing options do you offer?"
+        },
+        {
+          "type": "textarea",
+          "id": "answer",
+          "label": "Answer"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB Bulk & Reviews",
+      "blocks": [
+        { "type": "bulk_feature", "settings": { "text": "Upload employee lists" } },
+        { "type": "bulk_feature", "settings": { "text": "Create badges in bulk" } },
+        { "type": "bulk_feature", "settings": { "text": "Save templates" } },
+        { "type": "bulk_feature", "settings": { "text": "Reorder in one click" } },
+        { "type": "bulk_feature", "settings": { "text": "Volume discounts available" } },
+        {
+          "type": "faq",
+          "settings": {
+            "question": "What backing options do you offer?",
+            "answer": "Choose from magnetic backing, pin backing, or adhesive options depending on your preference. All backing types are shown in the design tool and on product pages."
+          }
+        },
+        {
+          "type": "faq",
+          "settings": {
+            "question": "How long does production take?",
+            "answer": "Most custom badge orders are produced and shipped within 2 business days of your order being placed."
+          }
+        },
+        {
+          "type": "faq",
+          "settings": {
+            "question": "Can I order badges in bulk?",
+            "answer": "Yes. For large team orders, conference orders, or ongoing corporate accounts, contact us for bulk order assistance and custom invoicing options."
+          }
+        },
+        {
+          "type": "faq",
+          "settings": {
+            "question": "Can I reorder badges later?",
+            "answer": "Absolutely. Your designs are saved to your account. Just log in, find your saved design, and reorder in one click."
+          }
+        },
+        {
+          "type": "faq",
+          "settings": {
+            "question": "Do you offer magnetic backing?",
+            "answer": "Yes — magnetic backing is available on most badge styles. Select it in the design tool or on the product page when configuring your order."
+          }
+        },
+        {
+          "type": "faq",
+          "settings": {
+            "question": "Are badges customized in the USA?",
+            "answer": "Yes. All Quality Badges are designed, printed, and shipped from our US facility."
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,17 +1,17 @@
 /* Bulk Orders landing page */
 :root,
 .aqb-bulk-orders-page {
-  --aqb-bo-navy: #0d1b2a;
-  --aqb-bo-navy2: #1a2f44;
-  --aqb-bo-gold: #c8962a;
-  --aqb-bo-gold-l: #e0ac42;
-  --aqb-bo-gold-p: #f5e6c0;
-  --aqb-bo-gold-pp: #fbf2de;
+  --aqb-bo-navy: #02132B;
+  --aqb-bo-navy2: #163356;
+  --aqb-bo-gold: #ED8918;
+  --aqb-bo-gold-l: #F3A248;
+  --aqb-bo-gold-p: #FFF3E5;
+  --aqb-bo-gold-pp: #FFF9EF;
   --aqb-bo-cream: #faf8f4;
   --aqb-bo-cream2: #f0ede6;
   --aqb-bo-white: #fefcf9;
-  --aqb-bo-border: rgba(13, 27, 42, 0.1);
-  --aqb-bo-text: #0d1b2a;
+  --aqb-bo-border: rgba(2, 19, 43, 0.1);
+  --aqb-bo-text: #02132B;
   --aqb-bo-text-m: #3a4f63;
   --aqb-bo-text-l: #7a8ea0;
   --aqb-bo-green: #2a9e72;
@@ -50,7 +50,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 60% 80% at 75% 50%, rgba(200, 150, 42, 0.1) 0%, transparent 70%);
+  background: radial-gradient(ellipse 60% 80% at 75% 50%, rgba(237, 137, 24, 0.1) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -150,7 +150,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: rgba(200, 150, 42, 0.2);
+  background: rgba(237, 137, 24, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -321,8 +321,8 @@
 }
 
 .aqb-bo-cat-card:hover {
-  border-color: rgba(200, 150, 42, 0.4);
-  box-shadow: 0 8px 28px rgba(13, 27, 42, 0.08);
+  border-color: rgba(237, 137, 24, 0.4);
+  box-shadow: 0 8px 28px rgba(2, 19, 43, 0.08);
   transform: translateY(-2px);
 }
 

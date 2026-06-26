@@ -1168,7 +1168,7 @@ const AqbBadgeStepSectionToggle: React.FC<AqbBadgeStepSectionToggleProps> = ({
             : visualState === "error"
             ? "bg-[#dc2626]"
             : visualState === "active"
-            ? "bg-[#0d1b2a]"
+            ? "bg-[#02132B]"
             : "bg-[#d4cec6]"
         }`}
       >
@@ -1184,7 +1184,7 @@ const AqbBadgeStepSectionToggle: React.FC<AqbBadgeStepSectionToggleProps> = ({
         className={
           visualState === "inactive"
             ? "min-w-0 truncate text-[14px] font-medium leading-none text-[#6b7f92]"
-            : "min-w-0 truncate text-[14px] font-semibold leading-none text-[#0d1b2a]"
+            : "min-w-0 truncate text-[14px] font-semibold leading-none text-[#02132B]"
         }
       >
         {title}
@@ -1196,14 +1196,14 @@ const AqbBadgeStepSectionToggle: React.FC<AqbBadgeStepSectionToggleProps> = ({
     <div className="flex shrink-0 items-center gap-1.5 pl-1">
       {summary ? (
         <span
-          className="max-w-[7rem] truncate text-[14px] font-semibold leading-none text-[#0d1b2a] sm:max-w-[11rem]"
+          className="max-w-[7rem] truncate text-[14px] font-semibold leading-none text-[#02132B] sm:max-w-[11rem]"
           title={summary}
         >
           {summary}
         </span>
       ) : null}
       <ChevronDownIcon
-        className={`h-2.5 w-2.5 shrink-0 text-[#6b7f92] transition-transform duration-200 group-hover:text-[#3a4f63] ${
+        className={`h-2.5 w-2.5 shrink-0 text-[#6b7f92] transition-transform duration-200 group-hover:text-[#1a3d5c] ${
           open ? "rotate-180" : ""
         }`}
         aria-hidden
@@ -6170,7 +6170,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       ) {
         return (
           <div className="flex h-full w-full flex-col items-center justify-center px-4 text-center text-xs leading-snug text-[#3A4F63]">
-            <p className="font-semibold text-[#0D1B2A]">
+            <p className="font-semibold text-[#02132B]">
               Preview photo not available for this color yet.
             </p>
             <p className="mt-1.5">
@@ -8659,7 +8659,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   return (
     <div
-      className={`aqb-redesign-root min-h-screen bg-[#F0EDE6] overflow-x-hidden text-sm leading-[1.55] text-[#0d1b2a] ${
+      className={`aqb-redesign-root min-h-screen bg-[#F0EDE6] overflow-x-hidden text-sm leading-[1.55] text-[#02132B] ${
         storeChromeless ? "pb-0" : "pb-8"
       }${embeddedMobileBadgeShell ? " aqb-embedded-mobile-shell" : ""}`}
     >
@@ -8760,7 +8760,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             </div>
           ) : null}
 
-          <div className="overflow-hidden rounded-lg border border-[rgba(13,27,42,0.1)] bg-white">
+          <div className="overflow-hidden rounded-lg border border-[rgba(2, 19, 43,0.1)] bg-white">
             {variant !== "badge" ? (
               <AqbPreviewPanelHeader
                 centered
@@ -8902,14 +8902,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
         {/* LEFT COLUMN - Controls */}
         <div
-          className={`aqb-left-panel w-full md:min-w-0 flex-1 min-h-0 md:max-h-[calc(100vh-48px)] md:self-start rounded-xl border border-[rgba(13,27,42,0.1)] bg-white shadow-[0_2px_12px_rgba(13,27,42,0.06)] flex flex-col ${
+          className={`aqb-left-panel w-full md:min-w-0 flex-1 min-h-0 md:max-h-[calc(100vh-48px)] md:self-start rounded-xl border border-[rgba(2, 19, 43,0.1)] bg-white shadow-[0_2px_12px_rgba(2, 19, 43,0.06)] flex flex-col ${
             variant === "badge"
               ? "max-md:overflow-hidden overflow-y-auto md:overflow-y-auto"
               : "overflow-y-auto"
           }`}
         >
           <div
-            className={`w-full shrink-0 flex-col border-b border-[rgba(13,27,42,0.1)] bg-[#F8F7F4] flex ${
+            className={`w-full shrink-0 flex-col border-b border-[rgba(2, 19, 43,0.1)] bg-[#F8F7F4] flex ${
               variant === "badge"
                 ? "gap-0 px-0 py-0 md:py-[14px]"
                 : "hidden gap-3 px-5 py-4 sm:px-6 md:flex"
@@ -8923,7 +8923,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               }`}
             >
               <div className="min-w-0 flex-1">
-                <h2 className="text-[14px] font-bold uppercase leading-tight tracking-[0.5px] text-[#0D1B2A]">
+                <h2 className="text-[14px] font-bold uppercase leading-tight tracking-[0.5px] text-[#02132B]">
                   {multipleBadges.length === 0
                     ? `Customize your ${config.labelProduct.toLowerCase()}`
                     : `Customize your ${config.labelProduct.toLowerCase()} — ${
@@ -8931,7 +8931,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       } of ${totalBadges}`}
                 </h2>
                 {multipleBadges.length > 0 && activeTemplate && (
-                  <span className="mt-0.5 block text-[14px] font-semibold leading-tight text-[#c8962a]">
+                  <span className="mt-0.5 block text-[14px] font-semibold leading-tight text-[#ED8918]">
                     {activeTemplate.name}
                   </span>
                 )}
@@ -8941,7 +8941,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             <div
               className={`flex w-full min-w-0 items-center gap-y-2 gap-x-0.5 sm:flex-nowrap sm:justify-between sm:gap-0 ${
                 variant === "badge"
-                  ? "aqb-badge-mobile-step-nav shrink-0 z-10 flex-nowrap border-b border-[rgba(13,27,42,0.1)] bg-[#F8F7F4] py-2.5 md:static md:border-0 md:bg-transparent md:py-0"
+                  ? "aqb-badge-mobile-step-nav shrink-0 z-10 flex-nowrap border-b border-[rgba(2, 19, 43,0.1)] bg-[#F8F7F4] py-2.5 md:static md:border-0 md:bg-transparent md:py-0"
                   : "flex-wrap"
               }`}
             >
@@ -9070,7 +9070,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             step.done
                               ? "bg-[#2D9E75] text-white"
                               : step.current
-                              ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
+                              ? "bg-[#02132B] text-white shadow-[0_0_0_3px_rgba(2, 19, 43,0.15)]"
                               : "bg-[#D4CEC6] text-white"
                           }`}
                         >
@@ -9254,7 +9254,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           circleDone
                             ? "bg-[#2D9E75] text-white"
                             : circleActive
-                            ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
+                            ? "bg-[#02132B] text-white shadow-[0_0_0_3px_rgba(2, 19, 43,0.15)]"
                             : "bg-[#D4CEC6] text-white"
                         }`}
                       >
@@ -9288,7 +9288,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             ? circleDone
                               ? "font-medium text-[#2d9e75]"
                               : circleActive
-                              ? "font-semibold text-[#0d1b2a]"
+                              ? "font-semibold text-[#02132B]"
                               : "font-medium text-[#6b7f92]"
                             : "text-gray-600"
                         }`}
@@ -9354,7 +9354,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             }`}
           >
             {variant === "badge" ? (
-              <div className="aqb-mobile-badge-editor-tools md:hidden overflow-hidden rounded-lg border border-[rgba(13,27,42,0.1)] bg-white mb-2">
+              <div className="aqb-mobile-badge-editor-tools md:hidden overflow-hidden rounded-lg border border-[rgba(2, 19, 43,0.1)] bg-white mb-2">
                 <AqbPreviewActionsRow {...previewActionsRowProps} />
                 {aqbBadgeToolActions ? (
                   <div className="shrink-0">{aqbBadgeToolActions}</div>
@@ -9378,7 +9378,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               ref={templateSectionRef}
               className={
                 variant === "badge"
-                  ? "w-full min-w-0 border-b border-[rgba(13,27,42,0.1)] md:scroll-mt-0"
+                  ? "w-full min-w-0 border-b border-[rgba(2, 19, 43,0.1)] md:scroll-mt-0"
                   : "mb-4"
               }
             >
@@ -9425,7 +9425,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full mb-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       {variant === "plaque"
                         ? "Step 1: Choose layout"
                         : "Step 1: Pick a template"}
@@ -9567,8 +9567,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                 type="button"
                                 className={`relative flex w-full flex-col overflow-hidden rounded-[9px] bg-white transition-all ${
                                   isSelected
-                                    ? "border-2 border-[#0d1b2a] shadow-[0_0_0_2px_rgba(13,27,42,0.08)]"
-                                    : "border-2 border-[rgba(13,27,42,0.1)] hover:border-[#3a4f63]"
+                                    ? "border-2 border-[#02132B] shadow-[0_0_0_2px_rgba(2, 19, 43,0.08)]"
+                                    : "border-2 border-[rgba(2, 19, 43,0.1)] hover:border-[#1a3d5c]"
                                 }`}
                                 onClick={() => {
                                   console.log(
@@ -9593,7 +9593,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                   />
                                 </div>
                                 <div className="shrink-0 bg-white px-3 pb-2.5 pt-1.5 text-center">
-                                  <div className="text-[14px] font-semibold leading-tight text-[#0d1b2a]">
+                                  <div className="text-[14px] font-semibold leading-tight text-[#02132B]">
                                     {t.name}
                                   </div>
                                   <div className="mt-0.5 hidden text-[14px] leading-snug text-[#6b7f92] md:block">
@@ -9941,7 +9941,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             onClick={() => setShowTemplateModal(true)}
                             className={
                               variant === "badge"
-                                ? "py-1 text-left text-sm font-medium text-[#c8962a] hover:underline"
+                                ? "py-1 text-left text-sm font-medium text-[#ED8918] hover:underline"
                                 : "py-1 text-right text-sm text-blue-600 underline hover:text-blue-800"
                             }
                           >
@@ -9986,7 +9986,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full mb-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       Step 2: Choose size
                     </h3>
                     {multipleBadges.length > 0 && (
@@ -10107,7 +10107,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full mb-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       Step 3: Choose award format
                     </h3>
                     {Boolean(badge.plaqueFormatId?.trim()) && (
@@ -10227,7 +10227,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full mb-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       Step 2: Size
                     </h3>
                     {selectedSignSizeTemplateId != null && (
@@ -10297,7 +10297,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             {variant === "badge" && needsBadgeStyleStep ? (
               <div
                 ref={badgeStyleSectionRef}
-                className="flex w-full min-w-0 flex-col border-b border-[rgba(13,27,42,0.1)]"
+                className="flex w-full min-w-0 flex-col border-b border-[rgba(2, 19, 43,0.1)]"
               >
                 {aqbBadgeStepHeaderModel?.style ? (
                   <AqbBadgeStepSectionToggle
@@ -10354,7 +10354,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               ref={backgroundSectionRef}
               className={
                 variant === "badge"
-                  ? "flex w-full min-w-0 flex-col border-b border-[rgba(13,27,42,0.1)]"
+                  ? "flex w-full min-w-0 flex-col border-b border-[rgba(2, 19, 43,0.1)]"
                   : "mb-6 flex w-full flex-col"
               }
             >
@@ -10428,7 +10428,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     className="mb-2 flex w-full items-center justify-between text-left"
                   >
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                      <h3 className="text-lg font-semibold text-[#02132B]">
                         {variant === "plaque"
                           ? plaqueAttachedSelected
                             ? "Step 4: Metal plate finish"
@@ -10648,7 +10648,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                         : undefined,
                                     )
                                   }
-                                  className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#0d1b2a] underline transition-colors hover:text-[#3a4f63]"
+                                  className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#02132B] underline transition-colors hover:text-[#1a3d5c]"
                                 >
                                   Apply icon choice to all badges
                                 </button>
@@ -10707,7 +10707,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                       <CheckIcon
                                         className={`h-3.5 w-3.5 stroke-[3] ${
                                           c.light
-                                            ? "text-[#0d1b2a]"
+                                            ? "text-[#02132B]"
                                             : "text-white"
                                         }`}
                                         aria-hidden
@@ -10794,7 +10794,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               <button
                                 type="button"
                                 onClick={applyBackgroundColorToAll}
-                                className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#0d1b2a] underline transition-colors hover:text-[#3a4f63]"
+                                className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#02132B] underline transition-colors hover:text-[#1a3d5c]"
                                 title={`Apply background color to all ${config.labelProductPlural.toLowerCase()}`}
                               >
                                 Apply background color to all{" "}
@@ -10812,7 +10812,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                         : undefined,
                                     )
                                   }
-                                  className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#0d1b2a] underline transition-colors hover:text-[#3a4f63]"
+                                  className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#02132B] underline transition-colors hover:text-[#1a3d5c]"
                                 >
                                   Apply icon choice to all badges
                                 </button>
@@ -11034,7 +11034,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full mb-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       Step 4: Border
                     </h3>
                     {signBorderConfigured && (
@@ -11374,7 +11374,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full mb-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       {requiresPlaqueLogo
                         ? plaqueAttachedSelected
                           ? "Step 5: Upload icon"
@@ -11504,7 +11504,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               ref={textLinesSectionRef}
               className={
                 variant === "badge"
-                  ? "w-full min-w-0 border-b border-[rgba(13,27,42,0.1)]"
+                  ? "w-full min-w-0 border-b border-[rgba(2, 19, 43,0.1)]"
                   : "mb-4"
               }
             >
@@ -11597,7 +11597,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="mb-2 flex w-full items-center justify-between text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       {variant === "plaque"
                         ? plaqueAttachedSelected
                           ? "Step 6: Enter your text"
@@ -11790,7 +11790,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     className="flex items-center justify-between w-full mb-2 text-left"
                   >
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                      <h3 className="text-lg font-semibold text-[#02132B]">
                         {signBorderStepRequired
                           ? "Step 6: Image or logo (optional)"
                           : "Step 5: Image or logo (optional)"}
@@ -11907,7 +11907,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 ref={backingSectionRef}
                 className={
                   variant === "badge"
-                    ? `w-full min-w-0 border-b border-[rgba(13,27,42,0.1)]${
+                    ? `w-full min-w-0 border-b border-[rgba(2, 19, 43,0.1)]${
                         sectionsOpen.backing ? " relative z-20" : ""
                       }`
                     : "mb-4"
@@ -11967,7 +11967,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     className="mb-2 flex w-full items-center justify-between text-left"
                   >
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                      <h3 className="text-lg font-semibold text-[#02132B]">
                         Step 4: Choose badge attachment
                       </h3>
                       {sectionsOpened.backing && (
@@ -12119,7 +12119,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full mb-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       Border
                     </h3>
                     {sectionsOpened.border && (
@@ -12166,7 +12166,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             )}
 
             {variant !== "badge" ? (
-              <div className="mb-4 flex flex-wrap items-start justify-center gap-2 border-t border-[rgba(13,27,42,0.08)] bg-[#faf8f4] -mx-4 px-4 py-3 md:-mx-5 md:px-5 md:gap-3">
+              <div className="mb-4 flex flex-wrap items-start justify-center gap-2 border-t border-[rgba(2, 19, 43,0.08)] bg-[#faf8f4] -mx-4 px-4 py-3 md:-mx-5 md:px-5 md:gap-3">
                 <div className="flex flex-col items-center gap-1">
                   <button
                     className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors disabled:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -12284,9 +12284,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
             {/* Save / Add to cart (non-badge; badge uses toolbar + right-panel ATC) */}
             {variant !== "badge" ? (
-              <div className="mt-2 mb-4 flex flex-wrap justify-end gap-2 border-t border-[rgba(13,27,42,0.08)] pt-4">
+              <div className="mt-2 mb-4 flex flex-wrap justify-end gap-2 border-t border-[rgba(2, 19, 43,0.08)] pt-4">
                 <button
-                  className="rounded-lg border border-[rgba(13,27,42,0.15)] bg-white px-4 py-2 text-sm font-medium text-[#0d1b2a] shadow-sm hover:bg-[#faf8f4] transition-colors"
+                  className="rounded-lg border border-[rgba(2, 19, 43,0.15)] bg-white px-4 py-2 text-sm font-medium text-[#02132B] shadow-sm hover:bg-[#faf8f4] transition-colors"
                   onClick={(e) => {
                     e.preventDefault();
                     saveBadge();
@@ -12297,7 +12297,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 <button
                   type="button"
                   title="Log in to load a previous design"
-                  className="rounded-lg border border-[rgba(13,27,42,0.15)] bg-white px-4 py-2 text-sm font-medium text-[#0d1b2a] shadow-sm hover:bg-[#faf8f4] transition-colors"
+                  className="rounded-lg border border-[rgba(2, 19, 43,0.15)] bg-white px-4 py-2 text-sm font-medium text-[#02132B] shadow-sm hover:bg-[#faf8f4] transition-colors"
                   onClick={(e) => {
                     e.preventDefault();
                     onLoadDesignClick();
@@ -12309,7 +12309,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className={`px-5 py-2.5 rounded-lg text-base font-bold shadow-sm transition-opacity ${
                     isAddingToCart || isGeneratingDesigns || !stepsComplete
                       ? "bg-[#9ca3af] text-white cursor-not-allowed"
-                      : "bg-[#c8962a] text-[#0d1b2a] hover:opacity-90"
+                      : "bg-[#ED8918] text-[#02132B] hover:opacity-90"
                   }`}
                   onClick={(e) => {
                     e.preventDefault();
@@ -12363,7 +12363,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         }}
                         className="flex items-center justify-between w-full mb-2 text-left"
                       >
-                        <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                        <h3 className="text-lg font-semibold text-[#02132B]">
                           Export Options
                         </h3>
                         {sectionsOpen.export ? (
@@ -12641,8 +12641,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               : ""
           }`}
         >
-          <div className="rounded-xl border border-[rgba(13,27,42,0.1)] bg-white overflow-hidden shadow-[0_2px_12px_rgba(13,27,42,0.06)] w-full flex flex-col min-h-0">
-            <div className="border-b border-[rgba(13,27,42,0.08)] bg-[#F8F7F4]">
+          <div className="rounded-xl border border-[rgba(2, 19, 43,0.1)] bg-white overflow-hidden shadow-[0_2px_12px_rgba(2, 19, 43,0.06)] w-full flex flex-col min-h-0">
+            <div className="border-b border-[rgba(2, 19, 43,0.08)] bg-[#F8F7F4]">
               <AqbPreviewPanelHeader
                 title={
                   variant === "badge"
@@ -12767,7 +12767,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     {/* Current badge being edited */}
                     <div className="flex w-full flex-shrink-0 flex-col items-center">
                       <div
-                        className="font-semibold text-[#0d1b2a] mb-1"
+                        className="font-semibold text-[#02132B] mb-1"
                         style={{
                           fontSize: `${DESIGNER_UI_TYPOGRAPHY.nowEditingFontRem}rem`,
                         }}
@@ -12791,7 +12791,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           p.badge.backgroundColor,
                         );
                         return (
-                          <div className="relative w-full border-2 border-[rgba(13,27,42,0.2)] rounded-lg bg-white/80 pt-2 pb-3 px-1 flex-shrink-0 shadow-sm">
+                          <div className="relative w-full border-2 border-[rgba(2, 19, 43,0.2)] rounded-lg bg-white/80 pt-2 pb-3 px-1 flex-shrink-0 shadow-sm">
                             {variant !== "badge" ? (
                               <div className="absolute z-20 left-2 top-2 flex items-center gap-1.5">
                                 <button
@@ -13077,28 +13077,28 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     (l.text ?? "").trim(),
                   ).length;
                   return (
-                    <div className="border-t border-[rgba(13,27,42,0.08)] bg-white px-4 py-3 space-y-1.5 text-[14px]">
+                    <div className="border-t border-[rgba(2, 19, 43,0.08)] bg-white px-4 py-3 space-y-1.5 text-[14px]">
                       <div className="flex justify-between gap-2">
                         <span className="text-[#6b7f92]">Shape</span>
-                        <span className="font-medium text-[#0d1b2a] text-right">
+                        <span className="font-medium text-[#02132B] text-right">
                           {activeTemplate?.name ?? "—"}
                         </span>
                       </div>
                       <div className="flex justify-between gap-2">
                         <span className="text-[#6b7f92]">Background</span>
-                        <span className="font-medium text-[#0d1b2a] text-right">
+                        <span className="font-medium text-[#02132B] text-right">
                           {bgName}
                         </span>
                       </div>
                       <div className="flex justify-between gap-2">
                         <span className="text-[#6b7f92]">Lines of text</span>
-                        <span className="font-medium text-[#0d1b2a]">
+                        <span className="font-medium text-[#02132B]">
                           {lineCount} line{lineCount === 1 ? "" : "s"}
                         </span>
                       </div>
                       <div className="flex justify-between gap-2">
                         <span className="text-[#6b7f92]">Backing</span>
-                        <span className="font-medium text-[#0d1b2a] text-right">
+                        <span className="font-medium text-[#02132B] text-right">
                           {backingStr}
                         </span>
                       </div>
@@ -13107,7 +13107,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           <span className="text-[#6b7f92]">
                             Badges in order
                           </span>
-                          <span className="font-semibold text-[#c8962a] text-right">
+                          <span className="font-semibold text-[#ED8918] text-right">
                             {badgeOrderQty} badge
                             {badgeOrderQty === 1 ? "" : "s"}
                             {multipleBadges.length > 1
@@ -13116,12 +13116,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           </span>
                         </div>
                       ) : null}
-                      <div className="h-px bg-[rgba(13,27,42,0.08)] my-1" />
+                      <div className="h-px bg-[rgba(2, 19, 43,0.08)] my-1" />
                       <div className="flex justify-between gap-2">
                         <span className="text-[#6b7f92]">
                           Designs in editor
                         </span>
-                        <span className="font-semibold text-[#c8962a]">
+                        <span className="font-semibold text-[#ED8918]">
                           {multipleBadges.length}{" "}
                           {multipleBadges.length === 1
                             ? config.labelProduct.toLowerCase()
@@ -13133,10 +13133,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 })()
               : null}
             <div className="px-4 pb-4 space-y-3">
-              <div className="rounded-xl bg-[#0d1b2a] px-4 py-4 text-white">
+              <div className="rounded-xl bg-[#02132B] px-4 py-4 text-white">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0 flex-1">
-                    <div className="text-[26px] md:text-[28px] font-bold text-[#e0ac42] leading-none tracking-tight">
+                    <div className="text-[26px] md:text-[28px] font-bold text-[#F5A84D] leading-none tracking-tight">
                       {addToCartPriceLabel}
                     </div>
                     <p className="text-[14px] text-white/35 mt-2 leading-snug">
@@ -13217,30 +13217,30 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 </button>
               </div>
               {variant !== "badge" ? (
-                <div className="rounded-lg border border-[rgba(13,27,42,0.1)] bg-white px-3 py-3 space-y-2">
-                  <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
+                <div className="rounded-lg border border-[rgba(2, 19, 43,0.1)] bg-white px-3 py-3 space-y-2">
+                  <div className="flex items-start gap-2 text-[14px] text-[#1a3d5c] leading-snug">
                     <TruckIcon className="h-4 w-4 shrink-0 text-[#2d9e75] mt-0.5" />
                     <span>
                       Free USA shipping on many badge orders — final rates in
                       cart.
                     </span>
                   </div>
-                  <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
-                    <BoltIcon className="h-4 w-4 shrink-0 text-[#c8962a] mt-0.5" />
+                  <div className="flex items-start gap-2 text-[14px] text-[#1a3d5c] leading-snug">
+                    <BoltIcon className="h-4 w-4 shrink-0 text-[#ED8918] mt-0.5" />
                     <span>
                       Fast production — most custom badges ship within two
                       business days.
                     </span>
                   </div>
-                  <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
-                    <PencilSquareIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
+                  <div className="flex items-start gap-2 text-[14px] text-[#1a3d5c] leading-snug">
+                    <PencilSquareIcon className="h-4 w-4 shrink-0 text-[#1a3d5c] mt-0.5" />
                     <span>
                       Print-ready artwork is generated automatically when you
                       check out.
                     </span>
                   </div>
-                  <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
-                    <UserIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
+                  <div className="flex items-start gap-2 text-[14px] text-[#1a3d5c] leading-snug">
+                    <UserIcon className="h-4 w-4 shrink-0 text-[#1a3d5c] mt-0.5" />
                     <span>
                       Sign in on the storefront to save drafts and reorder
                       faster.
@@ -13250,7 +13250,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               ) : null}
               {variant !== "badge" ? (
                 <p className="text-[14px] leading-snug text-[#6b7f92] px-0.5">
-                  <strong className="text-[#3a4f63]">
+                  <strong className="text-[#1a3d5c]">
                     {BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE}
                   </strong>{" "}
                   On-screen colors are a guide; finished badges may vary
@@ -13263,7 +13263,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
         {/* MOBILE: Step progress bar (non-badge variants only; badge uses steps in editor header) */}
         {variant !== "badge" ? (
-        <div className="flex-shrink-0 md:hidden w-full border-t border-[rgba(13,27,42,0.08)] bg-white px-4 py-3">
+        <div className="flex-shrink-0 md:hidden w-full border-t border-[rgba(2, 19, 43,0.08)] bg-white px-4 py-3">
           <div className="flex items-center justify-center gap-4 w-full">
             {(() => {
               const signBgReady =
@@ -13389,7 +13389,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           step.done
                             ? "bg-[#2D9E75] text-white"
                             : step.current
-                            ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
+                            ? "bg-[#02132B] text-white shadow-[0_0_0_3px_rgba(2, 19, 43,0.15)]"
                             : "bg-[#D4CEC6] text-white"
                         }`}
                       >
@@ -13494,7 +13494,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         step.done
                           ? "bg-[#2D9E75] text-white"
                           : step.current
-                          ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
+                          ? "bg-[#02132B] text-white shadow-[0_0_0_3px_rgba(2, 19, 43,0.15)]"
                           : "bg-[#D4CEC6] text-white"
                       }`}
                     >
