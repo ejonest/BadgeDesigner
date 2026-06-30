@@ -1,5 +1,6 @@
 // app/utils/renderSvg.ts
 import type { LoadedTemplate } from "~/utils/templates";
+import { layoutAqbPresetTextLines } from "~/utils/aqbBadgeTextSize";
 import type {
   Badge,
   BadgeImage,
@@ -48,10 +49,10 @@ import {
   renderBadgeIconLayer,
 } from "~/utils/badgeIconRender";
 import {
-  resolveBlankBadgePhoto,
   resolvePhotoTextRect,
   type ResolvedBlankBadgePhoto,
 } from "~/utils/badgeBlankPhotos";
+import { resolveBadgePlatePhoto } from "~/utils/badgeCustomBackgrounds";
 import { inlineBadgeBlankPhotoSrc } from "~/utils/inlineBadgePhoto";
 import { signTemplateSupportsUserLogoUpload } from "~/utils/signLogoPlacement";
 import {
@@ -117,6 +118,11 @@ type RenderOpts = {
    * so solid colors work but brushed-metal gradients vanish.
    */
   svgDefScopeId?: string;
+  /**
+   * Redesigned badge tool: render text at exact Small/Medium/Large preset px inside the
+   * calibrated photo text box (no calculateTextLayout fractional shrink).
+   */
+  aqbPresetTextLayout?: boolean;
 };
 
 export type { RenderOpts };
@@ -240,7 +246,7 @@ export function getBadgePreviewDesignBox(
   template: LoadedTemplate,
   badge: Badge,
 ): { x: number; y: number; width: number; height: number } {
-  const photo = resolveBlankBadgePhoto(template.id, badge.backgroundColor);
+  const photo = resolveBadgePlatePhoto(template.id, badge);
   if (photo) {
     return resolvePhotoTextRect(photo, badge.badgeIconId);
   }
@@ -256,7 +262,7 @@ function resolvePhotoPlateForRender(
   if (isPlaqueTemplateId(template.id)) return null;
   if (template.signTextLayout) return null;
   if (opts.photoPlateOverride) return opts.photoPlateOverride;
-  return resolveBlankBadgePhoto(template.id, badge.backgroundColor);
+  return resolveBadgePlatePhoto(template.id, badge);
 }
 
 function buildRectClipPathMarkup(
@@ -285,15 +291,21 @@ function renderBadgePhotoPlateSvg(
   const designBox = resolvePhotoTextRect(photo, badge.badgeIconId);
   const clipId = clipPathIdForSvg(opts, badge);
 
-  const lineLayout = calculateTextLayout(
-    badge.lines || [],
-    designBox,
-    template,
-    fontMappings,
-    badge,
-    undefined,
-    photo.iconRect,
-  );
+  const lineLayout = opts.aqbPresetTextLayout
+    ? layoutAqbPresetTextLines(
+        badge.lines || [],
+        designBox,
+        fontMappings,
+      )
+    : calculateTextLayout(
+        badge.lines || [],
+        designBox,
+        template,
+        fontMappings,
+        badge,
+        undefined,
+        photo.iconRect,
+      );
 
   const badgeIconLayer = renderBadgeIconLayer(
     badge.badgeIconId,
@@ -311,9 +323,9 @@ function renderBadgePhotoPlateSvg(
       return `<text x="${item.x}" y="${item.y}" font-size="${
         item.fontSize
       }" text-anchor="${item.anchor}"
-              dominant-baseline="middle" font-family="${
-                item.familyEscaped
-              }" fill="${color}"
+              dominant-baseline="middle" font-family="${esc(
+                item.familyRaw,
+              )}" fill="${color}"
               font-weight="${item.fontWeight}"
               font-style="${item.fontStyle}"
               text-decoration="${textDecoration}">${esc(

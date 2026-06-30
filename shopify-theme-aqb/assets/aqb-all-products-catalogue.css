@@ -1,13 +1,13 @@
 :root,
 .template-collection-handle-all .content-for-layout {
-  --aqb-ap-navy: #0d1b2a;
-  --aqb-ap-gold: #c8962a;
-  --aqb-ap-gold-l: #e0ac42;
+  --aqb-ap-navy: #02132B;
+  --aqb-ap-gold: #ED8918;
+  --aqb-ap-gold-l: #F3A248;
   --aqb-ap-cream: #faf8f4;
   --aqb-ap-cream2: #f0ede6;
   --aqb-ap-white: #fefcf9;
-  --aqb-ap-border: rgba(13, 27, 42, 0.1);
-  --aqb-ap-text: #0d1b2a;
+  --aqb-ap-border: rgba(2, 19, 43, 0.1);
+  --aqb-ap-text: #02132B;
   --aqb-ap-text-m: #3a4f63;
   --aqb-ap-text-l: #7a8ea0;
   --aqb-ap-green: #2a9e72;
@@ -287,7 +287,7 @@
   display: none !important;
 }
 .aqb-ap-card:hover {
-  box-shadow: 0 8px 28px rgba(13, 27, 42, 0.1);
+  box-shadow: 0 8px 28px rgba(2, 19, 43, 0.1);
   transform: translateY(-2px);
 }
 .aqb-ap-card__image {
@@ -429,7 +429,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(13, 27, 42, 0.2);
+  box-shadow: 0 4px 12px rgba(2, 19, 43, 0.2);
 }
 .aqb-ap-scroll-controls.is-at-top #all-products-scroll-top,
 .aqb-ap-scroll-controls.is-at-bottom #all-products-scroll-bottom {

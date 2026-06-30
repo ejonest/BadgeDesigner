@@ -209,8 +209,24 @@ import {
 } from "~/utils/badgeColorContrast";
 import {
   badgeColorHasPhoto,
-  resolveBlankBadgePhoto,
 } from "~/utils/badgeBlankPhotos";
+import {
+  badgeTemplateHasStyleStep,
+  getCustomBackgroundDisplayName,
+  getCustomBadgeBackgroundById,
+  resolveBadgePlatePhoto,
+} from "~/utils/badgeCustomBackgrounds";
+import { AqbBadgeStylePicker } from "~/components/AqbBadgeStylePicker";
+import {
+  aqbPresetIndex,
+  aqbPresetToSizeNorm,
+  fitAqbBadgeLinesToPresets,
+  getDefaultAqbSizePresetForLine,
+  nearestAqbSizePreset,
+  aqbSizeNormToPx,
+  aqbBadgeHasTextOverflow,
+  refitAqbBadgeLinesForLayoutChange,
+} from "~/utils/aqbBadgeTextSize";
 import {
   PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
   isFeaturedBrushedMetalPlateColor,
@@ -1111,11 +1127,13 @@ function DesktopPreviewDimensionFrame({
 }
 
 /** Reference step header: grey / black / green circle + summary (same navy as titles) + chevron (badge redesign only). */
-type AqbBadgeStepVisualState = "done" | "active" | "inactive";
+type AqbBadgeStepVisualState = "done" | "active" | "inactive" | "error";
 
 interface AqbBadgeStepSectionToggleProps {
   buttonRef?: React.Ref<HTMLButtonElement>;
   stepNumber: number;
+  /** When set, shown in the step circle instead of stepNumber (e.g. "1b"). */
+  stepLabel?: string;
   visualState: AqbBadgeStepVisualState;
   title: string;
   summary: string | null;
@@ -1128,6 +1146,7 @@ interface AqbBadgeStepSectionToggleProps {
 const AqbBadgeStepSectionToggle: React.FC<AqbBadgeStepSectionToggleProps> = ({
   buttonRef,
   stepNumber,
+  stepLabel,
   visualState,
   title,
   summary,
@@ -1146,22 +1165,26 @@ const AqbBadgeStepSectionToggle: React.FC<AqbBadgeStepSectionToggleProps> = ({
         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold leading-none text-white ${
           visualState === "done"
             ? "bg-[#2d9e75]"
+            : visualState === "error"
+            ? "bg-[#dc2626]"
             : visualState === "active"
-            ? "bg-[#0d1b2a]"
+            ? "bg-[#02132B]"
             : "bg-[#d4cec6]"
         }`}
       >
         {visualState === "done" ? (
           <CheckIcon className="h-3 w-3 stroke-[2.5]" aria-hidden />
+        ) : visualState === "error" ? (
+          <XMarkIcon className="h-3 w-3 stroke-[2.5]" aria-hidden />
         ) : (
-          <span className="leading-none">{stepNumber}</span>
+          <span className="leading-none">{stepLabel ?? stepNumber}</span>
         )}
       </div>
       <span
         className={
           visualState === "inactive"
             ? "min-w-0 truncate text-[14px] font-medium leading-none text-[#6b7f92]"
-            : "min-w-0 truncate text-[14px] font-semibold leading-none text-[#0d1b2a]"
+            : "min-w-0 truncate text-[14px] font-semibold leading-none text-[#02132B]"
         }
       >
         {title}
@@ -1173,14 +1196,14 @@ const AqbBadgeStepSectionToggle: React.FC<AqbBadgeStepSectionToggleProps> = ({
     <div className="flex shrink-0 items-center gap-1.5 pl-1">
       {summary ? (
         <span
-          className="max-w-[7rem] truncate text-[14px] font-semibold leading-none text-[#0d1b2a] sm:max-w-[11rem]"
+          className="max-w-[7rem] truncate text-[14px] font-semibold leading-none text-[#02132B] sm:max-w-[11rem]"
           title={summary}
         >
           {summary}
         </span>
       ) : null}
       <ChevronDownIcon
-        className={`h-2.5 w-2.5 shrink-0 text-[#6b7f92] transition-transform duration-200 group-hover:text-[#3a4f63] ${
+        className={`h-2.5 w-2.5 shrink-0 text-[#6b7f92] transition-transform duration-200 group-hover:text-[#1a3d5c] ${
           open ? "rotate-180" : ""
         }`}
         aria-hidden
@@ -1881,6 +1904,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     const updatedBadge = {
       ...badge,
       backgroundColor: colorValue,
+      customBadgeBackgroundId: undefined,
     };
     console.log(`[COLOR TRACKING] Background color changed to: ${colorValue}`);
     setBadge(updatedBadge);
@@ -1907,6 +1931,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           template: false,
           size: false,
           export: false,
+          badgeStyle: false,
           background: false,
           textLines: false,
           backing: false,
@@ -1922,6 +1947,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           template: false,
           size: false,
           export: false,
+          badgeStyle: false,
           background: false,
           textLines: false,
           backing: false,
@@ -1936,6 +1962,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           template: false,
           size: false,
           export: false,
+          badgeStyle: false,
           background: false,
           textLines: true,
           backing: false,
@@ -1989,6 +2016,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     const updatedBadge = {
       ...badge,
       backgroundColor: colorValue,
+      customBadgeBackgroundId: undefined,
       lines: updatedLines,
     };
     setBadge(updatedBadge);
@@ -2013,6 +2041,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           template: false,
           size: false,
           export: false,
+          badgeStyle: false,
           background: false,
           textLines: false,
           backing: false,
@@ -2028,6 +2057,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           template: false,
           size: false,
           export: false,
+          badgeStyle: false,
           background: false,
           textLines: false,
           backing: false,
@@ -2042,6 +2072,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           template: false,
           size: false,
           export: false,
+          badgeStyle: false,
           background: false,
           textLines: true,
           backing: false,
@@ -2054,6 +2085,95 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         }));
       }
       guidedFlowCompletedRef.current = true;
+    }
+  };
+
+  const syncBadgeStyleToMultiple = (updatedBadge: Badge) => {
+    setBadge(updatedBadge);
+    const updatedMultipleBadges = [...multipleBadges];
+    if (updatedMultipleBadges[selectedBadgeIndex]) {
+      updatedMultipleBadges[selectedBadgeIndex] = updatedBadge;
+      setMultipleBadges(updatedMultipleBadges);
+    }
+    if (selectedBadgeIndex === 0) {
+      setBadge1Data(updatedBadge);
+    }
+  };
+
+  const applyBadgeStylePlain = () => {
+    saveToUndoHistory({
+      type: "background-color",
+      badgeIndex: selectedBadgeIndex,
+    });
+    setHasChosenBadgeStyle(true);
+    setHasChosenBackgroundColor(false);
+    syncBadgeStyleToMultiple({
+      ...badge,
+      customBadgeBackgroundId: undefined,
+    });
+    setSectionsOpen({
+      template: false,
+      size: false,
+      export: false,
+      badgeStyle: false,
+      background: true,
+      textLines: false,
+      backing: false,
+      border: false,
+      plaqueFormat: false,
+    });
+    setSectionsOpened((prev) => ({
+      ...prev,
+      badgeStyle: true,
+      background: true,
+    }));
+  };
+
+  const applyBadgeStyleCustom = (backgroundId: string) => {
+    const entry = getCustomBadgeBackgroundById(backgroundId);
+    if (!entry || entry.templateId !== universalTemplateId) return;
+
+    saveToUndoHistory({
+      type: "background-color",
+      badgeIndex: selectedBadgeIndex,
+    });
+    setHasChosenBadgeStyle(true);
+    setHasChosenBackgroundColor(true);
+    syncBadgeStyleToMultiple({
+      ...badge,
+      customBadgeBackgroundId: backgroundId,
+    });
+
+    if (!guidedFlowCompletedRef.current) {
+      setSectionsOpen({
+        template: false,
+        size: false,
+        export: false,
+        badgeStyle: false,
+        background: true,
+        textLines: false,
+        backing: false,
+        border: false,
+        plaqueFormat: false,
+      });
+      setSectionsOpened((prev) => ({
+        ...prev,
+        badgeStyle: true,
+        background: true,
+      }));
+    } else {
+      setSectionsOpen({
+        template: false,
+        size: false,
+        export: false,
+        badgeStyle: false,
+        background: false,
+        textLines: false,
+        backing: false,
+        border: false,
+        plaqueFormat: false,
+      });
+      setSectionsOpened((prev) => ({ ...prev, badgeStyle: true }));
     }
   };
 
@@ -2129,9 +2249,36 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     });
   };
 
+  const applyAqbBadgeIconChange = (
+    base: Badge,
+    iconId: BadgeIconId | undefined,
+  ): Badge => {
+    if (variant !== "badge" || !badgeTemplateSupportsIcon(universalTemplateId)) {
+      return { ...base, badgeIconId: iconId };
+    }
+    const proto: Badge = { ...base, badgeIconId: iconId };
+    const tpl = templates.find(
+      (t) => t.id === (base.templateId ?? universalTemplateId),
+    );
+    if (!tpl) return proto;
+    const designBox = getBadgePreviewDesignBox(tpl, proto);
+    const { lines, charLimitLineIndices } = refitAqbBadgeLinesForLayoutChange(
+      base.lines,
+      designBox,
+      proto,
+      universalTemplateId,
+    );
+    setAqbLayoutCharLimitByLine(() => {
+      const next: Record<number, boolean> = {};
+      for (const i of charLimitLineIndices) next[i] = true;
+      return next;
+    });
+    return { ...proto, lines: calculateCenterPositions(lines) };
+  };
+
   const setBadgeIconForCurrent = (iconId: BadgeIconId | undefined) => {
     if (!badgeTemplateSupportsIcon(universalTemplateId)) return;
-    const next: Badge = { ...badge, badgeIconId: iconId };
+    const next = applyAqbBadgeIconChange(badge, iconId);
     setBadge(next);
     const updatedMultipleBadges = [...multipleBadges];
     if (updatedMultipleBadges[selectedBadgeIndex]) {
@@ -2145,13 +2292,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   const applyBadgeIconToAll = (iconId: BadgeIconId | undefined) => {
     if (!badgeTemplateSupportsIcon(universalTemplateId)) return;
-    const updatedMultipleBadges = multipleBadges.map((b: Badge) => ({
-      ...b,
-      badgeIconId: iconId,
-    }));
+    const updatedMultipleBadges = multipleBadges.map((b: Badge) =>
+      applyAqbBadgeIconChange(b, iconId),
+    );
     setMultipleBadges(updatedMultipleBadges);
     const cur = updatedMultipleBadges[selectedBadgeIndex] ?? badge;
-    setBadge({ ...cur, badgeIconId: iconId });
+    setBadge(cur);
     if (updatedMultipleBadges[0]) {
       setBadge1Data(updatedMultipleBadges[0]);
     }
@@ -2341,6 +2487,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   });
   const [hasChosenBackgroundColor, setHasChosenBackgroundColor] =
     useState(false);
+  const [hasChosenBadgeStyle, setHasChosenBadgeStyle] = useState(false);
+  const [aqbLayoutCharLimitByLine, setAqbLayoutCharLimitByLine] = useState<
+    Record<number, boolean>
+  >({});
   const [templates, setTemplates] = useState<LoadedTemplate[]>([]);
   /** Raw SVG markup for template picker thumbnails (badge photos need inline SVG, not data-URL img). */
   const [templatePreviewSvgs, setTemplatePreviewSvgs] = useState<
@@ -2608,6 +2758,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     template: boolean;
     size: boolean;
     export: boolean;
+    badgeStyle: boolean;
     background: boolean;
     textLines: boolean;
     backing: boolean;
@@ -2618,6 +2769,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     template: true,
     size: false,
     export: false,
+    badgeStyle: false,
     background: false,
     textLines: false,
     backing: false,
@@ -2629,6 +2781,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     template: false,
     size: false,
     export: false,
+    badgeStyle: false,
     background: false,
     textLines: false,
     backing: false,
@@ -2735,6 +2888,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       const t0 = (badge.lines[0]?.text || "").trim();
       return t0 !== "" && t0 !== getStep3DefaultText(0);
     })();
+
   /** Attached plate or detached-photo layout: user must upload an image before the design is complete. */
   const requiresPlaqueLogo =
     variant === "plaque" &&
@@ -2744,11 +2898,34 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         badge.templateId,
         universalTemplateId,
       ));
+
+  const badgeAqbTextOverflow = useMemo(() => {
+    if (variant !== "badge") return false;
+    const tpl = templates.find((t) => t.id === universalTemplateId);
+    if (!tpl) return false;
+    return aqbBadgeHasTextOverflow(
+      badge.lines,
+      getBadgePreviewDesignBox(tpl, badge),
+      badge,
+      universalTemplateId,
+    );
+  }, [variant, templates, universalTemplateId, badge]);
+
+  const hasAqbCharLimitBlock = useMemo(
+    () => Object.values(aqbLayoutCharLimitByLine).some(Boolean),
+    [aqbLayoutCharLimitByLine],
+  );
+
+  const hasStep3TextValid =
+    hasStep3TextEntered &&
+    (variant !== "badge" ||
+      (!badgeAqbTextOverflow && !hasAqbCharLimitBlock));
+
   const stepsComplete =
     multipleBadges.length > 0 &&
     hasChosenBackgroundColor &&
     (!requiresPlaqueLogo || Boolean(badge.logo?.src?.trim())) &&
-    hasStep3TextEntered &&
+    hasStep3TextValid &&
     (config.hasBacking ? sectionsOpened.backing : true) &&
     (variant === "plaque"
       ? selectedPlaqueSize != null &&
@@ -2759,6 +2936,26 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     (signBorderStepRequired ? signBorderConfigured : true);
 
   /** Returns message like "Please complete steps (1)" or "Please complete steps (1-4)" for step-guard alerts. When opening step N, pass forStep = N so only steps 1..N-1 are required. */
+  const needsBadgeStyleStep =
+    variant === "badge" && badgeTemplateHasStyleStep(universalTemplateId);
+
+  const badgeStyleSelection = useMemo((): "plain" | string | null => {
+    if (!needsBadgeStyleStep || !hasChosenBadgeStyle) return null;
+    return badge.customBadgeBackgroundId ?? "plain";
+  }, [
+    needsBadgeStyleStep,
+    hasChosenBadgeStyle,
+    badge.customBadgeBackgroundId,
+  ]);
+
+  const badgeBackgroundStepGuard = needsBadgeStyleStep ? 3 : 2;
+  const badgeTextStepGuard = needsBadgeStyleStep ? 4 : 3;
+  const badgeBackingStepGuard = needsBadgeStyleStep ? 5 : 4;
+
+  const badgeBackgroundStepTitle = badgeTemplateSupportsIcon(universalTemplateId)
+    ? "Step 2: Background color & icon"
+    : "Step 2: Pick a background color";
+
   const getIncompleteStepsMessage = (
     forStep: 2 | 3 | 4 | 5 | 6 | 7,
   ): string | null => {
@@ -2817,14 +3014,29 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       if (forStep >= 6 && !st5) incomplete.push(5);
     } else {
       const s1 = multipleBadges.length > 0;
+      const s1b = !needsBadgeStyleStep || hasChosenBadgeStyle;
       const s2 = hasChosenBackgroundColor;
-      const sText = hasStep3TextEntered;
+      const sText =
+        variant === "badge" ? hasStep3TextValid : hasStep3TextEntered;
       const sBacking = config.hasBacking ? sectionsOpened.backing : true;
-      const step1Incomplete = !s1;
-      if (forStep >= 2 && step1Incomplete) incomplete.push(1);
-      if (forStep >= 3 && !s2) incomplete.push(2);
-      if (forStep >= 4 && !sText) incomplete.push(3);
-      if (forStep >= 5 && config.hasBacking && !sBacking) incomplete.push(4);
+      const incompleteLabels: string[] = [];
+      if (forStep >= 2 && !s1) incompleteLabels.push("1");
+      if (needsBadgeStyleStep && forStep >= 3 && !s1b) {
+        incompleteLabels.push("1b");
+      }
+      const backgroundGate = needsBadgeStyleStep ? 4 : 3;
+      if (forStep >= backgroundGate && !s2) incompleteLabels.push("2");
+      const textGate = needsBadgeStyleStep ? 5 : 4;
+      if (forStep >= textGate && !sText) incompleteLabels.push("3");
+      const backingGate = needsBadgeStyleStep ? 6 : 5;
+      if (forStep >= backingGate && config.hasBacking && !sBacking) {
+        incompleteLabels.push("4");
+      }
+      if (incompleteLabels.length === 0) return null;
+      if (incompleteLabels.length === 1) {
+        return `Please complete step (${incompleteLabels[0]})`;
+      }
+      return `Please complete steps (${incompleteLabels.join(", ")})`;
     }
 
     if (incomplete.length === 0) return null;
@@ -2851,6 +3063,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   // Refs for step sections to enable scroll-into-view
   const templateSectionRef = useRef<HTMLDivElement | null>(null);
   const exportSectionRef = useRef<HTMLButtonElement | null>(null);
+  const badgeStyleSectionRef = useRef<HTMLDivElement | null>(null);
   const backgroundSectionRef = useRef<HTMLDivElement | null>(null);
   const textLinesSectionRef = useRef<HTMLDivElement | null>(null);
   const backingSectionRef = useRef<HTMLDivElement | null>(null);
@@ -3015,8 +3228,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   };
 
   const openBadgeStepSection = (
-    section: "template" | "background" | "textLines" | "backing",
-    forStep?: 2 | 3 | 4,
+    section: "template" | "badgeStyle" | "background" | "textLines" | "backing",
+    forStep?: 2 | 3 | 4 | 5 | 6,
   ) => {
     if (forStep != null) {
       const msg = getIncompleteStepsMessage(forStep);
@@ -3029,6 +3242,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       template: section === "template",
       size: false,
       export: false,
+      badgeStyle: section === "badgeStyle",
       background: section === "background",
       textLines: section === "textLines",
       backing: section === "backing",
@@ -3069,10 +3283,22 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   }, [sectionsOpen.export]);
 
   useEffect(() => {
+    if (sectionsOpen.badgeStyle && badgeStyleSectionRef.current) {
+      const wasAboveOpen = prevOpenSectionRef.current === "template";
+      scrollSectionIntoView(
+        badgeStyleSectionRef.current,
+        wasAboveOpen ? 350 : 150,
+      );
+      prevOpenSectionRef.current = "badgeStyle";
+    }
+  }, [sectionsOpen.badgeStyle]);
+
+  useEffect(() => {
     if (sectionsOpen.background && backgroundSectionRef.current) {
       // If template or export was open above, wait longer for collapse
       const wasAboveOpen =
         prevOpenSectionRef.current === "template" ||
+        prevOpenSectionRef.current === "badgeStyle" ||
         prevOpenSectionRef.current === "export";
       scrollSectionIntoView(
         backgroundSectionRef.current,
@@ -3087,6 +3313,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       // If any section above was open, wait longer for collapse (especially template)
       const wasAboveOpen =
         prevOpenSectionRef.current === "template" ||
+        prevOpenSectionRef.current === "badgeStyle" ||
         prevOpenSectionRef.current === "export" ||
         prevOpenSectionRef.current === "background";
       // Template is the largest, so give it extra time
@@ -3245,6 +3472,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       universalTemplateId?: string;
       selectedBadgeIndex?: number;
       hasChosenBackgroundColor?: boolean;
+      hasChosenBadgeStyle?: boolean;
       designId?: string | null;
       selectedSignTemplateType?: string | null;
       selectedSignSizeTemplateId?: string | null;
@@ -3308,6 +3536,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setUniversalTemplateId(migratedUniversal);
     setSelectedBadgeIndex(safeIndex);
     setHasChosenBackgroundColor(payload.hasChosenBackgroundColor ?? false);
+    const restoredBadge = migratedBadges[safeIndex] ?? migratedBadges[0];
+    setHasChosenBadgeStyle(
+      payload.hasChosenBadgeStyle ??
+        Boolean(restoredBadge?.customBadgeBackgroundId),
+    );
+    if (restoredBadge?.customBadgeBackgroundId) {
+      setHasChosenBackgroundColor(true);
+    }
     setBadge(migratedBadges[safeIndex] ?? migratedBadges[0]);
     if (payload.designId != null) {
       sessionDesignIdRef.current = payload.designId;
@@ -3410,6 +3646,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         universalTemplateId,
         selectedBadgeIndex,
         hasChosenBackgroundColor,
+        hasChosenBadgeStyle,
         designId: sessionDesignIdRef.current,
         ...(variant === "sign"
           ? {
@@ -3434,6 +3671,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     universalTemplateId,
     selectedBadgeIndex,
     hasChosenBackgroundColor,
+    hasChosenBadgeStyle,
     selectedSignTemplateType,
     selectedSignSizeTemplateId,
     selectedPlaqueSize,
@@ -3868,6 +4106,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         universalTemplateId,
         selectedBadgeIndex,
         hasChosenBackgroundColor,
+        hasChosenBadgeStyle,
         designId: sessionDesignIdRef.current,
         ...(isSignLikeVariant(variant)
           ? {
@@ -3890,6 +4129,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     universalTemplateId,
     selectedBadgeIndex,
     hasChosenBackgroundColor,
+    hasChosenBadgeStyle,
     selectedSignTemplateType,
     selectedSignSizeTemplateId,
     variant,
@@ -4169,11 +4409,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const aqbBadgeStepHeaderModel = useMemo(() => {
     if (variant !== "badge") return null;
     const templateDone = multipleBadges.length > 0;
+    const styleDone = !needsBadgeStyleStep || hasChosenBadgeStyle;
     const backgroundDone = hasChosenBackgroundColor;
-    const textDone = hasStep3TextEntered;
+    const textDone = hasStep3TextValid;
     const backingDone = sectionsOpened.backing;
 
-    const completions = [templateDone, backgroundDone, textDone, backingDone];
+    const completions = needsBadgeStyleStep
+      ? [templateDone, styleDone, backgroundDone, textDone, backingDone]
+      : [templateDone, backgroundDone, textDone, backingDone];
     const firstIncomplete = completions.findIndex((c) => !c);
 
     const visual = (index: number): AqbBadgeStepVisualState => {
@@ -4183,6 +4426,16 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       return "inactive";
     };
 
+    const textVisualState = (): AqbBadgeStepVisualState => {
+      if (
+        hasStep3TextEntered &&
+        (badgeAqbTextOverflow || hasAqbCharLimitBlock)
+      ) {
+        return "error";
+      }
+      return visual(textIndex);
+    };
+
     const lookup = [
       ...BADGE_AQB_FEATURED_BACKGROUND_COLORS,
       ...BACKGROUND_COLORS,
@@ -4190,7 +4443,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       ...SMART_PALETTE_COLORS,
     ];
     const hx = (badge.backgroundColor || "").toUpperCase();
+    const customBgName = badge.customBadgeBackgroundId
+      ? getCustomBackgroundDisplayName(badge.customBadgeBackgroundId)
+      : null;
     const bgName = (() => {
+      if (customBgName) return customBgName;
       if (isFeaturedBrushedMetalPlateColor(badge.backgroundColor)) {
         const norm = normalizeFeaturedBrushedMetalBaseHex(
           badge.backgroundColor!,
@@ -4210,7 +4467,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         ""
       );
     })();
-    const hasAnyBg = Boolean((badge.backgroundColor ?? "").trim());
+    const hasAnyBg =
+      Boolean((badge.backgroundColor ?? "").trim()) ||
+      Boolean(badge.customBadgeBackgroundId);
 
     const lineTexts = badge.lines
       .map((l) => (l.text ?? "").trim())
@@ -4228,13 +4487,33 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         }`
       : badge.backing;
 
+    const styleSummary = (() => {
+      if (!needsBadgeStyleStep || !hasChosenBadgeStyle) return null;
+      if (badge.customBadgeBackgroundId) {
+        return getCustomBackgroundDisplayName(badge.customBadgeBackgroundId);
+      }
+      return "Plain color badge";
+    })();
+
+    const bgIndex = needsBadgeStyleStep ? 2 : 1;
+    const textIndex = needsBadgeStyleStep ? 3 : 2;
+    const backingIndex = needsBadgeStyleStep ? 4 : 3;
+
     return {
       template: {
         state: visual(0),
         summary: templateDone ? activeTemplate?.name?.trim() || "—" : null,
       },
+      ...(needsBadgeStyleStep
+        ? {
+            style: {
+              state: visual(1),
+              summary: styleSummary,
+            },
+          }
+        : {}),
       background: {
-        state: visual(1),
+        state: visual(bgIndex),
         summary: hasAnyBg
           ? [
               bgName,
@@ -4248,21 +4527,27 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           : null,
       },
       text: {
-        state: visual(2),
+        state: textVisualState(),
         summary: textDone ? textSummary || "Text added" : null,
       },
       backing: {
-        state: visual(3),
+        state: visual(backingIndex),
         summary: badge.backing ? backingSummary : null,
       },
     };
   }, [
     variant,
+    needsBadgeStyleStep,
     multipleBadges.length,
+    hasChosenBadgeStyle,
     hasChosenBackgroundColor,
     hasStep3TextEntered,
+    hasStep3TextValid,
+    badgeAqbTextOverflow,
+    hasAqbCharLimitBlock,
     sectionsOpened.backing,
     badge.backgroundColor,
+    badge.customBadgeBackgroundId,
     badge.lines,
     badge.backing,
     badge.badgeIconId,
@@ -4322,11 +4607,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   const activeBadgePhotoPreview = useMemo(() => {
     if (variant !== "badge" || !activeTemplate) return null;
-    return resolveBlankBadgePhoto(
-      universalTemplateId,
-      badge.backgroundColor,
-    );
-  }, [variant, activeTemplate, badge.backgroundColor, universalTemplateId]);
+    return resolveBadgePlatePhoto(universalTemplateId, badge);
+  }, [
+    variant,
+    activeTemplate,
+    badge,
+    universalTemplateId,
+  ]);
 
   /** Step 2: resolved layout for size list + dimension copy (fallback: attached). */
   const effectivePlaqueLayoutIdForStep2 = useMemo(() => {
@@ -4433,10 +4720,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         | { x: number; y: number; width: number; height: number }
         | undefined;
       if (variant === "badge" && templateId) {
-        const photo = resolveBlankBadgePhoto(
-          templateId,
-          backgroundColor ?? badge.backgroundColor,
-        );
+        const photo = resolveBadgePlatePhoto(templateId, {
+          ...badge,
+          backgroundColor: backgroundColor ?? badge.backgroundColor,
+        });
         if (photo) {
           photoBadgeFaceRect = photo.badgeFaceRect;
           photoPreviewCropRect = photo.previewCropRect;
@@ -4444,7 +4731,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       }
       return { widthPx, heightPx, photoBadgeFaceRect, photoPreviewCropRect };
     },
-    [templates, activeTemplate, variant, badge.backgroundColor],
+    [templates, activeTemplate, variant, badge],
   );
 
   // Set session design id once when we have badges and template (for incremental draft saves)
@@ -4487,6 +4774,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         template: false,
         size: false,
         export: false,
+        badgeStyle: false,
         background: false,
         textLines: false,
         backing: true,
@@ -5204,6 +5492,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         typeof document !== "undefined";
       if (
         !useSignSync &&
+        variant !== "badge" &&
         (typeof changes.sizeNorm !== "undefined" ||
           typeof changes.text !== "undefined" ||
           typeof changes.fontFamily !== "undefined" ||
@@ -5220,7 +5509,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
         const maxTextWidth = maxTextWidthDefault;
 
-        // Measure text width and auto-scale down if it exceeds badge width
+        // Measure text width and auto-scale down if it exceeds badge boundaries
         if (text) {
           let textWidth = measureTextWidth(
             text,
@@ -5251,7 +5540,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         }
       }
 
-      if (typeof changes.text !== "undefined") {
+      if (typeof changes.text !== "undefined" && variant !== "badge") {
         // Legacy auto-scaling for text changes (keeping for backward compatibility)
         let fontSize = updated.fontSize || 18;
         let textWidth = measureTextWidth(
@@ -5287,6 +5576,32 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       return updated;
     });
 
+    const badgePresetFitEligible =
+      variant === "badge" &&
+      (typeof changes.sizeNorm !== "undefined" ||
+        typeof changes.text !== "undefined" ||
+        typeof changes.fontFamily !== "undefined" ||
+        typeof changes.bold !== "undefined" ||
+        typeof changes.italic !== "undefined");
+
+    const newLinesAfterBadgePresets =
+      badgePresetFitEligible
+        ? fitAqbBadgeLinesToPresets(
+            newLines,
+            designBox,
+            badge,
+            badge.templateId ?? universalTemplateId,
+            index,
+            typeof changes.sizeNorm === "number"
+              ? aqbPresetIndex(
+                  nearestAqbSizePreset(
+                    aqbSizeNormToPx(changes.sizeNorm, designBox.height),
+                  ).label,
+                )
+              : undefined,
+          )
+        : newLines;
+
     const signHasLayout =
       isSignLikeVariant(variant) &&
       !!lineTemplate?.signTextLayout &&
@@ -5314,7 +5629,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     let fittedLines: BadgeLine[];
 
     if (debounceSignTextSync && typeof window !== "undefined") {
-      fittedLines = newLines;
+      fittedLines = newLinesAfterBadgePresets;
       window.clearTimeout(signTextSyncTimerRef.current ?? undefined);
       signTextSyncTimerRef.current = window.setTimeout(() => {
         const tid =
@@ -5341,7 +5656,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         lineTemplate?.signTextLayout && isSignLikeVariant(variant)
           ? getEffectiveSignTextLayoutForBadge(lineTemplate, {
               ...badge,
-              lines: newLines,
+              lines: newLinesAfterBadgePresets,
             })
           : undefined;
 
@@ -5350,12 +5665,21 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
       fittedLines =
         signSyncEligible && effectiveSignLayout
-          ? syncSignBadgeLinesSizeNorm(newLines, effectiveSignLayout)
-          : newLines;
+          ? syncSignBadgeLinesSizeNorm(newLinesAfterBadgePresets, effectiveSignLayout)
+          : newLinesAfterBadgePresets;
     }
 
     // Apply center-based positioning
     const centeredLines = calculateCenterPositions(fittedLines);
+
+    if (variant === "badge" && typeof changes.text !== "undefined") {
+      setAqbLayoutCharLimitByLine((prev) => {
+        if (!prev[index]) return prev;
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+    }
 
     const nextBadge = { ...badge, lines: centeredLines };
     setBadge(nextBadge);
@@ -5367,7 +5691,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       // Get the current template's designBox for positioning new lines
       const currentTemplate = templates.find((t) => t.id === badge.templateId);
       const designBox = currentTemplate
-        ? getEffectiveDesignBox(currentTemplate, badge)
+        ? variant === "badge"
+          ? getBadgePreviewDesignBox(currentTemplate, badge)
+          : getEffectiveDesignBox(currentTemplate, badge)
         : effectiveDesignBox;
 
       const newLineIndex = badge.lines.length;
@@ -5517,6 +5843,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     lineIndex: number,
     designBoxHeight: number = 96,
   ): number => {
+    if (variant === "badge") {
+      return aqbPresetToSizeNorm(
+        getDefaultAqbSizePresetForLine(lineIndex).px,
+        designBoxHeight,
+      );
+    }
     const basePx = lineIndex === 0 ? 25 : 17;
     if (isSignLikeVariant(variant)) {
       // sizeNorm = (basePx * (h/96)) / h = basePx/96 → scales with design box height in px
@@ -5552,6 +5884,19 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             }) ?? signTextLayout
           : signTextLayout;
       return syncSignBadgeLinesSizeNorm(lines, eff);
+    }
+
+    if (variant === "badge" && layoutBadge) {
+      const box =
+        layoutTemplate && layoutBadge
+          ? getBadgePreviewDesignBox(layoutTemplate, layoutBadge)
+          : { width: 288, ...designBox };
+      return fitAqbBadgeLinesToPresets(
+        lines,
+        box,
+        layoutBadge,
+        layoutTemplate?.id ?? layoutBadge.templateId,
+      );
     }
 
     const designBoxHeight = designBox.height;
@@ -5821,11 +6166,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     ) => {
       if (
         variant === "badge" &&
-        !resolveBlankBadgePhoto(p.templateId, p.badge.backgroundColor)
+        !resolveBadgePlatePhoto(p.templateId, p.badge)
       ) {
         return (
           <div className="flex h-full w-full flex-col items-center justify-center px-4 text-center text-xs leading-snug text-[#3A4F63]">
-            <p className="font-semibold text-[#0D1B2A]">
+            <p className="font-semibold text-[#02132B]">
               Preview photo not available for this color yet.
             </p>
             <p className="mt-1.5">
@@ -5854,6 +6199,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       template: false,
       size: false,
       export: false,
+      badgeStyle: false,
       background: false,
       textLines: true,
       backing: false,
@@ -5931,10 +6277,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setBadge(blankBadge);
     setSelectedBadgeIndex(0);
     setHasChosenBackgroundColor(false);
+    setHasChosenBadgeStyle(false);
     setSectionsOpened({
       template: false,
       size: false,
       export: false,
+      badgeStyle: false,
       background: false,
       textLines: false,
       backing: false,
@@ -5945,6 +6293,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       template: true,
       size: false,
       export: false,
+      badgeStyle: false,
       background: false,
       textLines: false,
       backing: false,
@@ -6152,6 +6501,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           template: false,
           size: false,
           export: false,
+          badgeStyle: false,
           background: true,
           textLines: false,
           backing: false,
@@ -6266,6 +6616,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             template: false,
             size: true,
             export: false,
+            badgeStyle: false,
             background: false,
             textLines: false,
             backing: false,
@@ -6280,11 +6631,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         } else {
           const openPlaqueAttachedAwardFormatStep =
             variant === "plaque" && isPlaqueAttachedTemplateId(newTemplateId);
+          const openBadgeStyleStep =
+            variant === "badge" && badgeTemplateHasStyleStep(newTemplateId);
           setSectionsOpen({
             template: false,
             size: false,
             export: false,
-            background: openPlaqueAttachedAwardFormatStep ? false : true,
+            badgeStyle: openBadgeStyleStep,
+            background:
+              !openPlaqueAttachedAwardFormatStep && !openBadgeStyleStep,
             textLines: false,
             backing: false,
             border: false,
@@ -6295,8 +6650,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             template: true,
             ...(openPlaqueAttachedAwardFormatStep
               ? { size: true, plaqueFormat: true }
-              : { background: true }),
+              : openBadgeStyleStep
+                ? { badgeStyle: true }
+                : { background: true }),
           }));
+          if (openBadgeStyleStep) {
+            setHasChosenBadgeStyle(false);
+            setHasChosenBackgroundColor(false);
+          }
         }
         templateGuidedAutoAdvanceDoneRef.current = true;
       }
@@ -6491,7 +6852,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         ...(variant === "badge" && !badgeTemplateSupportsIcon(newTemplateId)
           ? { badgeIconId: undefined }
           : {}),
+        ...(variant === "badge" && !badgeTemplateHasStyleStep(newTemplateId)
+          ? { customBadgeBackgroundId: undefined }
+          : {}),
       };
+      if (
+        variant === "badge" &&
+        badgeTemplateHasStyleStep(newTemplateId) &&
+        proto.customBadgeBackgroundId
+      ) {
+        const entry = getCustomBadgeBackgroundById(proto.customBadgeBackgroundId);
+        if (!entry || entry.templateId !== newTemplateId) {
+          proto = { ...proto, customBadgeBackgroundId: undefined };
+        }
+      }
       let linesSource = prevB.lines;
       if (variant === "plaque") {
         const nowAttached = isPlaqueAttachedTemplateId(newTemplateId);
@@ -6516,10 +6890,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           );
         }
       }
-      const box = getEffectiveDesignBox(newTemplate, proto);
+      const box =
+        variant === "badge"
+          ? getBadgePreviewDesignBox(newTemplate, proto)
+          : getEffectiveDesignBox(newTemplate, proto);
       const scaledLines = isSignLikeVariant(variant)
         ? applySignTemplateLineSizes(linesSource, box, proto)
-        : autoScaleLinesForNewTemplate(linesSource, box, prevB.templateId);
+        : variant === "badge"
+          ? fitAqbBadgeLinesToPresets(
+              linesSource,
+              box,
+              proto,
+              newTemplateId,
+            )
+          : autoScaleLinesForNewTemplate(linesSource, box, prevB.templateId);
       if (
         isSignLikeVariant(variant) &&
         newTemplate.signTextLayout &&
@@ -6579,6 +6963,24 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setMultipleBadges(updated);
     if (updated[0]) {
       setBadge1Data(updated[0]);
+    }
+    if (variant === "badge") {
+      const nextBadge = nextCurrent ?? updated[0];
+      if (!badgeTemplateHasStyleStep(newTemplateId)) {
+        setHasChosenBadgeStyle(false);
+      } else if (
+        nextBadge?.customBadgeBackgroundId &&
+        !getCustomBadgeBackgroundById(nextBadge.customBadgeBackgroundId)
+      ) {
+        setHasChosenBadgeStyle(false);
+        setHasChosenBackgroundColor(false);
+      } else if (
+        prevList.some((b) => b.customBadgeBackgroundId) &&
+        !nextBadge?.customBadgeBackgroundId
+      ) {
+        setHasChosenBadgeStyle(false);
+        setHasChosenBackgroundColor(false);
+      }
     }
   };
 
@@ -8257,7 +8659,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   return (
     <div
-      className={`aqb-redesign-root min-h-screen bg-[#F0EDE6] overflow-x-hidden text-sm leading-[1.55] text-[#0d1b2a] ${
+      className={`aqb-redesign-root min-h-screen bg-[#F0EDE6] overflow-x-hidden text-sm leading-[1.55] text-[#02132B] ${
         storeChromeless ? "pb-0" : "pb-8"
       }${embeddedMobileBadgeShell ? " aqb-embedded-mobile-shell" : ""}`}
     >
@@ -8358,7 +8760,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             </div>
           ) : null}
 
-          <div className="overflow-hidden rounded-lg border border-[rgba(13,27,42,0.1)] bg-white">
+          <div className="overflow-hidden rounded-lg border border-[rgba(2, 19, 43,0.1)] bg-white">
             {variant !== "badge" ? (
               <AqbPreviewPanelHeader
                 centered
@@ -8500,14 +8902,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
         {/* LEFT COLUMN - Controls */}
         <div
-          className={`aqb-left-panel w-full md:min-w-0 flex-1 min-h-0 md:max-h-[calc(100vh-48px)] md:self-start rounded-xl border border-[rgba(13,27,42,0.1)] bg-white shadow-[0_2px_12px_rgba(13,27,42,0.06)] flex flex-col ${
+          className={`aqb-left-panel w-full md:min-w-0 flex-1 min-h-0 md:max-h-[calc(100vh-48px)] md:self-start rounded-xl border border-[rgba(2, 19, 43,0.1)] bg-white shadow-[0_2px_12px_rgba(2, 19, 43,0.06)] flex flex-col ${
             variant === "badge"
               ? "max-md:overflow-hidden overflow-y-auto md:overflow-y-auto"
               : "overflow-y-auto"
           }`}
         >
           <div
-            className={`w-full shrink-0 flex-col border-b border-[rgba(13,27,42,0.1)] bg-[#F8F7F4] flex ${
+            className={`w-full shrink-0 flex-col border-b border-[rgba(2, 19, 43,0.1)] bg-[#F8F7F4] flex ${
               variant === "badge"
                 ? "gap-0 px-0 py-0 md:py-[14px]"
                 : "hidden gap-3 px-5 py-4 sm:px-6 md:flex"
@@ -8521,7 +8923,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               }`}
             >
               <div className="min-w-0 flex-1">
-                <h2 className="text-[14px] font-bold uppercase leading-tight tracking-[0.5px] text-[#0D1B2A]">
+                <h2 className="text-[14px] font-bold uppercase leading-tight tracking-[0.5px] text-[#02132B]">
                   {multipleBadges.length === 0
                     ? `Customize your ${config.labelProduct.toLowerCase()}`
                     : `Customize your ${config.labelProduct.toLowerCase()} — ${
@@ -8529,7 +8931,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       } of ${totalBadges}`}
                 </h2>
                 {multipleBadges.length > 0 && activeTemplate && (
-                  <span className="mt-0.5 block text-[14px] font-semibold leading-tight text-[#c8962a]">
+                  <span className="mt-0.5 block text-[14px] font-semibold leading-tight text-[#ED8918]">
                     {activeTemplate.name}
                   </span>
                 )}
@@ -8539,7 +8941,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             <div
               className={`flex w-full min-w-0 items-center gap-y-2 gap-x-0.5 sm:flex-nowrap sm:justify-between sm:gap-0 ${
                 variant === "badge"
-                  ? "aqb-badge-mobile-step-nav shrink-0 z-10 flex-nowrap border-b border-[rgba(13,27,42,0.1)] bg-[#F8F7F4] py-2.5 md:static md:border-0 md:bg-transparent md:py-0"
+                  ? "aqb-badge-mobile-step-nav shrink-0 z-10 flex-nowrap border-b border-[rgba(2, 19, 43,0.1)] bg-[#F8F7F4] py-2.5 md:static md:border-0 md:bg-transparent md:py-0"
                   : "flex-wrap"
               }`}
             >
@@ -8668,7 +9070,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             step.done
                               ? "bg-[#2D9E75] text-white"
                               : step.current
-                              ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
+                              ? "bg-[#02132B] text-white shadow-[0_0_0_3px_rgba(2, 19, 43,0.15)]"
                               : "bg-[#D4CEC6] text-white"
                           }`}
                         >
@@ -8710,6 +9112,16 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     done: multipleBadges.length > 0,
                     current: multipleBadges.length === 0,
                   },
+                  ...(variant === "badge" && needsBadgeStyleStep
+                    ? [
+                        {
+                          label: "Style",
+                          done: hasChosenBadgeStyle,
+                          current:
+                            multipleBadges.length > 0 && !hasChosenBadgeStyle,
+                        },
+                      ]
+                    : []),
                   ...(config.hasSizeStep
                     ? [
                         {
@@ -8727,6 +9139,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     current:
                       multipleBadges.length > 0 &&
                       !hasChosenBackgroundColor &&
+                      (variant === "badge" && needsBadgeStyleStep
+                        ? hasChosenBadgeStyle
+                        : true) &&
                       (config.hasSizeStep
                         ? selectedSignSizeTemplateId != null
                         : true),
@@ -8742,10 +9157,19 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     : []),
                   {
                     label: "Text",
-                    done: hasStep3TextEntered,
+                    done:
+                      variant === "badge"
+                        ? hasStep3TextValid
+                        : hasStep3TextEntered,
                     current: signBorderStepRequired
-                      ? signBorderConfigured && !hasStep3TextEntered
-                      : hasChosenBackgroundColor && !hasStep3TextEntered,
+                      ? signBorderConfigured &&
+                        !(variant === "badge"
+                          ? hasStep3TextValid
+                          : hasStep3TextEntered)
+                      : hasChosenBackgroundColor &&
+                        !(variant === "badge"
+                          ? hasStep3TextValid
+                          : hasStep3TextEntered),
                   },
                   ...(isSignLikeVariant(variant) && signUserLogoUploadSupported
                     ? [
@@ -8762,7 +9186,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           label: "Backing",
                           done: sectionsOpened.backing,
                           current:
-                            hasStep3TextEntered && !sectionsOpened.backing,
+                            (variant === "badge"
+                              ? hasStep3TextValid
+                              : hasStep3TextEntered) &&
+                            !sectionsOpened.backing,
                         },
                       ]
                     : []),
@@ -8777,18 +9204,34 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     : []),
                 ];
                 const doneStates = steps.map((s) => s.done);
-                const badgeMobileStepKeys = [
-                  "template",
-                  "background",
-                  "textLines",
-                  "backing",
-                ] as const;
-                const badgeMobileStepGuards: (2 | 3 | 4 | undefined)[] = [
-                  undefined,
-                  2,
-                  3,
-                  4,
-                ];
+                const badgeMobileStepKeys = (
+                  variant === "badge" && needsBadgeStyleStep
+                    ? [
+                        "template",
+                        "badgeStyle",
+                        "background",
+                        "textLines",
+                        "backing",
+                      ]
+                    : ["template", "background", "textLines", "backing"]
+                ) as readonly (
+                  | "template"
+                  | "badgeStyle"
+                  | "background"
+                  | "textLines"
+                  | "backing"
+                )[];
+                const badgeMobileStepGuards: (
+                  | 2
+                  | 3
+                  | 4
+                  | 5
+                  | 6
+                  | undefined
+                )[] =
+                  variant === "badge" && needsBadgeStyleStep
+                    ? [undefined, 2, 3, 4, 5]
+                    : [undefined, 2, 3, 4];
                 return steps.map((step, i) => {
                   const badgeSectionKey =
                     variant === "badge" ? badgeMobileStepKeys[i] : undefined;
@@ -8811,7 +9254,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           circleDone
                             ? "bg-[#2D9E75] text-white"
                             : circleActive
-                            ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
+                            ? "bg-[#02132B] text-white shadow-[0_0_0_3px_rgba(2, 19, 43,0.15)]"
                             : "bg-[#D4CEC6] text-white"
                         }`}
                       >
@@ -8845,7 +9288,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             ? circleDone
                               ? "font-medium text-[#2d9e75]"
                               : circleActive
-                              ? "font-semibold text-[#0d1b2a]"
+                              ? "font-semibold text-[#02132B]"
                               : "font-medium text-[#6b7f92]"
                             : "text-gray-600"
                         }`}
@@ -8911,7 +9354,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             }`}
           >
             {variant === "badge" ? (
-              <div className="aqb-mobile-badge-editor-tools md:hidden overflow-hidden rounded-lg border border-[rgba(13,27,42,0.1)] bg-white mb-2">
+              <div className="aqb-mobile-badge-editor-tools md:hidden overflow-hidden rounded-lg border border-[rgba(2, 19, 43,0.1)] bg-white mb-2">
                 <AqbPreviewActionsRow {...previewActionsRowProps} />
                 {aqbBadgeToolActions ? (
                   <div className="shrink-0">{aqbBadgeToolActions}</div>
@@ -8935,7 +9378,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               ref={templateSectionRef}
               className={
                 variant === "badge"
-                  ? "w-full min-w-0 border-b border-[rgba(13,27,42,0.1)] md:scroll-mt-0"
+                  ? "w-full min-w-0 border-b border-[rgba(2, 19, 43,0.1)] md:scroll-mt-0"
                   : "mb-4"
               }
             >
@@ -8952,6 +9395,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       template: willBeOpen,
                       size: false,
                       export: false,
+                      badgeStyle: false,
                       background: false,
                       textLines: false,
                       backing: false,
@@ -8969,6 +9413,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       template: willBeOpen,
                       size: false,
                       export: false,
+                      badgeStyle: false,
                       background: false,
                       textLines: false,
                       backing: false,
@@ -8980,7 +9425,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full mb-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       {variant === "plaque"
                         ? "Step 1: Choose layout"
                         : "Step 1: Pick a template"}
@@ -9122,8 +9567,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                 type="button"
                                 className={`relative flex w-full flex-col overflow-hidden rounded-[9px] bg-white transition-all ${
                                   isSelected
-                                    ? "border-2 border-[#0d1b2a] shadow-[0_0_0_2px_rgba(13,27,42,0.08)]"
-                                    : "border-2 border-[rgba(13,27,42,0.1)] hover:border-[#3a4f63]"
+                                    ? "border-2 border-[#02132B] shadow-[0_0_0_2px_rgba(2, 19, 43,0.08)]"
+                                    : "border-2 border-[rgba(2, 19, 43,0.1)] hover:border-[#1a3d5c]"
                                 }`}
                                 onClick={() => {
                                   console.log(
@@ -9148,7 +9593,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                   />
                                 </div>
                                 <div className="shrink-0 bg-white px-3 pb-2.5 pt-1.5 text-center">
-                                  <div className="text-[14px] font-semibold leading-tight text-[#0d1b2a]">
+                                  <div className="text-[14px] font-semibold leading-tight text-[#02132B]">
                                     {t.name}
                                   </div>
                                   <div className="mt-0.5 hidden text-[14px] leading-snug text-[#6b7f92] md:block">
@@ -9276,6 +9721,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                             template: false,
                                             size: true,
                                             export: false,
+                                            badgeStyle: false,
                                             background: false,
                                             textLines: false,
                                             backing: false,
@@ -9369,6 +9815,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               template: false,
                               size: true,
                               export: false,
+                              badgeStyle: false,
                               background: false,
                               textLines: false,
                               backing: false,
@@ -9494,7 +9941,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             onClick={() => setShowTemplateModal(true)}
                             className={
                               variant === "badge"
-                                ? "py-1 text-left text-sm font-medium text-[#c8962a] hover:underline"
+                                ? "py-1 text-left text-sm font-medium text-[#ED8918] hover:underline"
                                 : "py-1 text-right text-sm text-blue-600 underline hover:text-blue-800"
                             }
                           >
@@ -9525,6 +9972,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       template: false,
                       size: willBeOpen,
                       export: false,
+                      badgeStyle: false,
                       background: false,
                       textLines: false,
                       backing: false,
@@ -9538,7 +9986,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full mb-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       Step 2: Choose size
                     </h3>
                     {multipleBadges.length > 0 && (
@@ -9642,6 +10090,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       template: false,
                       size: false,
                       export: false,
+                      badgeStyle: false,
                       background: false,
                       textLines: false,
                       backing: false,
@@ -9658,7 +10107,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full mb-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       Step 3: Choose award format
                     </h3>
                     {Boolean(badge.plaqueFormatId?.trim()) && (
@@ -9766,6 +10215,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       template: false,
                       size: willBeOpen,
                       export: false,
+                      badgeStyle: false,
                       background: false,
                       textLines: false,
                       backing: false,
@@ -9777,7 +10227,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full mb-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       Step 2: Size
                     </h3>
                     {selectedSignSizeTemplateId != null && (
@@ -9817,6 +10267,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               template: false,
                               size: false,
                               export: false,
+                              badgeStyle: false,
                               background: true,
                               textLines: false,
                               backing: false,
@@ -9843,12 +10294,67 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               </div>
             )}
 
+            {variant === "badge" && needsBadgeStyleStep ? (
+              <div
+                ref={badgeStyleSectionRef}
+                className="flex w-full min-w-0 flex-col border-b border-[rgba(2, 19, 43,0.1)]"
+              >
+                {aqbBadgeStepHeaderModel?.style ? (
+                  <AqbBadgeStepSectionToggle
+                    stepNumber={1}
+                    stepLabel="1b"
+                    visualState={aqbBadgeStepHeaderModel.style.state}
+                    title="Step 1b: Pick a badge style"
+                    summary={aqbBadgeStepHeaderModel.style.summary}
+                    open={sectionsOpen.badgeStyle}
+                    onClick={() => {
+                      const msg = getIncompleteStepsMessage(2);
+                      if (msg) {
+                        alert(msg);
+                        return;
+                      }
+                      const willBeOpen = !sectionsOpen.badgeStyle;
+                      setSectionsOpen({
+                        template: false,
+                        size: false,
+                        export: false,
+                        badgeStyle: willBeOpen,
+                        background: false,
+                        textLines: false,
+                        backing: false,
+                        border: false,
+                        plaqueFormat: false,
+                      });
+                      setSectionsOpened((prev) => ({
+                        ...prev,
+                        badgeStyle: true,
+                      }));
+                    }}
+                  />
+                ) : null}
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${
+                    sectionsOpen.badgeStyle
+                      ? "max-h-[min(70vh,720px)] overflow-y-auto px-6 pb-5 pt-2 opacity-100"
+                      : "max-h-0 p-0 opacity-0"
+                  }`}
+                >
+                  <AqbBadgeStylePicker
+                    templateId={universalTemplateId}
+                    selected={badgeStyleSelection}
+                    onSelectPlain={applyBadgeStylePlain}
+                    onSelectCustom={applyBadgeStyleCustom}
+                  />
+                </div>
+              </div>
+            ) : null}
+
             {/* Background Color / Backgrounds */}
             <div
               ref={backgroundSectionRef}
               className={
                 variant === "badge"
-                  ? "flex w-full min-w-0 flex-col border-b border-[rgba(13,27,42,0.1)]"
+                  ? "flex w-full min-w-0 flex-col border-b border-[rgba(2, 19, 43,0.1)]"
                   : "mb-6 flex w-full flex-col"
               }
             >
@@ -9858,11 +10364,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   <AqbBadgeStepSectionToggle
                     stepNumber={2}
                     visualState={aqbBadgeStepHeaderModel.background.state}
-                    title="Step 2: Pick a background color"
+                    title={badgeBackgroundStepTitle}
                     summary={aqbBadgeStepHeaderModel.background.summary}
                     open={sectionsOpen.background}
                     onClick={() => {
-                      const msg = getIncompleteStepsMessage(2);
+                      const msg = getIncompleteStepsMessage(
+                        badgeBackgroundStepGuard,
+                      );
                       if (msg) {
                         alert(msg);
                         return;
@@ -9872,6 +10380,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         template: false,
                         size: false,
                         export: false,
+                        badgeStyle: false,
                         background: willBeOpen,
                         textLines: false,
                         backing: false,
@@ -9904,6 +10413,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         template: false,
                         size: false,
                         export: false,
+                        badgeStyle: false,
                         background: willBeOpen,
                         textLines: false,
                         backing: false,
@@ -9918,7 +10428,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     className="mb-2 flex w-full items-center justify-between text-left"
                   >
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                      <h3 className="text-lg font-semibold text-[#02132B]">
                         {variant === "plaque"
                           ? plaqueAttachedSelected
                             ? "Step 4: Metal plate finish"
@@ -10070,6 +10580,84 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         }
                       };
 
+                      if (badge.customBadgeBackgroundId) {
+                        const customName = getCustomBackgroundDisplayName(
+                          badge.customBadgeBackgroundId,
+                        );
+                        return (
+                          <>
+                            <div className="aqb-badge-style-picker__custom-active">
+                              <p className="aqb-badge-style-picker__hint">
+                                Your badge uses the{" "}
+                                <strong>{customName ?? "custom"}</strong> design.
+                                Text will print on top of this artwork.
+                              </p>
+                              <button
+                                type="button"
+                                className="aqb-badge-finish-pill"
+                                onClick={() => {
+                                  setSectionsOpen({
+                                    template: false,
+                                    size: false,
+                                    export: false,
+                                    badgeStyle: true,
+                                    background: false,
+                                    textLines: false,
+                                    backing: false,
+                                    border: false,
+                                    plaqueFormat: false,
+                                  });
+                                  setSectionsOpened((prev) => ({
+                                    ...prev,
+                                    badgeStyle: true,
+                                  }));
+                                }}
+                              >
+                                Change style
+                              </button>
+                            </div>
+
+                            {badgeTemplateSupportsIcon(universalTemplateId) ? (
+                              <div className="finish-row">
+                                <div className="aqb-badge-finish-lbl">
+                                  Badge icon (optional)
+                                </div>
+                                <AqbBadgeIconPicker
+                                  variant="inline"
+                                  value={
+                                    isBadgeIconId(badge.badgeIconId)
+                                      ? badge.badgeIconId
+                                      : undefined
+                                  }
+                                  onChange={(iconId) =>
+                                    setBadgeIconForCurrent(iconId)
+                                  }
+                                />
+                              </div>
+                            ) : null}
+
+                            {multipleBadges.length > 1 &&
+                            badgeTemplateSupportsIcon(universalTemplateId) ? (
+                              <div className="mt-2 flex flex-col gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    applyBadgeIconToAll(
+                                      isBadgeIconId(badge.badgeIconId)
+                                        ? badge.badgeIconId
+                                        : undefined,
+                                    )
+                                  }
+                                  className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#02132B] underline transition-colors hover:text-[#1a3d5c]"
+                                >
+                                  Apply icon choice to all badges
+                                </button>
+                              </div>
+                            ) : null}
+                          </>
+                        );
+                      }
+
                       return (
                         <>
                           <div className="aqb-badge-colour-row">
@@ -10119,7 +10707,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                       <CheckIcon
                                         className={`h-3.5 w-3.5 stroke-[3] ${
                                           c.light
-                                            ? "text-[#0d1b2a]"
+                                            ? "text-[#02132B]"
                                             : "text-white"
                                         }`}
                                         aria-hidden
@@ -10206,7 +10794,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               <button
                                 type="button"
                                 onClick={applyBackgroundColorToAll}
-                                className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#0d1b2a] underline transition-colors hover:text-[#3a4f63]"
+                                className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#02132B] underline transition-colors hover:text-[#1a3d5c]"
                                 title={`Apply background color to all ${config.labelProductPlural.toLowerCase()}`}
                               >
                                 Apply background color to all{" "}
@@ -10224,7 +10812,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                         : undefined,
                                     )
                                   }
-                                  className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#0d1b2a] underline transition-colors hover:text-[#3a4f63]"
+                                  className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#02132B] underline transition-colors hover:text-[#1a3d5c]"
                                 >
                                   Apply icon choice to all badges
                                 </button>
@@ -10435,6 +11023,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       template: false,
                       size: false,
                       export: false,
+                      badgeStyle: false,
                       background: false,
                       textLines: false,
                       backing: false,
@@ -10445,7 +11034,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full mb-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       Step 4: Border
                     </h3>
                     {signBorderConfigured && (
@@ -10785,7 +11374,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full mb-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       {requiresPlaqueLogo
                         ? plaqueAttachedSelected
                           ? "Step 5: Upload icon"
@@ -10915,7 +11504,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               ref={textLinesSectionRef}
               className={
                 variant === "badge"
-                  ? "w-full min-w-0 border-b border-[rgba(13,27,42,0.1)]"
+                  ? "w-full min-w-0 border-b border-[rgba(2, 19, 43,0.1)]"
                   : "mb-4"
               }
             >
@@ -10928,7 +11517,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   open={sectionsOpen.textLines}
                   onClick={() => {
                     const msg = getIncompleteStepsMessage(
-                      config.hasSizeStep ? (signBorderStepRequired ? 5 : 4) : 3,
+                      config.hasSizeStep
+                        ? signBorderStepRequired
+                          ? 5
+                          : 4
+                        : badgeTextStepGuard,
                     );
                     if (msg) {
                       alert(msg);
@@ -10939,6 +11532,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       template: false,
                       size: false,
                       export: false,
+                      badgeStyle: false,
                       background: false,
                       textLines: willBeOpen,
                       backing: false,
@@ -10992,6 +11586,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       template: false,
                       size: false,
                       export: false,
+                      badgeStyle: false,
                       background: false,
                       textLines: willBeOpen,
                       backing: false,
@@ -11002,7 +11597,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="mb-2 flex w-full items-center justify-between text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       {variant === "plaque"
                         ? plaqueAttachedSelected
                           ? "Step 6: Enter your text"
@@ -11013,9 +11608,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           : "Step 4: Enter your text"
                         : "Step 3: Enter your text"}
                     </h3>
-                    {hasStep3TextEntered && (
-                      <CheckCircleIcon className="h-5 w-5 text-green-600" />
-                    )}
+                    {hasStep3TextEntered &&
+                      (badgeAqbTextOverflow || hasAqbCharLimitBlock ? (
+                        <XMarkIcon
+                          className="h-5 w-5 text-red-600"
+                          aria-label="Text exceeds badge width — shorten or reduce size"
+                        />
+                      ) : (
+                        <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                      ))}
                     {badge.lines.some(
                       (l) =>
                         l.color &&
@@ -11050,6 +11651,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   <BadgeEditorPanel
                     badge={badge}
                     panelLayout={variant === "badge" ? "aqb-badge" : "default"}
+                    layoutCharLimitByLine={
+                      variant === "badge" ? aqbLayoutCharLimitByLine : undefined
+                    }
                     onLineChange={updateLine}
                     onAlignmentChange={(index, alignment) => {
                       // Save to undo history before making changes
@@ -11186,7 +11790,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     className="flex items-center justify-between w-full mb-2 text-left"
                   >
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                      <h3 className="text-lg font-semibold text-[#02132B]">
                         {signBorderStepRequired
                           ? "Step 6: Image or logo (optional)"
                           : "Step 5: Image or logo (optional)"}
@@ -11303,7 +11907,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 ref={backingSectionRef}
                 className={
                   variant === "badge"
-                    ? `w-full min-w-0 border-b border-[rgba(13,27,42,0.1)]${
+                    ? `w-full min-w-0 border-b border-[rgba(2, 19, 43,0.1)]${
                         sectionsOpen.backing ? " relative z-20" : ""
                       }`
                     : "mb-4"
@@ -11317,7 +11921,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     summary={aqbBadgeStepHeaderModel.backing.summary}
                     open={sectionsOpen.backing}
                     onClick={() => {
-                      const msg = getIncompleteStepsMessage(4);
+                      const msg = getIncompleteStepsMessage(
+                        variant === "badge" ? badgeBackingStepGuard : 4,
+                      );
                       if (msg) {
                         alert(msg);
                         return;
@@ -11327,6 +11933,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         template: false,
                         size: false,
                         export: false,
+                        badgeStyle: false,
                         background: false,
                         textLines: false,
                         backing: willBeOpen,
@@ -11349,6 +11956,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         template: false,
                         size: false,
                         export: false,
+                        badgeStyle: false,
                         background: false,
                         textLines: false,
                         backing: willBeOpen,
@@ -11359,7 +11967,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     className="mb-2 flex w-full items-center justify-between text-left"
                   >
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                      <h3 className="text-lg font-semibold text-[#02132B]">
                         Step 4: Choose badge attachment
                       </h3>
                       {sectionsOpened.backing && (
@@ -11500,6 +12108,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       template: false,
                       size: false,
                       export: false,
+                      badgeStyle: false,
                       background: false,
                       textLines: false,
                       backing: false,
@@ -11510,7 +12119,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full mb-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                    <h3 className="text-lg font-semibold text-[#02132B]">
                       Border
                     </h3>
                     {sectionsOpened.border && (
@@ -11557,7 +12166,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             )}
 
             {variant !== "badge" ? (
-              <div className="mb-4 flex flex-wrap items-start justify-center gap-2 border-t border-[rgba(13,27,42,0.08)] bg-[#faf8f4] -mx-4 px-4 py-3 md:-mx-5 md:px-5 md:gap-3">
+              <div className="mb-4 flex flex-wrap items-start justify-center gap-2 border-t border-[rgba(2, 19, 43,0.08)] bg-[#faf8f4] -mx-4 px-4 py-3 md:-mx-5 md:px-5 md:gap-3">
                 <div className="flex flex-col items-center gap-1">
                   <button
                     className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400 rounded transition-colors disabled:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -11675,9 +12284,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
             {/* Save / Add to cart (non-badge; badge uses toolbar + right-panel ATC) */}
             {variant !== "badge" ? (
-              <div className="mt-2 mb-4 flex flex-wrap justify-end gap-2 border-t border-[rgba(13,27,42,0.08)] pt-4">
+              <div className="mt-2 mb-4 flex flex-wrap justify-end gap-2 border-t border-[rgba(2, 19, 43,0.08)] pt-4">
                 <button
-                  className="rounded-lg border border-[rgba(13,27,42,0.15)] bg-white px-4 py-2 text-sm font-medium text-[#0d1b2a] shadow-sm hover:bg-[#faf8f4] transition-colors"
+                  className="rounded-lg border border-[rgba(2, 19, 43,0.15)] bg-white px-4 py-2 text-sm font-medium text-[#02132B] shadow-sm hover:bg-[#faf8f4] transition-colors"
                   onClick={(e) => {
                     e.preventDefault();
                     saveBadge();
@@ -11688,7 +12297,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 <button
                   type="button"
                   title="Log in to load a previous design"
-                  className="rounded-lg border border-[rgba(13,27,42,0.15)] bg-white px-4 py-2 text-sm font-medium text-[#0d1b2a] shadow-sm hover:bg-[#faf8f4] transition-colors"
+                  className="rounded-lg border border-[rgba(2, 19, 43,0.15)] bg-white px-4 py-2 text-sm font-medium text-[#02132B] shadow-sm hover:bg-[#faf8f4] transition-colors"
                   onClick={(e) => {
                     e.preventDefault();
                     onLoadDesignClick();
@@ -11700,7 +12309,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className={`px-5 py-2.5 rounded-lg text-base font-bold shadow-sm transition-opacity ${
                     isAddingToCart || isGeneratingDesigns || !stepsComplete
                       ? "bg-[#9ca3af] text-white cursor-not-allowed"
-                      : "bg-[#c8962a] text-[#0d1b2a] hover:opacity-90"
+                      : "bg-[#ED8918] text-[#02132B] hover:opacity-90"
                   }`}
                   onClick={(e) => {
                     e.preventDefault();
@@ -11754,7 +12363,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         }}
                         className="flex items-center justify-between w-full mb-2 text-left"
                       >
-                        <h3 className="text-lg font-semibold text-[#0D1B2A]">
+                        <h3 className="text-lg font-semibold text-[#02132B]">
                           Export Options
                         </h3>
                         {sectionsOpen.export ? (
@@ -11965,6 +12574,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               template: false,
                               size: false,
                               export: false,
+                              badgeStyle: false,
                               background: false,
                               textLines: false,
                               backing: false,
@@ -11975,6 +12585,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               template: true,
                               size: false,
                               export: false,
+                              badgeStyle: false,
                               background: false,
                               textLines: false,
                               backing: false,
@@ -12030,8 +12641,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               : ""
           }`}
         >
-          <div className="rounded-xl border border-[rgba(13,27,42,0.1)] bg-white overflow-hidden shadow-[0_2px_12px_rgba(13,27,42,0.06)] w-full flex flex-col min-h-0">
-            <div className="border-b border-[rgba(13,27,42,0.08)] bg-[#F8F7F4]">
+          <div className="rounded-xl border border-[rgba(2, 19, 43,0.1)] bg-white overflow-hidden shadow-[0_2px_12px_rgba(2, 19, 43,0.06)] w-full flex flex-col min-h-0">
+            <div className="border-b border-[rgba(2, 19, 43,0.08)] bg-[#F8F7F4]">
               <AqbPreviewPanelHeader
                 title={
                   variant === "badge"
@@ -12156,7 +12767,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     {/* Current badge being edited */}
                     <div className="flex w-full flex-shrink-0 flex-col items-center">
                       <div
-                        className="font-semibold text-[#0d1b2a] mb-1"
+                        className="font-semibold text-[#02132B] mb-1"
                         style={{
                           fontSize: `${DESIGNER_UI_TYPOGRAPHY.nowEditingFontRem}rem`,
                         }}
@@ -12180,7 +12791,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           p.badge.backgroundColor,
                         );
                         return (
-                          <div className="relative w-full border-2 border-[rgba(13,27,42,0.2)] rounded-lg bg-white/80 pt-2 pb-3 px-1 flex-shrink-0 shadow-sm">
+                          <div className="relative w-full border-2 border-[rgba(2, 19, 43,0.2)] rounded-lg bg-white/80 pt-2 pb-3 px-1 flex-shrink-0 shadow-sm">
                             {variant !== "badge" ? (
                               <div className="absolute z-20 left-2 top-2 flex items-center gap-1.5">
                                 <button
@@ -12466,28 +13077,28 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     (l.text ?? "").trim(),
                   ).length;
                   return (
-                    <div className="border-t border-[rgba(13,27,42,0.08)] bg-white px-4 py-3 space-y-1.5 text-[14px]">
+                    <div className="border-t border-[rgba(2, 19, 43,0.08)] bg-white px-4 py-3 space-y-1.5 text-[14px]">
                       <div className="flex justify-between gap-2">
                         <span className="text-[#6b7f92]">Shape</span>
-                        <span className="font-medium text-[#0d1b2a] text-right">
+                        <span className="font-medium text-[#02132B] text-right">
                           {activeTemplate?.name ?? "—"}
                         </span>
                       </div>
                       <div className="flex justify-between gap-2">
                         <span className="text-[#6b7f92]">Background</span>
-                        <span className="font-medium text-[#0d1b2a] text-right">
+                        <span className="font-medium text-[#02132B] text-right">
                           {bgName}
                         </span>
                       </div>
                       <div className="flex justify-between gap-2">
                         <span className="text-[#6b7f92]">Lines of text</span>
-                        <span className="font-medium text-[#0d1b2a]">
+                        <span className="font-medium text-[#02132B]">
                           {lineCount} line{lineCount === 1 ? "" : "s"}
                         </span>
                       </div>
                       <div className="flex justify-between gap-2">
                         <span className="text-[#6b7f92]">Backing</span>
-                        <span className="font-medium text-[#0d1b2a] text-right">
+                        <span className="font-medium text-[#02132B] text-right">
                           {backingStr}
                         </span>
                       </div>
@@ -12496,7 +13107,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           <span className="text-[#6b7f92]">
                             Badges in order
                           </span>
-                          <span className="font-semibold text-[#c8962a] text-right">
+                          <span className="font-semibold text-[#ED8918] text-right">
                             {badgeOrderQty} badge
                             {badgeOrderQty === 1 ? "" : "s"}
                             {multipleBadges.length > 1
@@ -12505,12 +13116,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           </span>
                         </div>
                       ) : null}
-                      <div className="h-px bg-[rgba(13,27,42,0.08)] my-1" />
+                      <div className="h-px bg-[rgba(2, 19, 43,0.08)] my-1" />
                       <div className="flex justify-between gap-2">
                         <span className="text-[#6b7f92]">
                           Designs in editor
                         </span>
-                        <span className="font-semibold text-[#c8962a]">
+                        <span className="font-semibold text-[#ED8918]">
                           {multipleBadges.length}{" "}
                           {multipleBadges.length === 1
                             ? config.labelProduct.toLowerCase()
@@ -12522,10 +13133,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 })()
               : null}
             <div className="px-4 pb-4 space-y-3">
-              <div className="rounded-xl bg-[#0d1b2a] px-4 py-4 text-white">
+              <div className="rounded-xl bg-[#02132B] px-4 py-4 text-white">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0 flex-1">
-                    <div className="text-[26px] md:text-[28px] font-bold text-[#e0ac42] leading-none tracking-tight">
+                    <div className="text-[26px] md:text-[28px] font-bold text-[#F5A84D] leading-none tracking-tight">
                       {addToCartPriceLabel}
                     </div>
                     <p className="text-[14px] text-white/35 mt-2 leading-snug">
@@ -12606,30 +13217,30 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 </button>
               </div>
               {variant !== "badge" ? (
-                <div className="rounded-lg border border-[rgba(13,27,42,0.1)] bg-white px-3 py-3 space-y-2">
-                  <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
+                <div className="rounded-lg border border-[rgba(2, 19, 43,0.1)] bg-white px-3 py-3 space-y-2">
+                  <div className="flex items-start gap-2 text-[14px] text-[#1a3d5c] leading-snug">
                     <TruckIcon className="h-4 w-4 shrink-0 text-[#2d9e75] mt-0.5" />
                     <span>
                       Free USA shipping on many badge orders — final rates in
                       cart.
                     </span>
                   </div>
-                  <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
-                    <BoltIcon className="h-4 w-4 shrink-0 text-[#c8962a] mt-0.5" />
+                  <div className="flex items-start gap-2 text-[14px] text-[#1a3d5c] leading-snug">
+                    <BoltIcon className="h-4 w-4 shrink-0 text-[#ED8918] mt-0.5" />
                     <span>
                       Fast production — most custom badges ship within two
                       business days.
                     </span>
                   </div>
-                  <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
-                    <PencilSquareIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
+                  <div className="flex items-start gap-2 text-[14px] text-[#1a3d5c] leading-snug">
+                    <PencilSquareIcon className="h-4 w-4 shrink-0 text-[#1a3d5c] mt-0.5" />
                     <span>
                       Print-ready artwork is generated automatically when you
                       check out.
                     </span>
                   </div>
-                  <div className="flex items-start gap-2 text-[14px] text-[#3a4f63] leading-snug">
-                    <UserIcon className="h-4 w-4 shrink-0 text-[#3a4f63] mt-0.5" />
+                  <div className="flex items-start gap-2 text-[14px] text-[#1a3d5c] leading-snug">
+                    <UserIcon className="h-4 w-4 shrink-0 text-[#1a3d5c] mt-0.5" />
                     <span>
                       Sign in on the storefront to save drafts and reorder
                       faster.
@@ -12639,7 +13250,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               ) : null}
               {variant !== "badge" ? (
                 <p className="text-[14px] leading-snug text-[#6b7f92] px-0.5">
-                  <strong className="text-[#3a4f63]">
+                  <strong className="text-[#1a3d5c]">
                     {BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE}
                   </strong>{" "}
                   On-screen colors are a guide; finished badges may vary
@@ -12652,7 +13263,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
         {/* MOBILE: Step progress bar (non-badge variants only; badge uses steps in editor header) */}
         {variant !== "badge" ? (
-        <div className="flex-shrink-0 md:hidden w-full border-t border-[rgba(13,27,42,0.08)] bg-white px-4 py-3">
+        <div className="flex-shrink-0 md:hidden w-full border-t border-[rgba(2, 19, 43,0.08)] bg-white px-4 py-3">
           <div className="flex items-center justify-center gap-4 w-full">
             {(() => {
               const signBgReady =
@@ -12778,7 +13389,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           step.done
                             ? "bg-[#2D9E75] text-white"
                             : step.current
-                            ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
+                            ? "bg-[#02132B] text-white shadow-[0_0_0_3px_rgba(2, 19, 43,0.15)]"
                             : "bg-[#D4CEC6] text-white"
                         }`}
                       >
@@ -12883,7 +13494,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         step.done
                           ? "bg-[#2D9E75] text-white"
                           : step.current
-                          ? "bg-[#0D1B2A] text-white shadow-[0_0_0_3px_rgba(13,27,42,0.15)]"
+                          ? "bg-[#02132B] text-white shadow-[0_0_0_3px_rgba(2, 19, 43,0.15)]"
                           : "bg-[#D4CEC6] text-white"
                       }`}
                     >
@@ -13508,6 +14119,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         template: false,
                         size: true,
                         export: false,
+                        badgeStyle: false,
                         background: false,
                         textLines: false,
                         backing: false,

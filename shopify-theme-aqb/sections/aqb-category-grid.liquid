@@ -12,6 +12,9 @@
         {%- if section.settings.heading != blank -%}
           <h2 class="aqb-category-grid__heading">{{ section.settings.heading }}</h2>
         {%- endif -%}
+        {%- if section.settings.subheading != blank -%}
+          <p class="aqb-category-grid__subheading">{{ section.settings.subheading | escape }}</p>
+        {%- endif -%}
       </div>
       {%- if section.settings.view_all_label != blank -%}
         <a href="{{ section.settings.view_all_link }}" class="view-all">
@@ -136,6 +139,12 @@
     },
     {
       "type": "text",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Magnetic, pin, and adhesive backings available"
+    },
+    {
+      "type": "text",
       "id": "view_all_label",
       "label": "View all link label",
       "default": "View all products →"
@@ -226,6 +235,7 @@
         "layout": "split",
         "eyebrow": "Shop by category",
         "heading": "Every badge,<br>one destination.",
+        "subheading": "Magnetic, pin, and adhesive backings available",
         "view_all_label": "View all products →",
         "view_all_link": "/collections/all"
       },

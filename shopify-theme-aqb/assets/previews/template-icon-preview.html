@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Step 1 Template Icon Preview</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f5f5;
+      padding: 40px;
+      color: #02132B;
+    }
+    h1 { font-size: 18px; margin-bottom: 8px; }
+    p { margin: 0 0 24px; color: #555; font-size: 14px; }
+    .row {
+      display: flex;
+      gap: 48px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+    }
+    .card span {
+      display: block;
+      margin-top: 12px;
+      font-size: 12px;
+      color: #666;
+    }
+    .on-white { background: #fff; }
+    .on-navy {
+      background: #02132B;
+      padding: 24px;
+      border-radius: 12px;
+    }
+    .on-navy span { color: rgba(255,255,255,0.7); }
+    .compare {
+      display: flex;
+      gap: 24px;
+      margin-top: 32px;
+      align-items: center;
+    }
+    .compare img { border: 1px solid #ccc; background: #fff; }
+  </style>
+</head>
+<body>
+  <h1>Step 1 — Choose a template (SVG v2 preview)</h1>
+  <p>Not uploaded to Shopify yet. Open this file locally to review.</p>
+
+  <div class="row">
+    <div class="card on-white">
+      <img src="aqb-step-icon-template-v2.svg" width="76" height="76" alt="76px">
+      <span>76px (site size)</span>
+    </div>
+    <div class="card on-white">
+      <img src="aqb-step-icon-template-v2.svg" width="152" height="152" alt="152px">
+      <span>152px (2× zoom)</span>
+    </div>
+    <div class="card on-white">
+      <img src="aqb-step-icon-template-v2.svg" width="228" height="228" alt="228px">
+      <span>228px (3× zoom)</span>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div>
+      <strong>Reference (original PNG)</strong><br>
+      <img src="template-icon-reference.png" width="76" height="76" alt="reference">
+    </div>
+    <div>
+      <strong>New SVG v2</strong><br>
+      <img src="aqb-step-icon-template-v2.svg" width="76" height="76" alt="new svg">
+    </div>
+  </div>
+</body>
+</html>

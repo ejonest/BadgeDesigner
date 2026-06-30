@@ -180,8 +180,8 @@ export function computeBadgeAqbOrderQtyUiModel(
     freeShipGoal,
   );
   const savingsBarGradient = freeShipPieces
-    ? "linear-gradient(90deg,#C8962A,#2D9E75)"
-    : "linear-gradient(90deg,#C8962A,#E0AC42)";
+    ? "linear-gradient(90deg,#ED8918,#2D9E75)"
+    : "linear-gradient(90deg,#ED8918,#F5A84D)";
   const savingsBarLabel = freeShipPieces
     ? "Free shipping unlocked"
     : orderCount > 0

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Step 4 Order Icon Preview</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f5f5;
+      padding: 40px;
+      color: #02132B;
+      max-width: 960px;
+    }
+    h1 { font-size: 18px; margin-bottom: 8px; }
+    p { margin: 0 0 24px; color: #555; font-size: 14px; }
+    .row {
+      display: flex;
+      gap: 32px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+    }
+    .card span {
+      display: block;
+      margin-top: 12px;
+      font-size: 12px;
+      color: #666;
+    }
+    .compare {
+      display: flex;
+      gap: 24px;
+      margin-top: 32px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .compare div { text-align: center; }
+    .compare strong { display: block; margin-bottom: 8px; font-size: 13px; }
+    h2 { font-size: 15px; margin: 32px 0 16px; }
+  </style>
+</head>
+<body>
+  <h1>Step 4 — Order it (SVG preview)</h1>
+  <p>Open via dev server: <a href="http://localhost:5173/icon-previews/order-icon-preview.html">localhost:5173/icon-previews/order-icon-preview.html</a></p>
+
+  <h2>Sizes</h2>
+  <div class="row">
+    <div class="card">
+      <img src="aqb-step-icon-order-v2.svg" width="76" height="76" alt="">
+      <span>76px (site size)</span>
+    </div>
+    <div class="card">
+      <img src="aqb-step-icon-order-v2.svg" width="152" height="152" alt="">
+      <span>152px (2x zoom)</span>
+    </div>
+    <div class="card">
+      <img src="aqb-step-icon-order-v2.svg" width="228" height="228" alt="">
+      <span>228px (3x zoom)</span>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div>
+      <strong>Reference (original)</strong>
+      <img src="order-icon-reference.png" width="76" height="76" alt="">
+    </div>
+    <div>
+      <strong>New v2</strong>
+      <img src="aqb-step-icon-order-v2.svg" width="76" height="76" alt="">
+    </div>
+    <div>
+      <strong>Preview (approved)</strong>
+      <img src="aqb-step-icon-preview-v3.svg" width="76" height="76" alt="">
+    </div>
+    <div>
+      <strong>Customize (approved)</strong>
+      <img src="aqb-step-icon-customize-lucide.svg" width="76" height="76" alt="">
+    </div>
+    <div>
+      <strong>Template (approved)</strong>
+      <img src="aqb-step-icon-template-v2.svg" width="76" height="76" alt="">
+    </div>
+  </div>
+</body>
+</html>

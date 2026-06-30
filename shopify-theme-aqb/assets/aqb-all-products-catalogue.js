@@ -53,6 +53,9 @@
   var priceMin = null;
   var priceMax = null;
   var showAdult = false;
+  var searchQuery = '';
+  var searchHandles = [];
+  var searchLoading = false;
   var currentPage = 1;
   var collectionPage = 1;
   var collectionPageSize = 250;
@@ -245,6 +248,7 @@
     article.setAttribute('data-desk-sign-type', deskInfo.signType);
     article.setAttribute('data-desk-categories', deskInfo.categories.join(' '));
     article.setAttribute('data-product-id', String(product.id));
+    article.setAttribute('data-product-handle', handle);
     article.setAttribute('data-product-index', String(index));
     article.setAttribute('data-title', product.title || '');
     article.setAttribute('data-price', variant ? String(variant.price) : '0');
@@ -307,6 +311,123 @@
       ids[card.getAttribute('data-product-id')] = true;
     });
     return ids;
+  }
+
+  function existingProductHandles() {
+    var handles = {};
+    refreshCards().forEach(function (card) {
+      var handle = card.getAttribute('data-product-handle');
+      if (handle) handles[handle] = true;
+    });
+    return handles;
+  }
+
+  function parseProductHandlesFromHtml(html) {
+    var handles = [];
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+    var scope =
+      doc.getElementById('product-grid') ||
+      doc.querySelector('.template-search') ||
+      doc.querySelector('main');
+
+    if (!scope) return handles;
+
+    scope.querySelectorAll('a[href*="/products/"]').forEach(function (link) {
+      var href = link.getAttribute('href') || '';
+      var match = href.match(/\/products\/([^/?#]+)/);
+      if (match && handles.indexOf(match[1]) === -1) {
+        handles.push(match[1]);
+      }
+    });
+
+    return handles;
+  }
+
+  function fetchSearchResultHandles(query) {
+    var handles = [];
+    var pageNum = 1;
+    var maxPages = 8;
+
+    function fetchPage() {
+      var url = '/search?q=' + encodeURIComponent(query) + '&type=product';
+      if (pageNum > 1) url += '&page=' + pageNum;
+
+      return fetch(url)
+        .then(function (res) {
+          return res.text();
+        })
+        .then(function (html) {
+          var pageHandles = parseProductHandlesFromHtml(html);
+          pageHandles.forEach(function (handle) {
+            if (handles.indexOf(handle) === -1) handles.push(handle);
+          });
+
+          var doc = new DOMParser().parseFromString(html, 'text/html');
+          var hasNext =
+            doc.querySelector('.pagination__item--next:not(.pagination__item--disabled) a') ||
+            doc.querySelector('a[rel="next"]');
+
+          if (hasNext && pageNum < maxPages && pageHandles.length) {
+            pageNum += 1;
+            return fetchPage();
+          }
+
+          return handles;
+        });
+    }
+
+    return fetchPage().catch(function () {
+      return handles;
+    });
+  }
+
+  function ensureSearchProductsLoaded(handles) {
+    var knownHandles = existingProductHandles();
+    var missing = handles.filter(function (handle) {
+      return handle && !knownHandles[handle];
+    });
+
+    if (!missing.length) return Promise.resolve();
+
+    return Promise.all(
+      missing.map(function (handle) {
+        return fetch('/products/' + encodeURIComponent(handle) + '.js')
+          .then(function (res) {
+            if (!res.ok) throw new Error('missing product');
+            return res.json();
+          })
+          .then(function (product) {
+            if (existingProductIds()[String(product.id)]) return;
+            grid.appendChild(buildCardElement(product, refreshCards().length));
+          })
+          .catch(function () {
+            return null;
+          });
+      })
+    );
+  }
+
+  function loadSearchResults() {
+    if (!searchQuery) {
+      searchHandles = [];
+      searchLoading = false;
+      return Promise.resolve();
+    }
+
+    searchLoading = true;
+    renderGrid();
+
+    return fetchSearchResultHandles(searchQuery)
+      .then(function (handles) {
+        searchHandles = handles;
+        return ensureSearchProductsLoaded(handles);
+      })
+      .then(function () {
+        cards = refreshCards();
+      })
+      .finally(function () {
+        searchLoading = false;
+      });
   }
 
   function loadNextCollectionPage() {
@@ -489,6 +610,7 @@
     priceMin = params.get('min') ? parseFloat(params.get('min')) : null;
     priceMax = params.get('max') ? parseFloat(params.get('max')) : null;
     showAdult = params.get('adult') === '1';
+    searchQuery = (params.get('q') || '').trim().toLowerCase();
   }
 
   function applyUrlStateToUi() {
@@ -541,6 +663,7 @@
     if (priceMin != null && !isNaN(priceMin)) params.set('min', String(priceMin));
     if (priceMax != null && !isNaN(priceMax)) params.set('max', String(priceMax));
     if (showAdult) params.set('adult', '1');
+    if (searchQuery) params.set('q', searchQuery);
 
     var query = params.toString();
     var next = catalogueBase + (query ? '?' + query : '');
@@ -610,6 +733,16 @@
     if (priceMin != null && !isNaN(priceMin) && priceCents < Math.round(priceMin * 100)) return false;
     if (priceMax != null && !isNaN(priceMax) && priceCents > Math.round(priceMax * 100)) return false;
 
+    if (searchQuery) {
+      if (searchLoading) return false;
+      if (searchHandles.length) {
+        var handle = card.getAttribute('data-product-handle') || '';
+        return searchHandles.indexOf(handle) !== -1;
+      }
+      var title = (card.getAttribute('data-title') || '').toLowerCase();
+      return title.indexOf(searchQuery) !== -1;
+    }
+
     return true;
   }
 
@@ -660,12 +793,18 @@
 
     var shown = Math.min(visibleCount, filtered.length);
     if (countEl) {
-      countEl.textContent = 'Showing ' + shown + ' of ' + filtered.length + ' products';
+      var countText = 'Showing ' + shown + ' of ' + filtered.length + ' products';
+      if (searchLoading) {
+        countText = 'Searching products for “' + searchQuery + '”…';
+      } else if (searchQuery) {
+        countText = 'Showing ' + shown + ' of ' + filtered.length + ' results for “' + searchQuery + '”';
+      }
+      countEl.textContent = countText;
     }
 
     if (loadWrap) {
       var canShowMoreFiltered = shown < filtered.length;
-      var canLoadMoreCollection = !allCollectionLoaded && collectionHandle;
+      var canLoadMoreCollection = !searchQuery && !allCollectionLoaded && collectionHandle;
       loadWrap.hidden = !canShowMoreFiltered && !canLoadMoreCollection;
     }
   }
@@ -689,6 +828,9 @@
     priceMin = null;
     priceMax = null;
     showAdult = false;
+    searchQuery = '';
+    searchHandles = [];
+    searchLoading = false;
     applyUrlStateToUi();
     currentPage = 1;
     updateUrl();
@@ -701,6 +843,11 @@
 
     if (visibleCount < filtered.length) {
       currentPage += 1;
+      renderGrid();
+      return;
+    }
+
+    if (searchQuery) {
       renderGrid();
       return;
     }
@@ -774,7 +921,11 @@
   applyUrlStateToUi();
   renderGrid();
 
-  if (collectionHandle && totalProducts > cards.length) {
+  if (searchQuery) {
+    loadSearchResults().then(function () {
+      renderGrid();
+    });
+  } else if (collectionHandle && totalProducts > cards.length) {
     loadAllRemainingPages().then(function () {
       renderGrid();
     });

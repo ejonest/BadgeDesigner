@@ -28,11 +28,11 @@ export function BadgeQtyStepper({
   }, [clamped, focused]);
 
   const btnClass = compact
-    ? "flex h-7 w-7 items-center justify-center rounded border border-[rgba(13,27,42,0.15)] bg-white text-[#0d1b2a] hover:bg-[#f5f2ee] disabled:opacity-40 text-sm"
+    ? "flex h-7 w-7 items-center justify-center rounded border border-[rgba(2, 19, 43,0.15)] bg-white text-[#02132B] hover:bg-[#f5f2ee] disabled:opacity-40 text-sm"
     : "flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-40";
 
   const inputClass = compact
-    ? "w-9 text-center text-xs font-semibold tabular-nums border border-[rgba(13,27,42,0.15)] rounded bg-white text-[#0d1b2a] py-0.5"
+    ? "w-9 text-center text-xs font-semibold tabular-nums border border-[rgba(2, 19, 43,0.15)] rounded bg-white text-[#02132B] py-0.5"
     : "w-10 text-center text-sm font-semibold tabular-nums border border-gray-300 rounded-md bg-white py-1";
 
   return (

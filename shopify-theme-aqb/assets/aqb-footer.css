@@ -6,7 +6,7 @@
 }
 
 .aqb-footer {
-  background: #0d1b2a;
+  background: #02132B;
   padding: 60px 48px 32px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   font-family: 'DM Sans', sans-serif;
@@ -34,7 +34,7 @@
 .aqb-footer__logo-mark {
   width: 38px;
   height: 38px;
-  background: #0d1b2a;
+  background: #02132B;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 50%;
   display: flex;
@@ -42,7 +42,7 @@
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  color: #e0ac42;
+  color: #F3A248;
   letter-spacing: 0.5px;
   flex-shrink: 0;
 }
@@ -56,7 +56,7 @@
 }
 
 .aqb-footer__logo-text span {
-  color: #c8962a;
+  color: #ED8918;
 }
 
 .aqb-footer__brand-copy {
@@ -94,7 +94,7 @@
 }
 
 .aqb-footer__links a:hover {
-  color: #e0ac42;
+  color: #F3A248;
 }
 
 .aqb-footer__bottom {
@@ -127,7 +127,7 @@
 }
 
 .aqb-footer__lita-dot {
-  color: #c8962a;
+  color: #ED8918;
 }
 
 @media screen and (max-width: 989px) {

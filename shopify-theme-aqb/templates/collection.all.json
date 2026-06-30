@@ -6,9 +6,9 @@
         "stat_products": {
           "type": "stat",
           "settings": {
-            "value": "1000+",
+            "value": "950+",
             "label": "Products",
-            "use_collection_count": true
+            "use_collection_count": false
           }
         },
         "stat_types": {

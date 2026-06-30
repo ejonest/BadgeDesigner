@@ -3603,19 +3603,19 @@ details-disclosure > details {
    ================================================ */
 
 :root {
-  --aqb-navy: #0d1b2a;
-  --aqb-navy-mid: #162637;
-  --aqb-gold: #c8962a;
-  --aqb-gold-light: #e0ac42;
-  --aqb-gold-pale: #f5e6c0;
+  --aqb-navy: #02132B;
+  --aqb-navy-mid: #0c2444;
+  --aqb-gold: #ED8918;
+  --aqb-gold-light: #F3A248;
+  --aqb-gold-pale: #FFF3E5;
   --aqb-cream: #faf8f4;
   --aqb-blue: #2563eb;
-  --aqb-orange: #c8962a;
-  --aqb-orange-light: #e0ac42;
+  --aqb-orange: #ED8918;
+  --aqb-orange-light: #F3A248;
   --aqb-off: #faf8f4;
-  --aqb-ink: #0d1b2a;
+  --aqb-ink: #02132B;
   --aqb-mid: #3a4f63;
-  --aqb-border: rgba(13, 27, 42, 0.1);
+  --aqb-border: rgba(2, 19, 43, 0.1);
   --aqb-radius: 8px;
   --aqb-radius-lg: 14px;
   --aqb-ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -4247,7 +4247,7 @@ cart-remove-button button:hover {
 .cart__checkout-button:hover {
   background: var(--aqb-orange-light) !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.35) !important;
+  box-shadow: 0 8px 24px rgba(237, 137, 24, 0.35) !important;
 }
 
 /* ── Continue shopping link ── */

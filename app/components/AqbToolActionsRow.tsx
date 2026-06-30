@@ -22,7 +22,7 @@ export interface AqbToolActionsRowProps {
   onLoad: () => void;
 }
 
-const iconClass = "h-[18px] w-[18px] stroke-[1.75] text-[#0d1b2a]";
+const iconClass = "h-[18px] w-[18px] stroke-[1.75] text-[#02132B]";
 
 /** 2×2 grid: 3 squares + plus in top-right (matches 4-grid, fourth cell is “add”). */
 export const AddMultipleGridIcon: React.FC<{ className?: string }> = ({

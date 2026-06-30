@@ -1,75 +1,167 @@
-<section class="aqb-capabilities">
+<section class="aqb-capabilities" id="aqb-capabilities-{{ section.id }}">
   <div class="aqb-capabilities__inner">
-    {%- for block in section.blocks -%}
-      <div class="aqb-capabilities__item" {{ block.shopify_attributes }}>
-        <span class="aqb-capabilities__num">{{ block.settings.number | escape }}</span>
-        <div>
-          <div class="aqb-capabilities__title">{{ block.settings.title | escape }}</div>
-          <div class="aqb-capabilities__desc">{{ block.settings.description | escape }}</div>
-        </div>
-      </div>
-    {%- endfor -%}
+    {%- if section.settings.heading != blank -%}
+      <h2 class="aqb-capabilities__heading">{{ section.settings.heading | escape }}</h2>
+    {%- endif -%}
+
+    <div class="aqb-capabilities__track">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'step' -%}
+          <div class="aqb-capabilities__step" {{ block.shopify_attributes }}>
+            <div class="aqb-capabilities__icon-wrap">
+              <span class="aqb-capabilities__badge">{{ block.settings.number | escape }}</span>
+              <span class="aqb-capabilities__icon" aria-hidden="true">
+                {%- case block.settings.icon -%}
+                  {%- when 'customize' -%}
+                    <svg viewBox="0 0 76 76" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <g transform="translate(7, 7) scale(2.6)" stroke="#02132B" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round">
+                        <path fill="#FFFFFF" d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+                      </g>
+                      <circle cx="42.1" cy="24.9" r="2.6" fill="#ED8918" stroke="#02132B" stroke-width="1.6"/>
+                      <circle cx="52.5" cy="34.3" r="2.6" fill="#FFFFFF" stroke="#02132B" stroke-width="1.6"/>
+                      <circle cx="29.1" cy="27.5" r="2.6" fill="#ED8918" stroke="#02132B" stroke-width="1.6"/>
+                      <circle cx="23.9" cy="39.5" r="2.6" fill="#ED8918" stroke="#02132B" stroke-width="1.6"/>
+                    </svg>
+                  {%- when 'preview' -%}
+                    <svg viewBox="0 0 76 76" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <path d="M16 40c8-13 36-13 44 0-8 13-36 13-44 0z" stroke="#02132B" stroke-width="2.75" stroke-linejoin="round"/>
+                      <circle cx="38" cy="40" r="9.5" stroke="#02132B" stroke-width="2.25"/>
+                      <circle cx="38" cy="40" r="4.25" fill="#02132B"/>
+                      <path d="M38 24v-7" stroke="#02132B" stroke-width="2.5" stroke-linecap="round"/>
+                      <path d="M19 30.5l-5-5" stroke="#02132B" stroke-width="2.5" stroke-linecap="round"/>
+                      <path d="M57 30.5l5-5" stroke="#02132B" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>
+                  {%- when 'order' -%}
+                    <svg viewBox="0 0 76 76" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <path d="M14 19h7" stroke="#02132B" stroke-width="2.75" stroke-linecap="round"/>
+                      <path d="M21 19L28 48" stroke="#02132B" stroke-width="2.75" stroke-linecap="round"/>
+                      <path d="M23 26h33" stroke="#02132B" stroke-width="2.75" stroke-linecap="round"/>
+                      <path d="M56 26l-4 18" stroke="#02132B" stroke-width="2.75" stroke-linecap="round"/>
+                      <path d="M27 44h25" stroke="#02132B" stroke-width="2.75" stroke-linecap="round"/>
+                      <path d="M28 48h22" stroke="#02132B" stroke-width="2.75" stroke-linecap="round"/>
+                      <circle cx="32" cy="52" r="3.5" stroke="#02132B" stroke-width="2.25"/>
+                      <circle cx="46" cy="52" r="3.5" stroke="#02132B" stroke-width="2.25"/>
+                    </svg>
+                  {%- else -%}
+                    <svg viewBox="0 0 76 76" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <rect x="11" y="11" width="54" height="54" rx="7" stroke="#02132B" stroke-width="2.75"/>
+                      <path d="M11 27h54" stroke="#02132B" stroke-width="2"/>
+                      <circle cx="19" cy="20" r="3.5" fill="#ED8918"/>
+                      <path d="M38 27v38" stroke="#02132B" stroke-width="2"/>
+                      <path d="M11 46h54" stroke="#02132B" stroke-width="2"/>
+                      <path d="M17 31v11" stroke="#02132B" stroke-width="2.25" stroke-linecap="round"/>
+                      <circle cx="27" cy="36.5" r="5.2" fill="#ED8918"/>
+                      <path d="M17 50v11" stroke="#02132B" stroke-width="2.25" stroke-linecap="round"/>
+                      <circle cx="27" cy="55.5" r="5.2" fill="#ED8918"/>
+                    </svg>
+                {%- endcase -%}
+              </span>
+            </div>
+            <h3 class="aqb-capabilities__title">{{ block.settings.title | escape }}</h3>
+            <p class="aqb-capabilities__desc">{{ block.settings.description | escape }}</p>
+          </div>
+
+          {%- unless forloop.last -%}
+            <span class="aqb-capabilities__arrow" aria-hidden="true">
+              <svg viewBox="0 0 96 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12h72" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M68 6l12 6-12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          {%- endunless -%}
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
   </div>
 </section>
 
 {% schema %}
 {
-  "name": "AQB Capabilities",
+  "name": "AQB Design Steps",
   "tag": "section",
   "class": "section",
-  "max_blocks": 6,
+  "max_blocks": 4,
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Design Your Badge in 4 Simple Steps"
+    }
+  ],
   "blocks": [
     {
-      "type": "capability",
-      "name": "Capability",
+      "type": "step",
+      "name": "Step",
       "settings": [
         {
           "type": "text",
           "id": "number",
-          "label": "Number",
-          "default": "01"
+          "label": "Step number",
+          "default": "1"
+        },
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "template", "label": "Template" },
+            { "value": "customize", "label": "Customize" },
+            { "value": "preview", "label": "Preview" },
+            { "value": "order", "label": "Order" }
+          ],
+          "default": "template"
         },
         {
           "type": "text",
           "id": "title",
           "label": "Title",
-          "default": "Any color you want"
+          "default": "Choose a template"
         },
         {
-          "type": "textarea",
+          "type": "text",
           "id": "description",
           "label": "Description",
-          "default": "Choose from the full color spectrum — not just a handful of presets."
+          "default": "Pick a style you like"
         }
       ]
     }
   ],
   "presets": [
     {
-      "name": "AQB Capabilities",
+      "name": "AQB Design Steps",
       "blocks": [
         {
-          "type": "capability",
+          "type": "step",
           "settings": {
-            "number": "01",
-            "title": "Any color you want",
-            "description": "Choose from the full color spectrum — not just a handful of presets. Navy, gold, red, green, black, white and everything in between."
+            "number": "1",
+            "icon": "template",
+            "title": "Choose a template",
+            "description": "Pick a style you like"
           }
         },
         {
-          "type": "capability",
+          "type": "step",
           "settings": {
-            "number": "02",
-            "title": "Your text, your font",
-            "description": "Name, role, department, organization — any text you need across multiple lines, in your choice of font style."
+            "number": "2",
+            "icon": "customize",
+            "title": "Customize it",
+            "description": "Add colors, graphics & text"
           }
         },
         {
-          "type": "capability",
+          "type": "step",
           "settings": {
-            "number": "03",
-            "title": "See it before you buy",
-            "description": "The live preview updates as you design. What you see on screen is what gets made. No surprises, no artwork fees, no back-and-forth."
+            "number": "3",
+            "icon": "preview",
+            "title": "Preview live",
+            "description": "See exactly how it will look"
+          }
+        },
+        {
+          "type": "step",
+          "settings": {
+            "number": "4",
+            "icon": "order",
+            "title": "Place your order",
+            "description": "Ships fast. No artwork fees."
           }
         }
       ]

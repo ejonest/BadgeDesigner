@@ -1,0 +1,159 @@
+<section class="aqb-home-usa" id="aqb-home-usa-{{ section.id }}">
+  <div class="aqb-home-usa__inner">
+    <div class="aqb-home-usa__intro">
+      <div class="aqb-home-usa__map" aria-hidden="true">
+        {%- if section.settings.map_image != blank -%}
+          {{
+            section.settings.map_image
+            | image_url: width: 480
+            | image_tag: loading: 'lazy', widths: '240,480', sizes: '240px', alt: section.settings.map_image_alt
+          }}
+        {%- elsif section.settings.map_image_asset != blank -%}
+          <img
+            src="{{ section.settings.map_image_asset | asset_url }}"
+            alt="{{ section.settings.map_image_alt | escape }}"
+            width="240"
+            height="196"
+            loading="lazy"
+          >
+        {%- endif -%}
+      </div>
+
+      <div class="aqb-home-usa__copy">
+        {%- if section.settings.heading != blank -%}
+          <h2 class="aqb-home-usa__heading">{{ section.settings.heading | escape }}</h2>
+        {%- endif -%}
+        {%- if section.settings.description != blank -%}
+          <p class="aqb-home-usa__desc">{{ section.settings.description | escape }}</p>
+        {%- endif -%}
+      </div>
+    </div>
+
+    <div class="aqb-home-usa__stats">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'stat' -%}
+          <div class="aqb-home-usa__stat" {{ block.shopify_attributes }}>
+            <span class="aqb-home-usa__icon aqb-home-usa__icon--{{ block.settings.icon | default: 'star' }}" aria-hidden="true">
+              {%- case block.settings.icon -%}
+                {%- when 'package' -%}
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M12 22v-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M15.17 2.21a1.67 1.67 0 0 1 1.63 0L21 4.57a1.93 1.93 0 0 1 0 3.36L8.82 14.79a1.655 1.655 0 0 1-1.64 0L3 12.43a1.93 1.93 0 0 1 0-3.36z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M20 13v3.87a2.06 2.06 0 0 1-1.11 1.83l-6 3.08a1.93 1.93 0 0 1-1.78 0l-6-3.08A2.06 2.06 0 0 1 4 16.87V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M21 12.43a1.93 1.93 0 0 0 0-3.36L8.83 2.2a1.64 1.64 0 0 0-1.63 0L3 4.57a1.93 1.93 0 0 0 0 3.36l12.18 6.86a1.636 1.636 0 0 0 1.63 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                {%- when 'award' -%}
+                  <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M20 8.6 21.36 10.05 23.21 9.33 23.8 11.23 25.79 11.39 25.5 13.35 27.21 14.35 26.1 16 27.21 17.65 25.5 18.65 25.79 20.61 23.8 20.77 23.21 22.67 21.36 21.95 20 23.4 18.64 21.95 16.79 22.67 16.2 20.77 14.21 20.61 14.5 18.65 12.79 17.65 13.9 16 12.79 14.35 14.5 13.35 14.21 11.39 16.2 11.23 16.79 9.33 18.64 10.05Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M14.8 26.2 12.5 33.5 19.8 30.1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M25.2 26.2 27.5 33.5 20.2 30.1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                {%- when 'people' -%}
+                  <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <circle cx="13.5" cy="14.5" r="4.2" stroke="currentColor" stroke-width="2"/>
+                    <path d="M6.5 29.5c0-3.9 3.1-6.8 7-6.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="26.5" cy="14.5" r="4.2" stroke="currentColor" stroke-width="2"/>
+                    <path d="M33.5 29.5c0-3.9-3.1-6.8-7-6.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="20" cy="16.5" r="5.2" fill="currentColor"/>
+                    <path d="M10.5 32.5c0-5.2 4.3-8.8 9.5-8.8s9.5 3.6 9.5 8.8" fill="currentColor"/>
+                  </svg>
+                {%- else -%}
+                  <svg viewBox="0 0 40 40" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M20 7.2 23.4 16.8h10.1l-8.2 6 3.1 9.6L20 26.2l-8.4 6.2 3.1-9.6-8.2-6h10.1L20 7.2Z"/>
+                  </svg>
+              {%- endcase -%}
+            </span>
+            {%- if block.settings.value != blank -%}
+              <div class="aqb-home-usa__value">{{ block.settings.value | escape }}</div>
+            {%- endif -%}
+            {%- if block.settings.label != blank -%}
+              <div class="aqb-home-usa__label">{{ block.settings.label | escape }}</div>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "AQB USA Banner",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Designed, Customized & Finished in the USA"
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "We are a U.S. business. Your badges are customized, printed, engraved and assembled in our facility in the USA with care and quality. Every badge is customized, engraved, printed and assembled by our team using imported materials manufactured to our exact specifications."
+    },
+    {
+      "type": "image_picker",
+      "id": "map_image",
+      "label": "USA map image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "map_image_asset",
+      "label": "USA map theme asset (fallback)",
+      "default": "aqb-home-usa-map.png"
+    },
+    {
+      "type": "text",
+      "id": "map_image_alt",
+      "label": "Map image alt text",
+      "default": "United States map with American flag — customized and finished in the USA"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "stat",
+      "name": "Stat",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "package", "label": "Package" },
+            { "value": "star", "label": "Star" },
+            { "value": "award", "label": "Award" },
+            { "value": "people", "label": "People" }
+          ],
+          "default": "star"
+        },
+        {
+          "type": "text",
+          "id": "value",
+          "label": "Value",
+          "default": "Millions+"
+        },
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "Badges Sold on Amazon"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "AQB USA Banner",
+      "blocks": [
+        { "type": "stat", "settings": { "icon": "package", "value": "Millions+", "label": "Badges Sold on Amazon" } },
+        { "type": "stat", "settings": { "icon": "star", "value": "6,000+", "label": "5-Star Ratings on Amazon" } },
+        { "type": "stat", "settings": { "icon": "award", "value": "10+ Years", "label": "Serving Customers Worldwide" } },
+        { "type": "stat", "settings": { "icon": "people", "value": "25,000+", "label": "Businesses, Schools & Organizations" } }
+      ]
+    }
+  ]
+}
+{% endschema %}
