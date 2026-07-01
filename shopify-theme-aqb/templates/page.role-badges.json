@@ -395,7 +395,7 @@
           "type": "card",
           "settings": {
             "emoji": "✏️",
-            "title": "Custom printed badges",
+            "title": "Design custom name badges",
             "description": "Any name, any title. Preview before you order.",
             "link": "shopify://products/custom-1x3-badge"
           }
@@ -428,7 +428,7 @@
         "eyebrow": "Don't see your role?",
         "heading": "We'll print <em>exactly</em><br>what you need.",
         "description": "Our custom badge tool lets you type any name, title, or role — and see your badge before you order. Perfect for unique positions, branded titles, or names alongside a role.",
-        "button_label": "Start designing →",
+        "button_label": "Design custom name badges →",
         "button_link": "shopify://products/custom-1x3-badge"
       }
     }

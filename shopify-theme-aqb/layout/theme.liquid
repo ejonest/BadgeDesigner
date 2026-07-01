@@ -389,5 +389,8 @@
     {%- if page.handle == 'desk-signs' -%}
       <script src="{{ 'aqb-desk-signs-v2.js' | asset_url }}" defer="defer"></script>
     {%- endif -%}
-  </body>
+
+    {%- if page.handle == 'badge-blank' -%}
+      {% render 'aqb-badge-blank-schema' %}
+    {%- endif -%}  </body>
 </html>

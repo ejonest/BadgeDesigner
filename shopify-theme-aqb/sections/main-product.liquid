@@ -17,6 +17,8 @@
   {{ 'component-price.css' | asset_url | stylesheet_tag }}
   {{ 'component-slider.css' | asset_url | stylesheet_tag }}
   {{ 'component-rating.css' | asset_url | stylesheet_tag }}
+  {{ 'component-aqb-judgeme.css' | asset_url | stylesheet_tag }}
+  {{ 'component-aqb-product-layout.css' | asset_url | stylesheet_tag }}
   {{ 'component-deferred-media.css' | asset_url | stylesheet_tag }}
 
   {% unless product.has_only_default_variant %}
@@ -297,6 +299,17 @@
                     price_class: 'price--large'
                   -%}
                 </div>
+                {%- comment -%} Judge.me preview badge (stars + count) {%- endcomment -%}
+                {%- if product -%}
+                  <div class="aqb-judgeme-preview-badge">
+                    <div
+                      class="jdgm-widget jdgm-preview-badge"
+                      data-id="{{ product.id }}"
+                    >
+                      {{ product.metafields.judgeme.badge }}
+                    </div>
+                  </div>
+                {%- endif -%}
                 {%- if product.quantity_price_breaks_configured? -%}
                   <div class="volume-pricing-note" id="Volume-Note-{{ section.id }}">
                     <span>{{ 'products.product.volume_pricing.note' | t }}</span>

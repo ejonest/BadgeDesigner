@@ -1,0 +1,22 @@
+{% comment %}
+  Judge.me widget renderer for theme-integrated placements.
+{% endcomment %}
+
+{% if widget_type == 'judgeme_review_widget' and product %}
+  <div
+    class="jdgm-widget jdgm-review-widget"
+    data-id="{{ product.id }}"
+    data-product-title="{{ product.title | escape }}"
+  >
+    {{ product.metafields.judgeme.widget }}
+  </div>
+{% endif %}
+
+{% if widget_type == 'judgeme_preview_badge' and product %}
+  <div
+    class="jdgm-widget jdgm-preview-badge"
+    data-id="{{ product.id }}"
+  >
+    {{ product.metafields.judgeme.badge }}
+  </div>
+{% endif %}

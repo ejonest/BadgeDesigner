@@ -1,0 +1,61 @@
+.aqb-judgeme-preview-badge {
+  margin-top: 0.8rem;
+  margin-bottom: 1.2rem;
+  line-height: 1.5;
+}
+
+.aqb-judgeme-preview-badge .jdgm-prev-badge {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1.5;
+}
+
+/* Dawn pulls shipping text up with a negative margin — reset on product pages */
+product-info:not(.main-product--badge-designer) .product__tax {
+  margin-top: 0.8rem;
+}
+
+product-info:not(.main-product--badge-designer) .aqb-judgeme-preview-badge + .product__tax {
+  margin-top: 1rem;
+}
+
+.aqb-judgeme-preview-badge:empty {
+  display: none;
+}
+
+.aqb-judgeme-reviews {
+  margin-top: 2.4rem;
+  padding-bottom: 2rem;
+}
+
+.aqb-judgeme-reviews:empty {
+  display: none;
+}
+
+/* Judge.me hides snippet-based widgets until installed via their UI — show theme-placed widgets */
+.aqb-judgeme-preview-badge .jdgm-preview-badge,
+.aqb-judgeme-preview-badge .jdgm-prev-badge {
+  display: block !important;
+}
+
+.aqb-judgeme-preview-badge .jdgm-prev-badge__text {
+  visibility: visible !important;
+}
+
+.aqb-judgeme-reviews .jdgm-review-widget,
+.aqb-judgeme-reviews .jdgm-rev-widg {
+  display: block !important;
+}
+
+.aqb-judgeme-reviews .jdgm-rev-widg__title,
+.aqb-judgeme-reviews .jdgm-rev-widg__summary-text {
+  visibility: visible !important;
+}
+
+@media screen and (min-width: 750px) {
+  .aqb-judgeme-reviews {
+    margin-top: 3.2rem;
+  }
+}

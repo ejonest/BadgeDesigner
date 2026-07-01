@@ -1,0 +1,98 @@
+.aqb-badge-designer-seo {
+  background: #faf8f4;
+  border-top: 1px solid rgba(2, 19, 43, 0.08);
+  padding: 3.2rem 0 4rem;
+  font-family: "DM Sans", sans-serif;
+  color: #02132b;
+  line-height: 1.65;
+}
+
+.aqb-badge-designer-seo__inner {
+  max-width: 900px;
+}
+
+.aqb-badge-designer-seo__heading {
+  font-family: "Lora", serif;
+  font-size: clamp(1.35rem, 2.2vw, 1.65rem);
+  font-weight: 700;
+  color: #02132b;
+  margin: 2.4rem 0 0.85rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid rgba(2, 19, 43, 0.08);
+}
+
+.aqb-badge-designer-seo__heading:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.aqb-badge-designer-seo__subheading {
+  font-family: "Lora", serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #02132b;
+  margin: 1.6rem 0 0.75rem;
+}
+
+.aqb-badge-designer-seo__text {
+  font-size: 0.95rem;
+  color: #3a4f63;
+  margin: 0 0 0.85rem;
+}
+
+.aqb-badge-designer-seo__text--emphasis {
+  font-weight: 600;
+  color: #02132b;
+}
+
+.aqb-badge-designer-seo__list {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+@media screen and (min-width: 750px) {
+  .aqb-badge-designer-seo__list {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1.5rem;
+  }
+}
+
+.aqb-badge-designer-seo__list li {
+  position: relative;
+  padding-left: 1.25rem;
+  font-size: 0.95rem;
+  color: #3a4f63;
+}
+
+.aqb-badge-designer-seo__list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ed8918;
+}
+
+.aqb-badge-designer-seo__tagline {
+  margin: 2rem 0 0;
+  padding: 1.1rem 1.25rem;
+  background: #fefcf9;
+  border: 1px solid rgba(2, 19, 43, 0.08);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #02132b;
+  text-align: center;
+}
+
+@media screen and (max-width: 749px) {
+  .aqb-badge-designer-seo {
+    padding: 2.4rem 0 3rem;
+  }
+}

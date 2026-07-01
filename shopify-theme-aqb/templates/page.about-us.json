@@ -1,0 +1,92 @@
+{
+  "sections": {
+    "main": {
+      "type": "aqb-info-page",
+      "blocks": {
+        "heading_who": {
+          "type": "section_heading",
+          "settings": { "heading": "Who We Are" }
+        },
+        "para_who": {
+          "type": "paragraph",
+          "settings": {
+            "text": "All Quality Badges is a dedicated name badge brand built for businesses, churches, schools, healthcare organizations, and anyone who needs professional identification done right.\n\nWe're part of the LITA family of brands — a US-based operation with over a decade of experience producing high-quality name badges and identification products. Every order is customized and fulfilled at our US facility, then shipped directly to you.\n\nWhen you order from All Quality Badges, a real team handles your order from start to finish."
+          }
+        },
+        "heading_what": {
+          "type": "section_heading",
+          "settings": { "heading": "What We Make" }
+        },
+        "para_what_1": {
+          "type": "paragraph",
+          "settings": {
+            "text": "We specialize in two things: custom name badges designed live by you online, and blank name tag stock for engravers, trophy shops, and organizations who handle their own finishing."
+          }
+        },
+        "para_what_2": {
+          "type": "paragraph",
+          "settings": {
+            "text": "Our catalog covers hundreds of badge styles — rounded corners, oval, square, magnetic backing, pin backing, adhesive — in a range of sizes, colors, and finishes. Whether you need one badge for a new hire or 500 for a full conference, we handle both without minimums or artwork fees."
+          }
+        },
+        "heading_why": {
+          "type": "section_heading",
+          "settings": { "heading": "Why Customers Choose Us" }
+        },
+        "bullets_why": {
+          "type": "bullets",
+          "settings": {
+            "items": "US-based operation — every order is customized and shipped from our US facility\nNo artwork fees — design your badge live in minutes, no files to send\nFast production — most orders ship within 2 business days\nMillions of badges sold — trusted by businesses and organizations across the country\nReal people behind it — questions get answered by our actual team, not a bot"
+          }
+        },
+        "heading_commitment": {
+          "type": "section_heading",
+          "settings": { "heading": "Our Commitment" }
+        },
+        "para_commitment": {
+          "type": "paragraph",
+          "settings": {
+            "text": "We believe professional identification shouldn't require a graphic designer, a purchase order, or a three-week lead time. Our goal is to make ordering fast, affordable, and exactly right — every time."
+          }
+        },
+        "cta_design": {
+          "type": "cta",
+          "settings": {
+            "prefix": "Ready to get started?",
+            "label": "Design Your Badge Now",
+            "url": "shopify://products/custom-1x3-badge",
+            "style": "gold"
+          }
+        },
+        "cta_shop": {
+          "type": "cta",
+          "settings": {
+            "prefix": "",
+            "label": "Shop All Badges",
+            "url": "shopify://collections/all",
+            "style": "outline"
+          }
+        }
+      },
+      "block_order": [
+        "heading_who",
+        "para_who",
+        "heading_what",
+        "para_what_1",
+        "para_what_2",
+        "heading_why",
+        "bullets_why",
+        "heading_commitment",
+        "para_commitment",
+        "cta_design",
+        "cta_shop"
+      ],
+      "settings": {
+        "eyebrow": "About us",
+        "heading": "About All Quality <em>Badges</em>",
+        "subheading": "Professional name badges, customized and shipped from our US facility."
+      }
+    }
+  },
+  "order": ["main"]
+}
