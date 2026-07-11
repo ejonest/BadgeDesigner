@@ -152,6 +152,8 @@ export interface BadgeDesign {
   design_data?: any;
   thumbnail_url?: string;
   full_image_url?: string;
+  /** CorelDRAW / print SVG: text + icon + registration shape only (no background art). */
+  print_svg_url?: string;
   /** Sign designer: public URL of user-uploaded logo (not SVG export). */
   uploaded_image_url?: string;
   status?: "draft" | "saved" | "ordered" | "archived";
@@ -645,6 +647,10 @@ export async function savePlaqueDesign(design: SignDesign) {
   return saveSignLikeDesign("plaque_designs", design);
 }
 
+export async function saveDeskSignDesign(design: SignDesign) {
+  return saveSignLikeDesign("desk_sign_designs", design);
+}
+
 async function getLatestSavedSignLikeDesign(
   table: SignLikeDesignsTable,
   userId: string,
@@ -686,6 +692,13 @@ export async function getLatestSavedPlaqueDesign(
   return getLatestSavedSignLikeDesign("plaque_designs", userId, shopId);
 }
 
+export async function getLatestSavedDeskSignDesign(
+  userId: string,
+  shopId: string,
+) {
+  return getLatestSavedSignLikeDesign("desk_sign_designs", userId, shopId);
+}
+
 async function deleteSavedSignLikeDesignsForUser(
   table: SignLikeDesignsTable,
   userId: string,
@@ -722,6 +735,13 @@ export async function deleteSavedPlaqueDesignsForUser(
   shopId: string,
 ) {
   return deleteSavedSignLikeDesignsForUser("plaque_designs", userId, shopId);
+}
+
+export async function deleteSavedDeskSignDesignsForUser(
+  userId: string,
+  shopId: string,
+) {
+  return deleteSavedSignLikeDesignsForUser("desk_sign_designs", userId, shopId);
 }
 
 function countBadgesInDesignData(designData: unknown): number {
@@ -875,6 +895,10 @@ export async function upsertPlaqueAutosaveDesign(row: SignDesign) {
   return upsertSignLikeAutosaveDesign("plaque_designs", row);
 }
 
+export async function upsertDeskSignAutosaveDesign(row: SignDesign) {
+  return upsertSignLikeAutosaveDesign("desk_sign_designs", row);
+}
+
 /** Insert or update a milestone row, then prune old milestones. */
 export async function saveBadgeDesignMilestone(row: BadgeDesign, saveKind: DesignSaveKind) {
   if (saveKind === "autosave") {
@@ -931,6 +955,13 @@ export async function savePlaqueDesignMilestone(
   saveKind: DesignSaveKind,
 ) {
   return saveSignLikeDesignMilestone("plaque_designs", row, saveKind);
+}
+
+export async function saveDeskSignDesignMilestone(
+  row: SignDesign,
+  saveKind: DesignSaveKind,
+) {
+  return saveSignLikeDesignMilestone("desk_sign_designs", row, saveKind);
 }
 
 export type DesignGalleryListItem = {
@@ -1064,6 +1095,13 @@ export async function listPlaqueDesignGallery(
   return listSignLikeDesignGallery("plaque_designs", userId, shopId);
 }
 
+export async function listDeskSignDesignGallery(
+  userId: string,
+  shopId: string,
+): Promise<{ autosave: DesignGalleryListItem | null; milestones: DesignGalleryListItem[] }> {
+  return listSignLikeDesignGallery("desk_sign_designs", userId, shopId);
+}
+
 /** Remove one milestone row (manual/cart/ordered). Cannot delete the autosave draft row. */
 export async function deleteDesignLibraryMilestone(
   table: "badge_designs" | SignLikeDesignsTable,
@@ -1175,6 +1213,19 @@ export async function getPlaqueDesignForUserShop(
   designId: string,
 ) {
   return getSignLikeDesignForUserShop("plaque_designs", userId, shopId, designId);
+}
+
+export async function getDeskSignDesignForUserShop(
+  userId: string,
+  shopId: string,
+  designId: string,
+) {
+  return getSignLikeDesignForUserShop(
+    "desk_sign_designs",
+    userId,
+    shopId,
+    designId,
+  );
 }
 
 /**
@@ -1318,6 +1369,8 @@ export interface BadgeOrderItem {
   line_6_alignment?: string;
   thumbnail_url?: string;
   full_image_url?: string;
+  /** CorelDRAW / print SVG: text + icon + registration shape only (no background art). */
+  print_svg_url?: string;
   /** Sign designer: user-uploaded logo URL (sign_order_items only). */
   uploaded_image_url?: string;
   pdf_url?: string;
@@ -1410,6 +1463,8 @@ export function convertBadgeToOrderItem(
     shopify_order_number?: string;
     thumbnail_url?: string;
     full_image_url?: string;
+    /** CorelDRAW / print SVG: text + icon + registration shape only (no background art). */
+    print_svg_url?: string;
     pdf_url?: string;
     shopify_customer_id?: string;
     /** Default 1; set from cart/order when known. */
@@ -1483,6 +1538,7 @@ export function convertBadgeToOrderItem(
     line_6_alignment: lines[5]?.align,
     thumbnail_url: options?.thumbnail_url,
     full_image_url: options?.full_image_url,
+    print_svg_url: options?.print_svg_url,
     uploaded_image_url: persistedSignUploadedImageUrl(badge.logo?.src),
     pdf_url: options?.pdf_url,
     shopify_customer_id: options?.shopify_customer_id,

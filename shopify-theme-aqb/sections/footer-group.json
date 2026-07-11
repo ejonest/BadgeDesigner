@@ -86,6 +86,15 @@
             "open_new_tab": false
           }
         },
+        "buy_blog": {
+          "type": "link",
+          "settings": {
+            "column": "buyers",
+            "label": "Blog",
+            "url": "/blogs/news",
+            "open_new_tab": false
+          }
+        },
         "buy_contact": {
           "type": "link",
           "settings": {
@@ -150,6 +159,7 @@
         "buy_how_it_works",
         "buy_faq",
         "buy_shipping",
+        "buy_blog",
         "buy_contact",
         "buy_about",
         "lita_signs",

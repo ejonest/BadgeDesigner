@@ -24,7 +24,8 @@ function rowPayload(
 ): Record<string, unknown> {
   const isSignTable =
     def.orderItemsTable === "sign_order_items" ||
-    def.orderItemsTable === "plaque_order_items";
+    def.orderItemsTable === "plaque_order_items" ||
+    def.orderItemsTable === "desk_sign_order_items";
   const base: Record<string, unknown> = {
     design_id: item.design_id,
     shopify_order_id: item.shopify_order_id,
@@ -34,6 +35,7 @@ function rowPayload(
     quantity: item.quantity ?? 1,
     thumbnail_url: item.thumbnail_url,
     full_image_url: item.full_image_url,
+    print_svg_url: item.print_svg_url,
     ...(isSignTable && item.uploaded_image_url
       ? { uploaded_image_url: item.uploaded_image_url }
       : {}),

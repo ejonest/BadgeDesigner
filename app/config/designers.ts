@@ -9,19 +9,28 @@ export const DESIGNER_IDS = [
   "plaque",
   "stamp",
   "nameplate",
+  "desk-sign",
 ] as const;
 export type DesignerId = (typeof DESIGNER_IDS)[number];
 
-export type LineIdColumn = "badge_id" | "sign_id" | "plaque_id";
+export type LineIdColumn =
+  | "badge_id"
+  | "sign_id"
+  | "plaque_id"
+  | "desk_sign_id";
 
 /** Supabase design-library tables (milestones + autosave). */
 export type DesignLibraryTable =
   | "badge_designs"
   | "sign_designs"
-  | "plaque_designs";
+  | "plaque_designs"
+  | "desk_sign_designs";
 
 /** Sign and plaque share extended order-item rows and library shape. */
-export type SignLikeDesignsTable = "sign_designs" | "plaque_designs";
+export type SignLikeDesignsTable =
+  | "sign_designs"
+  | "plaque_designs"
+  | "desk_sign_designs";
 
 export interface DesignerGadgetGraphQL {
   /** Env var for API base URL */
@@ -197,6 +206,33 @@ export const DESIGNERS: Record<DesignerId, DesignerDefinition> = {
     orderSlipPdfRelativePath: (designId) =>
       `${designId}/nameplate-design.pdf`,
   },
+  "desk-sign": {
+    id: "desk-sign",
+    label: "Desk sign",
+    orderItemsTable: "desk_sign_order_items",
+    imageBucket: "desk-sign-images",
+    pdfBucket: "desk-sign-pdfs",
+    lineIdPrefix: "desk-sign",
+    lineIdColumn: "desk_sign_id",
+    upsertOnConflict: "design_id,desk_sign_id",
+    cartIndexPropertyPrimary: "Desk Sign Index",
+    cartIndexPropertyFallbacks: ["Sign Index", "Badge Index"],
+    gadget: {
+      apiUrlEnv: "GADGET_DESK_SIGN_API_URL",
+      apiKeyEnv: "GADGET_DESK_SIGN_API_KEY",
+      defaultApiUrl:
+        "https://signs-by-lita-connection--development.gadget.app",
+      createField: "createDeskSignDesign",
+      inputVariable: "deskSignDesign",
+      inputType: "CreateDeskSignDesignInput",
+      resultSelection: "deskSignDesign",
+    },
+    linkOrderSecretEnv: "LINK_ORDER_SECRET_DESK_SIGN",
+    pdfProofRelativePath: (designId) =>
+      `${designId}/desk-sign-design_proof.pdf`,
+    orderSlipPdfRelativePath: (designId) =>
+      `${designId}/desk-sign-design.pdf`,
+  },
 };
 
 export function isDesignerId(value: string): value is DesignerId {
@@ -216,6 +252,7 @@ export function getDesignLibraryTable(
   if (id === "badge") return "badge_designs";
   if (id === "sign") return "sign_designs";
   if (id === "plaque") return "plaque_designs";
+  if (id === "desk-sign") return "desk_sign_designs";
   return null;
 }
 
@@ -224,6 +261,7 @@ export function getSignLikeLibraryTable(
 ): SignLikeDesignsTable | null {
   if (id === "sign") return "sign_designs";
   if (id === "plaque") return "plaque_designs";
+  if (id === "desk-sign") return "desk_sign_designs";
   return null;
 }
 
@@ -268,6 +306,17 @@ export function getDesignerLibraryApiPaths(id: DesignerId): {
       savedDesignDetail: "/api/saved-plaque-design-detail",
       deleteMilestone: "/api/delete-plaque-design-milestone",
       uploadLogo: "/api/upload-plaque-logo",
+    };
+  }
+  if (id === "desk-sign") {
+    return {
+      saveDesign: "/api/save-desk-sign-design",
+      autosaveDesign: "/api/autosave-desk-sign-design",
+      savedDesign: "/api/saved-desk-sign-design",
+      savedDesigns: "/api/saved-desk-sign-designs",
+      savedDesignDetail: "/api/saved-desk-sign-design-detail",
+      deleteMilestone: "/api/delete-desk-sign-design-milestone",
+      uploadLogo: "/api/upload-desk-sign-logo",
     };
   }
   return {

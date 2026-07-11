@@ -124,8 +124,22 @@
   })();
 </script>
 
+{% comment %} Custom desk sign product {% endcomment %}
+{% if product and product.handle == 'custom-desk-sign' %}
+
+{% assign desk_sign_v0 = product.selected_or_first_available_variant | default: product.variants[0] %}
+<div style="width:100%; min-height:900px;">
+  <iframe
+    id="desk-sign-designer-iframe"
+    src="{{ badge_designer_origin }}/desk-sign-designer?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&storeUrl={{ shop.permanent_domain | url_param_escape }}&product={{ product.id | url_param_escape }}&deskSignProductHandle={{ product.handle | url_param_escape }}&variantIdSign={{ desk_sign_v0.id | url_param_escape }}{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}"
+    style="width:100%; height:900px; border:0;"
+    loading="lazy"
+    allow="clipboard-read; clipboard-write"
+  ></iframe>
+</div>
+
 {% comment %} Custom sign product (Shape × Size variants, live price from Shopify) {% endcomment %}
-{% if product and product.handle == 'custom-sign' %}
+{% elsif product and product.handle == 'custom-sign' %}
 
 {% assign sign_v0 = product.selected_or_first_available_variant | default: product.variants[0] %}
 <div style="width:100%; min-height:900px;">

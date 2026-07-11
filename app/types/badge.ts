@@ -113,6 +113,10 @@ export interface Badge {
    * space by shrinking the image down to (at minimum) the captured ratio vs the slot baseline.
    */
   signLogoLayoutSnapshot?: SignLogoLayoutSnapshot;
+  /** Desk sign only: acrylic, rosewood, or plastic finish. */
+  deskSignMaterial?: "acrylic" | "rosewood" | "plastic";
+  /** Desk sign only: profession template family id (e.g. doctor, nurse). */
+  deskSignProfessionId?: string;
 }
 
 export interface BadgeEditorPanelProps {

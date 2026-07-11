@@ -3,7 +3,7 @@ import {
   type DesignerVariant,
   isSignLikeVariant,
 } from '~/constants/designerVariants';
-import { renderBadgeToSvgString, renderBadgeToSvgStringWithFonts } from './renderSvg';
+import { renderBadgeToSvgString, renderBadgeToSvgStringWithFonts, type RenderOpts } from './renderSvg';
 import { loadTemplateById, type LoadedTemplate } from './templates';
 import { isPlaqueTemplateId } from './plaqueRender';
 import { badgeWithPlaqueLogoInlinedForSvgImg } from './plaqueLogoInline';
@@ -24,9 +24,10 @@ export interface BadgeThumbnailOptions {
   plateRenderMode?: 'photo' | 'vector';
 }
 
-export interface FullBadgeImageOptions {
-  plateRenderMode?: 'photo' | 'vector';
-}
+export type FullBadgeImageOptions = Pick<
+  RenderOpts,
+  'plateRenderMode' | 'aqbPresetTextLayout' | 'showOutline'
+>;
 
 function resolveViewBoxPx(
   template: LoadedTemplate,
@@ -186,6 +187,13 @@ export async function generateFullBadgeImage(
 ): Promise<string> {
   const plateRenderMode =
     options.plateRenderMode ?? (variant === 'badge' ? 'photo' : 'vector');
+  const renderOpts: RenderOpts = {
+    showOutline: options.showOutline ?? false,
+    plateRenderMode,
+    ...(options.aqbPresetTextLayout || plateRenderMode === 'photo'
+      ? { aqbPresetTextLayout: true }
+      : {}),
+  };
   try {
     // Use the unified renderer for consistency
     console.log('Generating full badge image using unified renderer...');
@@ -199,10 +207,7 @@ export async function generateFullBadgeImage(
         : badge;
 
     // Generate SVG using font-embedding version for consistent font rendering
-    const svgString = await renderBadgeToSvgStringWithFonts(badgeForSvg, template, {
-      showOutline: false,
-      plateRenderMode,
-    });
+    const svgString = await renderBadgeToSvgStringWithFonts(badgeForSvg, template, renderOpts);
     
     const viewBox = resolveViewBoxPx(
       template,

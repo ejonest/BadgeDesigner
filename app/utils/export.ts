@@ -1,4 +1,10 @@
-import { renderBadgeToSvgString, renderBadgeToSvgStringWithFonts } from "./renderSvg";
+import {
+  renderBadgeToSvgString,
+  renderBadgeToSvgStringWithFonts,
+  resolvePrintRenderOpts,
+  resolveProductionRenderOpts,
+} from "./renderSvg";
+import type { DesignerVariant } from "~/constants/designerVariants";
 import type { Badge } from "../types/badge";
 import type { LoadedTemplate } from "./templates";
 
@@ -21,9 +27,9 @@ export async function downloadSVG(badge: Badge, template: LoadedTemplate, filena
 
 
 export async function downloadCDR(badge: Badge, template: LoadedTemplate, filename = "badge.cdr") {
-  // CorelDRAW opens SVGs. This is the same SVG with a .cdr filename for now.
+  // CorelDRAW opens SVGs. Print-ready SVG (text + icon + die outline, no background art).
   const svg = await renderBadgeToSvgStringWithFonts(badge, template, {
-    plateRenderMode: "vector",
+    ...resolvePrintRenderOpts(badge, template, "badge"),
   });
   const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
   downloadBlob(blob, filename);
@@ -119,7 +125,7 @@ export async function downloadMultiPageCDR(badges: Badge[], templates: LoadedTem
       
       // Generate SVG for this badge with font embedding
       const badgeSvg = await renderBadgeToSvgStringWithFonts(badge, template, {
-        plateRenderMode: "vector",
+        ...resolvePrintRenderOpts(badge, template, "badge"),
       });
       
       // Extract the content from the badge SVG (remove the outer svg tags)
@@ -198,12 +204,35 @@ export async function downloadMultipleSVGs(badges: Badge[], templates: LoadedTem
 }
 
 /**
- * Generate SVG as a Blob (for upload, not download)
+ * Generate SVG as a Blob (for upload, not download).
+ * Badge designs embed the product photo + icons when plate photography is available.
  */
-export async function generateSVGAsBlob(badge: Badge, template: LoadedTemplate): Promise<Blob> {
-  const svg = await renderBadgeToSvgStringWithFonts(badge, template, {
-    plateRenderMode: "vector",
-  });
+export async function generateSVGAsBlob(
+  badge: Badge,
+  template: LoadedTemplate,
+  variant: DesignerVariant = "badge",
+): Promise<Blob> {
+  const svg = await renderBadgeToSvgStringWithFonts(
+    badge,
+    template,
+    resolveProductionRenderOpts(badge, template, variant),
+  );
+  return new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+}
+
+/**
+ * Print-ready SVG for CorelDRAW: colored text, icon, and registration shape only.
+ */
+export async function generatePrintSVGAsBlob(
+  badge: Badge,
+  template: LoadedTemplate,
+  variant: DesignerVariant = "badge",
+): Promise<Blob> {
+  const svg = await renderBadgeToSvgStringWithFonts(
+    badge,
+    template,
+    resolvePrintRenderOpts(badge, template, variant),
+  );
   return new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
 }
 
