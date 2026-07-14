@@ -236,6 +236,82 @@ export async function generatePrintSVGAsBlob(
   return new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
 }
 
+/** Full proof SVG string (backgrounds/photo + text + icon). */
+export async function generateSVGAsString(
+  badge: Badge,
+  template: LoadedTemplate,
+  variant: DesignerVariant = "badge",
+): Promise<string> {
+  return renderBadgeToSvgStringWithFonts(
+    badge,
+    template,
+    resolveProductionRenderOpts(badge, template, variant),
+  );
+}
+
+/** CorelDRAW / print SVG string (text + icon + registration, no plate fill). */
+export async function generatePrintSVGAsString(
+  badge: Badge,
+  template: LoadedTemplate,
+  variant: DesignerVariant = "badge",
+): Promise<string> {
+  return renderBadgeToSvgStringWithFonts(
+    badge,
+    template,
+    resolvePrintRenderOpts(badge, template, variant),
+  );
+}
+
+/**
+ * Composite preview: proof + print stacked (same crop viewBox / layout coords).
+ * Magenta box marks the calibrated badge face for reference.
+ */
+export function buildProofPrintAlignmentOverlaySvg(
+  proofSvg: string,
+  printSvg: string,
+  proofViewBox: { width: number; height: number },
+  faceInProof: { x: number; y: number; width: number; height: number },
+): string {
+  /** Root width/height attributes so nested SVGs paint reliably inside <image>. */
+  const withExplicitSize = (svg: string, w: number, h: number) => {
+    let out = svg.replace(
+      /\s(?:width|height)\s*=\s*("[^"]*"|'[^']*')/gi,
+      "",
+    );
+    if (/\<svg\b/i.test(out)) {
+      out = out.replace(
+        /\<svg\b/i,
+        `<svg width="${w}" height="${h}"`,
+      );
+    }
+    return out;
+  };
+
+  const toDataUrl = (svg: string) =>
+    `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+
+  const W = proofViewBox.width;
+  const H = proofViewBox.height;
+  const { x, y, width, height } = faceInProof;
+  const proofHref = toDataUrl(withExplicitSize(proofSvg, W, H));
+  const printHref = toDataUrl(withExplicitSize(printSvg, W, H));
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 ${W} ${H}"
+     preserveAspectRatio="xMidYMid meet">
+  <title>Proof + print registration overlay</title>
+  <image href="${proofHref}" xlink:href="${proofHref}"
+         x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none" />
+  <image href="${printHref}" xlink:href="${printHref}"
+         x="0" y="0" width="${W}" height="${H}"
+         preserveAspectRatio="none" opacity="0.55" />
+  <rect x="${x}" y="${y}" width="${width}" height="${height}"
+        fill="none" stroke="#FF00AA" stroke-width="${Math.max(2, width * 0.004)}"
+        stroke-dasharray="${Math.max(4, width * 0.01)} ${Math.max(3, width * 0.006)}" />
+</svg>`;
+}
+
 /**
  * Generate PNG as a Blob (for upload, not download)
  */

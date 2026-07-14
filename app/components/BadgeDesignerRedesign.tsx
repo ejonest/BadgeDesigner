@@ -229,6 +229,7 @@ import {
 } from "~/utils/badgeColorContrast";
 import {
   badgeColorHasPhoto,
+  getPhotoPlateViewBoxSize,
 } from "~/utils/badgeBlankPhotos";
 import {
   badgeTemplateHasStyleStep,
@@ -386,8 +387,11 @@ import {
   downloadMultiplePNGs,
   downloadMultipleCDRs,
   downloadMultipleTIFFs,
+  downloadBlob,
   generateSVGAsBlob,
   generatePrintSVGAsBlob,
+  generateSVGAsString,
+  generatePrintSVGAsString,
 } from "../utils/export";
 
 const INITIAL_BADGE = BADGE_CONSTANTS.INITIAL_BADGE;
@@ -4525,6 +4529,128 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }
     return template;
   }, [templates, universalTemplateId]);
+
+  /** Dev-only SVG proof/print preview (?designLibraryDummy=1). */
+  const [devSvgOpen, setDevSvgOpen] = useState(false);
+  const [devSvgBusy, setDevSvgBusy] = useState(false);
+  const [devSvgError, setDevSvgError] = useState<string | null>(null);
+  const [devSvgProofUrl, setDevSvgProofUrl] = useState<string | null>(null);
+  const [devSvgPrintUrl, setDevSvgPrintUrl] = useState<string | null>(null);
+  const [devSvgProofBlob, setDevSvgProofBlob] = useState<Blob | null>(null);
+  const [devSvgPrintBlob, setDevSvgPrintBlob] = useState<Blob | null>(null);
+  /** Face rect as % of shared proof/print viewBox — magenta guide only. */
+  const [devSvgFacePct, setDevSvgFacePct] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
+
+  const refreshDevSvgPreviews = useCallback(async () => {
+    if (!designLibraryDummy.enabled) return;
+    setDevSvgBusy(true);
+    setDevSvgError(null);
+    try {
+      const templateId =
+        badge.templateId ||
+        activeTemplate?.id ||
+        universalTemplateId ||
+        "rect-1x3";
+      const template =
+        activeTemplate?.id === templateId
+          ? activeTemplate
+          : await loadTemplateById(templateId, variant);
+      if (!template) {
+        throw new Error(`Template not loaded: ${templateId}`);
+      }
+      const badgeForSvg: Badge = {
+        ...badge,
+        templateId,
+      };
+      const [proofSvg, printSvg] = await Promise.all([
+        generateSVGAsString(badgeForSvg, template, variant),
+        generatePrintSVGAsString(badgeForSvg, template, variant),
+      ]);
+
+      const PADDING_PX = 24;
+      const photo = resolveBadgePlatePhoto(templateId, badgeForSvg);
+      if (photo) {
+        const proofViewBox = getPhotoPlateViewBoxSize(photo);
+        const contentTx = PADDING_PX - photo.previewCropRect.x;
+        const contentTy = PADDING_PX - photo.previewCropRect.y;
+        const face = photo.badgeFaceRect;
+        setDevSvgFacePct({
+          left: ((contentTx + face.x) / proofViewBox.widthPx) * 100,
+          top: ((contentTy + face.y) / proofViewBox.heightPx) * 100,
+          width: (face.width / proofViewBox.widthPx) * 100,
+          height: (face.height / proofViewBox.heightPx) * 100,
+        });
+      } else {
+        const proofW = template.standardViewBoxWidth + PADDING_PX * 2;
+        const proofH = template.standardViewBoxHeight + PADDING_PX * 2;
+        setDevSvgFacePct({
+          left: (PADDING_PX / proofW) * 100,
+          top: (PADDING_PX / proofH) * 100,
+          width: (template.widthPx / proofW) * 100,
+          height: (template.heightPx / proofH) * 100,
+        });
+      }
+
+      const proofBlob = new Blob([proofSvg], {
+        type: "image/svg+xml;charset=utf-8",
+      });
+      const printBlob = new Blob([printSvg], {
+        type: "image/svg+xml;charset=utf-8",
+      });
+      const proofUrl = URL.createObjectURL(proofBlob);
+      const printUrl = URL.createObjectURL(printBlob);
+      setDevSvgProofUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return proofUrl;
+      });
+      setDevSvgPrintUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return printUrl;
+      });
+      setDevSvgProofBlob(proofBlob);
+      setDevSvgPrintBlob(printBlob);
+    } catch (err) {
+      console.warn("[BadgeDesignerRedesign] Dev SVG preview failed:", err);
+      setDevSvgError(
+        err instanceof Error ? err.message : "Failed to generate SVG previews",
+      );
+    } finally {
+      setDevSvgBusy(false);
+    }
+  }, [
+    designLibraryDummy.enabled,
+    badge,
+    activeTemplate,
+    universalTemplateId,
+    variant,
+  ]);
+
+  useEffect(() => {
+    if (!designLibraryDummy.enabled || !devSvgOpen) return;
+    void refreshDevSvgPreviews();
+  }, [
+    designLibraryDummy.enabled,
+    devSvgOpen,
+    badge.templateId,
+    badge.badgeIconId,
+    badge.customBadgeBackgroundId,
+    badge.backgroundColor,
+    badge.lines,
+    refreshDevSvgPreviews,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (devSvgProofUrl) URL.revokeObjectURL(devSvgProofUrl);
+      if (devSvgPrintUrl) URL.revokeObjectURL(devSvgPrintUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- revoke on unmount
+  }, []);
 
   /** Badge-only: accordion header circles + per-step summary accents (matches reference HTML). */
   const aqbBadgeStepHeaderModel = useMemo(() => {
@@ -12919,6 +13045,184 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     ? "Generating..."
                     : "Add to Cart"}
                 </button>
+              </div>
+            ) : null}
+
+            {/* Dev SVG preview/download — only with ?designLibraryDummy=1 */}
+            {designLibraryDummy.enabled ? (
+              <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50/60 p-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !devSvgOpen;
+                    setDevSvgOpen(next);
+                    if (next) void refreshDevSvgPreviews();
+                  }}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <h3 className="text-lg font-semibold text-[#02132B]">
+                    Dev SVG preview
+                  </h3>
+                  {devSvgOpen ? (
+                    <ChevronUpIcon className="w-5 h-5 text-gray-600" />
+                  ) : (
+                    <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+                  )}
+                </button>
+                {devSvgOpen ? (
+                  <div className="mt-3 space-y-3">
+                    <p className="text-xs text-amber-950/80 leading-snug">
+                      Local-only tools for the current badge. Proof SVG includes
+                      backgrounds; CorelDRAW SVG is text + icon + registration
+                      shape only.{" "}
+                      <span className="font-medium">
+                        Supabase{" "}
+                        <code className="text-[11px]">print_svg_url</code> is not
+                        written yet — run{" "}
+                        <code className="text-[11px]">
+                          docs/migration_add_print_svg_url.sql
+                        </code>{" "}
+                        when you can, then flip{" "}
+                        <code className="text-[11px]">
+                          INCLUDE_PRINT_SVG_URL_IN_DB
+                        </code>
+                        .
+                      </span>
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-xs border border-amber-400 rounded bg-white hover:bg-amber-50 disabled:opacity-60"
+                        disabled={devSvgBusy}
+                        onClick={() => void refreshDevSvgPreviews()}
+                      >
+                        {devSvgBusy ? "Generating…" : "Refresh previews"}
+                      </button>
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-xs border border-amber-400 rounded bg-white hover:bg-amber-50 disabled:opacity-60"
+                        disabled={!devSvgProofBlob}
+                        onClick={() => {
+                          if (devSvgProofBlob)
+                            downloadBlob(
+                              devSvgProofBlob,
+                              `${designerId === "badge" ? "badge" : designerId}-proof.svg`,
+                            );
+                        }}
+                      >
+                        Download proof SVG
+                      </button>
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-xs border border-amber-400 rounded bg-white hover:bg-amber-50 disabled:opacity-60"
+                        disabled={!devSvgPrintBlob}
+                        onClick={() => {
+                          if (devSvgPrintBlob)
+                            downloadBlob(
+                              devSvgPrintBlob,
+                              `${designerId === "badge" ? "badge" : designerId}-print.svg`,
+                            );
+                        }}
+                      >
+                        Download CorelDRAW SVG
+                      </button>
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-xs border border-amber-400 rounded bg-white hover:bg-amber-50 disabled:opacity-60"
+                        disabled={!devSvgPrintBlob}
+                        onClick={() => {
+                          if (devSvgPrintBlob)
+                            downloadBlob(
+                              devSvgPrintBlob,
+                              `${designerId === "badge" ? "badge" : designerId}-print.cdr`,
+                            );
+                        }}
+                      >
+                        Download as .cdr
+                      </button>
+                    </div>
+                    {devSvgError ? (
+                      <p className="text-xs text-red-700">{devSvgError}</p>
+                    ) : null}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="rounded border border-amber-200 bg-white p-2">
+                        <div className="text-xs font-semibold mb-2 text-[#02132B]">
+                          Proof SVG (full design)
+                        </div>
+                        {devSvgProofUrl ? (
+                          <img
+                            src={devSvgProofUrl}
+                            alt="Proof SVG preview"
+                            className="w-full h-auto max-h-48 object-contain bg-[#f7f5f0]"
+                          />
+                        ) : (
+                          <div className="text-xs text-gray-500 py-8 text-center">
+                            {devSvgBusy ? "Generating…" : "No preview yet"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="rounded border border-amber-200 bg-white p-2">
+                        <div className="text-xs font-semibold mb-2 text-[#02132B]">
+                          CorelDRAW SVG (print layer)
+                        </div>
+                        {devSvgPrintUrl ? (
+                          <img
+                            src={devSvgPrintUrl}
+                            alt="Print SVG preview"
+                            className="w-full h-auto max-h-48 object-contain bg-[#c8cdd4]"
+                            style={{ border: "1px solid #9aa3ad" }}
+                          />
+                        ) : (
+                          <div className="text-xs text-gray-500 py-8 text-center">
+                            {devSvgBusy ? "Generating…" : "No preview yet"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="rounded border border-amber-200 bg-white p-2 md:col-span-2">
+                        <div className="text-xs font-semibold mb-1 text-[#02132B]">
+                          Registration overlay (proof + print)
+                        </div>
+                        <p className="text-[11px] text-amber-950/70 mb-2 leading-snug">
+                          Both SVGs share the same crop viewBox and layout
+                          coords. Stack at full size (55% print opacity).
+                          Magenta box = calibrated badge face. Perfect
+                          registration = single crisp text/icon; double/ghost =
+                          still misaligned.
+                        </p>
+                        {devSvgProofUrl && devSvgPrintUrl ? (
+                          <div className="relative mx-auto w-full max-w-sm bg-[#f7f5f0]">
+                            <img
+                              src={devSvgProofUrl}
+                              alt="Proof base for registration overlay"
+                              className="block h-auto w-full"
+                            />
+                            <img
+                              src={devSvgPrintUrl}
+                              alt="Print layer over proof"
+                              className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+                              style={{ opacity: 0.55 }}
+                            />
+                            {devSvgFacePct ? (
+                              <div
+                                className="pointer-events-none absolute border-2 border-dashed border-[#FF00AA]"
+                                style={{
+                                  left: `${devSvgFacePct.left}%`,
+                                  top: `${devSvgFacePct.top}%`,
+                                  width: `${devSvgFacePct.width}%`,
+                                  height: `${devSvgFacePct.height}%`,
+                                }}
+                              />
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="py-8 text-center text-xs text-gray-500">
+                            {devSvgBusy ? "Generating…" : "No preview yet"}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
 

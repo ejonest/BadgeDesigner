@@ -175,7 +175,6 @@ export function resolvePrintRenderOpts(
   return {
     plateRenderMode: "print",
     showOutline: true,
-    outlineStrokeWidth: "0.75",
     ...(hasPhotoPlate ? { aqbPresetTextLayout: true } : {}),
   };
 }
@@ -191,11 +190,134 @@ function svgPhysicalDimensionAttrs(template: LoadedTemplate): string {
   return `width="${fmt(wIn)}in" height="${fmt(hIn)}in"`;
 }
 
-function renderBadgeFaceRegistrationMarkup(
-  photo: ResolvedBlankBadgePhoto,
+/**
+ * Die outline drawn into photo-space badgeFaceRect (same coords as proof artwork).
+ */
+function renderPrintDieOutlineInFaceRect(
+  template: LoadedTemplate,
+  face: { x: number; y: number; width: number; height: number },
+  strokeWidth: string,
 ): string {
+  const source =
+    template.innerElement?.trim() || template.outlineElement?.trim() || "";
+  if (!source || !(template.widthPx > 0) || !(template.heightPx > 0)) {
+    return `<rect x="${face.x}" y="${face.y}" width="${face.width}" height="${face.height}" fill="none" stroke="#111111" stroke-width="${strokeWidth}" />`;
+  }
+  // Uniform scale so rounded die is not stretched wider/shorter than the photo face.
+  const scale = Math.min(
+    face.width / template.widthPx,
+    face.height / template.heightPx,
+  );
+  const ox = face.x + (face.width - template.widthPx * scale) / 2;
+  const oy = face.y + (face.height - template.heightPx * scale) / 2;
+  const outline = prepareElementForOutline(
+    source,
+    "none",
+    "#111111",
+    strokeWidth,
+    false,
+  );
+  return `<g transform="translate(${ox}, ${oy}) scale(${scale})">${outline}</g>`;
+}
+
+/**
+ * Print SVG for photo plates: identical framing/layout to the proof SVG
+ * (same crop viewBox + text/icon coords), without the product photo.
+ * That is what makes proof and CorelDRAW registration match pixel-for-pixel.
+ */
+function renderBadgePrintDieSvgFromPhotoPlate(
+  badge: Badge,
+  template: LoadedTemplate,
+  photo: ResolvedBlankBadgePhoto,
+  opts: RenderOpts,
+  fontDefs: string[],
+  fontMappings: Map<string, string> | undefined,
+): string {
+  const PADDING_PX = 24;
+  const crop = photo.previewCropRect;
+  const W = crop.width + PADDING_PX * 2;
+  const H = crop.height + PADDING_PX * 2;
+  const contentTx = PADDING_PX - crop.x;
+  const contentTy = PADDING_PX - crop.y;
   const face = photo.badgeFaceRect;
-  return `<rect x="${face.x}" y="${face.y}" width="${face.width}" height="${face.height}" fill="none" stroke="#000000" stroke-width="1" vector-effect="non-scaling-stroke" />`;
+  const designBox = resolvePhotoTextRect(photo, badge.badgeIconId);
+  const clipId = clipPathIdForSvg(opts, badge);
+
+  const lineLayout = opts.aqbPresetTextLayout
+    ? layoutAqbPresetTextLines(badge.lines || [], designBox, fontMappings)
+    : calculateTextLayout(
+        badge.lines || [],
+        designBox,
+        template,
+        fontMappings,
+        badge,
+        undefined,
+        photo.iconRect,
+      );
+
+  const badgeIconLayer = renderBadgeIconLayer(
+    badge.badgeIconId,
+    designBox,
+    template.id,
+    photo.iconRect,
+  );
+
+  const textElements = lineLayout
+    .map((item) => {
+      const line = item.line;
+      const color = line.color || "#000";
+      const textDecoration = line.underline ? "underline" : "none";
+      return `<text x="${item.x}" y="${item.y}" font-size="${
+        item.fontSize
+      }" text-anchor="${item.anchor}"
+              dominant-baseline="middle" font-family="${esc(
+                item.familyRaw,
+              )}" fill="${color}"
+              font-weight="${item.fontWeight}"
+              font-style="${item.fontStyle}"
+              text-decoration="${textDecoration}">${esc(
+        line.text || "",
+      )}</text>`;
+    })
+    .join("");
+
+  const textClipRect = buildRectClipPathMarkup(designBox);
+  const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
+  const styleBlock =
+    fontDefs.length > 0
+      ? `<style type="text/css">${fontDefs.join("\n")}</style>`
+      : "";
+  const outlineWidth =
+    opts.outlineStrokeWidth ??
+    String(Math.max(3, Math.round(face.width * 0.004)));
+  const dieOutline = renderPrintDieOutlineInFaceRect(
+    template,
+    face,
+    outlineWidth,
+  );
+
+  // Same viewBox as the proof photo plate — never force 3×1.5 with
+  // preserveAspectRatio="none" (that stretched face aspect ~1.92 → 2:1).
+  return `
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="100%" height="100%"
+     viewBox="0 0 ${W} ${H}"
+     preserveAspectRatio="xMidYMid meet">
+  <defs>
+    ${styleBlock}
+  </defs>
+  <g transform="translate(${contentTx}, ${contentTy})">
+    <defs>
+      <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
+        ${textClipRect}
+      </clipPath>
+    </defs>
+    ${dieOutline}
+    ${badgeIconLayer}
+    ${text}
+  </g>
+</svg>`.trim();
 }
 
 export function resolveProductionViewBoxPx(
@@ -373,7 +495,17 @@ function renderBadgePhotoPlateSvg(
   fontMappings: Map<string, string> | undefined,
   inlinedPhotoHref?: string,
 ): string {
-  const isPrint = isPrintPlateRender(opts);
+  if (isPrintPlateRender(opts)) {
+    return renderBadgePrintDieSvgFromPhotoPlate(
+      badge,
+      template,
+      photo,
+      opts,
+      fontDefs,
+      fontMappings,
+    );
+  }
+
   const PADDING_PX = 24;
   const canvasW = photo.canvasWidthPx;
   const canvasH = photo.canvasHeightPx;
@@ -437,31 +569,12 @@ function renderBadgePhotoPlateSvg(
       : "";
 
   const photoHref = inlinedPhotoHref ?? photo.src;
-  const dimensionAttrs = isPrint
-    ? svgPhysicalDimensionAttrs(template)
-    : `width="100%" height="100%"`;
   const svgOpen = `
 <svg xmlns="http://www.w3.org/2000/svg"
      xmlns:xlink="http://www.w3.org/1999/xlink"
-     ${dimensionAttrs}
+     width="100%" height="100%"
      viewBox="0 0 ${W} ${H}"
      preserveAspectRatio="xMidYMid meet">`;
-
-  const photoLayer = isPrint
-    ? ""
-    : `<image
-      href="${photoHref}"
-      xlink:href="${photoHref}"
-      x="0"
-      y="0"
-      width="${canvasW}"
-      height="${canvasH}"
-      preserveAspectRatio="none"
-      style="image-rendering:optimizeQuality"
-    />`;
-  const registrationLayer = isPrint
-    ? renderBadgeFaceRegistrationMarkup(photo)
-    : "";
 
   return `${svgOpen}
   <defs>
@@ -473,8 +586,16 @@ function renderBadgePhotoPlateSvg(
         ${textClipRect}
       </clipPath>
     </defs>
-    ${registrationLayer}
-    ${photoLayer}
+    <image
+      href="${photoHref}"
+      xlink:href="${photoHref}"
+      x="0"
+      y="0"
+      width="${canvasW}"
+      height="${canvasH}"
+      preserveAspectRatio="none"
+      style="image-rendering:optimizeQuality"
+    />
     ${badgeIconLayer}
     ${text}
   </g>
@@ -1884,7 +2005,7 @@ export function renderBadgeToSvgString(
       : paintOverlay
       ? trimColors.outlineStroke
       : badge.borderColor ?? "#111";
-  const outlineWidth = opts.outlineStrokeWidth ?? (isPrint ? "0.75" : "1.25");
+  const outlineWidth = opts.outlineStrokeWidth ?? (isPrint ? "2" : "1.25");
   const outlineNonScaling = opts.outlineNonScalingStroke === true;
   const deskSignStandLayer = isPrint ? "" : buildDeskSignStandMarkup(template, badge);
   const outline =
@@ -2178,7 +2299,7 @@ export async function renderBadgeToSvgStringWithFonts(
       : paintOverlay
       ? trimColors.outlineStroke
       : badge.borderColor ?? "#111";
-  const outlineWidth = opts.outlineStrokeWidth ?? (isPrint ? "0.75" : "1.25");
+  const outlineWidth = opts.outlineStrokeWidth ?? (isPrint ? "2" : "1.25");
   const outlineNonScaling = opts.outlineNonScalingStroke === true;
   const deskSignStandLayer = isPrint ? "" : buildDeskSignStandMarkup(template, badge);
   const outline =

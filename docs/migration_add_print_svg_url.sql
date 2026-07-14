@@ -1,3 +1,8 @@
+-- TODO(supabase): Run this migration when you have Dashboard/SQL access again.
+-- Until then, order-item rows omit print_svg_url so drafts/checkouts still save.
+-- Print SVGs are still generated in the designer for local preview/download
+-- when ?designLibraryDummy=1 is on.
+--
 -- Print-ready SVG for CorelDRAW (text + icon + registration shape; no background art).
 -- Stored separately from full_image_url (proof/production preview SVG with backgrounds).
 
