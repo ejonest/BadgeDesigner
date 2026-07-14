@@ -8,7 +8,11 @@ import { PLAQUE_LAYOUT_OPTIONS as PLAQUE_LAYOUT_OPTIONS_CONST } from "./plaqueLa
 
 export type DesignerVariant = "badge" | "sign" | "plaque" | "desk-sign";
 
-export type DeskSignMaterial = "acrylic" | "rosewood" | "plastic";
+export type DeskSignMaterial =
+  | "acrylic"
+  | "rosewood"
+  | "plastic"
+  | "wall-mount";
 
 /**
  * Sign/plaque template grid + plaque live preview: non-scaling outline so trim stays visible
@@ -136,7 +140,7 @@ export const DESIGNER_VARIANT_CONFIG: Record<
     helpContent: "sign",
   },
   "desk-sign": {
-    maxLines: 6,
+    maxLines: 2,
     hasBacking: false,
     hasBorder: false,
     hasSizeStep: false,
@@ -524,24 +528,36 @@ export const DESK_SIGN_MATERIALS: readonly {
   label: string;
   description: string;
   sizeText: string;
+  /** Example product photo shown on the Choose material step. */
+  exampleImageSrc: string;
 }[] = [
   {
     id: "acrylic",
     label: "Acrylic",
-    description: "Clear acrylic with laser-engraved personalization",
+    description: "Clear acrylic, laser-engraved (white preview for editing)",
     sizeText: '2×10"',
+    exampleImageSrc: "/images/desk-sign/acrylicEx.jpg?v=4",
   },
   {
     id: "rosewood",
     label: "Rosewood",
     description: "Piano-finish base with engraved gold & black plate",
     sizeText: '2×10"',
+    exampleImageSrc: "/images/desk-sign/rosewoodEx.jpg?v=4",
   },
   {
     id: "plastic",
     label: "Plastic",
-    description: "Traditional insert — gold on navy",
+    description: "Engraved plastic plate with desk stand",
     sizeText: '2×8"',
+    exampleImageSrc: "/images/desk-sign/plasticEx.jpg?v=5",
+  },
+  {
+    id: "wall-mount",
+    label: "Wall Mount",
+    description: "Same engraved plastic plate — ships with wall mount hardware",
+    sizeText: '2×10"',
+    exampleImageSrc: "/images/desk-sign/wallPlateEx.jpg?v=4",
   },
 ] as const;
 
@@ -621,6 +637,13 @@ export const DESK_SIGN_TEMPLATE_TYPES: DeskSignTemplateType[] = [
     hasBorderTrim: false,
     layoutTemplateId: "desk-plastic-2x8",
   },
+  {
+    id: "wall-mount-business",
+    name: "Business",
+    material: "wall-mount",
+    hasBorderTrim: false,
+    layoutTemplateId: "desk-wall-mount-2x10",
+  },
 ];
 
 export function getDeskSignTemplateTypesForMaterial(
@@ -629,11 +652,20 @@ export function getDeskSignTemplateTypesForMaterial(
   return DESK_SIGN_TEMPLATE_TYPES.filter((t) => t.material === material);
 }
 
-/** Rosewood and plastic inserts have a colors step; acrylic is always clear etched block. */
+/** Plastic desk insert and wall-mount plate share the engraving-plastic color set. */
+export function deskSignMaterialUsesPlasticFinishes(
+  material: DeskSignMaterial | null,
+): boolean {
+  return material === "plastic" || material === "wall-mount";
+}
+
+/** Rosewood / plastic / wall-mount have a colors step; acrylic is always clear etched. */
 export function deskSignMaterialShowsColorsStep(
   material: DeskSignMaterial | null,
 ): boolean {
-  return material === "rosewood" || material === "plastic";
+  return (
+    material === "rosewood" || deskSignMaterialUsesPlasticFinishes(material)
+  );
 }
 
 /** @deprecated Use deskSignMaterialShowsColorsStep — kept for call sites passing type id. */
@@ -659,6 +691,9 @@ export function resolveDeskSignDefaultTemplateId(
   const type = DESK_SIGN_TEMPLATE_TYPES.find((t) => t.material === material);
   if (material === "plastic") {
     return type?.layoutTemplateId ?? "desk-plastic-2x8";
+  }
+  if (material === "wall-mount") {
+    return type?.layoutTemplateId ?? "desk-wall-mount-2x10";
   }
   return type?.professions?.[0]?.templateId ?? `desk-${material}-doctor-2x10`;
 }

@@ -1,5 +1,6 @@
 import type { BadgeImage, PlaqueDetachedPhotoFrameFinish } from "~/types/badge";
 import {
+  FEATURED_BRUSHED_BLACK_HEX,
   FEATURED_BRUSHED_GOLD_HEX,
   FEATURED_BRUSHED_SILVER_HEX,
   LEGACY_BRUSHED_GOLD_HEX,
@@ -185,7 +186,7 @@ export const FEATURED_BRUSHED_SILVER_PLATE_HEX = FEATURED_BRUSHED_SILVER_HEX;
 
 /**
  * True when the plate background should use the brushed-metal gradient
- * (same treatment as plaque metal), limited to featured gold/silver swatches only.
+ * (same treatment as plaque metal), limited to featured gold/silver/black swatches.
  */
 export function isFeaturedBrushedMetalPlateColor(
   hex: string | undefined | null,
@@ -196,6 +197,7 @@ export function isFeaturedBrushedMetalPlateColor(
   return (
     normalized === PLAQUE_DEFAULT_BRUSH_GOLD_HEX.toUpperCase() ||
     normalized === FEATURED_BRUSHED_SILVER_PLATE_HEX.toUpperCase() ||
+    normalized === FEATURED_BRUSHED_BLACK_HEX.toUpperCase() ||
     normalized === LEGACY_BRUSHED_GOLD_HEX.toUpperCase() ||
     normalized === LEGACY_BRUSHED_SILVER_HEX.toUpperCase()
   );
@@ -220,6 +222,9 @@ export function normalizeFeaturedBrushedMetalBaseHex(
     n === FEATURED_BRUSHED_SILVER_PLATE_HEX.toUpperCase()
   ) {
     return FEATURED_BRUSHED_SILVER_PLATE_HEX;
+  }
+  if (n === FEATURED_BRUSHED_BLACK_HEX.toUpperCase()) {
+    return FEATURED_BRUSHED_BLACK_HEX;
   }
   return raw;
 }

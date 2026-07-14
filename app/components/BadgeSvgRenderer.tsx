@@ -116,7 +116,9 @@ export default function BadgeSvgRenderer({
             plateRenderMode: v === "badge" ? "photo" : "vector",
             ...(v === "badge"
               ? { showOutline: false, aqbPresetTextLayout: true }
-              : {}),
+              : v === "desk-sign"
+                ? { aqbPresetTextLayout: true }
+                : {}),
             ...(photoPlateOverrideRef.current
               ? { photoPlateOverride: photoPlateOverrideRef.current }
               : {}),

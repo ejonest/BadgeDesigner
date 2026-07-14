@@ -129,6 +129,15 @@
       "svgFile": "/templates/desk-sign/desk-plastic-2x8.svg",
       "safeInsetPx": 6,
       "deskSignMaterial": "plastic"
+    },
+    {
+      "id": "desk-wall-mount-2x10",
+      "name": "Wall Mount 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-wall-mount-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "wall-mount"
     }
   ]
 }

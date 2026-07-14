@@ -25,18 +25,18 @@ export function findDeskSignVariantByMaterial(
   product: ShopifyProductJs,
   material: DeskSignMaterial,
 ): ShopifyProductJsVariant | null {
-  const label =
+  const aliases =
     material === "acrylic"
-      ? "acrylic"
+      ? ["acrylic"]
       : material === "rosewood"
-        ? "rosewood"
-        : "plastic";
-  const nm = normOpt(label);
+        ? ["rosewood"]
+        : material === "wall-mount"
+          ? ["wall-mount", "wall mount", "wallmount", "wall plate"]
+          : ["plastic"];
+  const aliasSet = new Set(aliases.map(normOpt));
   for (const v of product.variants) {
-    const o1 = normOpt(v.option1);
-    const o2 = normOpt(v.option2);
-    const o3 = normOpt(v.option3);
-    if (o1 === nm || o2 === nm || o3 === nm) {
+    const opts = [v.option1, v.option2, v.option3].map(normOpt);
+    if (opts.some((o) => aliasSet.has(o))) {
       return v;
     }
   }

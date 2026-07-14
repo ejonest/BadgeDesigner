@@ -4,6 +4,7 @@ import {
   deskSignInnerFillForRender,
   isDeskSignTemplateId,
 } from "~/utils/deskSignRender";
+import { layoutDeskSignTextLines } from "~/utils/deskSignTextSize";
 import { layoutAqbPresetTextLines } from "~/utils/aqbBadgeTextSize";
 import type {
   Badge,
@@ -1951,15 +1952,19 @@ export function renderBadgeToSvgString(
       ? renderBg(badge.backgroundImage, designBox)
       : "";
 
-  // Text rendering with uniform spacing and proportional scaling
-  const lineLayout = calculateTextLayout(
-    badge.lines || [],
-    designBox,
-    template,
-    undefined,
-    badge,
-    effectiveSignLayout,
-  );
+  // Text rendering: desk signs + AQB badge presets use exact sizeNorm px (no fractional re-shrink).
+  const lineLayout = isDeskSignTemplateId(template.id)
+    ? layoutDeskSignTextLines(badge.lines || [], designBox, undefined)
+    : opts.aqbPresetTextLayout
+      ? layoutAqbPresetTextLines(badge.lines || [], designBox, undefined)
+      : calculateTextLayout(
+          badge.lines || [],
+          designBox,
+          template,
+          undefined,
+          badge,
+          effectiveSignLayout,
+        );
 
   const badgeIconLayer = renderBadgeIconLayer(
     badge.badgeIconId,
@@ -1978,7 +1983,7 @@ export function renderBadgeToSvgString(
         item.fontSize
       }" text-anchor="${item.anchor}"
               dominant-baseline="middle" font-family="${
-                item.familyEscaped
+                item.familyEscaped ?? esc(item.familyRaw)
               }" fill="${color}"
               font-weight="${item.fontWeight}"
               font-style="${item.fontStyle}"
@@ -2246,14 +2251,18 @@ export async function renderBadgeToSvgStringWithFonts(
       : "";
 
   // Text rendering with embedded fonts, uniform spacing and proportional scaling
-  const lineLayout = calculateTextLayout(
-    badge.lines || [],
-    designBox,
-    template,
-    fontMappings,
-    badge,
-    effectiveSignLayoutWithFonts,
-  );
+  const lineLayout = isDeskSignTemplateId(template.id)
+    ? layoutDeskSignTextLines(badge.lines || [], designBox, fontMappings)
+    : opts.aqbPresetTextLayout
+      ? layoutAqbPresetTextLines(badge.lines || [], designBox, fontMappings)
+      : calculateTextLayout(
+          badge.lines || [],
+          designBox,
+          template,
+          fontMappings,
+          badge,
+          effectiveSignLayoutWithFonts,
+        );
 
   const badgeIconLayer = renderBadgeIconLayer(
     badge.badgeIconId,
@@ -2272,7 +2281,7 @@ export async function renderBadgeToSvgStringWithFonts(
         item.fontSize
       }" text-anchor="${item.anchor}"
               dominant-baseline="middle" font-family="${
-                item.familyEscaped
+                item.familyEscaped ?? esc(item.familyRaw)
               }" fill="${color}"
               font-weight="${item.fontWeight}"
               font-style="${item.fontStyle}"
