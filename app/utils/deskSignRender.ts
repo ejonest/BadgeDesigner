@@ -11,6 +11,80 @@ export const DESK_SIGN_ACRYLIC_PREVIEW_FILL = "#FFFFFF";
 /** Fixed engraving preview text on acrylic (customers can’t pick a print color). */
 export const DESK_SIGN_ACRYLIC_TEXT_COLOR = "#1A1A1A";
 
+export type DeskSignAcrylicFinishId = "clear" | "frosted" | "black";
+
+/** Placeholder preview treatments; product photos can replace these swatches later. */
+export const DESK_SIGN_ACRYLIC_FINISHES: readonly {
+  id: DeskSignAcrylicFinishId;
+  label: string;
+  plateColor: string;
+  textColor: string;
+  description: string;
+  imageSrc: string;
+}[] = [
+  {
+    id: "clear",
+    label: "Clear",
+    plateColor: "#FFFFFF",
+    textColor: "#1A1A1A",
+    description: "Clear polished acrylic",
+    imageSrc: "/images/desk-sign/ClearAcrylic.jpg?v=1",
+  },
+  {
+    id: "frosted",
+    label: "Frosted",
+    plateColor: "#E5E7EB",
+    textColor: "#1A1A1A",
+    description: "Soft frosted acrylic",
+    imageSrc: "/images/desk-sign/FrostedAcrylic.jpg?v=1",
+  },
+  {
+    id: "black",
+    label: "Black",
+    plateColor: "#171717",
+    textColor: "#FFFFFF",
+    description: "Gloss black acrylic",
+    imageSrc: "/images/desk-sign/BlackAcrylic.jpg?v=1",
+  },
+] as const;
+
+export type DeskSignMountType = "desk-stand" | "wall-mount";
+export type DeskSignAluminumColorId = "black" | "silver" | "gold" | "white";
+
+export const DESK_SIGN_ALUMINUM_COLORS: readonly {
+  id: DeskSignAluminumColorId;
+  label: string;
+  color: string;
+}[] = [
+  { id: "black", label: "Black", color: "#1A1A1A" },
+  { id: "silver", label: "Silver", color: "#B8BDC4" },
+  { id: "gold", label: "Gold", color: "#C9A66B" },
+  { id: "white", label: "White", color: "#FFFFFF" },
+] as const;
+
+export function findDeskSignAcrylicFinish(
+  id: string | undefined | null,
+): (typeof DESK_SIGN_ACRYLIC_FINISHES)[number] | null {
+  return DESK_SIGN_ACRYLIC_FINISHES.find((finish) => finish.id === id) ?? null;
+}
+
+export function applyDeskSignAcrylicFinish(
+  badge: Badge,
+  finishId: DeskSignAcrylicFinishId,
+): Badge {
+  const finish =
+    findDeskSignAcrylicFinish(finishId) ?? DESK_SIGN_ACRYLIC_FINISHES[0];
+  return {
+    ...badge,
+    deskSignAcrylicFinish: finish.id,
+    backgroundColor: finish.plateColor,
+    lines: badge.lines.map((line) => ({
+      ...line,
+      color: finish.textColor,
+    })),
+  };
+}
+
 /** Fixed rosewood stand; not shown in design preview (plate-only). */
 export const DESK_SIGN_ROSEWOOD_STAND_COLOR = "#4A2C1A";
 
@@ -26,6 +100,7 @@ export const DESK_SIGN_ROSEWOOD_PLATE_FINISHES: readonly {
   plateColor: string;
   textColor: string;
   description: string;
+  imageSrc: string;
 }[] = [
   {
     id: "brushed-gold",
@@ -33,6 +108,7 @@ export const DESK_SIGN_ROSEWOOD_PLATE_FINISHES: readonly {
     plateColor: FEATURED_BRUSHED_GOLD_HEX,
     textColor: "#1A1A1A",
     description: "Brushed gold plate with black text",
+    imageSrc: "/images/desk-sign/RWGold.png?v=1",
   },
   {
     id: "brushed-silver",
@@ -40,6 +116,7 @@ export const DESK_SIGN_ROSEWOOD_PLATE_FINISHES: readonly {
     plateColor: FEATURED_BRUSHED_SILVER_HEX,
     textColor: "#1A1A1A",
     description: "Brushed silver plate with black text",
+    imageSrc: "/images/desk-sign/RWSilver.png?v=1",
   },
   {
     id: "black-gold",
@@ -47,6 +124,7 @@ export const DESK_SIGN_ROSEWOOD_PLATE_FINISHES: readonly {
     plateColor: FEATURED_BRUSHED_BLACK_HEX,
     textColor: DESK_SIGN_BLACK_GOLD_TEXT_HEX,
     description: "Brushed black plate with gold text",
+    imageSrc: "/images/desk-sign/RWBlackGold.png?v=1",
   },
 ] as const;
 
@@ -82,11 +160,6 @@ export const DESK_SIGN_DEFAULT_COLORS: Record<
   plastic: {
     backgroundColor: "#1A1A1A",
     standColor: "#1A1A1A",
-    textColor: "#FFFFFF",
-  },
-  "wall-mount": {
-    backgroundColor: "#1A1A1A",
-    standColor: "transparent",
     textColor: "#FFFFFF",
   },
 };
@@ -161,6 +234,10 @@ export function applyDeskSignMaterialDefaults(
   return {
     ...badge,
     deskSignMaterial: material,
+    deskSignSize: undefined,
+    deskSignAcrylicFinish: undefined,
+    deskSignMountType: undefined,
+    deskSignAluminumColor: undefined,
     backgroundColor: colors.backgroundColor,
     borderColor: colors.standColor,
     signBorderEnabled: false,
@@ -203,10 +280,7 @@ export function deskSignInnerFillForRender(
   const material = badge.deskSignMaterial;
   if (!material && isDeskSignTemplateId(template.id)) {
     if (template.id.includes("acrylic")) return DESK_SIGN_ACRYLIC_PREVIEW_FILL;
-    if (
-      template.id.includes("plastic") ||
-      template.id.includes("wall-mount")
-    ) {
+    if (template.id.includes("plastic")) {
       return (
         badge.backgroundColor?.trim() ||
         DESK_SIGN_DEFAULT_COLORS.plastic.backgroundColor
@@ -214,7 +288,12 @@ export function deskSignInnerFillForRender(
     }
     return badge.backgroundColor?.trim() || FEATURED_BRUSHED_GOLD_HEX;
   }
-  if (material === "acrylic") return DESK_SIGN_ACRYLIC_PREVIEW_FILL;
+  if (material === "acrylic") {
+    return (
+      findDeskSignAcrylicFinish(badge.deskSignAcrylicFinish)?.plateColor ??
+      DESK_SIGN_ACRYLIC_PREVIEW_FILL
+    );
+  }
   const raw = badge.backgroundColor?.trim();
   if (!raw || raw === "transparent") {
     return DESK_SIGN_DEFAULT_COLORS[material ?? "plastic"].backgroundColor;
@@ -230,10 +309,7 @@ export function deskSignStandFillForRender(
   if (template.id.startsWith("desk-rosewood")) {
     return null;
   }
-  if (
-    template.id.startsWith("desk-plastic") ||
-    template.id.startsWith("desk-wall-mount")
-  ) {
+  if (template.id.startsWith("desk-plastic")) {
     return null;
   }
   return null;
@@ -253,11 +329,10 @@ export function deskSignColorsStepComplete(
   hasChosenPlateColor: boolean,
   _hasChosenStandColor?: boolean,
 ): boolean {
-  if (material === "acrylic") return true;
   if (
+    material === "acrylic" ||
     material === "rosewood" ||
-    material === "plastic" ||
-    material === "wall-mount"
+    material === "plastic"
   ) {
     return hasChosenPlateColor;
   }

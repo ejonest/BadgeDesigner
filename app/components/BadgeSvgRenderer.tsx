@@ -117,8 +117,8 @@ export default function BadgeSvgRenderer({
             ...(v === "badge"
               ? { showOutline: false, aqbPresetTextLayout: true }
               : v === "desk-sign"
-                ? { aqbPresetTextLayout: true }
-                : {}),
+                ? { aqbPresetTextLayout: true, previewPaddingPx: 0 }
+              : {}),
             ...(photoPlateOverrideRef.current
               ? { photoPlateOverride: photoPlateOverrideRef.current }
               : {}),

@@ -518,7 +518,11 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   onChange={(e) => {
                     const attempted = e.target.value;
                     if (isDeskSignPanel) {
-                      const { text: fitted, wasTruncated } =
+                      const {
+                        text: fitted,
+                        sizeNorm,
+                        wasTruncated,
+                      } =
                         clampDeskSignLineTextInput({
                           lines: badge.lines,
                           lineIndex: idx,
@@ -526,7 +530,10 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                           designBox,
                         });
                       markCharLimitRejected(idx, wasTruncated);
-                      onLineChange(idx, { text: fitted });
+                      onLineChange(idx, {
+                        text: fitted,
+                        ...(typeof sizeNorm === "number" ? { sizeNorm } : {}),
+                      });
                       return;
                     }
                     const fitted = truncateAqbLineTextToFit(

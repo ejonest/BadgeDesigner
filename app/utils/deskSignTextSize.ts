@@ -1,5 +1,5 @@
 /**
- * Desk sign text sizing (acrylic / rosewood / plastic / wall-mount).
+ * Desk sign text sizing (acrylic / rosewood / plastic).
  *
  * Tunable px caps below are the *maximum* for each layout; text shrinks down to
  * `DESK_SIGN_TEXT_MIN_PX` to fit the plate width. Past that, input is truncated
@@ -25,14 +25,14 @@ export const DESK_SIGN_MAX_TEXT_LINES = 2;
  * Max font size (px in template/design-box space) when the customer has exactly 1 line.
  * Change this to make single-line text larger or smaller by default.
  */
-export const DESK_SIGN_SINGLE_LINE_MAX_PX = 72;
+export const DESK_SIGN_SINGLE_LINE_MAX_PX = 100;
 
 /**
  * Max font sizes when the customer has 2 lines.
  * Line 1 is intentionally larger than line 2 (name vs title hierarchy).
  */
-export const DESK_SIGN_TWO_LINE_FIRST_MAX_PX = 48;
-export const DESK_SIGN_TWO_LINE_SECOND_MAX_PX = 28;
+export const DESK_SIGN_TWO_LINE_FIRST_MAX_PX = 80;
+export const DESK_SIGN_TWO_LINE_SECOND_MAX_PX = 60;
 
 /**
  * Smallest font size before we stop shrinking and treat further typing as over the limit.
@@ -128,12 +128,22 @@ export function fitDeskSignLines(
   if (!(H > 0)) return lines;
 
   const maxTextWidth = deskSignMaxTextWidth(designBox.width);
-  const lineCount = lines.length;
   const minPx = DESK_SIGN_TEXT_MIN_PX;
+  const visibleIndexes = lines
+    .map((line, index) => ((line.text || "").trim() ? index : -1))
+    .filter((index) => index >= 0);
+  const visibleCount = Math.max(1, visibleIndexes.length);
+  const visibleRankByIndex = new Map(
+    visibleIndexes.map((lineIndex, rank) => [lineIndex, rank]),
+  );
 
   let sizesPx = lines.map((line, index) => {
+    const visibleRank = visibleRankByIndex.get(index);
+    if (visibleRank === undefined) {
+      return aqbSizeNormToPx(line.sizeNorm ?? 0.15, H);
+    }
     const typography = aqbLineTypography(line);
-    const target = deskSignTargetMaxPx(index, lineCount);
+    const target = deskSignTargetMaxPx(visibleRank, visibleCount);
     return shrinkPxToFitWidth({
       text: line.text || "",
       startPx: target,
@@ -148,12 +158,19 @@ export function fitDeskSignLines(
   // Height squeeze: preserve relative hierarchy while scaling down to min floor.
   let guard = 0;
   while (
-    totalStackHeightPx(sizesPx, H) > H &&
-    sizesPx.some((px) => px > minPx) &&
+    totalStackHeightPx(
+      visibleIndexes.map((index) => sizesPx[index]),
+      H,
+    ) > H &&
+    visibleIndexes.some((index) => sizesPx[index] > minPx) &&
     guard < 80
   ) {
     guard += 1;
-    sizesPx = sizesPx.map((px) => Math.max(minPx, Math.round(px * 0.95)));
+    sizesPx = sizesPx.map((px, index) =>
+      visibleRankByIndex.has(index)
+        ? Math.max(minPx, Math.round(px * 0.95))
+        : px,
+    );
   }
 
   return lines.map((line, index) => ({
@@ -211,7 +228,9 @@ export function truncateDeskSignLineTextToFit(
   while (lo < hi) {
     const mid = Math.ceil((lo + hi) / 2);
     const candidate = text.slice(0, mid);
-    if (lineWidthFits(candidate, fontPx, fontFamily, bold, italic, maxTextWidth)) {
+    if (
+      lineWidthFits(candidate, fontPx, fontFamily, bold, italic, maxTextWidth)
+    ) {
       lo = mid;
     } else {
       hi = mid - 1;
@@ -228,7 +247,7 @@ export function clampDeskSignLineTextInput(args: {
   lineIndex: number;
   attemptedText: string;
   designBox: { width: number; height: number };
-}): { text: string; wasTruncated: boolean } {
+}): { text: string; sizeNorm?: number; wasTruncated: boolean } {
   const { lines, lineIndex, attemptedText, designBox } = args;
   const tentative = lines.map((line, i) =>
     i === lineIndex ? { ...line, text: attemptedText } : line,
@@ -250,6 +269,7 @@ export function clampDeskSignLineTextInput(args: {
   );
   return {
     text: truncated,
+    sizeNorm: line.sizeNorm,
     wasTruncated: truncated !== attemptedText,
   };
 }
@@ -282,10 +302,11 @@ export function layoutDeskSignTextLines(
   designBox: { x: number; y: number; width: number; height: number },
   fontMappings?: Map<string, string>,
 ): DeskSignTextLayoutItem[] {
-  if (lines.length === 0) return [];
+  const visibleLines = lines.filter((line) => (line.text || "").trim());
+  if (visibleLines.length === 0) return [];
 
   const lineSpacing = designBox.height * DESK_SIGN_LINE_SPACING_FRACTION;
-  const sizes = lines.map((line) =>
+  const sizes = visibleLines.map((line) =>
     aqbSizeNormToPx(line.sizeNorm ?? 0.15, designBox.height),
   );
   const totalHeight =
@@ -294,15 +315,11 @@ export function layoutDeskSignTextLines(
 
   let currentY = designBox.y + (designBox.height - totalHeight) / 2;
 
-  return lines.map((line, index) => {
+  return visibleLines.map((line, index) => {
     const fontSize = sizes[index];
     const alignment = line.align || "center";
     const anchor =
-      alignment === "left"
-        ? "start"
-        : alignment === "right"
-          ? "end"
-          : "middle";
+      alignment === "left" ? "start" : alignment === "right" ? "end" : "middle";
 
     let x: number;
     if (anchor === "middle") {
@@ -314,7 +331,8 @@ export function layoutDeskSignTextLines(
     }
 
     const y = currentY + fontSize / 2;
-    currentY += fontSize + (index < lines.length - 1 ? lineSpacing : 0);
+    currentY +=
+      fontSize + (index < visibleLines.length - 1 ? lineSpacing : 0);
 
     const originalFamily = line.fontFamily || "Arial";
     const familyRaw = fontMappings?.get(originalFamily) || originalFamily;

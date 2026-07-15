@@ -131,6 +131,8 @@ type RenderOpts = {
    * calibrated photo text box (no calculateTextLayout fractional shrink).
    */
   aqbPresetTextLayout?: boolean;
+  /** UI previews may reduce the default 24px canvas padding to enlarge wide products. */
+  previewPaddingPx?: number;
 };
 
 export type { RenderOpts };
@@ -171,8 +173,7 @@ export function resolvePrintRenderOpts(
   variant: DesignerVariant = "badge",
 ): RenderOpts {
   const hasPhotoPlate =
-    variant === "badge" &&
-    Boolean(resolveBadgePlatePhoto(template.id, badge));
+    variant === "badge" && Boolean(resolveBadgePlatePhoto(template.id, badge));
   return {
     plateRenderMode: "print",
     showOutline: true,
@@ -337,7 +338,8 @@ export function resolveProductionViewBoxPx(
   }
   return {
     widthPx: template.standardViewBoxWidth + PRODUCTION_VIEWBOX_PADDING_PX * 2,
-    heightPx: template.standardViewBoxHeight + PRODUCTION_VIEWBOX_PADDING_PX * 2,
+    heightPx:
+      template.standardViewBoxHeight + PRODUCTION_VIEWBOX_PADDING_PX * 2,
   };
 }
 
@@ -481,9 +483,12 @@ function resolvePhotoPlateForRender(
   return resolveBadgePlatePhoto(template.id, badge);
 }
 
-function buildRectClipPathMarkup(
-  rect: { x: number; y: number; width: number; height: number },
-): string {
+function buildRectClipPathMarkup(rect: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}): string {
   return `<rect x="${rect.x}" y="${rect.y}" width="${rect.width}" height="${rect.height}"/>`;
 }
 
@@ -519,11 +524,7 @@ function renderBadgePhotoPlateSvg(
   const clipId = clipPathIdForSvg(opts, badge);
 
   const lineLayout = opts.aqbPresetTextLayout
-    ? layoutAqbPresetTextLines(
-        badge.lines || [],
-        designBox,
-        fontMappings,
-      )
+    ? layoutAqbPresetTextLines(badge.lines || [], designBox, fontMappings)
     : calculateTextLayout(
         badge.lines || [],
         designBox,
@@ -1906,7 +1907,7 @@ export function renderBadgeToSvgString(
 
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
   const isPrint = isPrintPlateRender(opts);
-  const PADDING_PX = isPrint ? 0 : 24;
+  const PADDING_PX = isPrint ? 0 : (opts.previewPaddingPx ?? 24);
   // ViewBox must match content coordinates: innerElement/designBox are in template.widthPx × template.heightPx space.
   // Using widthPx/heightPx lets large signs fit fully; SVG then scales to container (preview) with width/height="100%".
   const W = template.widthPx + PADDING_PX * 2;
@@ -1922,15 +1923,14 @@ export function renderBadgeToSvgString(
     template,
     badge,
   );
-  const { innerPlateMarkup, gradientDefXml: plateBrushGradientDefXml } =
-    isPrint
-      ? { innerPlateMarkup: "", gradientDefXml: "" }
-      : plateBrushGradientForBadgeInner(
-          badge,
-          template,
-          clipId,
-          innerPathWithFill,
-        );
+  const { innerPlateMarkup, gradientDefXml: plateBrushGradientDefXml } = isPrint
+    ? { innerPlateMarkup: "", gradientDefXml: "" }
+    : plateBrushGradientForBadgeInner(
+        badge,
+        template,
+        clipId,
+        innerPathWithFill,
+      );
 
   const effectiveSignLayout = template.signTextLayout
     ? getEffectiveSignTextLayoutForBadge(template, badge)
@@ -1956,15 +1956,15 @@ export function renderBadgeToSvgString(
   const lineLayout = isDeskSignTemplateId(template.id)
     ? layoutDeskSignTextLines(badge.lines || [], designBox, undefined)
     : opts.aqbPresetTextLayout
-      ? layoutAqbPresetTextLines(badge.lines || [], designBox, undefined)
-      : calculateTextLayout(
-          badge.lines || [],
-          designBox,
-          template,
-          undefined,
-          badge,
-          effectiveSignLayout,
-        );
+    ? layoutAqbPresetTextLines(badge.lines || [], designBox, undefined)
+    : calculateTextLayout(
+        badge.lines || [],
+        designBox,
+        template,
+        undefined,
+        badge,
+        effectiveSignLayout,
+      );
 
   const badgeIconLayer = renderBadgeIconLayer(
     badge.badgeIconId,
@@ -2012,7 +2012,9 @@ export function renderBadgeToSvgString(
       : badge.borderColor ?? "#111";
   const outlineWidth = opts.outlineStrokeWidth ?? (isPrint ? "2" : "1.25");
   const outlineNonScaling = opts.outlineNonScalingStroke === true;
-  const deskSignStandLayer = isPrint ? "" : buildDeskSignStandMarkup(template, badge);
+  const deskSignStandLayer = isPrint
+    ? ""
+    : buildDeskSignStandMarkup(template, badge);
   const outline =
     isDeskSignTemplateId(template.id) && !isPrint
       ? ""
@@ -2203,7 +2205,7 @@ export async function renderBadgeToSvgStringWithFonts(
 
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
   const isPrint = isPrintPlateRender(opts);
-  const PADDING_PX = isPrint ? 0 : 24;
+  const PADDING_PX = isPrint ? 0 : (opts.previewPaddingPx ?? 24);
   // ViewBox must match content coordinates (widthPx × heightPx) so full design fits; preview scales via width/height="100%".
   const W = template.widthPx + PADDING_PX * 2;
   const H = template.heightPx + PADDING_PX * 2;
@@ -2254,15 +2256,15 @@ export async function renderBadgeToSvgStringWithFonts(
   const lineLayout = isDeskSignTemplateId(template.id)
     ? layoutDeskSignTextLines(badge.lines || [], designBox, fontMappings)
     : opts.aqbPresetTextLayout
-      ? layoutAqbPresetTextLines(badge.lines || [], designBox, fontMappings)
-      : calculateTextLayout(
-          badge.lines || [],
-          designBox,
-          template,
-          fontMappings,
-          badge,
-          effectiveSignLayoutWithFonts,
-        );
+    ? layoutAqbPresetTextLines(badge.lines || [], designBox, fontMappings)
+    : calculateTextLayout(
+        badge.lines || [],
+        designBox,
+        template,
+        fontMappings,
+        badge,
+        effectiveSignLayoutWithFonts,
+      );
 
   const badgeIconLayer = renderBadgeIconLayer(
     badge.badgeIconId,
@@ -2310,7 +2312,9 @@ export async function renderBadgeToSvgStringWithFonts(
       : badge.borderColor ?? "#111";
   const outlineWidth = opts.outlineStrokeWidth ?? (isPrint ? "2" : "1.25");
   const outlineNonScaling = opts.outlineNonScalingStroke === true;
-  const deskSignStandLayer = isPrint ? "" : buildDeskSignStandMarkup(template, badge);
+  const deskSignStandLayer = isPrint
+    ? ""
+    : buildDeskSignStandMarkup(template, badge);
   const outline =
     isDeskSignTemplateId(template.id) && !isPrint
       ? ""

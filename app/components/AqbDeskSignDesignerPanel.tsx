@@ -10,18 +10,18 @@ import {
 import type { DesignerVariant } from "~/constants/designerVariants";
 import { TemplatePreviewThumb } from "./TemplatePreviewThumb";
 import {
+  DESK_SIGN_ACRYLIC_FINISHES,
+  DESK_SIGN_ALUMINUM_COLORS,
   DESK_SIGN_PLASTIC_PLATE_FINISHES,
   DESK_SIGN_ROSEWOOD_PLATE_FINISHES,
+  findDeskSignAcrylicFinish,
   findDeskSignPlasticPlateFinish,
   findDeskSignRosewoodPlateFinish,
+  type DeskSignAcrylicFinishId,
+  type DeskSignAluminumColorId,
+  type DeskSignMountType,
   type DeskSignRosewoodPlateFinishId,
 } from "~/utils/deskSignRender";
-import { plaqueMetalBrushCssBackgroundImage } from "~/utils/plaqueRender";
-import {
-  FEATURED_BRUSHED_BLACK_HEX,
-  FEATURED_BRUSHED_GOLD_HEX,
-  FEATURED_BRUSHED_SILVER_HEX,
-} from "~/constants/colors";
 
 type MaterialPickerProps = {
   material: DeskSignMaterial;
@@ -33,7 +33,7 @@ export function DeskSignMaterialPicker({
   onMaterialChange,
 }: MaterialPickerProps) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
       {DESK_SIGN_MATERIALS.map((m) => {
         const selected = material === m.id;
         return (
@@ -60,7 +60,6 @@ export function DeskSignMaterialPicker({
               <div className="font-semibold text-[#02132B] text-sm leading-tight">
                 {m.label}
               </div>
-              <div className="text-xs text-[#6b7f92] mt-0.5">{m.sizeText}</div>
               <div className="text-[11px] text-[#4a5568] mt-1.5 leading-snug">
                 {m.description}
               </div>
@@ -95,9 +94,7 @@ export function DeskSignDesignPicker({
   if (deskSignMaterialUsesPlasticFinishes(material)) {
     return (
       <p className="text-sm text-[#4a5568]">
-        {material === "wall-mount"
-          ? "Engraved plastic wall plate (2×10″) — choose plate color next."
-          : "Engraved plastic desk plate with stand (2×8″) — choose plate color next."}
+        Engraved plastic plate — choose the plate color next.
       </p>
     );
   }
@@ -163,6 +160,7 @@ type ColorsPickerProps = {
   badge: Badge;
   onPlateColorChange: (color: string) => void;
   onStandColorChange: (color: string) => void;
+  onAcrylicFinishChange?: (finishId: DeskSignAcrylicFinishId) => void;
   onRosewoodPlateFinishChange?: (finishId: DeskSignRosewoodPlateFinishId) => void;
   onPlasticPlateFinishChange?: (finishId: string) => void;
 };
@@ -170,9 +168,56 @@ type ColorsPickerProps = {
 export function DeskSignColorsPicker({
   material,
   badge,
+  onAcrylicFinishChange,
   onRosewoodPlateFinishChange,
   onPlasticPlateFinishChange,
 }: ColorsPickerProps) {
+  if (material === "acrylic") {
+    const selected = findDeskSignAcrylicFinish(
+      badge.deskSignAcrylicFinish,
+    )?.id;
+    return (
+      <div>
+        <p className="mb-2 text-xs font-medium text-[#6b7f92]">
+          Acrylic finish
+        </p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {DESK_SIGN_ACRYLIC_FINISHES.map((finish) => (
+            <button
+              key={finish.id}
+              type="button"
+              className={`rounded-lg border p-3 text-left transition-all ${
+                selected === finish.id
+                  ? "border-[#1a3d5c] bg-[#f8fafc] ring-2 ring-[#1a3d5c]/20"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+              onClick={() => onAcrylicFinishChange?.(finish.id)}
+            >
+              <div className="mb-2 aspect-[5/2] w-full overflow-hidden rounded border border-black/15 bg-[#eef2f6]">
+                <img
+                  src={finish.imageSrc}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <div className="text-sm font-semibold text-[#02132B]">
+                {finish.label}
+              </div>
+              <div className="mt-1 text-xs leading-snug text-[#6b7f92]">
+                {finish.description}
+              </div>
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-[#6b7f92]">
+          Engraving color is fixed for the selected acrylic finish.
+        </p>
+      </div>
+    );
+  }
+
   if (material === "rosewood") {
     const selected =
       findDeskSignRosewoodPlateFinish(badge.backgroundColor)?.id ?? null;
@@ -182,15 +227,6 @@ export function DeskSignColorsPicker({
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {DESK_SIGN_ROSEWOOD_PLATE_FINISHES.map((finish) => {
             const isSelected = selected === finish.id;
-            const brushCss =
-              finish.plateColor.toUpperCase() ===
-                FEATURED_BRUSHED_GOLD_HEX.toUpperCase() ||
-              finish.plateColor.toUpperCase() ===
-                FEATURED_BRUSHED_SILVER_HEX.toUpperCase() ||
-              finish.plateColor.toUpperCase() ===
-                FEATURED_BRUSHED_BLACK_HEX.toUpperCase()
-                ? plaqueMetalBrushCssBackgroundImage(finish.plateColor)
-                : undefined;
             return (
               <button
                 key={finish.id}
@@ -202,13 +238,15 @@ export function DeskSignColorsPicker({
                 }`}
                 onClick={() => onRosewoodPlateFinishChange?.(finish.id)}
               >
-                <div
-                  className="mb-2 h-8 w-full rounded border border-black/10"
-                  style={{
-                    backgroundColor: finish.plateColor,
-                    ...(brushCss ? { backgroundImage: brushCss } : {}),
-                  }}
-                />
+                <div className="mb-2 aspect-[5/2] w-full overflow-hidden rounded border border-black/10 bg-[#eef2f6]">
+                  <img
+                    src={finish.imageSrc}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
                 <div className="font-semibold text-[#02132B] text-sm">
                   {finish.label}
                 </div>
@@ -267,10 +305,99 @@ export function DeskSignColorsPicker({
     );
   }
 
+  return null;
+}
+
+type PlasticMountPickerProps = {
+  mountType: DeskSignMountType | undefined;
+  aluminumColor: DeskSignAluminumColorId | undefined;
+  onMountTypeChange: (mountType: DeskSignMountType) => void;
+  onAluminumColorChange: (color: DeskSignAluminumColorId) => void;
+};
+
+export function DeskSignPlasticMountPicker({
+  mountType,
+  aluminumColor,
+  onMountTypeChange,
+  onAluminumColorChange,
+}: PlasticMountPickerProps) {
+  const mountOptions: readonly {
+    id: DeskSignMountType;
+    label: string;
+    description: string;
+  }[] = [
+    {
+      id: "desk-stand",
+      label: "Desk Stand",
+      description: "Aluminum stand for a desktop or counter",
+    },
+    {
+      id: "wall-mount",
+      label: "Wall Mount",
+      description: "Aluminum mounting frame for a wall",
+    },
+  ];
+
   return (
-    <p className="text-sm text-[#4a5568]">
-      Preview uses a white plate so you can see your engraved text. Acrylic is
-      laser-etched — text color can’t be changed.
-    </p>
+    <div className="space-y-4">
+      <div>
+        <p className="mb-2 text-xs font-medium text-[#6b7f92]">Mount type</p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {mountOptions.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={`rounded-lg border p-3 text-left transition-all ${
+                mountType === option.id
+                  ? "border-[#1a3d5c] bg-[#f8fafc] ring-2 ring-[#1a3d5c]/20"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+              onClick={() => onMountTypeChange(option.id)}
+            >
+              <div className="text-sm font-semibold text-[#02132B]">
+                {option.label}
+              </div>
+              <div className="mt-1 text-xs text-[#6b7f92]">
+                {option.description}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-xs font-medium text-[#6b7f92]">
+          Aluminum Finish
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {DESK_SIGN_ALUMINUM_COLORS.map((finish) => (
+            <button
+              key={finish.id}
+              type="button"
+              className={`rounded-lg border p-2 text-left transition-all ${
+                aluminumColor === finish.id
+                  ? "border-[#1a3d5c] bg-[#f8fafc] ring-2 ring-[#1a3d5c]/20"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+              onClick={() => onAluminumColorChange(finish.id)}
+            >
+              <div
+                className="mb-2 h-9 rounded border border-black/15"
+                style={{
+                  backgroundColor: finish.color,
+                  backgroundImage:
+                    finish.id === "silver" || finish.id === "gold"
+                      ? `linear-gradient(100deg, ${finish.color}, #fff8, ${finish.color})`
+                      : undefined,
+                }}
+              />
+              <div className="text-xs font-semibold text-[#02132B]">
+                {finish.label}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

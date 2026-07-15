@@ -4,7 +4,10 @@
  * We proxy that via `/api/shopify-product` for CORS and SSRF control.
  */
 
-import type { DeskSignMaterial } from "~/constants/designerVariants";
+import type {
+  DeskSignMaterial,
+  DeskSignSize,
+} from "~/constants/designerVariants";
 import type {
   ShopifyProductJs,
   ShopifyProductJsVariant,
@@ -20,34 +23,49 @@ function normOpt(s: string | null | undefined): string {
     .replace(/\s+/g, " ");
 }
 
-/** Match variant by Material option (Acrylic / Rosewood / Plastic). */
+function normalizedDimensions(value: string | null | undefined): string {
+  return normOpt(value)
+    .replace(/[×]/g, "x")
+    .replace(/["″'']/g, "")
+    .replace(/\s+/g, "");
+}
+
+/** Match variant by material, and by size when Shopify exposes a size option. */
 export function findDeskSignVariantByMaterial(
   product: ShopifyProductJs,
   material: DeskSignMaterial,
+  size?: DeskSignSize | null,
 ): ShopifyProductJsVariant | null {
   const aliases =
     material === "acrylic"
       ? ["acrylic"]
       : material === "rosewood"
         ? ["rosewood"]
-        : material === "wall-mount"
-          ? ["wall-mount", "wall mount", "wallmount", "wall plate"]
-          : ["plastic"];
+        : ["plastic"];
   const aliasSet = new Set(aliases.map(normOpt));
-  for (const v of product.variants) {
+  const materialMatches = product.variants.filter((v) => {
     const opts = [v.option1, v.option2, v.option3].map(normOpt);
-    if (opts.some((o) => aliasSet.has(o))) {
-      return v;
-    }
+    return opts.some((o) => aliasSet.has(o));
+  });
+  if (size) {
+    const sizeMatch = materialMatches.find((v) => {
+      const values = [v.title, v.option1, v.option2, v.option3];
+      return values.some((value) =>
+        normalizedDimensions(value).includes(size),
+      );
+    });
+    if (sizeMatch) return sizeMatch;
   }
+  if (materialMatches[0]) return materialMatches[0];
   return product.variants[0] ?? null;
 }
 
 export function deskSignMaterialPrice(
   product: ShopifyProductJs,
   material: DeskSignMaterial,
+  size?: DeskSignSize | null,
 ): number {
-  const v = findDeskSignVariantByMaterial(product, material);
+  const v = findDeskSignVariantByMaterial(product, material, size);
   if (!v) return 0;
   return parseShopifyMoney(v.price);
 }

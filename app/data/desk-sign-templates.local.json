@@ -122,8 +122,44 @@
       "deskSignProfessionId": "manager"
     },
     {
+      "id": "desk-acrylic-2x8",
+      "name": "Acrylic 2×8\"",
+      "widthInches": 8,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-acrylic-2x8.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "acrylic"
+    },
+    {
+      "id": "desk-acrylic-2x10",
+      "name": "Acrylic 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-acrylic-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "acrylic"
+    },
+    {
+      "id": "desk-rosewood-2x8",
+      "name": "Piano Finished Rosewood 2×8\"",
+      "widthInches": 8,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-rosewood-2x8.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "rosewood"
+    },
+    {
+      "id": "desk-rosewood-2x10",
+      "name": "Piano Finished Rosewood 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-rosewood-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "rosewood"
+    },
+    {
       "id": "desk-plastic-2x8",
-      "name": "Plastic Business 2×8\"",
+      "name": "Traditional 2×8\"",
       "widthInches": 8,
       "heightInches": 2,
       "svgFile": "/templates/desk-sign/desk-plastic-2x8.svg",
@@ -131,13 +167,13 @@
       "deskSignMaterial": "plastic"
     },
     {
-      "id": "desk-wall-mount-2x10",
-      "name": "Wall Mount 2×10\"",
+      "id": "desk-plastic-2x10",
+      "name": "Traditional 2×10\"",
       "widthInches": 10,
       "heightInches": 2,
-      "svgFile": "/templates/desk-sign/desk-wall-mount-2x10.svg",
+      "svgFile": "/templates/desk-sign/desk-plastic-2x10.svg",
       "safeInsetPx": 6,
-      "deskSignMaterial": "wall-mount"
+      "deskSignMaterial": "plastic"
     }
   ]
 }
