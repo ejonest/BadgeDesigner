@@ -1,5 +1,28 @@
-{%- assign is_badge_editor_product = false -%}
-{%- if product.handle == 'custom-1x3-badge' -%}{%- assign is_badge_editor_product = true -%}{%- endif -%}
+{%- liquid
+  assign aqb_is_badge_designer_product = false
+  assign aqb_badge_icon_preset = ''
+  assign aqb_bd_handle = product.handle | default: '' | strip | downcase
+
+  if aqb_bd_handle == 'custom-1x3-badge'
+    assign aqb_is_badge_designer_product = true
+  elsif aqb_bd_handle.size >= 19
+    assign aqb_bd_prefix = aqb_bd_handle | slice: 0, 12
+    assign aqb_bd_suffix = aqb_bd_handle | slice: -6, 6
+    if aqb_bd_prefix == 'custom-1x3-' and aqb_bd_suffix == '-badge'
+      assign aqb_bd_mid_len = aqb_bd_handle.size | minus: 18
+      if aqb_bd_mid_len > 0
+        assign aqb_is_badge_designer_product = true
+        assign aqb_badge_icon_preset = aqb_bd_handle | slice: 12, aqb_bd_mid_len
+      endif
+    endif
+  endif
+
+  if aqb_is_badge_designer_product == false and product.tags contains 'custom-icon-badge'
+    assign aqb_is_badge_designer_product = true
+  endif
+
+  assign is_badge_editor_product = aqb_is_badge_designer_product
+-%}
 
 <product-info
   id="MainProduct-{{ section.id }}"
@@ -43,7 +66,7 @@
       }
     }
 
-    {%- if product.handle == 'custom-1x3-badge' -%}
+    {%- if is_badge_editor_product -%}
     #MainProduct-{{ section.id }}.main-product--badge-designer.section-{{ section.id }}-padding {
       padding-top: 0 !important;
       padding-bottom: 0 !important;

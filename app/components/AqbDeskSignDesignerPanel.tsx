@@ -178,7 +178,7 @@ export function DeskSignColorsPicker({
     )?.id;
     return (
       <div>
-        <p className="mb-2 text-xs font-medium text-[#6b7f92]">
+        <p className="mb-2 text-xs font-bold text-[#02132B]">
           Acrylic finish
         </p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -223,7 +223,7 @@ export function DeskSignColorsPicker({
       findDeskSignRosewoodPlateFinish(badge.backgroundColor)?.id ?? null;
     return (
       <div>
-        <p className="text-xs font-medium text-[#6b7f92] mb-2">Plate</p>
+        <p className="text-xs font-bold text-[#02132B] mb-2">Plate</p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {DESK_SIGN_ROSEWOOD_PLATE_FINISHES.map((finish) => {
             const isSelected = selected === finish.id;
@@ -266,15 +266,14 @@ export function DeskSignColorsPicker({
       findDeskSignPlasticPlateFinish(badge.backgroundColor)?.id ?? null;
     return (
       <div>
-        <p className="text-xs font-medium text-[#6b7f92] mb-2">Plate color</p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <p className="text-xs font-bold text-[#02132B] mb-2">Plate color</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {DESK_SIGN_PLASTIC_PLATE_FINISHES.map((finish) => {
             const isSelected = selected === finish.id;
             const light =
               finish.plateColor.toUpperCase() === "#FFFFFF" ||
-              finish.plateColor.toUpperCase() === "#E8D5B7" ||
-              finish.plateColor.toUpperCase() === "#F9A825" ||
-              finish.plateColor.toUpperCase() === "#B0B0B0" ||
+              finish.plateColor.toUpperCase() === "#F5F0E6" ||
+              finish.plateColor.toUpperCase() === "#B8BDC4" ||
               finish.plateColor.toUpperCase() === "#C9A66B";
             return (
               <button
@@ -341,7 +340,7 @@ export function DeskSignPlasticMountPicker({
   return (
     <div className="space-y-4">
       <div>
-        <p className="mb-2 text-xs font-medium text-[#6b7f92]">Mount type</p>
+        <p className="mb-2 text-xs font-bold text-[#02132B]">Mount type</p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {mountOptions.map((option) => (
             <button
@@ -366,11 +365,16 @@ export function DeskSignPlasticMountPicker({
       </div>
 
       <div>
-        <p className="mb-2 text-xs font-medium text-[#6b7f92]">
-          Aluminum Finish
+        <p className="mb-2 text-xs font-bold text-[#02132B]">
+          Aluminum Frame
         </p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {DESK_SIGN_ALUMINUM_COLORS.map((finish) => (
+          {DESK_SIGN_ALUMINUM_COLORS.map((finish) => {
+            const frameImageSrc =
+              mountType === "wall-mount"
+                ? finish.wallImageSrc
+                : finish.imageSrc;
+            return (
             <button
               key={finish.id}
               type="button"
@@ -381,21 +385,22 @@ export function DeskSignPlasticMountPicker({
               }`}
               onClick={() => onAluminumColorChange(finish.id)}
             >
-              <div
-                className="mb-2 h-9 rounded border border-black/15"
-                style={{
-                  backgroundColor: finish.color,
-                  backgroundImage:
-                    finish.id === "silver" || finish.id === "gold"
-                      ? `linear-gradient(100deg, ${finish.color}, #fff8, ${finish.color})`
-                      : undefined,
-                }}
-              />
+              <div className="mb-2 w-full overflow-hidden rounded border border-black/10 bg-white">
+                <img
+                  key={frameImageSrc}
+                  src={frameImageSrc}
+                  alt=""
+                  className="block h-auto w-full"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
               <div className="text-xs font-semibold text-[#02132B]">
                 {finish.label}
               </div>
             </button>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

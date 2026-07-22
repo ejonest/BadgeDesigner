@@ -24,6 +24,7 @@
       item.product_handle || item.handle || '',
     ).toLowerCase();
     if (handle === 'custom-1x3-badge') return true;
+    if (/^custom-1x3-.+-badge$/.test(handle)) return true;
     var props = normalizeLineProperties(item);
     if (props['Custom Badge Design'] === 'Yes') {
       var designer = String(props['Designer'] || '')

@@ -1,6 +1,7 @@
 {% comment %}
   Badge + Sign + Plaque designer iframe embed
-  - Badge: product handle custom-1x3-badge → loads app root with badge designer (default).
+  - Badge: custom-1x3-badge and custom-1x3-{icon}-badge listings → /badge-designer-redesign
+    (optional ?badgeIconId= from handle, e.g. custom-1x3-airplane-badge)
   - Sign: product handle custom-sign → ?variant=sign or /sign-designer (Shape × Size variants, live price).
   - Plaque: product handle custom-plaque → ?variant=plaque or /plaque-designer (parallel to sign).
 
@@ -166,34 +167,65 @@
   ></iframe>
 </div>
 
-{% comment %} Custom badge product (pin / magnetic / adhesive variants) {% endcomment %}
-{% elsif product and product.handle == 'custom-1x3-badge' %}
+{% comment %} Custom badge product + icon listing products (pin / magnetic / adhesive) {% endcomment %}
+{% else %}
+{%- liquid
+  assign aqb_is_badge_designer_product = false
+  assign aqb_badge_icon_preset = ''
+  assign aqb_bd_handle = product.handle | default: '' | strip | downcase
+
+  if aqb_bd_handle == 'custom-1x3-badge'
+    assign aqb_is_badge_designer_product = true
+  elsif aqb_bd_handle.size >= 19
+    assign aqb_bd_prefix = aqb_bd_handle | slice: 0, 12
+    assign aqb_bd_suffix = aqb_bd_handle | slice: -6, 6
+    if aqb_bd_prefix == 'custom-1x3-' and aqb_bd_suffix == '-badge'
+      assign aqb_bd_mid_len = aqb_bd_handle.size | minus: 18
+      if aqb_bd_mid_len > 0
+        assign aqb_is_badge_designer_product = true
+        assign aqb_badge_icon_preset = aqb_bd_handle | slice: 12, aqb_bd_mid_len
+      endif
+    endif
+  endif
+
+  if aqb_is_badge_designer_product == false and product.tags contains 'custom-icon-badge'
+    assign aqb_is_badge_designer_product = true
+  endif
+-%}
+{% if product and aqb_is_badge_designer_product %}
 
 {% assign badge_designer_path = '/badge-designer-redesign' %}
 
 {% assign v0 = product.variants[0] %}
 {% assign v1 = product.variants[1] | default: v0 %}
 {% assign v2 = product.variants[2] | default: v0 %}
-{% assign duplicate_product = all_products['custom-1x3-badge-duplicate'] %}
-{% if duplicate_product and duplicate_product.variants.size >= 3 %}
-  {% assign dup0 = duplicate_product.variants[0] %}
-  {% assign dup1 = duplicate_product.variants[1] %}
-  {% assign dup2 = duplicate_product.variants[2] %}
-  {% assign duplicate_params = '&variantIdPinDuplicate=' | append: dup0.id %}
-  {% assign duplicate_params = duplicate_params | append: '&variantIdMagneticDuplicate=' | append: dup1.id %}
-  {% assign duplicate_params = duplicate_params | append: '&variantIdAdhesiveDuplicate=' | append: dup2.id %}
-{% else %}
-  {% assign duplicate_params = '' %}
+{% comment %} Duplicate-set variants only apply to the original custom-1x3-badge product. {% endcomment %}
+{% assign duplicate_params = '' %}
+{% if product.handle == 'custom-1x3-badge' %}
+  {% assign duplicate_product = all_products['custom-1x3-badge-duplicate'] %}
+  {% if duplicate_product and duplicate_product.variants.size >= 3 %}
+    {% assign dup0 = duplicate_product.variants[0] %}
+    {% assign dup1 = duplicate_product.variants[1] %}
+    {% assign dup2 = duplicate_product.variants[2] %}
+    {% assign duplicate_params = '&variantIdPinDuplicate=' | append: dup0.id %}
+    {% assign duplicate_params = duplicate_params | append: '&variantIdMagneticDuplicate=' | append: dup1.id %}
+    {% assign duplicate_params = duplicate_params | append: '&variantIdAdhesiveDuplicate=' | append: dup2.id %}
+  {% endif %}
+{% endif %}
+{% assign badge_icon_param = '' %}
+{% if aqb_badge_icon_preset != blank %}
+  {% assign badge_icon_param = '&badgeIconId=' | append: aqb_badge_icon_preset | append: '&completeEarlySteps=1' %}
 {% endif %}
 <div class="aqb-designer-embed">
   <iframe
     id="badge-designer-iframe"
     title="Design your custom badge"
-    src="{{ badge_designer_origin }}{{ badge_designer_path }}?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&amp;storeUrl={{ shop.permanent_domain | url_param_escape }}&amp;product={{ product.id | url_param_escape }}&amp;variantIdPin={{ v0.id | url_param_escape }}&amp;variantIdMagnetic={{ v1.id | url_param_escape }}&amp;variantIdAdhesive={{ v2.id | url_param_escape }}{{ duplicate_params }}{% if customer %}&amp;customerId={{ customer.id | url_param_escape }}{% endif %}"
+    src="{{ badge_designer_origin }}{{ badge_designer_path }}?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&amp;storeUrl={{ shop.permanent_domain | url_param_escape }}&amp;product={{ product.id | url_param_escape }}&amp;variantIdPin={{ v0.id | url_param_escape }}&amp;variantIdMagnetic={{ v1.id | url_param_escape }}&amp;variantIdAdhesive={{ v2.id | url_param_escape }}{{ duplicate_params }}{{ badge_icon_param }}{% if customer %}&amp;customerId={{ customer.id | url_param_escape }}{% endif %}"
     loading="lazy"
     allow="clipboard-read; clipboard-write"
   ></iframe>
 </div>
 {% render 'aqb-badge-designer-seo' %}
 
+{% endif %}
 {% endif %}

@@ -3,10 +3,32 @@ import { BADGE_AQB_ORDER_FREE_SHIP_MIN } from "../constants/badgeAqbOrderQty";
 import {
   BADGE_AQB_PRINT_COLOURS_DISCLAIMER_BODY,
   BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE,
+  DESK_SIGN_PRINT_COLOURS_DISCLAIMER_BODY,
+  DESK_SIGN_PRINT_COLOURS_DISCLAIMER_TITLE,
 } from "../constants/manufacturingDisclaimer";
 
+export type AqbTrustProduct = "badge" | "desk-sign";
+
+export interface AqbBadgeTrustAndDisclaimerProps {
+  /** Defaults to badge copy so existing call sites stay unchanged. */
+  product?: AqbTrustProduct;
+  freeShipMin?: number;
+}
+
 export const AqbBadgeTrustAndDisclaimer = memo(
-  function AqbBadgeTrustAndDisclaimer() {
+  function AqbBadgeTrustAndDisclaimer({
+    product = "badge",
+    freeShipMin = BADGE_AQB_ORDER_FREE_SHIP_MIN,
+  }: AqbBadgeTrustAndDisclaimerProps) {
+    const isDeskSign = product === "desk-sign";
+    const freeShipNoun = isDeskSign ? "desk signs" : "badges";
+    const disclaimerTitle = isDeskSign
+      ? DESK_SIGN_PRINT_COLOURS_DISCLAIMER_TITLE
+      : BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE;
+    const disclaimerBody = isDeskSign
+      ? DESK_SIGN_PRINT_COLOURS_DISCLAIMER_BODY
+      : BADGE_AQB_PRINT_COLOURS_DISCLAIMER_BODY;
+
     return (
       <div className="aqb-badge-trust-disclaimer">
         <div className="aqb-trust-strip">
@@ -15,8 +37,8 @@ export const AqbBadgeTrustAndDisclaimer = memo(
               <span className="aqb-ts-icon" aria-hidden>
                 🚚
               </span>
-              Free USA shipping (on orders of {BADGE_AQB_ORDER_FREE_SHIP_MIN}{" "}
-              badges or more)
+              Free USA shipping (on orders of {freeShipMin} {freeShipNoun} or
+              more)
             </div>
           </div>
           <div className="aqb-trust-strip-col">
@@ -40,10 +62,9 @@ export const AqbBadgeTrustAndDisclaimer = memo(
         <div
           className="aqb-print-colours-disclaimer"
           role="note"
-          aria-label={BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE}
+          aria-label={disclaimerTitle}
         >
-          <strong>{BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE}</strong>{" "}
-          {BADGE_AQB_PRINT_COLOURS_DISCLAIMER_BODY}
+          <strong>{disclaimerTitle}</strong> {disclaimerBody}
         </div>
       </div>
     );

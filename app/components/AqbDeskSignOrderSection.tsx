@@ -101,7 +101,7 @@ export const AqbDeskSignOrderSection = memo(function AqbDeskSignOrderSection({
       </div>
 
       <div className="aqb-bq-checkout-footer">
-        <AqbBadgeTrustAndDisclaimer />
+        <AqbBadgeTrustAndDisclaimer product="desk-sign" />
       </div>
     </div>
   );

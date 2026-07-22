@@ -122,7 +122,7 @@ export interface Badge {
   /** Plastic desk sign aluminum hardware style. */
   deskSignMountType?: "desk-stand" | "wall-mount";
   /** Plastic desk sign aluminum hardware finish. */
-  deskSignAluminumColor?: "black" | "silver" | "gold" | "white";
+  deskSignAluminumColor?: "black" | "silver" | "gold" | "rose-gold";
   /** Desk sign only: profession template family id (e.g. doctor, nurse). */
   deskSignProfessionId?: string;
 }

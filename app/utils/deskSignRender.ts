@@ -49,18 +49,75 @@ export const DESK_SIGN_ACRYLIC_FINISHES: readonly {
 ] as const;
 
 export type DeskSignMountType = "desk-stand" | "wall-mount";
-export type DeskSignAluminumColorId = "black" | "silver" | "gold" | "white";
+export type DeskSignAluminumColorId =
+  | "black"
+  | "silver"
+  | "gold"
+  | "rose-gold";
 
 export const DESK_SIGN_ALUMINUM_COLORS: readonly {
   id: DeskSignAluminumColorId;
   label: string;
   color: string;
+  /** Desk-stand product photo. */
+  imageSrc: string;
+  /** Wall-mount product photo. */
+  wallImageSrc: string;
 }[] = [
-  { id: "black", label: "Black", color: "#1A1A1A" },
-  { id: "silver", label: "Silver", color: "#B8BDC4" },
-  { id: "gold", label: "Gold", color: "#C9A66B" },
-  { id: "white", label: "White", color: "#FFFFFF" },
+  {
+    id: "silver",
+    label: "Silver",
+    color: "#B8BDC4",
+    imageSrc: "/images/desk-sign/DeskFrameSilver.png?v=1",
+    wallImageSrc: "/images/desk-sign/WallFrameSilver.png?v=1",
+  },
+  {
+    id: "gold",
+    label: "Gold",
+    color: "#C9A66B",
+    imageSrc: "/images/desk-sign/DeskFrameGold.png?v=1",
+    wallImageSrc: "/images/desk-sign/WallFrameGold.png?v=1",
+  },
+  {
+    id: "black",
+    label: "Black",
+    color: "#1A1A1A",
+    imageSrc: "/images/desk-sign/DeskFrameBlack.png?v=1",
+    wallImageSrc: "/images/desk-sign/WallFrameBlack.png?v=1",
+  },
+  {
+    id: "rose-gold",
+    label: "Rose Gold",
+    color: "#A87C6A",
+    imageSrc: "/images/desk-sign/DeskFrameRoseGold.png?v=1",
+    wallImageSrc: "/images/desk-sign/WallFrameRoseGold.png?v=1",
+  },
 ] as const;
+
+export function findDeskSignAluminumColor(
+  id: string | undefined | null,
+): (typeof DESK_SIGN_ALUMINUM_COLORS)[number] | null {
+  const normalized = normalizeDeskSignAluminumColor(id);
+  return (
+    DESK_SIGN_ALUMINUM_COLORS.find((finish) => finish.id === normalized) ?? null
+  );
+}
+
+export function normalizeDeskSignAluminumColor(
+  id: string | undefined | null,
+): DeskSignAluminumColorId | undefined {
+  if (!id) return undefined;
+  if (id === "white") return "rose-gold";
+  if (
+    id === "black" ||
+    id === "silver" ||
+    id === "gold" ||
+    id === "rose-gold"
+  ) {
+    return id;
+  }
+  return undefined;
+}
 
 export function findDeskSignAcrylicFinish(
   id: string | undefined | null,
@@ -165,9 +222,7 @@ export const DESK_SIGN_DEFAULT_COLORS: Record<
 };
 
 /**
- * Plastic insert finishes from the Signs By LITA engraving-plastic color set
- * (Amazon listing color fan). Pair plate + engraved core text color.
- * @see https://www.amazon.com/dp/B01N7GKHMS
+ * Traditional (plastic) plate colors — display order matches the color picker.
  */
 export const DESK_SIGN_PLASTIC_PLATE_FINISHES: readonly {
   id: string;
@@ -175,16 +230,14 @@ export const DESK_SIGN_PLASTIC_PLATE_FINISHES: readonly {
   plateColor: string;
   textColor: string;
 }[] = [
-  { id: "brown", label: "Brown", plateColor: "#4A2C1A", textColor: "#FFFFFF" },
-  { id: "green", label: "Green", plateColor: "#2E7D32", textColor: "#FFFFFF" },
-  { id: "black", label: "Black", plateColor: "#1A1A1A", textColor: "#FFFFFF" },
-  { id: "almond", label: "Almond", plateColor: "#E8D5B7", textColor: "#1A1A1A" },
-  { id: "red", label: "Red", plateColor: "#C62828", textColor: "#FFFFFF" },
-  { id: "gray", label: "Gray", plateColor: "#B0B0B0", textColor: "#1A1A1A" },
-  { id: "yellow", label: "Yellow", plateColor: "#F9A825", textColor: "#1A1A1A" },
-  { id: "white", label: "White", plateColor: "#FFFFFF", textColor: "#1A1A1A" },
-  { id: "blue", label: "Blue", plateColor: "#0D47A1", textColor: "#FFFFFF" },
+  { id: "silver", label: "Silver", plateColor: "#B8BDC4", textColor: "#1A1A1A" },
   { id: "gold", label: "Gold", plateColor: "#C9A66B", textColor: "#1A1A1A" },
+  { id: "white", label: "White", plateColor: "#FFFFFF", textColor: "#1A1A1A" },
+  { id: "black", label: "Black", plateColor: "#1A1A1A", textColor: "#FFFFFF" },
+  { id: "red", label: "Red", plateColor: "#C62828", textColor: "#FFFFFF" },
+  { id: "blue", label: "Blue", plateColor: "#0D47A1", textColor: "#FFFFFF" },
+  { id: "ivory", label: "Ivory", plateColor: "#F5F0E6", textColor: "#1A1A1A" },
+  { id: "brown", label: "Brown", plateColor: "#4A2C1A", textColor: "#FFFFFF" },
 ] as const;
 
 export function findDeskSignPlasticPlateFinish(

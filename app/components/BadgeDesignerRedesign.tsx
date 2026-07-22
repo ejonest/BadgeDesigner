@@ -204,8 +204,10 @@ import {
   applyDeskSignRosewoodPlateFinish,
   deskSignColorsStepComplete,
   findDeskSignAcrylicFinish,
+  findDeskSignAluminumColor,
   findDeskSignPlasticPlateFinish,
   findDeskSignRosewoodPlateFinish,
+  normalizeDeskSignAluminumColor,
   type DeskSignAcrylicFinishId,
   type DeskSignAluminumColorId,
   type DeskSignMountType,
@@ -2545,6 +2547,21 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     INITIAL_BADGE.lines,
     defaultLineShape,
   );
+  const presetBadgeIconId = useMemo(() => {
+    if (variant !== "badge") return undefined;
+    const raw =
+      searchParams.get("badgeIconId") ?? searchParams.get("icon") ?? "";
+    const id = raw.trim().toLowerCase();
+    return isBadgeIconId(id) ? id : undefined;
+  }, [variant, searchParams]);
+  /** Icon listing PDPs pass completeEarlySteps=1 so template/style/background start done. */
+  const completeEarlySteps = useMemo(
+    () =>
+      variant === "badge" &&
+      Boolean(presetBadgeIconId) &&
+      searchParams.get("completeEarlySteps") === "1",
+    [variant, presetBadgeIconId, searchParams],
+  );
   const initialDefaultBadge: Badge = {
     ...INITIAL_BADGE,
     templateId: defaultTemplateId,
@@ -2554,6 +2571,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       | "magnetic"
       | "adhesive",
     lines: paddedLines.map((line) => ({ ...line })),
+    ...(presetBadgeIconId ? { badgeIconId: presetBadgeIconId } : {}),
     ...(variant === "sign"
       ? {
           // signBorderOptionId omitted until user selects in Border step (matches Badge type).
@@ -3291,6 +3309,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const plaqueLayoutGuidedAutoAdvanceDoneRef = useRef(false);
   /** True after we have restored from localStorage cache once (prevents re-restore on later effect runs). */
   const restoredFromCacheRef = useRef(false);
+  /** Icon listing products: bootstrap template/style/background+icon once (steps 1–2). */
+  const iconListingBootstrapDoneRef = useRef(false);
   /** True after we have asked to load previous design this session (don't show modal again until next visit). */
   /** When true, debounced cache save will skip one write (set after add-to-cart success so we don't write old state back). */
   const skipCacheSaveRef = useRef(false);
@@ -3700,6 +3720,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           deskSignMountType: "wall-mount",
         }));
       }
+      migratedBadges = migratedBadges.map((b) => {
+        const aluminum = normalizeDeskSignAluminumColor(
+          b.deskSignAluminumColor as string | undefined,
+        );
+        return aluminum === b.deskSignAluminumColor
+          ? b
+          : { ...b, deskSignAluminumColor: aluminum };
+      });
     }
     if (variant === "plaque") {
       migratedBadges = migratedBadges.map((b) => {
@@ -3819,6 +3847,90 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }
     // Do not mark steps 3 or 4 as opened; user must open step 4 (and step 3 counts complete only when they have non-default text) in this session
   }, [templates, _shop, _productId, variant]);
+
+  // Icon listing PDPs (e.g. Custom 1x3 Apple Badge): start with template + plain style +
+  // white background + icon already chosen; open text so only text + backing remain.
+  useEffect(() => {
+    if (variant !== "badge") return;
+    if (!completeEarlySteps || !presetBadgeIconId) return;
+    if (templates.length === 0) return;
+    if (iconListingBootstrapDoneRef.current) return;
+    if (restoredFromCacheRef.current) return;
+
+    try {
+      const cached = localStorage.getItem(
+        getDesignerDraftCacheKey(_shop, _productId, variant),
+      );
+      if (cached) return;
+    } catch {
+      // ignore storage errors and continue bootstrap
+    }
+
+    const templateId = "rect-1x3";
+    const tpl = templates.find((t) => t.id === templateId);
+    if (!tpl) return;
+
+    iconListingBootstrapDoneRef.current = true;
+    templateGuidedAutoAdvanceDoneRef.current = true;
+
+    const maxLinesForTpl = getBadgeMaxTextLines(templateId);
+    const bootLines = buildPaddedInitialLines(
+      "badge",
+      maxLinesForTpl,
+      INITIAL_BADGE.lines,
+      INITIAL_BADGE.lines[0],
+    ).map((line) => ({ ...line }));
+
+    let boot: Badge = {
+      ...INITIAL_BADGE,
+      id: `icon-listing-${presetBadgeIconId}`,
+      templateId,
+      backgroundColor: "#FFFFFF",
+      customBadgeBackgroundId: undefined,
+      badgeIconId: presetBadgeIconId,
+      backing: (INITIAL_BADGE.backing ?? "magnetic") as
+        | "pin"
+        | "magnetic"
+        | "adhesive",
+      lines: bootLines,
+    };
+    boot = applyAqbBadgeIconChange(boot, presetBadgeIconId);
+
+    setUniversalTemplateId(templateId);
+    setMultipleBadges([boot]);
+    setBadgeLineQuantities([1]);
+    setSelectedBadgeIndex(0);
+    setBadge(boot);
+    setBadge1Data(boot);
+    setHasChosenBadgeStyle(true);
+    setHasChosenBackgroundColor(true);
+    setSectionsOpen({
+      template: false,
+      size: false,
+      export: false,
+      badgeStyle: false,
+      background: false,
+      textLines: true,
+      backing: false,
+      border: false,
+      plaqueFormat: false,
+    });
+    setSectionsOpened((prev) => ({
+      ...prev,
+      template: true,
+      badgeStyle: true,
+      background: true,
+      textLines: true,
+    }));
+  }, [
+    variant,
+    completeEarlySteps,
+    presetBadgeIconId,
+    templates,
+    _shop,
+    _productId,
+    applyAqbBadgeIconChange,
+  ]);
 
   // Sign: migrate legacy themed Designer template ids off storage/API.
   useEffect(() => {
@@ -5021,10 +5133,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       ? "Wall Mount"
                       : "Desk Stand"
                   } · ${
-                    badge.deskSignAluminumColor
-                      ? badge.deskSignAluminumColor[0].toUpperCase() +
-                        badge.deskSignAluminumColor.slice(1)
-                      : ""
+                    findDeskSignAluminumColor(badge.deskSignAluminumColor)
+                      ?.label ?? ""
                   }`
                 : null,
             },
@@ -8293,14 +8403,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           const legacyWallMount =
             (b.deskSignMaterial as string | undefined) === "wall-mount" ||
             b.templateId === "desk-wall-mount-2x10";
-          return legacyWallMount
+          const aluminum = normalizeDeskSignAluminumColor(
+            b.deskSignAluminumColor as string | undefined,
+          );
+          const next = legacyWallMount
             ? {
                 ...b,
                 templateId: "desk-plastic-2x8",
-                deskSignMaterial: "plastic",
-                deskSignMountType: "wall-mount",
+                deskSignMaterial: "plastic" as const,
+                deskSignMountType: "wall-mount" as const,
               }
             : b;
+          return aluminum === next.deskSignAluminumColor
+            ? next
+            : { ...next, deskSignAluminumColor: aluminum };
         });
       }
       if (variant === "plaque") {
@@ -8887,9 +9003,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             : {}),
           ...(b.deskSignAluminumColor
             ? {
-                "Aluminum Finish":
-                  b.deskSignAluminumColor[0].toUpperCase() +
-                  b.deskSignAluminumColor.slice(1),
+                "Aluminum Frame":
+                  findDeskSignAluminumColor(b.deskSignAluminumColor)?.label ??
+                  b.deskSignAluminumColor,
               }
             : {}),
         };
