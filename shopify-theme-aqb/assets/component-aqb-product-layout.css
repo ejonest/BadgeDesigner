@@ -1,0 +1,42 @@
+/* Product page layout — scoped to standard product pages only (not badge designer) */
+
+@media screen and (min-width: 990px) {
+  product-info:not(.main-product--badge-designer) > .page-width {
+    max-width: min(1440px, calc(100vw - 6rem));
+  }
+
+  product-info:not(.main-product--badge-designer) .product--large:not(.product--no-media) .product__media-wrapper {
+    max-width: 50%;
+    width: calc(50% - var(--grid-desktop-horizontal-spacing) / 2);
+  }
+
+  product-info:not(.main-product--badge-designer) .product--large:not(.product--no-media) .product__info-wrapper {
+    max-width: 50%;
+    width: calc(50% - var(--grid-desktop-horizontal-spacing) / 2);
+    padding: 0 0 0 3rem;
+  }
+
+  product-info:not(.main-product--badge-designer) .product--large:not(.product--no-media).product--right .product__info-wrapper {
+    padding: 0 3rem 0 0;
+  }
+
+  product-info:not(.main-product--badge-designer) .product__info-container {
+    max-width: none;
+  }
+}
+
+@media screen and (min-width: 1200px) {
+  product-info:not(.main-product--badge-designer) > .page-width {
+    max-width: min(1500px, calc(100vw - 8rem));
+  }
+
+  product-info:not(.main-product--badge-designer) .product--large:not(.product--no-media) .product__media-wrapper {
+    max-width: 48%;
+    width: calc(48% - var(--grid-desktop-horizontal-spacing) / 2);
+  }
+
+  product-info:not(.main-product--badge-designer) .product--large:not(.product--no-media) .product__info-wrapper {
+    max-width: 52%;
+    width: calc(52% - var(--grid-desktop-horizontal-spacing) / 2);
+  }
+}

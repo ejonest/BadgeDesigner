@@ -1,0 +1,179 @@
+{
+  "version": 2,
+  "templates": [
+    {
+      "id": "desk-acrylic-doctor-2x10",
+      "name": "Acrylic Doctor 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-acrylic-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "acrylic",
+      "deskSignProfessionId": "doctor"
+    },
+    {
+      "id": "desk-acrylic-nurse-2x10",
+      "name": "Acrylic Nurse 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-acrylic-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "acrylic",
+      "deskSignProfessionId": "nurse"
+    },
+    {
+      "id": "desk-acrylic-lawyer-2x10",
+      "name": "Acrylic Lawyer 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-acrylic-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "acrylic",
+      "deskSignProfessionId": "lawyer"
+    },
+    {
+      "id": "desk-acrylic-accountant-2x10",
+      "name": "Acrylic Accountant 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-acrylic-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "acrylic",
+      "deskSignProfessionId": "accountant"
+    },
+    {
+      "id": "desk-acrylic-teacher-2x10",
+      "name": "Acrylic Teacher 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-acrylic-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "acrylic",
+      "deskSignProfessionId": "teacher"
+    },
+    {
+      "id": "desk-acrylic-manager-2x10",
+      "name": "Acrylic Manager 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-acrylic-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "acrylic",
+      "deskSignProfessionId": "manager"
+    },
+    {
+      "id": "desk-rosewood-doctor-2x10",
+      "name": "Rosewood Doctor 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-rosewood-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "rosewood",
+      "deskSignProfessionId": "doctor"
+    },
+    {
+      "id": "desk-rosewood-nurse-2x10",
+      "name": "Rosewood Nurse 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-rosewood-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "rosewood",
+      "deskSignProfessionId": "nurse"
+    },
+    {
+      "id": "desk-rosewood-lawyer-2x10",
+      "name": "Rosewood Lawyer 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-rosewood-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "rosewood",
+      "deskSignProfessionId": "lawyer"
+    },
+    {
+      "id": "desk-rosewood-accountant-2x10",
+      "name": "Rosewood Accountant 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-rosewood-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "rosewood",
+      "deskSignProfessionId": "accountant"
+    },
+    {
+      "id": "desk-rosewood-teacher-2x10",
+      "name": "Rosewood Teacher 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-rosewood-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "rosewood",
+      "deskSignProfessionId": "teacher"
+    },
+    {
+      "id": "desk-rosewood-manager-2x10",
+      "name": "Rosewood Manager 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-rosewood-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "rosewood",
+      "deskSignProfessionId": "manager"
+    },
+    {
+      "id": "desk-acrylic-2x8",
+      "name": "Acrylic 2×8\"",
+      "widthInches": 8,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-acrylic-2x8.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "acrylic"
+    },
+    {
+      "id": "desk-acrylic-2x10",
+      "name": "Acrylic 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-acrylic-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "acrylic"
+    },
+    {
+      "id": "desk-rosewood-2x8",
+      "name": "Piano Finished Rosewood 2×8\"",
+      "widthInches": 8,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-rosewood-2x8.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "rosewood"
+    },
+    {
+      "id": "desk-rosewood-2x10",
+      "name": "Piano Finished Rosewood 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-rosewood-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "rosewood"
+    },
+    {
+      "id": "desk-plastic-2x8",
+      "name": "Traditional 2×8\"",
+      "widthInches": 8,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-plastic-2x8.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "plastic"
+    },
+    {
+      "id": "desk-plastic-2x10",
+      "name": "Traditional 2×10\"",
+      "widthInches": 10,
+      "heightInches": 2,
+      "svgFile": "/templates/desk-sign/desk-plastic-2x10.svg",
+      "safeInsetPx": 6,
+      "deskSignMaterial": "plastic"
+    }
+  ]
+}

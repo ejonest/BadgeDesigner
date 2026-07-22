@@ -127,6 +127,8 @@ export const SMART_PALETTE_COLORS = [
 /** Featured brushed-metal plate swatches (SVG gradient + picker). */
 export const FEATURED_BRUSHED_GOLD_HEX = "#f2d678";
 export const FEATURED_BRUSHED_SILVER_HEX = "#e2e2e2";
+/** Dark brushed metal (desk-sign “black gold” plate, etc.). */
+export const FEATURED_BRUSHED_BLACK_HEX = "#2c2c2c";
 
 /** Badge redesign Step 2 — featured plate swatches (order: white, brushed metals, black, then brand colors). */
 export const BADGE_AQB_FEATURED_BACKGROUND_COLORS = [

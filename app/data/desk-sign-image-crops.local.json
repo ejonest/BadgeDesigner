@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "outputWidthPx": 800,
+  "outputHeightPx": 320,
+  "assets": {
+    "material-acrylic": {
+      "cropRectNorm": {
+        "xNorm": 0,
+        "yNorm": 0.22,
+        "widthNorm": 1,
+        "heightNorm": 0.5995584989
+      }
+    },
+    "material-traditional": {
+      "cropRectNorm": {
+        "xNorm": 0.06559759646045919,
+        "yNorm": 0.42750206772161997,
+        "widthNorm": 0.719451904296875,
+        "heightNorm": 0.28778076171875
+      }
+    },
+    "acrylic-clear": {
+      "cropRectNorm": {
+        "xNorm": 0.05765667350924745,
+        "yNorm": 0.24687967883687031,
+        "widthNorm": 0.9081229782776828,
+        "heightNorm": 0.5444728496693569
+      }
+    },
+    "acrylic-frosted": {
+      "cropRectNorm": {
+        "xNorm": 0.017311936981823983,
+        "yNorm": 0.5378663541832748,
+        "widthNorm": 0.9308081802056759,
+        "heightNorm": 0.37232327208227034
+      }
+    },
+    "acrylic-black": {
+      "cropRectNorm": {
+        "xNorm": 0.07877072704081632,
+        "yNorm": 0.526324500259088,
+        "widthNorm": 0.9040426137496014,
+        "heightNorm": 0.3616170454998406
+      }
+    },
+    "rosewood-black-gold": {
+      "cropRectNorm": {
+        "xNorm": 0,
+        "yNorm": 0.0333333333,
+        "widthNorm": 1,
+        "heightNorm": 0.9333333333
+      }
+    },
+    "rosewood-gold": {
+      "cropRectNorm": {
+        "xNorm": 0,
+        "yNorm": 0.0333333333,
+        "widthNorm": 1,
+        "heightNorm": 0.9333333333
+      }
+    },
+    "rosewood-silver": {
+      "cropRectNorm": {
+        "xNorm": 0,
+        "yNorm": 0.0333333333,
+        "widthNorm": 1,
+        "heightNorm": 0.9333333333
+      }
+    }
+  }
+}

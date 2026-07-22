@@ -4,15 +4,16 @@ import {
   type DesignerVariant,
   isSignLikeVariant,
 } from "~/constants/designerVariants";
+import { BADGE_ICON_LABELS, isBadgeIconId } from "~/constants/badgeIcons";
 import { getColorInfo } from "../constants/colors";
 import { generateBadgeTiff, generateFullBadgeImage } from "./badgeThumbnail";
-import { loadTemplateById } from "./templates";
+import { getCustomBackgroundDisplayName } from "./badgeCustomBackgrounds";
+import { resolveProductionRenderOpts } from "./renderSvg";
+import { loadTemplateById, type LoadedTemplate } from "./templates";
 
 const HEADER_HEIGHT = 18;
 const HEADER_GAP = 6;
 
-const IMAGE_BOTTOM_GAP = 6;
-const BACKGROUND_TEXT_HEIGHT = 12;
 const SECTION_BOTTOM_PADDING = 14;
 
 const PAGE_HEIGHT = 841.89;
@@ -90,6 +91,81 @@ function cssColorToHex(color: string): string {
 const pxToPt = (px: number) => px * 0.75;
 const pxToPtRounded = (px: number) => Math.round(pxToPt(px));
 
+/** Proof PDF layout box — badge/sign die size, not full photo canvas crop. */
+function resolvePdfProofDisplayViewBoxPx(template: LoadedTemplate): {
+  widthPx: number;
+  heightPx: number;
+} {
+  const SVG_VIEWBOX_PADDING_PX = 24 * 2;
+  return {
+    widthPx: template.standardViewBoxWidth + SVG_VIEWBOX_PADDING_PX,
+    heightPx: template.standardViewBoxHeight + SVG_VIEWBOX_PADDING_PX,
+  };
+}
+
+function getPdfSpecRows(
+  badge: Badge,
+  template: LoadedTemplate,
+): string[] {
+  const icon =
+    badge.badgeIconId && isBadgeIconId(badge.badgeIconId)
+      ? BADGE_ICON_LABELS[badge.badgeIconId]
+      : "NA";
+  const backgroundImage = badge.customBadgeBackgroundId
+    ? getCustomBackgroundDisplayName(badge.customBadgeBackgroundId) ??
+      badge.customBadgeBackgroundId
+    : "NA";
+
+  let backgroundColor = "NA";
+  if (!badge.customBadgeBackgroundId) {
+    const bgHex = cssColorToHex(badge.backgroundColor ?? "#000000");
+    const bgColorInfo = getColorInfo(bgHex) ?? {
+      name: "Custom",
+      hex: bgHex,
+    };
+    backgroundColor = `${bgColorInfo.name} (${bgHex})`;
+  }
+
+  return [
+    `Shape/size: ${template.name}`,
+    `Icon: ${icon}`,
+    `Background color: ${backgroundColor}`,
+    `Background image: ${backgroundImage}`,
+  ];
+}
+
+function drawPdfTableRow(
+  page: ReturnType<PDFDocument["addPage"]>,
+  opts: {
+    tableX: number;
+    tableY: number;
+    tableWidth: number;
+    rowHeight: number;
+    rowIdx: number;
+    label: string;
+    font: Awaited<ReturnType<PDFDocument["embedFont"]>>;
+  },
+): number {
+  const rowY = opts.tableY - (opts.rowIdx + 1) * opts.rowHeight;
+  page.drawRectangle({
+    x: opts.tableX,
+    y: rowY,
+    width: opts.tableWidth,
+    height: opts.rowHeight,
+    color: opts.rowIdx % 2 === 0 ? rgb(1, 1, 1) : rgb(0.95, 0.95, 0.95),
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 0.5,
+  });
+  page.drawText(opts.label, {
+    x: opts.tableX + 5,
+    y: rowY + 4,
+    size: 8,
+    font: opts.font,
+    color: rgb(0, 0, 0),
+  });
+  return opts.rowIdx + 1;
+}
+
 /* ---------- NEW SIMPLE PDF GENERATOR ---------- */
 
 export const generatePDFNew = async (
@@ -128,14 +204,15 @@ export const generatePDFNew = async (
         template.id,
         `(${template.widthPx}x${template.heightPx})`
       );
-      // Use SVG viewBox dimensions (same as renderSvg + badgeThumbnail) so PDF matches SVG exactly
-      const SVG_VIEWBOX_PADDING_PX = 24 * 2; // PADDING_PX*2 from renderSvg
-      const svgViewBoxW = template.standardViewBoxWidth + SVG_VIEWBOX_PADDING_PX;
-      const svgViewBoxH = template.standardViewBoxHeight + SVG_VIEWBOX_PADDING_PX;
+      // Proof layout uses die dimensions so the image fits beside the spec table.
+      // Render still uses photo plates (embedded bg + icons) at full resolution.
+      const viewBox = resolvePdfProofDisplayViewBoxPx(template);
+      const svgViewBoxW = viewBox.widthPx;
+      const svgViewBoxH = viewBox.heightPx;
       const imageHeightPt = pxToPt(svgViewBoxH);
 
       // Estimate section height BEFORE rendering (use SVG viewBox height in points)
-      const estimatedTotalRows = badge.lines.length * 4;
+      const estimatedTotalRows = badge.lines.length * 4 + 4;
       const estimatedTableHeight = estimatedTotalRows * 16;
       const estimatedContentHeight = Math.max(
         imageHeightPt,
@@ -146,8 +223,6 @@ export const generatePDFNew = async (
         HEADER_HEIGHT +
         HEADER_GAP +
         estimatedContentHeight +
-        IMAGE_BOTTOM_GAP +
-        BACKGROUND_TEXT_HEIGHT +
         SECTION_BOTTOM_PADDING;
 
       // Page break check
@@ -166,9 +241,11 @@ export const generatePDFNew = async (
 
       // Generate high-resolution image
       console.log(`Generating ${designLabel.toLowerCase()} image...`);
-      const imageDataUrl = await generateFullBadgeImage(badge, variant, {
-        plateRenderMode: "vector",
-      });
+      const imageDataUrl = await generateFullBadgeImage(
+        badge,
+        variant,
+        resolveProductionRenderOpts(badge, template, variant),
+      );
       console.log("Image generated successfully");
 
       // Convert to Uint8Array and embed
@@ -228,6 +305,18 @@ export const generatePDFNew = async (
 
       // Table rows
       let rowIdx = 0;
+
+      for (const label of getPdfSpecRows(badge, template)) {
+        rowIdx = drawPdfTableRow(page, {
+          tableX,
+          tableY,
+          tableWidth,
+          rowHeight,
+          rowIdx,
+          label,
+          font,
+        });
+      }
 
       // Text lines
       badge.lines.forEach((line, lineIdx) => {
@@ -327,33 +416,16 @@ export const generatePDFNew = async (
         });
         rowIdx++;
       });
-      const totalRows = 1 + badge.lines.length * 4; // Background + 4 rows per text line
+
+      const totalRows = badge.lines.length * 4 + 4;
       const tableHeight = totalRows * rowHeight;
       const contentHeight = Math.max(imageHeight, tableHeight);
-      const contentBottomY = imageTopY - contentHeight;
-
-      const bgColorRaw = badge.backgroundColor ?? "#000000";
-      const bgHex = cssColorToHex(bgColorRaw);
-      const bgColorInfo = getColorInfo(bgHex) ?? {
-        name: "Custom",
-        hex: bgHex,
-      };
-
-      page.drawText(`Background: ${bgColorInfo.name} (${bgHex})`, {
-        x: margin,
-        y: contentBottomY - IMAGE_BOTTOM_GAP - BACKGROUND_TEXT_HEIGHT,
-        size: 9,
-        font,
-        color: rgb(0, 0, 0),
-      });
 
       // Move to next badge
       const sectionHeight =
         HEADER_HEIGHT +
         HEADER_GAP +
         contentHeight +
-        IMAGE_BOTTOM_GAP +
-        BACKGROUND_TEXT_HEIGHT +
         SECTION_BOTTOM_PADDING;
       y -= sectionHeight;
 
@@ -455,14 +527,15 @@ export const generatePDFAsBlob = async (
         template.id,
         `(${template.widthPx}x${template.heightPx})`
       );
-      // Use SVG viewBox dimensions (same as renderSvg + badgeThumbnail) so PDF matches SVG exactly
-      const SVG_VIEWBOX_PADDING_PX = 24 * 2; // PADDING_PX*2 from renderSvg
-      const svgViewBoxW = template.standardViewBoxWidth + SVG_VIEWBOX_PADDING_PX;
-      const svgViewBoxH = template.standardViewBoxHeight + SVG_VIEWBOX_PADDING_PX;
+      // Proof layout uses die dimensions so the image fits beside the spec table.
+      // Render still uses photo plates (embedded bg + icons) at full resolution.
+      const viewBox = resolvePdfProofDisplayViewBoxPx(template);
+      const svgViewBoxW = viewBox.widthPx;
+      const svgViewBoxH = viewBox.heightPx;
       const imageHeightPt = pxToPt(svgViewBoxH);
 
-      // Estimate section height BEFORE rendering (use SVG viewBox height in points); +1 for Quantity row
-      const estimatedTotalRows = badge.lines.length * 4 + 1;
+      // Estimate section height BEFORE rendering; appearance rows + Quantity row.
+      const estimatedTotalRows = badge.lines.length * 4 + 5;
       const estimatedTableHeight = estimatedTotalRows * 16;
       const estimatedContentHeight = Math.max(
         imageHeightPt,
@@ -473,8 +546,6 @@ export const generatePDFAsBlob = async (
         HEADER_HEIGHT +
         HEADER_GAP +
         estimatedContentHeight +
-        IMAGE_BOTTOM_GAP +
-        BACKGROUND_TEXT_HEIGHT +
         SECTION_BOTTOM_PADDING;
 
       // Page break check
@@ -493,9 +564,11 @@ export const generatePDFAsBlob = async (
 
       // Generate high-resolution image
       console.log(`Generating ${designLabel.toLowerCase()} image...`);
-      const imageDataUrl = await generateFullBadgeImage(badge, variant, {
-        plateRenderMode: "vector",
-      });
+      const imageDataUrl = await generateFullBadgeImage(
+        badge,
+        variant,
+        resolveProductionRenderOpts(badge, template, variant),
+      );
       console.log("Image generated successfully");
 
       // Convert to Uint8Array and embed
@@ -555,6 +628,18 @@ export const generatePDFAsBlob = async (
 
       // Table rows
       let rowIdx = 0;
+
+      for (const label of getPdfSpecRows(badge, template)) {
+        rowIdx = drawPdfTableRow(page, {
+          tableX,
+          tableY,
+          tableWidth,
+          rowHeight,
+          rowIdx,
+          label,
+          font,
+        });
+      }
 
       // Text lines
       badge.lines.forEach((line, lineIdx) => {
@@ -654,6 +739,7 @@ export const generatePDFAsBlob = async (
         });
         rowIdx++;
       });
+
       // Quantity row (order slip)
       const quantityRowY = tableY - (rowIdx + 1) * rowHeight;
       page.drawRectangle({
@@ -673,33 +759,15 @@ export const generatePDFAsBlob = async (
         color: rgb(0, 0, 0),
       });
       rowIdx++;
-      const totalRows = 1 + badge.lines.length * 4 + 1; // Background + 4 rows per text line + Quantity
+      const totalRows = badge.lines.length * 4 + 5;
       const tableHeight = totalRows * rowHeight;
       const contentHeight = Math.max(imageHeight, tableHeight);
-      const contentBottomY = imageTopY - contentHeight;
-
-      const bgColorRaw = badge.backgroundColor ?? "#000000";
-      const bgHex = cssColorToHex(bgColorRaw);
-      const bgColorInfo = getColorInfo(bgHex) ?? {
-        name: "Custom",
-        hex: bgHex,
-      };
-
-      page.drawText(`Background: ${bgColorInfo.name} (${bgHex})`, {
-        x: margin,
-        y: contentBottomY - IMAGE_BOTTOM_GAP - BACKGROUND_TEXT_HEIGHT,
-        size: 9,
-        font,
-        color: rgb(0, 0, 0),
-      });
 
       // Move to next item
       const sectionHeight =
         HEADER_HEIGHT +
         HEADER_GAP +
         contentHeight +
-        IMAGE_BOTTOM_GAP +
-        BACKGROUND_TEXT_HEIGHT +
         SECTION_BOTTOM_PADDING;
       y -= sectionHeight;
 

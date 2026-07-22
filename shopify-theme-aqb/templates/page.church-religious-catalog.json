@@ -75,7 +75,7 @@
         "subheading": "Role badges, desk name plates, and name tag blanks for greeters, pastors, welcome teams, deacons, and more — including bilingual Spanish options.",
         "primary_label": "Browse Ministry Products",
         "primary_link": "#church-religious-catalogue",
-        "secondary_label": "Design a Custom Badge →",
+        "secondary_label": "Design custom name badges →",
         "secondary_link": "shopify://products/custom-1x3-badge"
       }
     },
@@ -228,7 +228,7 @@
           "type": "card",
           "settings": {
             "emoji": "✏️",
-            "title": "Custom printed badges",
+            "title": "Design custom name badges",
             "description": "Add your church logo, ministry name, or custom title.",
             "link": "shopify://products/custom-1x3-badge"
           }
@@ -261,7 +261,7 @@
         "eyebrow": "Need something specific?",
         "heading": "We'll print <em>exactly</em><br>what your ministry needs.",
         "description": "Custom badges let you add church logos, ministry names, or unique titles — preview before you order.",
-        "button_label": "Start designing →",
+        "button_label": "Design custom name badges →",
         "button_link": "shopify://products/custom-1x3-badge"
       }
     }

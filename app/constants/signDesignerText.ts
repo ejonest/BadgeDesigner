@@ -5,6 +5,7 @@
 import type { BadgeLine } from "../types/badge";
 import {
   type DesignerVariant,
+  isDeskSignVariant,
   isSignLikeVariant,
 } from "./designerVariants";
 
@@ -94,7 +95,7 @@ export function getAddMultipleDesignerCopy(
   const base =
     variant === "plaque"
       ? plaqueAddMultipleCopy(maxLines)
-      : isSignLikeVariant(variant)
+      : isSignLikeVariant(variant) || isDeskSignVariant(variant)
         ? signAddMultipleCopy(maxLines)
         : badgeAddMultipleCopy(maxLines);
   return {
@@ -126,7 +127,7 @@ export function buildPaddedInitialLines(
             id: `line-${i + 1}`,
             text: "",
           };
-    if (isSignLikeVariant(variant)) {
+    if (isSignLikeVariant(variant) || isDeskSignVariant(variant)) {
       const text =
         i < SIGN_DEFAULT_LINE_TEXTS.length ? SIGN_DEFAULT_LINE_TEXTS[i] : "";
       return { ...base, id: `line-${i + 1}`, text };

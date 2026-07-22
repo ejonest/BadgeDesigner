@@ -113,6 +113,18 @@ export interface Badge {
    * space by shrinking the image down to (at minimum) the captured ratio vs the slot baseline.
    */
   signLogoLayoutSnapshot?: SignLogoLayoutSnapshot;
+  /** Desk sign only: the primary sign material. */
+  deskSignMaterial?: "acrylic" | "rosewood" | "plastic";
+  /** Desk sign only: selected physical plate size. */
+  deskSignSize?: "2x8" | "2x10";
+  /** Acrylic desk sign finish; engraving color remains fixed by the finish. */
+  deskSignAcrylicFinish?: "clear" | "frosted" | "black";
+  /** Plastic desk sign aluminum hardware style. */
+  deskSignMountType?: "desk-stand" | "wall-mount";
+  /** Plastic desk sign aluminum hardware finish. */
+  deskSignAluminumColor?: "black" | "silver" | "gold" | "rose-gold";
+  /** Desk sign only: profession template family id (e.g. doctor, nurse). */
+  deskSignProfessionId?: string;
 }
 
 export interface BadgeEditorPanelProps {

@@ -264,6 +264,7 @@ import {
   downloadMultipleCDRs,
   downloadMultipleTIFFs,
   generateSVGAsBlob,
+  generatePrintSVGAsBlob,
 } from "../utils/export";
 
 const INITIAL_BADGE = BADGE_CONSTANTS.INITIAL_BADGE;
@@ -3862,11 +3863,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         const badgePromises = allBadgesForDraft.map((b, i) =>
           Promise.all([
             generateFullBadgeImage(b, variant).then(dataURLToBlob),
-            generateSVGAsBlob(b, template),
+            generateSVGAsBlob(b, template, variant),
+            generatePrintSVGAsBlob(b, template, variant),
           ])
-            .then(([pngBlob, svgBlob]) => ({
+            .then(([pngBlob, svgBlob, printSvgBlob]) => ({
               pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
               svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
+              printSvgBlob:
+                printSvgBlob && printSvgBlob.size > 0 ? printSvgBlob : new Blob(),
               i,
             }))
             .catch((err) => {
@@ -3876,13 +3880,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 "PNG/SVG failed",
                 err,
               );
-              return { pngBlob: new Blob(), svgBlob: new Blob(), i };
+              return {
+                pngBlob: new Blob(),
+                svgBlob: new Blob(),
+                printSvgBlob: new Blob(),
+                i,
+              };
             }),
         );
         const badgeResults = await Promise.all(badgePromises);
         badgeResults.sort((a, b) => a.i - b.i);
         const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
         const svgBlobs = badgeResults.map((r) => r.svgBlob);
+        const printSvgBlobs = badgeResults.map((r) => r.printSvgBlob);
 
         const designDataForDraft = {
           badge: allBadgesForDraft[0],
@@ -3918,6 +3928,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               `svg_${index}`,
               svgBlob,
               `badge-${index}-design.svg`,
+            );
+        });
+        printSvgBlobs.forEach((printSvgBlob, index) => {
+          if (printSvgBlob?.size > 0)
+            formData.append(
+              `print_svg_${index}`,
+              printSvgBlob,
+              `badge-${index}-print.svg`,
             );
         });
 
@@ -3985,11 +4003,16 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           const badgePromises = normalized.map((b, i) =>
             Promise.all([
               generateFullBadgeImage(b, variant).then(dataURLToBlob),
-              generateSVGAsBlob(b, template),
+              generateSVGAsBlob(b, template, variant),
+              generatePrintSVGAsBlob(b, template, variant),
             ])
-              .then(([pngBlob, svgBlob]) => ({
+              .then(([pngBlob, svgBlob, printSvgBlob]) => ({
                 pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
                 svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
+                printSvgBlob:
+                  printSvgBlob && printSvgBlob.size > 0
+                    ? printSvgBlob
+                    : new Blob(),
                 i,
               }))
               .catch((err) => {
@@ -3999,13 +4022,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   "PNG/SVG failed",
                   err,
                 );
-                return { pngBlob: new Blob(), svgBlob: new Blob(), i };
+                return {
+                  pngBlob: new Blob(),
+                  svgBlob: new Blob(),
+                  printSvgBlob: new Blob(),
+                  i,
+                };
               }),
           );
           const badgeResults = await Promise.all(badgePromises);
           badgeResults.sort((a, b) => a.i - b.i);
           const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
           const svgBlobs = badgeResults.map((r) => r.svgBlob);
+          const printSvgBlobs = badgeResults.map((r) => r.printSvgBlob);
           const designDataForDraft = {
             badge: normalized[0],
             multipleBadges: normalized.length > 1 ? normalized.slice(1) : [],
@@ -4039,6 +4068,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 `svg_${index}`,
                 svgBlob,
                 `badge-${index}-design.svg`,
+              );
+          });
+          printSvgBlobs.forEach((printSvgBlob, index) => {
+            if (printSvgBlob?.size > 0)
+              formData.append(
+                `print_svg_${index}`,
+                printSvgBlob,
+                `badge-${index}-print.svg`,
               );
           });
           const res = await fetch(designerApiPaths.saveDraft, {
@@ -5827,16 +5864,24 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const badgePromises = allBadges.map((badge, i) =>
         Promise.all([
           generateFullBadgeImage(badge, variant).then(dataURLToBlob),
-          generateSVGAsBlob(badge, template),
+          generateSVGAsBlob(badge, template, variant),
+          generatePrintSVGAsBlob(badge, template, variant),
         ])
-          .then(([pngBlob, svgBlob]) => ({
+          .then(([pngBlob, svgBlob, printSvgBlob]) => ({
             pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
             svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
+            printSvgBlob:
+              printSvgBlob && printSvgBlob.size > 0 ? printSvgBlob : new Blob(),
             i,
           }))
           .catch((error) => {
             console.error(`Error generating images for badge ${i}:`, error);
-            return { pngBlob: new Blob(), svgBlob: new Blob(), i };
+            return {
+              pngBlob: new Blob(),
+              svgBlob: new Blob(),
+              printSvgBlob: new Blob(),
+              i,
+            };
           }),
       );
 
@@ -5847,6 +5892,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       badgeResults.sort((a, b) => a.i - b.i);
       const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
       const svgBlobs = badgeResults.map((r) => r.svgBlob);
+      const printSvgBlobs = badgeResults.map((r) => r.printSvgBlob);
 
       // Prepare design data (use shop data if available, otherwise use defaults for testing)
       const designData = {
@@ -5891,6 +5937,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             `svg_${index}`,
             svgBlob,
             `${thumbBase}-${index}-design.svg`,
+          );
+        }
+      });
+      printSvgBlobs.forEach((printSvgBlob, index) => {
+        if (printSvgBlob && printSvgBlob.size > 0) {
+          formData.append(
+            `print_svg_${index}`,
+            printSvgBlob,
+            `${thumbBase}-${index}-print.svg`,
           );
         }
       });
@@ -6431,22 +6486,37 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       "[BadgeDesigner] proof upload: template missing",
                       templateIdForBadge,
                     );
-                    return { pngBlob: new Blob(), svgBlob: new Blob(), i };
+                    return {
+                      pngBlob: new Blob(),
+                      svgBlob: new Blob(),
+                      printSvgBlob: new Blob(),
+                      i,
+                    };
                   }
                   try {
-                    const [pngBlob, svgBlob] = await Promise.all([
+                    const [pngBlob, svgBlob, printSvgBlob] = await Promise.all([
                       generateFullBadgeImage(b, variant).then(dataURLToBlob),
-                      generateSVGAsBlob(b, tmpl),
+                      generateSVGAsBlob(b, tmpl, variant),
+                      generatePrintSVGAsBlob(b, tmpl, variant),
                     ]);
                     return {
                       pngBlob:
                         pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
                       svgBlob:
                         svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
+                      printSvgBlob:
+                        printSvgBlob && printSvgBlob.size > 0
+                          ? printSvgBlob
+                          : new Blob(),
                       i,
                     };
                   } catch {
-                    return { pngBlob: new Blob(), svgBlob: new Blob(), i };
+                    return {
+                      pngBlob: new Blob(),
+                      svgBlob: new Blob(),
+                      printSvgBlob: new Blob(),
+                      i,
+                    };
                   }
                 })(),
               );
@@ -6454,6 +6524,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               badgeResults.sort((a, b) => a.i - b.i);
               const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
               const svgBlobs = badgeResults.map((r) => r.svgBlob);
+              const printSvgBlobs = badgeResults.map((r) => r.printSvgBlob);
               const designDataForSupabase = {
                 badge: badgesForSupabase[0],
                 multipleBadges:
@@ -6503,6 +6574,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                     `svg_${index}`,
                     svgBlob,
                     `${designerConfig.lineIdPrefix}-${index}-design.svg`,
+                  );
+                }
+              });
+              printSvgBlobs.forEach((printSvgBlob, index) => {
+                if (printSvgBlob && printSvgBlob.size > 0) {
+                  formDataForSupabase.append(
+                    `print_svg_${index}`,
+                    printSvgBlob,
+                    `${designerConfig.lineIdPrefix}-${index}-print.svg`,
                   );
                 }
               });

@@ -8,6 +8,7 @@
 
 import {
   type DesignerVariant,
+  isDeskSignVariant,
   isSignLikeVariant,
 } from "~/constants/designerVariants";
 import type { DesignerSizeKey } from "~/data/designerMotifs";
@@ -15,6 +16,7 @@ import { templateIdToDesignerSizeKey } from "~/data/designerMotifs";
 import templatesJson from "../data/templates.local.json";
 import signTemplatesJson from "../data/sign-templates.local.json";
 import plaqueTemplatesJson from "../data/plaque-templates.local.json";
+import deskSignTemplatesJson from "../data/desk-sign-templates.local.json";
 import type {
   ResolvedSignTextLayout,
   SignTextLayoutConfigJson,
@@ -83,18 +85,28 @@ type TemplatesFile = { version: number; templates: TemplateConfig[] };
 const badgeCfg = (templatesJson as TemplatesFile).templates || [];
 const signCfg = (signTemplatesJson as TemplatesFile).templates || [];
 const plaqueCfg = (plaqueTemplatesJson as TemplatesFile).templates || [];
+const deskSignCfg =
+  (deskSignTemplatesJson as TemplatesFile).templates || [];
+
+function isSignOrDeskSignVariant(variant: DesignerVariant): boolean {
+  return isSignLikeVariant(variant) || isDeskSignVariant(variant);
+}
 
 /** Returns template configs for the picker and loading. */
 export function getTemplateConfigsForVariant(
   variant: DesignerVariant,
 ): TemplateConfig[] {
   if (variant === "plaque") return [...plaqueCfg];
-  return variant === "sign" ? [...signCfg] : [...badgeCfg];
+  if (variant === "sign") return [...signCfg];
+  if (variant === "desk-sign") return [...deskSignCfg];
+  return [...badgeCfg];
 }
 
 function getCfgForVariant(variant: DesignerVariant): TemplateConfig[] {
   if (variant === "plaque") return plaqueCfg;
-  return variant === "sign" ? signCfg : badgeCfg;
+  if (variant === "sign") return signCfg;
+  if (variant === "desk-sign") return deskSignCfg;
+  return badgeCfg;
 }
 
 /**
@@ -1122,7 +1134,7 @@ async function loadOne(
     trimPathFancy;
 
   const signInsetTrim =
-    isSignLikeVariant(variant) &&
+    isSignOrDeskSignVariant(variant) &&
     !isSignDesignerWithBorder &&
     !isSignClassicFramed &&
     !isSignFancy &&

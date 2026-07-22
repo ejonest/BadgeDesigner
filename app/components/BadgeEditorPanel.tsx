@@ -25,6 +25,12 @@ import {
   aqbLineTextInputWasTruncated,
   truncateAqbLineTextToFit,
 } from "~/utils/aqbBadgeTextSize";
+import {
+  DESK_SIGN_LINE_CHAR_LIMIT_MESSAGE,
+  clampDeskSignLineTextInput,
+  deskSignLineFitsAtCurrentSize,
+  deskSignMaxTextWidth,
+} from "~/utils/deskSignTextSize";
 import { SIGN_TEXT_MIN_FONT_PX } from "~/utils/signTextLayout";
 import {
   type DesignerVariant,
@@ -267,10 +273,12 @@ export interface BadgeEditorPanelProps {
   lineLabels?: (string | undefined)[];
   /** Plaque: slot placeholder per line (HTML placeholder + treat as unset when it matches stored text). */
   linePlaceholders?: (string | undefined)[];
-  /** Badge redesign: reference-style text line cards. */
-  panelLayout?: "default" | "aqb-badge";
+  /** Badge redesign: reference-style text line cards. Desk sign: same shell, auto sizes (no size picker). */
+  panelLayout?: "default" | "aqb-badge" | "aqb-desk-sign";
   /** Lines flagged after layout refit (e.g. icon added) truncated text to fit. */
   layoutCharLimitByLine?: Record<number, boolean>;
+  /** Acrylic desk signs: laser-engraved text color is fixed — hide color controls. */
+  textColorLocked?: boolean;
 }
 
 export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
@@ -294,6 +302,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   linePlaceholders,
   panelLayout = "default",
   layoutCharLimitByLine,
+  textColorLocked = false,
 }) => {
   const { labelProductPlural } = getDesignerVariantConfig(variant);
   const allItemsLabel = labelProductPlural.toLowerCase();
@@ -387,10 +396,17 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
     variant === "plaque" &&
     Boolean(badge.templateId && isPlaqueAttachedTemplateId(badge.templateId));
 
-  if (panelLayout === "aqb-badge") {
+  if (panelLayout === "aqb-badge" || panelLayout === "aqb-desk-sign") {
+    const isDeskSignPanel = panelLayout === "aqb-desk-sign";
     const lineInputValue = (line: BadgeLine, idx: number) => {
       const defaultText =
-        idx === 0 ? "Your Name" : idx === 1 ? "Title" : "Line Text";
+        idx === 0
+          ? "Your Name"
+          : idx === 1
+            ? isDeskSignPanel
+              ? "Your Title"
+              : "Title"
+            : "Line Text";
       const slotPh = linePlaceholders?.[idx];
       const rawTrim = (line.text ?? "").trim();
       const matchesSlotPlaceholder =
@@ -432,23 +448,29 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
           const displayText = lineInputValue(line, idx);
           const presetPx = sizePreset.px;
           const typography = aqbLineTypography(line);
-          const maxTextWidth = aqbBadgeMaxTextWidth(
-            designBox,
-            badge,
-            badge.templateId,
-          );
-          const showCharLimitError =
-            Boolean(charLimitRejectedByLine[idx]) ||
-            Boolean(layoutCharLimitByLine?.[idx]) ||
-            (displayText.trim().length > 0 &&
-              !aqbLineTextFitsAtPresetPx(
-                displayText,
-                presetPx,
-                typography.fontFamily,
-                typography.bold,
-                typography.italic,
-                maxTextWidth,
-              ));
+          const maxTextWidth = isDeskSignPanel
+            ? deskSignMaxTextWidth(designBox.width)
+            : aqbBadgeMaxTextWidth(designBox, badge, badge.templateId);
+          const showCharLimitError = isDeskSignPanel
+            ? Boolean(charLimitRejectedByLine[idx]) ||
+              Boolean(layoutCharLimitByLine?.[idx]) ||
+              (displayText.trim().length > 0 &&
+                !deskSignLineFitsAtCurrentSize(
+                  line,
+                  designBox.height,
+                  maxTextWidth,
+                ))
+            : Boolean(charLimitRejectedByLine[idx]) ||
+              Boolean(layoutCharLimitByLine?.[idx]) ||
+              (displayText.trim().length > 0 &&
+                !aqbLineTextFitsAtPresetPx(
+                  displayText,
+                  presetPx,
+                  typography.fontFamily,
+                  typography.bold,
+                  typography.italic,
+                  maxTextWidth,
+                ));
 
           return (
             <div key={line.id ?? idx} className="aqb-badge-text-line">
@@ -495,6 +517,25 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   value={displayText}
                   onChange={(e) => {
                     const attempted = e.target.value;
+                    if (isDeskSignPanel) {
+                      const {
+                        text: fitted,
+                        sizeNorm,
+                        wasTruncated,
+                      } =
+                        clampDeskSignLineTextInput({
+                          lines: badge.lines,
+                          lineIndex: idx,
+                          attemptedText: attempted,
+                          designBox,
+                        });
+                      markCharLimitRejected(idx, wasTruncated);
+                      onLineChange(idx, {
+                        text: fitted,
+                        ...(typeof sizeNorm === "number" ? { sizeNorm } : {}),
+                      });
+                      return;
+                    }
                     const fitted = truncateAqbLineTextToFit(
                       attempted,
                       presetPx,
@@ -518,7 +559,9 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                     className="aqb-badge-text-input-limit-error"
                     role="alert"
                   >
-                    {AQB_LINE_CHAR_LIMIT_MESSAGE}
+                    {isDeskSignPanel
+                      ? DESK_SIGN_LINE_CHAR_LIMIT_MESSAGE
+                      : AQB_LINE_CHAR_LIMIT_MESSAGE}
                   </p>
                 ) : null}
               </div>
@@ -542,33 +585,39 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                     ))}
                   </select>
                 </div>
-                <div className="aqb-badge-trc-group">
-                  <div className="aqb-badge-trc-label">Size</div>
-                  <AqbBadgeSizeSelect
-                    value={sizePreset.label}
-                    options={presetAvailability.map(({ preset, available }) => ({
-                      label: preset.label,
-                      available,
-                    }))}
-                    onChange={(label) => {
-                      const entry = presetAvailability.find(
-                        (item) => item.preset.label === label,
-                      );
-                      if (!entry?.available) return;
-                      clearCharLimitRejected(idx);
-                      onLineChange(idx, {
-                        sizeNorm: aqbPresetToSizeNorm(
-                          entry.preset.px,
-                          fontMetricsHeight,
-                        ),
-                      });
-                    }}
-                    disabled={!editable}
-                    ariaLabel={`Text size for line ${idx + 1}`}
-                  />
-                </div>
+                {!isDeskSignPanel ? (
+                  <div className="aqb-badge-trc-group">
+                    <div className="aqb-badge-trc-label">Size</div>
+                    <AqbBadgeSizeSelect
+                      value={sizePreset.label}
+                      options={presetAvailability.map(
+                        ({ preset, available }) => ({
+                          label: preset.label,
+                          available,
+                        }),
+                      )}
+                      onChange={(label) => {
+                        const entry = presetAvailability.find(
+                          (item) => item.preset.label === label,
+                        );
+                        if (!entry?.available) return;
+                        clearCharLimitRejected(idx);
+                        onLineChange(idx, {
+                          sizeNorm: aqbPresetToSizeNorm(
+                            entry.preset.px,
+                            fontMetricsHeight,
+                          ),
+                        });
+                      }}
+                      disabled={!editable}
+                      ariaLabel={`Text size for line ${idx + 1}`}
+                    />
+                  </div>
+                ) : null}
               </div>
 
+              {!textColorLocked ? (
+                <>
               <div className="aqb-badge-text-colour-row">
                 <span className="aqb-badge-tc-lbl">Color:</span>
                 {BADGE_AQB_TEXT_COLORS.map((tc, tcIdx) => {
@@ -632,6 +681,12 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   )
                     ? "Text color matches the background and will not be visible."
                     : "Similar colors may not show well on this background."}
+                </p>
+              ) : null}
+                </>
+              ) : isDeskSignPanel ? (
+                <p className="mt-1 text-xs text-[#6b7f92]">
+                  Text color is fixed — acrylic is laser-engraved.
                 </p>
               ) : null}
 

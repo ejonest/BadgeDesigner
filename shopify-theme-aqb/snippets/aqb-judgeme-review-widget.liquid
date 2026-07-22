@@ -1,0 +1,5 @@
+{%- if product -%}
+  <div class="aqb-judgeme-reviews page-width" id="aqb-judgeme-reviews">
+    {% render 'judgeme_widgets', widget_type: 'judgeme_review_widget', concierge_install: true, product: product %}
+  </div>
+{%- endif -%}

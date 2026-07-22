@@ -160,6 +160,10 @@
         "description": "Choose color, shape, size, backing and pack size — your price updates instantly. Ready to order in under a minute."
       }
     },
+    "seo_content": {
+      "type": "aqb-blanks-seo-content",
+      "settings": {}
+    },
     "lifestyle": {
       "type": "aqb-blanks-lifestyle",
       "blocks": {
@@ -297,6 +301,7 @@
     "hero",
     "trust_bar",
     "shop",
+    "seo_content",
     "lifestyle",
     "backing",
     "bulk"

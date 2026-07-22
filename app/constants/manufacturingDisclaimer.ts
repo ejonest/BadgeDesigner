@@ -11,3 +11,10 @@ export const BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE = "About print colors:";
 
 export const BADGE_AQB_PRINT_COLOURS_DISCLAIMER_BODY =
   "Badge colors may vary slightly between your screen and the finished product. We may adjust spacing slightly so your badge looks its best.";
+
+/** Desk-sign redesign — same notice, product-specific wording. */
+export const DESK_SIGN_PRINT_COLOURS_DISCLAIMER_TITLE =
+  BADGE_AQB_PRINT_COLOURS_DISCLAIMER_TITLE;
+
+export const DESK_SIGN_PRINT_COLOURS_DISCLAIMER_BODY =
+  "Desk sign colors may vary slightly between your screen and the finished product. We may adjust spacing slightly so your desk sign looks its best.";

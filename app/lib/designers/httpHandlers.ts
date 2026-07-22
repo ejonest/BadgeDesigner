@@ -86,9 +86,13 @@ export async function runSaveDraftDesigner(
         `thumbnail_png_${badgeIndex}`,
       ) as File | null;
       const svgFile = formData.get(`svg_${badgeIndex}`) as File | null;
+      const printSvgFile = formData.get(
+        `print_svg_${badgeIndex}`,
+      ) as File | null;
 
       let thumbnailUrl = "";
       let fullImageUrl = "";
+      let printSvgUrl = "";
 
       if (thumbnailPngFile?.size) {
         try {
@@ -124,9 +128,27 @@ export async function runSaveDraftDesigner(
         }
       }
 
+      if (printSvgFile?.size) {
+        try {
+          const printSvgFileName = `${designId}/${def.lineIdPrefix}-${badgeIndex}-print.svg`;
+          printSvgUrl = await uploadImageToDesignerBucket(
+            def,
+            printSvgFile,
+            printSvgFileName,
+            "image/svg+xml",
+          );
+        } catch (err) {
+          console.warn(
+            `[save-draft-${designerId}] Print SVG upload failed line ${badgeIndex}:`,
+            err,
+          );
+        }
+      }
+
       const item = convertBadgeToOrderItem(badge, designId, badgeIndex, {
         thumbnail_url: thumbnailUrl,
         full_image_url: fullImageUrl,
+        print_svg_url: printSvgUrl,
         shopify_customer_id: shopifyCustomerId ?? undefined,
         lineIdPrefix: def.lineIdPrefix,
       });
@@ -339,9 +361,11 @@ export async function runSendOrderDraftToSupabase(
       const badge = allBadges[i];
       const thumbnailPngFile = formData.get(`thumbnail_png_${i}`) as File;
       const svgFile = formData.get(`svg_${i}`) as File;
+      const printSvgFile = formData.get(`print_svg_${i}`) as File | null;
 
       let thumbnailUrl = "";
       let fullImageUrl = "";
+      let printSvgUrl = "";
 
       if (thumbnailPngFile && thumbnailPngFile.size > 0) {
         try {
@@ -371,9 +395,24 @@ export async function runSendOrderDraftToSupabase(
         }
       }
 
+      if (printSvgFile && printSvgFile.size > 0) {
+        try {
+          const printSvgName = `${designId}/${def.lineIdPrefix}-${i}-print.svg`;
+          printSvgUrl = await uploadImageToDesignerBucket(
+            def,
+            printSvgFile,
+            printSvgName,
+            "image/svg+xml",
+          );
+        } catch (e) {
+          console.error(`Print SVG upload failed line ${i}:`, e);
+        }
+      }
+
       const item = convertBadgeToOrderItem(badge, designId, i, {
         thumbnail_url: thumbnailUrl,
         full_image_url: fullImageUrl,
+        print_svg_url: printSvgUrl,
         pdf_url: pdfUrl,
         shopify_customer_id: shopifyCustomerId ?? undefined,
         lineIdPrefix: def.lineIdPrefix,

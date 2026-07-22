@@ -86,12 +86,30 @@
             "open_new_tab": false
           }
         },
+        "buy_blog": {
+          "type": "link",
+          "settings": {
+            "column": "buyers",
+            "label": "Blog",
+            "url": "/blogs/news",
+            "open_new_tab": false
+          }
+        },
         "buy_contact": {
           "type": "link",
           "settings": {
             "column": "buyers",
             "label": "Contact Us",
             "url": "shopify://pages/contact",
+            "open_new_tab": false
+          }
+        },
+        "buy_about": {
+          "type": "link",
+          "settings": {
+            "column": "buyers",
+            "label": "About Us",
+            "url": "shopify://pages/about-us",
             "open_new_tab": false
           }
         },
@@ -141,7 +159,9 @@
         "buy_how_it_works",
         "buy_faq",
         "buy_shipping",
+        "buy_blog",
         "buy_contact",
+        "buy_about",
         "lita_signs",
         "lita_gavels",
         "lita_designs",

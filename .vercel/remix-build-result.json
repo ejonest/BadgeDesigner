@@ -10,21 +10,33 @@
       }
     },
     "routeIdToServerBundleId": {
+      "routes/api.dev.badge-custom-background-calibrate.save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.delete-desk-sign-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/dev.badge-custom-background-calibrate": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.link-order-desk-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.delete-plaque-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.dev.badge-photo-calibrate.save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.delete-badge-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-plaque-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-desk-sign-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.delete-sign-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-plaque-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.send-desk-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.autosave-desk-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-sign-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-desk-sign-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-plaque-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-plaque-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-desk-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-desk-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.supabase-update-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.upload-desk-sign-logo": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/dev.badge-photo-calibrate": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-draft-desk-sign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-plaque-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-plaque-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -43,7 +55,9 @@
       "routes/api.save-draft-sign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.shopify-product": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.finalize-draft": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-desk-sign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.test-endpoints": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/desk-sign-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.badge-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.gadget-health": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -79,6 +93,42 @@
         "id": "root",
         "file": "app/root.tsx",
         "config": {}
+      },
+      "routes/api.dev.badge-custom-background-calibrate.save": {
+        "file": "app/routes/api.dev.badge-custom-background-calibrate.save.tsx",
+        "id": "routes/api.dev.badge-custom-background-calibrate.save",
+        "path": "api/dev/badge-custom-background-calibrate/save",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.delete-desk-sign-design-milestone": {
+        "file": "app/routes/api.delete-desk-sign-design-milestone.tsx",
+        "id": "routes/api.delete-desk-sign-design-milestone",
+        "path": "api/delete-desk-sign-design-milestone",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/dev.badge-custom-background-calibrate": {
+        "file": "app/routes/dev.badge-custom-background-calibrate.tsx",
+        "id": "routes/dev.badge-custom-background-calibrate",
+        "path": "dev/badge-custom-background-calibrate",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.link-order-desk-sign-to-supabase": {
+        "file": "app/routes/api.link-order-desk-sign-to-supabase.tsx",
+        "id": "routes/api.link-order-desk-sign-to-supabase",
+        "path": "api/link-order-desk-sign-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
       },
       "routes/api.delete-plaque-design-milestone": {
         "file": "app/routes/api.delete-plaque-design-milestone.tsx",
@@ -116,6 +166,15 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.saved-desk-sign-design-detail": {
+        "file": "app/routes/api.saved-desk-sign-design-detail.tsx",
+        "id": "routes/api.saved-desk-sign-design-detail",
+        "path": "api/saved-desk-sign-design-detail",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.delete-sign-design-milestone": {
         "file": "app/routes/api.delete-sign-design-milestone.tsx",
         "id": "routes/api.delete-sign-design-milestone",
@@ -143,10 +202,37 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.send-desk-sign-to-supabase": {
+        "file": "app/routes/api.send-desk-sign-to-supabase.tsx",
+        "id": "routes/api.send-desk-sign-to-supabase",
+        "path": "api/send-desk-sign-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.autosave-desk-sign-design": {
+        "file": "app/routes/api.autosave-desk-sign-design.tsx",
+        "id": "routes/api.autosave-desk-sign-design",
+        "path": "api/autosave-desk-sign-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.saved-sign-design-detail": {
         "file": "app/routes/api.saved-sign-design-detail.tsx",
         "id": "routes/api.saved-sign-design-detail",
         "path": "api/saved-sign-design-detail",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.saved-desk-sign-designs": {
+        "file": "app/routes/api.saved-desk-sign-designs.tsx",
+        "id": "routes/api.saved-desk-sign-designs",
+        "path": "api/saved-desk-sign-designs",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -179,6 +265,24 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.saved-desk-sign-design": {
+        "file": "app/routes/api.saved-desk-sign-design.tsx",
+        "id": "routes/api.saved-desk-sign-design",
+        "path": "api/saved-desk-sign-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.save-desk-sign-design": {
+        "file": "app/routes/api.save-desk-sign-design.tsx",
+        "id": "routes/api.save-desk-sign-design",
+        "path": "api/save-desk-sign-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.send-sign-to-supabase": {
         "file": "app/routes/api.send-sign-to-supabase.tsx",
         "id": "routes/api.send-sign-to-supabase",
@@ -197,6 +301,15 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.upload-desk-sign-logo": {
+        "file": "app/routes/api.upload-desk-sign-logo.tsx",
+        "id": "routes/api.upload-desk-sign-logo",
+        "path": "api/upload-desk-sign-logo",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/dev.badge-photo-calibrate": {
         "file": "app/routes/dev.badge-photo-calibrate.tsx",
         "id": "routes/dev.badge-photo-calibrate",
@@ -210,6 +323,15 @@
         "file": "app/routes/api.autosave-sign-design.tsx",
         "id": "routes/api.autosave-sign-design",
         "path": "api/autosave-sign-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.save-draft-desk-sign": {
+        "file": "app/routes/api.save-draft-desk-sign.tsx",
+        "id": "routes/api.save-draft-desk-sign",
+        "path": "api/save-draft-desk-sign",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -377,10 +499,28 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.save-desk-sign": {
+        "file": "app/routes/api.save-desk-sign.tsx",
+        "id": "routes/api.save-desk-sign",
+        "path": "api/save-desk-sign",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.test-endpoints": {
         "file": "app/routes/api.test-endpoints.tsx",
         "id": "routes/api.test-endpoints",
         "path": "api/test-endpoints",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/desk-sign-designer": {
+        "file": "app/routes/desk-sign-designer.tsx",
+        "id": "routes/desk-sign-designer",
+        "path": "desk-sign-designer",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -661,6 +801,30 @@
         "id": "root",
         "file": "root.tsx"
       },
+      "routes/api.dev.badge-custom-background-calibrate.save": {
+        "file": "routes/api.dev.badge-custom-background-calibrate.save.tsx",
+        "id": "routes/api.dev.badge-custom-background-calibrate.save",
+        "path": "api/dev/badge-custom-background-calibrate/save",
+        "parentId": "root"
+      },
+      "routes/api.delete-desk-sign-design-milestone": {
+        "file": "routes/api.delete-desk-sign-design-milestone.tsx",
+        "id": "routes/api.delete-desk-sign-design-milestone",
+        "path": "api/delete-desk-sign-design-milestone",
+        "parentId": "root"
+      },
+      "routes/dev.badge-custom-background-calibrate": {
+        "file": "routes/dev.badge-custom-background-calibrate.tsx",
+        "id": "routes/dev.badge-custom-background-calibrate",
+        "path": "dev/badge-custom-background-calibrate",
+        "parentId": "root"
+      },
+      "routes/api.link-order-desk-sign-to-supabase": {
+        "file": "routes/api.link-order-desk-sign-to-supabase.tsx",
+        "id": "routes/api.link-order-desk-sign-to-supabase",
+        "path": "api/link-order-desk-sign-to-supabase",
+        "parentId": "root"
+      },
       "routes/api.delete-plaque-design-milestone": {
         "file": "routes/api.delete-plaque-design-milestone.tsx",
         "id": "routes/api.delete-plaque-design-milestone",
@@ -685,6 +849,12 @@
         "path": "api/link-order-plaque-to-supabase",
         "parentId": "root"
       },
+      "routes/api.saved-desk-sign-design-detail": {
+        "file": "routes/api.saved-desk-sign-design-detail.tsx",
+        "id": "routes/api.saved-desk-sign-design-detail",
+        "path": "api/saved-desk-sign-design-detail",
+        "parentId": "root"
+      },
       "routes/api.delete-sign-design-milestone": {
         "file": "routes/api.delete-sign-design-milestone.tsx",
         "id": "routes/api.delete-sign-design-milestone",
@@ -703,10 +873,28 @@
         "path": "api/saved-plaque-design-detail",
         "parentId": "root"
       },
+      "routes/api.send-desk-sign-to-supabase": {
+        "file": "routes/api.send-desk-sign-to-supabase.tsx",
+        "id": "routes/api.send-desk-sign-to-supabase",
+        "path": "api/send-desk-sign-to-supabase",
+        "parentId": "root"
+      },
+      "routes/api.autosave-desk-sign-design": {
+        "file": "routes/api.autosave-desk-sign-design.tsx",
+        "id": "routes/api.autosave-desk-sign-design",
+        "path": "api/autosave-desk-sign-design",
+        "parentId": "root"
+      },
       "routes/api.saved-sign-design-detail": {
         "file": "routes/api.saved-sign-design-detail.tsx",
         "id": "routes/api.saved-sign-design-detail",
         "path": "api/saved-sign-design-detail",
+        "parentId": "root"
+      },
+      "routes/api.saved-desk-sign-designs": {
+        "file": "routes/api.saved-desk-sign-designs.tsx",
+        "id": "routes/api.saved-desk-sign-designs",
+        "path": "api/saved-desk-sign-designs",
         "parentId": "root"
       },
       "routes/api.send-plaque-to-supabase": {
@@ -727,6 +915,18 @@
         "path": "api/link-order-to-supabase",
         "parentId": "root"
       },
+      "routes/api.saved-desk-sign-design": {
+        "file": "routes/api.saved-desk-sign-design.tsx",
+        "id": "routes/api.saved-desk-sign-design",
+        "path": "api/saved-desk-sign-design",
+        "parentId": "root"
+      },
+      "routes/api.save-desk-sign-design": {
+        "file": "routes/api.save-desk-sign-design.tsx",
+        "id": "routes/api.save-desk-sign-design",
+        "path": "api/save-desk-sign-design",
+        "parentId": "root"
+      },
       "routes/api.send-sign-to-supabase": {
         "file": "routes/api.send-sign-to-supabase.tsx",
         "id": "routes/api.send-sign-to-supabase",
@@ -739,6 +939,12 @@
         "path": "api/supabase-update-badge",
         "parentId": "root"
       },
+      "routes/api.upload-desk-sign-logo": {
+        "file": "routes/api.upload-desk-sign-logo.tsx",
+        "id": "routes/api.upload-desk-sign-logo",
+        "path": "api/upload-desk-sign-logo",
+        "parentId": "root"
+      },
       "routes/dev.badge-photo-calibrate": {
         "file": "routes/dev.badge-photo-calibrate.tsx",
         "id": "routes/dev.badge-photo-calibrate",
@@ -749,6 +955,12 @@
         "file": "routes/api.autosave-sign-design.tsx",
         "id": "routes/api.autosave-sign-design",
         "path": "api/autosave-sign-design",
+        "parentId": "root"
+      },
+      "routes/api.save-draft-desk-sign": {
+        "file": "routes/api.save-draft-desk-sign.tsx",
+        "id": "routes/api.save-draft-desk-sign",
+        "path": "api/save-draft-desk-sign",
         "parentId": "root"
       },
       "routes/api.saved-plaque-designs": {
@@ -859,10 +1071,22 @@
         "path": "api/finalize-draft",
         "parentId": "root"
       },
+      "routes/api.save-desk-sign": {
+        "file": "routes/api.save-desk-sign.tsx",
+        "id": "routes/api.save-desk-sign",
+        "path": "api/save-desk-sign",
+        "parentId": "root"
+      },
       "routes/api.test-endpoints": {
         "file": "routes/api.test-endpoints.tsx",
         "id": "routes/api.test-endpoints",
         "path": "api/test-endpoints",
+        "parentId": "root"
+      },
+      "routes/desk-sign-designer": {
+        "file": "routes/desk-sign-designer.tsx",
+        "id": "routes/desk-sign-designer",
+        "path": "desk-sign-designer",
         "parentId": "root"
       },
       "routes/api.badge-designs": {

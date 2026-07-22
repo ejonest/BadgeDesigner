@@ -6,6 +6,8 @@
     assign aqb_is_info_page = true
   elsif page.handle == 'shipping-delivery' or template.suffix == 'shipping-delivery'
     assign aqb_is_info_page = true
+  elsif page.handle == 'about-us' or template.suffix == 'about-us'
+    assign aqb_is_info_page = true
   endif
 -%}
 {%- if aqb_is_info_page -%}
@@ -98,6 +100,27 @@
                 <p class="aqb-ip-paragraph__text">{{ block.settings.text | escape | newline_to_br }}</p>
               {%- endif -%}
             </div>
+
+          {%- when 'bullets' -%}
+            {%- if in_steps -%}
+              </div>
+              {%- assign in_steps = false -%}
+            {%- endif -%}
+            {%- if in_table -%}
+              </tbody></table></div>
+              {%- assign in_table = false -%}
+            {%- endif -%}
+            {%- if block.settings.items != blank -%}
+              <ul class="aqb-ip-bullets" {{ block.shopify_attributes }}>
+                {%- assign bullet_lines = block.settings.items | newline_to_br | split: '<br />' -%}
+                {%- for line in bullet_lines -%}
+                  {%- assign bullet_text = line | strip -%}
+                  {%- if bullet_text != blank -%}
+                    <li>{{ bullet_text | escape }}</li>
+                  {%- endif -%}
+                {%- endfor -%}
+              </ul>
+            {%- endif -%}
 
           {%- when 'table_row' -%}
             {%- if in_steps -%}
@@ -240,6 +263,13 @@
       "settings": [
         { "type": "text", "id": "title", "label": "Title (optional)" },
         { "type": "textarea", "id": "text", "label": "Text" }
+      ]
+    },
+    {
+      "type": "bullets",
+      "name": "Bullet list",
+      "settings": [
+        { "type": "textarea", "id": "items", "label": "Items (one per line)" }
       ]
     },
     {

@@ -6,7 +6,13 @@ import { BACKGROUND_COLORS, EXTENDED_BACKGROUND_COLORS } from "./colors";
 import type { PlaqueLayoutOption } from "./plaqueLayouts";
 import { PLAQUE_LAYOUT_OPTIONS as PLAQUE_LAYOUT_OPTIONS_CONST } from "./plaqueLayouts";
 
-export type DesignerVariant = "badge" | "sign" | "plaque";
+export type DesignerVariant = "badge" | "sign" | "plaque" | "desk-sign";
+
+export type DeskSignMaterial =
+  | "acrylic"
+  | "rosewood"
+  | "plastic";
+export type DeskSignSize = "2x8" | "2x10";
 
 /**
  * Sign/plaque template grid + plaque live preview: non-scaling outline so trim stays visible
@@ -23,6 +29,12 @@ export function isSignLikeVariant(
   variant: DesignerVariant,
 ): variant is "sign" | "plaque" {
   return variant === "sign" || variant === "plaque";
+}
+
+export function isDeskSignVariant(
+  variant: DesignerVariant,
+): variant is "desk-sign" {
+  return variant === "desk-sign";
 }
 
 export interface BackgroundColorOption {
@@ -56,7 +68,7 @@ export interface DesignerVariantConfig {
   sizeOptions: readonly SizeOption[];
   labelProduct: string;
   labelProductPlural: string;
-  templatesKey: "badge" | "sign" | "plaque";
+  templatesKey: "badge" | "sign" | "plaque" | "desk-sign";
   backgroundColors: readonly BackgroundColorOption[];
   backgroundTextures: readonly BackgroundTextureOption[];
   borderOptions: readonly BorderOption[];
@@ -125,6 +137,20 @@ export const DESIGNER_VARIANT_CONFIG: Record<
     backgroundColors: signBackgroundColors,
     backgroundTextures: [], // Placeholder – add wood etc. later
     borderOptions: [], // Placeholder – add border assets later
+    helpContent: "sign",
+  },
+  "desk-sign": {
+    maxLines: 2,
+    hasBacking: false,
+    hasBorder: false,
+    hasSizeStep: false,
+    sizeOptions: [],
+    labelProduct: "Desk Sign",
+    labelProductPlural: "Desk Signs",
+    templatesKey: "desk-sign",
+    backgroundColors: signBackgroundColors,
+    backgroundTextures: [],
+    borderOptions: [],
     helpContent: "sign",
   },
 };
@@ -494,6 +520,179 @@ export function signTemplateTypeShowsBorderStep(
   if (!typeId) return true;
   const t = ALL_SIGN_TEMPLATE_TYPES.find((x) => x.id === typeId);
   return t?.hasBorderTrim !== false;
+}
+
+/** Desk sign materials (finish) — drives template family and Shopify variant. */
+export const DESK_SIGN_MATERIALS: readonly {
+  id: DeskSignMaterial;
+  label: string;
+  description: string;
+  /** Example product photo shown on the Choose material step. */
+  exampleImageSrc: string;
+}[] = [
+  {
+    id: "acrylic",
+    label: "Acrylic",
+    description: "Laser-engraved acrylic in clear, frosted, or black",
+    exampleImageSrc: "/images/desk-sign/acrylicEx.jpg?v=4",
+  },
+  {
+    id: "rosewood",
+    label: "Piano Finished Rosewood",
+    description: "Piano-finish base with engraved gold & black plate",
+    exampleImageSrc: "/images/desk-sign/RWSilver.png?v=1",
+  },
+  {
+    id: "plastic",
+    label: "Traditional",
+    description: "Engraved plastic plate with your choice of aluminum mount",
+    exampleImageSrc: "/images/desk-sign/plasticEx.jpg?v=5",
+  },
+] as const;
+
+export const DESK_SIGN_SIZE_OPTIONS: readonly {
+  id: DeskSignSize;
+  label: string;
+}[] = [
+  { id: "2x8", label: '2×8"' },
+  { id: "2x10", label: '2×10"' },
+] as const;
+
+export interface DeskSignProfessionOption {
+  id: string;
+  name: string;
+  templateId: string;
+}
+
+export interface DeskSignTemplateType {
+  id: string;
+  name: string;
+  material: DeskSignMaterial;
+  professions?: DeskSignProfessionOption[];
+  layoutTemplateId?: string;
+  hasBorderTrim?: boolean;
+}
+
+/** Desk sign template families per material. */
+export const DESK_SIGN_TEMPLATE_TYPES: DeskSignTemplateType[] = [
+  {
+    id: "acrylic-profession",
+    name: "Profession",
+    material: "acrylic",
+    hasBorderTrim: true,
+    professions: [
+      { id: "doctor", name: "Doctor", templateId: "desk-acrylic-doctor-2x10" },
+      { id: "nurse", name: "Nurse", templateId: "desk-acrylic-nurse-2x10" },
+      { id: "lawyer", name: "Lawyer", templateId: "desk-acrylic-lawyer-2x10" },
+      {
+        id: "accountant",
+        name: "Accountant",
+        templateId: "desk-acrylic-accountant-2x10",
+      },
+      {
+        id: "teacher",
+        name: "Teacher",
+        templateId: "desk-acrylic-teacher-2x10",
+      },
+      {
+        id: "manager",
+        name: "Manager",
+        templateId: "desk-acrylic-manager-2x10",
+      },
+    ],
+  },
+  {
+    id: "rosewood-profession",
+    name: "Profession",
+    material: "rosewood",
+    hasBorderTrim: true,
+    professions: [
+      { id: "doctor", name: "Doctor", templateId: "desk-rosewood-doctor-2x10" },
+      { id: "nurse", name: "Nurse", templateId: "desk-rosewood-nurse-2x10" },
+      { id: "lawyer", name: "Lawyer", templateId: "desk-rosewood-lawyer-2x10" },
+      {
+        id: "accountant",
+        name: "Accountant",
+        templateId: "desk-rosewood-accountant-2x10",
+      },
+      {
+        id: "teacher",
+        name: "Teacher",
+        templateId: "desk-rosewood-teacher-2x10",
+      },
+      {
+        id: "manager",
+        name: "Manager",
+        templateId: "desk-rosewood-manager-2x10",
+      },
+    ],
+  },
+  {
+    id: "plastic-business",
+    name: "Business",
+    material: "plastic",
+    hasBorderTrim: false,
+    layoutTemplateId: "desk-plastic-2x8",
+  },
+];
+
+export function getDeskSignTemplateTypesForMaterial(
+  material: DeskSignMaterial,
+): DeskSignTemplateType[] {
+  return DESK_SIGN_TEMPLATE_TYPES.filter((t) => t.material === material);
+}
+
+/** Plastic desk signs use the engraving-plastic color set. */
+export function deskSignMaterialUsesPlasticFinishes(
+  material: DeskSignMaterial | null,
+): boolean {
+  return material === "plastic";
+}
+
+/** Every desk-sign material requires an explicit finish/color choice. */
+export function deskSignMaterialShowsColorsStep(
+  _material: DeskSignMaterial | null,
+): boolean {
+  return true;
+}
+
+/** @deprecated Use deskSignMaterialShowsColorsStep — kept for call sites passing type id. */
+export function deskSignTemplateTypeShowsBorderStep(
+  material: DeskSignMaterial | null,
+  _typeId: string | null,
+): boolean {
+  return deskSignMaterialShowsColorsStep(material);
+}
+
+export function findDeskSignProfessionTemplate(
+  material: DeskSignMaterial,
+  professionId: string,
+): string | null {
+  const type = DESK_SIGN_TEMPLATE_TYPES.find((t) => t.material === material);
+  const hit = type?.professions?.find((p) => p.id === professionId);
+  return hit?.templateId ?? null;
+}
+
+export function resolveDeskSignDefaultTemplateId(
+  material: DeskSignMaterial,
+): string {
+  return resolveDeskSignTemplateIdForSize(material, "2x10");
+}
+
+export function resolveDeskSignTemplateIdForSize(
+  material: DeskSignMaterial,
+  size: DeskSignSize,
+): string {
+  return `desk-${material}-${size}`;
+}
+
+export function inferDeskSignSizeFromTemplateId(
+  templateId: string | undefined | null,
+): DeskSignSize | null {
+  if (!templateId) return null;
+  if (templateId.endsWith("-2x8")) return "2x8";
+  if (templateId.endsWith("-2x10")) return "2x10";
+  return null;
 }
 
 /** Map universal template id → sign shape row + size (for sync / restore). */
