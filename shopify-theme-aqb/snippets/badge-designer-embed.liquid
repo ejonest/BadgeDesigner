@@ -169,29 +169,29 @@
 
 {% comment %} Custom badge product + icon listing products (pin / magnetic / adhesive) {% endcomment %}
 {% else %}
-{%- liquid
-  assign aqb_is_badge_designer_product = false
-  assign aqb_badge_icon_preset = ''
-  assign aqb_bd_handle = product.handle | default: '' | strip | downcase
-
-  if aqb_bd_handle == 'custom-1x3-badge'
-    assign aqb_is_badge_designer_product = true
-  elsif aqb_bd_handle.size >= 19
-    assign aqb_bd_prefix = aqb_bd_handle | slice: 0, 12
-    assign aqb_bd_suffix = aqb_bd_handle | slice: -6, 6
-    if aqb_bd_prefix == 'custom-1x3-' and aqb_bd_suffix == '-badge'
-      assign aqb_bd_mid_len = aqb_bd_handle.size | minus: 18
-      if aqb_bd_mid_len > 0
-        assign aqb_is_badge_designer_product = true
-        assign aqb_badge_icon_preset = aqb_bd_handle | slice: 12, aqb_bd_mid_len
-      endif
-    endif
-  endif
-
-  if aqb_is_badge_designer_product == false and product.tags contains 'custom-icon-badge'
-    assign aqb_is_badge_designer_product = true
-  endif
--%}
+{% assign aqb_is_badge_designer_product = false %}
+{% assign aqb_badge_icon_preset = '' %}
+{% assign aqb_bd_handle = product.handle | default: '' | strip | downcase %}
+{% if aqb_bd_handle == 'custom-1x3-badge' %}
+  {% assign aqb_is_badge_designer_product = true %}
+{% elsif aqb_bd_handle contains 'custom-1x3-' %}
+  {% assign aqb_bd_after = aqb_bd_handle | replace_first: 'custom-1x3-', '' %}
+  {% if aqb_bd_after != blank and aqb_bd_after != 'badge' %}
+    {% assign aqb_badge_icon_preset = aqb_bd_after | replace: '-badge', '' %}
+    {% if aqb_badge_icon_preset != blank and aqb_badge_icon_preset != aqb_bd_after %}
+      {% assign aqb_is_badge_designer_product = true %}
+    {% endif %}
+  {% endif %}
+{% endif %}
+{% if aqb_is_badge_designer_product == false and product.tags contains 'custom-icon-badge' %}
+  {% assign aqb_is_badge_designer_product = true %}
+  {% if aqb_badge_icon_preset == blank and aqb_bd_handle contains 'custom-1x3-' %}
+    {% assign aqb_bd_after = aqb_bd_handle | replace_first: 'custom-1x3-', '' %}
+    {% if aqb_bd_after != blank and aqb_bd_after != 'badge' %}
+      {% assign aqb_badge_icon_preset = aqb_bd_after | replace: '-badge', '' %}
+    {% endif %}
+  {% endif %}
+{% endif %}
 {% if product and aqb_is_badge_designer_product %}
 
 {% assign badge_designer_path = '/badge-designer-redesign' %}

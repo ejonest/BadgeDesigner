@@ -2038,6 +2038,27 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           ...prev,
           background: true,
         }));
+      } else if (
+        variant === "badge" &&
+        badgeTemplateSupportsIcon(universalTemplateId)
+      ) {
+        setSectionsOpen({
+          template: false,
+          size: false,
+          export: false,
+          badgeStyle: false,
+          background: false,
+          badgeIcon: true,
+          textLines: false,
+          backing: false,
+          border: false,
+          plaqueFormat: false,
+        });
+        setSectionsOpened((prev) => ({
+          ...prev,
+          background: true,
+          badgeIcon: true,
+        }));
       } else {
         setSectionsOpen({
           template: false,
@@ -2148,6 +2169,27 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           ...prev,
           background: true,
         }));
+      } else if (
+        variant === "badge" &&
+        badgeTemplateSupportsIcon(universalTemplateId)
+      ) {
+        setSectionsOpen({
+          template: false,
+          size: false,
+          export: false,
+          badgeStyle: false,
+          background: false,
+          badgeIcon: true,
+          textLines: false,
+          backing: false,
+          border: false,
+          plaqueFormat: false,
+        });
+        setSectionsOpened((prev) => ({
+          ...prev,
+          background: true,
+          badgeIcon: true,
+        }));
       } else {
         setSectionsOpen({
           template: false,
@@ -2226,12 +2268,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     });
 
     if (!guidedFlowCompletedRef.current) {
+      const openIconNext = badgeTemplateSupportsIcon(universalTemplateId);
       setSectionsOpen({
         template: false,
         size: false,
         export: false,
         badgeStyle: false,
-        background: true,
+        background: !openIconNext,
+        badgeIcon: openIconNext,
         textLines: false,
         backing: false,
         border: false,
@@ -2241,7 +2285,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         ...prev,
         badgeStyle: true,
         background: true,
+        ...(openIconNext ? { badgeIcon: true } : {}),
       }));
+      if (openIconNext) {
+        guidedFlowCompletedRef.current = true;
+      }
     } else {
       setSectionsOpen({
         template: false,
@@ -2877,6 +2925,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     export: boolean;
     badgeStyle: boolean;
     background: boolean;
+    /** Badge Step 2b — optional icon; omitted keys are treated as closed. */
+    badgeIcon?: boolean;
     textLines: boolean;
     backing: boolean;
     border: boolean;
@@ -2888,6 +2938,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     export: false,
     badgeStyle: false,
     background: false,
+    badgeIcon: false,
     textLines: false,
     backing: false,
     border: false,
@@ -2900,6 +2951,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     export: false,
     badgeStyle: false,
     background: false,
+    badgeIcon: false,
     textLines: false,
     backing: false,
     border: false,
@@ -3084,9 +3136,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     (config.hasSizeStep ? selectedSignSizeTemplateId != null : true) &&
     (signBorderStepRequired ? signBorderConfigured : true);
 
-  /** Returns message like "Please complete steps (1)" or "Please complete steps (1-4)" for step-guard alerts. When opening step N, pass forStep = N so only steps 1..N-1 are required. */
+  /** Style step only after a template is chosen that actually has styles. */
   const needsBadgeStyleStep =
-    variant === "badge" && badgeTemplateHasStyleStep(universalTemplateId);
+    variant === "badge" &&
+    multipleBadges.length > 0 &&
+    badgeTemplateHasStyleStep(universalTemplateId);
 
   const badgeStyleSelection = useMemo((): "plain" | string | null => {
     if (!needsBadgeStyleStep || !hasChosenBadgeStyle) return null;
@@ -3100,16 +3154,31 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const badgeBackgroundStepGuard = needsBadgeStyleStep ? 3 : 2;
   const badgeTextStepGuard = needsBadgeStyleStep ? 4 : 3;
   const badgeBackingStepGuard = needsBadgeStyleStep ? 5 : 4;
+  /** Icon step only after a background color is chosen on a template that supports icons. */
+  const showBadgeIconStep =
+    variant === "badge" &&
+    multipleBadges.length > 0 &&
+    hasChosenBackgroundColor &&
+    badgeTemplateSupportsIcon(universalTemplateId);
 
-  const badgeBackgroundStepTitle = badgeTemplateSupportsIcon(universalTemplateId)
-    ? "Step 2: Background color & icon"
-    : "Step 2: Pick a background color";
+  const badgeBackgroundStepTitle = "Step 2: Pick a background color";
+  const badgeIconStepTitle = "Step 2b: Badge icon (optional)";
+
+  /** Actionable guard alerts when opening a later step (e.g. "Please select a background color"). */
+  const formatIncompleteStepActions = (actions: string[]): string | null => {
+    if (actions.length === 0) return null;
+    if (actions.length === 1) return `Please ${actions[0]}`;
+    if (actions.length === 2) {
+      return `Please ${actions[0]} and ${actions[1]}`;
+    }
+    return `Please ${actions.slice(0, -1).join(", ")}, and ${
+      actions[actions.length - 1]
+    }`;
+  };
 
   const getIncompleteStepsMessage = (
     forStep: 2 | 3 | 4 | 5 | 6 | 7,
   ): string | null => {
-    const incomplete: number[] = [];
-
     if (variant === "plaque") {
       const st1 = selectedPlaqueLayoutId != null || multipleBadges.length > 0;
       const st2 = multipleBadges.length > 0;
@@ -3128,24 +3197,28 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       );
       const requiresLogo = attachedFlow || detachedPhotoReq;
       const missingPlaqueLogo = requiresLogo && !badge.logo?.src?.trim();
-      if (forStep >= 2 && !st1) incomplete.push(1);
-      if (forStep >= 3 && !st2) incomplete.push(2);
+      const actions: string[] = [];
+      if (forStep >= 2 && !st1) actions.push("choose a layout");
+      if (forStep >= 3 && !st2) actions.push("choose a size");
       if (attachedFlow) {
-        if (forStep >= 4 && !stFormat) incomplete.push(3);
-        if (forStep >= 5 && !stMetal) incomplete.push(4);
-        if (forStep >= 6 && missingPlaqueLogo) incomplete.push(5);
-        if (forStep >= 7 && !hasStep3TextEntered) incomplete.push(6);
+        if (forStep >= 4 && !stFormat) actions.push("choose an award format");
+        if (forStep >= 5 && !stMetal) {
+          actions.push("select a metal plate finish");
+        }
+        if (forStep >= 6 && missingPlaqueLogo) actions.push("upload an icon");
+        if (forStep >= 7 && !hasStep3TextEntered) {
+          actions.push("enter your text");
+        }
       } else {
-        if (forStep >= 4 && !stMetal) incomplete.push(3);
-        if (forStep >= 5 && missingPlaqueLogo) incomplete.push(4);
-        if (forStep >= 6 && !hasStep3TextEntered) incomplete.push(5);
+        if (forStep >= 4 && !stMetal) {
+          actions.push("select a metal plate finish");
+        }
+        if (forStep >= 5 && missingPlaqueLogo) actions.push("upload an icon");
+        if (forStep >= 6 && !hasStep3TextEntered) {
+          actions.push("enter your text");
+        }
       }
-      if (incomplete.length === 0) return null;
-      if (incomplete.length === 1)
-        return `Please complete steps (${incomplete[0]})`;
-      return `Please complete steps (${incomplete[0]}-${
-        incomplete[incomplete.length - 1]
-      })`;
+      return formatIncompleteStepActions(actions);
     }
 
     if (isDeskSignVariant(variant)) {
@@ -3163,23 +3236,17 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         deskSignMaterial !== "plastic" ||
         (Boolean(badge.deskSignMountType) &&
           Boolean(badge.deskSignAluminumColor));
-      const incompleteLabels: string[] = [];
-      if (forStep >= 2 && !s1) incompleteLabels.push("1");
-      if (forStep >= 3 && !sSize) incompleteLabels.push("2");
+      const actions: string[] = [];
+      if (forStep >= 2 && !s1) actions.push("choose a material");
+      if (forStep >= 3 && !sSize) actions.push("choose a size");
       if (deskSignShowColorsStep && forStep >= 4 && !sColors) {
-        incompleteLabels.push("3");
+        actions.push("select your colors");
       }
-      if (forStep >= 5 && !sText) {
-        incompleteLabels.push("4");
-      }
+      if (forStep >= 5 && !sText) actions.push("enter your text");
       if (deskSignMaterial === "plastic" && forStep >= 6 && !sMount) {
-        incompleteLabels.push("5");
+        actions.push("choose wall mount or desk stand");
       }
-      if (incompleteLabels.length === 0) return null;
-      if (incompleteLabels.length === 1) {
-        return `Please complete step (${incompleteLabels[0]})`;
-      }
-      return `Please complete steps (${incompleteLabels.join(", ")})`;
+      return formatIncompleteStepActions(actions);
     }
 
     if (config.hasSizeStep) {
@@ -3187,47 +3254,50 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       const st1 = selectedSignTemplateType != null;
       const st2 = selectedSignSizeTemplateId != null;
       const st3 = hasChosenBackgroundColor;
-      const st4 = !signBorderStepRequired || signBorderConfigured;
       const st5 = hasStep3TextEntered;
-      if (forStep >= 2 && !st1) incomplete.push(1);
-      if (forStep >= 3 && !st2) incomplete.push(2);
-      if (forStep >= 4 && !st3) incomplete.push(3);
-      if (forStep >= 5 && signBorderStepRequired && !signBorderConfigured)
-        incomplete.push(4);
-      if (forStep >= 6 && !st5) incomplete.push(5);
-    } else {
-      const s1 = multipleBadges.length > 0;
-      const s1b = !needsBadgeStyleStep || hasChosenBadgeStyle;
-      const s2 = hasChosenBackgroundColor;
-      const sText =
-        variant === "badge" ? hasStep3TextValid : hasStep3TextEntered;
-      const sBacking = config.hasBacking ? sectionsOpened.backing : true;
-      const incompleteLabels: string[] = [];
-      if (forStep >= 2 && !s1) incompleteLabels.push("1");
-      if (needsBadgeStyleStep && forStep >= 3 && !s1b) {
-        incompleteLabels.push("1b");
+      const actions: string[] = [];
+      if (forStep >= 2 && !st1) actions.push("pick a template");
+      if (forStep >= 3 && !st2) actions.push("choose a size");
+      if (forStep >= 4 && !st3) actions.push("select a background color");
+      if (forStep >= 5 && signBorderStepRequired && !signBorderConfigured) {
+        actions.push("select a border type");
       }
-      const backgroundGate = needsBadgeStyleStep ? 4 : 3;
-      if (forStep >= backgroundGate && !s2) incompleteLabels.push("2");
-      const textGate = needsBadgeStyleStep ? 5 : 4;
-      if (forStep >= textGate && !sText) incompleteLabels.push("3");
-      const backingGate = needsBadgeStyleStep ? 6 : 5;
-      if (forStep >= backingGate && config.hasBacking && !sBacking) {
-        incompleteLabels.push("4");
-      }
-      if (incompleteLabels.length === 0) return null;
-      if (incompleteLabels.length === 1) {
-        return `Please complete step (${incompleteLabels[0]})`;
-      }
-      return `Please complete steps (${incompleteLabels.join(", ")})`;
+      if (forStep >= 6 && !st5) actions.push("enter your text");
+      return formatIncompleteStepActions(actions);
     }
 
-    if (incomplete.length === 0) return null;
-    if (incomplete.length === 1)
-      return `Please complete steps (${incomplete[0]})`;
-    return `Please complete steps (${incomplete[0]}-${
-      incomplete[incomplete.length - 1]
-    })`;
+    const s1 = multipleBadges.length > 0;
+    const s1b = !needsBadgeStyleStep || hasChosenBadgeStyle;
+    const s2 = hasChosenBackgroundColor;
+    const sText =
+      variant === "badge" ? hasStep3TextValid : hasStep3TextEntered;
+    const sBacking = config.hasBacking ? sectionsOpened.backing : true;
+    const actions: string[] = [];
+    if (forStep >= 2 && !s1) {
+      actions.push(
+        variant === "badge" ? "select a badge shape" : "pick a template",
+      );
+    }
+    if (needsBadgeStyleStep && forStep >= 3 && !s1b) {
+      actions.push("pick a badge style");
+    }
+    const backgroundGate = needsBadgeStyleStep ? 4 : 3;
+    if (forStep >= backgroundGate && !s2) {
+      actions.push("select a background color");
+    }
+    const textGate = needsBadgeStyleStep ? 5 : 4;
+    if (forStep >= textGate && !sText) {
+      actions.push(
+        variant === "badge" && hasStep3TextEntered
+          ? "fix text that fits on the badge"
+          : "enter your text",
+      );
+    }
+    const backingGate = needsBadgeStyleStep ? 6 : 5;
+    if (forStep >= backingGate && config.hasBacking && !sBacking) {
+      actions.push("choose a badge attachment");
+    }
+    return formatIncompleteStepActions(actions);
   };
 
   const incompleteStepsForCart = (): 2 | 3 | 4 | 5 | 6 | 7 =>
@@ -3252,6 +3322,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const exportSectionRef = useRef<HTMLButtonElement | null>(null);
   const badgeStyleSectionRef = useRef<HTMLDivElement | null>(null);
   const backgroundSectionRef = useRef<HTMLDivElement | null>(null);
+  const badgeIconSectionRef = useRef<HTMLDivElement | null>(null);
   const textLinesSectionRef = useRef<HTMLDivElement | null>(null);
   const backingSectionRef = useRef<HTMLDivElement | null>(null);
   const borderSectionRef = useRef<HTMLButtonElement | null>(null);
@@ -3422,6 +3493,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       | "size"
       | "badgeStyle"
       | "background"
+      | "badgeIcon"
       | "textLines"
       | "backing",
     forStep?: 2 | 3 | 4 | 5 | 6,
@@ -3439,6 +3511,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       export: false,
       badgeStyle: section === "badgeStyle",
       background: section === "background",
+      badgeIcon: section === "badgeIcon",
       textLines: section === "textLines",
       backing: section === "backing",
       border: false,
@@ -3504,13 +3577,29 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   }, [sectionsOpen.background]);
 
   useEffect(() => {
+    if (sectionsOpen.badgeIcon && badgeIconSectionRef.current) {
+      const wasAboveOpen =
+        prevOpenSectionRef.current === "template" ||
+        prevOpenSectionRef.current === "badgeStyle" ||
+        prevOpenSectionRef.current === "background" ||
+        prevOpenSectionRef.current === "export";
+      scrollSectionIntoView(
+        badgeIconSectionRef.current,
+        wasAboveOpen ? 350 : 150,
+      );
+      prevOpenSectionRef.current = "badgeIcon";
+    }
+  }, [sectionsOpen.badgeIcon]);
+
+  useEffect(() => {
     if (sectionsOpen.textLines && textLinesSectionRef.current) {
       // If any section above was open, wait longer for collapse (especially template)
       const wasAboveOpen =
         prevOpenSectionRef.current === "template" ||
         prevOpenSectionRef.current === "badgeStyle" ||
         prevOpenSectionRef.current === "export" ||
-        prevOpenSectionRef.current === "background";
+        prevOpenSectionRef.current === "background" ||
+        prevOpenSectionRef.current === "badgeIcon";
       // Template is the largest, so give it extra time
       const delay =
         prevOpenSectionRef.current === "template"
@@ -3529,6 +3618,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         prevOpenSectionRef.current === "template" ||
         prevOpenSectionRef.current === "export" ||
         prevOpenSectionRef.current === "background" ||
+        prevOpenSectionRef.current === "badgeIcon" ||
         prevOpenSectionRef.current === "textLines";
       const delay = wasAboveOpen ? 350 : 150;
       scrollSectionIntoView(backingSectionRef.current, delay);
@@ -3910,6 +4000,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       export: false,
       badgeStyle: false,
       background: false,
+      badgeIcon: false,
       textLines: true,
       backing: false,
       border: false,
@@ -3920,6 +4011,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       template: true,
       badgeStyle: true,
       background: true,
+      badgeIcon: true,
       textLines: true,
     }));
   }, [
@@ -4900,12 +4992,19 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     const templateDone = multipleBadges.length > 0;
     const styleDone = !needsBadgeStyleStep || hasChosenBadgeStyle;
     const backgroundDone = hasChosenBackgroundColor;
+    /** Optional icon step: complete as soon as it appears (default = no icon). */
+    const iconDone = true;
     const textDone = hasStep3TextValid;
     const backingDone = sectionsOpened.backing;
 
-    const completions = needsBadgeStyleStep
-      ? [templateDone, styleDone, backgroundDone, textDone, backingDone]
-      : [templateDone, backgroundDone, textDone, backingDone];
+    const completions = (() => {
+      const base = needsBadgeStyleStep
+        ? [templateDone, styleDone, backgroundDone]
+        : [templateDone, backgroundDone];
+      if (showBadgeIconStep) base.push(iconDone);
+      base.push(textDone, backingDone);
+      return base;
+    })();
     const firstIncomplete = completions.findIndex((c) => !c);
 
     const visual = (index: number): AqbBadgeStepVisualState => {
@@ -4985,8 +5084,19 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     })();
 
     const bgIndex = needsBadgeStyleStep ? 2 : 1;
-    const textIndex = needsBadgeStyleStep ? 3 : 2;
-    const backingIndex = needsBadgeStyleStep ? 4 : 3;
+    const iconIndex = showBadgeIconStep ? bgIndex + 1 : -1;
+    const textIndex = showBadgeIconStep
+      ? needsBadgeStyleStep
+        ? 4
+        : 3
+      : needsBadgeStyleStep
+        ? 3
+        : 2;
+    const backingIndex = textIndex + 1;
+
+    const iconSummary = isBadgeIconId(badge.badgeIconId)
+      ? BADGE_ICON_LABELS[badge.badgeIconId]
+      : "No icon";
 
     return {
       template: {
@@ -5003,18 +5113,16 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         : {}),
       background: {
         state: visual(bgIndex),
-        summary: hasAnyBg
-          ? [
-              bgName,
-              badgeTemplateSupportsIcon(universalTemplateId) &&
-              isBadgeIconId(badge.badgeIconId)
-                ? BADGE_ICON_LABELS[badge.badgeIconId]
-                : null,
-            ]
-              .filter(Boolean)
-              .join(" · ")
-          : null,
+        summary: hasAnyBg && hasChosenBackgroundColor ? bgName : null,
       },
+      ...(showBadgeIconStep
+        ? {
+            icon: {
+              state: visual(iconIndex),
+              summary: iconSummary,
+            },
+          }
+        : {}),
       text: {
         state: textVisualState(),
         summary: textDone ? textSummary || "Text added" : null,
@@ -5027,6 +5135,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   }, [
     variant,
     needsBadgeStyleStep,
+    showBadgeIconStep,
     multipleBadges.length,
     hasChosenBadgeStyle,
     hasChosenBackgroundColor,
@@ -5390,15 +5499,39 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     const didClose =
       (prev.template && !sectionsOpen.template) ||
       (prev.background && !sectionsOpen.background) ||
+      (prev.badgeIcon && !sectionsOpen.badgeIcon) ||
       (prev.textLines && !sectionsOpen.textLines) ||
       (prev.backing && !sectionsOpen.backing) ||
       (prev.border && !sectionsOpen.border) ||
       (prev.export && !sectionsOpen.export);
     const didCloseText = prev.textLines && !sectionsOpen.textLines;
+    const didCloseIcon = Boolean(prev.badgeIcon) && !sectionsOpen.badgeIcon;
     const didOpenExport = !prev.export && sectionsOpen.export;
     prevSectionsOpenRef.current = sectionsOpen;
     if (didClose) setDraftSaveTrigger((t) => t + 1);
     if (didOpenExport && stepsComplete) setDraftSaveTrigger((t) => t + 1);
+    // After optional icon step, advance to text the first time the user closes 2b.
+    if (
+      variant === "badge" &&
+      showBadgeIconStep &&
+      didCloseIcon &&
+      hasChosenBackgroundColor &&
+      !sectionsOpened.textLines
+    ) {
+      setSectionsOpened((p) => ({ ...p, textLines: true }));
+      setSectionsOpen({
+        template: false,
+        size: false,
+        export: false,
+        badgeStyle: false,
+        background: false,
+        badgeIcon: false,
+        textLines: true,
+        backing: false,
+        border: false,
+      });
+      return;
+    }
     // Open Step 4 (backing) when user closes Step 3 (text) and has completed step 3 (entered text) – only for variants with backing
     if (
       config.hasBacking &&
@@ -5413,6 +5546,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         export: false,
         badgeStyle: false,
         background: false,
+        badgeIcon: false,
         textLines: false,
         backing: true,
         border: false,
@@ -5421,9 +5555,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   }, [
     sectionsOpen,
     sectionsOpened.backing,
+    sectionsOpened.textLines,
     stepsComplete,
     hasStep3TextEntered,
+    hasChosenBackgroundColor,
     config.hasBacking,
+    variant,
+    showBadgeIconStep,
   ]);
 
   // Debounced draft save: only when stepsComplete, triggered by draftSaveTrigger (section close / apply-to-all / selectBadge)
@@ -7046,6 +7184,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       export: false,
       badgeStyle: false,
       background: false,
+      badgeIcon: false,
       textLines: false,
       backing: false,
       border: false,
@@ -7057,6 +7196,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       export: false,
       badgeStyle: false,
       background: false,
+      badgeIcon: false,
       textLines: false,
       backing: false,
       border: false,
@@ -10430,6 +10570,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         ? selectedSignSizeTemplateId != null
                         : true),
                   },
+                  ...(variant === "badge" && showBadgeIconStep
+                    ? [
+                        {
+                          label: "Icon · optional",
+                          done: hasChosenBackgroundColor,
+                          current: false,
+                        },
+                      ]
+                    : []),
                   ...(signBorderStepRequired
                     ? [
                         {
@@ -10492,18 +10641,36 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 const doneStates = steps.map((s) => s.done);
                 const badgeMobileStepKeys = (
                   variant === "badge" && needsBadgeStyleStep
-                    ? [
-                        "template",
-                        "badgeStyle",
-                        "background",
-                        "textLines",
-                        "backing",
-                      ]
-                    : ["template", "background", "textLines", "backing"]
+                    ? showBadgeIconStep
+                      ? [
+                          "template",
+                          "badgeStyle",
+                          "background",
+                          "badgeIcon",
+                          "textLines",
+                          "backing",
+                        ]
+                      : [
+                          "template",
+                          "badgeStyle",
+                          "background",
+                          "textLines",
+                          "backing",
+                        ]
+                    : showBadgeIconStep
+                      ? [
+                          "template",
+                          "background",
+                          "badgeIcon",
+                          "textLines",
+                          "backing",
+                        ]
+                      : ["template", "background", "textLines", "backing"]
                 ) as readonly (
                   | "template"
                   | "badgeStyle"
                   | "background"
+                  | "badgeIcon"
                   | "textLines"
                   | "backing"
                 )[];
@@ -10516,8 +10683,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   | undefined
                 )[] =
                   variant === "badge" && needsBadgeStyleStep
-                    ? [undefined, 2, 3, 4, 5]
-                    : [undefined, 2, 3, 4];
+                    ? showBadgeIconStep
+                      ? [undefined, 2, 3, 4, 4, 5]
+                      : [undefined, 2, 3, 4, 5]
+                    : showBadgeIconStep
+                      ? [undefined, 2, 3, 3, 4]
+                      : [undefined, 2, 3, 4];
                 return steps.map((step, i) => {
                   const badgeSectionKey =
                     variant === "badge" ? badgeMobileStepKeys[i] : undefined;
@@ -10525,7 +10696,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     variant === "badge" &&
                     isMobileViewport &&
                     badgeSectionKey != null &&
-                    sectionsOpen[badgeSectionKey];
+                    Boolean(sectionsOpen[badgeSectionKey]);
                   const circleDone = step.done && !isNavSelected;
                   const circleActive =
                     isNavSelected || (!isMobileViewport && step.current);
@@ -12011,44 +12182,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                 Change style
                               </button>
                             </div>
-
-                            {badgeTemplateSupportsIcon(universalTemplateId) ? (
-                              <div className="finish-row">
-                                <div className="aqb-badge-finish-lbl">
-                                  Badge icon (optional)
-                                </div>
-                                <AqbBadgeIconPicker
-                                  variant="inline"
-                                  value={
-                                    isBadgeIconId(badge.badgeIconId)
-                                      ? badge.badgeIconId
-                                      : undefined
-                                  }
-                                  onChange={(iconId) =>
-                                    setBadgeIconForCurrent(iconId)
-                                  }
-                                />
-                              </div>
-                            ) : null}
-
-                            {multipleBadges.length > 1 &&
-                            badgeTemplateSupportsIcon(universalTemplateId) ? (
-                              <div className="mt-2 flex flex-col gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    applyBadgeIconToAll(
-                                      isBadgeIconId(badge.badgeIconId)
-                                        ? badge.badgeIconId
-                                        : undefined,
-                                    )
-                                  }
-                                  className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#02132B] underline transition-colors hover:text-[#1a3d5c]"
-                                >
-                                  Apply icon choice to all badges
-                                </button>
-                              </div>
-                            ) : null}
                           </>
                         );
                       }
@@ -12057,10 +12190,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         <>
                           <div className="aqb-badge-colour-row">
                             {BADGE_AQB_FEATURED_BACKGROUND_COLORS.map((c) => {
-                              const selected = isAqbBadgeBgSwatchSelected(
-                                badge.backgroundColor,
-                                c.value,
-                              );
+                              const selected =
+                                hasChosenBackgroundColor &&
+                                isAqbBadgeBgSwatchSelected(
+                                  badge.backgroundColor,
+                                  c.value,
+                                );
                               const hasPhoto = badgeColorHasPhoto(c.value);
                               const blockedByText =
                                 badgeBackgroundConflictsWithTextColor(
@@ -12165,25 +12300,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             </div>
                           ) : null}
 
-                          {badgeTemplateSupportsIcon(universalTemplateId) ? (
-                            <div className="finish-row">
-                              <div className="aqb-badge-finish-lbl">
-                                Badge icon (optional)
-                              </div>
-                              <AqbBadgeIconPicker
-                                variant="inline"
-                                value={
-                                  isBadgeIconId(badge.badgeIconId)
-                                    ? badge.badgeIconId
-                                    : undefined
-                                }
-                                onChange={(iconId) =>
-                                  setBadgeIconForCurrent(iconId)
-                                }
-                              />
-                            </div>
-                          ) : null}
-
                           {multipleBadges.length > 1 ? (
                             <div className="mt-2 flex flex-col gap-1">
                               <button
@@ -12195,23 +12311,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                 Apply background color to all{" "}
                                 {config.labelProductPlural.toLowerCase()}
                               </button>
-                              {badgeTemplateSupportsIcon(
-                                universalTemplateId,
-                              ) ? (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    applyBadgeIconToAll(
-                                      isBadgeIconId(badge.badgeIconId)
-                                        ? badge.badgeIconId
-                                        : undefined,
-                                    )
-                                  }
-                                  className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#02132B] underline transition-colors hover:text-[#1a3d5c]"
-                                >
-                                  Apply icon choice to all badges
-                                </button>
-                              ) : null}
                             </div>
                           ) : null}
                         </>
@@ -12403,6 +12502,85 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 </div>
               </div>
             </div>
+            ) : null}
+
+            {showBadgeIconStep && aqbBadgeStepHeaderModel?.icon ? (
+              <div
+                ref={badgeIconSectionRef}
+                className="flex w-full min-w-0 flex-col border-b border-[rgba(2, 19, 43,0.1)]"
+              >
+                <AqbBadgeStepSectionToggle
+                  stepNumber={2}
+                  stepLabel="2b"
+                  visualState={aqbBadgeStepHeaderModel.icon.state}
+                  title={badgeIconStepTitle}
+                  summary={aqbBadgeStepHeaderModel.icon.summary}
+                  open={Boolean(sectionsOpen.badgeIcon)}
+                  onClick={() => {
+                    const msg = getIncompleteStepsMessage(badgeTextStepGuard);
+                    if (msg) {
+                      alert(msg);
+                      return;
+                    }
+                    const willBeOpen = !sectionsOpen.badgeIcon;
+                    setSectionsOpen({
+                      template: false,
+                      size: false,
+                      export: false,
+                      badgeStyle: false,
+                      background: false,
+                      badgeIcon: willBeOpen,
+                      textLines: false,
+                      backing: false,
+                      border: false,
+                      plaqueFormat: false,
+                    });
+                    setSectionsOpened((prev) => ({
+                      ...prev,
+                      badgeIcon: true,
+                    }));
+                  }}
+                />
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${
+                    sectionsOpen.badgeIcon
+                      ? "max-h-[min(70vh,520px)] overflow-y-auto px-6 pb-5 pt-2 opacity-100"
+                      : "max-h-0 p-0 opacity-0"
+                  }`}
+                >
+                  <div className="finish-row">
+                    <div className="aqb-badge-finish-lbl">
+                      Choose an icon or keep none
+                    </div>
+                    <AqbBadgeIconPicker
+                      variant="inline"
+                      value={
+                        isBadgeIconId(badge.badgeIconId)
+                          ? badge.badgeIconId
+                          : undefined
+                      }
+                      onChange={(iconId) => setBadgeIconForCurrent(iconId)}
+                    />
+                  </div>
+                  {multipleBadges.length > 1 ? (
+                    <div className="mt-2 flex flex-col gap-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          applyBadgeIconToAll(
+                            isBadgeIconId(badge.badgeIconId)
+                              ? badge.badgeIconId
+                              : undefined,
+                          )
+                        }
+                        className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#02132B] underline transition-colors hover:text-[#1a3d5c]"
+                      >
+                        Apply icon choice to all badges
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             ) : null}
 
             {signBorderStepRequired && (
@@ -14255,6 +14433,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               export: false,
                               badgeStyle: false,
                               background: false,
+                              badgeIcon: false,
                               textLines: false,
                               backing: false,
                               border: false,
@@ -14266,6 +14445,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               export: false,
                               badgeStyle: false,
                               background: false,
+                              badgeIcon: false,
                               textLines: false,
                               backing: false,
                               border: false,
