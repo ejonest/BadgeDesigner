@@ -10,14 +10,20 @@
   for item in cart.items
     assign aqb_designer = item.properties['Designer'] | default: '' | strip | downcase
     assign aqb_is_custom_badge = false
-    if item.product.handle == 'custom-1x3-badge'
+    assign aqb_fs_handle = item.product.handle | default: '' | strip | downcase
+    if aqb_fs_handle == 'custom-1x3-badge'
       assign aqb_is_custom_badge = true
-    elsif item.product.handle.size >= 19
-      assign aqb_fs_prefix = item.product.handle | slice: 0, 12
-      assign aqb_fs_suffix = item.product.handle | slice: -6, 6
-      if aqb_fs_prefix == 'custom-1x3-' and aqb_fs_suffix == '-badge'
-        assign aqb_is_custom_badge = true
+    elsif aqb_fs_handle contains 'custom-1x3-'
+      assign aqb_fs_after = aqb_fs_handle | replace_first: 'custom-1x3-', ''
+      if aqb_fs_after != blank and aqb_fs_after != 'badge'
+        assign aqb_fs_icon_check = aqb_fs_after | replace: '-badge', ''
+        if aqb_fs_icon_check != blank and aqb_fs_icon_check != aqb_fs_after
+          assign aqb_is_custom_badge = true
+        endif
       endif
+    endif
+    if aqb_is_custom_badge == false and item.product.tags contains 'custom-icon-badge'
+      assign aqb_is_custom_badge = true
     endif
     if aqb_is_custom_badge == false and item.properties['Custom Badge Design'] == 'Yes' and aqb_designer != 'sign' and aqb_designer != 'plaque'
       assign aqb_is_custom_badge = true

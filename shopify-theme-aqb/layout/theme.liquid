@@ -262,31 +262,21 @@
     {{ 'base.css' | asset_url | stylesheet_tag }}
     {%- assign aqb_designer_product = false -%}
     {%- if template.name == 'product' and product != blank -%}
-      {%- liquid
-        assign aqb_is_badge_designer_product = false
-        assign aqb_bd_handle = product.handle | default: '' | strip | downcase
-
-        if aqb_bd_handle == 'custom-1x3-badge'
-          assign aqb_is_badge_designer_product = true
-        elsif aqb_bd_handle.size >= 19
-          assign aqb_bd_prefix = aqb_bd_handle | slice: 0, 12
-          assign aqb_bd_suffix = aqb_bd_handle | slice: -6, 6
-          if aqb_bd_prefix == 'custom-1x3-' and aqb_bd_suffix == '-badge'
-            assign aqb_bd_mid_len = aqb_bd_handle.size | minus: 18
-            if aqb_bd_mid_len > 0
-              assign aqb_is_badge_designer_product = true
-            endif
-          endif
-        endif
-
-        if aqb_is_badge_designer_product == false and product.tags contains 'custom-icon-badge'
-          assign aqb_is_badge_designer_product = true
-        endif
-
-        if aqb_is_badge_designer_product
-          assign aqb_designer_product = true
-        endif
-      -%}
+      {%- assign aqb_bd_handle = product.handle | default: '' | strip | downcase -%}
+      {%- if aqb_bd_handle == 'custom-1x3-badge' -%}
+        {%- assign aqb_designer_product = true -%}
+      {%- elsif aqb_bd_handle contains 'custom-1x3-' -%}
+        {%- assign aqb_bd_after = aqb_bd_handle | replace_first: 'custom-1x3-', '' -%}
+        {%- if aqb_bd_after != blank and aqb_bd_after != 'badge' -%}
+          {%- assign aqb_bd_icon_check = aqb_bd_after | replace: '-badge', '' -%}
+          {%- if aqb_bd_icon_check != blank and aqb_bd_icon_check != aqb_bd_after -%}
+            {%- assign aqb_designer_product = true -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endif -%}
+      {%- if aqb_designer_product == false and product.tags contains 'custom-icon-badge' -%}
+        {%- assign aqb_designer_product = true -%}
+      {%- endif -%}
     {%- endif -%}
     {%- if template.name == 'index' or aqb_designer_product -%}
       {{ 'aqb-homepage.css' | asset_url | stylesheet_tag }}
