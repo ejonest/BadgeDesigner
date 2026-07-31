@@ -49,6 +49,18 @@ export type TemplateConfig = {
     widthNorm: number;
     heightNorm: number;
   };
+  /**
+   * Plaque: calibrated user image/icon slot, normalized to full plaque dimensions.
+   * Attached: fixed draw rect (x/y/w/h).
+   * Detached: `xNorm` is the left bound; `yNorm`/`widthNorm`/`heightNorm` are fixed size + Y.
+   * Detached horizontal position is computed at runtime between that left bound and the text.
+   */
+  plaqueImageRectNorm?: {
+    xNorm: number;
+    yNorm: number;
+    widthNorm: number;
+    heightNorm: number;
+  };
 };
 
 export type LoadedTemplate = {
@@ -76,6 +88,11 @@ export type LoadedTemplate = {
   signTextLayout?: ResolvedSignTextLayout;
   /** Plaque detached: pixel rect for the photo on wood (template space). */
   plaquePhotoRectPx?: { x: number; y: number; width: number; height: number };
+  /**
+   * Plaque user image/icon slot in template pixels.
+   * Detached: `x` = left bound; `y`/`width`/`height` = fixed icon size + vertical position.
+   */
+  plaqueImageRectPx?: { x: number; y: number; width: number; height: number };
   /** Badge blank product photo layout (text + icon rects on 1500×1500 canvas). */
   blankPhotoPlate?: BlankPhotoPlateConfig;
 };
@@ -1438,6 +1455,22 @@ async function loadOne(
     };
   }
 
+  let plaqueImageRectPx: LoadedTemplate["plaqueImageRectPx"];
+  if (
+    variant === "plaque" &&
+    c.plaqueImageRectNorm &&
+    Number.isFinite(widthPx) &&
+    Number.isFinite(heightPx)
+  ) {
+    const r = c.plaqueImageRectNorm;
+    plaqueImageRectPx = {
+      x: r.xNorm * widthPx,
+      y: r.yNorm * heightPx,
+      width: r.widthNorm * widthPx,
+      height: r.heightNorm * heightPx,
+    };
+  }
+
   const blankPhotoPlate =
     variant === "badge" ? getBlankPhotoPlateConfig(c.id) ?? undefined : undefined;
 
@@ -1458,6 +1491,7 @@ async function loadOne(
     svgFile: c.svgFile,
     signTextLayout,
     ...(plaquePhotoRectPx ? { plaquePhotoRectPx } : {}),
+    ...(plaqueImageRectPx ? { plaqueImageRectPx } : {}),
     ...(blankPhotoPlate ? { blankPhotoPlate } : {}),
   };
 

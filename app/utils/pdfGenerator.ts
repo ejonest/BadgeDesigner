@@ -6,10 +6,30 @@ import {
 } from "~/constants/designerVariants";
 import { BADGE_ICON_LABELS, isBadgeIconId } from "~/constants/badgeIcons";
 import { getColorInfo } from "../constants/colors";
-import { generateBadgeTiff, generateFullBadgeImage } from "./badgeThumbnail";
+import {
+  generateBadgeTiff,
+  generateFullBadgeImage,
+  type FullBadgeImageOptions,
+} from "./badgeThumbnail";
 import { getCustomBackgroundDisplayName } from "./badgeCustomBackgrounds";
-import { resolveProductionRenderOpts } from "./renderSvg";
+import {
+  getEffectiveDesignBox,
+  resolveProductionRenderOpts,
+} from "./renderSvg";
 import { loadTemplateById, type LoadedTemplate } from "./templates";
+import {
+  getPlaqueAwardFormatById,
+  resolveAttachedPlaqueAwardFormatForRender,
+} from "~/constants/plaqueFormats";
+import {
+  parsePlaqueTemplateId,
+  PLAQUE_LAYOUT_OPTIONS,
+} from "~/constants/plaqueLayouts";
+import {
+  isPlaqueAttachedTemplateId,
+  isPlaqueDetachedTemplateId,
+  isPlaqueTemplateId,
+} from "./plaqueRender";
 
 const HEADER_HEIGHT = 18;
 const HEADER_GAP = 6;
@@ -20,6 +40,14 @@ const PAGE_HEIGHT = 841.89;
 const PAGE_WIDTH = 595.28;
 const TOP_MARGIN = 40;
 const BOTTOM_MARGIN = 40;
+
+/** Proof PDF mockup for plaques: lower res JPEG to save space, time, and ink. */
+export const PLAQUE_PROOF_PDF_IMAGE_OPTIONS: FullBadgeImageOptions = {
+  rasterScale: 1.25,
+  rasterFormat: "image/jpeg",
+  rasterQuality: 0.72,
+  loadTimeoutMs: 30_000,
+};
 
 /* ---------- Color utils ---------- */
 
@@ -106,7 +134,12 @@ function resolvePdfProofDisplayViewBoxPx(template: LoadedTemplate): {
 function getPdfSpecRows(
   badge: Badge,
   template: LoadedTemplate,
+  variant: DesignerVariant = "badge",
 ): string[] {
+  if (variant === "plaque" || isPlaqueTemplateId(template.id)) {
+    return getPlaquePdfSpecRows(badge, template);
+  }
+
   const icon =
     badge.badgeIconId && isBadgeIconId(badge.badgeIconId)
       ? BADGE_ICON_LABELS[badge.badgeIconId]
@@ -132,6 +165,111 @@ function getPdfSpecRows(
     `Background color: ${backgroundColor}`,
     `Background image: ${backgroundImage}`,
   ];
+}
+
+function getPlaquePdfSpecRows(
+  badge: Badge,
+  template: LoadedTemplate,
+): string[] {
+  const parsed = parsePlaqueTemplateId(template.id);
+  const layoutOpt = parsed
+    ? PLAQUE_LAYOUT_OPTIONS.find((o) => o.id === parsed.layoutId)
+    : undefined;
+  const layoutLabel = layoutOpt?.name
+    ? layoutOpt.name
+    : isPlaqueAttachedTemplateId(template.id)
+      ? "Attached plate"
+      : isPlaqueDetachedTemplateId(template.id)
+        ? "Detached / photo plaque"
+        : "Plaque";
+  const sizeLabel = parsed?.size
+    ? parsed.size.charAt(0).toUpperCase() + parsed.size.slice(1)
+    : "—";
+
+  const plateHex = cssColorToHex(badge.backgroundColor ?? "#000000");
+  const plateInfo = getColorInfo(plateHex) ?? {
+    name: "Custom",
+    hex: plateHex,
+  };
+  const plateColor = `${plateInfo.name} (${plateHex})`;
+
+  const rows = [
+    `Layout: ${layoutLabel}`,
+    `Size: ${sizeLabel}`,
+    `Template: ${template.name}`,
+    `Plate color: ${plateColor}`,
+  ];
+
+  if (isPlaqueAttachedTemplateId(template.id)) {
+    const format =
+      resolveAttachedPlaqueAwardFormatForRender(badge) ??
+      getPlaqueAwardFormatById(badge.plaqueFormatId);
+    rows.push(`Award format: ${format?.name ?? "Custom / none"}`);
+  }
+
+  if (isPlaqueDetachedTemplateId(template.id)) {
+    const finish = badge.plaqueDetachedPhotoFrameFinish ?? "gold";
+    rows.push(
+      `Photo frame finish: ${finish.charAt(0).toUpperCase()}${finish.slice(1)}`,
+    );
+  }
+
+  const logoSrc = badge.logo?.src?.trim() ?? "";
+  if (logoSrc) {
+    const isHttp = /^https?:\/\//i.test(logoSrc);
+    rows.push(
+      isHttp
+        ? `Uploaded image: Saved to library`
+        : `Uploaded image: Yes (pending cloud URL)`,
+    );
+  } else {
+    rows.push(`Uploaded image: None`);
+  }
+
+  return rows;
+}
+
+function formatLineFontSizeLabel(
+  badge: Badge,
+  template: LoadedTemplate,
+  line: Badge["lines"][number],
+): string {
+  const designBox = getEffectiveDesignBox(template, badge);
+  const px =
+    typeof line.fontSize === "number" && line.fontSize > 0
+      ? Math.round(line.fontSize)
+      : Math.max(1, Math.round((line.sizeNorm || 0) * designBox.height));
+  const pt = Math.round(px * 0.75);
+  return `${px}px (~${pt}pt)`;
+}
+
+async function embedProofMockupInPdf(
+  pdfDoc: PDFDocument,
+  badge: Badge,
+  template: LoadedTemplate,
+  variant: DesignerVariant,
+): Promise<Awaited<ReturnType<PDFDocument["embedPng"]>>> {
+  const baseOpts = resolveProductionRenderOpts(badge, template, variant);
+  const imageOpts: FullBadgeImageOptions =
+    variant === "plaque" || isPlaqueTemplateId(template.id)
+      ? { ...baseOpts, ...PLAQUE_PROOF_PDF_IMAGE_OPTIONS }
+      : baseOpts;
+  const imageDataUrl = await generateFullBadgeImage(
+    badge,
+    variant,
+    imageOpts,
+  );
+  const base64Data = imageDataUrl.split(",")[1];
+  const imageBytes = Uint8Array.from(atob(base64Data), (c) =>
+    c.charCodeAt(0),
+  );
+  if (
+    imageOpts.rasterFormat === "image/jpeg" ||
+    imageDataUrl.startsWith("data:image/jpeg")
+  ) {
+    return pdfDoc.embedJpg(imageBytes);
+  }
+  return pdfDoc.embedPng(imageBytes);
 }
 
 function drawPdfTableRow(
@@ -212,7 +350,10 @@ export const generatePDFNew = async (
       const imageHeightPt = pxToPt(svgViewBoxH);
 
       // Estimate section height BEFORE rendering (use SVG viewBox height in points)
-      const estimatedTotalRows = badge.lines.length * 4 + 4;
+      const estimatedTotalRows =
+        badge.lines.length * 4 +
+        getPdfSpecRows(badge, template, variant).length +
+        1;
       const estimatedTableHeight = estimatedTotalRows * 16;
       const estimatedContentHeight = Math.max(
         imageHeightPt,
@@ -239,21 +380,14 @@ export const generatePDFNew = async (
       // NOW lock section top
       const sectionTopY = y;
 
-      // Generate high-resolution image
+      // Mockup raster (plaques use lower-quality JPEG to save space/ink)
       console.log(`Generating ${designLabel.toLowerCase()} image...`);
-      const imageDataUrl = await generateFullBadgeImage(
+      const pdfImage = await embedProofMockupInPdf(
+        pdfDoc,
         badge,
+        template,
         variant,
-        resolveProductionRenderOpts(badge, template, variant),
       );
-      console.log("Image generated successfully");
-
-      // Convert to Uint8Array and embed
-      const base64Data = imageDataUrl.split(",")[1];
-      const imageBytes = Uint8Array.from(atob(base64Data), (c) =>
-        c.charCodeAt(0)
-      );
-      const pdfImage = await pdfDoc.embedPng(imageBytes);
       console.log("Image embedded in PDF");
       console.log("PDF image dimensions:", {
         width: pdfImage.width,
@@ -306,7 +440,7 @@ export const generatePDFNew = async (
       // Table rows
       let rowIdx = 0;
 
-      for (const label of getPdfSpecRows(badge, template)) {
+      for (const label of getPdfSpecRows(badge, template, variant)) {
         rowIdx = drawPdfTableRow(page, {
           tableX,
           tableY,
@@ -322,9 +456,8 @@ export const generatePDFNew = async (
       badge.lines.forEach((line, lineIdx) => {
         const cleanText = (line.text ?? "").replace(/^"|"$/g, "").trim();
 
-        // BadgeLine-safe fields
         const fontName = line.fontFamily ?? "Roboto";
-        const fontSize = 12; // BadgeLine does not expose size
+        const fontSizeLabel = formatLineFontSizeLabel(badge, template, line);
         const textColor = cssColorToHex(line.color ?? "#000000");
 
         const style: string[] = [];
@@ -333,8 +466,10 @@ export const generatePDFNew = async (
         if (line.underline) style.push("Underline");
         const styleText = style.length ? style.join(", ") : "Normal";
 
-        // BadgeLine does not expose alignment
-        const alignText = "Center";
+        const alignText =
+          line.align === "left" || line.align === "right" || line.align === "center"
+            ? line.align.charAt(0).toUpperCase() + line.align.slice(1)
+            : "Center";
 
         const rowY = tableY - (rowIdx + 1) * rowHeight;
         page.drawRectangle({
@@ -367,7 +502,7 @@ export const generatePDFNew = async (
           borderColor: rgb(0, 0, 0),
           borderWidth: 0.5,
         });
-        page.drawText(`Font: ${fontName} ${fontSize}pt (${styleText})`, {
+        page.drawText(`Font: ${fontName} ${fontSizeLabel} (${styleText})`, {
           x: tableX + 5,
           y: fontRowY + 4,
           size: 8,
@@ -417,7 +552,10 @@ export const generatePDFNew = async (
         rowIdx++;
       });
 
-      const totalRows = badge.lines.length * 4 + 4;
+      const totalRows =
+        badge.lines.length * 4 +
+        getPdfSpecRows(badge, template, variant).length +
+        1;
       const tableHeight = totalRows * rowHeight;
       const contentHeight = Math.max(imageHeight, tableHeight);
 
@@ -535,7 +673,10 @@ export const generatePDFAsBlob = async (
       const imageHeightPt = pxToPt(svgViewBoxH);
 
       // Estimate section height BEFORE rendering; appearance rows + Quantity row.
-      const estimatedTotalRows = badge.lines.length * 4 + 5;
+      const estimatedTotalRows =
+        badge.lines.length * 4 +
+        getPdfSpecRows(badge, template, variant).length +
+        1;
       const estimatedTableHeight = estimatedTotalRows * 16;
       const estimatedContentHeight = Math.max(
         imageHeightPt,
@@ -562,21 +703,14 @@ export const generatePDFAsBlob = async (
       // NOW lock section top
       const sectionTopY = y;
 
-      // Generate high-resolution image
+      // Mockup raster (plaques use lower-quality JPEG to save space/ink)
       console.log(`Generating ${designLabel.toLowerCase()} image...`);
-      const imageDataUrl = await generateFullBadgeImage(
+      const pdfImage = await embedProofMockupInPdf(
+        pdfDoc,
         badge,
+        template,
         variant,
-        resolveProductionRenderOpts(badge, template, variant),
       );
-      console.log("Image generated successfully");
-
-      // Convert to Uint8Array and embed
-      const base64Data = imageDataUrl.split(",")[1];
-      const imageBytes = Uint8Array.from(atob(base64Data), (c) =>
-        c.charCodeAt(0)
-      );
-      const pdfImage = await pdfDoc.embedPng(imageBytes);
       console.log("Image embedded in PDF");
       console.log("PDF image dimensions:", {
         width: pdfImage.width,
@@ -629,7 +763,7 @@ export const generatePDFAsBlob = async (
       // Table rows
       let rowIdx = 0;
 
-      for (const label of getPdfSpecRows(badge, template)) {
+      for (const label of getPdfSpecRows(badge, template, variant)) {
         rowIdx = drawPdfTableRow(page, {
           tableX,
           tableY,
@@ -645,9 +779,8 @@ export const generatePDFAsBlob = async (
       badge.lines.forEach((line, lineIdx) => {
         const cleanText = (line.text ?? "").replace(/^"|"$/g, "").trim();
 
-        // BadgeLine-safe fields
         const fontName = line.fontFamily ?? "Roboto";
-        const fontSize = 12; // BadgeLine does not expose size
+        const fontSizeLabel = formatLineFontSizeLabel(badge, template, line);
         const textColor = cssColorToHex(line.color ?? "#000000");
 
         const style: string[] = [];
@@ -656,8 +789,10 @@ export const generatePDFAsBlob = async (
         if (line.underline) style.push("Underline");
         const styleText = style.length ? style.join(", ") : "Normal";
 
-        // BadgeLine does not expose alignment
-        const alignText = "Center";
+        const alignText =
+          line.align === "left" || line.align === "right" || line.align === "center"
+            ? line.align.charAt(0).toUpperCase() + line.align.slice(1)
+            : "Center";
 
         const rowY = tableY - (rowIdx + 1) * rowHeight;
         page.drawRectangle({
@@ -690,7 +825,7 @@ export const generatePDFAsBlob = async (
           borderColor: rgb(0, 0, 0),
           borderWidth: 0.5,
         });
-        page.drawText(`Font: ${fontName} ${fontSize}pt (${styleText})`, {
+        page.drawText(`Font: ${fontName} ${fontSizeLabel} (${styleText})`, {
           x: tableX + 5,
           y: fontRowY + 4,
           size: 8,
@@ -759,7 +894,10 @@ export const generatePDFAsBlob = async (
         color: rgb(0, 0, 0),
       });
       rowIdx++;
-      const totalRows = badge.lines.length * 4 + 5;
+      const totalRows =
+        badge.lines.length * 4 +
+        getPdfSpecRows(badge, template, variant).length +
+        1;
       const tableHeight = totalRows * rowHeight;
       const contentHeight = Math.max(imageHeight, tableHeight);
 

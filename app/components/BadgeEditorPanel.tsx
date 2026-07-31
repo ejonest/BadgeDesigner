@@ -948,6 +948,11 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 })()}
                 disabled={!editable}
               />
+              {layoutCharLimitByLine?.[idx] ? (
+                <p className="text-xs text-red-600 mt-1" role="alert">
+                  {AQB_LINE_CHAR_LIMIT_MESSAGE}
+                </p>
+              ) : null}
               <div className="flex flex-col sm:flex-row gap-2 items-center mt-2 min-w-0">
                 <div className="flex flex-wrap gap-2 items-center min-w-0 w-full">
                   {/* Font */}

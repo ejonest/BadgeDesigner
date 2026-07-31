@@ -139,6 +139,7 @@ import {
   renderBadgeToSvgString,
   getEffectiveDesignBox,
   getEffectiveSignTextLayoutForBadge,
+  detachedPlaqueCalibratedIconHasRoom,
 } from "../utils/renderSvg";
 import {
   badgeBackgroundConflictsWithTextColor,
@@ -164,7 +165,10 @@ import {
   plaqueUserLineTextMatchesPlaceholder,
   resolveAttachedPlaqueAwardFormatForRender,
 } from "~/constants/plaqueFormats";
-import { buildPlaqueAwardFormatPreviewBadge } from "~/utils/plaqueAwardFormatPreview";
+import {
+  buildPlaqueAwardFormatPreviewBadge,
+  buildPlaqueLayoutPreviewBadge,
+} from "~/utils/plaqueAwardFormatPreview";
 import {
   getSignLogoPlacementOptionsForTemplate,
   normalizeSignLogoPlacementForTemplate,
@@ -222,6 +226,49 @@ function readImageDimensionsFromFile(
     img.src = url;
   });
 }
+
+/** If logo is still a data URL, upload to Supabase so production always has a durable URL. */
+async function persistBadgeLogoToSupabaseIfNeeded(
+  badge: Badge,
+  designId: string,
+  uploadLogoUrl: string,
+): Promise<Badge> {
+  const src = badge.logo?.src?.trim() ?? "";
+  if (!src || /^https?:\/\//i.test(src) || !src.startsWith("data:")) {
+    return badge;
+  }
+  const res = await fetch(src);
+  const blob = await res.blob();
+  const ext =
+    blob.type === "image/jpeg"
+      ? "jpg"
+      : blob.type === "image/webp"
+        ? "webp"
+        : blob.type === "image/gif"
+          ? "gif"
+          : "png";
+  const file = new File([blob], `user-logo.${ext}`, {
+    type: blob.type || "image/png",
+  });
+  const fd = new FormData();
+  fd.set("designId", designId);
+  fd.set("file", file);
+  const uploadRes = await fetch(uploadLogoUrl, { method: "POST", body: fd });
+  const data = (await uploadRes.json().catch(() => ({}))) as {
+    publicUrl?: string;
+    error?: string;
+  };
+  if (!uploadRes.ok || !data.publicUrl) {
+    throw new Error(data.error || "Could not save uploaded image to library");
+  }
+  return {
+    ...badge,
+    logo: {
+      ...badge.logo!,
+      src: data.publicUrl,
+    },
+  };
+}
 import {
   SIGN_TEXT_MIN_FONT_PX,
   createSignTextMeasure,
@@ -266,6 +313,7 @@ import {
   generateSVGAsBlob,
   generatePrintSVGAsBlob,
 } from "../utils/export";
+import DevExportPreviewPanel from "./DevExportPreviewPanel";
 
 const INITIAL_BADGE = BADGE_CONSTANTS.INITIAL_BADGE;
 
@@ -2262,6 +2310,20 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     return m;
   }, [plaqueAwardFormatPreviewTemplateId, defaultLineShape]);
 
+  const plaqueLayoutPreviewBadges = useMemo(() => {
+    const m = new Map<string, Badge>();
+    for (const opt of PLAQUE_LAYOUT_OPTIONS) {
+      const b = buildPlaqueLayoutPreviewBadge({
+        layoutId: opt.id,
+        templateId: opt.thumbnailTemplateId,
+        defaultLineShape,
+        plateBackgroundHex: PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
+      });
+      if (b) m.set(opt.id, b);
+    }
+    return m;
+  }, [defaultLineShape]);
+
   useEffect(() => {
     if (!plaqueAttachedSelected) setPlaqueAwardFormatsExpanded(false);
   }, [plaqueAttachedSelected]);
@@ -2270,6 +2332,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [signLogoSectionOpen, setSignLogoSectionOpen] = useState(false);
   const [signLogoUploading, setSignLogoUploading] = useState(false);
   const signLogoFileInputRef = useRef<HTMLInputElement | null>(null);
+  /** Detached plaque: line indexes that hit the icon/text room character limit. */
+  const [plaqueIconCharLimitByLine, setPlaqueIconCharLimitByLine] = useState<
+    Record<number, boolean>
+  >({});
   /** True when the selected sign template family has a border trim (Circle/Basic omit the border step). */
   const signBorderStepRequired =
     isSignLikeVariant(variant) &&
@@ -4645,6 +4711,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
     // Text-only: skip `getEffectiveSignTextLayoutForBadge` on each keystroke (expensive on Fancy);
     // sync sizeNorm after idle. Preview still uses lines.text directly.
+    // Detached calibrated icon: always sync immediately so we can enforce room for the icon.
+    const detachedIconNeedsRoomCheck =
+      variant === "plaque" &&
+      !!lineTemplate &&
+      isPlaqueDetachedTemplateId(lineTemplate.id) &&
+      Boolean(badge.logo?.src?.trim()) &&
+      Boolean(lineTemplate.plaqueImageRectPx) &&
+      typeof changes.text !== "undefined";
+
     const debounceSignTextSync =
       signHasLayout &&
       typographyMayNeedSync &&
@@ -4653,7 +4728,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       typeof changes.fontFamily === "undefined" &&
       typeof changes.bold === "undefined" &&
       typeof changes.italic === "undefined" &&
-      Object.keys(changes).length === 1;
+      Object.keys(changes).length === 1 &&
+      !detachedIconNeedsRoomCheck;
 
     let fittedLines: BadgeLine[];
 
@@ -4699,7 +4775,48 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     }
 
     // Apply center-based positioning
-    const centeredLines = calculateCenterPositions(fittedLines);
+    let centeredLines = calculateCenterPositions(fittedLines);
+
+    if (detachedIconNeedsRoomCheck && lineTemplate) {
+      const probeBadge = { ...badge, lines: centeredLines };
+      const hasRoom = detachedPlaqueCalibratedIconHasRoom(
+        lineTemplate,
+        probeBadge,
+      );
+      if (!hasRoom) {
+        const previousText = badge.lines[index]?.text ?? "";
+        const attempted = String(changes.text ?? "");
+        // Keep the longest prefix that still leaves room for the icon.
+        let lo = 0;
+        let hi = attempted.length;
+        let best = previousText;
+        while (lo <= hi) {
+          const mid = Math.floor((lo + hi) / 2);
+          const candidate = attempted.slice(0, mid);
+          const candidateLines = centeredLines.map((line, i) =>
+            i === index ? { ...line, text: candidate } : line,
+          );
+          const candidateBadge = { ...badge, lines: candidateLines };
+          if (detachedPlaqueCalibratedIconHasRoom(lineTemplate, candidateBadge)) {
+            best = candidate;
+            lo = mid + 1;
+          } else {
+            hi = mid - 1;
+          }
+        }
+        centeredLines = centeredLines.map((line, i) =>
+          i === index ? { ...line, text: best } : line,
+        );
+        setPlaqueIconCharLimitByLine((prev) => ({ ...prev, [index]: true }));
+      } else {
+        setPlaqueIconCharLimitByLine((prev) => {
+          if (!prev[index]) return prev;
+          const next = { ...prev };
+          delete next[index];
+          return next;
+        });
+      }
+    }
 
     const nextBadge = { ...badge, lines: centeredLines };
     setBadge(nextBadge);
@@ -6173,16 +6290,41 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         universalTemplateId,
       );
 
+      // Plaque: ensure any data-URL logos are persisted to Supabase before PDF/order assets.
+      let badgesReadyForOrder = allBadgesForSupabase;
+      if (variant === "plaque") {
+        const uploadLogoUrl = designerLibraryApiPaths.uploadLogo;
+        if (uploadLogoUrl) {
+          badgesReadyForOrder = await Promise.all(
+            allBadgesForSupabase.map((b) =>
+              persistBadgeLogoToSupabaseIfNeeded(b, designId, uploadLogoUrl),
+            ),
+          );
+          const changed = badgesReadyForOrder.some(
+            (b, i) => b.logo?.src !== allBadgesForSupabase[i]?.logo?.src,
+          );
+          if (changed) {
+            setMultipleBadges(badgesReadyForOrder);
+            const current = badgesReadyForOrder[selectedBadgeIndex];
+            if (current) setBadge(current);
+          }
+        }
+      }
+
       void runCloudAutosaveNow({
-        multipleBadgesOverride: multipleBadges,
-        badgeOverride: badge,
+        multipleBadgesOverride:
+          variant === "plaque" ? badgesReadyForOrder : multipleBadges,
+        badgeOverride:
+          variant === "plaque"
+            ? badgesReadyForOrder[selectedBadgeIndex] ?? badge
+            : badge,
       });
 
       // Design metadata and files go only to Supabase (no Gadget at add-to-cart). designData is cached in Supabase for link-order when order is paid.
       const designIdForSupabase = designId;
 
       // Start Gadget save in parallel with generation + upload so it doesn't block the critical path
-      const firstBadge = allBadgesForSupabase[0];
+      const firstBadge = badgesReadyForOrder[0];
       const minimalDesignData = {
         designId: designIdForSupabase,
         productId: _productId || "test-product",
@@ -6195,7 +6337,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               backing: firstBadge.backing,
             }
           : undefined,
-        allBadges: allBadgesForSupabase.map((b) => ({
+        allBadges: badgesReadyForOrder.map((b) => ({
           lines: b.lines,
           backgroundColor: b.backgroundColor,
           backing: b.backing,
@@ -6205,9 +6347,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
       // Phase 1: Generate PDF only and show proof modal; add-to-cart completes in onProofConfirm
       const pdfBlob = await generatePDFAsBlob(
-        allBadgesForSupabase[0],
-        allBadgesForSupabase.length > 1
-          ? allBadgesForSupabase.slice(1)
+        badgesReadyForOrder[0],
+        badgesReadyForOrder.length > 1
+          ? badgesReadyForOrder.slice(1)
           : undefined,
         undefined,
         config.labelProduct,
@@ -6217,7 +6359,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         pdfBlob,
         designId,
         designIdForSupabase,
-        allBadgesForSupabase,
+        allBadgesForSupabase: badgesReadyForOrder,
         shopData,
         gadgetPromise,
         shopifyCustomerIdFromUrl,
@@ -7953,17 +8095,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
                       if (variant === "plaque") {
                         return (
-                          <div className="grid grid-cols-2 gap-2 mb-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                             {PLAQUE_LAYOUT_OPTIONS.map((opt) => {
                               const thumbId = opt.thumbnailTemplateId;
-                              const t = templates.find((x) => x.id === thumbId);
-                              const previewSrc =
-                                templatePreviewDataUrls[thumbId] ||
-                                (t?.svgFile != null
-                                  ? t.svgFile.includes(" ")
-                                    ? encodeURI(t.svgFile)
-                                    : t.svgFile
-                                  : "");
+                              const layoutPreviewBadge =
+                                plaqueLayoutPreviewBadges.get(opt.id) ?? null;
                               const parsed =
                                 parsePlaqueTemplateId(universalTemplateId);
                               /** Avoid double highlight during async template load: parsed id lags behind `selectedPlaqueLayoutId`. */
@@ -7976,16 +8112,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                 <div key={opt.id} className="relative">
                                   <button
                                     type="button"
-                                    className={`relative rounded-lg overflow-hidden transition-all w-full border bg-white ${
+                                    className={`flex flex-col gap-1 text-left rounded-lg border p-1.5 transition-colors w-full ${
                                       isSelected
-                                        ? "border-blue-600 ring-2 ring-blue-300 shadow-md"
-                                        : "border-gray-300 hover:border-gray-400"
+                                        ? "border-blue-600 bg-blue-50 ring-2 ring-blue-200"
+                                        : "border-gray-300 bg-white hover:border-gray-400"
                                     }`}
-                                    style={{
-                                      height: "160px",
-                                      display: "flex",
-                                      flexDirection: "column",
-                                    }}
                                     onClick={() => {
                                       setSelectedPlaqueLayoutId(opt.id);
                                       if (multipleBadges.length === 0) {
@@ -8031,39 +8162,31 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                                     }}
                                     title={opt.description}
                                   >
-                                    <div
-                                      className={`text-center py-1 flex-shrink-0 leading-tight ${
-                                        isSelected
-                                          ? "bg-blue-600 text-white"
-                                          : "bg-gray-200 text-gray-700"
-                                      }`}
-                                      style={{
-                                        fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
-                                      }}
-                                    >
-                                      {opt.name}
-                                    </div>
-                                    <div
-                                      className="flex-1 overflow-hidden flex items-center justify-center"
-                                      style={{
-                                        minHeight: 0,
-                                        width: "100%",
-                                        height: "100%",
-                                        padding: "6px",
-                                        boxSizing: "border-box",
-                                      }}
-                                    >
-                                      {previewSrc ? (
-                                        <img
-                                          src={previewSrc}
-                                          alt={opt.name}
-                                          className="object-contain max-w-full max-h-full"
+                                    <div className="w-full overflow-hidden rounded border border-gray-200 bg-slate-100/90 flex items-center justify-center aspect-[4/5] max-h-[176px] min-h-[120px]">
+                                      {layoutPreviewBadge ? (
+                                        <BadgeSvgRenderer
+                                          key={`plaque-layout-thumb-${opt.id}-${thumbId}`}
+                                          variant="plaque"
+                                          badge={layoutPreviewBadge}
+                                          templateId={thumbId}
+                                          height={166}
+                                          className="max-h-[166px]"
                                         />
                                       ) : (
                                         <span className="text-gray-400 text-xs px-1 text-center leading-tight">
                                           {opt.description}
                                         </span>
                                       )}
+                                    </div>
+                                    <div className="px-0.5 pb-0.5">
+                                      <div
+                                        className="font-semibold text-gray-900 leading-tight"
+                                        style={{
+                                          fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
+                                        }}
+                                      >
+                                        {opt.name}
+                                      </div>
                                     </div>
                                   </button>
                                 </div>
@@ -9568,6 +9691,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                           })()
                         : undefined
                     }
+                    layoutCharLimitByLine={
+                      variant === "plaque" ? plaqueIconCharLimitByLine : undefined
+                    }
                   />
                   <div className="flex items-center justify-end">
                     <button
@@ -10071,6 +10197,24 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   : "Add to Cart"}
               </button>
             </div>
+
+            {/* Dev-only: same proof/print/thumbnail assets as add-to-cart */}
+            {(import.meta.env as { DEV?: boolean }).DEV ? (
+              <DevExportPreviewPanel
+                badge={{
+                  ...(badge1Data || badge),
+                  templateId:
+                    (badge1Data || badge).templateId || universalTemplateId,
+                }}
+                activeTemplate={activeTemplate}
+                universalTemplateId={universalTemplateId}
+                variant={variant}
+                fileBasename={
+                  designerId === "badge" ? "badge" : designerId
+                }
+                productLabel={config.labelProduct.toLowerCase()}
+              />
+            ) : null}
 
             {/* Export Options (visible for sign designer for testing; badge when SHOW_EXPORT_OPTIONS) */}
             {(SHOW_EXPORT_OPTIONS || isSignLikeVariant(variant)) && (
