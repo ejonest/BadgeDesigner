@@ -5,9 +5,8 @@
  * ringed by page colour plus a soft drop-shadow ramp. That ring must never
  * reach the parent: it lands on or inside the trim line and prints as a white
  * outline around the badge. So we locate the badge's painted edge, scale the
- * artwork inside it to fill the bleed width, and fill whatever is left over
- * (bleed corners and the top/bottom strips) by mirroring artwork back across
- * the painted edge.
+ * artwork to cover the full bleed rectangle, and trim page AA so it never
+ * prints as a white outline.
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -26,7 +25,7 @@ export const PUBLIC_DIR = join(root, "public/badge-custom-backgrounds");
 /** Page colour is uniform; anything past this delta is shadow or artwork. */
 const PAGE_DELTA = 5;
 /** Extra pixels trimmed past the detected painted edge, for anti-aliasing. */
-const EDGE_SAFETY = 2;
+const EDGE_SAFETY = 7;
 /** Used when a side has too little contrast to find its painted edge. */
 const FALLBACK_RAMP = 14;
 /** Real artwork must reach at least this far past the die on the short axis. */
@@ -203,48 +202,140 @@ export function signedDistanceRoundedRect(x, y, w, h, r) {
   );
 }
 
-/** Reflect a bleed pixel across the closest painted rounded-rect edge. */
-function mirrorInside(x, y, w, h, r) {
-  if (x >= r && x <= w - 1 - r) {
-    return [x, y < 0 ? -y : 2 * (h - 1) - y];
+/**
+ * Replace isolated warm/bright fringe rows (die AA) near the top/bottom of
+ * the bleed with the average of the rows above and below.
+ */
+function healBrightRimRows(buf, W, H) {
+  const candidates = new Set();
+  for (let y = 0; y < 12; y++) {
+    candidates.add(y);
+    candidates.add(H - 1 - y);
   }
-  if (y >= r && y <= h - 1 - r) {
-    return [x < 0 ? -x : 2 * (w - 1) - x, y];
+  for (const y of candidates) {
+    if (y < 1 || y >= H - 1) continue;
+    let bright = 0;
+    let n = 0;
+    for (let x = Math.floor(W * 0.08); x < Math.floor(W * 0.92); x++) {
+      const i = (y * W + x) * 3;
+      const r = buf[i];
+      const g = buf[i + 1];
+      const b = buf[i + 2];
+      const L = (r + g + b) / 3;
+      n++;
+      if (L > 195 && r > b + 10) bright++;
+    }
+    if (bright < n * 0.35) continue;
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 3;
+      const above = ((y - 1) * W + x) * 3;
+      const below = ((y + 1) * W + x) * 3;
+      buf[i] = Math.round((buf[above] + buf[below]) / 2);
+      buf[i + 1] = Math.round((buf[above + 1] + buf[below + 1]) / 2);
+      buf[i + 2] = Math.round((buf[above + 2] + buf[below + 2]) / 2);
+    }
   }
-  const cx = x < r ? r : w - 1 - r;
-  const cy = y < r ? r : h - 1 - r;
-  const vx = x - cx;
-  const vy = y - cy;
-  const distance = Math.hypot(vx, vy) || 1;
-  const mirrored = Math.max(1, 2 * r - distance);
-  return [cx + (vx / distance) * mirrored, cy + (vy / distance) * mirrored];
 }
 
-function sampleBilinear(data, width, height, x, y) {
-  const cx = Math.max(0, Math.min(width - 1, x));
-  const cy = Math.max(0, Math.min(height - 1, y));
-  const x0 = Math.floor(cx);
-  const y0 = Math.floor(cy);
-  const x1 = Math.min(width - 1, x0 + 1);
-  const y1 = Math.min(height - 1, y0 + 1);
-  const fx = cx - x0;
-  const fy = cy - y0;
-  const out = [0, 0, 0];
-  for (let c = 0; c < 3; c++) {
-    const top =
-      data[(y0 * width + x0) * 3 + c] * (1 - fx) +
-      data[(y0 * width + x1) * 3 + c] * fx;
-    const bottom =
-      data[(y1 * width + x0) * 3 + c] * (1 - fx) +
-      data[(y1 * width + x1) * 3 + c] * fx;
-    out[c] = Math.round(top * (1 - fy) + bottom * fy);
+/** Replace a darker 1px hairline on the outer edge with the next interior row. */
+function healEdgeHairline(buf, W, H) {
+  for (const y of [0, H - 1]) {
+    const yIn = y === 0 ? 1 : H - 2;
+    let deltaSum = 0;
+    let n = 0;
+    for (let x = Math.floor(W * 0.1); x < Math.floor(W * 0.9); x++) {
+      const i = (y * W + x) * 3;
+      const j = (yIn * W + x) * 3;
+      const L0 = (buf[i] + buf[i + 1] + buf[i + 2]) / 3;
+      const L1 = (buf[j] + buf[j + 1] + buf[j + 2]) / 3;
+      deltaSum += L1 - L0;
+      n++;
+    }
+    if (n < 1 || deltaSum / n < 4) continue;
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 3;
+      const j = (yIn * W + x) * 3;
+      buf[i] = buf[j];
+      buf[i + 1] = buf[j + 1];
+      buf[i + 2] = buf[j + 2];
+    }
   }
-  return out;
+}
+
+/**
+ * Die-edge AA often leaves 1–3 pale rows at the top/bottom of the extract.
+ * Replace any band brighter than its interior neighbour with that neighbour.
+ */
+function healPaleEdgeBands(buf, W, H, maxDepth = 5) {
+  for (const fromTop of [true, false]) {
+    for (let depth = 0; depth < maxDepth; depth++) {
+      const y = fromTop ? depth : H - 1 - depth;
+      const yRef = fromTop
+        ? Math.min(H - 1, depth + 4)
+        : Math.max(0, H - 1 - depth - 4);
+      if (y === yRef) continue;
+      let sumY = 0;
+      let sumRef = 0;
+      let n = 0;
+      for (let x = Math.floor(W * 0.1); x < Math.floor(W * 0.9); x++) {
+        const i = (y * W + x) * 3;
+        const j = (yRef * W + x) * 3;
+        sumY += (buf[i] + buf[i + 1] + buf[i + 2]) / 3;
+        sumRef += (buf[j] + buf[j + 1] + buf[j + 2]) / 3;
+        n++;
+      }
+      if (n < 1 || sumY / n < sumRef / n + 10) continue;
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 3;
+        const j = (yRef * W + x) * 3;
+        buf[i] = buf[j];
+        buf[i + 1] = buf[j + 1];
+        buf[i + 2] = buf[j + 2];
+      }
+    }
+  }
+}
+
+/**
+ * Fill AABB corner crescents that are still page-white. Real artwork near the
+ * die arc (including soft sand/sky) is left alone so we don't leave a curved seam.
+ */
+function cleanRoundedRectCrescents(buf, w, h, radius) {
+  const r = Math.max(
+    1,
+    Math.min(Math.round(radius), Math.floor(Math.min(w, h) / 2) - 1),
+  );
+  const margin = Math.min(r, Math.max(18, Math.round(r * 0.35)));
+  const src = Buffer.from(buf);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      // Include a couple px of AA just inside the arc.
+      if (signedDistanceRoundedRect(x, y, w, h, r) < -2) continue;
+      const di = (y * w + x) * 3;
+      const rC = src[di];
+      const gC = src[di + 1];
+      const bC = src[di + 2];
+      const L = (rC + gC + bC) / 3;
+      const chroma = Math.max(rC, gC, bC) - Math.min(rC, gC, bC);
+      // Page / soft AA: bright and low-chroma (not blue sky, not warm sand grain).
+      // Sky is chromatic blue; page is near-neutral.
+      if (L < 200 || chroma > 28) continue;
+      if (bC > rC + 15 && bC > gC + 5) continue; // sky
+      const sx = Math.max(margin, Math.min(w - 1 - margin, x));
+      const sy = Math.max(margin, Math.min(h - 1 - margin, y));
+      const si = (sy * w + sx) * 3;
+      buf[di] = src[si];
+      buf[di + 1] = src[si + 1];
+      buf[di + 2] = src[si + 2];
+    }
+  }
 }
 
 /**
  * Build a bleed-sized parent whose every pixel is badge artwork.
- * Returns the PNG plus the geometry report used to verify the trim area.
+ * Cleans page crescents from the painted AABB, then scales to cover the full
+ * bleed rectangle (no mirrored overhang). Returns the PNG plus a geometry
+ * report for the trim.
  */
 export async function buildParentFromMockup({ sourcePath, crop, templateId }) {
   const sizes = sizesForTemplate(templateId);
@@ -274,23 +365,37 @@ export async function buildParentFromMockup({ sourcePath, crop, templateId }) {
     badge.rect.height += up + down;
   }
 
-  // Scale to the bleed width, which is what puts real art past the left and
-  // right trim. The bleed rectangle is a squarer aspect than the die, so the
-  // face never fills it vertically and the leftover strips are extended art —
-  // fine, as long as the face still covers the die itself with a margin.
+  const extracted = await sharp(sourcePath)
+    .extract(badge.rect)
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  cleanRoundedRectCrescents(
+    extracted.data,
+    extracted.info.width,
+    extracted.info.height,
+    badge.radius,
+  );
+
+  // Cover the full bleed so every pixel is real artwork — no corner extend.
   const scale = Math.max(
     sizes.bleedW / badge.rect.width,
+    sizes.bleedH / badge.rect.height,
     (sizes.dieH + DIE_COVER_MARGIN * 2) / badge.rect.height,
   );
   const faceW = Math.round(badge.rect.width * scale);
   const faceH = Math.round(badge.rect.height * scale);
-  const faceRadius = badge.radius * scale;
   const offsetX = Math.round((sizes.bleedW - faceW) / 2);
   const offsetY = Math.round((sizes.bleedH - faceH) / 2);
 
   const face = (
-    await sharp(sourcePath)
-      .extract(badge.rect)
+    await sharp(extracted.data, {
+      raw: {
+        width: extracted.info.width,
+        height: extracted.info.height,
+        channels: 3,
+      },
+    })
       .resize(faceW, faceH, { fit: "fill", kernel: sharp.kernel.lanczos3 })
       .removeAlpha()
       .raw()
@@ -298,29 +403,23 @@ export async function buildParentFromMockup({ sourcePath, crop, templateId }) {
   ).data;
 
   const parent = Buffer.alloc(sizes.bleedW * sizes.bleedH * 3);
-  let mirrored = 0;
   for (let py = 0; py < sizes.bleedH; py++) {
     for (let px = 0; px < sizes.bleedW; px++) {
-      const fx = px - offsetX;
-      const fy = py - offsetY;
-      let colour;
-      if (signedDistanceRoundedRect(fx, fy, faceW, faceH, faceRadius) < 0) {
-        const i = (fy * faceW + fx) * 3;
-        colour = [face[i], face[i + 1], face[i + 2]];
-      } else {
-        const [sx, sy] = mirrorInside(fx, fy, faceW, faceH, faceRadius);
-        colour = sampleBilinear(face, faceW, faceH, sx, sy);
-        mirrored++;
-      }
-      const index = (py * sizes.bleedW + px) * 3;
-      parent[index] = colour[0];
-      parent[index + 1] = colour[1];
-      parent[index + 2] = colour[2];
+      const fx = Math.max(0, Math.min(faceW - 1, px - offsetX));
+      const fy = Math.max(0, Math.min(faceH - 1, py - offsetY));
+      const si = (fy * faceW + fx) * 3;
+      const di = (py * sizes.bleedW + px) * 3;
+      parent[di] = face[si];
+      parent[di + 1] = face[si + 1];
+      parent[di + 2] = face[si + 2];
     }
   }
 
-  // The trim area must be real artwork end to end: measure how far the painted
-  // edge clears the die outline at its tightest point.
+  healBrightRimRows(parent, sizes.bleedW, sizes.bleedH);
+  healEdgeHairline(parent, sizes.bleedW, sizes.bleedH);
+  healPaleEdgeBands(parent, sizes.bleedW, sizes.bleedH);
+
+  // Clearance is the pad (face covers the bleed).
   let clearance = Infinity;
   for (let dieY = 0; dieY < sizes.dieH; dieY++) {
     for (let dieX = 0; dieX < sizes.dieW; dieX++) {
@@ -333,16 +432,9 @@ export async function buildParentFromMockup({ sourcePath, crop, templateId }) {
           sizes.radiusPx,
         ) < 0;
       if (!inDie) continue;
-      clearance = Math.min(
-        clearance,
-        -signedDistanceRoundedRect(
-          dieX + sizes.pad - offsetX,
-          dieY + sizes.pad - offsetY,
-          faceW,
-          faceH,
-          faceRadius,
-        ),
-      );
+      const bx = dieX + sizes.pad;
+      const by = dieY + sizes.pad;
+      clearance = Math.min(bx, by, sizes.bleedW - 1 - bx, sizes.bleedH - 1 - by);
     }
   }
 
@@ -363,9 +455,7 @@ export async function buildParentFromMockup({ sourcePath, crop, templateId }) {
       faceH,
       offsetX,
       offsetY,
-      mirroredShare: Number(
-        (mirrored / (sizes.bleedW * sizes.bleedH)).toFixed(4),
-      ),
+      extendedShare: 0,
       trimClearancePx: Number(clearance.toFixed(1)),
     },
   };
