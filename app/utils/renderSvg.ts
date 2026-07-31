@@ -246,53 +246,6 @@ function isBadgePrintProductionTemplate(template: LoadedTemplate): boolean {
 }
 
 /**
- * Die outline drawn into photo-space badgeFaceRect (same coords as proof artwork).
- */
-function renderPrintDieOutlineInFaceRect(
-  template: LoadedTemplate,
-  face: { x: number; y: number; width: number; height: number },
-  strokeWidth: string,
-): string {
-  const source =
-    template.innerElement?.trim() || template.outlineElement?.trim() || "";
-  if (!source || !(template.widthPx > 0) || !(template.heightPx > 0)) {
-    return `<rect x="${face.x}" y="${face.y}" width="${face.width}" height="${face.height}" fill="none" stroke="#111111" stroke-width="${strokeWidth}" />`;
-  }
-  const scale = Math.min(
-    face.width / template.widthPx,
-    face.height / template.heightPx,
-  );
-  const ox = face.x + (face.width - template.widthPx * scale) / 2;
-  const oy = face.y + (face.height - template.heightPx * scale) / 2;
-  const outline = prepareElementForOutline(
-    source,
-    "none",
-    "#111111",
-    strokeWidth,
-    false,
-  );
-  return `<g transform="translate(${ox}, ${oy}) scale(${scale})">${outline}</g>`;
-}
-
-function renderPrintDieOutlineInDieSpace(
-  template: LoadedTemplate,
-  strokeWidth: string,
-): string {
-  const source =
-    template.outlineElement?.trim() || template.innerElement?.trim() || "";
-  if (!source) {
-    return `<rect x="0" y="0" width="${template.widthPx}" height="${template.heightPx}" fill="none" stroke="#111111" stroke-width="${strokeWidth}" />`;
-  }
-  return prepareElementForOutline(
-    source,
-    "none",
-    "#111111",
-    strokeWidth,
-    false,
-  );
-}
-
-/**
  * Production print SVG: physical die + 0.1″ bleed, plate color and/or custom
  * background, plus text + icons.
  *
@@ -344,8 +297,6 @@ function renderBadgePrintProductionSvg(
       ? `<style type="text/css">${fontDefs.join("\n")}</style>`
       : "";
 
-  const outlineWidth = opts.outlineStrokeWidth ?? "1.5";
-
   let layers = "";
   if (photo && customEntry) {
     const face = photo.badgeFaceRect;
@@ -387,14 +338,11 @@ function renderBadgePrintProductionSvg(
       .join("");
     const textClipRect = buildRectClipPathMarkup(designBox);
     const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
-    const dieOutline = renderPrintDieOutlineInFaceRect(
-      template,
-      face,
-      outlineWidth,
-    );
 
     // Face → die (inset by bleed). Bleed PNG is built so its center face
     // region maps 1:1 onto this die when the image fills 0..W × 0..H.
+    // No die outline stroke — that would print; the QA panel draws its own
+    // magenta trim guide over the preview only.
     const sx = dieW / face.width;
     const sy = dieH / face.height;
     const dieContentTransform = `translate(${bleedPad}, ${bleedPad}) scale(${sx}, ${sy}) translate(${-face.x}, ${-face.y})`;
@@ -414,7 +362,6 @@ function renderBadgePrintProductionSvg(
     </clipPath>
   </defs>
   <g transform="${dieContentTransform}">
-    ${dieOutline}
     ${badgeIconLayer}
     ${text}
   </g>`;
@@ -454,7 +401,6 @@ function renderBadgePrintProductionSvg(
       .join("");
     const textClipRect = buildRectClipPathMarkup(designBox);
     const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
-    const dieOutline = renderPrintDieOutlineInDieSpace(template, outlineWidth);
     layers = `
   <defs>
     <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
@@ -465,7 +411,6 @@ function renderBadgePrintProductionSvg(
     <rect x="0" y="0" width="${dieW}" height="${dieH}" fill="${esc(
       plateColor,
     )}" />
-    ${dieOutline}
     ${badgeIconLayer}
     ${text}
   </g>`;

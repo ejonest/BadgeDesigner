@@ -22,6 +22,14 @@ export type AddMultipleDesignerCopy = {
   addMultipleHelpParagraph: string;
 };
 
+export type AddMultipleCopyOptions = {
+  /**
+   * Plaque attached plate: CSV rows must have exactly `maxLines` columns
+   * (min and max). Detached / other designers keep “up to maxLines”.
+   */
+  exactLineCount?: boolean;
+};
+
 function badgeAddMultipleCopy(maxLines: number): AddMultipleDesignerCopy {
   const csvExampleRows =
     maxLines <= 2
@@ -66,24 +74,41 @@ function signAddMultipleCopy(maxLines: number): AddMultipleDesignerCopy {
   };
 }
 
-function plaqueAddMultipleCopy(maxLines: number): AddMultipleDesignerCopy {
+function plaqueAddMultipleCopy(
+  maxLines: number,
+  exactLineCount?: boolean,
+): AddMultipleDesignerCopy {
+  const lineRule = exactLineCount
+    ? `4. Each row must have exactly ${maxLines} text lines (comma-separated).`
+    : `4. Add up to ${maxLines} text lines per row.`;
+  const csvExampleRows = exactLineCount
+    ? [
+        "Name,Title,Organization,Year",
+        "Sarah Chen,Director of Operations,Acme Corp,2026",
+        "James Patel,Employee of the Year,North Division,2026",
+        "Maria Santos,25 Years of Service,Acme Corp,1999-2026",
+      ]
+    : [
+        "Name,Title,Date",
+        "Sarah Chen,Director of Operations,May 2026",
+        "James Patel,Employee of the Year,December 2026",
+        "Maria Santos,25 Years of Service,1999 - 2026",
+      ];
   return {
     csvModalSteps: [
       "1. You can upload a CSV file or paste CSV data below.",
       "2. Each row should represent one plaque.",
       "3. Use a comma (,) between each line of text on the plaque.",
-      `4. Add up to ${maxLines} text lines per row.`,
+      lineRule,
       "5. Add as many rows as you want.",
     ],
-    csvExampleRows: [
-      "Name,Title,Date",
-      "Sarah Chen,Director of Operations,May 2026",
-      "James Patel,Employee of the Year,December 2026",
-      "Maria Santos,25 Years of Service,1999 - 2026",
-    ],
-    csvTextareaPlaceholder: "Paste CSV data here...",
-    addMultipleHelpParagraph:
-      "You can upload a comma-separated CSV with up to {maxLines} entries per row, with each row becoming its own plaque. Don't have a file? Use the dialog box to add plaques directly in the same format.",
+    csvExampleRows,
+    csvTextareaPlaceholder: exactLineCount
+      ? `Paste CSV data here (exactly ${maxLines} fields per row)...`
+      : "Paste CSV data here...",
+    addMultipleHelpParagraph: exactLineCount
+      ? "You can upload a comma-separated CSV with exactly {maxLines} entries per row (required for attached plates), with each row becoming its own plaque. Don't have a file? Use the dialog box to add plaques directly in the same format."
+      : "You can upload a comma-separated CSV with up to {maxLines} entries per row, with each row becoming its own plaque. Don't have a file? Use the dialog box to add plaques directly in the same format.",
   };
 }
 
@@ -91,10 +116,12 @@ function plaqueAddMultipleCopy(maxLines: number): AddMultipleDesignerCopy {
 export function getAddMultipleDesignerCopy(
   variant: DesignerVariant,
   maxLines: number,
+  options?: AddMultipleCopyOptions,
 ): AddMultipleDesignerCopy {
+  const exact = Boolean(options?.exactLineCount);
   const base =
     variant === "plaque"
-      ? plaqueAddMultipleCopy(maxLines)
+      ? plaqueAddMultipleCopy(maxLines, exact)
       : isSignLikeVariant(variant) || isDeskSignVariant(variant)
         ? signAddMultipleCopy(maxLines)
         : badgeAddMultipleCopy(maxLines);
