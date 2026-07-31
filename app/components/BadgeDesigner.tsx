@@ -2520,6 +2520,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
   const [draftSaveTrigger, setDraftSaveTrigger] = useState(0);
   /** When set, addToCart waits for this promise so draft rows exist before finalize-draft. */
   const draftSaveInProgressRef = useRef<Promise<void> | null>(null);
+  /** Bumped on each draft-save request so older in-flight saves skip their POST (avoids deleting newer multi lines). */
+  const draftSaveGenerationRef = useRef(0);
   /** Set when proof modal is open; holds data needed to complete add-to-cart on confirm. */
   const proofPendingAddToCartRef = useRef<ProofPendingPayload | null>(null);
   /** True after the user edits line text this session (enables text-idle cloud autosave). */
@@ -3884,164 +3886,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     config.hasBacking,
   ]);
 
-  // Debounced draft save: only when stepsComplete, triggered by draftSaveTrigger (section close / apply-to-all / selectBadge)
-  const DRAFT_SAVE_DEBOUNCE_MS = 800;
   const activeTemplateRef = useRef(activeTemplate);
   activeTemplateRef.current = activeTemplate;
-  useEffect(() => {
-    if (!stepsComplete || !activeTemplateRef.current) return;
-    if (!sessionDesignIdRef.current) {
-      sessionDesignIdRef.current = `design_${Date.now()}_${Math.random()
-        .toString(36)
-        .slice(2, 11)}`;
-    }
-    const designId = sessionDesignIdRef.current;
 
-    const timer = setTimeout(async () => {
-      const multipleBadgesSnap = multipleBadgesRef.current;
-      const badgeSnap = badgeRef.current;
-      const selectedIdx = selectedBadgeIndexRef.current;
-      const universalId = universalTemplateIdRef.current;
-      const activeT = activeTemplateRef.current;
-      if (!activeT || multipleBadgesSnap.length === 0) return;
-
-      const finalized = [...multipleBadgesSnap];
-      if (finalized[selectedIdx]) {
-        finalized[selectedIdx] = {
-          ...badgeSnap,
-          templateId: badgeSnap.templateId || universalId,
-          backgroundColor: badgeSnap.backgroundColor || "#FFFFFF",
-        };
-      }
-      const allBadgesForDraft = getAllBadges(finalized);
-      if (allBadgesForDraft.length === 0) return;
-
-      try {
-        const templateId =
-          activeT?.id || allBadgesForDraft[0]?.templateId || "rect-1x3";
-        const template = await loadTemplateById(templateId, variant);
-        if (!template) {
-          console.warn(
-            "[BadgeDesigner] Draft save: template not loaded for",
-            templateId,
-          );
-          return;
-        }
-
-        const badgePromises = allBadgesForDraft.map((b, i) =>
-          Promise.all([
-            generateFullBadgeImage(b, variant).then(dataURLToBlob),
-            generateSVGAsBlob(b, template, variant),
-            generatePrintSVGAsBlob(b, template, variant),
-          ])
-            .then(([pngBlob, svgBlob, printSvgBlob]) => ({
-              pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
-              svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
-              printSvgBlob:
-                printSvgBlob && printSvgBlob.size > 0 ? printSvgBlob : new Blob(),
-              i,
-            }))
-            .catch((err) => {
-              console.warn(
-                "[BadgeDesigner] Draft save: badge",
-                i,
-                "PNG/SVG failed",
-                err,
-              );
-              return {
-                pngBlob: new Blob(),
-                svgBlob: new Blob(),
-                printSvgBlob: new Blob(),
-                i,
-              };
-            }),
-        );
-        const badgeResults = await Promise.all(badgePromises);
-        badgeResults.sort((a, b) => a.i - b.i);
-        const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
-        const svgBlobs = badgeResults.map((r) => r.svgBlob);
-        const printSvgBlobs = badgeResults.map((r) => r.printSvgBlob);
-
-        const designDataForDraft = {
-          badge: allBadgesForDraft[0],
-          multipleBadges:
-            allBadgesForDraft.length > 1 ? allBadgesForDraft.slice(1) : [],
-          allBadges: allBadgesForDraft,
-          timestamp: new Date().toISOString(),
-          shopId: "test-shop",
-          productId: _productId || "test-product",
-          backgroundColor: allBadgesForDraft[0].backgroundColor,
-          backingType: allBadgesForDraft[0].backing,
-        };
-        const formData = new FormData();
-        formData.append("designId", designId);
-        formData.append("designData", JSON.stringify(designDataForDraft));
-        const shopifyCustomerIdFromUrl =
-          typeof window !== "undefined"
-            ? new URLSearchParams(window.location.search).get("customerId")
-            : null;
-        if (shopifyCustomerIdFromUrl)
-          formData.append("shopifyCustomerId", shopifyCustomerIdFromUrl);
-        thumbnailPngBlobs.forEach((pngBlob, index) => {
-          if (pngBlob?.size > 0)
-            formData.append(
-              `thumbnail_png_${index}`,
-              pngBlob,
-              `badge-${index}-thumbnail.png`,
-            );
-        });
-        svgBlobs.forEach((svgBlob, index) => {
-          if (svgBlob?.size > 0)
-            formData.append(
-              `svg_${index}`,
-              svgBlob,
-              `badge-${index}-design.svg`,
-            );
-        });
-        printSvgBlobs.forEach((printSvgBlob, index) => {
-          if (printSvgBlob?.size > 0)
-            formData.append(
-              `print_svg_${index}`,
-              printSvgBlob,
-              `badge-${index}-print.svg`,
-            );
-        });
-
-        const res = await fetch(designerApiPaths.saveDraft, {
-          method: "POST",
-          body: formData,
-        });
-        if (res.ok) {
-          const data = await res.json().catch(() => ({}));
-          if (data.savedCount)
-            console.log(
-              "[BadgeDesigner] Draft save OK:",
-              designId,
-              "badges:",
-              data.savedCount,
-            );
-        } else {
-          console.warn(
-            "[BadgeDesigner] Draft save failed:",
-            res.status,
-            await res.text(),
-          );
-        }
-      } catch (err) {
-        console.warn("[BadgeDesigner] Draft save error:", err);
-      }
-    }, DRAFT_SAVE_DEBOUNCE_MS);
-
-    return () => clearTimeout(timer);
-  }, [
-    draftSaveTrigger,
-    stepsComplete,
-    _productId,
-    designerApiPaths.saveDraft,
-    variant,
-  ]);
-
-  /** Run draft save immediately for the given badges (e.g. after CSV override/add). Shows generating spinner over badges. */
+  /**
+   * Persist order-item draft rows (thumbnails + SVGs) for every badge in the list.
+   * Serialized + generation-gated so a stale 1-item save cannot delete newer multi lines.
+   */
   const runDraftSaveForBadges = useCallback(
     async (allBadges: Badge[]) => {
       if (!allBadges?.length || !activeTemplateRef.current) return;
@@ -4051,39 +3902,49 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           .slice(2, 11)}`;
       }
       const designId = sessionDesignIdRef.current;
-      const promise = (async () => {
-        const activeT = activeTemplateRef.current;
-        const normalized = getAllBadges(allBadges);
-        if (normalized.length === 0) return;
+      const generation = ++draftSaveGenerationRef.current;
+      const normalized = getAllBadges(allBadges);
+      if (normalized.length === 0) return;
 
+      const runOne = async () => {
+        if (generation !== draftSaveGenerationRef.current) return;
         setIsGeneratingDesigns(true);
         try {
-          const templateId =
-            activeT?.id || normalized[0]?.templateId || "rect-1x3";
-          const template = await loadTemplateById(templateId, variant);
-          if (!template) {
-            console.warn(
-              "[BadgeDesigner] runDraftSaveForBadges: template not loaded for",
-              templateId,
-            );
-            return;
-          }
           const badgePromises = normalized.map((b, i) =>
-            Promise.all([
-              generateFullBadgeImage(b, variant).then(dataURLToBlob),
-              generateSVGAsBlob(b, template, variant),
-              generatePrintSVGAsBlob(b, template, variant),
-            ])
-              .then(([pngBlob, svgBlob, printSvgBlob]) => ({
-                pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
-                svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
-                printSvgBlob:
-                  printSvgBlob && printSvgBlob.size > 0
-                    ? printSvgBlob
-                    : new Blob(),
-                i,
-              }))
-              .catch((err) => {
+            (async () => {
+              const templateIdForBadge =
+                b.templateId ||
+                activeTemplateRef.current?.id ||
+                (isSignLikeVariant(variant) ? "circle-4x4" : "rect-1x3");
+              const tmpl = await loadTemplateById(templateIdForBadge, variant);
+              if (!tmpl) {
+                console.warn(
+                  "[BadgeDesigner] runDraftSaveForBadges: template missing",
+                  templateIdForBadge,
+                );
+                return {
+                  pngBlob: new Blob(),
+                  svgBlob: new Blob(),
+                  printSvgBlob: new Blob(),
+                  i,
+                };
+              }
+              try {
+                const [pngBlob, svgBlob, printSvgBlob] = await Promise.all([
+                  generateFullBadgeImage(b, variant).then(dataURLToBlob),
+                  generateSVGAsBlob(b, tmpl, variant),
+                  generatePrintSVGAsBlob(b, tmpl, variant),
+                ]);
+                return {
+                  pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
+                  svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
+                  printSvgBlob:
+                    printSvgBlob && printSvgBlob.size > 0
+                      ? printSvgBlob
+                      : new Blob(),
+                  i,
+                };
+              } catch (err) {
                 console.warn(
                   "[BadgeDesigner] runDraftSaveForBadges: badge",
                   i,
@@ -4096,9 +3957,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   printSvgBlob: new Blob(),
                   i,
                 };
-              }),
+              }
+            })(),
           );
           const badgeResults = await Promise.all(badgePromises);
+          if (generation !== draftSaveGenerationRef.current) return;
           badgeResults.sort((a, b) => a.i - b.i);
           const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
           const svgBlobs = badgeResults.map((r) => r.svgBlob);
@@ -4116,6 +3979,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           const formData = new FormData();
           formData.append("designId", designId);
           formData.append("designData", JSON.stringify(designDataForDraft));
+          formData.append("draftGeneration", String(generation));
+          formData.append("badgeCount", String(normalized.length));
           const shopifyCustomerIdFromUrl =
             typeof window !== "undefined"
               ? new URLSearchParams(window.location.search).get("customerId")
@@ -4146,6 +4011,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 `badge-${index}-print.svg`,
               );
           });
+          if (generation !== draftSaveGenerationRef.current) return;
           const res = await fetch(designerApiPaths.saveDraft, {
             method: "POST",
             body: formData,
@@ -4169,14 +4035,52 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         } catch (err) {
           console.warn("[BadgeDesigner] runDraftSaveForBadges error:", err);
         } finally {
-          setIsGeneratingDesigns(false);
+          if (generation === draftSaveGenerationRef.current) {
+            setIsGeneratingDesigns(false);
+          }
+        }
+      };
+
+      const prev = draftSaveInProgressRef.current;
+      const promise = (prev ?? Promise.resolve())
+        .catch(() => undefined)
+        .then(runOne);
+      draftSaveInProgressRef.current = promise;
+      try {
+        await promise;
+      } finally {
+        if (draftSaveInProgressRef.current === promise) {
           draftSaveInProgressRef.current = null;
         }
-      })();
-      draftSaveInProgressRef.current = promise;
+      }
     },
     [_productId, designerApiPaths.saveDraft, variant],
   );
+
+  // Debounced draft save: only when stepsComplete, triggered by draftSaveTrigger (section close / apply-to-all / selectBadge)
+  const DRAFT_SAVE_DEBOUNCE_MS = 800;
+  useEffect(() => {
+    if (!stepsComplete || !activeTemplateRef.current) return;
+    const timer = setTimeout(() => {
+      const multipleBadgesSnap = multipleBadgesRef.current;
+      const badgeSnap = badgeRef.current;
+      const selectedIdx = selectedBadgeIndexRef.current;
+      const universalId = universalTemplateIdRef.current;
+      if (multipleBadgesSnap.length === 0) return;
+
+      const finalized = [...multipleBadgesSnap];
+      if (finalized[selectedIdx]) {
+        finalized[selectedIdx] = {
+          ...badgeSnap,
+          templateId: badgeSnap.templateId || universalId,
+          backgroundColor: badgeSnap.backgroundColor || "#FFFFFF",
+        };
+      }
+      void runDraftSaveForBadges(getAllBadges(finalized));
+    }, DRAFT_SAVE_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [draftSaveTrigger, stepsComplete, runDraftSaveForBadges]);
 
   const touchStartX = React.useRef<number>(0);
 
@@ -5404,7 +5308,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     if (newMultipleBadges[0]) {
       setBadge1Data(newMultipleBadges[0]);
     }
-    setDraftSaveTrigger((t) => t + 1);
+    void runDraftSaveForBadges(newMultipleBadges);
+    const runCloud = runCloudAutosaveNowRef.current;
+    if (runCloud) {
+      void runCloud({
+        multipleBadgesOverride: newMultipleBadges,
+        badgeOverride: badgeToLoad,
+      });
+    }
   };
 
   /** Insert a full copy of the badge at `index` immediately after it; select the new copy. */
@@ -5434,8 +5345,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     openEnterTextSectionOnly();
     setBadge(dupBadge);
     if (newMultiple[0]) setBadge1Data(newMultiple[0]);
-    setDraftSaveTrigger((t) => t + 1);
-    runDraftSaveForBadges(newMultiple);
+    // Single draft save (do not also bump draftSaveTrigger — concurrent stale saves deleted extra lines).
+    void runDraftSaveForBadges(newMultiple);
+    const runCloud = runCloudAutosaveNowRef.current;
+    if (runCloud) {
+      void runCloud({
+        multipleBadgesOverride: newMultiple,
+        badgeOverride: dupBadge,
+      });
+    }
   };
 
   const duplicateCurrentBadge = () => {
@@ -6267,6 +6185,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       if (draftSaveInProgressRef.current) {
         await draftSaveInProgressRef.current;
       }
+      // Invalidate any draft save that starts while proof/cart is in progress.
+      draftSaveGenerationRef.current += 1;
       const shopData = getCurrentShop(_shop);
       if (!shopData) {
         alert("Shop information not found. Please reload the page.");
@@ -6583,6 +6503,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
     setIsAddingToCart(true);
     try {
+      if (draftSaveInProgressRef.current) {
+        await draftSaveInProgressRef.current;
+      }
+      draftSaveGenerationRef.current += 1;
       let thumbnailUrls: string[] = [];
       let pdfUrlForCart: string | undefined;
       let usedFinalize = false;

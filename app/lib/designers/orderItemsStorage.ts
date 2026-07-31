@@ -208,18 +208,69 @@ export async function saveDesignerOrderItems(
   if (!supabaseAdmin) {
     throw new Error("Supabase is not configured.");
   }
-  const itemsToInsert = items.map((item) => ({
-    ...rowPayload(item, def),
-    created_at: item.created_at || getPacificTimestamp(),
-    updated_at: getPacificTimestamp(),
-  }));
-  const { data, error } = await supabaseAdmin
-    .from(def.orderItemsTable)
-    .upsert(itemsToInsert, {
-      onConflict: def.upsertOnConflict,
-      ignoreDuplicates: false,
-    })
-    .select();
+  if (!items.length) return [];
+
+  const buildRows = (includePrintSvg: boolean) =>
+    items.map((item) => {
+      const payload = rowPayload(item, def);
+      if (!includePrintSvg) {
+        delete payload.print_svg_url;
+      }
+      return {
+        ...payload,
+        created_at: item.created_at || getPacificTimestamp(),
+        updated_at: getPacificTimestamp(),
+      };
+    });
+
+  const tryUpsert = async (includePrintSvg: boolean) => {
+    const client = supabaseAdmin!;
+    const itemsToInsert = buildRows(includePrintSvg);
+    return client
+      .from(def.orderItemsTable)
+      .upsert(itemsToInsert, {
+        onConflict: def.upsertOnConflict,
+        ignoreDuplicates: false,
+      })
+      .select();
+  };
+
+  let includePrint = INCLUDE_PRINT_SVG_URL_IN_DB;
+  let { data, error } = await tryUpsert(includePrint);
+
+  if (
+    error &&
+    includePrint &&
+    /print_svg_url/i.test(error.message || "") &&
+    /column|schema cache|Could not find/i.test(error.message || "")
+  ) {
+    console.warn(
+      "saveDesignerOrderItems: print_svg_url column missing; retrying without it",
+    );
+    includePrint = false;
+    ({ data, error } = await tryUpsert(false));
+  }
+
+  if (error && /no unique|ON CONFLICT/i.test(error.message || "")) {
+    console.warn(
+      "saveDesignerOrderItems: upsert conflict target missing; falling back to delete+insert",
+    );
+    const designId = items[0]?.design_id;
+    if (designId) {
+      await deleteDesignerOrderItemsByDesignId(def, designId);
+    }
+    const rows = buildRows(includePrint);
+    const insertRes = await supabaseAdmin!
+      .from(def.orderItemsTable)
+      .insert(rows)
+      .select();
+    if (insertRes.error) {
+      console.error("saveDesignerOrderItems insert fallback error:", insertRes.error);
+      throw insertRes.error;
+    }
+    return insertRes.data;
+  }
+
   if (error) {
     console.error("saveDesignerOrderItems error:", error);
     throw error;
@@ -242,6 +293,11 @@ export async function saveDraftDesignerOrderItemsMerge(
   }
   const keepLineIds = items.map((_, i) => `${def.lineIdPrefix}-${i}`);
   await deleteDraftDesignerOrderItemsExcept(def, designId, keepLineIds);
+
+  const isMissingPrintSvgCol = (err: { message?: string } | null) =>
+    !!err?.message &&
+    /print_svg_url/i.test(err.message) &&
+    /column|schema cache|Could not find/i.test(err.message);
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
@@ -280,10 +336,17 @@ export async function saveDraftDesignerOrderItemsMerge(
       const cleaned = Object.fromEntries(
         Object.entries(updateBody).filter(([, v]) => v !== undefined),
       );
-      const { error: upErr } = await supabaseAdmin
+      let { error: upErr } = await supabaseAdmin
         .from(def.orderItemsTable)
         .update(cleaned)
         .eq("id", existing.id);
+      if (isMissingPrintSvgCol(upErr)) {
+        delete cleaned.print_svg_url;
+        ({ error: upErr } = await supabaseAdmin
+          .from(def.orderItemsTable)
+          .update(cleaned)
+          .eq("id", existing.id));
+      }
       if (upErr) throw upErr;
     } else {
       const insertPayload = {
@@ -291,12 +354,18 @@ export async function saveDraftDesignerOrderItemsMerge(
         created_at: item.created_at || getPacificTimestamp(),
         updated_at: getPacificTimestamp(),
       };
-      const cleanedInsert = Object.fromEntries(
+      let cleanedInsert = Object.fromEntries(
         Object.entries(insertPayload).filter(([, v]) => v !== undefined),
       );
-      const { error: insErr } = await supabaseAdmin
+      let { error: insErr } = await supabaseAdmin
         .from(def.orderItemsTable)
         .insert(cleanedInsert);
+      if (isMissingPrintSvgCol(insErr)) {
+        delete cleanedInsert.print_svg_url;
+        ({ error: insErr } = await supabaseAdmin
+          .from(def.orderItemsTable)
+          .insert(cleanedInsert));
+      }
       if (insErr) throw insErr;
     }
   }
