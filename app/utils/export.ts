@@ -14,8 +14,8 @@ const plaqueExportLogoCache = new Map<string, string>();
 
 export type SvgBlobExportOptions = {
   /**
-   * Compact SVGs for multipart upload to Remix/Supabase:
-   * keep https logo hrefs, skip wood data-URL inlining, skip font embedding on proof SVG.
+   * @deprecated No longer reduces SVG quality. Kept so call sites compile;
+   * storage SVGs always embed fonts and inline images like local export.
    */
   forRemoteStorage?: boolean;
 };
@@ -24,14 +24,8 @@ async function badgeForSvgExport(
   badge: Badge,
   template: LoadedTemplate,
   variant: DesignerVariant,
-  options?: SvgBlobExportOptions,
 ): Promise<Badge> {
   if (variant === "plaque" || isPlaqueTemplateId(template.id)) {
-    if (options?.forRemoteStorage) {
-      const raw = badge.logo?.src?.trim();
-      // https URLs stay as hrefs (small). Still inline blob: so storage SVG is self-contained.
-      if (raw && /^https?:\/\//i.test(raw)) return badge;
-    }
     return badgeWithPlaqueLogoInlinedForSvgImg(badge, plaqueExportLogoCache);
   }
   return badge;
@@ -240,19 +234,13 @@ export async function generateSVGAsBlob(
   badge: Badge,
   template: LoadedTemplate,
   variant: DesignerVariant = "badge",
-  options?: SvgBlobExportOptions,
+  _options?: SvgBlobExportOptions,
 ): Promise<Blob> {
-  const badgeForSvg = await badgeForSvgExport(badge, template, variant, options);
-  const renderOpts = {
-    ...resolveProductionRenderOpts(badgeForSvg, template, variant),
-    ...(options?.forRemoteStorage
-      ? { embedFonts: false, inlineRemoteImages: false }
-      : {}),
-  };
+  const badgeForSvg = await badgeForSvgExport(badge, template, variant);
   const svg = await renderBadgeToSvgStringWithFonts(
     badgeForSvg,
     template,
-    renderOpts,
+    resolveProductionRenderOpts(badgeForSvg, template, variant),
   );
   return new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
 }
@@ -266,18 +254,13 @@ export async function generatePrintSVGAsBlob(
   badge: Badge,
   template: LoadedTemplate,
   variant: DesignerVariant = "badge",
-  options?: SvgBlobExportOptions,
+  _options?: SvgBlobExportOptions,
 ): Promise<Blob> {
-  const badgeForSvg = await badgeForSvgExport(badge, template, variant, options);
-  const renderOpts = {
-    ...resolvePrintRenderOpts(badgeForSvg, template, variant),
-    // Print still embeds fonts once; skip only remote image inlining when storing.
-    ...(options?.forRemoteStorage ? { inlineRemoteImages: false } : {}),
-  };
+  const badgeForSvg = await badgeForSvgExport(badge, template, variant);
   const svg = await renderBadgeToSvgStringWithFonts(
     badgeForSvg,
     template,
-    renderOpts,
+    resolvePrintRenderOpts(badgeForSvg, template, variant),
   );
   return new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
 }

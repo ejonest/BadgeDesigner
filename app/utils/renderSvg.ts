@@ -2748,29 +2748,14 @@ export async function renderBadgeToSvgStringWithFonts(
       fontMappings,
     );
     // Print = metal plate only; skip wood stock inlining used for mockup/proof.
+    // Always inline wood for proof/design SVGs — absolute site URLs only work in
+    // the browser; WhatsApp / downloads need data URLs.
     if (
       isPlaqueDetachedTemplateId(template.id) &&
-      !isPrintPlateRender(opts)
+      !isPrintPlateRender(opts) &&
+      opts.inlineRemoteImages !== false
     ) {
-      if (opts.inlineRemoteImages === false) {
-        // Prefer absolute same-origin URLs over multi-MB data URLs for storage.
-        if (typeof window !== "undefined") {
-          const origin = window.location.origin;
-          for (const publicPath of [
-            "/images/plaque/plaque-detached-portrait-stock.png",
-            "/images/plaque/plaque-detached-landscape-stock.png",
-          ]) {
-            if (!svg.includes(publicPath)) continue;
-            const abs = `${origin}${publicPath}`;
-            svg = svg.split(`href="${publicPath}"`).join(`href="${abs}"`);
-            svg = svg
-              .split(`xlink:href="${publicPath}"`)
-              .join(`xlink:href="${abs}"`);
-          }
-        }
-      } else {
-        svg = await inlinePlaqueDetachedWoodStockImagesInSvg(svg);
-      }
+      svg = await inlinePlaqueDetachedWoodStockImagesInSvg(svg);
     }
     return svg;
   }
