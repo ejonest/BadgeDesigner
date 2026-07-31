@@ -449,9 +449,11 @@ export async function runSendOrderDraftToSupabase(
     if (storageOnly) {
       let savedCount = 0;
       try {
-        await deleteDesignerOrderItemsByDesignId(def, designId);
-        const saved = await saveDesignerOrderItems(def, orderItems);
-        savedCount = Array.isArray(saved) ? saved.length : 0;
+        // Merge (do not delete-all first): a failed upsert after delete wiped every
+        // line and caused the proof “support may contact you” alert. Merge also
+        // keeps multi-item drafts intact when badge counts grow.
+        await saveDraftDesignerOrderItemsMerge(def, designId, orderItems);
+        savedCount = orderItems.length;
         try {
           await updateDesignerOrderItemsStatusByDesignId(def, designId, "in_cart");
         } catch (statusErr) {
@@ -459,15 +461,36 @@ export async function runSendOrderDraftToSupabase(
         }
       } catch (saveErr) {
         console.error("storageOnly save failed:", saveErr);
-        return json(
-          {
-            success: false,
-            error: "Failed to save draft order items",
-            message:
-              "Files uploaded but draft rows could not be saved. Check Supabase and table.",
-          },
-          { status: 503 },
-        );
+        // Last resort: full replace via upsert (or insert fallback inside saver).
+        try {
+          await deleteDesignerOrderItemsByDesignId(def, designId);
+          const saved = await saveDesignerOrderItems(def, orderItems);
+          savedCount = Array.isArray(saved) ? saved.length : orderItems.length;
+          try {
+            await updateDesignerOrderItemsStatusByDesignId(
+              def,
+              designId,
+              "in_cart",
+            );
+          } catch (statusErr) {
+            console.warn("in_cart status update failed:", statusErr);
+          }
+        } catch (fallbackErr) {
+          console.error("storageOnly fallback save failed:", fallbackErr);
+          return json(
+            {
+              success: false,
+              error: "Failed to save draft order items",
+              message:
+                "Files uploaded but draft rows could not be saved. Check Supabase and table.",
+              details:
+                fallbackErr instanceof Error
+                  ? fallbackErr.message
+                  : String(fallbackErr),
+            },
+            { status: 503 },
+          );
+        }
       }
       const hasAnyUploads =
         pdfUrl || orderItems.some((it) => it.thumbnail_url || it.full_image_url);

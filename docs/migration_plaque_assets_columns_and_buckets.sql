@@ -175,6 +175,10 @@ CREATE INDEX IF NOT EXISTS idx_plaque_order_items_design_id
 CREATE INDEX IF NOT EXISTS idx_plaque_order_items_shopify_order_id
   ON public.plaque_order_items (shopify_order_id);
 
+-- Ensure upsert target exists even if the table was created earlier without UNIQUE.
+CREATE UNIQUE INDEX IF NOT EXISTS plaque_order_items_design_id_plaque_id_key
+  ON public.plaque_order_items (design_id, plaque_id);
+
 -- ---------------------------------------------------------------------------
 -- Storage buckets + policies
 -- Server uploads use SUPABASE_SERVICE_ROLE_KEY (bypasses RLS).
