@@ -6431,9 +6431,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         textLines: true,
         backing: true,
       }));
-      if (row.design_id) {
-        sessionDesignIdRef.current = row.design_id;
-      }
+      // Load as a copy: never reuse the library/cart design_id so edits create a
+      // new draft session and cannot overwrite order items already in the cart.
+      sessionDesignIdRef.current = `design_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 11)}`;
       sessionHadLineTextEditRef.current = false;
     },
     [variant, config.hasSizeStep],
@@ -7039,20 +7041,28 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         }
       }
 
+      // Clear the editor before cart redirect/embed so a return visit is a
+      // blank slate (standalone redirect can abort code after location change).
+      const preCartDesignId = designIdForSupabase;
+      const preCartBadges = badgesForSupabase;
+      resetDesignerToBlank();
+      closeProofModal();
+
       const result = await api.addToCartMultiple(cartItems);
-      if (result.success) {
-        try {
-          const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${
-            _shop ?? "default"
-          }-${_productId ?? "default"}`;
-          localStorage.removeItem(cacheKey);
-        } catch {
-          // ignore
-        }
-        // Prevent any pending debounced save from writing old state back to cache
-        skipCacheSaveRef.current = true;
-        closeProofModal();
-      } else {
+      if (!result.success) {
+        // Cart failed — put the design back so the customer can retry.
+        applyRestoredDesign({
+          design_id: preCartDesignId,
+          design_data: {
+            badge: preCartBadges[0],
+            multipleBadges:
+              preCartBadges.length > 1 ? preCartBadges.slice(1) : [],
+            allBadges: preCartBadges,
+          },
+        });
+        // applyRestoredDesign mints a copy id; keep the cart session id so
+        // finalize/draft rows still match this attempt.
+        sessionDesignIdRef.current = preCartDesignId;
         alert(
           result.message || "Failed to add badge(s) to cart. Please try again.",
         );
