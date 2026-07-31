@@ -206,6 +206,15 @@ function plaqueDetachedPhotoRequired(
   );
 }
 
+/** Attached plate: every design must have exactly 4 filled text lines before cart. */
+function attachedPlaqueHasRequiredTextLines(b: Badge): boolean {
+  if (b.lines.length < ATTACHED_PLAQUE_MAX_TEXT_LINES) return false;
+  for (let i = 0; i < ATTACHED_PLAQUE_MAX_TEXT_LINES; i++) {
+    if (!(b.lines[i]?.text ?? "").trim()) return false;
+  }
+  return true;
+}
+
 function readImageDimensionsFromFile(
   file: File,
 ): Promise<{ w: number; h: number }> {
@@ -2237,9 +2246,17 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     return config.maxLines;
   }, [variant, config.maxLines, badge.templateId, universalTemplateId]);
 
+  /** Attached plate CSV: exactly 4 columns per row (min and max). */
+  const csvRequiresExactLineCount =
+    variant === "plaque" &&
+    isPlaqueAttachedTemplateId(badge.templateId ?? universalTemplateId);
+
   const addMultipleCopy = useMemo(
-    () => getAddMultipleDesignerCopy(variant, maxLines),
-    [variant, maxLines],
+    () =>
+      getAddMultipleDesignerCopy(variant, maxLines, {
+        exactLineCount: csvRequiresExactLineCount,
+      }),
+    [variant, maxLines, csvRequiresExactLineCount],
   );
 
   // Collapsible sections state - only first section (template) open by default
@@ -2367,8 +2384,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         const fmt = resolveAttachedPlaqueAwardFormatForRender(badge);
         if (fmt) {
           const n = plaqueAwardFormatUserLineCount(fmt);
+          if (badge.lines.length < n) return false;
           for (let i = 0; i < n; i++) {
-            if (i >= badge.lines.length) continue;
             const raw = badge.lines[i]?.text;
             const t = (raw ?? "").trim();
             if (!t) return false;
@@ -6212,6 +6229,24 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         universalTemplateId,
       );
 
+      if (variant === "plaque" && plaqueAttachedSelected) {
+        const incomplete = allBadgesForSupabase
+          .map((b, i) =>
+            attachedPlaqueHasRequiredTextLines(b) ? null : i + 1,
+          )
+          .filter((n): n is number => n != null);
+        if (incomplete.length > 0) {
+          alert(
+            `Attached plates need exactly ${ATTACHED_PLAQUE_MAX_TEXT_LINES} filled text lines on every plaque. ` +
+              `Update plaque${incomplete.length > 1 ? "s" : ""} ${incomplete.join(
+                ", ",
+              )} (use Add Multiple with ${ATTACHED_PLAQUE_MAX_TEXT_LINES} comma-separated values per row, or edit each plaque), then try Add to Cart again.`,
+          );
+          setIsAddingToCart(false);
+          return;
+        }
+      }
+
       // Plaque: ensure any data-URL logos are persisted to Supabase before PDF/order assets.
       let badgesReadyForOrder = allBadgesForSupabase;
       if (variant === "plaque") {
@@ -6710,12 +6745,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 pdfUrlForCart = supabaseJson.pdfUrl;
               } else {
                 const errData = await supabaseResponse.json().catch(() => ({}));
+                const detail =
+                  (errData as { details?: string; message?: string; error?: string })
+                    .details ||
+                  (errData as { message?: string }).message ||
+                  (errData as { error?: string }).error ||
+                  supabaseResponse.statusText;
                 console.warn(
                   "Supabase proof upload failed (cart will still add):",
-                  errData.message || supabaseResponse.statusText,
+                  detail,
+                  errData,
                 );
                 alert(
-                  "Proof upload failed; your design will still be added to cart. Support may follow up for the proof.",
+                  `Proof upload failed (${supabaseResponse.status}${
+                    detail ? `: ${detail}` : ""
+                  }). Your design will still be added to cart. Support may follow up for the proof.`,
                 );
               }
             }
@@ -6725,7 +6769,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               fallbackErr,
             );
             alert(
-              "Proof upload failed; your design will still be added to cart. Support may follow up for the proof.",
+              `Proof upload failed${
+                fallbackErr instanceof Error ? `: ${fallbackErr.message}` : ""
+              }. Your design will still be added to cart. Support may follow up for the proof.`,
             );
           }
         }
@@ -6735,7 +6781,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           supabaseErr,
         );
         alert(
-          "Proof upload failed; your design will still be added to cart. Support may follow up for the proof.",
+          `Proof upload failed${
+            supabaseErr instanceof Error ? `: ${supabaseErr.message}` : ""
+          }. Your design will still be added to cart. Support may follow up for the proof.`,
         );
       }
 
@@ -7005,6 +7053,30 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
 
   // CSV helpers
   // Preview CSV without creating badges
+  function validateCsvRowLineCounts(rows: string[][]): string | null {
+    const invalidRows: number[] = [];
+    rows.forEach((row, index) => {
+      if (csvRequiresExactLineCount) {
+        if (row.length !== maxLines) invalidRows.push(index + 1);
+      } else if (row.length > maxLines) {
+        invalidRows.push(index + 1);
+      }
+    });
+    if (invalidRows.length === 0) return null;
+    if (csvRequiresExactLineCount) {
+      return (
+        `Attached plates require exactly ${maxLines} text lines per ${config.labelProduct.toLowerCase()}. ` +
+        `Row${invalidRows.length > 1 ? "s" : ""} ${invalidRows.join(", ")} ` +
+        `${invalidRows.length > 1 ? "do" : "does"} not have exactly ${maxLines} comma-separated values.`
+      );
+    }
+    return (
+      `Each ${config.labelProduct.toLowerCase()} can have a maximum of ${maxLines} lines of text. ` +
+      `Row${invalidRows.length > 1 ? "s" : ""} ${invalidRows.join(", ")} ` +
+      `exceed${invalidRows.length > 1 ? "" : "s"} this limit.`
+    );
+  }
+
   function previewCsv(text: string) {
     try {
       setCsvError("");
@@ -7014,23 +7086,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         .filter((row: string) => row.trim().length > 0) // Filter out empty rows
         .map((row: string) => row.split(","));
 
-      // Validate that each row has at most maxLines comma-separated values
-      const invalidRows: number[] = [];
-      rows.forEach((row, index) => {
-        if (row.length > maxLines) {
-          invalidRows.push(index + 1); // 1-indexed for user display
-        }
-      });
-
-      if (invalidRows.length > 0) {
-        setCsvError(
-          `Each ${config.labelProduct.toLowerCase()} can have a maximum of ${maxLines} lines of text. ` +
-            `Row${invalidRows.length > 1 ? "s" : ""} ${invalidRows.join(
-              ", ",
-            )} ` +
-            `exceed${invalidRows.length > 1 ? "" : "s"} this limit.`,
-        );
-      }
+      const lineErr = validateCsvRowLineCounts(rows);
+      if (lineErr) setCsvError(lineErr);
 
       setCsvPreview(rows);
     } catch {
@@ -7058,22 +7115,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         .filter((row: string) => row.trim().length > 0) // Filter out empty rows
         .map((row: string) => row.split(","));
 
-      // Validate that each row has at most maxLines comma-separated values
-      const invalidRows: number[] = [];
-      rows.forEach((row, index) => {
-        if (row.length > maxLines) {
-          invalidRows.push(index + 1); // 1-indexed for user display
-        }
-      });
-
-      if (invalidRows.length > 0) {
-        setCsvError(
-          `Each ${config.labelProduct.toLowerCase()} can have a maximum of ${maxLines} lines of text. ` +
-            `Row${invalidRows.length > 1 ? "s" : ""} ${invalidRows.join(
-              ", ",
-            )} ` +
-            `exceed${invalidRows.length > 1 ? "" : "s"} this limit.`,
-        );
+      const lineErr = validateCsvRowLineCounts(rows);
+      if (lineErr) {
+        setCsvError(lineErr);
         return; // Don't proceed with badge creation
       }
 
@@ -7089,47 +7133,46 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             templateId: universalTemplateId,
             // CRITICAL: Preserve backgroundColor from current badge (single source of truth)
             backgroundColor: badge.backgroundColor || "#FFFFFF",
-            lines: row.map((cell: any, i: number) => {
-              // Get designBox height for size calculation
+            lines: (() => {
               const designBoxHeight = effectiveDesignBox.height || 96;
-
-              // If this line index exists in the first badge, use its formatting
-              // Otherwise, use default formatting (black, 17pt for line 3+)
-              if (i < badge.lines.length) {
-                const baseLine = badge.lines[i];
-                const lineSizeNorm = getDefaultSizeNorm(i, designBoxHeight);
-                return {
-                  ...baseLine,
-                  text: cell || "",
-                  color: baseLine.color || "#000000",
-                  sizeNorm: baseLine.sizeNorm || lineSizeNorm,
-                  align:
-                    baseLine.align === "left" ||
-                    baseLine.align === "center" ||
-                    baseLine.align === "right"
-                      ? baseLine.align
-                      : "center",
-                } as BadgeLine;
-              } else {
-                // For lines beyond the first badge's line count, use default formatting
-                // Line 3 should be 17px (index 2)
+              const lineCount = csvRequiresExactLineCount
+                ? maxLines
+                : row.length;
+              return Array.from({ length: lineCount }, (_, i) => {
+                const cell = row[i] ?? "";
+                if (i < badge.lines.length) {
+                  const baseLine = badge.lines[i];
+                  const lineSizeNorm = getDefaultSizeNorm(i, designBoxHeight);
+                  return {
+                    ...baseLine,
+                    text: cell || "",
+                    color: baseLine.color || "#000000",
+                    sizeNorm: baseLine.sizeNorm || lineSizeNorm,
+                    align:
+                      baseLine.align === "left" ||
+                      baseLine.align === "center" ||
+                      baseLine.align === "right"
+                        ? baseLine.align
+                        : "center",
+                  } as BadgeLine;
+                }
                 const newLineSizePx = 17;
                 const newSizeNorm = newLineSizePx / designBoxHeight;
                 return {
                   id: `line-${i}-${Date.now()}`,
                   text: cell || "",
                   xNorm: 0.5,
-                  yNorm: 0.5, // Will be repositioned by calculateCenterPositions
+                  yNorm: 0.5,
                   sizeNorm: newSizeNorm,
-                  color: "#000000", // Default black
+                  color: "#000000",
                   bold: false,
                   italic: false,
                   underline: false,
                   fontFamily: "Arial",
                   align: "center",
                 } as BadgeLine;
-              }
-            }),
+              });
+            })(),
           };
 
           // Apply center-based positioning to CSV badges
