@@ -279,9 +279,9 @@ export async function saveDesignerOrderItems(
 }
 
 /**
- * Draft autosave: merge into existing rows so we do not violate (design_id, line) uniqueness
- * after the customer has added to cart (status in_cart). Inserts only when no row exists.
- * Preserves status and Shopify order fields when status is in_cart or order_placed.
+ * Draft autosave: merge into existing rows so we do not violate (design_id, line) uniqueness.
+ * Inserts when no row exists. Skips rows already in_cart or order_placed so cart assets
+ * cannot be overwritten if a design_id is reused.
  */
 export async function saveDraftDesignerOrderItemsMerge(
   def: DesignerDefinition,
@@ -314,25 +314,15 @@ export async function saveDraftDesignerOrderItemsMerge(
     if (existing) {
       const terminal =
         existing.status === "in_cart" || existing.status === "order_placed";
-      let updateBody: Record<string, unknown>;
+      // Never mutate cart/order assets — a reused design_id must not rewrite
+      // what the customer already added to cart.
       if (terminal) {
-        const {
-          status: _st,
-          shopify_order_id: _so,
-          shopify_order_number: _sn,
-          shopify_customer_id: _sc,
-          ...restSafe
-        } = full;
-        updateBody = {
-          ...restSafe,
-          updated_at: getPacificTimestamp(),
-        };
-      } else {
-        updateBody = {
-          ...full,
-          updated_at: getPacificTimestamp(),
-        };
+        continue;
       }
+      const updateBody: Record<string, unknown> = {
+        ...full,
+        updated_at: getPacificTimestamp(),
+      };
       const cleaned = Object.fromEntries(
         Object.entries(updateBody).filter(([, v]) => v !== undefined),
       );

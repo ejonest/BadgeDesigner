@@ -8728,9 +8728,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         textLines: true,
         backing: true,
       }));
-      if (row.design_id) {
-        sessionDesignIdRef.current = row.design_id;
-      }
+      // Load as a copy: never reuse the library/cart design_id so edits create a
+      // new draft session and cannot overwrite order items already in the cart.
+      sessionDesignIdRef.current = `design_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 11)}`;
       sessionHadLineTextEditRef.current = false;
     },
     [variant, config.hasSizeStep],
@@ -9445,6 +9447,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         }
       }
 
+      // Clear the editor before cart redirect/embed so a return visit is a
+      // blank slate (standalone redirect can abort code after location change).
+      const preCartDesignId = designIdForSupabase;
+      const preCartBadges = badgesForSupabase;
+      resetDesignerToBlank();
+      closeProofModal();
+
       const result = await api.addToCartMultiple(cartItems);
       if (result.success) {
         if (proofUploadWarning) {
@@ -9452,25 +9461,22 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             "[BadgeDesignerRedesign] Proof upload warning:",
             proofUploadWarning,
           );
-        }
-        try {
-          const cacheKey = `${BADGE_DESIGNER_CACHE_PREFIX}-${
-            _shop ?? "default"
-          }-${_productId ?? "default"}`;
-          localStorage.removeItem(cacheKey);
-        } catch {
-          // ignore
-        }
-        // Prevent any pending debounced save from writing old state back to cache
-        skipCacheSaveRef.current = true;
-        closeProofModal();
-        if (proofUploadWarning) {
           console.info(
             "Design added to cart; proof files may need follow-up:",
             proofUploadWarning,
           );
         }
       } else {
+        applyRestoredDesign({
+          design_id: preCartDesignId,
+          design_data: {
+            badge: preCartBadges[0],
+            multipleBadges:
+              preCartBadges.length > 1 ? preCartBadges.slice(1) : [],
+            allBadges: preCartBadges,
+          },
+        });
+        sessionDesignIdRef.current = preCartDesignId;
         const proofNote = proofUploadWarning
           ? `\n\nProof upload also failed: ${proofUploadWarning}`
           : "";
