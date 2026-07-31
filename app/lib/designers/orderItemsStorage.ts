@@ -6,10 +6,11 @@ import {
 } from "~/utils/supabase";
 
 /**
- * Flip to true after running docs/migration_add_print_svg_url.sql in Supabase.
- * Leaving false avoids insert/update failures while the column is missing.
+ * Persist print-ready SVG URLs on order-item rows.
+ * Requires docs/migration_add_print_svg_url.sql (adds print_svg_url) to have
+ * been run in Supabase — without that column, inserts/updates will fail.
  */
-const INCLUDE_PRINT_SVG_URL_IN_DB = false;
+const INCLUDE_PRINT_SVG_URL_IN_DB = true;
 
 async function toUploadBuffer(file: File | Blob): Promise<Buffer> {
   const ab = await file.arrayBuffer();
@@ -41,9 +42,8 @@ function rowPayload(
     quantity: item.quantity ?? 1,
     thumbnail_url: item.thumbnail_url,
     full_image_url: item.full_image_url,
-    // TODO(supabase): set INCLUDE_PRINT_SVG_URL_IN_DB after migration_add_print_svg_url.sql
-    ...(INCLUDE_PRINT_SVG_URL_IN_DB && item.print_svg_url
-      ? { print_svg_url: item.print_svg_url }
+    ...(INCLUDE_PRINT_SVG_URL_IN_DB
+      ? { print_svg_url: item.print_svg_url || null }
       : {}),
     ...(isSignTable && item.uploaded_image_url
       ? { uploaded_image_url: item.uploaded_image_url }
