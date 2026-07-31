@@ -8868,6 +8868,40 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       try {
         // Badge-only: uploads to badge PDFs bucket and reads badge_order_items. Signs always use designer send-to-supabase below.
         if (!addDuplicates && !isSignLikeVariant(variant)) {
+          // Generate print-ready SVGs for finalize — draft save may be stale or
+          // predate print_svg_url persistence; add-to-cart must write both PDF + print SVGs.
+          const printSvgBlobsForFinalize = await Promise.all(
+            allBadgesForSupabase.map(async (b, i) => {
+              const templateIdForBadge =
+                b.templateId ||
+                activeTemplate?.id ||
+                "rect-1x3";
+              const tmpl = await loadTemplateById(templateIdForBadge, variant);
+              if (!tmpl) {
+                console.warn(
+                  "[BadgeDesignerRedesign] finalize: template missing",
+                  templateIdForBadge,
+                );
+                return { i, blob: new Blob() };
+              }
+              try {
+                const blob = await generatePrintSVGAsBlob(b, tmpl, variant);
+                return {
+                  i,
+                  blob: blob && blob.size > 0 ? blob : new Blob(),
+                };
+              } catch (err) {
+                console.warn(
+                  "[BadgeDesignerRedesign] finalize: print SVG failed",
+                  i,
+                  err,
+                );
+                return { i, blob: new Blob() };
+              }
+            }),
+          );
+          printSvgBlobsForFinalize.sort((a, b) => a.i - b.i);
+
           const formDataFinalize = new FormData();
           formDataFinalize.append("designId", designIdForSupabase);
           formDataFinalize.append("pdf", pdfBlob, "badge-design_proof.pdf");
@@ -8875,6 +8909,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           if (currentBacking) {
             formDataFinalize.append("backingType", currentBacking);
           }
+          printSvgBlobsForFinalize.forEach(({ blob }, index) => {
+            if (blob?.size > 0) {
+              formDataFinalize.append(
+                `print_svg_${index}`,
+                blob,
+                `badge-${index}-print.svg`,
+              );
+            }
+          });
           const finalizeRes = await fetch("/api/finalize-draft", {
             method: "POST",
             body: formDataFinalize,
@@ -8889,6 +8932,25 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           if (usedFinalize) {
             thumbnailUrls = finalizeJson.thumbnailUrls;
             pdfUrlForCart = finalizeJson.pdfUrl;
+            if (!finalizeJson.pdfUrl) {
+              console.warn(
+                "[BadgeDesignerRedesign] finalize succeeded but pdfUrl missing",
+              );
+            }
+            if (
+              !Array.isArray(finalizeJson.printSvgUrls) ||
+              finalizeJson.printSvgUrls.every((u: string) => !u)
+            ) {
+              console.warn(
+                "[BadgeDesignerRedesign] finalize succeeded but print_svg_url empty — check print SVG generation",
+              );
+            }
+          } else if (!finalizeRes.ok) {
+            console.warn(
+              "[BadgeDesignerRedesign] finalize-draft failed:",
+              finalizeRes.status,
+              finalizeJson,
+            );
           }
         }
         if (!usedFinalize) {
