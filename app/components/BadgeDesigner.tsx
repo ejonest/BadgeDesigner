@@ -382,8 +382,10 @@ function removeDesignerDraftCache(shop?: string, productId?: string): void {
   }
 }
 
-/** Set to true to show the Export Options section (SVG, PNG, TIFF, CDR, PDF, etc.). */
-const SHOW_EXPORT_OPTIONS = false;
+/** Export Options (SVG/PNG/TIFF/CDR/PDF) — Vite DEV only; never on production builds. */
+const SHOW_EXPORT_OPTIONS = Boolean(
+  (import.meta.env as { DEV?: boolean }).DEV,
+);
 
 /** Mobile preview (top of screen): tweak these to adjust the box and badge size. */
 const MOBILE_PREVIEW = {
@@ -10216,8 +10218,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               />
             ) : null}
 
-            {/* Export Options (visible for sign designer for testing; badge when SHOW_EXPORT_OPTIONS) */}
-            {(SHOW_EXPORT_OPTIONS || isSignLikeVariant(variant)) && (
+            {/* Export Options — DEV only (was wrongly shown for all sign-like on prod) */}
+            {SHOW_EXPORT_OPTIONS ? (
               <div className="mb-4">
                 {(() => {
                   const exportBaseName =
@@ -10502,7 +10504,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   );
                 })()}
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 
