@@ -380,17 +380,36 @@ export async function runSendOrderDraftToSupabase(
     }
 
     const allBadges = designData.allBadges || [designData.badge];
+    const existingRows = storageOnly
+      ? await getDesignerOrderItemsByDesignId(def, designId).catch((err) => {
+          console.warn("Could not load existing order items for merge:", err);
+          return [] as Awaited<
+            ReturnType<typeof getDesignerOrderItemsByDesignId>
+          >;
+        })
+      : [];
+    const existingByLine = new Map(
+      existingRows.map((row) => [String(row.badge_id || ""), row]),
+    );
+    // If this chunk omitted the PDF, keep the previously saved proof URL on every line.
+    if (!pdfUrl) {
+      const priorPdf = existingRows.find((r) => r.pdf_url)?.pdf_url;
+      if (priorPdf) pdfUrl = priorPdf;
+    }
+
     const orderItems = [];
 
     for (let i = 0; i < allBadges.length; i++) {
       const badge = allBadges[i];
+      const lineKey = `${def.lineIdPrefix}-${i}`;
+      const prev = existingByLine.get(lineKey);
       const thumbnailPngFile = formData.get(`thumbnail_png_${i}`) as File;
       const svgFile = formData.get(`svg_${i}`) as File;
       const printSvgFile = formData.get(`print_svg_${i}`) as File | null;
 
-      let thumbnailUrl = "";
-      let fullImageUrl = "";
-      let printSvgUrl = "";
+      let thumbnailUrl = prev?.thumbnail_url || "";
+      let fullImageUrl = prev?.full_image_url || "";
+      let printSvgUrl = prev?.print_svg_url || "";
 
       if (thumbnailPngFile && thumbnailPngFile.size > 0) {
         try {

@@ -322,6 +322,7 @@ import {
   generateSVGAsBlob,
   generatePrintSVGAsBlob,
 } from "../utils/export";
+import { slimBadgesForOrderUpload } from "../utils/slimBadgeForUpload";
 import DevExportPreviewPanel from "./DevExportPreviewPanel";
 
 const INITIAL_BADGE = BADGE_CONSTANTS.INITIAL_BADGE;
@@ -3949,8 +3950,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               try {
                 const [pngBlob, svgBlob, printSvgBlob] = await Promise.all([
                   generateFullBadgeImage(b, variant).then(dataURLToBlob),
-                  generateSVGAsBlob(b, tmpl, variant),
-                  generatePrintSVGAsBlob(b, tmpl, variant),
+                  generateSVGAsBlob(b, tmpl, variant, {
+                    forRemoteStorage: true,
+                  }),
+                  generatePrintSVGAsBlob(b, tmpl, variant, {
+                    forRemoteStorage: true,
+                  }),
                 ]);
                 return {
                   pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
@@ -3984,9 +3989,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           const svgBlobs = badgeResults.map((r) => r.svgBlob);
           const printSvgBlobs = badgeResults.map((r) => r.printSvgBlob);
           const designDataForDraft = {
-            badge: normalized[0],
-            multipleBadges: normalized.length > 1 ? normalized.slice(1) : [],
-            allBadges: normalized,
+            badge: slimBadgesForOrderUpload([normalized[0]])[0],
+            multipleBadges: slimBadgesForOrderUpload(
+              normalized.length > 1 ? normalized.slice(1) : [],
+            ),
+            allBadges: slimBadgesForOrderUpload(normalized),
             timestamp: new Date().toISOString(),
             shopId: "test-shop",
             productId: _productId || "test-product",
@@ -6613,155 +6620,160 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         if (!usedFinalize) {
           try {
             if (badgesForSupabase.length > 0) {
-              const badgePromises = badgesForSupabase.map((b, i) =>
-                (async () => {
-                  const templateIdForBadge =
-                    b.templateId ||
-                    activeTemplate?.id ||
-                    (isSignLikeVariant(variant) ? "circle-4x4" : "rect-1x3");
-                  const tmpl = await loadTemplateById(
-                    templateIdForBadge,
-                    variant,
-                  );
-                  if (!tmpl) {
-                    console.warn(
-                      "[BadgeDesigner] proof upload: template missing",
-                      templateIdForBadge,
-                    );
-                    return {
-                      pngBlob: new Blob(),
-                      svgBlob: new Blob(),
-                      printSvgBlob: new Blob(),
-                      i,
-                    };
-                  }
-                  try {
-                    const [pngBlob, svgBlob, printSvgBlob] = await Promise.all([
-                      generateFullBadgeImage(b, variant).then(dataURLToBlob),
-                      generateSVGAsBlob(b, tmpl, variant),
-                      generatePrintSVGAsBlob(b, tmpl, variant),
-                    ]);
-                    return {
-                      pngBlob:
-                        pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
-                      svgBlob:
-                        svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
-                      printSvgBlob:
-                        printSvgBlob && printSvgBlob.size > 0
-                          ? printSvgBlob
-                          : new Blob(),
-                      i,
-                    };
-                  } catch {
-                    return {
-                      pngBlob: new Blob(),
-                      svgBlob: new Blob(),
-                      printSvgBlob: new Blob(),
-                      i,
-                    };
-                  }
-                })(),
-              );
-              const badgeResults = await Promise.all(badgePromises);
-              badgeResults.sort((a, b) => a.i - b.i);
-              const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
-              const svgBlobs = badgeResults.map((r) => r.svgBlob);
-              const printSvgBlobs = badgeResults.map((r) => r.printSvgBlob);
+              const slimBadges = slimBadgesForOrderUpload(badgesForSupabase);
               const designDataForSupabase = {
-                badge: badgesForSupabase[0],
+                badge: slimBadges[0],
                 multipleBadges:
-                  badgesForSupabase.length > 1
-                    ? badgesForSupabase.slice(1)
-                    : [],
-                allBadges: badgesForSupabase,
+                  slimBadges.length > 1 ? slimBadges.slice(1) : [],
+                allBadges: slimBadges,
                 timestamp: new Date().toISOString(),
                 shopId: shopData.shopId || "test-shop",
                 productId: _productId || "test-product",
-                backgroundColor: badgesForSupabase[0].backgroundColor,
+                backgroundColor: slimBadges[0].backgroundColor,
                 ...(!isSignLikeVariant(variant)
-                  ? { backingType: badgesForSupabase[0].backing }
+                  ? { backingType: slimBadges[0].backing }
                   : {}),
               };
-              const formDataForSupabase = new FormData();
-              formDataForSupabase.append("designId", designIdForSupabase);
-              formDataForSupabase.append(
-                "designData",
-                JSON.stringify(designDataForSupabase),
-              );
-              formDataForSupabase.append("storageOnly", "true");
-              if (shopifyCustomerIdFromUrl) {
-                formDataForSupabase.append(
-                  "shopifyCustomerId",
-                  shopifyCustomerIdFromUrl,
-                );
-              }
               const designProofFilename = `${designerConfig.lineIdPrefix}-design_proof.pdf`;
-              formDataForSupabase.append(
-                "pdf",
-                pdfBlobToUse,
-                designProofFilename,
-              );
-              thumbnailPngBlobs.forEach((pngBlob, index) => {
-                if (pngBlob && pngBlob.size > 0) {
-                  formDataForSupabase.append(
-                    `thumbnail_png_${index}`,
-                    pngBlob,
-                    `${designerConfig.lineIdPrefix}-${index}-thumbnail.png`,
-                  );
-                }
-              });
-              svgBlobs.forEach((svgBlob, index) => {
-                if (svgBlob && svgBlob.size > 0) {
-                  formDataForSupabase.append(
-                    `svg_${index}`,
-                    svgBlob,
-                    `${designerConfig.lineIdPrefix}-${index}-design.svg`,
-                  );
-                }
-              });
-              printSvgBlobs.forEach((printSvgBlob, index) => {
-                if (printSvgBlob && printSvgBlob.size > 0) {
-                  formDataForSupabase.append(
-                    `print_svg_${index}`,
-                    printSvgBlob,
-                    `${designerConfig.lineIdPrefix}-${index}-print.svg`,
-                  );
-                }
-              });
-              const supabaseResponse = await fetch(
-                designerApiPaths.sendToSupabase,
-                {
-                  method: "POST",
-                  body: formDataForSupabase,
-                },
-              );
-              if (supabaseResponse.ok) {
-                const supabaseJson = await supabaseResponse
-                  .json()
-                  .catch(() => ({}));
-                thumbnailUrls = Array.isArray(supabaseJson.thumbnailUrls)
-                  ? supabaseJson.thumbnailUrls
-                  : [];
-                pdfUrlForCart = supabaseJson.pdfUrl;
-              } else {
-                const errData = await supabaseResponse.json().catch(() => ({}));
-                const detail =
-                  (errData as { details?: string; message?: string; error?: string })
-                    .details ||
-                  (errData as { message?: string }).message ||
-                  (errData as { error?: string }).error ||
-                  supabaseResponse.statusText;
-                console.warn(
-                  "Supabase proof upload failed (cart will still add):",
-                  detail,
-                  errData,
+              const storageOpts = { forRemoteStorage: true as const };
+
+              const postProofChunk = async (formData: FormData) => {
+                const supabaseResponse = await fetch(
+                  designerApiPaths.sendToSupabase,
+                  { method: "POST", body: formData },
                 );
-                alert(
-                  `Proof upload failed (${supabaseResponse.status}${
-                    detail ? `: ${detail}` : ""
-                  }). Your design will still be added to cart. Support may follow up for the proof.`,
+                if (!supabaseResponse.ok) {
+                  const errData = await supabaseResponse
+                    .json()
+                    .catch(() => ({}));
+                  const detail =
+                    (errData as { details?: string; message?: string; error?: string })
+                      .details ||
+                    (errData as { message?: string }).message ||
+                    (errData as { error?: string }).error ||
+                    supabaseResponse.statusText;
+                  throw new Error(
+                    `Proof upload failed (${supabaseResponse.status}${
+                      detail ? `: ${detail}` : ""
+                    })`,
+                  );
+                }
+                return supabaseResponse.json().catch(() => ({}));
+              };
+
+              // Chunk 0: PDF + slim JSON only (avoids 413 on multi-plaque payloads).
+              {
+                const formDataPdf = new FormData();
+                formDataPdf.append("designId", designIdForSupabase);
+                formDataPdf.append(
+                  "designData",
+                  JSON.stringify(designDataForSupabase),
                 );
+                formDataPdf.append("storageOnly", "true");
+                if (shopifyCustomerIdFromUrl) {
+                  formDataPdf.append(
+                    "shopifyCustomerId",
+                    shopifyCustomerIdFromUrl,
+                  );
+                }
+                formDataPdf.append("pdf", pdfBlobToUse, designProofFilename);
+                const pdfJson = await postProofChunk(formDataPdf);
+                pdfUrlForCart = pdfJson.pdfUrl || pdfUrlForCart;
               }
+
+              // Chunks 1..N: one plaque/badge assets per request.
+              const collectedThumbs: string[] = new Array(
+                badgesForSupabase.length,
+              ).fill("");
+              for (let i = 0; i < badgesForSupabase.length; i++) {
+                const b = badgesForSupabase[i];
+                const templateIdForBadge =
+                  b.templateId ||
+                  activeTemplate?.id ||
+                  (isSignLikeVariant(variant) ? "circle-4x4" : "rect-1x3");
+                const tmpl = await loadTemplateById(
+                  templateIdForBadge,
+                  variant,
+                );
+                let pngBlob = new Blob();
+                let svgBlob = new Blob();
+                let printSvgBlob = new Blob();
+                if (tmpl) {
+                  try {
+                    const generated = await Promise.all([
+                      generateFullBadgeImage(b, variant).then(dataURLToBlob),
+                      generateSVGAsBlob(b, tmpl, variant, storageOpts),
+                      generatePrintSVGAsBlob(b, tmpl, variant, storageOpts),
+                    ]);
+                    pngBlob =
+                      generated[0] && generated[0].size > 0
+                        ? generated[0]
+                        : new Blob();
+                    svgBlob =
+                      generated[1] && generated[1].size > 0
+                        ? generated[1]
+                        : new Blob();
+                    printSvgBlob =
+                      generated[2] && generated[2].size > 0
+                        ? generated[2]
+                        : new Blob();
+                  } catch (err) {
+                    console.warn(
+                      "[BadgeDesigner] proof upload: asset gen failed",
+                      i,
+                      err,
+                    );
+                  }
+                } else {
+                  console.warn(
+                    "[BadgeDesigner] proof upload: template missing",
+                    templateIdForBadge,
+                  );
+                }
+
+                const formDataLine = new FormData();
+                formDataLine.append("designId", designIdForSupabase);
+                formDataLine.append(
+                  "designData",
+                  JSON.stringify(designDataForSupabase),
+                );
+                formDataLine.append("storageOnly", "true");
+                if (shopifyCustomerIdFromUrl) {
+                  formDataLine.append(
+                    "shopifyCustomerId",
+                    shopifyCustomerIdFromUrl,
+                  );
+                }
+                if (pngBlob.size > 0) {
+                  formDataLine.append(
+                    `thumbnail_png_${i}`,
+                    pngBlob,
+                    `${designerConfig.lineIdPrefix}-${i}-thumbnail.png`,
+                  );
+                }
+                if (svgBlob.size > 0) {
+                  formDataLine.append(
+                    `svg_${i}`,
+                    svgBlob,
+                    `${designerConfig.lineIdPrefix}-${i}-design.svg`,
+                  );
+                }
+                if (printSvgBlob.size > 0) {
+                  formDataLine.append(
+                    `print_svg_${i}`,
+                    printSvgBlob,
+                    `${designerConfig.lineIdPrefix}-${i}-print.svg`,
+                  );
+                }
+                const lineJson = await postProofChunk(formDataLine);
+                if (Array.isArray(lineJson.thumbnailUrls)) {
+                  lineJson.thumbnailUrls.forEach((u: string, idx: number) => {
+                    if (u) collectedThumbs[idx] = u;
+                  });
+                }
+                pdfUrlForCart = lineJson.pdfUrl || pdfUrlForCart;
+              }
+              thumbnailUrls = collectedThumbs;
             }
           } catch (fallbackErr) {
             console.warn(
@@ -6769,8 +6781,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               fallbackErr,
             );
             alert(
-              `Proof upload failed${
-                fallbackErr instanceof Error ? `: ${fallbackErr.message}` : ""
+              `${
+                fallbackErr instanceof Error
+                  ? fallbackErr.message
+                  : "Proof upload failed"
               }. Your design will still be added to cart. Support may follow up for the proof.`,
             );
           }

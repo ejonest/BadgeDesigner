@@ -147,6 +147,16 @@ type RenderOpts = {
   aqbPresetTextLayout?: boolean;
   /** UI previews may reduce the default 24px canvas padding to enlarge wide products. */
   previewPaddingPx?: number;
+  /**
+   * When false, skip base64 @font-face embedding (much smaller SVGs for storage upload).
+   * Default true for downloads/PDF rasterization.
+   */
+  embedFonts?: boolean;
+  /**
+   * When false, keep http(s) / site-relative image hrefs instead of inlining as data URLs
+   * (smaller storage uploads). Default true for canvas/PDF rasterization.
+   */
+  inlineRemoteImages?: boolean;
 };
 
 export type { RenderOpts };
@@ -2670,46 +2680,62 @@ export async function renderBadgeToSvgStringWithFonts(
     }
   });
 
-  // Load and embed fonts
+  // Load and embed fonts (optional — skip for compact storage uploads)
   const fontDefs: string[] = [];
   const fontMappings = new Map<string, string>(); // original name -> embedded name
+  const shouldEmbedFonts = opts.embedFonts !== false;
 
-  for (const fontFamily of fontFamilies) {
-    try {
-      const fontData = await loadFont(fontFamily);
-      if (fontData) {
-        const embeddedName = `Embedded${fontFamily.replace(/\s+/g, "")}`;
-        fontMappings.set(fontFamily, embeddedName);
+  if (shouldEmbedFonts) {
+    for (const fontFamily of fontFamilies) {
+      try {
+        const fontData = await loadFont(fontFamily);
+        if (fontData) {
+          const embeddedName = `Embedded${fontFamily.replace(/\s+/g, "")}`;
+          fontMappings.set(fontFamily, embeddedName);
 
-        fontDefs.push(`
-          @font-face {
-            font-family: "${embeddedName}";
-            src: url("data:font/ttf;base64,${fontData.regular}");
-            font-weight: normal;
-            font-style: normal;
+          // One @font-face per real file — do not repeat the same base64 four times.
+          const faces: Array<{
+            weight: string;
+            style: string;
+            data: string;
+          }> = [
+            { weight: "normal", style: "normal", data: fontData.regular },
+          ];
+          if (fontData.bold) {
+            faces.push({
+              weight: "bold",
+              style: "normal",
+              data: fontData.bold,
+            });
           }
-          @font-face {
-            font-family: "${embeddedName}";
-            src: url("data:font/ttf;base64,${fontData.regular}");
-            font-weight: bold;
-            font-style: normal;
+          if (fontData.italic) {
+            faces.push({
+              weight: "normal",
+              style: "italic",
+              data: fontData.italic,
+            });
           }
-          @font-face {
-            font-family: "${embeddedName}";
-            src: url("data:font/ttf;base64,${fontData.regular}");
-            font-weight: normal;
-            font-style: italic;
+          if (fontData.boldItalic) {
+            faces.push({
+              weight: "bold",
+              style: "italic",
+              data: fontData.boldItalic,
+            });
           }
+          for (const face of faces) {
+            fontDefs.push(`
           @font-face {
             font-family: "${embeddedName}";
-            src: url("data:font/ttf;base64,${fontData.regular}");
-            font-weight: bold;
-            font-style: italic;
+            src: url("data:font/ttf;base64,${face.data}");
+            font-weight: ${face.weight};
+            font-style: ${face.style};
           }
         `);
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to load font ${fontFamily}:`, error);
       }
-    } catch (error) {
-      console.warn(`Failed to load font ${fontFamily}:`, error);
     }
   }
 
@@ -2726,7 +2752,25 @@ export async function renderBadgeToSvgStringWithFonts(
       isPlaqueDetachedTemplateId(template.id) &&
       !isPrintPlateRender(opts)
     ) {
-      svg = await inlinePlaqueDetachedWoodStockImagesInSvg(svg);
+      if (opts.inlineRemoteImages === false) {
+        // Prefer absolute same-origin URLs over multi-MB data URLs for storage.
+        if (typeof window !== "undefined") {
+          const origin = window.location.origin;
+          for (const publicPath of [
+            "/images/plaque/plaque-detached-portrait-stock.png",
+            "/images/plaque/plaque-detached-landscape-stock.png",
+          ]) {
+            if (!svg.includes(publicPath)) continue;
+            const abs = `${origin}${publicPath}`;
+            svg = svg.split(`href="${publicPath}"`).join(`href="${abs}"`);
+            svg = svg
+              .split(`xlink:href="${publicPath}"`)
+              .join(`xlink:href="${abs}"`);
+          }
+        }
+      } else {
+        svg = await inlinePlaqueDetachedWoodStockImagesInSvg(svg);
+      }
     }
     return svg;
   }
