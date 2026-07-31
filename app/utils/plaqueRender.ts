@@ -591,6 +591,69 @@ function plaqueDetachedWoodPhotoHereBannerSvg(slot: {
 }
 
 /**
+ * Preview-only image slot on the metal plate where the user’s upload will sit
+ * (attached: upper logo band; detached: left/right plate logo).
+ */
+export function plaqueAttachedImagePlaceholderRect(trimBox: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}): { x: number; y: number; width: number; height: number } {
+  const band = plaqueAttachedLogoBandRect(trimBox);
+  const padX = Math.max(10, band.width * 0.08);
+  const padY = Math.max(10, band.height * 0.12);
+  return {
+    x: band.x + padX,
+    y: band.y + padY,
+    width: Math.max(1, band.width - 2 * padX),
+    height: Math.max(1, band.height - 2 * padY),
+  };
+}
+
+export function plaqueUserImagePlaceholderSvg(params: {
+  slot: { x: number; y: number; width: number; height: number };
+  /** Engraved ink / contrast color on the plate. */
+  inkHex: string;
+  label?: string;
+}): string {
+  const { x, y, width, height } = params.slot;
+  if (width < 8 || height < 8) return "";
+  const size = Math.max(8, Math.min(width, height) * 0.9);
+  const cardX = x + (width - size) / 2;
+  const cardY = y + (height - size) / 2;
+  const iconCx = cardX + size / 2;
+  const iconCy = cardY + size * 0.38;
+  const headR = size * 0.15;
+  const fontSize = Math.max(9, Math.min(28, size * 0.18));
+  const textX = cardX + size / 2;
+  const lineHeight = fontSize;
+  const textY = cardY + size / 2 - lineHeight * 0.7;
+  const words = (params.label ?? "Your Image Here")
+    .trim()
+    .toUpperCase()
+    .split(/\s+/)
+    .slice(0, 3)
+    .map((word) => word.replace(/&/g, "&amp;").replace(/</g, "&lt;"));
+  while (words.length < 3) words.push("");
+  return `
+    <rect x="${cardX + size * 0.035}" y="${cardY + size * 0.045}"
+      width="${size}" height="${size}" fill="#000000" fill-opacity="0.09"/>
+    <rect x="${cardX}" y="${cardY}" width="${size}" height="${size}"
+      fill="#f1f1f3"/>
+    <circle cx="${iconCx}" cy="${iconCy}" r="${headR}" fill="#d2d2d7"/>
+    <ellipse cx="${iconCx}" cy="${cardY + size * 0.72}"
+      rx="${size * 0.3}" ry="${size * 0.15}" fill="#dedee2"/>
+    <text x="${textX}" y="${textY}" text-anchor="middle"
+      font-family="Arial, Helvetica, sans-serif" font-size="${fontSize}" font-weight="700"
+      fill="#000000">
+      <tspan x="${textX}" dy="0">${words[0]}</tspan>
+      <tspan x="${textX}" dy="${lineHeight}">${words[1]}</tspan>
+      <tspan x="${textX}" dy="${lineHeight}">${words[2]}</tspan>
+    </text>`;
+}
+
+/**
  * SVG defs fragment + body group: stock photo clipped to the wood opening, optional banner, frame stroke
  * drawn on top by {@link plaqueDetachedPhotoFrameDecor}.
  */

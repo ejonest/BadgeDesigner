@@ -94,56 +94,81 @@ export async function runSaveDraftDesigner(
       let fullImageUrl = "";
       let printSvgUrl = "";
 
+      const uploadJobs: Promise<void>[] = [];
+
       if (thumbnailPngFile?.size) {
-        try {
-          const thumbnailFileName = `${designId}/${def.lineIdPrefix}-${badgeIndex}-thumbnail.png`;
-          thumbnailUrl = await uploadImageToDesignerBucket(
-            def,
-            thumbnailPngFile,
-            thumbnailFileName,
-            "image/png",
-          );
-        } catch (err) {
-          console.warn(
-            `[save-draft-${designerId}] Thumbnail upload failed line ${badgeIndex}:`,
-            err,
-          );
-        }
+        const thumbType =
+          thumbnailPngFile.type && thumbnailPngFile.type.startsWith("image/")
+            ? thumbnailPngFile.type
+            : "image/jpeg";
+        const thumbExt = thumbType.includes("png")
+          ? "png"
+          : thumbType.includes("webp")
+            ? "webp"
+            : "jpg";
+        uploadJobs.push(
+          (async () => {
+            try {
+              const thumbnailFileName = `${designId}/${def.lineIdPrefix}-${badgeIndex}-thumbnail.${thumbExt}`;
+              thumbnailUrl = await uploadImageToDesignerBucket(
+                def,
+                thumbnailPngFile,
+                thumbnailFileName,
+                thumbType,
+              );
+            } catch (err) {
+              console.warn(
+                `[save-draft-${designerId}] Thumbnail upload failed line ${badgeIndex}:`,
+                err,
+              );
+            }
+          })(),
+        );
       }
 
       if (svgFile?.size) {
-        try {
-          const svgFileName = `${designId}/${def.lineIdPrefix}-${badgeIndex}-design.svg`;
-          fullImageUrl = await uploadImageToDesignerBucket(
-            def,
-            svgFile,
-            svgFileName,
-            "image/svg+xml",
-          );
-        } catch (err) {
-          console.warn(
-            `[save-draft-${designerId}] SVG upload failed line ${badgeIndex}:`,
-            err,
-          );
-        }
+        uploadJobs.push(
+          (async () => {
+            try {
+              const svgFileName = `${designId}/${def.lineIdPrefix}-${badgeIndex}-design.svg`;
+              fullImageUrl = await uploadImageToDesignerBucket(
+                def,
+                svgFile,
+                svgFileName,
+                "image/svg+xml",
+              );
+            } catch (err) {
+              console.warn(
+                `[save-draft-${designerId}] SVG upload failed line ${badgeIndex}:`,
+                err,
+              );
+            }
+          })(),
+        );
       }
 
       if (printSvgFile?.size) {
-        try {
-          const printSvgFileName = `${designId}/${def.lineIdPrefix}-${badgeIndex}-print.svg`;
-          printSvgUrl = await uploadImageToDesignerBucket(
-            def,
-            printSvgFile,
-            printSvgFileName,
-            "image/svg+xml",
-          );
-        } catch (err) {
-          console.warn(
-            `[save-draft-${designerId}] Print SVG upload failed line ${badgeIndex}:`,
-            err,
-          );
-        }
+        uploadJobs.push(
+          (async () => {
+            try {
+              const printSvgFileName = `${designId}/${def.lineIdPrefix}-${badgeIndex}-print.svg`;
+              printSvgUrl = await uploadImageToDesignerBucket(
+                def,
+                printSvgFile,
+                printSvgFileName,
+                "image/svg+xml",
+              );
+            } catch (err) {
+              console.warn(
+                `[save-draft-${designerId}] Print SVG upload failed line ${badgeIndex}:`,
+                err,
+              );
+            }
+          })(),
+        );
       }
+
+      await Promise.all(uploadJobs);
 
       const item = convertBadgeToOrderItem(badge, designId, badgeIndex, {
         thumbnail_url: thumbnailUrl,

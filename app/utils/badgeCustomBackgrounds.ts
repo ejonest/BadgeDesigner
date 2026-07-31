@@ -54,6 +54,60 @@ export function buildCustomBadgeBackgroundSrc(fileName: string): string {
   return `/badge-custom-backgrounds/${fileName}`;
 }
 
+/**
+ * Map a preview/mockup fileName to the print-bleed asset (sharp rectangle
+ * with overhang art). Falls back through common naming variants.
+ */
+export function customBackgroundPreviewToBleedFileName(
+  fileName: string,
+): string {
+  const base = fileName
+    .replace(/-Badge-main-preview\.(jpe?g|png|webp)$/i, "")
+    .replace(/-main-preview\.(jpe?g|png|webp)$/i, "")
+    .replace(/\.(jpe?g|png|webp)$/i, "");
+  return `${base}-bleed.png`;
+}
+
+/** Public URL for a custom background's print-bleed image, if configured. */
+export function buildCustomBadgeBackgroundBleedSrc(
+  fileName: string,
+): string {
+  return buildCustomBadgeBackgroundSrc(
+    customBackgroundPreviewToBleedFileName(fileName),
+  );
+}
+
+/**
+ * Resolve the image URL to use on the production print die for a custom
+ * background. Prefers the generative-fill bleed PNG; falls back to the preview
+ * mockup when no bleed asset is on disk (e.g. Nursing Homes until generated).
+ */
+export function resolveCustomBadgeBackgroundPrintImageSrc(
+  id: string | undefined,
+): string | null {
+  const entry = getCustomBadgeBackgroundById(id);
+  if (!entry) return null;
+  const bleedName = customBackgroundPreviewToBleedFileName(entry.fileName);
+  if (typeof window === "undefined") {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { existsSync } = require("node:fs") as typeof import("node:fs");
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { join } = require("node:path") as typeof import("node:path");
+      const dir = join(process.cwd(), "public", "badge-custom-backgrounds");
+      if (existsSync(join(dir, bleedName))) {
+        return buildCustomBadgeBackgroundSrc(bleedName);
+      }
+      if (existsSync(join(dir, entry.fileName))) {
+        return buildCustomBadgeBackgroundSrc(entry.fileName);
+      }
+    } catch {
+      // fall through
+    }
+  }
+  return buildCustomBadgeBackgroundSrc(bleedName);
+}
+
 export function getCustomBadgeBackgroundById(
   id: string | undefined,
 ): CustomBadgeBackgroundEntry | undefined {

@@ -27,7 +27,23 @@ export interface BadgeThumbnailOptions {
 export type FullBadgeImageOptions = Pick<
   RenderOpts,
   'plateRenderMode' | 'aqbPresetTextLayout' | 'showOutline'
->;
+> & {
+  /** Canvas multiplier vs SVG viewBox (default 3). Draft thumbs use 2. */
+  rasterScale?: number;
+  rasterFormat?: 'image/png' | 'image/jpeg';
+  /** 0–1 for JPEG/WebP; ignored for PNG. */
+  rasterQuality?: number;
+  /** Reject if SVG→canvas never settles (avoids forever-spinners). */
+  loadTimeoutMs?: number;
+};
+
+/** Fast draft/autosave raster: still crisp, much smaller uploads than full print PNG. */
+export const DRAFT_FULL_BADGE_IMAGE_OPTIONS: FullBadgeImageOptions = {
+  rasterScale: 2,
+  rasterFormat: 'image/jpeg',
+  rasterQuality: 0.88,
+  loadTimeoutMs: 20_000,
+};
 
 function resolveViewBoxPx(
   template: LoadedTemplate,
@@ -213,58 +229,77 @@ export async function generateFullBadgeImage(
       template,
       badgeForSvg,
       variant,
-      plateRenderMode,
+      plateRenderMode === 'photo' ? 'photo' : 'vector',
     );
     const viewBoxW = viewBox.widthPx;
     const viewBoxH = viewBox.heightPx;
 
-    // Convert SVG to high-resolution PNG
+    const scale = options.rasterScale ?? 3;
+    const rasterFormat = options.rasterFormat ?? 'image/png';
+    const rasterQuality = options.rasterQuality ?? (rasterFormat === 'image/png' ? 1.0 : 0.92);
+    const loadTimeoutMs = options.loadTimeoutMs ?? 45_000;
+
+    // Convert SVG to high-resolution raster (PNG by default; JPEG for draft thumbs)
     return new Promise((resolve, reject) => {
       const img = new Image();
       const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
       const svgUrl = URL.createObjectURL(svgBlob);
-      
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          if (!ctx) {
-            reject(new Error('Could not get canvas context'));
-            return;
-          }
+      let settled = false;
 
-          // Use same aspect ratio as SVG viewBox (no stretching)
-          const scale = 3;
-          canvas.width = viewBoxW * scale;
-          canvas.height = viewBoxH * scale;
+      const finish = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        fn();
+      };
 
-          // Enable high-quality rendering
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-
-          // Draw the SVG to match viewBox dimensions exactly
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          // Convert to PNG data URL
-          const dataUrl = canvas.toDataURL('image/png', 1.0);
-          console.log('Full badge image generated successfully');
-          resolve(dataUrl);
-          
-          // Clean up
+      const timeoutId = setTimeout(() => {
+        finish(() => {
+          console.error('Timeout loading SVG for full image');
           URL.revokeObjectURL(svgUrl);
-        } catch (error) {
-          console.error('Error converting SVG to high-res canvas:', error);
-          reject(error);
-        }
+          reject(new Error('Timed out converting badge SVG to image'));
+        });
+      }, loadTimeoutMs);
+
+      img.onload = () => {
+        finish(() => {
+          try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            if (!ctx) {
+              URL.revokeObjectURL(svgUrl);
+              reject(new Error('Could not get canvas context'));
+              return;
+            }
+
+            canvas.width = Math.max(1, Math.round(viewBoxW * scale));
+            canvas.height = Math.max(1, Math.round(viewBoxH * scale));
+
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            const dataUrl = canvas.toDataURL(rasterFormat, rasterQuality);
+            console.log('Full badge image generated successfully');
+            resolve(dataUrl);
+            URL.revokeObjectURL(svgUrl);
+          } catch (error) {
+            console.error('Error converting SVG to high-res canvas:', error);
+            URL.revokeObjectURL(svgUrl);
+            reject(error);
+          }
+        });
       };
-      
+
       img.onerror = (error) => {
-        console.error('Error loading SVG for full image:', error);
-        URL.revokeObjectURL(svgUrl);
-        reject(error);
+        finish(() => {
+          console.error('Error loading SVG for full image:', error);
+          URL.revokeObjectURL(svgUrl);
+          reject(error);
+        });
       };
-      
+
       img.src = svgUrl;
     });
   } catch (error) {
@@ -274,8 +309,8 @@ export async function generateFullBadgeImage(
     const fullImage = await generateBadgeThumbnail(badge, {
       width: 900,
       height: 900,
-      quality: 1.0,
-      format: 'image/png',
+      quality: options.rasterQuality ?? 1.0,
+      format: options.rasterFormat ?? 'image/png',
       plateRenderMode,
     });
     return fullImage;

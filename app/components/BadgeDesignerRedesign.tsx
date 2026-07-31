@@ -170,6 +170,7 @@ import {
   generateFullBadgeImage,
   generateThumbnailFromFullImage,
 } from "../utils/badgeThumbnail";
+import { generateDraftBadgeAssetBlobs } from "../utils/draftBadgeAssets";
 import { getCurrentShop, type ShopAuthData } from "../utils/shopAuth";
 import { useEmbeddedMobileStoreChrome } from "../utils/embeddedStoreChrome";
 import { getDesignLibraryDummyAuth } from "../utils/designLibraryDummyAuth";
@@ -294,7 +295,10 @@ import {
   plaqueUserLineTextMatchesPlaceholder,
   resolveAttachedPlaqueAwardFormatForRender,
 } from "~/constants/plaqueFormats";
-import { buildPlaqueAwardFormatPreviewBadge } from "~/utils/plaqueAwardFormatPreview";
+import {
+  buildPlaqueAwardFormatPreviewBadge,
+  buildPlaqueLayoutPreviewBadge,
+} from "~/utils/plaqueAwardFormatPreview";
 import {
   getSignLogoPlacementOptionsForTemplate,
   normalizeSignLogoPlacementForTemplate,
@@ -466,6 +470,15 @@ function dataURLToBlob(dataUrl: string): Blob {
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new Blob([bytes], { type: mime });
+}
+
+function draftThumbnailFileName(index: number, blob: Blob): string {
+  const isJpeg =
+    blob.type.includes("jpeg") ||
+    blob.type.includes("jpg") ||
+    blob.type === "image/webp";
+  const ext = isJpeg ? (blob.type.includes("webp") ? "webp" : "jpg") : "png";
+  return `badge-${index}-thumbnail.${ext}`;
 }
 
 /** localStorage key prefix and version for badge designer draft cache (reload persistence). */
@@ -2864,6 +2877,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const [badge1Data, setBadge1Data] = useState<Badge | null>(null); // Keep for backward compatibility, synced with multipleBadges[0]
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isGeneratingDesigns, setIsGeneratingDesigns] = useState(false);
+  /** Non-blocking draft save (Add Multiple / apply-all): corner chip, not full overlay. */
+  const [isBackgroundDraftSaving, setIsBackgroundDraftSaving] = useState(false);
+  /** After Add Multiple: explain background save + View All. */
+  const [showBulkSaveNotice, setShowBulkSaveNotice] = useState(false);
+  const [bulkSaveNoticeCount, setBulkSaveNoticeCount] = useState(0);
   /** Sign: product JSON from Shopify (variant IDs + prices), via `/api/shopify-product`. */
   const [signShopifyProduct, setSignShopifyProduct] =
     useState<ShopifyProductJs | null>(null);
@@ -2994,6 +3012,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }
     return m;
   }, [plaqueAwardFormatPreviewTemplateId, defaultLineShape]);
+
+  const plaqueLayoutPreviewBadges = useMemo(() => {
+    const previews = new Map<string, Badge>();
+    for (const opt of PLAQUE_LAYOUT_OPTIONS) {
+      const b = buildPlaqueLayoutPreviewBadge({
+        layoutId: opt.id,
+        templateId: opt.thumbnailTemplateId,
+        defaultLineShape,
+        plateBackgroundHex: PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
+      });
+      if (b) previews.set(opt.id, b);
+    }
+    return previews;
+  }, [defaultLineShape]);
 
   useEffect(() => {
     if (!plaqueAttachedSelected) setPlaqueAwardFormatsExpanded(false);
@@ -4864,7 +4896,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     return template;
   }, [templates, universalTemplateId]);
 
-  /** Dev-only SVG proof/print preview (?designLibraryDummy=1). */
+  /**
+   * Local SVG QA panel: customer preview (proof), print-ready, and overlap.
+   * Available in any Vite development build — not only designLibraryDummy mode.
+   */
+  const isDevSvgQaEnabled = Boolean(
+    (import.meta.env as { DEV?: boolean }).DEV,
+  );
   const [devSvgOpen, setDevSvgOpen] = useState(false);
   const [devSvgBusy, setDevSvgBusy] = useState(false);
   const [devSvgError, setDevSvgError] = useState<string | null>(null);
@@ -4872,16 +4910,47 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const [devSvgPrintUrl, setDevSvgPrintUrl] = useState<string | null>(null);
   const [devSvgProofBlob, setDevSvgProofBlob] = useState<Blob | null>(null);
   const [devSvgPrintBlob, setDevSvgPrintBlob] = useState<Blob | null>(null);
-  /** Face rect as % of shared proof/print viewBox — magenta guide only. */
+  /** Face rect as % of proof viewBox — magenta guide only. */
   const [devSvgFacePct, setDevSvgFacePct] = useState<{
     left: number;
     top: number;
     width: number;
     height: number;
   } | null>(null);
+  /**
+   * Print SVG placement over proof so the *die* (not bleed pad) matches the
+   * magenta face. Print canvas is die + 0.1″ overhang.
+   */
+  const [devSvgPrintOverlayPct, setDevSvgPrintOverlayPct] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  /**
+   * Print canvas geometry so the panel can draw the real bleed edge and trim
+   * (die) line over the print SVG.
+   */
+  const [devSvgPrintGeom, setDevSvgPrintGeom] = useState<{
+    printW: number;
+    printH: number;
+    dieW: number;
+    dieH: number;
+    pad: number;
+    dieMarkup: string;
+  } | null>(null);
+  /**
+   * Overlap display. Colour-on-colour is unreadable, so the useful modes strip
+   * colour: mono difference goes black where the two layers agree, and red/cyan
+   * shows misregistration as coloured fringes.
+   */
+  const [devSvgOverlapMode, setDevSvgOverlapMode] = useState<
+    "mono" | "rgcyan" | "swipe"
+  >("mono");
+  const [devSvgSwipePct, setDevSvgSwipePct] = useState(50);
 
   const refreshDevSvgPreviews = useCallback(async () => {
-    if (!designLibraryDummy.enabled) return;
+    if (!isDevSvgQaEnabled) return;
     setDevSvgBusy(true);
     setDevSvgError(null);
     try {
@@ -4907,13 +4976,49 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       ]);
 
       const PADDING_PX = 24;
+      // Must match PRINT_BLEED_IN_PER_SIDE * 96 in renderSvg.ts
+      const printBleedPadPx = 0.05 * 96;
+      const dieW = template.widthPx;
+      const dieH = template.heightPx;
+      const printW = dieW + printBleedPadPx * 2;
+      const printH = dieH + printBleedPadPx * 2;
+
+      setDevSvgPrintGeom({
+        printW,
+        printH,
+        dieW,
+        dieH,
+        pad: printBleedPadPx,
+        dieMarkup: (
+          template.innerElement ||
+          template.outlineElement ||
+          `<rect x="0" y="0" width="${dieW}" height="${dieH}" />`
+        ).replace(/\sfill="[^"]*"/g, ""),
+      });
+
+      const applyFaceGuide = (face: {
+        left: number;
+        top: number;
+        width: number;
+        height: number;
+      }) => {
+        setDevSvgFacePct(face);
+        // Print canvas = die + bleed; place so the die lines up with the face.
+        setDevSvgPrintOverlayPct({
+          left: face.left - face.width * (printBleedPadPx / dieW),
+          top: face.top - face.height * (printBleedPadPx / dieH),
+          width: face.width * (printW / dieW),
+          height: face.height * (printH / dieH),
+        });
+      };
+
       const photo = resolveBadgePlatePhoto(templateId, badgeForSvg);
       if (photo) {
         const proofViewBox = getPhotoPlateViewBoxSize(photo);
         const contentTx = PADDING_PX - photo.previewCropRect.x;
         const contentTy = PADDING_PX - photo.previewCropRect.y;
         const face = photo.badgeFaceRect;
-        setDevSvgFacePct({
+        applyFaceGuide({
           left: ((contentTx + face.x) / proofViewBox.widthPx) * 100,
           top: ((contentTy + face.y) / proofViewBox.heightPx) * 100,
           width: (face.width / proofViewBox.widthPx) * 100,
@@ -4922,7 +5027,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       } else {
         const proofW = template.standardViewBoxWidth + PADDING_PX * 2;
         const proofH = template.standardViewBoxHeight + PADDING_PX * 2;
-        setDevSvgFacePct({
+        applyFaceGuide({
           left: (PADDING_PX / proofW) * 100,
           top: (PADDING_PX / proofH) * 100,
           width: (template.widthPx / proofW) * 100,
@@ -4957,7 +5062,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       setDevSvgBusy(false);
     }
   }, [
-    designLibraryDummy.enabled,
+    isDevSvgQaEnabled,
     badge,
     activeTemplate,
     universalTemplateId,
@@ -4965,10 +5070,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   ]);
 
   useEffect(() => {
-    if (!designLibraryDummy.enabled || !devSvgOpen) return;
+    if (!isDevSvgQaEnabled || !devSvgOpen) return;
     void refreshDevSvgPreviews();
   }, [
-    designLibraryDummy.enabled,
+    isDevSvgQaEnabled,
     devSvgOpen,
     badge.templateId,
     badge.badgeIconId,
@@ -5608,35 +5713,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           return;
         }
 
-        const badgePromises = allBadgesForDraft.map((b, i) =>
-          Promise.all([
-            generateFullBadgeImage(b, variant).then(dataURLToBlob),
-            generateSVGAsBlob(b, template, variant),
-            generatePrintSVGAsBlob(b, template, variant),
-          ])
-            .then(([pngBlob, svgBlob, printSvgBlob]) => ({
-              pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
-              svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
-              printSvgBlob:
-                printSvgBlob && printSvgBlob.size > 0 ? printSvgBlob : new Blob(),
-              i,
-            }))
-            .catch((err) => {
-              console.warn(
-                "[BadgeDesignerRedesign] Draft save: badge",
-                i,
-                "PNG/SVG failed",
-                err,
-              );
-              return {
-                pngBlob: new Blob(),
-                svgBlob: new Blob(),
-                printSvgBlob: new Blob(),
-                i,
-              };
-            }),
+        const badgeResults = await generateDraftBadgeAssetBlobs(
+          allBadgesForDraft,
+          template,
+          variant,
         );
-        const badgeResults = await Promise.all(badgePromises);
         badgeResults.sort((a, b) => a.i - b.i);
         const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
         const svgBlobs = badgeResults.map((r) => r.svgBlob);
@@ -5668,7 +5749,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             formData.append(
               `thumbnail_png_${index}`,
               pngBlob,
-              `badge-${index}-thumbnail.png`,
+              draftThumbnailFileName(index, pngBlob),
             );
         });
         svgBlobs.forEach((svgBlob, index) => {
@@ -5722,9 +5803,18 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     variant,
   ]);
 
-  /** Run draft save immediately for the given badges (e.g. after CSV override/add). Shows generating spinner over badges. */
+  type DraftSaveForBadgesOptions = {
+    /** Full overlay that blocks preview interactions (add-to-cart). */
+    blocking?: boolean;
+  };
+
+  /** Run draft save immediately for the given badges (CSV, apply-all, duplicate, cart). */
   const runDraftSaveForBadges = useCallback(
-    (allBadges: Badge[]): Promise<void> => {
+    (
+      allBadges: Badge[],
+      options: DraftSaveForBadgesOptions = {},
+    ): Promise<void> => {
+      const blocking = options.blocking === true;
       if (!allBadges?.length || !activeTemplateRef.current)
         return Promise.resolve();
       if (!sessionDesignIdRef.current) {
@@ -5738,7 +5828,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         const normalized = getAllBadges(allBadges);
         if (normalized.length === 0) return;
 
-        setIsGeneratingDesigns(true);
+        if (blocking) setIsGeneratingDesigns(true);
+        else setIsBackgroundDraftSaving(true);
         try {
           const templateId =
             activeT?.id || normalized[0]?.templateId || "rect-1x3";
@@ -5750,37 +5841,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             );
             return;
           }
-          const badgePromises = normalized.map((b, i) =>
-            Promise.all([
-              generateFullBadgeImage(b, variant).then(dataURLToBlob),
-              generateSVGAsBlob(b, template, variant),
-              generatePrintSVGAsBlob(b, template, variant),
-            ])
-              .then(([pngBlob, svgBlob, printSvgBlob]) => ({
-                pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
-                svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
-                printSvgBlob:
-                  printSvgBlob && printSvgBlob.size > 0
-                    ? printSvgBlob
-                    : new Blob(),
-                i,
-              }))
-              .catch((err) => {
-                console.warn(
-                  "[BadgeDesignerRedesign] runDraftSaveForBadges: badge",
-                  i,
-                  "PNG/SVG failed",
-                  err,
-                );
-                return {
-                  pngBlob: new Blob(),
-                  svgBlob: new Blob(),
-                  printSvgBlob: new Blob(),
-                  i,
-                };
-              }),
+          const badgeResults = await generateDraftBadgeAssetBlobs(
+            normalized,
+            template,
+            variant,
           );
-          const badgeResults = await Promise.all(badgePromises);
           badgeResults.sort((a, b) => a.i - b.i);
           const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
           const svgBlobs = badgeResults.map((r) => r.svgBlob);
@@ -5810,7 +5875,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               formData.append(
                 `thumbnail_png_${index}`,
                 pngBlob,
-                `badge-${index}-thumbnail.png`,
+                draftThumbnailFileName(index, pngBlob),
               );
           });
           svgBlobs.forEach((svgBlob, index) => {
@@ -5855,15 +5920,21 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             err,
           );
         } finally {
-          setIsGeneratingDesigns(false);
+          if (blocking) setIsGeneratingDesigns(false);
+          else setIsBackgroundDraftSaving(false);
           draftSaveInProgressRef.current = null;
         }
       })();
       draftSaveInProgressRef.current = promise;
       return promise;
     },
-    [_productId, designerApiPaths.saveDraft, variant],
+    [_productId, designerApiPaths.saveDraft, variant, badgeOrderQty],
   );
+
+  const notifyBulkBadgesAdded = useCallback((count: number) => {
+    setBulkSaveNoticeCount(count);
+    setShowBulkSaveNotice(true);
+  }, []);
 
   const touchStartX = React.useRef<number>(0);
 
@@ -8787,7 +8858,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     try {
       // Ensure Supabase draft rows exist before finalize-draft (autosave only runs on section close).
       if (!isSignLikeVariant(variant) && badgesForSupabase.length > 0) {
-        await runDraftSaveForBadges(badgesForSupabase);
+        await runDraftSaveForBadges(badgesForSupabase, { blocking: true });
       }
 
       let thumbnailUrls: string[] = [];
@@ -10062,10 +10133,18 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/85 rounded-lg">
                 <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-blue-600 mb-2" />
                 <span className="text-gray-700 font-medium">
-                  Generating {config.labelProduct.toLowerCase()} designs
+                  Saving {config.labelProduct.toLowerCase()} designs…
                 </span>
                 <span className="text-gray-500 text-sm mt-1">
-                  Saving to database…
+                  Almost ready for checkout
+                </span>
+              </div>
+            )}
+            {isBackgroundDraftSaving && !isGeneratingDesigns && (
+              <div className="absolute z-20 right-2 bottom-2 flex items-center gap-2 rounded-lg border border-blue-200 bg-white/95 px-2.5 py-1.5 shadow-sm pointer-events-none">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600" />
+                <span className="text-xs text-gray-700 font-medium">
+                  Saving designs…
                 </span>
               </div>
             )}
@@ -11154,17 +11233,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
                       if (variant === "plaque") {
                         return (
-                          <div className="grid grid-cols-2 gap-2 mb-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                             {PLAQUE_LAYOUT_OPTIONS.map((opt) => {
                               const thumbId = opt.thumbnailTemplateId;
-                              const t = templates.find((x) => x.id === thumbId);
-                              const previewSvg = templatePreviewSvgs[thumbId];
-                              const fallbackPreviewSrc =
-                                t?.svgFile != null
-                                  ? t.svgFile.includes(" ")
-                                    ? encodeURI(t.svgFile)
-                                    : t.svgFile
-                                  : "";
+                              const layoutPreviewBadge =
+                                plaqueLayoutPreviewBadges.get(opt.id) ?? null;
                               const parsed =
                                 parsePlaqueTemplateId(universalTemplateId);
                               /** Avoid double highlight during async template load: parsed id lags behind `selectedPlaqueLayoutId`. */
@@ -11177,16 +11250,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                 <div key={opt.id} className="relative">
                                   <button
                                     type="button"
-                                    className={`relative rounded-lg overflow-hidden transition-all w-full border bg-white ${
+                                    className={`flex flex-col gap-1 text-left rounded-lg border p-1.5 transition-colors w-full ${
                                       isSelected
-                                        ? "border-blue-600 ring-2 ring-blue-300 shadow-md"
-                                        : "border-gray-300 hover:border-gray-400"
+                                        ? "border-blue-600 bg-blue-50 ring-2 ring-blue-200"
+                                        : "border-gray-300 bg-white hover:border-gray-400"
                                     }`}
-                                    style={{
-                                      height: "160px",
-                                      display: "flex",
-                                      flexDirection: "column",
-                                    }}
                                     onClick={() => {
                                       setSelectedPlaqueLayoutId(opt.id);
                                       if (multipleBadges.length === 0) {
@@ -11233,41 +11301,31 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                     }}
                                     title={opt.description}
                                   >
-                                    <div
-                                      className={`text-center py-1 flex-shrink-0 leading-tight ${
-                                        isSelected
-                                          ? "bg-blue-600 text-white"
-                                          : "bg-gray-200 text-gray-700"
-                                      }`}
-                                      style={{
-                                        fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
-                                      }}
-                                    >
-                                      {opt.name}
-                                    </div>
-                                    <div
-                                      className="flex-1 overflow-hidden flex items-center justify-center"
-                                      style={{
-                                        minHeight: 0,
-                                        width: "100%",
-                                        height: "100%",
-                                        padding: "6px",
-                                        boxSizing: "border-box",
-                                      }}
-                                    >
-                                      {previewSvg || fallbackPreviewSrc ? (
-                                        <TemplatePreviewThumb
-                                          svgMarkup={previewSvg}
-                                          variant={variant}
-                                          alt={opt.name}
-                                          className="max-h-full max-w-full object-contain"
-                                          fallbackSrc={fallbackPreviewSrc}
+                                    <div className="w-full overflow-hidden rounded border border-gray-200 bg-slate-100/90 flex items-center justify-center aspect-[4/5] max-h-[176px] min-h-[120px]">
+                                      {layoutPreviewBadge ? (
+                                        <BadgeSvgRenderer
+                                          key={`plaque-layout-thumb-${opt.id}-${thumbId}`}
+                                          variant="plaque"
+                                          badge={layoutPreviewBadge}
+                                          templateId={thumbId}
+                                          height={166}
+                                          className="max-h-[166px]"
                                         />
                                       ) : (
                                         <span className="text-gray-400 text-xs px-1 text-center leading-tight">
-                                          {opt.description}
+                                          Preview unavailable
                                         </span>
                                       )}
+                                    </div>
+                                    <div className="px-0.5 pb-0.5">
+                                      <div
+                                        className="font-semibold text-gray-900 leading-tight"
+                                        style={{
+                                          fontSize: `${DESIGNER_UI_TYPOGRAPHY.templateNameFontPx}px`,
+                                        }}
+                                      >
+                                        {opt.name}
+                                      </div>
                                     </div>
                                   </button>
                                 </div>
@@ -14017,8 +14075,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               </div>
             ) : null}
 
-            {/* Dev SVG preview/download — only with ?designLibraryDummy=1 */}
-            {designLibraryDummy.enabled ? (
+            {/* Dev SVG QA: customer preview + print-ready + overlap — Vite DEV only */}
+            {isDevSvgQaEnabled ? (
               <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50/60 p-3">
                 <button
                   type="button"
@@ -14030,7 +14088,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="flex items-center justify-between w-full text-left"
                 >
                   <h3 className="text-lg font-semibold text-[#02132B]">
-                    Dev SVG preview
+                    SVG centering QA
                   </h3>
                   {devSvgOpen ? (
                     <ChevronUpIcon className="w-5 h-5 text-gray-600" />
@@ -14041,23 +14099,41 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 {devSvgOpen ? (
                   <div className="mt-3 space-y-3">
                     <p className="text-xs text-amber-950/80 leading-snug">
-                      Local-only tools for the current badge. Proof SVG includes
-                      backgrounds; CorelDRAW SVG is text + icon + registration
-                      shape only.{" "}
-                      <span className="font-medium">
-                        Supabase{" "}
-                        <code className="text-[11px]">print_svg_url</code> is not
-                        written yet — run{" "}
-                        <code className="text-[11px]">
-                          docs/migration_add_print_svg_url.sql
-                        </code>{" "}
-                        when you can, then flip{" "}
-                        <code className="text-[11px]">
-                          INCLUDE_PRINT_SVG_URL_IN_DB
-                        </code>
-                        .
-                      </span>
+                      Local-only check for the current badge. Compare the
+                      customer-facing preview, the print-ready SVG (full bleed
+                      rectangle + text/icons), and the overlapped registration
+                      view. When centering is correct, text and icons in the
+                      overlap look like a single crisp layer — not a double
+                      image.
                     </p>
+                    <svg
+                      aria-hidden="true"
+                      width="0"
+                      height="0"
+                      style={{ position: "absolute" }}
+                    >
+                      <filter id="devSvgQaRed" colorInterpolationFilters="sRGB">
+                        <feColorMatrix
+                          type="matrix"
+                          values="0.30 0.59 0.11 0 0
+                                  0    0    0    0 0
+                                  0    0    0    0 0
+                                  0    0    0    1 0"
+                        />
+                      </filter>
+                      <filter
+                        id="devSvgQaCyan"
+                        colorInterpolationFilters="sRGB"
+                      >
+                        <feColorMatrix
+                          type="matrix"
+                          values="0    0    0    0 0
+                                  0.30 0.59 0.11 0 0
+                                  0.30 0.59 0.11 0 0
+                                  0    0    0    1 0"
+                        />
+                      </filter>
+                    </svg>
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
@@ -14079,7 +14155,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             );
                         }}
                       >
-                        Download proof SVG
+                        Download preview SVG
                       </button>
                       <button
                         type="button"
@@ -14093,7 +14169,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             );
                         }}
                       >
-                        Download CorelDRAW SVG
+                        Download print-ready SVG
                       </button>
                       <button
                         type="button"
@@ -14116,12 +14192,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="rounded border border-amber-200 bg-white p-2">
                         <div className="text-xs font-semibold mb-2 text-[#02132B]">
-                          Proof SVG (full design)
+                          Customer preview (what the shopper sees)
                         </div>
                         {devSvgProofUrl ? (
                           <img
                             src={devSvgProofUrl}
-                            alt="Proof SVG preview"
+                            alt="Customer preview SVG"
                             className="w-full h-auto max-h-48 object-contain bg-[#f7f5f0]"
                           />
                         ) : (
@@ -14131,16 +14207,44 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         )}
                       </div>
                       <div className="rounded border border-amber-200 bg-white p-2">
-                        <div className="text-xs font-semibold mb-2 text-[#02132B]">
-                          CorelDRAW SVG (print layer)
+                        <div className="text-xs font-semibold mb-1 text-[#02132B]">
+                          Print-ready (full bleed rectangle)
                         </div>
-                        {devSvgPrintUrl ? (
-                          <img
-                            src={devSvgPrintUrl}
-                            alt="Print SVG preview"
-                            className="w-full h-auto max-h-48 object-contain bg-[#c8cdd4]"
-                            style={{ border: "1px solid #9aa3ad" }}
-                          />
+                        <p className="text-[11px] text-amber-950/70 mb-2 leading-snug">
+                          The whole rectangle is artwork. The dashed line is the
+                          trim (die) — art must run past it on every side, and
+                          nothing white or badge-shaped should appear inside the
+                          rectangle.
+                        </p>
+                        {devSvgPrintUrl && devSvgPrintGeom ? (
+                          <div
+                            className="relative"
+                            style={{ background: "#ff00ff" }}
+                          >
+                            <img
+                              src={devSvgPrintUrl}
+                              alt="Print-ready SVG"
+                              className="block w-full h-auto"
+                            />
+                            <svg
+                              className="pointer-events-none absolute inset-0 h-full w-full"
+                              viewBox={`0 0 ${devSvgPrintGeom.printW} ${devSvgPrintGeom.printH}`}
+                              preserveAspectRatio="none"
+                            >
+                              <g
+                                transform={`translate(${devSvgPrintGeom.pad}, ${devSvgPrintGeom.pad})`}
+                                style={{
+                                  fill: "none",
+                                  stroke: "#FF00AA",
+                                  strokeWidth: 1.5,
+                                  strokeDasharray: "7 5",
+                                }}
+                                dangerouslySetInnerHTML={{
+                                  __html: devSvgPrintGeom.dieMarkup,
+                                }}
+                              />
+                            </svg>
+                          </div>
                         ) : (
                           <div className="text-xs text-gray-500 py-8 text-center">
                             {devSvgBusy ? "Generating…" : "No preview yet"}
@@ -14149,39 +14253,125 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       </div>
                       <div className="rounded border border-amber-200 bg-white p-2 md:col-span-2">
                         <div className="text-xs font-semibold mb-1 text-[#02132B]">
-                          Registration overlay (proof + print)
+                          Overlap (centering check)
                         </div>
                         <p className="text-[11px] text-amber-950/70 mb-2 leading-snug">
-                          Both SVGs share the same crop viewBox and layout
-                          coords. Stack at full size (55% print opacity).
-                          Magenta box = calibrated badge face. Perfect
-                          registration = single crisp text/icon; double/ghost =
-                          still misaligned.
+                          The print die is scaled onto the magenta face box of
+                          the customer preview.{" "}
+                          {devSvgOverlapMode === "mono"
+                            ? "Mono difference: matching pixels go black, so any text or icon that shows as a bright ghost is off-register."
+                            : devSvgOverlapMode === "rgcyan"
+                              ? "Red/cyan: aligned artwork reads neutral grey; red or cyan fringes on text edges mean a shift in that direction."
+                              : "Swipe: drag the slider to wipe between preview and print — features should not jump as the seam passes."}
                         </p>
-                        {devSvgProofUrl && devSvgPrintUrl ? (
-                          <div className="relative mx-auto w-full max-w-sm bg-[#f7f5f0]">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          {(
+                            [
+                              ["mono", "Mono difference"],
+                              ["rgcyan", "Red / cyan"],
+                              ["swipe", "Swipe"],
+                            ] as const
+                          ).map(([mode, label]) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              className={`px-2 py-1 text-[11px] border rounded ${
+                                devSvgOverlapMode === mode
+                                  ? "border-amber-500 bg-amber-100"
+                                  : "border-amber-300 bg-white"
+                              }`}
+                              onClick={() => setDevSvgOverlapMode(mode)}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                          {devSvgOverlapMode === "swipe" ? (
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              value={devSvgSwipePct}
+                              onChange={(e) =>
+                                setDevSvgSwipePct(Number(e.target.value))
+                              }
+                              className="w-40"
+                              aria-label="Swipe position"
+                            />
+                          ) : null}
+                        </div>
+                        {devSvgProofUrl &&
+                        devSvgPrintUrl &&
+                        devSvgFacePct &&
+                        devSvgPrintOverlayPct ? (
+                          <div
+                            className="relative mx-auto w-full max-w-sm overflow-hidden"
+                            style={{
+                              background:
+                                devSvgOverlapMode === "swipe"
+                                  ? "#f7f5f0"
+                                  : "#000",
+                            }}
+                          >
                             <img
                               src={devSvgProofUrl}
-                              alt="Proof base for registration overlay"
+                              alt="Customer preview base for overlap"
                               className="block h-auto w-full"
+                              style={
+                                devSvgOverlapMode === "mono"
+                                  ? { filter: "grayscale(1) contrast(1.35)" }
+                                  : devSvgOverlapMode === "rgcyan"
+                                    ? { filter: "url(#devSvgQaRed)" }
+                                    : undefined
+                              }
                             />
                             <img
                               src={devSvgPrintUrl}
-                              alt="Print layer over proof"
-                              className="pointer-events-none absolute inset-0 h-full w-full object-contain"
-                              style={{ opacity: 0.55 }}
+                              alt="Print-ready layer over preview"
+                              className="pointer-events-none absolute"
+                              style={{
+                                left: `${devSvgPrintOverlayPct.left}%`,
+                                top: `${devSvgPrintOverlayPct.top}%`,
+                                width: `${devSvgPrintOverlayPct.width}%`,
+                                height: `${devSvgPrintOverlayPct.height}%`,
+                                objectFit: "fill",
+                                ...(devSvgOverlapMode === "mono"
+                                  ? {
+                                      filter: "grayscale(1) contrast(1.35)",
+                                      mixBlendMode: "difference",
+                                    }
+                                  : devSvgOverlapMode === "rgcyan"
+                                    ? {
+                                        filter: "url(#devSvgQaCyan)",
+                                        mixBlendMode: "screen",
+                                      }
+                                    : {
+                                        clipPath: `inset(0 0 0 ${devSvgSwipePct}%)`,
+                                      }),
+                              }}
                             />
-                            {devSvgFacePct ? (
+                            {devSvgOverlapMode === "swipe" ? (
                               <div
-                                className="pointer-events-none absolute border-2 border-dashed border-[#FF00AA]"
+                                className="pointer-events-none absolute top-0 bottom-0 w-px bg-[#00E5FF]"
                                 style={{
-                                  left: `${devSvgFacePct.left}%`,
-                                  top: `${devSvgFacePct.top}%`,
-                                  width: `${devSvgFacePct.width}%`,
-                                  height: `${devSvgFacePct.height}%`,
+                                  left: `${
+                                    devSvgPrintOverlayPct.left +
+                                    (devSvgPrintOverlayPct.width *
+                                      devSvgSwipePct) /
+                                      100
+                                  }%`,
                                 }}
                               />
                             ) : null}
+                            <div
+                              className="pointer-events-none absolute border-2 border-dashed border-[#FF00AA]"
+                              style={{
+                                left: `${devSvgFacePct.left}%`,
+                                top: `${devSvgFacePct.top}%`,
+                                width: `${devSvgFacePct.width}%`,
+                                height: `${devSvgFacePct.height}%`,
+                              }}
+                              title="Badge face / die outline"
+                            />
                           </div>
                         ) : (
                           <div className="py-8 text-center text-xs text-gray-500">
@@ -14534,10 +14724,18 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/85 rounded-lg border-2 border-blue-200">
                     <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-blue-600 mb-2" />
                     <span className="text-gray-700 font-medium">
-                      Generating {config.labelProduct.toLowerCase()} designs
+                      Saving {config.labelProduct.toLowerCase()} designs…
                     </span>
                     <span className="text-gray-500 text-sm mt-1">
-                      Saving to database…
+                      Almost ready for checkout
+                    </span>
+                  </div>
+                )}
+                {isBackgroundDraftSaving && !isGeneratingDesigns && (
+                  <div className="absolute z-20 right-2 bottom-2 flex items-center gap-2 rounded-lg border border-blue-200 bg-white/95 px-2.5 py-1.5 shadow-sm pointer-events-none">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600" />
+                    <span className="text-xs text-gray-700 font-medium">
+                      Saving designs…
                     </span>
                   </div>
                 )}
@@ -17293,9 +17491,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   e.preventDefault();
                   if (csvText.trim() && !csvError) {
                     if (multipleBadges.length === 0) {
-                      parseCsv(csvText, true, (newBadges) =>
-                        runDraftSaveForBadges(newBadges),
-                      );
+                      parseCsv(csvText, true, (newBadges) => {
+                        notifyBulkBadgesAdded(newBadges.length);
+                        void runDraftSaveForBadges(newBadges);
+                      });
                       if (!csvError) {
                         setCsvText("");
                         setCsvPreview([]);
@@ -17359,9 +17558,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   e.preventDefault();
                   setPendingCsvAction("override");
                   setShowCsvWarningModal(false);
-                  parseCsv(csvText, true, (newBadges) =>
-                    runDraftSaveForBadges(newBadges),
-                  );
+                  parseCsv(csvText, true, (newBadges) => {
+                    notifyBulkBadgesAdded(newBadges.length);
+                    void runDraftSaveForBadges(newBadges);
+                  });
                   if (!csvError) {
                     setCsvText("");
                     setCsvPreview([]);
@@ -17380,9 +17580,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   e.preventDefault();
                   setPendingCsvAction("add");
                   setShowCsvWarningModal(false);
-                  parseCsv(csvText, false, (newBadges) =>
-                    runDraftSaveForBadges(newBadges),
-                  );
+                  parseCsv(csvText, false, (newBadges) => {
+                    notifyBulkBadgesAdded(newBadges.length);
+                    void runDraftSaveForBadges(newBadges);
+                  });
                   if (!csvError) {
                     setCsvText("");
                     setCsvPreview([]);
@@ -17406,6 +17607,68 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* After Add Multiple: explain background save + View All (non-blocking) */}
+      {showBulkSaveNotice && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bulk-save-notice-title"
+        >
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+            <button
+              type="button"
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl"
+              onClick={() => setShowBulkSaveNotice(false)}
+              aria-label="Close"
+            >
+              &times;
+            </button>
+            <h3
+              id="bulk-save-notice-title"
+              className="text-lg font-bold mb-2 text-gray-900"
+            >
+              Saving your {config.labelProductPlural.toLowerCase()}
+            </h3>
+            <p className="mb-3 text-sm text-gray-700">
+              {bulkSaveNoticeCount > 0
+                ? `${bulkSaveNoticeCount} ${
+                    bulkSaveNoticeCount === 1
+                      ? config.labelProduct.toLowerCase()
+                      : config.labelProductPlural.toLowerCase()
+                  } added. `
+                : ""}
+              We&apos;re saving your designs in the background—please be
+              patient while that finishes, especially for larger batches. You
+              can keep editing right away.
+            </p>
+            <p className="mb-4 text-sm text-gray-700">
+              Use <strong>View All</strong> above the preview to browse and
+              select any {config.labelProduct.toLowerCase()} to edit.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded font-medium"
+                onClick={() => {
+                  setShowBulkSaveNotice(false);
+                  setShowBadgeGridModal(true);
+                }}
+              >
+                Open View All
+              </button>
+              <button
+                type="button"
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded font-medium"
+                onClick={() => setShowBulkSaveNotice(false)}
+              >
+                Got it
+              </button>
+            </div>
           </div>
         </div>
       )}

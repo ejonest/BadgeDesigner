@@ -15,6 +15,7 @@ import type {
 } from "../types/badge";
 import {
   buildSignTextClipPathInnerMarkup,
+  computeSignTextInkBoundsFromLaid,
   createSignTextMeasure,
   isSignLineLayoutParticipant,
   isSignLineStrictEmpty,
@@ -32,6 +33,8 @@ import {
 } from "~/utils/signTextLayout";
 import {
   computeSignLogoDrawRect,
+  placeDetachedPlaqueCalibratedIcon,
+  plaqueDetachedIconCalibrationFromRect,
   resolveSignTextLayoutAndUserLogoSlack,
   resolveSignUserLogoBoundsBox,
   signLogoDrawMeetsMinDisplay,
@@ -59,9 +62,18 @@ import {
   type ResolvedBlankBadgePhoto,
 } from "~/utils/badgeBlankPhotos";
 import type { DesignerVariant } from "~/constants/designerVariants";
-import { resolveBadgePlatePhoto } from "~/utils/badgeCustomBackgrounds";
+import type { LoadedTemplate } from "~/utils/templates";
+import {
+  getCustomBadgeBackgroundById,
+  resolveBadgePlatePhoto,
+  resolveCustomBadgeBackgroundPrintImageSrc,
+} from "~/utils/badgeCustomBackgrounds";
 import { inlineBadgeBlankPhotoSrc } from "~/utils/inlineBadgePhoto";
-import { signTemplateSupportsUserLogoUpload } from "~/utils/signLogoPlacement";
+import {
+  getDefaultSignLogoPlacementForTemplate,
+  normalizeSignLogoPlacementForTemplate,
+  signTemplateSupportsUserLogoUpload,
+} from "~/utils/signLogoPlacement";
 import {
   isFeaturedBrushedMetalPlateColor,
   normalizeFeaturedBrushedMetalBaseHex,
@@ -69,6 +81,7 @@ import {
   isPlaqueAttachedTemplateId,
   isPlaqueDetachedTemplateId,
   isPlaqueTemplateId,
+  plaqueAttachedImagePlaceholderRect,
   plaqueAttachedLogoBandRect,
   plaqueAttachedLogoDrawRectClassic,
   plaqueAttachedLogoDrawRectFixed,
@@ -82,6 +95,7 @@ import {
   plaqueDetachedPlateInnerBorderSvgMarkup,
   inlinePlaqueDetachedWoodStockImagesInSvg,
   plaqueMetalBrushInnerPlateTreatment,
+  plaqueUserImagePlaceholderSvg,
   plaqueWoodBackgroundRect,
   plaqueWoodGrainFilterDef,
   plaqueWoodGradientDef,
@@ -166,18 +180,22 @@ export function resolveProductionRenderOpts(
   };
 }
 
-/** CorelDRAW / laser print: text + icon + registration shape only — no plate fill or background art. */
+const esc = (s: string) =>
+  (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const DEFAULT_PLATE_BG = "#FFFFFF";
+const DEFAULT_BORDER = "#FFFFFF";
+
+/** CorelDRAW / laser print: plate color/image + text/icon with die bleed overhang. */
 export function resolvePrintRenderOpts(
   badge: Badge,
   template: LoadedTemplate,
   variant: DesignerVariant = "badge",
 ): RenderOpts {
-  const hasPhotoPlate =
-    variant === "badge" && Boolean(resolveBadgePlatePhoto(template.id, badge));
   return {
     plateRenderMode: "print",
     showOutline: true,
-    ...(hasPhotoPlate ? { aqbPresetTextLayout: true } : {}),
+    aqbPresetTextLayout: true,
   };
 }
 
@@ -185,11 +203,46 @@ function isPrintPlateRender(opts: RenderOpts): boolean {
   return opts.plateRenderMode === "print";
 }
 
-function svgPhysicalDimensionAttrs(template: LoadedTemplate): string {
-  const wIn = template.widthPx / 96;
-  const hIn = template.heightPx / 96;
+/** 0.05″ per side → 1×3 → 1.1×3.1, 1.5×3 → 1.6×3.1 */
+const PRINT_BLEED_IN_PER_SIDE = 0.05;
+const PRINT_SVG_DPI = 96;
+
+function printBleedPadPx(): number {
+  return PRINT_BLEED_IN_PER_SIDE * PRINT_SVG_DPI;
+}
+
+function svgPhysicalBleedDimensionAttrsForDie(
+  dieWPx: number,
+  dieHPx: number,
+): string {
+  const wIn = dieWPx / PRINT_SVG_DPI + PRINT_BLEED_IN_PER_SIDE * 2;
+  const hIn = dieHPx / PRINT_SVG_DPI + PRINT_BLEED_IN_PER_SIDE * 2;
   const fmt = (n: number) => Number(n.toFixed(4)).toString();
   return `width="${fmt(wIn)}in" height="${fmt(hIn)}in"`;
+}
+
+function svgPhysicalBleedDimensionAttrs(template: LoadedTemplate): string {
+  return svgPhysicalBleedDimensionAttrsForDie(
+    template.widthPx,
+    template.heightPx,
+  );
+}
+
+function svgPhysicalDimensionAttrs(template: LoadedTemplate): string {
+  const wIn = template.widthPx / PRINT_SVG_DPI;
+  const hIn = template.heightPx / PRINT_SVG_DPI;
+  const fmt = (n: number) => Number(n.toFixed(4)).toString();
+  return `width="${fmt(wIn)}in" height="${fmt(hIn)}in"`;
+}
+
+function isBadgePrintProductionTemplate(template: LoadedTemplate): boolean {
+  const id = template.id || "";
+  return (
+    id.startsWith("rect-") ||
+    id.startsWith("square-") ||
+    id.includes("1x3") ||
+    id.includes("1_5x3")
+  );
 }
 
 /**
@@ -205,7 +258,6 @@ function renderPrintDieOutlineInFaceRect(
   if (!source || !(template.widthPx > 0) || !(template.heightPx > 0)) {
     return `<rect x="${face.x}" y="${face.y}" width="${face.width}" height="${face.height}" fill="none" stroke="#111111" stroke-width="${strokeWidth}" />`;
   }
-  // Uniform scale so rounded die is not stretched wider/shorter than the photo face.
   const scale = Math.min(
     face.width / template.widthPx,
     face.height / template.heightPx,
@@ -222,104 +274,232 @@ function renderPrintDieOutlineInFaceRect(
   return `<g transform="translate(${ox}, ${oy}) scale(${scale})">${outline}</g>`;
 }
 
+function renderPrintDieOutlineInDieSpace(
+  template: LoadedTemplate,
+  strokeWidth: string,
+): string {
+  const source =
+    template.outlineElement?.trim() || template.innerElement?.trim() || "";
+  if (!source) {
+    return `<rect x="0" y="0" width="${template.widthPx}" height="${template.heightPx}" fill="none" stroke="#111111" stroke-width="${strokeWidth}" />`;
+  }
+  return prepareElementForOutline(
+    source,
+    "none",
+    "#111111",
+    strokeWidth,
+    false,
+  );
+}
+
 /**
- * Print SVG for photo plates: identical framing/layout to the proof SVG
- * (same crop viewBox + text/icon coords), without the product photo.
- * That is what makes proof and CorelDRAW registration match pixel-for-pixel.
+ * Production print SVG: physical die + 0.1″ bleed, plate color and/or custom
+ * background, plus text + icons.
+ *
+ * Custom backgrounds:
+ * - Print plate art is an edge-extended bleed PNG whose CENTER is an exact
+ *   copy of the calibrated face from the original mockup (see
+ *   scripts/generate-custom-background-bleeds.mjs). Only the outer ring is
+ *   new (clamped edge pixels).
+ * - Text/icons use the same face → die mapping so they line up with that
+ *   preserved center (and therefore with the customer proof).
  */
-function renderBadgePrintDieSvgFromPhotoPlate(
+function renderBadgePrintProductionSvg(
   badge: Badge,
   template: LoadedTemplate,
-  photo: ResolvedBlankBadgePhoto,
   opts: RenderOpts,
   fontDefs: string[],
   fontMappings: Map<string, string> | undefined,
+  inlinedBleedHref?: string,
+  inlinedOriginalHref?: string,
 ): string {
-  const PADDING_PX = 24;
-  const crop = photo.previewCropRect;
-  const W = crop.width + PADDING_PX * 2;
-  const H = crop.height + PADDING_PX * 2;
-  const contentTx = PADDING_PX - crop.x;
-  const contentTy = PADDING_PX - crop.y;
-  const face = photo.badgeFaceRect;
-  const designBox = resolvePhotoTextRect(photo, badge.badgeIconId);
+  const bleedPad = printBleedPadPx();
+  const dieW = template.widthPx;
+  const dieH = template.heightPx;
+  const W = dieW + bleedPad * 2;
+  const H = dieH + bleedPad * 2;
   const clipId = clipPathIdForSvg(opts, badge);
+  const plateColor =
+    (badge.backgroundColor || DEFAULT_PLATE_BG).trim() || DEFAULT_PLATE_BG;
 
-  const lineLayout = opts.aqbPresetTextLayout
-    ? layoutAqbPresetTextLines(badge.lines || [], designBox, fontMappings)
-    : calculateTextLayout(
-        badge.lines || [],
-        designBox,
-        template,
-        fontMappings,
-        badge,
-        undefined,
-        photo.iconRect,
-      );
-
-  const badgeIconLayer = renderBadgeIconLayer(
-    badge.badgeIconId,
-    designBox,
-    template.id,
-    photo.iconRect,
+  const customEntry = getCustomBadgeBackgroundById(
+    badge.customBadgeBackgroundId,
   );
+  const photo = customEntry
+    ? resolveBadgePlatePhoto(template.id, badge)
+    : null;
+  const printBgHref =
+    inlinedBleedHref ??
+    (customEntry
+      ? resolveCustomBadgeBackgroundPrintImageSrc(
+          badge.customBadgeBackgroundId,
+        )
+      : null) ??
+    inlinedOriginalHref ??
+    photo?.src ??
+    null;
 
-  const textElements = lineLayout
-    .map((item) => {
-      const line = item.line;
-      const color = line.color || "#000";
-      const textDecoration = line.underline ? "underline" : "none";
-      return `<text x="${item.x}" y="${item.y}" font-size="${
-        item.fontSize
-      }" text-anchor="${item.anchor}"
+  const styleBlock =
+    fontDefs.length > 0
+      ? `<style type="text/css">${fontDefs.join("\n")}</style>`
+      : "";
+
+  const outlineWidth = opts.outlineStrokeWidth ?? "1.5";
+
+  let layers = "";
+  if (photo && customEntry) {
+    const face = photo.badgeFaceRect;
+    const designBox = resolvePhotoTextRect(photo, badge.badgeIconId);
+    const lineLayout = opts.aqbPresetTextLayout
+      ? layoutAqbPresetTextLines(badge.lines || [], designBox, fontMappings)
+      : calculateTextLayout(
+          badge.lines || [],
+          designBox,
+          template,
+          fontMappings,
+          badge,
+          undefined,
+          photo.iconRect,
+        );
+    const badgeIconLayer = renderBadgeIconLayer(
+      badge.badgeIconId,
+      designBox,
+      template.id,
+      photo.iconRect,
+    );
+    const textElements = lineLayout
+      .map((item) => {
+        const line = item.line;
+        const color = line.color || "#000";
+        const textDecoration = line.underline ? "underline" : "none";
+        return `<text x="${item.x}" y="${item.y}" font-size="${
+          item.fontSize
+        }" text-anchor="${item.anchor}"
               dominant-baseline="middle" font-family="${esc(
                 item.familyRaw,
               )}" fill="${color}"
               font-weight="${item.fontWeight}"
               font-style="${item.fontStyle}"
               text-decoration="${textDecoration}">${esc(
-        line.text || "",
-      )}</text>`;
-    })
-    .join("");
+          line.text || "",
+        )}</text>`;
+      })
+      .join("");
+    const textClipRect = buildRectClipPathMarkup(designBox);
+    const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
+    const dieOutline = renderPrintDieOutlineInFaceRect(
+      template,
+      face,
+      outlineWidth,
+    );
 
-  const textClipRect = buildRectClipPathMarkup(designBox);
-  const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
-  const styleBlock =
-    fontDefs.length > 0
-      ? `<style type="text/css">${fontDefs.join("\n")}</style>`
+    // Face → die (inset by bleed). Bleed PNG is built so its center face
+    // region maps 1:1 onto this die when the image fills 0..W × 0..H.
+    const sx = dieW / face.width;
+    const sy = dieH / face.height;
+    const dieContentTransform = `translate(${bleedPad}, ${bleedPad}) scale(${sx}, ${sy}) translate(${-face.x}, ${-face.y})`;
+
+    const bgImageLayer = printBgHref
+      ? `<image href="${esc(printBgHref)}" xlink:href="${esc(printBgHref)}"
+           x="0" y="0" width="${W}" height="${H}"
+           preserveAspectRatio="none"
+           style="image-rendering:optimizeQuality" />`
       : "";
-  const outlineWidth =
-    opts.outlineStrokeWidth ??
-    String(Math.max(3, Math.round(face.width * 0.004)));
-  const dieOutline = renderPrintDieOutlineInFaceRect(
-    template,
-    face,
-    outlineWidth,
-  );
 
-  // Same viewBox as the proof photo plate — never force 3×1.5 with
-  // preserveAspectRatio="none" (that stretched face aspect ~1.92 → 2:1).
-  return `
-<svg xmlns="http://www.w3.org/2000/svg"
-     xmlns:xlink="http://www.w3.org/1999/xlink"
-     width="100%" height="100%"
-     viewBox="0 0 ${W} ${H}"
-     preserveAspectRatio="xMidYMid meet">
+    layers = `
+  ${bgImageLayer}
   <defs>
-    ${styleBlock}
+    <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
+      ${textClipRect}
+    </clipPath>
   </defs>
-  <g transform="translate(${contentTx}, ${contentTy})">
-    <defs>
-      <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
-        ${textClipRect}
-      </clipPath>
-    </defs>
+  <g transform="${dieContentTransform}">
     ${dieOutline}
     ${badgeIconLayer}
     ${text}
-  </g>
+  </g>`;
+  } else {
+    const designBox = getEffectiveDesignBox(template, badge);
+    const lineLayout = opts.aqbPresetTextLayout
+      ? layoutAqbPresetTextLines(badge.lines || [], designBox, fontMappings)
+      : calculateTextLayout(
+          badge.lines || [],
+          designBox,
+          template,
+          fontMappings,
+          badge,
+        );
+    const badgeIconLayer = renderBadgeIconLayer(
+      badge.badgeIconId,
+      designBox,
+      template.id,
+    );
+    const textElements = lineLayout
+      .map((item) => {
+        const line = item.line;
+        const color = line.color || "#000";
+        const textDecoration = line.underline ? "underline" : "none";
+        return `<text x="${item.x}" y="${item.y}" font-size="${
+          item.fontSize
+        }" text-anchor="${item.anchor}"
+              dominant-baseline="middle" font-family="${esc(
+                item.familyRaw,
+              )}" fill="${color}"
+              font-weight="${item.fontWeight}"
+              font-style="${item.fontStyle}"
+              text-decoration="${textDecoration}">${esc(
+          line.text || "",
+        )}</text>`;
+      })
+      .join("");
+    const textClipRect = buildRectClipPathMarkup(designBox);
+    const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
+    const dieOutline = renderPrintDieOutlineInDieSpace(template, outlineWidth);
+    layers = `
+  <defs>
+    <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
+      ${textClipRect}
+    </clipPath>
+  </defs>
+  <g transform="translate(${bleedPad}, ${bleedPad})">
+    <rect x="0" y="0" width="${dieW}" height="${dieH}" fill="${esc(
+      plateColor,
+    )}" />
+    ${dieOutline}
+    ${badgeIconLayer}
+    ${text}
+  </g>`;
+  }
+
+  return `
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     ${svgPhysicalBleedDimensionAttrs(template)}
+     viewBox="0 0 ${W} ${H}"
+     preserveAspectRatio="none">
+  <defs>
+    ${styleBlock}
+  </defs>
+  <rect x="0" y="0" width="${W}" height="${H}" fill="${esc(plateColor)}" />
+  ${layers}
 </svg>`.trim();
+}
+
+function renderBadgePrintDieSvgFromPhotoPlate(
+  badge: Badge,
+  template: LoadedTemplate,
+  _photo: ResolvedBlankBadgePhoto,
+  opts: RenderOpts,
+  fontDefs: string[],
+  fontMappings: Map<string, string> | undefined,
+): string {
+  return renderBadgePrintProductionSvg(
+    badge,
+    template,
+    opts,
+    fontDefs,
+    fontMappings,
+  );
 }
 
 export function resolveProductionViewBoxPx(
@@ -343,11 +523,6 @@ export function resolveProductionViewBoxPx(
   };
 }
 
-const esc = (s: string) =>
-  (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-const DEFAULT_PLATE_BG = "#FFFFFF";
-const DEFAULT_BORDER = "#FFFFFF";
 
 /** Clip + gradient ids must be unique among all inline SVGs in the HTML document. */
 function clipPathIdForSvg(opts: RenderOpts, badge: Badge): string {
@@ -604,6 +779,46 @@ function renderBadgePhotoPlateSvg(
 </svg>`.trim();
 }
 
+async function resolvePrintProductionInlinedImages(badge: Badge): Promise<{
+  inlinedBleed?: string;
+  inlinedOriginal?: string;
+}> {
+  const bleedSrc = resolveCustomBadgeBackgroundPrintImageSrc(
+    badge.customBadgeBackgroundId,
+  );
+  const photo = badge.customBadgeBackgroundId
+    ? resolveBadgePlatePhoto(badge.templateId, badge)
+    : null;
+  const originalSrc = photo?.src;
+
+  let inlinedBleed: string | undefined;
+  let inlinedOriginal: string | undefined;
+
+  if (bleedSrc) {
+    try {
+      inlinedBleed = await inlineBadgeBlankPhotoSrc(bleedSrc);
+    } catch (err) {
+      console.warn(
+        "[renderSvg] Failed to inline print bleed background:",
+        bleedSrc,
+        err,
+      );
+    }
+  }
+  if (originalSrc) {
+    try {
+      inlinedOriginal = await inlineBadgeBlankPhotoSrc(originalSrc);
+    } catch (err) {
+      console.warn(
+        "[renderSvg] Failed to inline print original background:",
+        originalSrc,
+        err,
+      );
+    }
+  }
+  return { inlinedBleed, inlinedOriginal };
+}
+
 async function renderBadgePhotoPlateSvgAsync(
   badge: Badge,
   template: LoadedTemplate,
@@ -613,13 +828,16 @@ async function renderBadgePhotoPlateSvgAsync(
   fontMappings: Map<string, string> | undefined,
 ): Promise<string> {
   if (isPrintPlateRender(opts)) {
-    return renderBadgePhotoPlateSvg(
+    const { inlinedBleed, inlinedOriginal } =
+      await resolvePrintProductionInlinedImages(badge);
+    return renderBadgePrintProductionSvg(
       badge,
       template,
-      photo,
       opts,
       fontDefs,
       fontMappings,
+      inlinedBleed,
+      inlinedOriginal,
     );
   }
   const inlined = await inlineBadgeBlankPhotoSrc(photo.src);
@@ -658,11 +876,14 @@ export function getEffectiveSignTextLayoutAndLogoDrawForBadge(
   if (!template.signTextLayout) return { layout: undefined, draw: null };
   const trimBox = getEffectiveDesignBox(template, badge);
   const borderOn = resolveSignBorderOverlayActive(badge, template);
-  // Attached plaque + image: classic/formal formats center the emblem under the inner border; others use the logo band.
-  if (isPlaqueAttachedTemplateId(template.id) && badge.logo?.src?.trim()) {
+  // Attached plaque: always reserve the upper logo band for text (image required; preview shows a
+  // placeholder there until upload). Classic/formal formats center the emblem under the inner border.
+  if (isPlaqueAttachedTemplateId(template.id)) {
     const awardFmt = resolveAttachedPlaqueAwardFormatForRender(badge);
     const useClassicAwardLogo =
-      awardFmt && plaqueAwardUsesClassicAttachedLogo(awardFmt);
+      awardFmt &&
+      plaqueAwardUsesClassicAttachedLogo(awardFmt) &&
+      Boolean(badge.logo?.src?.trim());
 
     const textPlate = plaqueAttachedTextPlateRect(trimBox);
     const layout = resolveSignTextLayout(
@@ -672,17 +893,21 @@ export function getEffectiveSignTextLayoutAndLogoDrawForBadge(
       template.id,
     );
 
-    const draw = useClassicAwardLogo
-      ? plaqueAttachedLogoDrawRectClassic(
-          trimBox,
-          badge.logo,
-          trimBox.y + trimBox.height * PLAQUE_CLASSIC_Y_PRESENTED_TO_FRAC,
-          plaqueAwardLogoTopOffsetPx(trimBox, awardFmt.border),
-        )
-      : plaqueAttachedLogoDrawRectFixed(
-          plaqueAttachedLogoBandRect(trimBox),
-          badge.logo,
-        );
+    const draw = !badge.logo?.src?.trim()
+      ? null
+      : template.plaqueImageRectPx
+        ? template.plaqueImageRectPx
+        : useClassicAwardLogo
+        ? plaqueAttachedLogoDrawRectClassic(
+            trimBox,
+            badge.logo,
+            trimBox.y + trimBox.height * PLAQUE_CLASSIC_Y_PRESENTED_TO_FRAC,
+            plaqueAwardLogoTopOffsetPx(trimBox, awardFmt!.border),
+          )
+        : plaqueAttachedLogoDrawRectFixed(
+            plaqueAttachedLogoBandRect(trimBox),
+            badge.logo,
+          );
     return { layout, draw };
   }
   // Detached photo plaque: copy + plate logo stay inside the thin inner engraving frame (not the outer metal rect).
@@ -699,6 +924,21 @@ export function getEffectiveSignTextLayoutAndLogoDrawForBadge(
       signTemplateSupportsUserLogoUpload(template.id) &&
       !isPlaqueAttachedTemplateId(template.id);
     const logoForLayout = logoOnTextPlate ? badge.logo : undefined;
+    const calRect = template.plaqueImageRectPx;
+    const resolveOpts: ResolveSignLogoSlackOptions | undefined = (() => {
+      const fromBadge = resolveOptsFromBadge(badge);
+      if (!calRect) return fromBadge;
+      return {
+        ...fromBadge,
+        templateWidthPx: template.widthPx,
+        detachedIconCalibration: {
+          leftBoundPx: calRect.x,
+          widthPx: calRect.width,
+          heightPx: calRect.height,
+          yPx: calRect.y,
+        },
+      };
+    })();
     return resolveSignTextLayoutAndUserLogoSlack(
       baseLayout,
       plateInner,
@@ -707,7 +947,7 @@ export function getEffectiveSignTextLayoutAndLogoDrawForBadge(
       plateInner,
       badge.lines,
       createSignTextMeasure(),
-      resolveOptsFromBadge(badge),
+      resolveOpts,
     );
   }
   // Attached plaque without the early return uses full text plate; side logos apply only to detached + signs.
@@ -738,6 +978,44 @@ export function getEffectiveSignTextLayoutForBadge(
   badge: Badge,
 ): ResolvedSignTextLayout | undefined {
   return getEffectiveSignTextLayoutAndLogoDrawForBadge(template, badge).layout;
+}
+
+/**
+ * Detached plaque + calibrated icon: whether the current lines leave enough gap for the
+ * fixed-size icon between the left bound and the text. Used to enforce a character limit.
+ */
+export function detachedPlaqueCalibratedIconHasRoom(
+  template: LoadedTemplate,
+  badge: Badge,
+): boolean {
+  if (!isPlaqueDetachedTemplateId(template.id)) return true;
+  if (!badge.logo?.src?.trim() || !template.plaqueImageRectPx) return true;
+  const { layout } = getEffectiveSignTextLayoutAndLogoDrawForBadge(
+    template,
+    badge,
+  );
+  if (!layout) return true;
+  const measure = createSignTextMeasure();
+  const laid = layoutSignTextLines(badge.lines || [], layout, measure);
+  const ink = computeSignTextInkBoundsFromLaid(
+    laid,
+    badge.lines || [],
+    measure,
+  );
+  const placement = normalizeSignLogoPlacementForTemplate(
+    template.id,
+    badge.logo.placement,
+  );
+  if (placement !== "left" && placement !== "right") return true;
+  return placeDetachedPlaqueCalibratedIcon({
+    calibration: plaqueDetachedIconCalibrationFromRect(
+      template.plaqueImageRectPx,
+    ),
+    placement,
+    templateWidthPx: template.widthPx,
+    textInkLeft: ink?.left ?? null,
+    textInkRight: ink?.right ?? null,
+  }).hasRoom;
 }
 
 /**
@@ -1622,24 +1900,53 @@ function plateBrushGradientForBadgeInner(
   return { innerPlateMarkup, gradientDefXml: defsXml };
 }
 
-function renderPlaqueBadgeSvg(
+/**
+ * True metal plate outer bounds (#Inner path), not the safeInset text box.
+ * Print die + bleed must match the plate the shopper sees on screen.
+ */
+function getPlaqueMetalPlateOuterRect(
+  template: LoadedTemplate,
+  badge: Badge,
+): { x: number; y: number; width: number; height: number } {
+  const inset = Math.max(0, template.safeInsetPx ?? 0);
+  const insetBox = getEffectiveDesignBox(template, badge);
+  if (inset > 0 && insetBox.width > 0 && insetBox.height > 0) {
+    return {
+      x: insetBox.x - inset,
+      y: insetBox.y - inset,
+      width: insetBox.width + inset * 2,
+      height: insetBox.height + inset * 2,
+    };
+  }
+  return insetBox;
+}
+
+/**
+ * Production print SVG for plaques: same metal plate as the on-screen preview
+ * (brushed gold/silver, uploaded image/icon, text, borders) — no wood.
+ * Canvas = plate die + 0.05″ bleed per side.
+ */
+function renderPlaquePrintPlateSvg(
   badge: Badge,
   template: LoadedTemplate,
   opts: RenderOpts,
   fontDefs: string[],
   fontMappings: Map<string, string> | undefined,
 ): string {
-  const PADDING_PX = 24;
-  const W = template.widthPx + PADDING_PX * 2;
-  const H = template.heightPx + PADDING_PX * 2;
-  const plateOuterRect = getEffectiveDesignBox(template, badge);
+  // Layout box (safeInset) — same as preview for text/logo placement.
+  const layoutOuter = getEffectiveDesignBox(template, badge);
   const designBox = isPlaqueDetachedTemplateId(template.id)
-    ? plaqueDetachedPlateContentRect(plateOuterRect)
-    : plateOuterRect;
+    ? plaqueDetachedPlateContentRect(layoutOuter)
+    : layoutOuter;
+  // Physical die = true #Inner plate (matches preview metal plate edges).
+  const plateOuterRect = getPlaqueMetalPlateOuterRect(template, badge);
+  const dieW = Math.max(1, plateOuterRect.width);
+  const dieH = Math.max(1, plateOuterRect.height);
+  const bleedPad = printBleedPadPx();
+  const W = dieW + bleedPad * 2;
+  const H = dieH + bleedPad * 2;
   const clipId = clipPathIdForSvg(opts, badge);
-  const safeClip = clipId.replace(/[^a-zA-Z0-9]/g, "");
-  const woodGradId = `plaqueWood${safeClip}`;
-  const woodGrainFilterId = `plaqueWoodGrain${safeClip}`;
+  const safeClip = clipId.replace(/[^a-zA-Z0-9_-]/g, "");
 
   const { innerPathWithFill, innerPathData } = buildInnerFillAndClipData(
     template,
@@ -1648,23 +1955,34 @@ function renderPlaqueBadgeSvg(
   const plateUsesBrushedMetal = isFeaturedBrushedMetalPlateColor(
     badge.backgroundColor,
   );
-  const metalBrushFilterId = `plaqueMetalBrush${safeClip}`;
+  const plateBaseHex =
+    normalizeFeaturedBrushedMetalBaseHex(
+      badge.backgroundColor || DEFAULT_PLATE_BG,
+    ) ||
+    (badge.backgroundColor || DEFAULT_PLATE_BG).trim() ||
+    PLAQUE_DEFAULT_BRUSH_GOLD_HEX;
+
+  // Same brush-on-path treatment as the on-screen plaque preview.
+  const metalBrushFilterId = `plaquePrintMetalBrush${safeClip}`;
   const metalPlateTreatment = plateUsesBrushedMetal
     ? plaqueMetalBrushInnerPlateTreatment({
         innerPathWithFill,
         filterId: metalBrushFilterId,
-        baseHex:
-          normalizeFeaturedBrushedMetalBaseHex(
-            badge.backgroundColor || DEFAULT_PLATE_BG,
-          ) || PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
+        baseHex: plateBaseHex,
       })
     : null;
-  const metalGradientDef = metalPlateTreatment?.defsXml ?? "";
+  const metalBrushDefs = metalPlateTreatment?.defsXml ?? "";
   const innerPlateWithBrushFill =
     metalPlateTreatment?.innerPlateMarkup ?? innerPathWithFill;
 
+  // Bleed ring: solid plate color under the die so trim has metal to cut into.
+  const bleedUnderlay = `<rect x="0" y="0" width="${W}" height="${H}" fill="${esc(
+    plateBaseHex,
+  )}"/>`;
+
+  const badgeForLayout = badge;
   const effectiveSignLayout = template.signTextLayout
-    ? getEffectiveSignTextLayoutForBadge(template, badge)
+    ? getEffectiveSignTextLayoutForBadge(template, badgeForLayout)
     : undefined;
   const layoutForTextClip = effectiveSignLayout ?? template.signTextLayout;
   const textClipW = layoutForTextClip?.clipRect?.width ?? designBox.width;
@@ -1718,7 +2036,240 @@ function renderPlaqueBadgeSvg(
       designBox,
       template,
       fontMappings,
+      badgeForLayout,
+      effectiveSignLayout,
+    );
+
+    textElements = lineLayout
+      .map((item) => {
+        const line = item.line;
+        const color = line.color || "#000";
+        const textDecoration = line.underline ? "underline" : "none";
+        const family =
+          ("familyEscaped" in item && item.familyEscaped) ||
+          esc(("familyRaw" in item && item.familyRaw) || "Roboto");
+        return `<text x="${item.x}" y="${item.y}" font-size="${
+          item.fontSize
+        }" text-anchor="${item.anchor}"
+              dominant-baseline="middle" font-family="${family}" fill="${color}"
+              font-weight="${item.fontWeight}"
+              font-style="${item.fontStyle}"
+              text-decoration="${textDecoration}">${esc(
+          line.text || "",
+        )}</text>`;
+      })
+      .join("");
+  }
+
+  const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
+
+  const detached = isPlaqueDetachedTemplateId(template.id);
+  // Detached inner border uses layout outer (same as preview), not expanded die.
+  const detachedPlateInnerBorderMarkup =
+    detached && innerPathData
+      ? plaqueDetachedPlateInnerBorderSvgMarkup({
+          plateOuter: layoutOuter,
+          strokeHex: plaqueAwardInkHex(badge.backgroundColor),
+        })
+      : "";
+
+  const plateLogoClipId =
+    detached && innerPathData ? `${clipId}-plateContent` : clipId;
+
+  const plateUserLogoRaw = signTemplateSupportsUserLogoUpload(template.id)
+    ? renderUserLogoLayer(badge.logo, template, badge, designBox)
+    : "";
+  const plateUserLogoLayer =
+    innerPathData && plateUserLogoRaw.trim() !== ""
+      ? `<g clip-path="url(#${plateLogoClipId})">${plateUserLogoRaw}</g>`
+      : plateUserLogoRaw;
+
+  const styleBlock =
+    fontDefs.length > 0
+      ? `<style type="text/css">\n${fontDefs.join("\n")}\n</style>`
+      : "";
+
+  const contentTx = bleedPad - plateOuterRect.x;
+  const contentTy = bleedPad - plateOuterRect.y;
+
+  return `
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     ${svgPhysicalBleedDimensionAttrsForDie(dieW, dieH)}
+     viewBox="0 0 ${W} ${H}"
+     preserveAspectRatio="xMidYMid meet">
+  <defs>
+    ${styleBlock}
+    ${metalBrushDefs}
+    ${
+      innerPathData
+        ? `<clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">
+      ${innerPathData}
+    </clipPath>`
+        : ""
+    }
+    <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
+      ${textClipPathRect}
+    </clipPath>
+    ${
+      detached && innerPathData
+        ? `<clipPath id="${clipId}-plateContent" clipPathUnits="userSpaceOnUse">
+      <rect x="${designBox.x}" y="${designBox.y}" width="${designBox.width}" height="${designBox.height}"/>
+    </clipPath>`
+        : ""
+    }
+  </defs>
+  ${bleedUnderlay}
+  <g transform="translate(${contentTx}, ${contentTy})">
+    ${innerPlateWithBrushFill}
+    ${
+      detachedPlateInnerBorderMarkup && innerPathData
+        ? `<g clip-path="url(#${clipId})">${detachedPlateInnerBorderMarkup}</g>`
+        : ""
+    }
+    ${
+      plaqueInnerBorderMarkup && innerPathData
+        ? `<g clip-path="url(#${clipId})">${plaqueInnerBorderMarkup}</g>`
+        : ""
+    }
+    ${plateUserLogoLayer}
+    ${text}
+  </g>
+</svg>`.trim();
+}
+
+
+function renderPlaqueBadgeSvg(
+  badge: Badge,
+  template: LoadedTemplate,
+  opts: RenderOpts,
+  fontDefs: string[],
+  fontMappings: Map<string, string> | undefined,
+): string {
+  if (isPrintPlateRender(opts)) {
+    return renderPlaquePrintPlateSvg(
       badge,
+      template,
+      opts,
+      fontDefs,
+      fontMappings,
+    );
+  }
+
+  const PADDING_PX = 24;
+  const W = template.widthPx + PADDING_PX * 2;
+  const H = template.heightPx + PADDING_PX * 2;
+  const plateOuterRect = getEffectiveDesignBox(template, badge);
+  const designBox = isPlaqueDetachedTemplateId(template.id)
+    ? plaqueDetachedPlateContentRect(plateOuterRect)
+    : plateOuterRect;
+  const clipId = clipPathIdForSvg(opts, badge);
+  const safeClip = clipId.replace(/[^a-zA-Z0-9]/g, "");
+  const woodGradId = `plaqueWood${safeClip}`;
+  const woodGrainFilterId = `plaqueWoodGrain${safeClip}`;
+
+  const { innerPathWithFill, innerPathData } = buildInnerFillAndClipData(
+    template,
+    badge,
+  );
+  const plateUsesBrushedMetal = isFeaturedBrushedMetalPlateColor(
+    badge.backgroundColor,
+  );
+  const metalBrushFilterId = `plaqueMetalBrush${safeClip}`;
+  const metalPlateTreatment = plateUsesBrushedMetal
+    ? plaqueMetalBrushInnerPlateTreatment({
+        innerPathWithFill,
+        filterId: metalBrushFilterId,
+        baseHex:
+          normalizeFeaturedBrushedMetalBaseHex(
+            badge.backgroundColor || DEFAULT_PLATE_BG,
+          ) || PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
+      })
+    : null;
+  const metalGradientDef = metalPlateTreatment?.defsXml ?? "";
+  const innerPlateWithBrushFill =
+    metalPlateTreatment?.innerPlateMarkup ?? innerPathWithFill;
+
+  const hasUserLogo = Boolean(badge.logo?.src?.trim());
+  const showUserImagePlaceholder =
+    Boolean(opts.showOutline) &&
+    !hasUserLogo &&
+    signTemplateSupportsUserLogoUpload(template.id);
+
+  /** Preview: reserve plate logo space (detached left/right) so the placeholder matches upload layout. */
+  const badgeForLayout: Badge =
+    showUserImagePlaceholder && isPlaqueDetachedTemplateId(template.id)
+      ? {
+          ...badge,
+          logo: {
+            src: "__plaque-preview-image-placeholder__",
+            placement: normalizeSignLogoPlacementForTemplate(
+              template.id,
+              badge.logo?.placement ??
+                getDefaultSignLogoPlacementForTemplate(template.id),
+            ),
+            intrinsicWidth: 100,
+            intrinsicHeight: 100,
+          },
+        }
+      : badge;
+
+  const effectiveSignLayout = template.signTextLayout
+    ? getEffectiveSignTextLayoutForBadge(template, badgeForLayout)
+    : undefined;
+  const layoutForTextClip = effectiveSignLayout ?? template.signTextLayout;
+  const textClipW = layoutForTextClip?.clipRect?.width ?? designBox.width;
+  const curveTextClip = layoutForTextClip?.plateCircle
+    ? signCircleExtraInsetPx(layoutForTextClip.plateCircle.r)
+    : 0;
+  const textClipPathRect = buildSignTextClipPathInnerMarkup(
+    layoutForTextClip,
+    designBox,
+    signHorizontalInsetPx(textClipW) + curveTextClip,
+  );
+
+  const awardFormat = isPlaqueAttachedTemplateId(template.id)
+    ? resolveAttachedPlaqueAwardFormatForRender(badge)
+    : undefined;
+
+  let textElements: string;
+  let plaqueInnerBorderMarkup = "";
+
+  if (awardFormat && effectiveSignLayout) {
+    const ink = plaqueAwardInkHex(badge.backgroundColor);
+    const baseBody = Math.max(
+      15,
+      Math.min(
+        28,
+        effectiveSignLayout.contentRect.height /
+          Math.max(5, awardFormat.slots.length),
+      ),
+    );
+    const rows = layoutPlaqueAwardFormat(
+      awardFormat,
+      badge.lines || [],
+      effectiveSignLayout,
+      baseBody,
+      ink,
+      designBox,
+      { dividerArtIdSuffix: safeClip },
+    );
+    textElements = plaqueAwardRowsToSvgMarkup(rows);
+    if (awardFormat.border !== "none") {
+      plaqueInnerBorderMarkup = plaqueAwardPlateBorderSvgMarkup({
+        designBox,
+        stroke: ink,
+        border: awardFormat.border,
+        svgFilterIdSuffix: safeClip,
+      });
+    }
+  } else {
+    const lineLayout = calculateTextLayout(
+      badge.lines || [],
+      designBox,
+      template,
+      fontMappings,
+      badgeForLayout,
       effectiveSignLayout,
     );
 
@@ -1819,6 +2370,35 @@ function renderPlaqueBadgeSvg(
       ? `<g clip-path="url(#${plateLogoClipId})">${plateUserLogoRaw}</g>`
       : plateUserLogoRaw;
 
+  let plateImagePlaceholderLayer = "";
+  if (showUserImagePlaceholder) {
+    const ink = plaqueAwardInkHex(badge.backgroundColor);
+    let slot: { x: number; y: number; width: number; height: number } | null =
+      null;
+    if (isPlaqueAttachedTemplateId(template.id)) {
+      slot =
+        template.plaqueImageRectPx ??
+        plaqueAttachedImagePlaceholderRect(plateOuterRect);
+    } else if (isPlaqueDetachedTemplateId(template.id)) {
+      const { draw } = getEffectiveSignTextLayoutAndLogoDrawForBadge(
+        template,
+        badgeForLayout,
+      );
+      slot = draw;
+    }
+    if (slot) {
+      const raw = plaqueUserImagePlaceholderSvg({
+        slot,
+        inkHex: ink,
+        label: detached ? "Your Icon Here" : "Your Image Here",
+      });
+      plateImagePlaceholderLayer =
+        innerPathData && raw.trim() !== ""
+          ? `<g clip-path="url(#${plateLogoClipId})">${raw}</g>`
+          : raw;
+    }
+  }
+
   const styleBlock =
     fontDefs.length > 0
       ? `<style type="text/css">\n${fontDefs.join("\n")}\n</style>`
@@ -1878,6 +2458,7 @@ function renderPlaqueBadgeSvg(
         : ""
     }
     ${plateUserLogoLayer}
+    ${plateImagePlaceholderLayer}
     ${text}
     ${outline}
   </g>
@@ -1891,6 +2472,16 @@ export function renderBadgeToSvgString(
 ): string {
   if (isPlaqueTemplateId(template.id)) {
     return renderPlaqueBadgeSvg(badge, template, opts, [], undefined);
+  }
+
+  if (isPrintPlateRender(opts) && isBadgePrintProductionTemplate(template)) {
+    return renderBadgePrintProductionSvg(
+      badge,
+      template,
+      opts,
+      [],
+      undefined,
+    );
   }
 
   const photoPlate = resolvePhotoPlateForRender(template, badge, opts);
@@ -2185,10 +2776,28 @@ export async function renderBadgeToSvgStringWithFonts(
       fontDefs,
       fontMappings,
     );
-    if (isPlaqueDetachedTemplateId(template.id)) {
+    // Print = metal plate only; skip wood stock inlining used for mockup/proof.
+    if (
+      isPlaqueDetachedTemplateId(template.id) &&
+      !isPrintPlateRender(opts)
+    ) {
       svg = await inlinePlaqueDetachedWoodStockImagesInSvg(svg);
     }
     return svg;
+  }
+
+  if (isPrintPlateRender(opts) && isBadgePrintProductionTemplate(template)) {
+    const { inlinedBleed, inlinedOriginal } =
+      await resolvePrintProductionInlinedImages(badge);
+    return renderBadgePrintProductionSvg(
+      badge,
+      template,
+      opts,
+      fontDefs,
+      fontMappings,
+      inlinedBleed,
+      inlinedOriginal,
+    );
   }
 
   const photoPlate = resolvePhotoPlateForRender(template, badge, opts);

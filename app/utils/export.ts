@@ -7,6 +7,21 @@ import {
 import type { DesignerVariant } from "~/constants/designerVariants";
 import type { Badge } from "../types/badge";
 import type { LoadedTemplate } from "./templates";
+import { isPlaqueTemplateId } from "./plaqueRender";
+import { badgeWithPlaqueLogoInlinedForSvgImg } from "./plaqueLogoInline";
+
+const plaqueExportLogoCache = new Map<string, string>();
+
+async function badgeForSvgExport(
+  badge: Badge,
+  template: LoadedTemplate,
+  variant: DesignerVariant,
+): Promise<Badge> {
+  if (variant === "plaque" || isPlaqueTemplateId(template.id)) {
+    return badgeWithPlaqueLogoInlinedForSvgImg(badge, plaqueExportLogoCache);
+  }
+  return badge;
+}
 
 export function downloadBlob(data: Blob, filename: string) {
   const url = URL.createObjectURL(data);
@@ -212,26 +227,30 @@ export async function generateSVGAsBlob(
   template: LoadedTemplate,
   variant: DesignerVariant = "badge",
 ): Promise<Blob> {
+  const badgeForSvg = await badgeForSvgExport(badge, template, variant);
   const svg = await renderBadgeToSvgStringWithFonts(
-    badge,
+    badgeForSvg,
     template,
-    resolveProductionRenderOpts(badge, template, variant),
+    resolveProductionRenderOpts(badgeForSvg, template, variant),
   );
   return new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
 }
 
 /**
- * Print-ready SVG for CorelDRAW: colored text, icon, and registration shape only.
+ * Print-ready SVG for CorelDRAW: plate color and/or custom bleed background,
+ * text, icon, registration outline, sized to die + 0.1″ overhang.
+ * Plaques: metal plate only (no wood) with brushed fill + 0.05″ bleed per side.
  */
 export async function generatePrintSVGAsBlob(
   badge: Badge,
   template: LoadedTemplate,
   variant: DesignerVariant = "badge",
 ): Promise<Blob> {
+  const badgeForSvg = await badgeForSvgExport(badge, template, variant);
   const svg = await renderBadgeToSvgStringWithFonts(
-    badge,
+    badgeForSvg,
     template,
-    resolvePrintRenderOpts(badge, template, variant),
+    resolvePrintRenderOpts(badgeForSvg, template, variant),
   );
   return new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
 }
@@ -242,23 +261,25 @@ export async function generateSVGAsString(
   template: LoadedTemplate,
   variant: DesignerVariant = "badge",
 ): Promise<string> {
+  const badgeForSvg = await badgeForSvgExport(badge, template, variant);
   return renderBadgeToSvgStringWithFonts(
-    badge,
+    badgeForSvg,
     template,
-    resolveProductionRenderOpts(badge, template, variant),
+    resolveProductionRenderOpts(badgeForSvg, template, variant),
   );
 }
 
-/** CorelDRAW / print SVG string (text + icon + registration, no plate fill). */
+/** CorelDRAW / print SVG string (color/image + text + icon + bleed). */
 export async function generatePrintSVGAsString(
   badge: Badge,
   template: LoadedTemplate,
   variant: DesignerVariant = "badge",
 ): Promise<string> {
+  const badgeForSvg = await badgeForSvgExport(badge, template, variant);
   return renderBadgeToSvgStringWithFonts(
-    badge,
+    badgeForSvg,
     template,
-    resolvePrintRenderOpts(badge, template, variant),
+    resolvePrintRenderOpts(badgeForSvg, template, variant),
   );
 }
 

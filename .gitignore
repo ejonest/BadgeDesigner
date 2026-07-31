@@ -8,3 +8,5 @@ node_modules
 
 # Local temp files (e.g. Shopify email template copies)
 app/temp/
+
+.venv-bleed/

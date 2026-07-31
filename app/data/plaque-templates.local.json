@@ -7,7 +7,13 @@
       "widthInches": 5,
       "heightInches": 7,
       "svgFile": "/templates/plaque/Plaque-Attached-Small.svg",
-      "safeInsetPx": 6
+      "safeInsetPx": 6,
+      "plaqueImageRectNorm": {
+        "xNorm": 0.17384377317882718,
+        "yNorm": 0.14612526100850975,
+        "widthNorm": 0.6475489523751395,
+        "heightNorm": 0.25667876047961896
+      }
     },
     {
       "id": "plaque-attached-medium",
@@ -15,7 +21,13 @@
       "widthInches": 8,
       "heightInches": 10,
       "svgFile": "/templates/plaque/Plaque-Attached-Medium.svg",
-      "safeInsetPx": 6
+      "safeInsetPx": 6,
+      "plaqueImageRectNorm": {
+        "xNorm": 0.1915625,
+        "yNorm": 0.17319101949614138,
+        "widthNorm": 0.6150782151449293,
+        "heightNorm": 0.2387841734065456
+      }
     },
     {
       "id": "plaque-attached-large",
@@ -23,7 +35,13 @@
       "widthInches": 9,
       "heightInches": 12,
       "svgFile": "/templates/plaque/Plaque-Attached-Large.svg",
-      "safeInsetPx": 6
+      "safeInsetPx": 6,
+      "plaqueImageRectNorm": {
+        "xNorm": 0.178538609055615,
+        "yNorm": 0.15952805579669488,
+        "widthNorm": 0.6416666666666666,
+        "heightNorm": 0.2518643489104736
+      }
     },
     {
       "id": "plaque-detached-portrait-medium",
@@ -37,6 +55,12 @@
         "yNorm": 0.075,
         "widthNorm": 0.5625,
         "heightNorm": 0.65
+      },
+      "plaqueImageRectNorm": {
+        "xNorm": 0.1456790747429644,
+        "yNorm": 0.7819468949010243,
+        "widthNorm": 0.15837838195619128,
+        "heightNorm": 0.13521815272418553
       }
     },
     {
@@ -51,6 +75,12 @@
         "yNorm": 0.125,
         "widthNorm": 0.6111111111111112,
         "heightNorm": 0.625
+      },
+      "plaqueImageRectNorm": {
+        "xNorm": 0.1841510498746836,
+        "yNorm": 0.8219115965742751,
+        "widthNorm": 0.14441255236428882,
+        "heightNorm": 0.10979907387772654
       }
     },
     {
@@ -65,6 +95,12 @@
         "yNorm": 0.05,
         "widthNorm": 0.8125,
         "heightNorm": 0.45
+      },
+      "plaqueImageRectNorm": {
+        "xNorm": 0.1493326510837228,
+        "yNorm": 0.6291008338689885,
+        "widthNorm": 0.22773328137170698,
+        "heightNorm": 0.19026077226484636
       }
     },
     {
@@ -79,6 +115,12 @@
         "yNorm": 0.041666666666666664,
         "widthNorm": 0.8333333333333334,
         "heightNorm": 0.4583333333333333
+      },
+      "plaqueImageRectNorm": {
+        "xNorm": 0.13488182817904348,
+        "yNorm": 0.621397617178311,
+        "widthNorm": 0.2199501770227761,
+        "heightNorm": 0.16695118808376702
       }
     }
   ]

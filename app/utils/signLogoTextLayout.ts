@@ -29,6 +29,91 @@ import {
   signVerticalInsetPx,
 } from "~/utils/signTextLayout";
 
+/** Gap between detached plaque icon and nearest text ink edge. */
+export const PLAQUE_DETACHED_ICON_TEXT_GAP_PX = 10;
+
+/**
+ * Detached plate icon calibration (from template `plaqueImageRectPx`):
+ * - `leftBoundPx` = left bound (icon never goes left of this)
+ * - `widthPx` / `heightPx` / `yPx` = fixed icon size + vertical position
+ */
+export type PlaqueDetachedIconCalibration = {
+  leftBoundPx: number;
+  widthPx: number;
+  heightPx: number;
+  yPx: number;
+};
+
+export function plaqueDetachedIconCalibrationFromRect(rect: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}): PlaqueDetachedIconCalibration {
+  return {
+    leftBoundPx: rect.x,
+    widthPx: Math.max(1, rect.width),
+    heightPx: Math.max(1, rect.height),
+    yPx: rect.y,
+  };
+}
+
+/**
+ * Place a calibrated detached icon: fixed size/Y, X centered between the left bound and text.
+ */
+export function placeDetachedPlaqueCalibratedIcon(params: {
+  calibration: PlaqueDetachedIconCalibration;
+  placement: "left" | "right";
+  templateWidthPx: number;
+  textInkLeft?: number | null;
+  textInkRight?: number | null;
+  gapPx?: number;
+}): { draw: { x: number; y: number; width: number; height: number }; hasRoom: boolean } {
+  const {
+    calibration,
+    placement,
+    templateWidthPx,
+    textInkLeft = null,
+    textInkRight = null,
+  } = params;
+  const gap = params.gapPx ?? PLAQUE_DETACHED_ICON_TEXT_GAP_PX;
+  const w = Math.max(1, calibration.widthPx);
+  const h = Math.max(1, calibration.heightPx);
+  const y = calibration.yPx;
+
+  if (placement === "right") {
+    const rightBound = templateWidthPx - calibration.leftBoundPx;
+    if (textInkRight == null || !Number.isFinite(textInkRight)) {
+      return {
+        draw: { x: rightBound - w, y, width: w, height: h },
+        hasRoom: true,
+      };
+    }
+    const availableLeft = textInkRight + gap;
+    const availableRight = rightBound;
+    const available = availableRight - availableLeft;
+    const hasRoom = available >= w - 0.5;
+    const x = hasRoom
+      ? availableLeft + (available - w) / 2
+      : availableRight - w;
+    return { draw: { x, y, width: w, height: h }, hasRoom };
+  }
+
+  const leftBound = calibration.leftBoundPx;
+  if (textInkLeft == null || !Number.isFinite(textInkLeft)) {
+    return {
+      draw: { x: leftBound, y, width: w, height: h },
+      hasRoom: true,
+    };
+  }
+  const availableLeft = leftBound;
+  const availableRight = textInkLeft - gap;
+  const available = availableRight - availableLeft;
+  const hasRoom = available >= w - 0.5;
+  const x = hasRoom ? availableLeft + (available - w) / 2 : leftBound;
+  return { draw: { x, y, width: w, height: h }, hasRoom };
+}
+
 /** Max fraction of plate width used for left/right logo slot (before contain fit). */
 export const SIGN_LOGO_MAX_SLOT_WIDTH_FRAC = 0.35;
 /**
@@ -779,6 +864,18 @@ export type ResolveSignLogoSlackOptions = {
    * than this `min(w/W,h/H)` vs the baseline slot rect from `computeSignLogoDrawRect`.
    */
   minLogoRatioVsBaselineFloor?: number;
+  /**
+   * Detached plaque: calibrated icon size/Y + left bound. Horizontal position is centered
+   * between the left bound and the text ink (see {@link placeDetachedPlaqueCalibratedIcon}).
+   */
+  detachedIconCalibration?: {
+    leftBoundPx: number;
+    widthPx: number;
+    heightPx: number;
+    yPx: number;
+  };
+  /** Template width in px — required with {@link detachedIconCalibration} for right placement mirror. */
+  templateWidthPx?: number;
 };
 
 function ratioVsBaseline(
@@ -1025,19 +1122,56 @@ export function resolveSignTextLayoutAndUserLogoSlack(
   /**
    * Detached photo plaques (portrait + landscape): place the plate logo deterministically.
    *
-   * Rule:
+   * Default rule (no calibration):
    * - Fixed logo slot size (bounded by `maxSlotW` and `maxSlotH`, aspect preserved).
-   * - Add a small margin on all sides.
-   * - Keep the logo fully within the plate bounds (including margin).
-   * - Center the logo between the plate edge and the text ink edge (longest line), on the chosen side.
-   * - If text becomes too wide, the logo stops sliding at the plate edge and text shrinks to fit.
+   * - Center the logo between the plate edge and the text ink edge on the chosen side.
    *
-   * This avoids the slower “search for a fit” positioning path and makes template switches feel instant.
+   * With {@link ResolveSignLogoSlackOptions.detachedIconCalibration}:
+   * - Size + Y are fixed from calibration.
+   * - Left bound is fixed; X is centered between that bound and the text ink.
    */
   const isDetachedPlaque =
     templateIdLower.startsWith("plaque-detached-") ||
     templateIdLower === "plaque-detached";
   if (isDetachedPlaque && (placement === "left" || placement === "right")) {
+    const cal = resolveOptions?.detachedIconCalibration;
+    if (cal) {
+      const gap = PLAQUE_DETACHED_ICON_TEXT_GAP_PX;
+      let drawFixed: SignLogoDrawRect = {
+        x: placement === "left" ? cal.leftBoundPx : db.x + db.width - cal.widthPx,
+        y: cal.yPx,
+        width: cal.widthPx,
+        height: cal.heightPx,
+      };
+      let outLayout = layoutForDraw(drawFixed) ?? adjLayout ?? baseLayout;
+      for (let iter = 0; iter < 4; iter++) {
+        const laid = layoutSignTextLines(lines, outLayout, measure);
+        const ink = computeSignTextInkBoundsFromLaid(laid, lines, measure);
+        const placed = placeDetachedPlaqueCalibratedIcon({
+          calibration: cal,
+          placement,
+          templateWidthPx:
+            resolveOptions?.templateWidthPx ?? db.x + db.width + db.x,
+          textInkLeft: ink?.left ?? null,
+          textInkRight: ink?.right ?? null,
+          gapPx: gap,
+        });
+        drawFixed = placed.draw;
+        const nextLayout = layoutForDraw(drawFixed);
+        if (!nextLayout) break;
+        const cr0 = outLayout.contentRect;
+        const cr1 = nextLayout.contentRect;
+        outLayout = nextLayout;
+        if (
+          Math.abs(cr0.x - cr1.x) < 0.45 &&
+          Math.abs(cr0.width - cr1.width) < 0.45
+        ) {
+          break;
+        }
+      }
+      return { layout: outLayout, draw: drawFixed };
+    }
+
     const laid = layoutSignTextLines(lines, adjLayout, measure);
     const ink = computeSignTextInkBoundsFromLaid(laid, lines, measure);
     if (ink) {
