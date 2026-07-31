@@ -83,6 +83,111 @@ export async function dieMaskPng(dieW, dieH, radiusPx) {
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
+/** SDF of a rounded rect; negative inside. Local coords with origin at top-left. */
+function signedDistanceRoundedRect(x, y, w, h, radius) {
+  const r = Math.max(
+    0,
+    Math.min(radius, Math.floor(Math.min(w, h) / 2) - 1),
+  );
+  const qx = Math.abs(x - (w - 1) / 2) - (w / 2 - r);
+  const qy = Math.abs(y - (h - 1) / 2) - (h / 2 - r);
+  const ox = Math.max(qx, 0);
+  const oy = Math.max(qy, 0);
+  return Math.min(Math.max(qx, qy), 0) + Math.hypot(ox, oy) - r;
+}
+
+/**
+ * Remove a thin dark/neutral badge outline along the die path inside a bleed parent.
+ * Mockup photos often leave this stroke on the face; it must not print.
+ * Keeps chromatic art (flowers, logos) that crosses the trim.
+ *
+ * Also clears the same stroke when it sits in the bleed overhang (outside the die),
+ * which is common when the photographed badge border was scaled into the pad.
+ */
+export async function stripInsetDieStrokePng(bleedPng, sizes, opts = {}) {
+  const band = opts.band ?? 5;
+  // Mockup badge borders often land in the pad/overhang, slightly outside the
+  // true die SDF (seen ~pad+5..pad+10). Cover the full overhang plus margin.
+  const overhangBand = opts.overhangBand ?? sizes.pad + 16;
+  const { data, info } = await sharp(bleedPng)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const { width: W, height: H, channels } = info;
+  const { pad, dieW, dieH, radiusPx } = sizes;
+  const src = data;
+  const out = Buffer.from(data);
+  let removed = 0;
+
+  const cx = pad + dieW / 2;
+  const cy = pad + dieH / 2;
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const lx = x - pad;
+      const ly = y - pad;
+      const sd = signedDistanceRoundedRect(lx, ly, dieW, dieH, radiusPx);
+      const absD = Math.abs(sd);
+      // Near the die path, or anywhere in the bleed overhang outside the die.
+      const inOverhang = sd > 0 && sd <= overhangBand;
+      const nearDie = absD <= band;
+      if (!nearDie && !inOverhang) continue;
+
+      const i = (y * W + x) * channels;
+      const r = src[i];
+      const g = src[i + 1];
+      const b = src[i + 2];
+      const L = (r + g + b) / 3;
+      const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+      // Keep colourful motifs (floral petals etc.).
+      if (chroma > 30) continue;
+      if (inOverhang) {
+        // Overhang stroke AA is often near-white grey (L~241–248) on plate.
+        if (L >= 250) continue;
+        if (chroma > 22) continue;
+        // Always plate-white in overhang — inward samples can still sit on the AA ring.
+        out[i] = 255;
+        out[i + 1] = 255;
+        out[i + 2] = 255;
+        removed++;
+        continue;
+      }
+
+      // Keep already-clean plate white inside the die.
+      if (L > 215) continue;
+      // Only mid/dark neutral hairlines (and their AA).
+      if (L > 205 && chroma > 10) continue;
+
+      const vx = cx - x;
+      const vy = cy - y;
+      const len = Math.hypot(vx, vy) || 1;
+      const step = Math.max(band, Math.ceil(absD)) + 6;
+      const sx = Math.max(0, Math.min(W - 1, Math.round(x + (vx / len) * step)));
+      const sy = Math.max(0, Math.min(H - 1, Math.round(y + (vy / len) * step)));
+      const si = (sy * W + sx) * channels;
+      // Prefer a bright interior sample; if inward is also dark, force plate white.
+      const iL = (src[si] + src[si + 1] + src[si + 2]) / 3;
+      if (iL > 200) {
+        out[i] = src[si];
+        out[i + 1] = src[si + 1];
+        out[i + 2] = src[si + 2];
+      } else {
+        out[i] = 255;
+        out[i + 1] = 255;
+        out[i + 2] = 255;
+      }
+      removed++;
+    }
+  }
+
+  const png = await sharp(out, {
+    raw: { width: W, height: H, channels },
+  })
+    .png()
+    .toBuffer();
+  return { png, removed };
+}
+
 /**
  * Cut center die from bleed parent and apply exact round-rect mask.
  * Outside die → transparent (caller composites onto white).
@@ -211,12 +316,23 @@ export async function processParent({
   mkdirSync(join(outDir, "preview-mockup"), { recursive: true });
   mkdirSync(join(outDir, "compare"), { recursive: true });
 
-  const bleedPng = await toExactSize(
+  const bleedRaw = await toExactSize(
     parentPath,
     sizes.bleedW,
     sizes.bleedH,
     coverPosition,
   );
+  // Two passes: first clears the dark stroke; second clears residual AA left
+  // when an inward sample still landed on the ring.
+  const pass1 = await stripInsetDieStrokePng(bleedRaw, sizes);
+  const pass2 = await stripInsetDieStrokePng(pass1.png, sizes);
+  const bleedPng = pass2.png;
+  const removed = pass1.removed + pass2.removed;
+  if (removed > 0) {
+    console.log(
+      `[cut-die] ${stem}: stripped ${removed} die-outline px (${pass1.removed}+${pass2.removed})`,
+    );
+  }
   const diePng = await cutDieFromBleed(bleedPng, sizes);
   const mockupJpg = await buildMockupPreviewTrueDie(
     diePng,
