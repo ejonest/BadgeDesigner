@@ -504,6 +504,28 @@
   transition: border-color 0.15s, background 0.15s, color 0.15s, opacity 0.15s;
 }
 
+@keyframes aqb-ta-highlight-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(26, 61, 92, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(26, 61, 92, 0);
+  }
+}
+
+.aqb-redesign-root .aqb-ta-btn--highlight {
+  border-color: #1a3d5c;
+  background: #eef4f9;
+  color: #1a3d5c;
+  animation: aqb-ta-highlight-pulse 1.4s ease-in-out infinite;
+}
+
+.aqb-redesign-root .aqb-ta-btn--highlight .aqb-ta-label {
+  color: #1a3d5c;
+  font-weight: 600;
+}
+
 .aqb-redesign-root .aqb-ta-label--mobile {
   display: none;
 }

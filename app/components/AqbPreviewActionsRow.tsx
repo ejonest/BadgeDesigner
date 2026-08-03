@@ -15,6 +15,7 @@ interface PreviewActionButtonProps {
   icon: React.ReactNode;
   danger?: boolean;
   duplicate?: boolean;
+  highlight?: boolean;
   /** Short label beside icon on mobile */
   mobileLabel?: string;
 }
@@ -26,13 +27,14 @@ const PreviewActionButton: React.FC<PreviewActionButtonProps> = ({
   icon,
   danger = false,
   duplicate = false,
+  highlight = false,
   mobileLabel,
 }) => (
   <button
     type="button"
     className={`aqb-ta-btn${
       danger ? " aqb-ta-btn--danger" : duplicate ? " aqb-ta-btn--duplicate" : ""
-    }`}
+    }${highlight ? " aqb-ta-btn--highlight" : ""}`}
     onClick={(e) => {
       e.preventDefault();
       onClick();
@@ -89,6 +91,8 @@ export interface AqbPreviewActionsRowProps {
   labelProductPlural: string;
   hasBadges: boolean;
   showAddMultiple?: boolean;
+  /** After Add Multiple: draw attention to View All. */
+  highlightViewAll?: boolean;
   onCopy: () => void;
   onDelete: () => void;
   onDeleteAll: () => void;
@@ -101,6 +105,7 @@ export const AqbPreviewActionsRow: React.FC<AqbPreviewActionsRowProps> = ({
   labelProductPlural,
   hasBadges,
   showAddMultiple = true,
+  highlightViewAll = false,
   onCopy,
   onDelete,
   onDeleteAll,
@@ -146,6 +151,7 @@ export const AqbPreviewActionsRow: React.FC<AqbPreviewActionsRowProps> = ({
         mobileLabel="View All"
         title={`View all ${labelProductPlural}`}
         onClick={onViewAll}
+        highlight={highlightViewAll}
         icon={<Squares2X2Icon className={iconClass} />}
       />
       {showAddMultiple ? (

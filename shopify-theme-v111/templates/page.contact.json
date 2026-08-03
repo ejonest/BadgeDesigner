@@ -1,0 +1,89 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "hero": {
+      "type": "aqb-contact-hero",
+      "settings": {
+        "eyebrow": "Customer support",
+        "heading": "Ask us <em>anything.</em>",
+        "subheading": "Use the form below to reach our team — it's the fastest way to get help. We usually reply the same business day.",
+        "hours_label": "Support hours",
+        "hours_text": "Monday – Friday · 9 AM – 6 PM Pacific"
+      }
+    },
+    "form": {
+      "type": "aqb-contact-form",
+      "blocks": {
+        "link_bulk": {
+          "type": "quick_link",
+          "settings": {
+            "label": "Bulk orders →",
+            "url": "shopify://pages/bulk"
+          }
+        },
+        "link_design": {
+          "type": "quick_link",
+          "settings": {
+            "label": "Design a badge →",
+            "url": "shopify://products/custom-1x3-badge"
+          }
+        },
+        "topic_general": { "type": "topic_option", "settings": { "label": "General inquiry", "value": "General inquiry" } },
+        "topic_order": { "type": "topic_option", "settings": { "label": "Order status / tracking", "value": "Order status" } },
+        "topic_product": { "type": "topic_option", "settings": { "label": "Product question", "value": "Product question" } },
+        "topic_design": { "type": "topic_option", "settings": { "label": "Custom badge design help", "value": "Custom badge design" } },
+        "topic_bulk": { "type": "topic_option", "settings": { "label": "Bulk / volume pricing", "value": "Bulk pricing" } },
+        "topic_returns": { "type": "topic_option", "settings": { "label": "Returns & exchanges", "value": "Returns" } },
+        "topic_other": { "type": "topic_option", "settings": { "label": "Other", "value": "Other" } }
+      },
+      "block_order": [
+        "link_bulk",
+        "link_design",
+        "topic_general",
+        "topic_order",
+        "topic_product",
+        "topic_design",
+        "topic_bulk",
+        "topic_returns",
+        "topic_other"
+      ],
+      "settings": {
+        "info_intro": "Send us a message using the form — it's the fastest way to reach our team. We typically reply the same business day.",
+        "phone_label": "Phone",
+        "phone": "(310) 534-1138",
+        "email_label": "Email",
+        "email": "info@allquality.com",
+        "address_label": "Mailing address",
+        "address": "All Quality Badges\n2782 Gundry Ave\nSignal Hill, CA 90755",
+        "alt_contact_label": "Prefer phone or email instead?",
+        "alt_contact_note": "We still monitor these, but the contact form helps us route your request faster.",
+        "promise_heading": "Same-day responses when we can",
+        "promise_text": "Messages received Monday through Friday during business hours are usually answered the same day. For bulk or volume pricing, visit our Bulk Orders page for a faster quote.",
+        "form_badge": "Preferred contact method",
+        "form_heading": "Send us a message",
+        "form_subheading": "Fill out the form below and our team will get back to you — usually the same business day.",
+        "email_subject": "Contact Form — All Quality Badges"
+      }
+    },
+    "trust_bar": {
+      "type": "aqb-contact-trust-bar",
+      "blocks": {
+        "item_1": { "type": "item", "settings": { "emoji": "⚡", "title": "Same-day replies", "subtitle": "Mon–Fri during business hours" } },
+        "item_2": { "type": "item", "settings": { "emoji": "✉️", "title": "Form-first support", "subtitle": "Fastest way to reach our team" } },
+        "item_3": { "type": "item", "settings": { "emoji": "🇺🇸", "title": "Made in the USA", "subtitle": "Badges designed & produced here" } },
+        "item_4": { "type": "item", "settings": { "emoji": "🚚", "title": "Free USA shipping", "subtitle": "On qualifying badge orders" } }
+      },
+      "block_order": ["item_1", "item_2", "item_3", "item_4"],
+      "settings": {}
+    }
+  },
+  "order": ["hero", "form", "trust_bar"]
+}

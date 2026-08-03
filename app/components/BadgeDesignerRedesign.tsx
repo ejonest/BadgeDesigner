@@ -170,7 +170,11 @@ import {
   generateFullBadgeImage,
   generateThumbnailFromFullImage,
 } from "../utils/badgeThumbnail";
-import { generateDraftBadgeAssetBlobs } from "../utils/draftBadgeAssets";
+import {
+  generateCartProofBadgeAssets,
+  generateDraftBadgeAssetBlobs,
+  type CartProofBadgeAssets,
+} from "../utils/draftBadgeAssets";
 import { getCurrentShop, type ShopAuthData } from "../utils/shopAuth";
 import { useEmbeddedMobileStoreChrome } from "../utils/embeddedStoreChrome";
 import { getDesignLibraryDummyAuth } from "../utils/designLibraryDummyAuth";
@@ -331,7 +335,6 @@ const SIGN_LOGO_PLACEMENT_UI_LABEL: Record<SignLogoPlacement, string> = {
   bottom: "Bottom",
 };
 
-/** Image upload is required for detached-photo layouts and for attached-plaque (icon on the plate). */
 /** True when UI should show attached-plaque-only steps (format picker). */
 function plaqueAttachedFlowSelected(
   selectedPlaqueLayoutId: string | null,
@@ -342,17 +345,6 @@ function plaqueAttachedFlowSelected(
   if (selectedPlaqueLayoutId === "plaque-attached") return true;
   if (multipleBadgesLength === 0) return false;
   return isPlaqueAttachedTemplateId(badgeTemplateId ?? universalTemplateId);
-}
-
-function plaqueDetachedPhotoRequired(
-  multipleBadgesLength: number,
-  badgeTemplateId: string | undefined,
-  universalTemplateId: string,
-): boolean {
-  return (
-    multipleBadgesLength > 0 &&
-    isPlaqueDetachedTemplateId(badgeTemplateId ?? universalTemplateId)
-  );
 }
 
 function readImageDimensionsFromFile(
@@ -417,7 +409,6 @@ import {
   downloadMultipleCDRs,
   downloadMultipleTIFFs,
   downloadBlob,
-  generateSVGAsBlob,
   generatePrintSVGAsBlob,
   generateSVGAsString,
   generatePrintSVGAsString,
@@ -553,6 +544,11 @@ interface ProofPendingPayload {
   shopData: ShopAuthData;
   gadgetPromise: Promise<{ id?: string } | undefined>;
   shopifyCustomerIdFromUrl: string | null;
+  /**
+   * One-shot JPEG + print SVG per badge (generated before the proof modal).
+   * Reused on confirm for draft upload + finalize — no second render.
+   */
+  cartProofAssets?: CartProofBadgeAssets[];
 }
 
 /** Optional snapshot when React refs lag behind (e.g. immediately after apply-to-all). */
@@ -2882,6 +2878,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   /** After Add Multiple: explain background save + View All. */
   const [showBulkSaveNotice, setShowBulkSaveNotice] = useState(false);
   const [bulkSaveNoticeCount, setBulkSaveNoticeCount] = useState(0);
+  /** Pulse View All after Add Multiple. */
+  const [highlightViewAllAfterBulk, setHighlightViewAllAfterBulk] =
+    useState(false);
   /** Sign: product JSON from Shopify (variant IDs + prices), via `/api/shopify-product`. */
   const [signShopifyProduct, setSignShopifyProduct] =
     useState<ShopifyProductJs | null>(null);
@@ -3090,15 +3089,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       return t0 !== "" && t0 !== getStep3DefaultText(0);
     })();
 
-  /** Attached plate or detached-photo layout: user must upload an image before the design is complete. */
-  const requiresPlaqueLogo =
-    variant === "plaque" &&
-    (plaqueAttachedSelected ||
-      plaqueDetachedPhotoRequired(
-        multipleBadges.length,
-        badge.templateId,
-        universalTemplateId,
-      ));
+  /** Attached plaque: plate icon is required. Detached photo plaques: icon is optional. */
+  const requiresPlaqueLogo = variant === "plaque" && plaqueAttachedSelected;
 
   const badgeAqbTextOverflow = useMemo(() => {
     if (variant !== "badge") return false;
@@ -3222,13 +3214,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       );
       const stFormat = !attachedFlow || Boolean(badge.plaqueFormatId?.trim());
       const stMetal = hasChosenBackgroundColor;
-      const detachedPhotoReq = plaqueDetachedPhotoRequired(
-        multipleBadges.length,
-        badge.templateId,
-        universalTemplateId,
-      );
-      const requiresLogo = attachedFlow || detachedPhotoReq;
-      const missingPlaqueLogo = requiresLogo && !badge.logo?.src?.trim();
+      const missingPlaqueLogo =
+        attachedFlow && !badge.logo?.src?.trim();
       const actions: string[] = [];
       if (forStep >= 2 && !st1) actions.push("choose a layout");
       if (forStep >= 3 && !st2) actions.push("choose a size");
@@ -3245,7 +3232,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         if (forStep >= 4 && !stMetal) {
           actions.push("select a metal plate finish");
         }
-        if (forStep >= 5 && missingPlaqueLogo) actions.push("upload an icon");
+        // Detached: icon step is optional — do not gate later steps on it.
         if (forStep >= 6 && !hasStep3TextEntered) {
           actions.push("enter your text");
         }
@@ -5720,7 +5707,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         );
         badgeResults.sort((a, b) => a.i - b.i);
         const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
-        const svgBlobs = badgeResults.map((r) => r.svgBlob);
         const printSvgBlobs = badgeResults.map((r) => r.printSvgBlob);
 
         const designDataForDraft = {
@@ -5750,14 +5736,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               `thumbnail_png_${index}`,
               pngBlob,
               draftThumbnailFileName(index, pngBlob),
-            );
-        });
-        svgBlobs.forEach((svgBlob, index) => {
-          if (svgBlob?.size > 0)
-            formData.append(
-              `svg_${index}`,
-              svgBlob,
-              `badge-${index}-design.svg`,
             );
         });
         printSvgBlobs.forEach((printSvgBlob, index) => {
@@ -5848,7 +5826,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           );
           badgeResults.sort((a, b) => a.i - b.i);
           const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
-          const svgBlobs = badgeResults.map((r) => r.svgBlob);
           const printSvgBlobs = badgeResults.map((r) => r.printSvgBlob);
           const designDataForDraft = {
             badge: normalized[0],
@@ -5876,14 +5853,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 `thumbnail_png_${index}`,
                 pngBlob,
                 draftThumbnailFileName(index, pngBlob),
-              );
-          });
-          svgBlobs.forEach((svgBlob, index) => {
-            if (svgBlob?.size > 0)
-              formData.append(
-                `svg_${index}`,
-                svgBlob,
-                `badge-${index}-design.svg`,
               );
           });
           printSvgBlobs.forEach((printSvgBlob, index) => {
@@ -5934,6 +5903,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const notifyBulkBadgesAdded = useCallback((count: number) => {
     setBulkSaveNoticeCount(count);
     setShowBulkSaveNotice(true);
+    setHighlightViewAllAfterBulk(true);
   }, []);
 
   const touchStartX = React.useRef<number>(0);
@@ -7417,15 +7387,32 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setShowCsvModal(true);
   };
 
+  useEffect(() => {
+    if (showBadgeGridModal) setHighlightViewAllAfterBulk(false);
+  }, [showBadgeGridModal]);
+
+  useEffect(() => {
+    if (!highlightViewAllAfterBulk) return;
+    const t = window.setTimeout(
+      () => setHighlightViewAllAfterBulk(false),
+      12000,
+    );
+    return () => window.clearTimeout(t);
+  }, [highlightViewAllAfterBulk]);
+
   const previewActionsRowProps = {
     labelProduct: config.labelProduct.toLowerCase(),
     labelProductPlural: config.labelProductPlural.toLowerCase(),
     hasBadges: multipleBadges.length > 0,
     showAddMultiple: variant === "badge",
+    highlightViewAll: highlightViewAllAfterBulk,
     onCopy: duplicateCurrentBadge,
     onDelete: deleteCurrentBadgeFromPreview,
     onDeleteAll: deleteAllBadgesFromDesign,
-    onViewAll: () => setShowBadgeGridModal(true),
+    onViewAll: () => {
+      setHighlightViewAllAfterBulk(false);
+      setShowBadgeGridModal(true);
+    },
     onAddMultiple: openAddMultipleModal,
   };
 
@@ -8056,58 +8043,24 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         .toString(36)
         .slice(2, 11)}`;
 
-      // Generate files as blobs (template once, then PDF + all badge PNGs/SVGs in parallel)
+      // Generate files as blobs (JPEG thumbs + print SVGs once; PDF reuses JPEGs)
       console.log("Generating PDF and PNGs...");
 
-      const templateId =
-        templateToUse?.id || allBadges[0]?.templateId || "rect-1x3";
-      const template = await loadTemplateById(templateId, variant);
-      if (!template) {
-        throw new Error("Template not found for image generation");
-      }
-
-      const pdfPromise = generatePDFAsBlob(
+      const proofPdfFilename = `${
+        designerId === "badge" ? "badge" : designerId
+      }-design_proof.pdf`;
+      const cartAssets = await generateCartProofBadgeAssets(allBadges, variant);
+      cartAssets.sort((a, b) => a.i - b.i);
+      const pdfBlob = await generatePDFAsBlob(
         allBadges[0],
         allBadges.length > 1 ? allBadges.slice(1) : undefined,
         undefined,
         config.labelProduct,
         variant,
+        { mockupDataUrls: cartAssets.map((a) => a.jpegDataUrl) },
       );
-      const proofPdfFilename = `${
-        designerId === "badge" ? "badge" : designerId
-      }-design_proof.pdf`;
-      const badgePromises = allBadges.map((badge, i) =>
-        Promise.all([
-          generateFullBadgeImage(badge, variant).then(dataURLToBlob),
-          generateSVGAsBlob(badge, template, variant),
-          generatePrintSVGAsBlob(badge, template, variant),
-        ])
-          .then(([pngBlob, svgBlob, printSvgBlob]) => ({
-            pngBlob: pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
-            svgBlob: svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
-            printSvgBlob:
-              printSvgBlob && printSvgBlob.size > 0 ? printSvgBlob : new Blob(),
-            i,
-          }))
-          .catch((error) => {
-            console.error(`Error generating images for badge ${i}:`, error);
-            return {
-              pngBlob: new Blob(),
-              svgBlob: new Blob(),
-              printSvgBlob: new Blob(),
-              i,
-            };
-          }),
-      );
-
-      const [pdfBlob, ...badgeResults] = await Promise.all([
-        pdfPromise,
-        ...badgePromises,
-      ]);
-      badgeResults.sort((a, b) => a.i - b.i);
-      const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
-      const svgBlobs = badgeResults.map((r) => r.svgBlob);
-      const printSvgBlobs = badgeResults.map((r) => r.printSvgBlob);
+      const thumbnailPngBlobs = cartAssets.map((a) => a.jpegBlob);
+      const printSvgBlobs = cartAssets.map((a) => a.printSvgBlob);
 
       // Prepare design data (use shop data if available, otherwise use defaults for testing)
       const designData = {
@@ -8134,24 +8087,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         formData.append("shopifyCustomerId", shopifyCustomerId);
       }
       formData.append("pdf", pdfBlob, proofPdfFilename);
-      // Append each high-quality PNG (same as proof) with index
       const thumbBase = designerConfig.lineIdPrefix;
       thumbnailPngBlobs.forEach((pngBlob, index) => {
         if (pngBlob && pngBlob.size > 0) {
           formData.append(
             `thumbnail_png_${index}`,
             pngBlob,
-            `${thumbBase}-${index}-thumbnail.png`,
-          );
-        }
-      });
-      // Append each SVG blob with index (high quality for full images)
-      svgBlobs.forEach((svgBlob, index) => {
-        if (svgBlob && svgBlob.size > 0) {
-          formData.append(
-            `svg_${index}`,
-            svgBlob,
-            `${thumbBase}-${index}-design.svg`,
+            draftThumbnailFileName(index, pngBlob),
           );
         }
       });
@@ -8392,15 +8334,46 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     };
     const gadgetPromise = api.saveBadgeDesign(minimalDesignData, shopData);
 
-    const pdfBlob = await generatePDFAsBlob(
-      allBadgesForSupabase[0],
-      allBadgesForSupabase.length > 1
-        ? allBadgesForSupabase.slice(1)
-        : undefined,
-      lineQtys,
-      config.labelProduct,
-      variant,
-    );
+    // One-shot JPEG + print SVG per badge; PDF reuses the JPEGs (no second raster).
+    let cartProofAssets: CartProofBadgeAssets[] | undefined;
+    let pdfBlob: Blob;
+    if (!isSignLikeVariant(variant) && allBadgesForSupabase.length > 0) {
+      const assets = await generateCartProofBadgeAssets(
+        allBadgesForSupabase,
+        variant,
+      );
+      assets.sort((a, b) => a.i - b.i);
+      cartProofAssets = assets;
+      const missingPrint = assets.some((a) => !(a.printSvgBlob?.size > 0));
+      const missingJpeg = assets.some(
+        (a) => !(a.jpegBlob?.size > 0) || !a.jpegDataUrl,
+      );
+      if (missingPrint || missingJpeg) {
+        throw new Error(
+          "Could not generate badge proof assets. Please try again.",
+        );
+      }
+      pdfBlob = await generatePDFAsBlob(
+        allBadgesForSupabase[0],
+        allBadgesForSupabase.length > 1
+          ? allBadgesForSupabase.slice(1)
+          : undefined,
+        lineQtys,
+        config.labelProduct,
+        variant,
+        { mockupDataUrls: assets.map((a) => a.jpegDataUrl) },
+      );
+    } else {
+      pdfBlob = await generatePDFAsBlob(
+        allBadgesForSupabase[0],
+        allBadgesForSupabase.length > 1
+          ? allBadgesForSupabase.slice(1)
+          : undefined,
+        lineQtys,
+        config.labelProduct,
+        variant,
+      );
+    }
     const perLineQuantities =
       variant === "badge" ? lineQtys : allBadgesForSupabase.map(() => 1);
     const badgeOrderQtyForProof = variant === "badge" ? totalPieces : 1;
@@ -8414,6 +8387,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       shopData,
       gadgetPromise,
       shopifyCustomerIdFromUrl,
+      cartProofAssets,
     };
     const objectUrl = URL.createObjectURL(pdfBlob);
     setProofPdfObjectUrl(objectUrl);
@@ -8470,7 +8444,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       );
     } catch (error) {
       console.error("Failed to add to cart:", error);
-      alert("Failed to add badge to cart. Please try again.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to add badge to cart. Please try again.",
+      );
     } finally {
       setIsAddingToCart(false);
     }
@@ -8522,7 +8500,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       );
     } catch (e) {
       console.error("Failed to add to cart:", e);
-      alert("Failed to add badge to cart. Please try again.");
+      alert(
+        e instanceof Error
+          ? e.message
+          : "Failed to add badge to cart. Please try again.",
+      );
     } finally {
       setIsAddingToCart(false);
     }
@@ -8799,6 +8781,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       gadgetPromise,
       shopifyCustomerIdFromUrl,
       perLineQuantities,
+      cartProofAssets,
     } = pending;
     const perLineQtysResolved =
       perLineQuantities &&
@@ -8858,160 +8841,194 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
     setIsAddingToCart(true);
     try {
-      // Ensure Supabase draft rows exist before finalize-draft (autosave only runs on section close).
-      if (!isSignLikeVariant(variant) && badgesForSupabase.length > 0) {
-        await runDraftSaveForBadges(badgesForSupabase, { blocking: true });
-      }
-
       let thumbnailUrls: string[] = [];
       let pdfUrlForCart: string | undefined;
       let usedFinalize = false;
+      let proofUploadOk = false;
       let proofUploadWarning: string | null = null;
-      try {
-        // Badge-only: uploads to badge PDFs bucket and reads badge_order_items. Signs always use designer send-to-supabase below.
-        if (!addDuplicates && !isSignLikeVariant(variant)) {
-          // Generate print-ready SVGs for finalize — draft save may be stale or
-          // predate print_svg_url persistence; add-to-cart must write both PDF + print SVGs.
-          const printSvgBlobsForFinalize = await Promise.all(
-            allBadgesForSupabase.map(async (b, i) => {
-              const templateIdForBadge =
-                b.templateId ||
-                activeTemplate?.id ||
-                "rect-1x3";
-              const tmpl = await loadTemplateById(templateIdForBadge, variant);
-              if (!tmpl) {
-                console.warn(
-                  "[BadgeDesignerRedesign] finalize: template missing",
-                  templateIdForBadge,
-                );
-                return { i, blob: new Blob() };
-              }
-              try {
-                const blob = await generatePrintSVGAsBlob(b, tmpl, variant);
-                return {
-                  i,
-                  blob: blob && blob.size > 0 ? blob : new Blob(),
-                };
-              } catch (err) {
-                console.warn(
-                  "[BadgeDesignerRedesign] finalize: print SVG failed",
-                  i,
-                  err,
-                );
-                return { i, blob: new Blob() };
-              }
-            }),
-          );
-          printSvgBlobsForFinalize.sort((a, b) => a.i - b.i);
 
-          const formDataFinalize = new FormData();
-          formDataFinalize.append("designId", designIdForSupabase);
-          formDataFinalize.append("pdf", pdfBlob, "badge-design_proof.pdf");
-          const currentBacking = badgesForSupabase[0]?.backing;
-          if (currentBacking) {
-            formDataFinalize.append("backingType", currentBacking);
+      const sortedCartAssets =
+        cartProofAssets && cartProofAssets.length === allBadgesForSupabase.length
+          ? [...cartProofAssets].sort((a, b) => a.i - b.i)
+          : null;
+
+      try {
+        // Badge-only: upload cached JPEG + print SVG to draft, then finalize PDF.
+        if (!addDuplicates && !isSignLikeVariant(variant)) {
+          if (!sortedCartAssets) {
+            proofUploadWarning =
+              "Proof assets missing. Will try full upload.";
+          } else {
+          // Lightweight draft save from cached assets (no re-render).
+          const designDataForDraft = {
+            badge: badgesForSupabase[0],
+            multipleBadges:
+              badgesForSupabase.length > 1 ? badgesForSupabase.slice(1) : [],
+            allBadges: badgesForSupabase,
+            timestamp: new Date().toISOString(),
+            shopId: shopData.shopId || "test-shop",
+            productId: _productId || "test-product",
+            backgroundColor: badgesForSupabase[0].backgroundColor,
+            backingType: badgesForSupabase[0].backing,
+            ...(variant === "badge" ? { badgeOrderQty: totalOrderPieces } : {}),
+          };
+          const formDataDraft = new FormData();
+          formDataDraft.append("designId", designIdForSupabase);
+          formDataDraft.append(
+            "designData",
+            JSON.stringify(designDataForDraft),
+          );
+          if (shopifyCustomerIdFromUrl) {
+            formDataDraft.append("shopifyCustomerId", shopifyCustomerIdFromUrl);
           }
-          printSvgBlobsForFinalize.forEach(({ blob }, index) => {
-            if (blob?.size > 0) {
-              formDataFinalize.append(
+          sortedCartAssets.forEach((asset, index) => {
+            if (asset.jpegBlob?.size > 0) {
+              formDataDraft.append(
+                `thumbnail_png_${index}`,
+                asset.jpegBlob,
+                draftThumbnailFileName(index, asset.jpegBlob),
+              );
+            }
+            if (asset.printSvgBlob?.size > 0) {
+              formDataDraft.append(
                 `print_svg_${index}`,
-                blob,
+                asset.printSvgBlob,
                 `badge-${index}-print.svg`,
               );
             }
           });
-          const finalizeRes = await fetch("/api/finalize-draft", {
+          const draftRes = await fetch(designerApiPaths.saveDraft, {
             method: "POST",
-            body: formDataFinalize,
+            body: formDataDraft,
           });
-          const finalizeJson = await finalizeRes.json().catch(() => ({}));
-          usedFinalize =
-            finalizeRes.ok &&
-            !finalizeJson.draftNotFound &&
-            Array.isArray(finalizeJson.thumbnailUrls) &&
-            finalizeJson.thumbnailUrls.length >= allBadgesForSupabase.length;
-
-          if (usedFinalize) {
-            thumbnailUrls = finalizeJson.thumbnailUrls;
-            pdfUrlForCart = finalizeJson.pdfUrl;
-            if (!finalizeJson.pdfUrl) {
-              console.warn(
-                "[BadgeDesignerRedesign] finalize succeeded but pdfUrl missing",
-              );
-            }
-            if (
-              !Array.isArray(finalizeJson.printSvgUrls) ||
-              finalizeJson.printSvgUrls.every((u: string) => !u)
-            ) {
-              console.warn(
-                "[BadgeDesignerRedesign] finalize succeeded but print_svg_url empty — check print SVG generation",
-              );
-            }
-          } else if (!finalizeRes.ok) {
+          if (!draftRes.ok) {
+            const draftText = await draftRes.text().catch(() => "");
             console.warn(
-              "[BadgeDesignerRedesign] finalize-draft failed:",
-              finalizeRes.status,
-              finalizeJson,
+              "[BadgeDesignerRedesign] cached draft save failed:",
+              draftRes.status,
+              draftText,
             );
+            proofUploadWarning =
+              `Could not save badge draft (${draftRes.status}). ${draftText || "Will try full upload."}`.trim();
+          } else {
+            // Finalize: PDF + status. Resend cached print SVGs (no re-render).
+            const formDataFinalize = new FormData();
+            formDataFinalize.append("designId", designIdForSupabase);
+            formDataFinalize.append("pdf", pdfBlob, "badge-design_proof.pdf");
+            const currentBacking = badgesForSupabase[0]?.backing;
+            if (currentBacking) {
+              formDataFinalize.append("backingType", currentBacking);
+            }
+            sortedCartAssets.forEach((asset, index) => {
+              if (asset.printSvgBlob?.size > 0) {
+                formDataFinalize.append(
+                  `print_svg_${index}`,
+                  asset.printSvgBlob,
+                  `badge-${index}-print.svg`,
+                );
+              }
+            });
+            const finalizeRes = await fetch("/api/finalize-draft", {
+              method: "POST",
+              body: formDataFinalize,
+            });
+            const finalizeJson = await finalizeRes.json().catch(() => ({}));
+            usedFinalize =
+              finalizeRes.ok &&
+              !finalizeJson.draftNotFound &&
+              Array.isArray(finalizeJson.thumbnailUrls) &&
+              finalizeJson.thumbnailUrls.length >= allBadgesForSupabase.length;
+
+            if (usedFinalize) {
+              thumbnailUrls = finalizeJson.thumbnailUrls;
+              pdfUrlForCart = finalizeJson.pdfUrl;
+              proofUploadOk = true;
+              if (!finalizeJson.pdfUrl) {
+                console.warn(
+                  "[BadgeDesignerRedesign] finalize succeeded but pdfUrl missing",
+                );
+              }
+              if (
+                !Array.isArray(finalizeJson.printSvgUrls) ||
+                finalizeJson.printSvgUrls.every((u: string) => !u)
+              ) {
+                console.warn(
+                  "[BadgeDesignerRedesign] finalize succeeded but print_svg_url empty — check print SVG generation",
+                );
+              }
+            } else if (!finalizeRes.ok) {
+              console.warn(
+                "[BadgeDesignerRedesign] finalize-draft failed:",
+                finalizeRes.status,
+                finalizeJson,
+              );
+            }
+          }
           }
         }
+
         if (!usedFinalize) {
           try {
             if (badgesForSupabase.length > 0) {
-              const badgePromises = badgesForSupabase.map((b, i) =>
-                (async () => {
-                  const templateIdForBadge =
-                    b.templateId ||
-                    activeTemplate?.id ||
-                    (isSignLikeVariant(variant) ? "circle-4x4" : "rect-1x3");
-                  const tmpl = await loadTemplateById(
-                    templateIdForBadge,
-                    variant,
-                  );
-                  if (!tmpl) {
-                    console.warn(
-                      "[BadgeDesignerRedesign] proof upload: template missing",
+              let thumbnailPngBlobs: Blob[];
+              let printSvgBlobs: Blob[];
+              if (sortedCartAssets) {
+                thumbnailPngBlobs = sortedCartAssets.map((a) => a.jpegBlob);
+                printSvgBlobs = sortedCartAssets.map((a) => a.printSvgBlob);
+              } else {
+                const badgePromises = badgesForSupabase.map((b, i) =>
+                  (async () => {
+                    const templateIdForBadge =
+                      b.templateId ||
+                      activeTemplate?.id ||
+                      (isSignLikeVariant(variant) ? "circle-4x4" : "rect-1x3");
+                    const tmpl = await loadTemplateById(
                       templateIdForBadge,
+                      variant,
                     );
-                    return {
-                      pngBlob: new Blob(),
-                      svgBlob: new Blob(),
-                      printSvgBlob: new Blob(),
-                      i,
-                    };
-                  }
-                  try {
-                    const [pngBlob, svgBlob, printSvgBlob] = await Promise.all([
-                      generateFullBadgeImage(b, variant).then(dataURLToBlob),
-                      generateSVGAsBlob(b, tmpl, variant),
-                      generatePrintSVGAsBlob(b, tmpl, variant),
-                    ]);
-                    return {
-                      pngBlob:
-                        pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
-                      svgBlob:
-                        svgBlob && svgBlob.size > 0 ? svgBlob : new Blob(),
-                      printSvgBlob:
-                        printSvgBlob && printSvgBlob.size > 0
-                          ? printSvgBlob
-                          : new Blob(),
-                      i,
-                    };
-                  } catch {
-                    return {
-                      pngBlob: new Blob(),
-                      svgBlob: new Blob(),
-                      printSvgBlob: new Blob(),
-                      i,
-                    };
-                  }
-                })(),
-              );
-              const badgeResults = await Promise.all(badgePromises);
-              badgeResults.sort((a, b) => a.i - b.i);
-              const thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
-              const svgBlobs = badgeResults.map((r) => r.svgBlob);
-              const printSvgBlobs = badgeResults.map((r) => r.printSvgBlob);
+                    if (!tmpl) {
+                      console.warn(
+                        "[BadgeDesignerRedesign] proof upload: template missing",
+                        templateIdForBadge,
+                      );
+                      return {
+                        pngBlob: new Blob(),
+                        printSvgBlob: new Blob(),
+                        i,
+                      };
+                    }
+                    try {
+                      const [pngBlob, printSvgBlob] = await Promise.all([
+                        generateFullBadgeImage(b, variant, {
+                          rasterScale: 2,
+                          rasterFormat: "image/jpeg",
+                          rasterQuality: 0.88,
+                        }).then(dataURLToBlob),
+                        generatePrintSVGAsBlob(b, tmpl, variant),
+                      ]);
+                      return {
+                        pngBlob:
+                          pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
+                        printSvgBlob:
+                          printSvgBlob && printSvgBlob.size > 0
+                            ? printSvgBlob
+                            : new Blob(),
+                        i,
+                      };
+                    } catch {
+                      return {
+                        pngBlob: new Blob(),
+                        printSvgBlob: new Blob(),
+                        i,
+                      };
+                    }
+                  })(),
+                );
+                const badgeResults = await Promise.all(badgePromises);
+                badgeResults.sort((a, b) => a.i - b.i);
+                thumbnailPngBlobs = badgeResults.map((r) => r.pngBlob);
+                printSvgBlobs = badgeResults.map((r) => r.printSvgBlob);
+              }
               const designDataForSupabase = {
                 badge: badgesForSupabase[0],
                 multipleBadges:
@@ -9054,16 +9071,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   formDataForSupabase.append(
                     `thumbnail_png_${index}`,
                     pngBlob,
-                    `${designerConfig.lineIdPrefix}-${index}-thumbnail.png`,
-                  );
-                }
-              });
-              svgBlobs.forEach((svgBlob, index) => {
-                if (svgBlob && svgBlob.size > 0) {
-                  formDataForSupabase.append(
-                    `svg_${index}`,
-                    svgBlob,
-                    `${designerConfig.lineIdPrefix}-${index}-design.svg`,
+                    draftThumbnailFileName(index, pngBlob),
                   );
                 }
               });
@@ -9091,6 +9099,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   ? supabaseJson.thumbnailUrls
                   : [];
                 pdfUrlForCart = supabaseJson.pdfUrl;
+                proofUploadOk =
+                  thumbnailUrls.length >= badgesForSupabase.length &&
+                  Boolean(pdfUrlForCart);
+                if (!proofUploadOk) {
+                  proofUploadWarning =
+                    "Proof upload succeeded but required URLs were missing.";
+                }
               } else {
                 const errData = await supabaseResponse.json().catch(() => ({}));
                 const detail =
@@ -9098,10 +9113,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   (typeof errData.error === "string" && errData.error) ||
                   supabaseResponse.statusText ||
                   "Unknown error";
-                console.warn(
-                  "Supabase proof upload failed (cart will still add):",
-                  detail,
-                );
+                console.warn("Supabase proof upload failed:", detail);
                 proofUploadWarning = detail;
               }
             }
@@ -9110,10 +9122,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               fallbackErr instanceof Error
                 ? fallbackErr.message
                 : "Proof upload failed";
-            console.warn(
-              "Supabase fallback upload error (cart will still add):",
-              fallbackErr,
-            );
+            console.warn("Supabase fallback upload error:", fallbackErr);
             proofUploadWarning = detail;
           }
         }
@@ -9122,11 +9131,18 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           supabaseErr instanceof Error
             ? supabaseErr.message
             : "Proof upload failed";
-        console.warn(
-          "Supabase upload error (cart will still add):",
-          supabaseErr,
-        );
+        console.warn("Supabase upload error:", supabaseErr);
         proofUploadWarning = detail;
+      }
+
+      // Hard gate: do not add to cart unless order data persisted.
+      if (!usedFinalize && !proofUploadOk) {
+        alert(
+          proofUploadWarning
+            ? `Could not save your badge design. Nothing was added to the cart.\n\n${proofUploadWarning}`
+            : "Could not save your badge design. Nothing was added to the cart. Please try again.",
+        );
+        return;
       }
 
       if (isSignLikeVariant(variant)) {
@@ -13116,7 +13132,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       {isPlaqueDetachedTemplateId(
                         badge.templateId ?? universalTemplateId,
                       )
-                        ? "The framed area on the wood is for your printed photo (inserted separately). Your uploaded image appears on the metal plate beside your text — set left or right below."
+                        ? "The framed area on the wood is for your printed photo (inserted separately). Adding an icon on the metal plate is optional — if you upload one, choose left or right below."
                         : "Your image is placed on the metal plate above your text."}{" "}
                       PNG, JPEG, WebP, or GIF.
                     </p>

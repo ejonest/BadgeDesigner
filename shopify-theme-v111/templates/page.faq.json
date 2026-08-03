@@ -1,0 +1,221 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "main": {
+      "type": "aqb-info-page",
+      "blocks": {
+        "heading_ordering": {
+          "type": "section_heading",
+          "settings": { "heading": "Ordering & Minimums" }
+        },
+        "faq_min_qty": {
+          "type": "faq",
+          "settings": {
+            "question": "Is there a minimum order quantity?",
+            "answer": "No minimum. Order one badge or one thousand — we handle both."
+          }
+        },
+        "faq_mix_names": {
+          "type": "faq",
+          "settings": {
+            "question": "Can I mix different names on one order?",
+            "answer": "Yes. Use the \"Add Multiple\" feature in the design tool to add different names, titles, or text to each badge within the same order."
+          }
+        },
+        "faq_reorder": {
+          "type": "faq",
+          "settings": {
+            "question": "Can I reorder a previous design?",
+            "answer": "Absolutely. Your designs are saved to your account. Just log in, find your saved design, and reorder in one click."
+          }
+        },
+        "faq_org": {
+          "type": "faq",
+          "settings": {
+            "question": "Can I order for my whole organization at once?",
+            "answer": "Yes. For large team orders, conference orders, or ongoing corporate accounts, contact us for bulk order assistance and custom invoicing options."
+          }
+        },
+        "heading_design": {
+          "type": "section_heading",
+          "settings": { "heading": "Design & Customization" }
+        },
+        "faq_skills": {
+          "type": "faq",
+          "settings": {
+            "question": "Do I need design skills or software?",
+            "answer": "Not at all. Our live design tool is built for everyday users. Pick your shape, type your text, choose your colors — no design programs, no files to send."
+          }
+        },
+        "faq_artwork_fees": {
+          "type": "faq",
+          "settings": {
+            "question": "Do you charge artwork fees?",
+            "answer": "No. There are no artwork fees, setup fees, or hidden charges. You pay for the badges — that's it."
+          }
+        },
+        "faq_fonts": {
+          "type": "faq",
+          "settings": {
+            "question": "What fonts and colors are available?",
+            "answer": "The design tool gives you a range of fonts, text sizes, and background color options to choose from. Everything is selectable directly in the tool."
+          }
+        },
+        "faq_logo": {
+          "type": "faq",
+          "settings": {
+            "question": "Can I add a logo or icon to my badge?",
+            "answer": "Yes. The tool includes a library of professional icons for common roles — cross, stethoscope, star, and more. Custom logo uploads are available as well, please contact us directly for this."
+          }
+        },
+        "faq_sizes": {
+          "type": "faq",
+          "settings": {
+            "question": "What sizes and shapes are available?",
+            "answer": "We offer several standard badge sizes and shapes including rounded corner rectangles, oval, and square corner options. All available sizes are shown in the design tool."
+          }
+        },
+        "heading_pricing": {
+          "type": "section_heading",
+          "settings": { "heading": "Pricing & Payment" }
+        },
+        "faq_volume": {
+          "type": "faq",
+          "settings": {
+            "question": "How does volume pricing work?",
+            "answer": "The more badges you order, the lower your per-badge price. Pricing tiers are shown automatically as you build your order — no need to call for a quote."
+          }
+        },
+        "faq_hidden": {
+          "type": "faq",
+          "settings": {
+            "question": "Are there any hidden fees?",
+            "answer": "No. The price you see in the tool is the price you pay. No artwork fees, no setup fees, no surprise charges at checkout."
+          }
+        },
+        "faq_payment": {
+          "type": "faq",
+          "settings": {
+            "question": "What payment methods do you accept?",
+            "answer": "We accept all major credit cards, debit cards, and PayPal at checkout."
+          }
+        },
+        "faq_invoicing": {
+          "type": "faq",
+          "settings": {
+            "question": "Do you offer invoicing for corporate or institutional buyers?",
+            "answer": "For qualifying bulk orders, contact us to discuss invoicing and corporate account options."
+          }
+        },
+        "heading_production": {
+          "type": "section_heading",
+          "settings": { "heading": "Production & Shipping" }
+        },
+        "faq_production": {
+          "type": "faq",
+          "settings": {
+            "question": "How long does production take?",
+            "answer": "Most custom badge orders are produced and shipped within 2 business days of your order being placed."
+          }
+        },
+        "faq_ship_time": {
+          "type": "faq",
+          "settings": {
+            "question": "How long does shipping take?",
+            "answer": "Standard delivery is typically 3–5 business days after shipment, depending on your location. Expedited shipping options are available at checkout."
+          }
+        },
+        "faq_intl": {
+          "type": "faq",
+          "settings": {
+            "question": "Do you ship internationally?",
+            "answer": "We currently ship within the United States. Contact us if you have international shipping needs."
+          }
+        },
+        "faq_tracking": {
+          "type": "faq",
+          "settings": {
+            "question": "How will I know when my order ships?",
+            "answer": "You'll receive a shipping confirmation email with tracking information as soon as your order leaves our facility."
+          }
+        },
+        "heading_returns": {
+          "type": "section_heading",
+          "settings": { "heading": "Returns & Quality" }
+        },
+        "faq_returns": {
+          "type": "faq",
+          "settings": {
+            "question": "Do you accept returns on custom badges?",
+            "answer": "Because every badge is custom-made to order, we are unable to accept returns on personalized items. Please review your design carefully before placing your order."
+          }
+        },
+        "faq_defect": {
+          "type": "faq",
+          "settings": {
+            "question": "What if my order arrives with an error or defect?",
+            "answer": "If the error is on our end, we will replace your order at no charge — no questions asked. Contact us within 7 days of receiving your order with a photo of the issue."
+          }
+        },
+        "faq_typo": {
+          "type": "faq",
+          "settings": {
+            "question": "What if I made a typo in my design?",
+            "answer": "Please double-check all text before submitting your order. Unfortunately we cannot offer replacements for customer-entered errors, but contact us as soon as possible and we'll do our best to help."
+          }
+        },
+        "cta_contact": {
+          "type": "cta",
+          "settings": {
+            "prefix": "Still have a question?",
+            "label": "Contact Us",
+            "url": "shopify://pages/contact",
+            "style": "gold"
+          }
+        }
+      },
+      "block_order": [
+        "heading_ordering",
+        "faq_min_qty",
+        "faq_mix_names",
+        "faq_reorder",
+        "faq_org",
+        "heading_design",
+        "faq_skills",
+        "faq_artwork_fees",
+        "faq_fonts",
+        "faq_logo",
+        "faq_sizes",
+        "heading_pricing",
+        "faq_volume",
+        "faq_hidden",
+        "faq_payment",
+        "faq_invoicing",
+        "heading_production",
+        "faq_production",
+        "faq_ship_time",
+        "faq_intl",
+        "faq_tracking",
+        "heading_returns",
+        "faq_returns",
+        "faq_defect",
+        "faq_typo",
+        "cta_contact"
+      ],
+      "settings": {
+        "eyebrow": "Support",
+        "heading": "Frequently Asked <em>Questions</em>",
+        "subheading": "Got questions? We've got answers. If you don't see what you're looking for, reach out — we're happy to help."
+      }
+    }
+  },
+  "order": ["main"]
+}
