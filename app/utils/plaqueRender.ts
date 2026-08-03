@@ -403,8 +403,9 @@ export function applyPlaqueMetalBrushFilter(
       `filter="url(#${filterId})"`,
     );
   }
+  // Insert before `/>` or `>` — must not leave a bare `/` mid-tag (breaks XML parsers).
   return markup.replace(
-    /^(<[a-zA-Z][^>]*)(\/?>)/,
+    /^(<[a-zA-Z][^>]*?)\s*(\/?>)/,
     `$1 filter="url(#${filterId})"$2`,
   );
 }
