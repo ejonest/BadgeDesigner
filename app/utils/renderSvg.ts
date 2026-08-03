@@ -2146,28 +2146,15 @@ function renderPlaqueBadgeSvg(
     metalPlateTreatment?.innerPlateMarkup ?? innerPathWithFill;
 
   const hasUserLogo = Boolean(badge.logo?.src?.trim());
+  // Attached plaques require an icon — show a plate placeholder until upload.
+  // Detached photo plaques: icon is optional; without one, text uses the full plate.
   const showUserImagePlaceholder =
     Boolean(opts.showOutline) &&
     !hasUserLogo &&
-    signTemplateSupportsUserLogoUpload(template.id);
+    signTemplateSupportsUserLogoUpload(template.id) &&
+    isPlaqueAttachedTemplateId(template.id);
 
-  /** Preview: reserve plate logo space (detached left/right) so the placeholder matches upload layout. */
-  const badgeForLayout: Badge =
-    showUserImagePlaceholder && isPlaqueDetachedTemplateId(template.id)
-      ? {
-          ...badge,
-          logo: {
-            src: "__plaque-preview-image-placeholder__",
-            placement: normalizeSignLogoPlacementForTemplate(
-              template.id,
-              badge.logo?.placement ??
-                getDefaultSignLogoPlacementForTemplate(template.id),
-            ),
-            intrinsicWidth: 100,
-            intrinsicHeight: 100,
-          },
-        }
-      : badge;
+  const badgeForLayout: Badge = badge;
 
   const effectiveSignLayout = template.signTextLayout
     ? getEffectiveSignTextLayoutForBadge(template, badgeForLayout)

@@ -1,0 +1,428 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "home_hero": {
+      "type": "aqb-home-hero",
+      "blocks": {
+        "strength_1": {
+          "type": "strength",
+          "settings": {
+            "icon": "eye",
+            "title": "See it before you buy"
+          }
+        },
+        "strength_2": {
+          "type": "strength",
+          "settings": {
+            "icon": "price-tag",
+            "title": "Badges as low as $4.99"
+          }
+        },
+        "strength_3": {
+          "type": "strength",
+          "settings": {
+            "icon": "edit",
+            "title": "Design it live in minutes"
+          }
+        },
+        "strength_4": {
+          "type": "strength",
+          "settings": {
+            "icon": "reorder",
+            "title": "Reorder in one click"
+          }
+        }
+      },
+      "block_order": [
+        "strength_1",
+        "strength_2",
+        "strength_3",
+        "strength_4"
+      ],
+      "settings": {
+        "eyebrow": "Custom Badge Tool — Live Now",
+        "heading": "Custom name badges<br><em>designed live in minutes.</em>",
+        "subheading": "Design online, preview instantly and order with confidence. Perfect for businesses, schools, churches, and organizations of any size.",
+        "primary_label": "Design custom name badges",
+        "primary_link": "shopify://products/custom-1x3-badge",
+        "secondary_label": "Shop All Badges",
+        "secondary_link": "shopify://collections/all",
+        "hero_image_asset": "aqb-hero-badge-variations.png",
+        "editor_preview_mode": "screenshot",
+        "editor_preview_asset": "aqb-hero-editor-preview.png",
+        "editor_preview_cta_label": "Design custom name badges →",
+        "tool_url_label": "allqualitybadges.com — Design Studio",
+        "preview_org_1": "Grace Community Church",
+        "preview_name_1": "Sarah",
+        "preview_role_1": "Greeter",
+        "preview_org_2": "Iglesia Nueva Vida",
+        "preview_name_2": "Carlos",
+        "preview_role_2": "Ujier",
+        "preview_qty": "25",
+        "preview_price": "$47.25",
+        "preview_price_note": "($1.89 each)",
+        "tool_cta_label": "Add to Cart",
+        "show_amazon_review": true,
+        "amazon_rating": "4.8/5 from 6,000+ reviews",
+        "amazon_subtitle": "Millions of badges sold on Amazon",
+        "amazon_avatars_asset": "aqb-hero-amazon-avatars.png"
+      }
+    },
+    "trust_bar": {
+      "type": "aqb-trust-bar",
+      "blocks": {
+        "trust_shipping": {
+          "type": "trust_item",
+          "settings": {
+            "emoji": "🚚",
+            "headline": "Free USA Shipping",
+            "detail": "On orders of 5 badges or more"
+          }
+        },
+        "trust_speed": {
+          "type": "trust_item",
+          "settings": {
+            "emoji": "⚡",
+            "headline": "Fast Production",
+            "detail": "Ships in 1-2 business days"
+          }
+        },
+        "trust_manufacturer": {
+          "type": "trust_item",
+          "settings": {
+            "emoji": "✏️",
+            "headline": "No Artwork Fees",
+            "detail": "Design free — preview before you buy"
+          }
+        },
+        "trust_minimum": {
+          "type": "trust_item",
+          "settings": {
+            "emoji": "📦",
+            "headline": "No Minimum Order",
+            "detail": "Order 1 or 10,000 badges"
+          }
+        }
+      },
+      "block_order": [
+        "trust_shipping",
+        "trust_speed",
+        "trust_manufacturer",
+        "trust_minimum"
+      ],
+      "settings": {
+        "color_scheme": "scheme-1",
+        "padding_top": 0,
+        "padding_bottom": 0
+      }
+    },
+    "capabilities": {
+      "type": "aqb-capabilities",
+      "blocks": {
+        "step_1": {
+          "type": "step",
+          "settings": {
+            "number": "1",
+            "icon": "template",
+            "title": "Choose a template",
+            "description": "Pick a style you like"
+          }
+        },
+        "step_2": {
+          "type": "step",
+          "settings": {
+            "number": "2",
+            "icon": "customize",
+            "title": "Customize it",
+            "description": "Add colors, graphics & text"
+          }
+        },
+        "step_3": {
+          "type": "step",
+          "settings": {
+            "number": "3",
+            "icon": "preview",
+            "title": "Preview live",
+            "description": "See exactly how it will look"
+          }
+        },
+        "step_4": {
+          "type": "step",
+          "settings": {
+            "number": "4",
+            "icon": "order",
+            "title": "Place your order",
+            "description": "Ships fast. No artwork fees."
+          }
+        }
+      },
+      "block_order": [
+        "step_1",
+        "step_2",
+        "step_3",
+        "step_4"
+      ],
+      "settings": {
+        "heading": "Design Your Badge in 4 Simple Steps"
+      }
+    },
+    "category_grid": {
+      "type": "aqb-category-grid",
+      "blocks": {
+        "cat_church": {
+          "type": "category",
+          "settings": {
+            "banner_asset": "aqb-cat-banner-church.png",
+            "featured": false,
+            "icon": "church",
+            "visual_accent": "navy",
+            "title": "Church & Ministry",
+            "description": "Custom badges for greeters, pastors, ushers, deacons, volunteers, and welcome teams.",
+            "cta_label": "Shop ministry badges →",
+            "link": "shopify://pages/church-and-congregation"
+          }
+        },
+        "cat_engraved": {
+          "type": "category",
+          "settings": {
+            "banner_asset": "aqb-cat-banner-custom.png",
+            "featured": false,
+            "icon": "engraved",
+            "visual_accent": "navy",
+            "title": "Custom Designed Badges",
+            "description": "Durable, professional name badges printed with your text and logo. Choose colors, fonts, and backing options to match your brand.",
+            "cta_label": "Design custom name badges →",
+            "link": "shopify://products/custom-1x3-badge"
+          }
+        },
+        "cat_blanks": {
+          "type": "category",
+          "settings": {
+            "banner_asset": "aqb-cat-banner-blanks.png",
+            "featured": false,
+            "icon": "blanks",
+            "visual_accent": "navy",
+            "title": "Blank Name Tags",
+            "description": "High-quality blank badges ready for customization. Available in multiple shapes, colors, and backing options — perfect for any team or event.",
+            "cta_label": "Shop blanks →",
+            "link": "shopify://pages/badge-blank"
+          }
+        },
+        "cat_desk": {
+          "type": "category",
+          "settings": {
+            "banner_asset": "aqb-cat-banner-desk.png",
+            "featured": false,
+            "icon": "desk",
+            "visual_accent": "navy",
+            "title": "Desk Name Plates",
+            "description": "Custom desk name plates for offices, reception areas, schools, hotels, and home workspaces. Choose from classic styles, acrylic displays, and fun novelty designs.",
+            "cta_label": "Shop desk plates →",
+            "link": "shopify://pages/desk-signs"
+          }
+        }
+      },
+      "block_order": [
+        "cat_church",
+        "cat_engraved",
+        "cat_blanks",
+        "cat_desk"
+      ],
+      "settings": {
+        "layout": "split",
+        "eyebrow": "Shop by category",
+        "heading": "Every badge,<br>one destination.",
+        "subheading": "Magnetic, pin, and adhesive backings available",
+        "view_all_label": "View all products →",
+        "view_all_link": "shopify://collections/all"
+      }
+    },
+    "home_bulk_social": {
+      "type": "aqb-home-bulk-social",
+      "blocks": {
+        "bulk_feat_1": {
+          "type": "bulk_feature",
+          "settings": {
+            "text": "Upload employee lists"
+          }
+        },
+        "bulk_feat_2": {
+          "type": "bulk_feature",
+          "settings": {
+            "text": "Create badges in bulk"
+          }
+        },
+        "bulk_feat_3": {
+          "type": "bulk_feature",
+          "settings": {
+            "text": "Save templates"
+          }
+        },
+        "bulk_feat_4": {
+          "type": "bulk_feature",
+          "settings": {
+            "text": "Reorder in one click"
+          }
+        },
+        "bulk_feat_5": {
+          "type": "bulk_feature",
+          "settings": {
+            "text": "Volume discounts available"
+          }
+        },
+        "faq_1": {
+          "type": "faq",
+          "settings": {
+            "question": "What backing options do you offer?",
+            "answer": "Choose from magnetic backing, pin backing, or adhesive options depending on your preference. All backing types are shown in the design tool and on product pages."
+          }
+        },
+        "faq_2": {
+          "type": "faq",
+          "settings": {
+            "question": "How long does production take?",
+            "answer": "Most custom badge orders are produced and shipped within 2 business days of your order being placed."
+          }
+        },
+        "faq_3": {
+          "type": "faq",
+          "settings": {
+            "question": "Can I order badges in bulk?",
+            "answer": "Yes. For large team orders, conference orders, or ongoing corporate accounts, contact us for bulk order assistance and custom invoicing options."
+          }
+        },
+        "faq_4": {
+          "type": "faq",
+          "settings": {
+            "question": "Can I reorder badges later?",
+            "answer": "Absolutely. Your designs are saved to your account. Just log in, find your saved design, and reorder in one click."
+          }
+        },
+        "faq_5": {
+          "type": "faq",
+          "settings": {
+            "question": "Do you offer magnetic backing?",
+            "answer": "Yes — magnetic backing is available on most badge styles. Select it in the design tool or on the product page when configuring your order."
+          }
+        },
+        "faq_6": {
+          "type": "faq",
+          "settings": {
+            "question": "Are badges customized in the USA?",
+            "answer": "Yes. All Quality Badges are designed, printed, and shipped from our US facility."
+          }
+        }
+      },
+      "block_order": [
+        "bulk_feat_1",
+        "bulk_feat_2",
+        "bulk_feat_3",
+        "bulk_feat_4",
+        "bulk_feat_5",
+        "faq_1",
+        "faq_2",
+        "faq_3",
+        "faq_4",
+        "faq_5",
+        "faq_6"
+      ],
+      "settings": {
+        "bulk_heading": "Bulk Ordering Made Easy",
+        "bulk_button_label": "Get Started with Bulk Ordering →",
+        "bulk_button_link": "shopify://pages/bulk-orders",
+        "bulk_image_asset": "aqb-home-bulk-order-form.png",
+        "bulk_image_alt": "Bulk order quote request form",
+        "reviews_heading": "What our customers say",
+        "reviews_rating": "4.8/5 from 6,000+ reviews",
+        "reviews_quote": "The live preview made it so easy to get exactly what we needed. Fast shipping and great quality!",
+        "reviews_attribution": "— Mark R., Business Owner",
+        "reviews_image_asset": "aqb-home-reviews-badges.png",
+        "reviews_image_alt": "Assortment of custom name badges"
+      }
+    },
+    "dual_cta": {
+      "type": "aqb-dual-cta",
+      "settings": {
+        "layout": "homepage",
+        "header_kicker": "Two Ways to Buy",
+        "header_title": "Personalized or DIY — You Choose",
+        "left_eyebrow": "New visitor",
+        "left_title": "Try the design tool.",
+        "left_description": "No account needed. Pick a shape, set your colors, type your text — and see your badge live before you buy. Takes under two minutes.",
+        "left_button_label": "Design custom name badges →",
+        "link_custom": "shopify://products/custom-1x3-badge",
+        "right_eyebrow": "Returning customer",
+        "right_title": "Already a customer?",
+        "right_description": "Create an account and your orders are saved. Reorder the same badge — same color, same text, same everything — in four steps next time.",
+        "right_button_label": "Create Your Account →",
+        "link_blank": "/account/register"
+      }
+    },
+    "home_usa_banner": {
+      "type": "aqb-home-usa-banner",
+      "blocks": {
+        "stat_1": {
+          "type": "stat",
+          "settings": {
+            "icon": "package",
+            "value": "Millions+",
+            "label": "Badges Sold on Amazon"
+          }
+        },
+        "stat_2": {
+          "type": "stat",
+          "settings": {
+            "icon": "star",
+            "value": "6,000+",
+            "label": "5-Star Ratings on Amazon"
+          }
+        },
+        "stat_3": {
+          "type": "stat",
+          "settings": {
+            "icon": "award",
+            "value": "8+ Years",
+            "label": "Serving Customers Worldwide"
+          }
+        },
+        "stat_4": {
+          "type": "stat",
+          "settings": {
+            "icon": "people",
+            "value": "Trusted",
+            "label": "by everyone from education to government"
+          }
+        }
+      },
+      "block_order": [
+        "stat_1",
+        "stat_2",
+        "stat_3",
+        "stat_4"
+      ],
+      "settings": {
+        "heading": "Designed, Customized & Finished in the USA",
+        "description": "We are a U.S. business. Your badges are customized, printed, engraved and assembled in our facility in the USA with care and quality. Every badge is customized, engraved, printed and assembled by our team using imported materials manufactured to our exact specifications.",
+        "map_image_asset": "aqb-home-usa-map.png",
+        "map_image_alt": "United States map with American flag — customized and finished in the USA"
+      }
+    }
+  },
+  "order": [
+    "home_hero",
+    "trust_bar",
+    "capabilities",
+    "category_grid",
+    "home_bulk_social",
+    "dual_cta",
+    "home_usa_banner"
+  ]
+}

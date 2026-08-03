@@ -182,7 +182,6 @@ const SIGN_LOGO_PLACEMENT_UI_LABEL: Record<SignLogoPlacement, string> = {
   bottom: "Bottom",
 };
 
-/** Image upload is required for detached-photo layouts and for attached-plaque (icon on the plate). */
 /** True when UI should show attached-plaque-only steps (format picker). */
 function plaqueAttachedFlowSelected(
   selectedPlaqueLayoutId: string | null,
@@ -193,17 +192,6 @@ function plaqueAttachedFlowSelected(
   if (selectedPlaqueLayoutId === "plaque-attached") return true;
   if (multipleBadgesLength === 0) return false;
   return isPlaqueAttachedTemplateId(badgeTemplateId ?? universalTemplateId);
-}
-
-function plaqueDetachedPhotoRequired(
-  multipleBadgesLength: number,
-  badgeTemplateId: string | undefined,
-  universalTemplateId: string,
-): boolean {
-  return (
-    multipleBadgesLength > 0 &&
-    isPlaqueDetachedTemplateId(badgeTemplateId ?? universalTemplateId)
-  );
 }
 
 /** Attached plate: every design must have exactly 4 filled text lines before cart. */
@@ -2096,6 +2084,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     "override" | "add" | null
   >(null);
   const [showBadgeGridModal, setShowBadgeGridModal] = useState(false);
+  /** Pulse View All / Grid after Add Multiple so users find the multi-item browser. */
+  const [highlightViewAllAfterBulk, setHighlightViewAllAfterBulk] =
+    useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [plaqueAwardFormatsExpanded, setPlaqueAwardFormatsExpanded] =
     useState(false);
@@ -2410,15 +2401,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const t0 = (badge.lines[0]?.text || "").trim();
       return t0 !== "" && t0 !== getStep3DefaultText(0);
     })();
-  /** Attached plate or detached-photo layout: user must upload an image before the design is complete. */
-  const requiresPlaqueLogo =
-    variant === "plaque" &&
-    (plaqueAttachedSelected ||
-      plaqueDetachedPhotoRequired(
-        multipleBadges.length,
-        badge.templateId,
-        universalTemplateId,
-      ));
+  /** Attached plaque: plate icon is required. Detached photo plaques: icon is optional. */
+  const requiresPlaqueLogo = variant === "plaque" && plaqueAttachedSelected;
   const stepsComplete =
     multipleBadges.length > 0 &&
     hasChosenBackgroundColor &&
@@ -2450,13 +2434,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       );
       const stFormat = !attachedFlow || Boolean(badge.plaqueFormatId?.trim());
       const stMetal = hasChosenBackgroundColor;
-      const detachedPhotoReq = plaqueDetachedPhotoRequired(
-        multipleBadges.length,
-        badge.templateId,
-        universalTemplateId,
-      );
-      const requiresLogo = attachedFlow || detachedPhotoReq;
-      const missingPlaqueLogo = requiresLogo && !badge.logo?.src?.trim();
+      const missingPlaqueLogo =
+        attachedFlow && !badge.logo?.src?.trim();
       if (forStep >= 2 && !st1) incomplete.push(1);
       if (forStep >= 3 && !st2) incomplete.push(2);
       if (attachedFlow) {
@@ -2466,7 +2445,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         if (forStep >= 7 && !hasStep3TextEntered) incomplete.push(6);
       } else {
         if (forStep >= 4 && !stMetal) incomplete.push(3);
-        if (forStep >= 5 && missingPlaqueLogo) incomplete.push(4);
+        // Detached: icon step is optional — do not gate later steps on it.
         if (forStep >= 6 && !hasStep3TextEntered) incomplete.push(5);
       }
       if (incomplete.length === 0) return null;
@@ -7253,6 +7232,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             setSelectedBadgeIndex(0);
           }
           onBadgesUpdated?.(migratedBadges);
+          setHighlightViewAllAfterBulk(true);
         } else {
           // Add: Keep all existing badges, append CSV badges
           // First, save current badge to its position in multipleBadges
@@ -7275,6 +7255,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           }
           const newBadges = [...updatedMultipleBadges, ...migratedBadges];
           onBadgesUpdated?.(newBadges);
+          setHighlightViewAllAfterBulk(true);
         }
       }
     } catch {
@@ -7356,6 +7337,28 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       </div>
     );
   }, [cloudLibraryEnabled, multipleBadges.length, cloudAutosaveStatus]);
+
+  useEffect(() => {
+    if (showBadgeGridModal) setHighlightViewAllAfterBulk(false);
+  }, [showBadgeGridModal]);
+
+  useEffect(() => {
+    if (!highlightViewAllAfterBulk) return;
+    const t = window.setTimeout(
+      () => setHighlightViewAllAfterBulk(false),
+      12000,
+    );
+    return () => window.clearTimeout(t);
+  }, [highlightViewAllAfterBulk]);
+
+  const openViewAllBadges = useCallback(() => {
+    setHighlightViewAllAfterBulk(false);
+    setShowBadgeGridModal(true);
+  }, []);
+
+  const viewAllButtonClassName = highlightViewAllAfterBulk
+    ? "flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-lg border-2 border-blue-500 bg-blue-50 text-blue-800 ring-2 ring-blue-300 ring-offset-2 animate-pulse shadow-md"
+    : "flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100";
 
   // Early guard - don't render until we have a concrete template
   if (!activeTemplate) {
@@ -7479,17 +7482,23 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               <div className="flex flex-col items-center gap-1">
                 <button
                   type="button"
-                  className="flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                  onClick={() => setShowBadgeGridModal(true)}
+                  className={viewAllButtonClassName}
+                  onClick={openViewAllBadges}
                   aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
                   title={`View all ${config.labelProductPlural.toLowerCase()}`}
                 >
                   <Squares2X2Icon className="w-6 h-6" />
                 </button>
-                <div className="text-[8px] text-gray-600 text-center leading-tight">
-                  Grid
-                  <br />
+                <div
+                  className={`text-[8px] text-center leading-tight ${
+                    highlightViewAllAfterBulk
+                      ? "text-blue-700 font-semibold"
+                      : "text-gray-600"
+                  }`}
+                >
                   View
+                  <br />
+                  All
                 </div>
               </div>
             </div>
@@ -9462,7 +9471,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                       {isPlaqueDetachedTemplateId(
                         badge.templateId ?? universalTemplateId,
                       )
-                        ? "The framed area on the wood is for your printed photo (inserted separately). Your uploaded image appears on the metal plate beside your text — set left or right below."
+                        ? "The framed area on the wood is for your printed photo (inserted separately). Adding an icon on the metal plate is optional — if you upload one, choose left or right below."
                         : "Your image is placed on the metal plate above your text."}{" "}
                       PNG, JPEG, WebP, or GIF.
                     </p>
@@ -10553,17 +10562,23 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               <div className="flex flex-col items-center gap-1">
                 <button
                   type="button"
-                  className="w-14 h-14 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                  onClick={() => setShowBadgeGridModal(true)}
+                  className={viewAllButtonClassName}
+                  onClick={openViewAllBadges}
                   aria-label={`View all ${config.labelProductPlural.toLowerCase()}`}
                   title={`View all ${config.labelProductPlural.toLowerCase()}`}
                 >
                   <Squares2X2Icon className="w-6 h-6" />
                 </button>
-                <div className="text-[8px] text-gray-600 text-center leading-tight">
-                  Grid
-                  <br />
+                <div
+                  className={`text-[8px] text-center leading-tight ${
+                    highlightViewAllAfterBulk
+                      ? "text-blue-700 font-semibold"
+                      : "text-gray-600"
+                  }`}
+                >
                   View
+                  <br />
+                  All
                 </div>
               </div>
             </div>

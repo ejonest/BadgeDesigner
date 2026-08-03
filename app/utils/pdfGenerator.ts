@@ -49,6 +49,19 @@ export const PLAQUE_PROOF_PDF_IMAGE_OPTIONS: FullBadgeImageOptions = {
   loadTimeoutMs: 30_000,
 };
 
+/** Badge proof PDF mockup: same JPEG class as draft/cart thumbnails (not high-res PNG). */
+export const BADGE_PROOF_PDF_IMAGE_OPTIONS: FullBadgeImageOptions = {
+  rasterScale: 2,
+  rasterFormat: "image/jpeg",
+  rasterQuality: 0.88,
+  loadTimeoutMs: 20_000,
+};
+
+export type GeneratePDFAsBlobOptions = {
+  /** Precomputed mockup data URLs (one per badge). Skips internal raster when present. */
+  mockupDataUrls?: (string | undefined)[];
+};
+
 /* ---------- Color utils ---------- */
 
 // rgb()/hex → [0..1] rgb
@@ -248,17 +261,17 @@ async function embedProofMockupInPdf(
   badge: Badge,
   template: LoadedTemplate,
   variant: DesignerVariant,
+  precomputedDataUrl?: string,
 ): Promise<Awaited<ReturnType<PDFDocument["embedPng"]>>> {
   const baseOpts = resolveProductionRenderOpts(badge, template, variant);
   const imageOpts: FullBadgeImageOptions =
     variant === "plaque" || isPlaqueTemplateId(template.id)
       ? { ...baseOpts, ...PLAQUE_PROOF_PDF_IMAGE_OPTIONS }
-      : baseOpts;
-  const imageDataUrl = await generateFullBadgeImage(
-    badge,
-    variant,
-    imageOpts,
-  );
+      : { ...baseOpts, ...BADGE_PROOF_PDF_IMAGE_OPTIONS };
+  const imageDataUrl =
+    precomputedDataUrl && precomputedDataUrl.startsWith("data:image/")
+      ? precomputedDataUrl
+      : await generateFullBadgeImage(badge, variant, imageOpts);
   const base64Data = imageDataUrl.split(",")[1];
   const imageBytes = Uint8Array.from(atob(base64Data), (c) =>
     c.charCodeAt(0),
@@ -628,7 +641,8 @@ export const generatePDFAsBlob = async (
   multipleBadges?: Badge[],
   quantities?: number[],
   designLabel: string = "Badge",
-  variant: DesignerVariant = "badge"
+  variant: DesignerVariant = "badge",
+  options?: GeneratePDFAsBlobOptions,
 ): Promise<Blob> => {
   console.log("GENERATING PDF AS BLOB");
   try {
@@ -703,13 +717,14 @@ export const generatePDFAsBlob = async (
       // NOW lock section top
       const sectionTopY = y;
 
-      // Mockup raster (plaques use lower-quality JPEG to save space/ink)
+      // Mockup raster (badge/plaque JPEG; may reuse precomputed cart/proof assets)
       console.log(`Generating ${designLabel.toLowerCase()} image...`);
       const pdfImage = await embedProofMockupInPdf(
         pdfDoc,
         badge,
         template,
         variant,
+        options?.mockupDataUrls?.[idx],
       );
       console.log("Image embedded in PDF");
       console.log("PDF image dimensions:", {

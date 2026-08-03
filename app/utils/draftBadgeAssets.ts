@@ -1,14 +1,12 @@
 import type { Badge } from "~/types/badge";
 import type { DesignerVariant } from "~/constants/designerVariants";
-import type { LoadedTemplate } from "~/utils/templates";
+import { isSignLikeVariant } from "~/constants/designerVariants";
+import { loadTemplateById, type LoadedTemplate } from "~/utils/templates";
 import {
   DRAFT_FULL_BADGE_IMAGE_OPTIONS,
   generateFullBadgeImage,
 } from "~/utils/badgeThumbnail";
-import {
-  generatePrintSVGAsBlob,
-  generateSVGAsBlob,
-} from "~/utils/export";
+import { generatePrintSVGAsBlob } from "~/utils/export";
 import { mapWithConcurrency } from "~/utils/mapWithConcurrency";
 import {
   resolveCustomBadgeBackgroundPrintImageSrc,
@@ -18,9 +16,16 @@ import { inlineBadgeBlankPhotoSrc } from "~/utils/inlineBadgePhoto";
 
 export type DraftBadgeAssetBlobs = {
   pngBlob: Blob;
-  svgBlob: Blob;
   printSvgBlob: Blob;
   i: number;
+};
+
+/** One-shot cart/proof assets: JPEG (PDF + thumbnail) + print SVG only. */
+export type CartProofBadgeAssets = {
+  i: number;
+  jpegDataUrl: string;
+  jpegBlob: Blob;
+  printSvgBlob: Blob;
 };
 
 /** Keep a few badges in flight without melting the main thread / memory. */
@@ -58,8 +63,8 @@ export async function warmDraftBadgeImageCache(
 }
 
 /**
- * Render draft thumbnail + design SVG + print SVG for each badge.
- * Uses JPEG draft thumbnails (full SVG quality preserved) and bounded concurrency.
+ * Render draft thumbnail JPEG + print SVG for each badge.
+ * Design SVG is omitted (production uses print SVG; cart/PDF use JPEG).
  */
 export async function generateDraftBadgeAssetBlobs(
   badges: readonly Badge[],
@@ -73,15 +78,13 @@ export async function generateDraftBadgeAssetBlobs(
     DRAFT_BADGE_RENDER_CONCURRENCY,
     async (b, i) => {
       try {
-        const [dataUrl, svgBlob, printSvgBlob] = await Promise.all([
+        const [dataUrl, printSvgBlob] = await Promise.all([
           generateFullBadgeImage(b, variant, DRAFT_FULL_BADGE_IMAGE_OPTIONS),
-          generateSVGAsBlob(b, template, variant),
           generatePrintSVGAsBlob(b, template, variant),
         ]);
         const pngBlob = dataURLToBlob(dataUrl);
         return {
           pngBlob: pngBlob.size > 0 ? pngBlob : new Blob(),
-          svgBlob: svgBlob?.size > 0 ? svgBlob : new Blob(),
           printSvgBlob:
             printSvgBlob?.size > 0 ? printSvgBlob : new Blob(),
           i,
@@ -90,14 +93,75 @@ export async function generateDraftBadgeAssetBlobs(
         console.warn(
           "[generateDraftBadgeAssetBlobs] badge",
           i,
-          "PNG/SVG failed",
+          "JPEG/print SVG failed",
           err,
         );
         return {
           pngBlob: new Blob(),
-          svgBlob: new Blob(),
           printSvgBlob: new Blob(),
           i,
+        };
+      }
+    },
+  );
+}
+
+/**
+ * One-shot assets for proof PDF + cart finalize: JPEG + print SVG per badge.
+ * Loads each badge's template so multi-shape orders stay correct.
+ */
+export async function generateCartProofBadgeAssets(
+  badges: readonly Badge[],
+  variant: DesignerVariant,
+): Promise<CartProofBadgeAssets[]> {
+  await warmDraftBadgeImageCache(badges);
+  const fallbackTemplateId = isSignLikeVariant(variant)
+    ? "circle-4x4"
+    : "rect-1x3";
+
+  return mapWithConcurrency(
+    badges,
+    DRAFT_BADGE_RENDER_CONCURRENCY,
+    async (b, i) => {
+      try {
+        const templateId = b.templateId || fallbackTemplateId;
+        const tmpl = await loadTemplateById(templateId, variant);
+        if (!tmpl) {
+          console.warn(
+            "[generateCartProofBadgeAssets] template missing",
+            templateId,
+          );
+          return {
+            i,
+            jpegDataUrl: "",
+            jpegBlob: new Blob(),
+            printSvgBlob: new Blob(),
+          };
+        }
+        const [jpegDataUrl, printSvgBlob] = await Promise.all([
+          generateFullBadgeImage(b, variant, DRAFT_FULL_BADGE_IMAGE_OPTIONS),
+          generatePrintSVGAsBlob(b, tmpl, variant),
+        ]);
+        const jpegBlob = dataURLToBlob(jpegDataUrl);
+        return {
+          i,
+          jpegDataUrl,
+          jpegBlob: jpegBlob.size > 0 ? jpegBlob : new Blob(),
+          printSvgBlob:
+            printSvgBlob?.size > 0 ? printSvgBlob : new Blob(),
+        };
+      } catch (err) {
+        console.warn(
+          "[generateCartProofBadgeAssets] badge",
+          i,
+          "failed",
+          err,
+        );
+        return {
+          i,
+          jpegDataUrl: "",
+          jpegBlob: new Blob(),
+          printSvgBlob: new Blob(),
         };
       }
     },
