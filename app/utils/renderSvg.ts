@@ -282,8 +282,17 @@ function renderBadgePrintProductionSvg(
   const W = dieW + bleedPad * 2;
   const H = dieH + bleedPad * 2;
   const clipId = clipPathIdForSvg(opts, badge);
-  const plateColor =
+  const safeClip = clipId.replace(/[^a-zA-Z0-9_-]/g, "");
+  const plateColorRaw =
     (badge.backgroundColor || DEFAULT_PLATE_BG).trim() || DEFAULT_PLATE_BG;
+  // Featured brushed gold/silver/black: same brush treatment as on-screen preview.
+  // Plain swatches stay a solid fill of the chosen background color.
+  const plateUsesBrushedMetal =
+    isFeaturedBrushedMetalPlateColor(plateColorRaw);
+  const plateBaseHex =
+    (plateUsesBrushedMetal
+      ? normalizeFeaturedBrushedMetalBaseHex(plateColorRaw)
+      : "") || plateColorRaw;
 
   const customEntry = getCustomBadgeBackgroundById(
     badge.customBadgeBackgroundId,
@@ -307,6 +316,7 @@ function renderBadgePrintProductionSvg(
       ? `<style type="text/css">${fontDefs.join("\n")}</style>`
       : "";
 
+  let brushDefs = "";
   let layers = "";
   if (photo && customEntry) {
     const face = photo.badgeFaceRect;
@@ -411,6 +421,19 @@ function renderBadgePrintProductionSvg(
       .join("");
     const textClipRect = buildRectClipPathMarkup(designBox);
     const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
+    const dieRectMarkup = `<rect x="0" y="0" width="${dieW}" height="${dieH}" fill="${esc(
+      plateBaseHex,
+    )}" />`;
+    let diePlateMarkup = dieRectMarkup;
+    if (plateUsesBrushedMetal) {
+      const treatment = plaqueMetalBrushInnerPlateTreatment({
+        innerPathWithFill: dieRectMarkup,
+        filterId: `badgePrintMetalBrush${safeClip}`,
+        baseHex: plateBaseHex,
+      });
+      brushDefs = treatment.defsXml;
+      diePlateMarkup = treatment.innerPlateMarkup;
+    }
     layers = `
   <defs>
     <clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">
@@ -418,9 +441,7 @@ function renderBadgePrintProductionSvg(
     </clipPath>
   </defs>
   <g transform="translate(${bleedPad}, ${bleedPad})">
-    <rect x="0" y="0" width="${dieW}" height="${dieH}" fill="${esc(
-      plateColor,
-    )}" />
+    ${diePlateMarkup}
     ${badgeIconLayer}
     ${text}
   </g>`;
@@ -434,8 +455,9 @@ function renderBadgePrintProductionSvg(
      preserveAspectRatio="none">
   <defs>
     ${styleBlock}
+    ${brushDefs}
   </defs>
-  <rect x="0" y="0" width="${W}" height="${H}" fill="${esc(plateColor)}" />
+  <rect x="0" y="0" width="${W}" height="${H}" fill="${esc(plateBaseHex)}" />
   ${layers}
 </svg>`.trim();
 }
