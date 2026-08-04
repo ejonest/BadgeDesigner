@@ -112,6 +112,11 @@
 
       if (data.action === 'designer-chrome') {
         setDesignerChromeCollapsed(!!data.collapsed);
+        return;
+      }
+
+      if (data.action === 'designer-focus') {
+        setDesignerFocus(!!data.locked, data.scrollTo || null);
       }
     });
 
@@ -123,6 +128,66 @@
         'aqb-designer-chrome-collapsed',
         !!collapsed
       );
+    }
+
+    var designerFocusLocked = false;
+    var designerFocusScrollY = 0;
+
+    function getDesignerEmbedEl() {
+      return (
+        document.querySelector('.aqb-designer-embed') ||
+        document.querySelector('.badge-designer-iframe-outer') ||
+        document.getElementById('badge-designer-iframe')
+      );
+    }
+
+    function setDesignerFocus(locked, scrollTo) {
+      var html = document.documentElement;
+      var body = document.body;
+      if (!body || !body.classList.contains('aqb-designer-product')) return;
+
+      if (locked) {
+        if (!designerFocusLocked) {
+          designerFocusScrollY = window.scrollY || window.pageYOffset || 0;
+        }
+        designerFocusLocked = true;
+        html.classList.add('aqb-designer-focus');
+        setDesignerChromeCollapsed(true);
+
+        var embed = getDesignerEmbedEl();
+        if (embed && typeof embed.scrollIntoView === 'function') {
+          embed.scrollIntoView({ block: 'start' });
+        }
+
+        body.style.overflow = 'hidden';
+        body.style.overscrollBehavior = 'none';
+        body.style.touchAction = 'none';
+        html.style.overscrollBehavior = 'none';
+        return;
+      }
+
+      if (!designerFocusLocked && scrollTo !== 'below') return;
+      designerFocusLocked = false;
+      html.classList.remove('aqb-designer-focus');
+      setDesignerChromeCollapsed(false);
+      body.style.overflow = '';
+      body.style.overscrollBehavior = '';
+      body.style.touchAction = '';
+      html.style.overscrollBehavior = '';
+
+      window.requestAnimationFrame(function() {
+        if (scrollTo === 'below') {
+          var embedEl = getDesignerEmbedEl();
+          if (embedEl) {
+            var rect = embedEl.getBoundingClientRect();
+            var top =
+              rect.bottom + (window.scrollY || window.pageYOffset || 0) + 8;
+            window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+            return;
+          }
+        }
+        window.scrollTo(0, designerFocusScrollY || 0);
+      });
     }
   })();
 </script>

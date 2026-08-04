@@ -176,7 +176,11 @@ import {
   type CartProofBadgeAssets,
 } from "../utils/draftBadgeAssets";
 import { getCurrentShop, type ShopAuthData } from "../utils/shopAuth";
-import { useEmbeddedMobileStoreChrome } from "../utils/embeddedStoreChrome";
+import {
+  postDesignerFocus,
+  useEmbeddedMobileDesignerFocus,
+  useEmbeddedMobileStoreChrome,
+} from "../utils/embeddedStoreChrome";
 import { getDesignLibraryDummyAuth } from "../utils/designLibraryDummyAuth";
 import {
   CLOUD_LIBRARY_LOGIN_HINT_DISMISSED_KEY,
@@ -3365,11 +3369,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   const embeddedMobileBadgeShell =
     storeChromeless && usesAqbShell && isMobileViewport;
+  /** User dismissed focus mode to browse store content; re-lock on next editor interaction. */
+  const designerFocusReleasedRef = useRef(false);
 
   useEmbeddedMobileStoreChrome(
     embeddedMobileBadgeShell,
     mobileEditorScrollEl,
   );
+  useEmbeddedMobileDesignerFocus(embeddedMobileBadgeShell);
 
   /** Stable design id for this session; used for incremental draft saves and add-to-cart. */
   const sessionDesignIdRef = useRef<string | null>(null);
@@ -8586,9 +8593,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setShowProofModal(false);
   }, [proofPdfObjectUrl]);
 
-  // Keep proof modal gestures inside the iframe (don't chain-scroll the Shopify page).
+  // Keep modal gestures inside the iframe (don't chain-scroll the Shopify page).
+  const iframeModalOpen =
+    showProofModal ||
+    showCsvModal ||
+    showCsvWarningModal ||
+    showOrderQtyAllocationModal ||
+    showBadgeGridModal;
   useEffect(() => {
-    if (!showProofModal) return;
+    if (!iframeModalOpen) return;
     const html = document.documentElement;
     const body = document.body;
     const prevHtmlOverflow = html.style.overflow;
@@ -8602,7 +8615,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       body.style.overflow = prevBodyOverflow;
       body.style.overscrollBehavior = prevBodyOverscroll;
     };
-  }, [showProofModal]);
+  }, [iframeModalOpen]);
 
   const applyRestoredDesign = useCallback(
     (row: { design_id?: string; design_data: any; backing_type?: string }) => {
@@ -10114,6 +10127,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       className={`aqb-redesign-root min-h-screen bg-[#F0EDE6] overflow-x-hidden text-sm leading-[1.55] text-[#02132B] ${
         storeChromeless ? "pb-0" : "pb-8"
       }${embeddedMobileBadgeShell ? " aqb-embedded-mobile-shell" : ""}`}
+      onPointerDownCapture={(e) => {
+        if (!embeddedMobileBadgeShell || !designerFocusReleasedRef.current) {
+          return;
+        }
+        const target = e.target as Element | null;
+        if (target?.closest?.(".aqb-designer-focus-exit")) return;
+        designerFocusReleasedRef.current = false;
+        postDesignerFocus(true, { scrollTo: "designer" });
+      }}
     >
       {designLibraryDummy.enabled ? (
         <div
@@ -11006,7 +11028,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             }}
             className={`section-container flex-1 min-h-0 ${
               usesAqbShell
-                ? "mb-0 min-w-0 max-md:overflow-y-auto px-0 md:overflow-visible"
+                ? "mb-0 min-w-0 max-md:overflow-y-auto max-md:overscroll-contain px-0 md:overflow-visible"
                 : "mb-4 px-4 md:px-5"
             }`}
           >
@@ -14786,6 +14808,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               </div>
             )}
             {aqbBadgeMobileCheckoutBar}
+            {embeddedMobileBadgeShell ? (
+              <button
+                type="button"
+                className="aqb-designer-focus-exit md:hidden"
+                onClick={(e) => {
+                  e.preventDefault();
+                  designerFocusReleasedRef.current = true;
+                  postDesignerFocus(false, { scrollTo: "below" });
+                }}
+              >
+                <span className="aqb-designer-focus-exit__handle" aria-hidden />
+                <span>Store details & reviews below</span>
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -15686,17 +15722,19 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       {/* Badge grid picker modal (mobile + desktop) */}
       {showBadgeGridModal && (
         <div
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
+          className="fixed inset-0 flex items-end sm:items-center justify-center bg-black bg-opacity-40 z-50 p-0 sm:p-4"
+          style={{ overscrollBehavior: "contain" }}
           onClick={() => setShowBadgeGridModal(false)}
           role="dialog"
           aria-modal="true"
           aria-label={`Select ${config.labelProduct.toLowerCase()} to edit`}
         >
           <div
-            className="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[85vh] flex flex-col"
+            className="bg-white rounded-t-2xl sm:rounded-lg shadow-lg w-full max-w-lg max-h-[min(92dvh,92vh)] flex flex-col overflow-hidden"
+            style={{ overscrollBehavior: "contain" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center justify-between p-4 border-b shrink-0">
               <h3 className="text-lg font-bold text-gray-800">
                 Select {config.labelProduct.toLowerCase()} to edit
               </h3>
@@ -15806,7 +15844,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 </button>
               </div>
             ) : null}
-            <div className="grid grid-cols-2 gap-3 p-4 overflow-y-auto flex-1 min-h-0">
+            <div
+              className="grid grid-cols-2 gap-3 p-4 overflow-y-auto flex-1 min-h-0 overscroll-contain"
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
               {Array.from({ length: totalBadges }, (_, i) => {
                 const { badge: b, templateId: tid } = getBadgeForPreview(
                   i,
@@ -15951,23 +15992,34 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 );
               })}
             </div>
+            <div className="shrink-0 border-t bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] flex justify-end">
+              <button
+                type="button"
+                className="px-4 py-2 rounded shadow bg-[#02132B] text-white hover:opacity-90 text-sm font-semibold"
+                onClick={() => setShowBadgeGridModal(false)}
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {showOrderQtyAllocationModal && variant === "badge" && (
         <div
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-[60] p-4"
+          className="fixed inset-0 flex items-end sm:items-center justify-center bg-black bg-opacity-40 z-[60] p-0 sm:p-4"
+          style={{ overscrollBehavior: "contain" }}
           onClick={closeOrderQtyAllocationModal}
           role="dialog"
           aria-modal="true"
           aria-label="Match order quantity to badge designs"
         >
           <div
-            className="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[85vh] flex flex-col"
+            className="bg-white rounded-t-2xl sm:rounded-lg shadow-lg w-full max-w-lg max-h-[min(92dvh,92vh)] flex flex-col overflow-hidden"
+            style={{ overscrollBehavior: "contain" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center justify-between p-4 border-b shrink-0">
               <h3 className="text-lg font-bold text-gray-800">
                 Order quantity vs. designs
               </h3>
@@ -15980,7 +16032,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-4 space-y-4 overflow-y-auto flex-1 min-h-0 text-sm text-gray-700">
+            <div
+              className="p-4 space-y-4 overflow-y-auto flex-1 min-h-0 text-sm text-gray-700 overscroll-contain"
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
               <p className="leading-relaxed">
                 You currently have{" "}
                 <strong>{allocationBaselineOrderQtyRef.current}</strong> badges
@@ -16187,7 +16242,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 badges
               </p>
             </div>
-            <div className="flex flex-wrap justify-end gap-2 border-t p-4 bg-gray-50">
+            <div className="flex flex-wrap justify-end gap-2 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] bg-gray-50 shrink-0">
               <button
                 type="button"
                 className="px-4 py-2 rounded shadow border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 text-sm font-medium"
@@ -17464,109 +17519,134 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
       {/* CSV Modal */}
       {showCsvModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg relative">
-            <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl"
-              onClick={(e) => {
-                e.preventDefault();
-                setCsvText("");
-                setCsvPreview([]);
-                setCsvError("");
-                setCsvWarning("");
-                setShowCsvModal(false);
-              }}
-              aria-label="Close"
-            >
-              &times;
-            </button>
-            <h3 className="text-lg font-bold mb-2">
-              Add or Create Multiple {config.labelProductPlural}
-            </h3>
-            <p className="mb-2 text-sm text-gray-700">
-              {addMultipleCopy.csvModalSteps.map((step, idx) => (
-                <span key={idx}>
-                  {idx > 0 ? <br /> : null}
-                  {step}
-                </span>
-              ))}
-            </p>
-            <div className="mb-2 text-sm">
-              <b>Example:</b>
-              <br />
-              {addMultipleCopy.csvExampleRows.map((row, idx) => (
-                <React.Fragment key={idx}>
-                  <span className="font-mono bg-gray-100 p-1 rounded inline-block mb-1">
-                    {row}
-                  </span>
-                  {idx < addMultipleCopy.csvExampleRows.length - 1 ? (
-                    <br />
-                  ) : null}
-                </React.Fragment>
-              ))}
-            </div>
-            <div className="mb-2">
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleCsvFile}
-                className="mb-2"
-              />
-            </div>
-            <textarea
-              className="w-full border rounded p-2 mb-2 text-sm text-gray-900 bg-white"
-              rows={4}
-              placeholder={addMultipleCopy.csvTextareaPlaceholder}
-              value={csvText}
-              onChange={(e) => {
-                setCsvText(e.target.value);
-                previewCsv(e.target.value);
-              }}
-            />
-            {csvWarning && !csvError ? (
-              <div className="text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 text-sm mb-2">
-                {csvWarning}
-              </div>
-            ) : null}
-            {csvError && (
-              <div className="text-red-600 text-sm mb-2">{csvError}</div>
-            )}
-            {csvPreview.length > 0 && (
-              <div className="mb-2">
-                <div className="font-semibold mb-1">
-                  Preview ({csvPreview.length} row
-                  {csvPreview.length === 1 ? "" : "s"})
-                </div>
-                {/* Scrollable container: show ~10 rows worth of height, max 40vh so it shrinks on short screens */}
-                <div
-                  className="border rounded overflow-y-auto bg-white"
-                  style={{
-                    maxHeight: "min(280px, 40vh)",
-                    minHeight: "80px",
-                  }}
-                >
-                  <table className="w-full text-xs border-collapse">
-                    <tbody>
-                      {csvPreview.map((row, i) => (
-                        <tr key={i} className="border-t border-gray-200">
-                          {row.map((cell, j) => (
-                            <td
-                              key={j}
-                              className="border border-gray-200 px-2 py-1"
-                            >
-                              {cell}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-            <div className="flex justify-end">
+        <div
+          className="fixed inset-0 flex items-end sm:items-center justify-center bg-black bg-opacity-40 z-50 p-0 sm:p-4"
+          style={{ overscrollBehavior: "contain" }}
+          onClick={() => {
+            setCsvText("");
+            setCsvPreview([]);
+            setCsvError("");
+            setCsvWarning("");
+            setShowCsvModal(false);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Add or create multiple ${config.labelProductPlural}`}
+        >
+          <div
+            className="bg-white rounded-t-2xl sm:rounded-lg shadow-lg w-full max-w-lg max-h-[min(92dvh,92vh)] flex flex-col relative"
+            style={{ overscrollBehavior: "contain" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b shrink-0">
+              <h3 className="text-lg font-bold text-gray-800 pr-8">
+                Add or Create Multiple {config.labelProductPlural}
+              </h3>
               <button
-                className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1 rounded mr-2"
+                type="button"
+                className="p-2 text-gray-500 hover:text-gray-700"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCsvText("");
+                  setCsvPreview([]);
+                  setCsvError("");
+                  setCsvWarning("");
+                  setShowCsvModal(false);
+                }}
+                aria-label="Close"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <div
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3"
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
+              <p className="text-sm text-gray-700">
+                {addMultipleCopy.csvModalSteps.map((step, idx) => (
+                  <span key={idx}>
+                    {idx > 0 ? <br /> : null}
+                    {step}
+                  </span>
+                ))}
+              </p>
+              <div className="text-sm">
+                <b>Example:</b>
+                <br />
+                {addMultipleCopy.csvExampleRows.map((row, idx) => (
+                  <React.Fragment key={idx}>
+                    <span className="font-mono bg-gray-100 p-1 rounded inline-block mb-1">
+                      {row}
+                    </span>
+                    {idx < addMultipleCopy.csvExampleRows.length - 1 ? (
+                      <br />
+                    ) : null}
+                  </React.Fragment>
+                ))}
+              </div>
+              <div>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleCsvFile}
+                  className="mb-1"
+                />
+              </div>
+              <textarea
+                className="w-full border rounded p-2 text-sm text-gray-900 bg-white"
+                rows={4}
+                placeholder={addMultipleCopy.csvTextareaPlaceholder}
+                value={csvText}
+                onChange={(e) => {
+                  setCsvText(e.target.value);
+                  previewCsv(e.target.value);
+                }}
+              />
+              {csvWarning && !csvError ? (
+                <div className="text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 text-sm">
+                  {csvWarning}
+                </div>
+              ) : null}
+              {csvError ? (
+                <div className="text-red-600 text-sm">{csvError}</div>
+              ) : null}
+              {csvPreview.length > 0 ? (
+                <div>
+                  <div className="font-semibold mb-1 text-sm">
+                    Preview ({csvPreview.length} row
+                    {csvPreview.length === 1 ? "" : "s"})
+                  </div>
+                  <div
+                    className="border rounded overflow-y-auto bg-white"
+                    style={{
+                      maxHeight: "min(220px, 28vh)",
+                      minHeight: "80px",
+                    }}
+                  >
+                    <table className="w-full text-xs border-collapse">
+                      <tbody>
+                        {csvPreview.map((row, i) => (
+                          <tr key={i} className="border-t border-gray-200">
+                            {row.map((cell, j) => (
+                              <td
+                                key={j}
+                                className="border border-gray-200 px-2 py-1"
+                              >
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            <div className="shrink-0 border-t bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] flex justify-end gap-2">
+              <button
+                type="button"
+                className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-2 rounded text-sm font-medium"
                 onClick={(e) => {
                   e.preventDefault();
                   setCsvText("");
@@ -17579,7 +17659,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 Cancel
               </button>
               <button
-                className={`px-3 py-1 rounded ${
+                type="button"
+                className={`px-3 py-2 rounded text-sm font-semibold ${
                   csvError || !csvText.trim()
                     ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                     : "bg-green-600 hover:bg-green-700 text-white"
@@ -17615,95 +17696,122 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
       {/* CSV Warning Modal - asks user to override or add */}
       {showCsvWarningModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
-            <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl"
-              onClick={(e) => {
-                e.preventDefault();
-                setShowCsvWarningModal(false);
-                setPendingCsvAction(null);
-              }}
-              aria-label="Close"
-            >
-              &times;
-            </button>
-            <h3 className="text-lg font-bold mb-2">
-              Existing {config.labelProductPlural} Found
-            </h3>
-            <p className="mb-4 text-sm text-gray-700">
-              You currently have {multipleBadges.length} existing{" "}
-              {multipleBadges.length !== 1
-                ? config.labelProductPlural.toLowerCase()
-                : config.labelProduct.toLowerCase()}
-              . Choose how to add your new{" "}
-              {config.labelProductPlural.toLowerCase()}:
-            </p>
-            <p className="mb-3 text-xs text-gray-600">
-              <strong>Override Current</strong> replaces all existing{" "}
-              {config.labelProductPlural.toLowerCase()} with the new ones from
-              your CSV.
-              <br />
-              <strong>Add to Current</strong> keeps your existing{" "}
-              {config.labelProductPlural.toLowerCase()} and appends the new
-              ones.
-            </p>
-            <div className="flex gap-3 mb-4">
+        <div
+          className="fixed inset-0 flex items-end sm:items-center justify-center bg-black bg-opacity-40 z-50 p-0 sm:p-4"
+          style={{ overscrollBehavior: "contain" }}
+          onClick={() => {
+            setShowCsvWarningModal(false);
+            setPendingCsvAction(null);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Existing ${config.labelProductPlural} found`}
+        >
+          <div
+            className="bg-white rounded-t-2xl sm:rounded-lg shadow-lg w-full max-w-md max-h-[min(92dvh,92vh)] flex flex-col relative"
+            style={{ overscrollBehavior: "contain" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b shrink-0">
+              <h3 className="text-lg font-bold text-gray-800 pr-8">
+                Existing {config.labelProductPlural} Found
+              </h3>
               <button
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded font-medium"
+                type="button"
+                className="p-2 text-gray-500 hover:text-gray-700"
                 onClick={(e) => {
                   e.preventDefault();
-                  setPendingCsvAction("override");
                   setShowCsvWarningModal(false);
-                  parseCsv(csvText, true, (newBadges) => {
-                    notifyBulkBadgesAdded(newBadges.length);
-                    void runDraftSaveForBadges(newBadges);
-                  });
-                  if (!csvError) {
-                    setCsvText("");
-                    setCsvPreview([]);
-                    setCsvError("");
-                    setCsvWarning("");
-                    setShowCsvModal(false);
-                  }
                   setPendingCsvAction(null);
                 }}
+                aria-label="Close"
               >
-                Override Current
-              </button>
-              <button
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded font-medium"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setPendingCsvAction("add");
-                  setShowCsvWarningModal(false);
-                  parseCsv(csvText, false, (newBadges) => {
-                    notifyBulkBadgesAdded(newBadges.length);
-                    void runDraftSaveForBadges(newBadges);
-                  });
-                  if (!csvError) {
-                    setCsvText("");
-                    setCsvPreview([]);
-                    setCsvError("");
-                    setCsvWarning("");
-                    setShowCsvModal(false);
-                  }
-                  setPendingCsvAction(null);
-                }}
-              >
-                Add to Current
+                <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
-            <button
-              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded text-sm"
-              onClick={(e) => {
-                e.preventDefault();
-                setShowCsvWarningModal(false);
-                setPendingCsvAction(null);
-              }}
+            <div
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3"
+              style={{ WebkitOverflowScrolling: "touch" }}
             >
-              Cancel
-            </button>
+              <p className="text-sm text-gray-700">
+                You currently have {multipleBadges.length} existing{" "}
+                {multipleBadges.length !== 1
+                  ? config.labelProductPlural.toLowerCase()
+                  : config.labelProduct.toLowerCase()}
+                . Choose how to add your new{" "}
+                {config.labelProductPlural.toLowerCase()}:
+              </p>
+              <p className="text-xs text-gray-600">
+                <strong>Override Current</strong> replaces all existing{" "}
+                {config.labelProductPlural.toLowerCase()} with the new ones from
+                your CSV.
+                <br />
+                <strong>Add to Current</strong> keeps your existing{" "}
+                {config.labelProductPlural.toLowerCase()} and appends the new
+                ones.
+              </p>
+            </div>
+            <div className="shrink-0 border-t bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] space-y-3">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded font-medium"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPendingCsvAction("override");
+                    setShowCsvWarningModal(false);
+                    parseCsv(csvText, true, (newBadges) => {
+                      notifyBulkBadgesAdded(newBadges.length);
+                      void runDraftSaveForBadges(newBadges);
+                    });
+                    if (!csvError) {
+                      setCsvText("");
+                      setCsvPreview([]);
+                      setCsvError("");
+                      setCsvWarning("");
+                      setShowCsvModal(false);
+                    }
+                    setPendingCsvAction(null);
+                  }}
+                >
+                  Override Current
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded font-medium"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPendingCsvAction("add");
+                    setShowCsvWarningModal(false);
+                    parseCsv(csvText, false, (newBadges) => {
+                      notifyBulkBadgesAdded(newBadges.length);
+                      void runDraftSaveForBadges(newBadges);
+                    });
+                    if (!csvError) {
+                      setCsvText("");
+                      setCsvPreview([]);
+                      setCsvError("");
+                      setCsvWarning("");
+                      setShowCsvModal(false);
+                    }
+                    setPendingCsvAction(null);
+                  }}
+                >
+                  Add to Current
+                </button>
+              </div>
+              <button
+                type="button"
+                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded text-sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowCsvWarningModal(false);
+                  setPendingCsvAction(null);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

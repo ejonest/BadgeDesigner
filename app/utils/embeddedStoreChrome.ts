@@ -9,6 +9,25 @@ export function postDesignerChrome(collapsed: boolean) {
   );
 }
 
+/**
+ * Lock the Shopify parent page so overscroll stays inside the designer iframe.
+ * `scrollTo: "below"` unlocks and scrolls the parent to content under the embed.
+ */
+export function postDesignerFocus(
+  locked: boolean,
+  opts?: { scrollTo?: "designer" | "below" },
+) {
+  if (typeof window === "undefined" || window.parent === window) return;
+  window.parent.postMessage(
+    {
+      action: "designer-focus",
+      locked: Boolean(locked),
+      scrollTo: opts?.scrollTo ?? null,
+    },
+    "*",
+  );
+}
+
 const SCROLL_DELTA_PX = 10;
 const AT_TOP_PX = 6;
 
@@ -59,4 +78,19 @@ export function useEmbeddedMobileStoreChrome(
       postDesignerChrome(false);
     };
   }, [enabled, scrollContainer]);
+}
+
+/**
+ * Keep the Shopify product page locked to the designer on mobile until the user
+ * explicitly exits focus (bottom handle → store content below).
+ */
+export function useEmbeddedMobileDesignerFocus(enabled: boolean) {
+  useEffect(() => {
+    if (!enabled) {
+      postDesignerFocus(false);
+      return;
+    }
+    postDesignerFocus(true, { scrollTo: "designer" });
+    return () => postDesignerFocus(false);
+  }, [enabled]);
 }
