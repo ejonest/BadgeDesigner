@@ -265,6 +265,8 @@
       {%- assign aqb_bd_handle = product.handle | default: '' | strip | downcase -%}
       {%- if aqb_bd_handle == 'custom-1x3-badge' -%}
         {%- assign aqb_designer_product = true -%}
+      {%- elsif aqb_bd_handle == 'custom-desk-sign' -%}
+        {%- assign aqb_designer_product = true -%}
       {%- elsif aqb_bd_handle contains 'custom-1x3-' -%}
         {%- assign aqb_bd_after = aqb_bd_handle | replace_first: 'custom-1x3-', '' -%}
         {%- if aqb_bd_after != blank and aqb_bd_after != 'badge' -%}

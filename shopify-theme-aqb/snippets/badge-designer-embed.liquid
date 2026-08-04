@@ -1,7 +1,9 @@
 {% comment %}
-  Badge + Sign + Plaque designer iframe embed
+  Badge + Desk Sign + Sign + Plaque designer iframe embed
   - Badge: custom-1x3-badge and custom-1x3-{icon}-badge listings → /badge-designer-redesign
     (optional ?badgeIconId= from handle, e.g. custom-1x3-airplane-badge)
+  - Desk sign: product handle custom-desk-sign → /desk-sign-designer
+    (use product template: desk-sign-designer)
   - Sign: product handle custom-sign → ?variant=sign or /sign-designer (Shape × Size variants, live price).
   - Plaque: product handle custom-plaque → ?variant=plaque or /plaque-designer (parallel to sign).
 
@@ -129,11 +131,11 @@
 {% if product and product.handle == 'custom-desk-sign' %}
 
 {% assign desk_sign_v0 = product.selected_or_first_available_variant | default: product.variants[0] %}
-<div style="width:100%; min-height:900px;">
+<div class="aqb-designer-embed">
   <iframe
     id="desk-sign-designer-iframe"
-    src="{{ badge_designer_origin }}/desk-sign-designer?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&storeUrl={{ shop.permanent_domain | url_param_escape }}&product={{ product.id | url_param_escape }}&deskSignProductHandle={{ product.handle | url_param_escape }}&variantIdSign={{ desk_sign_v0.id | url_param_escape }}{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}"
-    style="width:100%; height:900px; border:0;"
+    title="Design your custom desk sign"
+    src="{{ badge_designer_origin }}/desk-sign-designer?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&amp;storeUrl={{ shop.permanent_domain | url_param_escape }}&amp;product={{ product.id | url_param_escape }}&amp;deskSignProductHandle={{ product.handle | url_param_escape }}&amp;variantIdSign={{ desk_sign_v0.id | url_param_escape }}{% if customer %}&amp;customerId={{ customer.id | url_param_escape }}{% endif %}"
     loading="lazy"
     allow="clipboard-read; clipboard-write"
   ></iframe>

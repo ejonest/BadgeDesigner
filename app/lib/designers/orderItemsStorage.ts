@@ -29,10 +29,11 @@ function rowPayload(
   item: BadgeOrderItem,
   def: DesignerDefinition,
 ): Record<string, unknown> {
-  const isSignTable =
+  const isMultiLineSignTable =
     def.orderItemsTable === "sign_order_items" ||
-    def.orderItemsTable === "plaque_order_items" ||
-    def.orderItemsTable === "desk_sign_order_items";
+    def.orderItemsTable === "plaque_order_items";
+  const isDeskSignTable = def.orderItemsTable === "desk_sign_order_items";
+  const supportsUploadedImage = isMultiLineSignTable || isDeskSignTable;
   const base: Record<string, unknown> = {
     design_id: item.design_id,
     shopify_order_id: item.shopify_order_id,
@@ -45,7 +46,7 @@ function rowPayload(
     ...(INCLUDE_PRINT_SVG_URL_IN_DB
       ? { print_svg_url: item.print_svg_url || null }
       : {}),
-    ...(isSignTable && item.uploaded_image_url
+    ...(supportsUploadedImage && item.uploaded_image_url
       ? { uploaded_image_url: item.uploaded_image_url }
       : {}),
     pdf_url: item.pdf_url,
@@ -66,27 +67,31 @@ function rowPayload(
     line_2_italicize: item.line_2_italicize,
     line_2_color: item.line_2_color,
     line_2_alignment: item.line_2_alignment,
-    line_3_text: item.line_3_text,
-    line_3_font: item.line_3_font,
-    line_3_font_size: item.line_3_font_size,
-    line_3_bold: item.line_3_bold,
-    line_3_underline: item.line_3_underline,
-    line_3_italicize: item.line_3_italicize,
-    line_3_color: item.line_3_color,
-    line_3_alignment: item.line_3_alignment,
-    line_4_text: item.line_4_text,
-    line_4_font: item.line_4_font,
-    line_4_font_size: item.line_4_font_size,
-    line_4_bold: item.line_4_bold,
-    line_4_underline: item.line_4_underline,
-    line_4_italicize: item.line_4_italicize,
-    line_4_color: item.line_4_color,
-    line_4_alignment: item.line_4_alignment,
   };
-  if (!isSignTable) {
+  // Badges + desk signs store backing/material; multi-line signs/plaques do not.
+  if (!isMultiLineSignTable) {
     base.backing_type = item.backing_type;
   }
-  if (isSignTable) {
+  // Badges have 4 lines; signs/plaques have 6. Desk signs stop at 2.
+  if (!isDeskSignTable) {
+    base.line_3_text = item.line_3_text;
+    base.line_3_font = item.line_3_font;
+    base.line_3_font_size = item.line_3_font_size;
+    base.line_3_bold = item.line_3_bold;
+    base.line_3_underline = item.line_3_underline;
+    base.line_3_italicize = item.line_3_italicize;
+    base.line_3_color = item.line_3_color;
+    base.line_3_alignment = item.line_3_alignment;
+    base.line_4_text = item.line_4_text;
+    base.line_4_font = item.line_4_font;
+    base.line_4_font_size = item.line_4_font_size;
+    base.line_4_bold = item.line_4_bold;
+    base.line_4_underline = item.line_4_underline;
+    base.line_4_italicize = item.line_4_italicize;
+    base.line_4_color = item.line_4_color;
+    base.line_4_alignment = item.line_4_alignment;
+  }
+  if (isMultiLineSignTable) {
     base.line_5_text = item.line_5_text;
     base.line_5_font = item.line_5_font;
     base.line_5_font_size = item.line_5_font_size;

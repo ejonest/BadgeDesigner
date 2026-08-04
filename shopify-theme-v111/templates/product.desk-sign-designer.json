@@ -1,0 +1,21 @@
+/*
+ * ------------------------------------------------------------
+ * Dedicated template for the unlisted custom-desk-sign product.
+ * Assign this template to that product in Shopify admin.
+ * Mirrors product.badge-designer.json — iframe only, no PDP chrome.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "designer_embed": {
+      "type": "custom-liquid",
+      "settings": {
+        "custom_liquid": "{% render 'badge-designer-embed' %}",
+        "color_scheme": "scheme-1",
+        "padding_top": 0,
+        "padding_bottom": 0
+      }
+    }
+  },
+  "order": ["designer_embed"]
+}
