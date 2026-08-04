@@ -298,6 +298,7 @@ import {
   migrateBadgeArray,
 } from "../utils/badgeMigration";
 import BadgeSvgRenderer from "./BadgeSvgRenderer";
+import { ProofPdfViewer } from "./ProofPdfViewer";
 import {
   downloadSVG,
   downloadPNG,
@@ -13146,10 +13147,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               </div>
               <div className="flex flex-col flex-1 min-h-0 overflow-hidden p-4 gap-4">
                 <div className="flex-1 min-h-[300px] rounded border border-gray-200 bg-gray-50 overflow-hidden">
-                  <iframe
-                    title={`${config.labelProduct} design proof (PDF)`}
-                    src={proofPdfObjectUrl}
-                    className="w-full h-full min-h-[300px]"
+                  <ProofPdfViewer
+                    url={proofPdfObjectUrl}
+                    title={`${config.labelProduct} design proof`}
+                    className="h-full min-h-[300px]"
                   />
                 </div>
                 <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
