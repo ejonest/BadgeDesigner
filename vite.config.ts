@@ -23,4 +23,7 @@ export default defineConfig({
     }),
     tsconfigPaths(),
   ],
+  optimizeDeps: {
+    include: ["pdfjs-dist"],
+  },
 });

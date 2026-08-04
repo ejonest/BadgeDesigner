@@ -194,6 +194,7 @@ import {
 } from "../constants/manufacturingDisclaimer";
 import { TemplatePreviewThumb } from "./TemplatePreviewThumb";
 import { BadgeTemplatePhotoPreview } from "./BadgeTemplatePhotoPreview";
+import { ProofPdfViewer } from "./ProofPdfViewer";
 import { stableAutosaveDesignId } from "../utils/stableDesignLibraryIds";
 import { createApi, type DesignLibraryListItem } from "../utils/api";
 import {
@@ -18158,10 +18159,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               style={{ WebkitOverflowScrolling: "touch" }}
             >
               <div className="h-[min(36vh,260px)] sm:h-[min(42vh,320px)] sm:min-h-[220px] rounded border border-gray-200 bg-gray-50 overflow-hidden shrink-0">
-                <iframe
-                  title={`${config.labelProduct} design proof (PDF)`}
-                  src={proofPdfObjectUrl}
-                  className="w-full h-full"
+                <ProofPdfViewer
+                  url={proofPdfObjectUrl}
+                  title={`${config.labelProduct} design proof`}
+                  className="h-full"
                 />
               </div>
               <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
