@@ -44,6 +44,7 @@ import {
 import { plaqueUserLineTextMatchesPlaceholder } from "~/constants/plaqueFormats";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { AqbBadgeSizeSelect } from "./AqbBadgeSizeSelect";
+import { FontFamilySelect } from "./FontFamilySelect";
 
 // Helper functions for normalized font size conversion
 function sizeNormToPx(sizeNorm: number, designBoxHeight: number): number {
@@ -567,24 +568,20 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
               </div>
 
               <div className="aqb-badge-text-row-controls">
-                <div className="aqb-badge-trc-group">
-                  <div className="aqb-badge-trc-label">Font</div>
-                  <select
-                    className="aqb-badge-trc-select"
-                    value={line.fontFamily ?? DEFAULT_FONT}
-                    onChange={(e) => {
-                      clearCharLimitRejected(idx);
-                      onLineChange(idx, { fontFamily: e.target.value });
-                    }}
-                    disabled={!editable}
-                  >
-                    {fontOptionsForLine(line).map((font) => (
-                      <option key={font.value} value={font.value}>
-                        {font.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div className="aqb-badge-trc-group">
+                    <div className="aqb-badge-trc-label">Font</div>
+                    <FontFamilySelect
+                      variant="aqb"
+                      value={line.fontFamily ?? DEFAULT_FONT}
+                      options={fontOptionsForLine(line)}
+                      onChange={(fontFamily) => {
+                        clearCharLimitRejected(idx);
+                        onLineChange(idx, { fontFamily });
+                      }}
+                      disabled={!editable}
+                      ariaLabel={`Font for line ${idx + 1}`}
+                    />
+                  </div>
                 {!isDeskSignPanel ? (
                   <div className="aqb-badge-trc-group">
                     <div className="aqb-badge-trc-label">Size</div>
@@ -958,20 +955,19 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   {/* Font */}
                   <div className="flex gap-1 items-center min-w-0">
                     <span className="font-semibold text-sm mr-1">Font:</span>
-                    <select
-                      className="border rounded px-2 py-1 text-sm"
-                      value={line.fontFamily}
-                      onChange={(e) =>
-                        onLineChange(idx, { fontFamily: e.target.value })
+                    <FontFamilySelect
+                      variant="legacy"
+                      value={line.fontFamily || DEFAULT_FONT}
+                      options={FONT_FAMILIES.map((font) => ({
+                        value: font.value,
+                        label: font.label,
+                      }))}
+                      onChange={(fontFamily) =>
+                        onLineChange(idx, { fontFamily })
                       }
                       disabled={!editable}
-                    >
-                      {FONT_FAMILIES.map((font) => (
-                        <option key={font.value} value={font.value}>
-                          {font.label}
-                        </option>
-                      ))}
-                    </select>
+                      ariaLabel={`Font for line ${idx + 1}`}
+                    />
                   </div>
                   {/* Format */}
                   <div className="flex gap-1 items-center min-w-0">

@@ -1340,6 +1340,64 @@
   opacity: 0.55;
 }
 
+.aqb-redesign-root .aqb-badge-font-select-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.aqb-redesign-root .aqb-badge-font-select-trigger {
+  display: block;
+  text-align: left;
+  /* Selected face comes from inline style; keep DM Sans off the trigger. */
+  font-family: inherit;
+}
+
+.aqb-redesign-root .aqb-badge-font-select-wrap.is-open .aqb-badge-font-select-trigger {
+  border-color: var(--aqb-navy);
+}
+
+.aqb-redesign-root .aqb-badge-font-select-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: min(280px, 45vh);
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1.5px solid var(--aqb-border);
+  border-radius: 5px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(2, 19, 43, 0.12);
+  -webkit-overflow-scrolling: touch;
+}
+
+.aqb-redesign-root .aqb-badge-font-select-option {
+  display: block;
+  width: 100%;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+  padding: 8px 9px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--aqb-navy);
+  text-align: left;
+  cursor: pointer;
+}
+
+.aqb-redesign-root .aqb-badge-font-select-option:hover {
+  background: #f0f3f6;
+}
+
+.aqb-redesign-root .aqb-badge-font-select-option.selected {
+  background: #eef2f6;
+  font-weight: 600;
+}
+
 .aqb-redesign-root .aqb-badge-text-colour-row {
   display: flex;
   flex-wrap: wrap;
