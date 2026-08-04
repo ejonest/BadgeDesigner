@@ -104,10 +104,12 @@ export const links: LinksFunction = () => [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ colorScheme: "only light" }}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* Keep exact product colors on Android Chrome dark mode (no Auto Dark rewrite). */}
+        <meta name="color-scheme" content="only light" />
         <Meta />
         <Links />
       </head>
