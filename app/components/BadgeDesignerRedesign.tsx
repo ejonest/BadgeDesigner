@@ -3142,12 +3142,19 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     (Boolean(badge.deskSignMountType) &&
       Boolean(badge.deskSignAluminumColor));
 
+  /** Style step only after a template is chosen that actually has styles. */
+  const needsBadgeStyleStep =
+    variant === "badge" &&
+    multipleBadges.length > 0 &&
+    badgeTemplateHasStyleStep(universalTemplateId);
+
   const stepsComplete =
     multipleBadges.length > 0 &&
     (!isDeskSignVariant(variant) || selectedDeskSignSize !== null) &&
     (isDeskSignVariant(variant)
       ? deskSignColorsComplete
       : hasChosenBackgroundColor) &&
+    (!needsBadgeStyleStep || hasChosenBadgeStyle) &&
     (!requiresPlaqueLogo || Boolean(badge.logo?.src?.trim())) &&
     hasStep3TextValid &&
     deskSignMountComplete &&
@@ -3159,12 +3166,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       : true) &&
     (config.hasSizeStep ? selectedSignSizeTemplateId != null : true) &&
     (signBorderStepRequired ? signBorderConfigured : true);
-
-  /** Style step only after a template is chosen that actually has styles. */
-  const needsBadgeStyleStep =
-    variant === "badge" &&
-    multipleBadges.length > 0 &&
-    badgeTemplateHasStyleStep(universalTemplateId);
 
   const badgeStyleSelection = useMemo((): "plain" | string | null => {
     if (!needsBadgeStyleStep || !hasChosenBadgeStyle) return null;
@@ -3333,8 +3334,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         ? 6
         : 5
       : config.hasBacking
-      ? 5
-      : 3;
+        ? // Style step shifts text→5 / backing→6; cart check must reach backing.
+          needsBadgeStyleStep
+          ? 6
+          : 5
+        : 3;
 
   // Refs for step sections to enable scroll-into-view
   const templateSectionRef = useRef<HTMLDivElement | null>(null);
@@ -8582,6 +8586,24 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setShowProofModal(false);
   }, [proofPdfObjectUrl]);
 
+  // Keep proof modal gestures inside the iframe (don't chain-scroll the Shopify page).
+  useEffect(() => {
+    if (!showProofModal) return;
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    const prevBodyOverscroll = body.style.overscrollBehavior;
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+      body.style.overscrollBehavior = prevBodyOverscroll;
+    };
+  }, [showProofModal]);
+
   const applyRestoredDesign = useCallback(
     (row: { design_id?: string; design_data: any; backing_type?: string }) => {
       const design = row.design_data;
@@ -10014,6 +10036,21 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const promptAddToCart = () => {
     if (isAddingToCart || isGeneratingDesigns) return;
     if (!stepsComplete) {
+      // Common mobile case: design is ready except backing hasn't been opened yet
+      // (checkout bar still shows the default "magnetic"). Open that step instead
+      // of a dead-end alert.
+      if (
+        variant === "badge" &&
+        config.hasBacking &&
+        !sectionsOpened.backing &&
+        multipleBadges.length > 0 &&
+        hasChosenBackgroundColor &&
+        (!needsBadgeStyleStep || hasChosenBadgeStyle) &&
+        hasStep3TextValid
+      ) {
+        openBadgeStepSection("backing", badgeBackingStepGuard);
+        return;
+      }
       const msg = getIncompleteStepsMessage(incompleteStepsForCart());
       alert(
         msg
@@ -14134,19 +14171,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   }`}
                   onClick={(e) => {
                     e.preventDefault();
-                    if (isAddingToCart || isGeneratingDesigns) return;
-                    if (!stepsComplete) {
-                      const msg = getIncompleteStepsMessage(
-                        incompleteStepsForCart(),
-                      );
-                      alert(
-                        msg
-                          ? `${msg} and finalize your design before adding to the cart.`
-                          : "Please complete your design before adding to the cart.",
-                      );
-                      return;
-                    }
-                    addToCart();
+                    promptAddToCart();
                   }}
                   disabled={isAddingToCart || isGeneratingDesigns}
                 >
@@ -15323,19 +15348,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   }`}
                   onClick={(e) => {
                     e.preventDefault();
-                    if (isAddingToCart || isGeneratingDesigns) return;
-                    if (!stepsComplete) {
-                      const msg = getIncompleteStepsMessage(
-                        incompleteStepsForCart(),
-                      );
-                      alert(
-                        msg
-                          ? `${msg} and finalize your design before adding to the cart.`
-                          : "Please complete your design before adding to the cart.",
-                      );
-                      return;
-                    }
-                    void addToCart();
+                    promptAddToCart();
                   }}
                   disabled={
                     isAddingToCart ||
@@ -18007,17 +18020,19 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       {/* Proof Modal - review PDF and acknowledge before adding to cart */}
       {showProofModal && proofPdfObjectUrl && (
         <div
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
+          className="fixed inset-0 flex items-end sm:items-center justify-center bg-black bg-opacity-40 z-50 p-0 sm:p-4"
+          style={{ overscrollBehavior: "contain" }}
           onClick={closeProofModal}
           role="dialog"
           aria-modal="true"
           aria-label="Review your proof"
         >
           <div
-            className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col"
+            className="bg-white rounded-t-2xl sm:rounded-lg shadow-lg w-full max-w-2xl max-h-[min(92dvh,92vh)] flex flex-col"
+            style={{ overscrollBehavior: "contain" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center justify-between p-4 border-b shrink-0">
               <h3 className="text-lg font-bold text-gray-800">
                 Review your proof
               </h3>
@@ -18030,12 +18045,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex flex-col flex-1 min-h-0 overflow-hidden p-4 gap-4">
-              <div className="flex-1 min-h-[300px] rounded border border-gray-200 bg-gray-50 overflow-hidden">
+            <div
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-4"
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
+              <div className="h-[min(36vh,260px)] sm:h-[min(42vh,320px)] sm:min-h-[220px] rounded border border-gray-200 bg-gray-50 overflow-hidden shrink-0">
                 <iframe
                   title={`${config.labelProduct} design proof (PDF)`}
                   src={proofPdfObjectUrl}
-                  className="w-full h-full min-h-[300px]"
+                  className="w-full h-full"
                 />
               </div>
               <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
@@ -18051,23 +18069,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 <p className="text-sm text-gray-600 mb-2">
                   {MANUFACTURING_DISCLAIMER_BODY}
                 </p>
-                <p className="text-sm text-gray-600 mb-3">
+                <p className="text-sm text-gray-600">
                   By adding to cart you acknowledge that custom-printed items
                   cannot be returned or refunded due to customer error (e.g.
                   typos or design choices). We only accept returns or
                   replacements for manufacturing defects.
                 </p>
-                <label className="flex items-start gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={proofAcknowledged}
-                    onChange={(e) => setProofAcknowledged(e.target.checked)}
-                    className="mt-1 rounded border-gray-300"
-                  />
-                  <span className="text-sm text-gray-700">
-                    Yes, all checked and good to go
-                  </span>
-                </label>
                 {/* DUPLICATE SET UPSELL - commented out for now; re-enable when discount/per-line is ready (e.g. Plus + Functions or two-product approach)
                 {(() => {
                   const pending = proofPendingAddToCartRef.current;
@@ -18094,7 +18101,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 })()}
                 */}
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+            </div>
+            <div className="shrink-0 border-t bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] space-y-3">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={proofAcknowledged}
+                  onChange={(e) => setProofAcknowledged(e.target.checked)}
+                  className="mt-1 rounded border-gray-300"
+                />
+                <span className="text-sm text-gray-700">
+                  Yes, all checked and good to go
+                </span>
+              </label>
+              <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   className="px-4 py-2 rounded shadow border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
