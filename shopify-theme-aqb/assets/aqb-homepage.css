@@ -2354,5 +2354,36 @@
     iframe {
     height: 100dvh !important;
   }
+
+  /* Mobile focus mode: designer fills the viewport; store content waits until exit. */
+  html.aqb-designer-focus body.aqb-designer-product {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+    touch-action: none;
+    height: 100dvh;
+  }
+
+  html.aqb-designer-focus body.aqb-designer-product .aqb-designer-embed,
+  html.aqb-designer-focus
+    body.aqb-designer-product
+    .badge-designer-iframe-outer {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    width: 100%;
+    height: 100dvh;
+    margin: 0;
+    background: #f0ede6;
+  }
+
+  html.aqb-designer-focus body.aqb-designer-product .aqb-designer-embed iframe,
+  html.aqb-designer-focus
+    body.aqb-designer-product
+    .badge-designer-iframe-outer
+    iframe {
+    height: 100dvh !important;
+    min-height: 0 !important;
+    touch-action: auto;
+  }
 }
 
