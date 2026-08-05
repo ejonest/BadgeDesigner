@@ -12,9 +12,37 @@ import {
  */
 const INCLUDE_PRINT_SVG_URL_IN_DB = true;
 
+/**
+ * Persist designer state (Badge JSON) on order-item rows so a cart line can be
+ * reopened for editing. Requires docs/migration_add_badge_json_to_order_items.sql
+ * (adds badge_json + design_meta) to have been run in Supabase.
+ */
+const INCLUDE_BADGE_JSON_IN_DB = true;
+
 async function toUploadBuffer(file: File | Blob): Promise<Buffer> {
   const ab = await file.arrayBuffer();
   return Buffer.from(ab);
+}
+
+/** Columns added by later migrations; writes retry without them if a column is absent. */
+const OPTIONAL_ROW_COLUMNS = [
+  "print_svg_url",
+  "badge_json",
+  "design_meta",
+] as const;
+
+/** Name of the optional column an error blames, so the caller can drop it and retry. */
+function missingOptionalColumn(
+  err: { message?: string } | null,
+): string | null {
+  const message = err?.message;
+  if (!message) return null;
+  if (!/column|schema cache|Could not find/i.test(message)) return null;
+  return (
+    OPTIONAL_ROW_COLUMNS.find((col) =>
+      new RegExp(col, "i").test(message),
+    ) ?? null
+  );
 }
 
 function hintIfStorageBucketMissing(bucket: string, message: string): string {
@@ -45,6 +73,12 @@ function rowPayload(
     full_image_url: item.full_image_url,
     ...(INCLUDE_PRINT_SVG_URL_IN_DB
       ? { print_svg_url: item.print_svg_url || null }
+      : {}),
+    ...(INCLUDE_BADGE_JSON_IN_DB
+      ? {
+          badge_json: item.badge_json ?? null,
+          ...(item.design_meta ? { design_meta: item.design_meta } : {}),
+        }
       : {}),
     ...(supportsUploadedImage && item.uploaded_image_url
       ? { uploaded_image_url: item.uploaded_image_url }
@@ -215,11 +249,12 @@ export async function saveDesignerOrderItems(
   }
   if (!items.length) return [];
 
-  const buildRows = (includePrintSvg: boolean) =>
+  const omittedColumns = new Set<string>();
+  const buildRows = () =>
     items.map((item) => {
       const payload = rowPayload(item, def);
-      if (!includePrintSvg) {
-        delete payload.print_svg_url;
+      for (const col of omittedColumns) {
+        delete payload[col];
       }
       return {
         ...payload,
@@ -228,9 +263,9 @@ export async function saveDesignerOrderItems(
       };
     });
 
-  const tryUpsert = async (includePrintSvg: boolean) => {
+  const tryUpsert = async () => {
     const client = supabaseAdmin!;
-    const itemsToInsert = buildRows(includePrintSvg);
+    const itemsToInsert = buildRows();
     return client
       .from(def.orderItemsTable)
       .upsert(itemsToInsert, {
@@ -240,20 +275,16 @@ export async function saveDesignerOrderItems(
       .select();
   };
 
-  let includePrint = INCLUDE_PRINT_SVG_URL_IN_DB;
-  let { data, error } = await tryUpsert(includePrint);
+  let { data, error } = await tryUpsert();
 
-  if (
-    error &&
-    includePrint &&
-    /print_svg_url/i.test(error.message || "") &&
-    /column|schema cache|Could not find/i.test(error.message || "")
-  ) {
+  for (let attempt = 0; attempt < OPTIONAL_ROW_COLUMNS.length; attempt++) {
+    const missing = missingOptionalColumn(error);
+    if (!missing || omittedColumns.has(missing)) break;
     console.warn(
-      "saveDesignerOrderItems: print_svg_url column missing; retrying without it",
+      `saveDesignerOrderItems: ${missing} column missing; retrying without it`,
     );
-    includePrint = false;
-    ({ data, error } = await tryUpsert(false));
+    omittedColumns.add(missing);
+    ({ data, error } = await tryUpsert());
   }
 
   if (error && /no unique|ON CONFLICT/i.test(error.message || "")) {
@@ -264,7 +295,7 @@ export async function saveDesignerOrderItems(
     if (designId) {
       await deleteDesignerOrderItemsByDesignId(def, designId);
     }
-    const rows = buildRows(includePrint);
+    const rows = buildRows();
     const insertRes = await supabaseAdmin!
       .from(def.orderItemsTable)
       .insert(rows)
@@ -299,10 +330,23 @@ export async function saveDraftDesignerOrderItemsMerge(
   const keepLineIds = items.map((_, i) => `${def.lineIdPrefix}-${i}`);
   await deleteDraftDesignerOrderItemsExcept(def, designId, keepLineIds);
 
-  const isMissingPrintSvgCol = (err: { message?: string } | null) =>
-    !!err?.message &&
-    /print_svg_url/i.test(err.message) &&
-    /column|schema cache|Could not find/i.test(err.message);
+  /** Retry a write, dropping one optional column per round until the schema accepts it. */
+  const writeDroppingMissingColumns = async (
+    payload: Record<string, unknown>,
+    write: (body: Record<string, unknown>) => PromiseLike<{
+      error: { message?: string } | null;
+    }>,
+  ) => {
+    const body = { ...payload };
+    let { error } = await write(body);
+    for (let attempt = 0; attempt < OPTIONAL_ROW_COLUMNS.length; attempt++) {
+      const missing = missingOptionalColumn(error);
+      if (!missing || !(missing in body)) break;
+      delete body[missing];
+      ({ error } = await write(body));
+    }
+    if (error) throw error;
+  };
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
@@ -331,37 +375,24 @@ export async function saveDraftDesignerOrderItemsMerge(
       const cleaned = Object.fromEntries(
         Object.entries(updateBody).filter(([, v]) => v !== undefined),
       );
-      let { error: upErr } = await supabaseAdmin
-        .from(def.orderItemsTable)
-        .update(cleaned)
-        .eq("id", existing.id);
-      if (isMissingPrintSvgCol(upErr)) {
-        delete cleaned.print_svg_url;
-        ({ error: upErr } = await supabaseAdmin
+      await writeDroppingMissingColumns(cleaned, (body) =>
+        supabaseAdmin!
           .from(def.orderItemsTable)
-          .update(cleaned)
-          .eq("id", existing.id));
-      }
-      if (upErr) throw upErr;
+          .update(body)
+          .eq("id", existing.id),
+      );
     } else {
       const insertPayload = {
         ...full,
         created_at: item.created_at || getPacificTimestamp(),
         updated_at: getPacificTimestamp(),
       };
-      let cleanedInsert = Object.fromEntries(
+      const cleanedInsert = Object.fromEntries(
         Object.entries(insertPayload).filter(([, v]) => v !== undefined),
       );
-      let { error: insErr } = await supabaseAdmin
-        .from(def.orderItemsTable)
-        .insert(cleanedInsert);
-      if (isMissingPrintSvgCol(insErr)) {
-        delete cleanedInsert.print_svg_url;
-        ({ error: insErr } = await supabaseAdmin
-          .from(def.orderItemsTable)
-          .insert(cleanedInsert));
-      }
-      if (insErr) throw insErr;
+      await writeDroppingMissingColumns(cleanedInsert, (body) =>
+        supabaseAdmin!.from(def.orderItemsTable).insert(body),
+      );
     }
   }
 }
@@ -427,6 +458,26 @@ export async function updateDesignerOrderItemsStatusByDesignId(
     .from(def.orderItemsTable)
     .update({ status, updated_at: getPacificTimestamp() })
     .eq("design_id", designId);
+  if (error) throw error;
+}
+
+/**
+ * A cart line was replaced by an edited design, so its rows are no longer in a cart.
+ * Only in_cart rows move back to draft; placed orders are never touched. Status has a
+ * CHECK constraint, so draft is the accurate "not in a cart" state.
+ */
+export async function releaseReplacedCartOrderItems(
+  def: DesignerDefinition,
+  designId: string,
+) {
+  if (!supabaseAdmin) {
+    throw new Error("Supabase is not configured.");
+  }
+  const { error } = await supabaseAdmin
+    .from(def.orderItemsTable)
+    .update({ status: "draft", updated_at: getPacificTimestamp() })
+    .eq("design_id", designId)
+    .eq("status", "in_cart");
   if (error) throw error;
 }
 

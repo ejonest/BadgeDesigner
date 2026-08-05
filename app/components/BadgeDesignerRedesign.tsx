@@ -3339,6 +3339,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   /** True after we have asked to load previous design this session (don't show modal again until next visit). */
   /** When true, debounced cache save will skip one write (set after add-to-cart success so we don't write old state back). */
   const skipCacheSaveRef = useRef(false);
+  /**
+   * Design id of the cart line being edited. Adding to cart replaces that line
+   * instead of appending a second one. Null for a normal design session.
+   */
+  const [cartEditDesignId, setCartEditDesignId] = useState<string | null>(null);
+  const cartEditDesignIdRef = useRef<string | null>(null);
+  cartEditDesignIdRef.current = cartEditDesignId;
+  /** Guards against re-restoring when the parent re-sends the edit request. */
+  const cartEditRestoreStartedRef = useRef(false);
   /** Debounce expensive sign `syncSignBadgeLinesSizeNorm` while typing plain text (Designer / ornate plates). */
   const signTextSyncTimerRef = useRef<number | null>(null);
   useEffect(() => {
@@ -7259,6 +7268,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setBadgeLineQuantities([]);
     setBadge(blankBadge);
     setSelectedBadgeIndex(0);
+    setCartEditDesignId(null);
     setHasChosenBackgroundColor(false);
     setHasChosenDeskSignStandColor(false);
     setHasChosenBadgeStyle(false);
@@ -8802,6 +8812,88 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     [variant, config.hasSizeStep],
   );
 
+  /**
+   * Reopen a design the customer clicked in the cart. Embedded, the theme cannot read
+   * query params in Liquid, so it answers our `designer-ready` ping with `edit-design`;
+   * standalone we read `?editDesignId=` directly.
+   */
+  const restoreCartDesignForEdit = useCallback(
+    async (designId: string, badgeIndex: number) => {
+      if (cartEditRestoreStartedRef.current) return;
+      cartEditRestoreStartedRef.current = true;
+      // Claim the cache slot before the async gap so the localStorage restore
+      // effect cannot overwrite the design we are about to apply.
+      restoredFromCacheRef.current = true;
+      try {
+        const detail = await api.getCartDesign(designId);
+        if (!detail.found || !detail.design?.design_data) {
+          restoredFromCacheRef.current = false;
+          cartEditRestoreStartedRef.current = false;
+          alert(
+            "We could not reopen that cart item for editing. You can build a new design here, then remove the old one from your cart.",
+          );
+          return;
+        }
+        applyRestoredDesign({
+          design_id: detail.design.design_id,
+          design_data: detail.design.design_data,
+          backing_type: detail.design.backing_type,
+        });
+        const badgeCount = Array.isArray(detail.design.design_data.allBadges)
+          ? detail.design.design_data.allBadges.length
+          : 1;
+        const quantities = detail.design.quantities;
+        if (variant === "badge" && quantities?.length) {
+          setBadgeLineQuantities(
+            syncBadgeLineQuantities(badgeCount, quantities),
+          );
+        }
+        if (badgeIndex > 0 && badgeIndex < badgeCount) {
+          setSelectedBadgeIndex(badgeIndex);
+        }
+        setCartEditDesignId(designId);
+        skipCacheSaveRef.current = true;
+      } catch (e) {
+        console.warn("[BadgeDesignerRedesign] Cart design restore failed:", e);
+        restoredFromCacheRef.current = false;
+        cartEditRestoreStartedRef.current = false;
+        alert("Could not load that cart item. Please try again.");
+      }
+    },
+    [api, applyRestoredDesign, variant],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined" || templates.length === 0) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const directDesignId = params.get("editDesignId")?.trim();
+    if (directDesignId) {
+      const idx = Number.parseInt(params.get("editBadgeIndex") ?? "", 10);
+      void restoreCartDesignForEdit(
+        directDesignId,
+        Number.isFinite(idx) ? idx : 0,
+      );
+      return;
+    }
+
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as
+        | { action?: string; designId?: string; badgeIndex?: number }
+        | null;
+      if (!data || data.action !== "edit-design") return;
+      const id = data.designId?.trim();
+      if (!id) return;
+      void restoreCartDesignForEdit(
+        id,
+        typeof data.badgeIndex === "number" ? data.badgeIndex : 0,
+      );
+    };
+    window.addEventListener("message", onMessage);
+    api.sendToParent({ action: "designer-ready" });
+    return () => window.removeEventListener("message", onMessage);
+  }, [templates.length, restoreCartDesignForEdit, api]);
+
   const closeDesignGalleryModal = useCallback(() => {
     setShowDesignGalleryModal(false);
     setDesignGalleryError(null);
@@ -9127,6 +9219,17 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   : {}),
                 ...(variant === "badge"
                   ? { badgeOrderQty: totalOrderPieces }
+                  : {}),
+                // Design-level state the order-item rows keep as design_meta, so a
+                // cart line can be reopened with the right sign/plaque selections.
+                ...(isSignLikeVariant(variant)
+                  ? {
+                      selectedSignTemplateType,
+                      selectedSignSizeTemplateId,
+                    }
+                  : {}),
+                ...(variant === "plaque"
+                  ? { selectedPlaqueLayoutId, selectedPlaqueSize }
                   : {}),
               };
               const formDataForSupabase = new FormData();
@@ -9551,11 +9654,24 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       // blank slate (standalone redirect can abort code after location change).
       const preCartDesignId = designIdForSupabase;
       const preCartBadges = badgesForSupabase;
+      const replacedCartDesignId = cartEditDesignIdRef.current;
       resetDesignerToBlank();
       closeProofModal();
 
-      const result = await api.addToCartMultiple(cartItems);
+      const result = await api.addToCartMultiple(cartItems, {
+        replaceDesignId: replacedCartDesignId,
+      });
       if (result.success) {
+        if (replacedCartDesignId) {
+          void api
+            .markCartDesignReplaced(replacedCartDesignId)
+            .catch((err) =>
+              console.warn(
+                "[BadgeDesignerRedesign] Replaced cart rows cleanup failed:",
+                err,
+              ),
+            );
+        }
         if (proofUploadWarning) {
           console.warn(
             "[BadgeDesignerRedesign] Proof upload warning:",
@@ -9577,6 +9693,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           },
         });
         sessionDesignIdRef.current = preCartDesignId;
+        // The old cart line is still there, so keep replacing it on the next try.
+        setCartEditDesignId(replacedCartDesignId);
         const proofNote = proofUploadWarning
           ? `\n\nProof upload also failed: ${proofUploadWarning}`
           : "";
@@ -10259,6 +10377,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             : "gap-5 px-4 md:px-8 h-screen md:h-auto"
         }`}
       >
+        {cartEditDesignId ? (
+          <div className="flex-shrink-0 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+            <strong className="font-semibold">Editing your cart item.</strong>{" "}
+            Adding to cart will replace it.
+          </div>
+        ) : null}
+
         {/* MOBILE: badge preview docked at top; editor scrolls below */}
         <div
           className={`md:hidden flex flex-col flex-shrink-0 ${

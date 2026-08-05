@@ -34,6 +34,27 @@ import {
 
 const LOG_PREFIX = "[Designer]";
 
+/** Design-level designer state (not per-badge) stored on the index-0 order-item row. */
+const DESIGN_META_KEYS = [
+  "selectedSignTemplateType",
+  "selectedSignSizeTemplateId",
+  "selectedPlaqueLayoutId",
+  "selectedPlaqueSize",
+  "badgeOrderQty",
+] as const;
+
+function pickDesignMeta(
+  designData: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | undefined {
+  if (!designData) return undefined;
+  const meta: Record<string, unknown> = {};
+  for (const key of DESIGN_META_KEYS) {
+    const value = designData[key];
+    if (value != null) meta[key] = value;
+  }
+  return Object.keys(meta).length > 0 ? meta : undefined;
+}
+
 /** Draft autosave: uploads to designer image bucket + sign_order_items / badge_order_items. */
 export async function runSaveDraftDesigner(
   designerId: DesignerId,
@@ -185,6 +206,7 @@ export async function runSaveDraftDesigner(
         print_svg_url: printSvgUrl,
         shopify_customer_id: shopifyCustomerId ?? undefined,
         lineIdPrefix: def.lineIdPrefix,
+        design_meta: pickDesignMeta(designData),
       });
       item.status = "draft";
       orderItems.push(item);
@@ -469,6 +491,7 @@ export async function runSendOrderDraftToSupabase(
         pdf_url: pdfUrl,
         shopify_customer_id: shopifyCustomerId ?? undefined,
         lineIdPrefix: def.lineIdPrefix,
+        design_meta: pickDesignMeta(designData),
       });
       item.status = "draft";
       orderItems.push(item);

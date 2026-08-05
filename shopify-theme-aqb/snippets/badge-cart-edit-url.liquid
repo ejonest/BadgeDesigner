@@ -1,0 +1,30 @@
+{% comment %}
+  Outputs the URL a cart item should link to.
+
+  Custom designs link back to the product page carrying editDesignId, so the
+  designer reopens that exact design instead of starting at Step 1. Everything
+  else falls through to the normal item URL.
+
+  Pass: item (cart item)
+  Usage: {%- capture cart_item_url -%}{% render 'badge-cart-edit-url', item: item %}{%- endcapture -%}
+{% endcomment %}
+{%- liquid
+  assign edit_design_id = item.properties['Design ID'] | strip
+  assign edit_badge_index = item.properties['Badge Index'] | default: item.properties['Sign Index'] | default: item.properties['Plaque Index']
+  assign is_custom_design = false
+  if item.properties['Custom Badge Design'] == 'Yes' and edit_design_id != blank
+    assign is_custom_design = true
+  endif
+-%}
+{%- if is_custom_design -%}
+  {%- if item.url contains '?' -%}
+    {{- item.url -}}&editDesignId={{ edit_design_id | url_param_escape }}
+  {%- else -%}
+    {{- item.url -}}?editDesignId={{ edit_design_id | url_param_escape }}
+  {%- endif -%}
+  {%- if edit_badge_index != blank -%}
+    &editBadgeIndex={{ edit_badge_index | url_param_escape }}
+  {%- endif -%}
+{%- else -%}
+  {{- item.url -}}
+{%- endif -%}

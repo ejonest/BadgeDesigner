@@ -17,6 +17,14 @@ function normalizeEnvString(val: any): string | undefined {
   return typeof val === "string" && val.trim() !== "" ? val : undefined;
 }
 
+export interface AddToCartOptions {
+  /**
+   * Design id of the cart line this design replaces. The theme removes lines
+   * carrying that Design ID once the new lines are added.
+   */
+  replaceDesignId?: string | null;
+}
+
 export interface BadgeDesignData {
   id?: string;
   designId?: string;
@@ -268,6 +276,43 @@ export function createApi(
       return response.json();
     },
 
+    /**
+     * Rebuild a design from its cart order-item rows so a cart line can be reopened
+     * for editing. Works for guests: no customer id required, the design id is the key.
+     */
+    async getCartDesign(designId: string): Promise<{
+      found: boolean;
+      design: {
+        design_id: string;
+        design_data: any;
+        backing_type?: string;
+        quantities?: number[];
+      } | null;
+    }> {
+      const params = new URLSearchParams({ designId, designer: designerId });
+      const response = await fetch(`/api/cart-design?${params}`);
+      if (response.status === 404) {
+        return { found: false, design: null };
+      }
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(
+          (err as { error?: string }).error ||
+            `Load cart design failed: ${response.status}`,
+        );
+      }
+      return response.json();
+    },
+
+    /** Housekeeping after an edited design replaced its cart line; failures are not fatal. */
+    async markCartDesignReplaced(designId: string): Promise<void> {
+      await fetch("/api/cart-design-replaced", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ designId, designer: designerId }),
+      });
+    },
+
     // Get badge design by ID (with fallback)
   async getBadgeDesign(id: string): Promise<BadgeDesignData> {
     try {
@@ -331,21 +376,25 @@ export function createApi(
   },
 
   // Add to cart functionality - direct Shopify cart API call (single item)
-  async addToCart(badgeData: any) {
-      return this.addToCartMultiple([badgeData]);
+  async addToCart(badgeData: any, options?: AddToCartOptions) {
+      return this.addToCartMultiple([badgeData], options);
   },
 
   // Add one or more badge line items to cart. Embedded: parent theme calls cart/add.js and acks. Standalone single item: redirect to cart/add.
-  async addToCartMultiple(cartItems: CartLineItemPayload[]): Promise<CartAddResult> {
+  async addToCartMultiple(
+    cartItems: CartLineItemPayload[],
+    options?: AddToCartOptions,
+  ): Promise<CartAddResult> {
       if (!cartItems || cartItems.length === 0) {
         console.error('addToCartMultiple: no items provided');
         return { success: false, message: 'No items to add' };
       }
       const items = sanitizeCartLineItems(cartItems);
+      const replaceDesignId = options?.replaceDesignId || undefined;
       const requestId = `cart-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       try {
         if (isDesignerEmbeddedInStorefront()) {
-          this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items } });
+          this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items, replaceDesignId } });
           const ack = await waitForStorefrontCartAddAck(requestId);
           if (ack.success === false) {
             return {
@@ -376,7 +425,7 @@ export function createApi(
           this.sendToParent({ action: 'add-to-cart', payload: badgeData });
           return { success: true, message: 'Redirecting to add item to cart', cartData: { redirectUrl: cartUrl }, badgeData };
         }
-        this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items } });
+        this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items, replaceDesignId } });
         const ack = await waitForStorefrontCartAddAck(requestId);
         if (ack.success === false) {
           return { success: false, message: ack.error || 'Failed to add to cart' };
@@ -393,7 +442,7 @@ export function createApi(
         if (items.length === 1) {
           this.sendToParent({ action: 'add-to-cart', payload: items[0] });
         } else {
-          this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items } });
+          this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items, replaceDesignId } });
         }
         throw error;
       }

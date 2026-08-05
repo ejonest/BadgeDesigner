@@ -40,7 +40,37 @@
       }
     }
 
-    function aqbDesignerCartAdd(items, event, requestId) {
+    /**
+     * Remove the cart lines the edited design replaces. The edited design always
+     * carries a new Design ID, so matching the old one cannot hit the new lines.
+     */
+    function aqbRemoveReplacedCartLines(cartRoot, replaceDesignId) {
+      if (!replaceDesignId) return Promise.resolve();
+      var base = cartRoot.replace(/\/$/, '');
+      return fetch(base + '/cart.js', { headers: { 'Accept': 'application/json' } })
+        .then(function(res) { return res.json(); })
+        .then(function(cart) {
+          var stale = (cart.items || []).filter(function(item) {
+            return item.properties && item.properties['Design ID'] === replaceDesignId;
+          });
+          // Sequential: each change.js response invalidates the previous line keys.
+          return stale.reduce(function(chain, item) {
+            return chain.then(function() {
+              return fetch(base + '/cart/change.js', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: item.key, quantity: 0 })
+              });
+            });
+          }, Promise.resolve());
+        })
+        .catch(function(err) {
+          // The new design is already in the cart; leaving the old line is better than failing.
+          console.error('Badge designer: could not remove replaced cart lines', err);
+        });
+    }
+
+    function aqbDesignerCartAdd(items, event, requestId, replaceDesignId) {
       if (!items || !items.length) {
         console.error('Badge designer: no cart items to add');
         replyToDesigner(event, requestId, false, 'No cart items to add');
@@ -73,6 +103,9 @@
           });
         })
         .then(function() {
+          return aqbRemoveReplacedCartLines(cartRoot, replaceDesignId);
+        })
+        .then(function() {
           replyToDesigner(event, requestId, true);
           window.location.href = cartRoot.replace(/\/$/, '') + '/cart';
         })
@@ -84,10 +117,36 @@
         });
     }
 
+    function getEditDesignRequest() {
+      var params = new URLSearchParams(window.location.search);
+      var designId = (params.get('editDesignId') || '').trim();
+      if (!designId) return null;
+      var badgeIndex = parseInt(params.get('editBadgeIndex'), 10);
+      return {
+        action: 'edit-design',
+        designId: designId,
+        badgeIndex: isNaN(badgeIndex) ? 0 : badgeIndex
+      };
+    }
+
     window.addEventListener('message', function(event) {
       if (!isAllowedDesignerOrigin(event.origin)) return;
       var data = event.data;
       if (!data || !data.action) return;
+
+      // Liquid cannot read query params, so the designer asks once it is mounted
+      // and we hand back the design the customer clicked in the cart.
+      if (data.action === 'designer-ready') {
+        var editRequest = getEditDesignRequest();
+        if (editRequest && event.source) {
+          try {
+            event.source.postMessage(editRequest, event.origin);
+          } catch (e) {
+            console.error('Badge designer: could not send edit-design', e);
+          }
+        }
+        return;
+      }
 
       if (data.action === 'redirect-to-login') {
         var returnTo = window.location.pathname + window.location.search;
@@ -96,12 +155,12 @@
       }
 
       if (data.action === 'add-to-cart' && data.payload) {
-        aqbDesignerCartAdd([data.payload], event, data.requestId);
+        aqbDesignerCartAdd([data.payload], event, data.requestId, data.payload.replaceDesignId);
         return;
       }
 
       if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
-        aqbDesignerCartAdd(data.payload.items, event, data.requestId);
+        aqbDesignerCartAdd(data.payload.items, event, data.requestId, data.payload.replaceDesignId);
         return;
       }
 
