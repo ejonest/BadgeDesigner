@@ -16,6 +16,8 @@ interface PreviewActionButtonProps {
   danger?: boolean;
   duplicate?: boolean;
   highlight?: boolean;
+  /** Orange/gold CTA styling (matches Add to cart). */
+  accent?: boolean;
   /** Short label beside icon on mobile */
   mobileLabel?: string;
 }
@@ -28,13 +30,16 @@ const PreviewActionButton: React.FC<PreviewActionButtonProps> = ({
   danger = false,
   duplicate = false,
   highlight = false,
+  accent = false,
   mobileLabel,
 }) => (
   <button
     type="button"
     className={`aqb-ta-btn${
       danger ? " aqb-ta-btn--danger" : duplicate ? " aqb-ta-btn--duplicate" : ""
-    }${highlight ? " aqb-ta-btn--highlight" : ""}`}
+    }${highlight ? " aqb-ta-btn--highlight" : ""}${
+      accent ? " aqb-ta-btn--accent" : ""
+    }`}
     onClick={(e) => {
       e.preventDefault();
       onClick();
@@ -156,11 +161,16 @@ export const AqbPreviewActionsRow: React.FC<AqbPreviewActionsRowProps> = ({
       />
       {showAddMultiple ? (
         <PreviewActionButton
-          label="Add multiple"
-          mobileLabel="Add"
+          label="Add Multiple"
+          mobileLabel="Add Multiple"
           title={`Add multiple ${labelProductPlural} from CSV file or data`}
           onClick={onAddMultiple}
-          icon={<AddMultipleGridIcon className={iconClass} />}
+          accent
+          icon={
+            <AddMultipleGridIcon
+              className={`${iconClass} text-current`}
+            />
+          }
         />
       ) : null}
     </PreviewActionRow>

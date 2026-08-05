@@ -2,9 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Design tools must show true product colors. Android Chrome "Auto dark" otherwise
+  rewrites light pages (gold darkens, black text can flip white, swatches shift).
+*/
+:root {
+  color-scheme: only light;
+}
+
 html,
 body {
+  color-scheme: only light;
   @apply bg-white;
+  forced-color-adjust: none;
+}
+
+/* Color-critical UI: never let the browser remap fills / text for dark themes. */
+.aqb-redesign-root,
+.color-button,
+.aqb-badge-tc-sw,
+.aqb-badge-bg-swatch,
+[data-aqb-color-critical],
+svg,
+canvas {
+  forced-color-adjust: none;
 }
 
 .control-button {

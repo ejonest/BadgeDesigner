@@ -9,6 +9,7 @@ import React, {
   useRef,
   useCallback,
 } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "@remix-run/react";
 import { ArrowPathIcon } from "@heroicons/react/24/solid";
 import {
@@ -60,10 +61,12 @@ import { AqbBadgeOrderQtySection } from "./AqbBadgeOrderQtySection";
 import { AqbDeskSignOrderSection } from "./AqbDeskSignOrderSection";
 import { BadgeQtyStepper } from "./BadgeQtyStepper";
 import { AqbToolActionsRow } from "./AqbToolActionsRow";
+import { AqbMobileActionsBar } from "./AqbMobileActionsBar";
 import {
   AqbResetDesignConfirmModal,
   type ResetDesignConfirmMode,
 } from "./AqbResetDesignConfirmModal";
+import { AqbBackingCompleteModal } from "./AqbBackingCompleteModal";
 import {
   dismissResetDesignConfirm,
   isResetDesignConfirmDismissed,
@@ -259,7 +262,7 @@ import {
   getEffectiveSignTextLayoutForBadge,
 } from "../utils/renderSvg";
 import {
-  badgeBackgroundConflictsWithTextColor,
+  areBadgePlateAndTextSameColor,
   badgeTextColorConflictsWithBackground,
 } from "~/utils/badgeColorContrast";
 import {
@@ -1983,12 +1986,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }
   };
 
-  // Apply background color change (called after user confirms or if no warning needed)
+  // Apply background color and auto-flip any text that would clash to black/white.
   const applyBackgroundColor = (colorValue: string) => {
-    if (badgeBackgroundConflictsWithTextColor(colorValue, badge.lines)) {
-      return;
-    }
-
     // Save to undo history before making changes
     saveToUndoHistory({
       type: "background-color",
@@ -1996,10 +1995,35 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     });
 
     setHasChosenBackgroundColor(true);
+    const contrastingText = getContrastingTextColor(colorValue);
+    const SIMILAR_THRESHOLD = 70;
+    const normalizedBg = (
+      colorValue.trim().startsWith("#")
+        ? colorValue.trim()
+        : `#${colorValue.trim()}`
+    ).toUpperCase();
+
+    const updatedLines = badge.lines.map((line) => {
+      if (!line.color) return line;
+      const normalizedLine = (
+        line.color.trim().startsWith("#")
+          ? line.color.trim()
+          : `#${line.color.trim()}`
+      ).toUpperCase();
+      if (
+        areBadgePlateAndTextSameColor(normalizedBg, normalizedLine) ||
+        areColorsSimilar(normalizedBg, normalizedLine, SIMILAR_THRESHOLD)
+      ) {
+        return { ...line, color: contrastingText };
+      }
+      return line;
+    });
+
     const updatedBadge = {
       ...badge,
       backgroundColor: colorValue,
       customBadgeBackgroundId: undefined,
+      lines: updatedLines,
     };
     console.log(`[COLOR TRACKING] Background color changed to: ${colorValue}`);
     setBadge(updatedBadge);
@@ -2094,135 +2118,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }
   };
 
-  // Apply background and set any text line whose color is similar to the new background to a contrasting color
+  // Kept for warning-modal confirm; contrast auto-fix now lives in applyBackgroundColor.
   const applyBackgroundColorWithContrastUpdate = (colorValue: string) => {
-    if (badgeBackgroundConflictsWithTextColor(colorValue, badge.lines)) {
-      setShowBackgroundColorWarning(false);
-      setPendingBackgroundColor(null);
-      return;
-    }
-
-    saveToUndoHistory({
-      type: "background-color",
-      badgeIndex: selectedBadgeIndex,
-    });
-
-    setHasChosenBackgroundColor(true);
-    const contrastingText = getContrastingTextColor(colorValue);
-    const SIMILAR_THRESHOLD = 70;
-    const normalizedBg = (
-      colorValue.trim().startsWith("#")
-        ? colorValue.trim()
-        : `#${colorValue.trim()}`
-    ).toUpperCase();
-
-    const updatedLines = badge.lines.map((line) => {
-      if (!line.color) return line;
-      const normalizedLine = (
-        line.color.trim().startsWith("#")
-          ? line.color.trim()
-          : `#${line.color.trim()}`
-      ).toUpperCase();
-      if (areColorsSimilar(normalizedBg, normalizedLine, SIMILAR_THRESHOLD)) {
-        return { ...line, color: contrastingText };
-      }
-      return line;
-    });
-
-    const updatedBadge = {
-      ...badge,
-      backgroundColor: colorValue,
-      customBadgeBackgroundId: undefined,
-      lines: updatedLines,
-    };
-    setBadge(updatedBadge);
-
-    const updatedMultipleBadges = [...multipleBadges];
-    if (updatedMultipleBadges[selectedBadgeIndex]) {
-      updatedMultipleBadges[selectedBadgeIndex] = updatedBadge;
-      setMultipleBadges(updatedMultipleBadges);
-    }
-
-    if (selectedBadgeIndex === 0) {
-      setBadge1Data(updatedBadge);
-    }
-
-    if (!guidedFlowCompletedRef.current) {
-      const needBorderStep =
-        isSignLikeVariant(variant) &&
-        config.hasBorder &&
-        signTemplateTypeShowsBorderStep(selectedSignTemplateType);
-      if (variant === "plaque") {
-        setSectionsOpen({
-          template: false,
-          size: false,
-          export: false,
-          badgeStyle: false,
-          background: false,
-          textLines: false,
-          backing: false,
-          border: false,
-        });
-        setSectionsOpened((prev) => ({
-          ...prev,
-          background: true,
-        }));
-        setSignLogoSectionOpen(true);
-      } else if (needBorderStep) {
-        setSectionsOpen({
-          template: false,
-          size: false,
-          export: false,
-          badgeStyle: false,
-          background: false,
-          textLines: false,
-          backing: false,
-          border: true,
-        });
-        setSectionsOpened((prev) => ({
-          ...prev,
-          background: true,
-        }));
-      } else if (
-        variant === "badge" &&
-        badgeTemplateSupportsIcon(universalTemplateId)
-      ) {
-        setSectionsOpen({
-          template: false,
-          size: false,
-          export: false,
-          badgeStyle: false,
-          background: false,
-          badgeIcon: true,
-          textLines: false,
-          backing: false,
-          border: false,
-          plaqueFormat: false,
-        });
-        setSectionsOpened((prev) => ({
-          ...prev,
-          background: true,
-          badgeIcon: true,
-        }));
-      } else {
-        setSectionsOpen({
-          template: false,
-          size: false,
-          export: false,
-          badgeStyle: false,
-          background: false,
-          textLines: true,
-          backing: false,
-          border: false,
-        });
-        setSectionsOpened((prev) => ({
-          ...prev,
-          background: true,
-          textLines: true,
-        }));
-      }
-      guidedFlowCompletedRef.current = true;
-    }
+    applyBackgroundColor(colorValue);
   };
 
   const syncBadgeStyleToMultiple = (updatedBadge: Badge) => {
@@ -2651,6 +2549,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const [hasChosenDeskSignStandColor, setHasChosenDeskSignStandColor] =
     useState(false);
   const [hasChosenBadgeStyle, setHasChosenBadgeStyle] = useState(false);
+  const [hasChosenBacking, setHasChosenBacking] = useState(false);
+  const [hasChosenBadgeIcon, setHasChosenBadgeIcon] = useState(false);
   const [aqbLayoutCharLimitByLine, setAqbLayoutCharLimitByLine] = useState<
     Record<number, boolean>
   >({});
@@ -2723,6 +2623,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const [plaqueAwardFormatsExpanded, setPlaqueAwardFormatsExpanded] =
     useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showBackingCompleteModal, setShowBackingCompleteModal] =
+    useState(false);
   const [resetConfirmMode, setResetConfirmMode] =
     useState<ResetDesignConfirmMode | null>(null);
   const [templateSortBy, setTemplateSortBy] = useState<
@@ -3153,6 +3055,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     multipleBadges.length > 0 &&
     badgeTemplateHasStyleStep(universalTemplateId);
 
+  /** Icon step only after a background color is chosen on a template that supports icons. */
+  const showBadgeIconStep =
+    variant === "badge" &&
+    multipleBadges.length > 0 &&
+    hasChosenBackgroundColor &&
+    badgeTemplateSupportsIcon(universalTemplateId);
+
   const stepsComplete =
     multipleBadges.length > 0 &&
     (!isDeskSignVariant(variant) || selectedDeskSignSize !== null) &&
@@ -3160,10 +3069,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       ? deskSignColorsComplete
       : hasChosenBackgroundColor) &&
     (!needsBadgeStyleStep || hasChosenBadgeStyle) &&
+    (!showBadgeIconStep || hasChosenBadgeIcon) &&
     (!requiresPlaqueLogo || Boolean(badge.logo?.src?.trim())) &&
     hasStep3TextValid &&
     deskSignMountComplete &&
-    (config.hasBacking ? sectionsOpened.backing : true) &&
+    (config.hasBacking ? hasChosenBacking : true) &&
     (variant === "plaque"
       ? selectedPlaqueSize != null &&
         multipleBadges.length > 0 &&
@@ -3183,13 +3093,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   const badgeBackgroundStepGuard = needsBadgeStyleStep ? 3 : 2;
   const badgeTextStepGuard = needsBadgeStyleStep ? 4 : 3;
-  const badgeBackingStepGuard = needsBadgeStyleStep ? 5 : 4;
-  /** Icon step only after a background color is chosen on a template that supports icons. */
-  const showBadgeIconStep =
-    variant === "badge" &&
-    multipleBadges.length > 0 &&
-    hasChosenBackgroundColor &&
-    badgeTemplateSupportsIcon(universalTemplateId);
+  /** Guard when opening text — includes icon choice when that step is shown. */
+  const badgeOpenTextGuard = needsBadgeStyleStep ? 5 : 4;
+  const badgeBackingStepGuard = needsBadgeStyleStep ? 6 : 5;
 
   const badgeBackgroundStepTitle = "Step 2: Pick a background color";
   const badgeIconStepTitle = "Step 2b: Badge icon (optional)";
@@ -3296,7 +3202,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     const s2 = hasChosenBackgroundColor;
     const sText =
       variant === "badge" ? hasStep3TextValid : hasStep3TextEntered;
-    const sBacking = config.hasBacking ? sectionsOpened.backing : true;
+    const sBacking = config.hasBacking ? hasChosenBacking : true;
     const actions: string[] = [];
     if (forStep >= 2 && !s1) {
       actions.push(
@@ -3311,7 +3217,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       actions.push("select a background color");
     }
     const textGate = needsBadgeStyleStep ? 5 : 4;
-    if (forStep >= textGate && !sText) {
+    if (
+      showBadgeIconStep &&
+      forStep >= textGate &&
+      !hasChosenBadgeIcon
+    ) {
+      actions.push("choose an icon option");
+    }
+    if (forStep >= textGate + 1 && !sText) {
       actions.push(
         variant === "badge" && hasStep3TextEntered
           ? "fix text that fits on the badge"
@@ -3367,6 +3280,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
+
+  /** Mobile sticky chrome: steps + preview + control panel collapse. */
+  const [mobileStepsExpanded, setMobileStepsExpanded] = useState(true);
+  const [mobileControlPanelExpanded, setMobileControlPanelExpanded] =
+    useState(false);
+  const [mobileStepsPortalEl, setMobileStepsPortalEl] =
+    useState<HTMLDivElement | null>(null);
 
   const embeddedMobileBadgeShell =
     storeChromeless && usesAqbShell && isMobileViewport;
@@ -3799,6 +3719,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       hasChosenBackgroundColor?: boolean;
       hasChosenDeskSignStandColor?: boolean;
       hasChosenBadgeStyle?: boolean;
+      hasChosenBacking?: boolean;
+      hasChosenBadgeIcon?: boolean;
       designId?: string | null;
       selectedSignTemplateType?: string | null;
       selectedSignSizeTemplateId?: string | null;
@@ -3912,6 +3834,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       payload.hasChosenBadgeStyle ??
         Boolean(restoredBadge?.customBadgeBackgroundId),
     );
+    setHasChosenBacking(payload.hasChosenBacking ?? false);
+    setHasChosenBadgeIcon(payload.hasChosenBadgeIcon ?? false);
     if (restoredBadge?.customBadgeBackgroundId) {
       setHasChosenBackgroundColor(true);
     }
@@ -4025,6 +3949,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setBadge1Data(boot);
     setHasChosenBadgeStyle(true);
     setHasChosenBackgroundColor(true);
+    setHasChosenBadgeIcon(true);
     setSectionsOpen({
       template: false,
       size: false,
@@ -4113,6 +4038,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         hasChosenBackgroundColor,
         hasChosenDeskSignStandColor,
         hasChosenBadgeStyle,
+        hasChosenBacking,
+        hasChosenBadgeIcon,
         designId: sessionDesignIdRef.current,
         ...(variant === "sign"
           ? {
@@ -4146,6 +4073,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     hasChosenBackgroundColor,
     hasChosenDeskSignStandColor,
     hasChosenBadgeStyle,
+    hasChosenBacking,
+    hasChosenBadgeIcon,
     selectedSignTemplateType,
     selectedSignSizeTemplateId,
     selectedPlaqueSize,
@@ -4583,6 +4512,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         hasChosenBackgroundColor,
         hasChosenDeskSignStandColor,
         hasChosenBadgeStyle,
+        hasChosenBacking,
+        hasChosenBadgeIcon,
         designId: sessionDesignIdRef.current,
         ...(isSignLikeVariant(variant)
           ? {
@@ -4614,6 +4545,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     hasChosenBackgroundColor,
     hasChosenDeskSignStandColor,
     hasChosenBadgeStyle,
+    hasChosenBacking,
+    hasChosenBadgeIcon,
     selectedSignTemplateType,
     selectedSignSizeTemplateId,
     selectedDeskSignSize,
@@ -5096,10 +5029,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     const templateDone = multipleBadges.length > 0;
     const styleDone = !needsBadgeStyleStep || hasChosenBadgeStyle;
     const backgroundDone = hasChosenBackgroundColor;
-    /** Optional icon step: complete as soon as it appears (default = no icon). */
-    const iconDone = true;
+    /** Optional icon step: complete only after an explicit choice (including No icon). */
+    const iconDone = !showBadgeIconStep || hasChosenBadgeIcon;
     const textDone = hasStep3TextValid;
-    const backingDone = sectionsOpened.backing;
+    const backingDone = hasChosenBacking;
 
     const completions = (() => {
       const base = needsBadgeStyleStep
@@ -5198,9 +5131,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         : 2;
     const backingIndex = textIndex + 1;
 
-    const iconSummary = isBadgeIconId(badge.badgeIconId)
-      ? BADGE_ICON_LABELS[badge.badgeIconId]
-      : "No icon";
+    const iconSummary = !hasChosenBadgeIcon
+      ? null
+      : isBadgeIconId(badge.badgeIconId)
+        ? BADGE_ICON_LABELS[badge.badgeIconId]
+        : "No icon";
 
     return {
       template: {
@@ -5233,7 +5168,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       },
       backing: {
         state: visual(backingIndex),
-        summary: badge.backing ? backingSummary : null,
+        summary: badge.backing && hasChosenBacking ? backingSummary : null,
       },
     };
   }, [
@@ -5247,7 +5182,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     hasStep3TextValid,
     badgeAqbTextOverflow,
     hasAqbCharLimitBlock,
-    sectionsOpened.backing,
+    hasChosenBacking,
+    hasChosenBadgeIcon,
     badge.backgroundColor,
     badge.customBadgeBackgroundId,
     badge.lines,
@@ -5371,6 +5307,99 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     badge.lines,
     hasStep3TextEntered,
   ]);
+
+  /** Collapsed mobile steps chrome — next incomplete step (not the open accordion). */
+  const mobileActiveStepSummary = useMemo(() => {
+    if (!usesAqbShell) return null;
+
+    type StepEntry = { label: string; done: boolean };
+
+    if (isDeskSignVariant(variant)) {
+      const materialDone = multipleBadges.length > 0;
+      const sizeDone = selectedDeskSignSize !== null;
+      const colorsDone = deskSignColorsStepComplete(
+        deskSignMaterial,
+        hasChosenBackgroundColor,
+        hasChosenDeskSignStandColor,
+      );
+      const textDone = hasStep3TextEntered;
+      const mountDone =
+        deskSignMaterial !== "plastic" ||
+        (Boolean(badge.deskSignMountType) &&
+          Boolean(badge.deskSignAluminumColor));
+
+      const entries: StepEntry[] = [
+        { label: "Material", done: materialDone },
+        { label: "Size", done: sizeDone },
+        ...(deskSignShowColorsStep
+          ? [{ label: "Colors", done: colorsDone }]
+          : []),
+        { label: "Text", done: textDone },
+        ...(deskSignMaterial === "plastic"
+          ? [{ label: "Mount", done: mountDone }]
+          : []),
+      ];
+      const idx = entries.findIndex((e) => !e.done);
+      if (idx < 0) {
+        return { allComplete: true as const };
+      }
+      return {
+        allComplete: false as const,
+        number: idx + 1,
+        label: entries[idx].label,
+      };
+    }
+
+    if (variant === "badge") {
+      const entries: StepEntry[] = [
+        { label: "Template", done: multipleBadges.length > 0 },
+        ...(needsBadgeStyleStep
+          ? [{ label: "Style", done: hasChosenBadgeStyle }]
+          : []),
+        { label: "Background", done: hasChosenBackgroundColor },
+        ...(showBadgeIconStep
+          ? [{ label: "Icon", done: hasChosenBadgeIcon }]
+          : []),
+        { label: "Text", done: hasStep3TextValid },
+        { label: "Backing", done: hasChosenBacking },
+      ];
+      const idx = entries.findIndex((e) => !e.done);
+      if (idx < 0) {
+        return { allComplete: true as const };
+      }
+      return {
+        allComplete: false as const,
+        number: idx + 1,
+        label: entries[idx].label,
+      };
+    }
+
+    return null;
+  }, [
+    usesAqbShell,
+    variant,
+    multipleBadges.length,
+    selectedDeskSignSize,
+    deskSignMaterial,
+    deskSignShowColorsStep,
+    hasChosenBackgroundColor,
+    hasChosenDeskSignStandColor,
+    hasChosenBadgeStyle,
+    hasStep3TextEntered,
+    hasStep3TextValid,
+    needsBadgeStyleStep,
+    showBadgeIconStep,
+    hasChosenBadgeIcon,
+    hasChosenBacking,
+    badge.deskSignMountType,
+    badge.deskSignAluminumColor,
+  ]);
+
+  const mobileStepsChromeTitle = mobileActiveStepSummary?.allComplete
+    ? "Checkout or add more in the control panel"
+    : mobileActiveStepSummary
+      ? `Step ${mobileActiveStepSummary.number}: ${mobileActiveStepSummary.label}`
+      : "Steps";
 
   const totalPriceAllBadges = useMemo(() => {
     if (multipleBadges.length === 0) return "0.00";
@@ -5614,11 +5643,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     prevSectionsOpenRef.current = sectionsOpen;
     if (didClose) setDraftSaveTrigger((t) => t + 1);
     if (didOpenExport && stepsComplete) setDraftSaveTrigger((t) => t + 1);
-    // After optional icon step, advance to text the first time the user closes 2b.
+    // After icon step, advance to text when the user closes 2b after choosing.
     if (
       variant === "badge" &&
       showBadgeIconStep &&
       didCloseIcon &&
+      hasChosenBadgeIcon &&
       hasChosenBackgroundColor &&
       !sectionsOpened.textLines
     ) {
@@ -5666,6 +5696,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     config.hasBacking,
     variant,
     showBadgeIconStep,
+    hasChosenBadgeIcon,
   ]);
 
   // Debounced draft save: only when stepsComplete, triggered by draftSaveTrigger (section close / apply-to-all / selectBadge)
@@ -7228,6 +7259,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setHasChosenBackgroundColor(false);
     setHasChosenDeskSignStandColor(false);
     setHasChosenBadgeStyle(false);
+    setHasChosenBacking(false);
+    setHasChosenBadgeIcon(false);
     if (variant === "desk-sign") {
       setSelectedDeskSignSize(null);
     }
@@ -8716,6 +8749,16 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       } else {
         setHasChosenBackgroundColor(true);
       }
+      if (variant === "badge") {
+        setHasChosenBacking(true);
+        setHasChosenBadgeIcon(true);
+        if (
+          restoredBadges[0]?.customBadgeBackgroundId ||
+          badgeTemplateHasStyleStep(restoredTid)
+        ) {
+          setHasChosenBadgeStyle(true);
+        }
+      }
       templateGuidedAutoAdvanceDoneRef.current = true;
       signSizeGuidedAutoAdvanceDoneRef.current = true;
       guidedFlowCompletedRef.current = true;
@@ -10056,7 +10099,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       if (
         variant === "badge" &&
         config.hasBacking &&
-        !sectionsOpened.backing &&
+        !hasChosenBacking &&
         multipleBadges.length > 0 &&
         hasChosenBackgroundColor &&
         (!needsBadgeStyleStep || hasChosenBadgeStyle) &&
@@ -10235,7 +10278,68 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             </div>
           ) : null}
 
-          <div className="overflow-hidden rounded-lg border border-[rgba(2, 19, 43,0.1)] bg-white">
+          {usesAqbShell ? (
+            <div className="aqb-mobile-steps-chrome">
+              {!mobileStepsExpanded ? (
+                <button
+                  type="button"
+                  className="aqb-mobile-chrome-bar"
+                  onClick={() => setMobileStepsExpanded(true)}
+                  aria-expanded={false}
+                >
+                  <span
+                    className={`aqb-mobile-chrome-bar__title${
+                      mobileActiveStepSummary?.allComplete
+                        ? " aqb-mobile-chrome-bar__title--complete"
+                        : ""
+                    }`}
+                  >
+                    {mobileStepsChromeTitle}
+                  </span>
+                  <span className="aqb-mobile-chrome-bar__action">
+                    Show all steps
+                    <ChevronDownIcon className="aqb-mobile-chrome-bar__chevron" />
+                  </span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="aqb-mobile-chrome-bar aqb-mobile-chrome-bar--collapse"
+                  onClick={() => setMobileStepsExpanded(false)}
+                  aria-expanded={true}
+                >
+                  <span
+                    className={`aqb-mobile-chrome-bar__title${
+                      mobileActiveStepSummary?.allComplete
+                        ? " aqb-mobile-chrome-bar__title--complete"
+                        : ""
+                    }`}
+                  >
+                    {mobileStepsChromeTitle}
+                  </span>
+                  <span className="aqb-mobile-chrome-bar__action">
+                    Hide steps
+                    <ChevronUpIcon className="aqb-mobile-chrome-bar__chevron" />
+                  </span>
+                </button>
+              )}
+              <div
+                ref={setMobileStepsPortalEl}
+                className={`aqb-mobile-steps-portal${
+                  mobileStepsExpanded ? "" : " is-collapsed"
+                }`}
+                hidden={!mobileStepsExpanded}
+              />
+            </div>
+          ) : null}
+
+          <div
+            className={`overflow-hidden border border-[rgba(2, 19, 43,0.1)] bg-white ${
+              usesAqbShell
+                ? "aqb-mobile-preview-card rounded-none"
+                : "rounded-lg"
+            }`}
+          >
             {!usesAqbShell ? (
               <AqbPreviewPanelHeader
                 centered
@@ -10381,6 +10485,76 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               <div className="shrink-0 md:hidden">{aqbBadgeToolActions}</div>
             ) : null}
           </div>
+
+          {usesAqbShell ? (
+            <div className="aqb-mobile-controls-chrome">
+              {!mobileControlPanelExpanded ? (
+                <button
+                  type="button"
+                  className="aqb-mobile-chrome-bar"
+                  onClick={() => setMobileControlPanelExpanded(true)}
+                  aria-expanded={false}
+                >
+                  <span className="aqb-mobile-chrome-bar__title">
+                    Control Panel
+                  </span>
+                  <span className="aqb-mobile-chrome-bar__action">
+                    View full Panel
+                    <ChevronDownIcon className="aqb-mobile-chrome-bar__chevron" />
+                  </span>
+                </button>
+              ) : (
+                <div className="aqb-mobile-controls-chrome__expanded">
+                  <button
+                    type="button"
+                    className="aqb-mobile-chrome-bar aqb-mobile-chrome-bar--collapse"
+                    onClick={() => setMobileControlPanelExpanded(false)}
+                    aria-expanded={true}
+                  >
+                    <span className="aqb-mobile-chrome-bar__title">
+                      Control Panel
+                    </span>
+                    <span className="aqb-mobile-chrome-bar__action">
+                      Hide panel
+                      <ChevronUpIcon className="aqb-mobile-chrome-bar__chevron" />
+                    </span>
+                  </button>
+                  <div className="aqb-mobile-badge-editor-tools">
+                    <AqbMobileActionsBar
+                      labelProduct={config.labelProduct.toLowerCase()}
+                      labelProductPlural={config.labelProductPlural.toLowerCase()}
+                      hasBadges={multipleBadges.length > 0}
+                      showAddMultiple={variant === "badge"}
+                      highlightViewAll={highlightViewAllAfterBulk}
+                      onViewAll={() => {
+                        setHighlightViewAllAfterBulk(false);
+                        setShowBadgeGridModal(true);
+                      }}
+                      onAddMultiple={openAddMultipleModal}
+                      onCopy={duplicateCurrentBadge}
+                      onDelete={deleteCurrentBadgeFromPreview}
+                      onDeleteAll={deleteAllBadgesFromDesign}
+                      onUndo={handleUndo}
+                      undoDisabled={undoHistory.length === 0}
+                      onReset={promptResetBadge}
+                      showResetAll={multipleBadges.length > 1}
+                      onResetAll={promptResetAllBadges}
+                      showApplyFormatToAll={multipleBadges.length > 1}
+                      onApplyFormatToAll={applyAllFormattingToAll}
+                      applyFormatLabel={`Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`}
+                      onHelp={() => setShowHelpModal(true)}
+                      onSave={() => {
+                        void saveBadge();
+                      }}
+                      onLoad={() => {
+                        void onLoadDesignClick();
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
 
         {/* LEFT COLUMN - Controls */}
@@ -10394,7 +10568,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           <div
             className={`w-full shrink-0 flex-col border-b border-[rgba(2, 19, 43,0.1)] bg-[#F8F7F4] flex ${
               usesAqbShell
-                ? "gap-0 px-0 py-0 md:py-[14px]"
+                ? "gap-0 px-0 py-0 md:py-[14px] max-md:contents"
                 : "hidden gap-3 px-5 py-4 sm:px-6 md:flex"
             }`}
           >
@@ -10421,14 +10595,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               </div>
               {usesAqbShell ? cloudLibrarySaveHint : null}
             </div>
-            <div
-              className={`flex w-full min-w-0 items-center gap-y-2 gap-x-0.5 sm:flex-nowrap sm:justify-between sm:gap-0 ${
-                usesAqbShell
-                  ? "aqb-badge-mobile-step-nav shrink-0 z-10 flex-nowrap border-b border-[rgba(2, 19, 43,0.1)] bg-[#F8F7F4] py-2.5 md:static md:border-0 md:bg-transparent md:py-0"
-                  : "flex-wrap"
-              }`}
-            >
-              {(() => {
+            {(() => {
+              const stepNavItems = (() => {
                 if (isDeskSignVariant(variant)) {
                   const materialDone = multipleBadges.length > 0;
                   const sizeDone = selectedDeskSignSize !== null;
@@ -10797,8 +10965,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     ? [
                         {
                           label: "Icon · optional",
-                          done: hasChosenBackgroundColor,
-                          current: false,
+                          done: hasChosenBadgeIcon,
+                          current:
+                            hasChosenBackgroundColor && !hasChosenBadgeIcon,
                         },
                       ]
                     : []),
@@ -10823,6 +10992,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           ? hasStep3TextValid
                           : hasStep3TextEntered)
                       : hasChosenBackgroundColor &&
+                        (!showBadgeIconStep || hasChosenBadgeIcon) &&
                         !(variant === "badge"
                           ? hasStep3TextValid
                           : hasStep3TextEntered),
@@ -10840,12 +11010,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     ? [
                         {
                           label: "Backing",
-                          done: sectionsOpened.backing,
+                          done: hasChosenBacking,
                           current:
                             (variant === "badge"
                               ? hasStep3TextValid
                               : hasStep3TextEntered) &&
-                            !sectionsOpened.backing,
+                            !hasChosenBacking,
                         },
                       ]
                     : []),
@@ -11018,8 +11188,26 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   </React.Fragment>
                   );
                 });
-              })()}
-            </div>
+              })();
+              const stepNav = (
+                <div
+                  className={`flex w-full min-w-0 items-center justify-center gap-y-2 gap-x-0.5 sm:flex-nowrap sm:justify-between sm:gap-0 ${
+                    usesAqbShell
+                      ? "aqb-badge-mobile-step-nav shrink-0 z-10 flex-nowrap border-b border-[rgba(2, 19, 43,0.1)] bg-[#F8F7F4] py-2.5 md:static md:border-0 md:bg-transparent md:py-0"
+                      : "flex-wrap"
+                  }`}
+                >
+                  {stepNavItems}
+                </div>
+              );
+              if (usesAqbShell && isMobileViewport) {
+                if (mobileStepsExpanded && mobileStepsPortalEl) {
+                  return createPortal(stepNav, mobileStepsPortalEl);
+                }
+                return null;
+              }
+              return stepNav;
+            })()}
           </div>
 
           <div
@@ -11033,26 +11221,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 : "mb-4 px-4 md:px-5"
             }`}
           >
-            {usesAqbShell ? (
-              <div className="aqb-mobile-badge-editor-tools md:hidden overflow-hidden rounded-lg border border-[rgba(2, 19, 43,0.1)] bg-white mb-2">
-                <AqbPreviewActionsRow {...previewActionsRowProps} />
-                {aqbBadgeToolActions ? (
-                  <div className="shrink-0">{aqbBadgeToolActions}</div>
-                ) : null}
-              </div>
-            ) : null}
-
-            {/* <button
-              className="px-2 py-1 text-xs border rounded bg-gray-100 hover:bg-gray-200"
-              onClick={() => {
-                console.log("[BadgeDesignerRedesign] Refreshing templates...");
-                setTemplateRefreshKey((prev) => prev + 1);
-              }}
-              title="Refresh Templates (Ctrl+R)"
-            >
-              Refresh
-            </button> */}
-
             {/* Template Selector - Image Swatches / desk sign material */}
             <div
               ref={templateSectionRef}
@@ -12261,21 +12429,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     ];
 
                     const handleColorClick = (colorValue: string) => {
-                      if (
-                        badgeBackgroundConflictsWithTextColor(
-                          colorValue,
-                          badge.lines,
-                        )
-                      ) {
-                        return;
-                      }
-                      // Check if the new background color is similar to any text line colors
-                      if (checkBackgroundColorSimilarity(colorValue)) {
-                        setPendingBackgroundColor(colorValue);
-                        setShowBackgroundColorWarning(true);
-                      } else {
-                        applyBackgroundColor(colorValue);
-                      }
+                      applyBackgroundColor(colorValue);
                     };
 
                     // Parse hex or RGB input and convert to hex
@@ -12399,31 +12553,24 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                   c.value,
                                 );
                               const hasPhoto = badgeColorHasPhoto(c.value);
-                              const blockedByText =
-                                badgeBackgroundConflictsWithTextColor(
-                                  c.value,
-                                  badge.lines,
-                                );
                               return (
                                 <button
                                   key={c.value}
                                   type="button"
                                   className={`aqb-badge-colour-swatch ${
-                                    !hasPhoto || blockedByText
+                                    !hasPhoto
                                       ? "cursor-not-allowed opacity-45"
                                       : ""
                                   }`}
                                   title={
-                                    blockedByText
-                                      ? `${c.name} — same as text color`
-                                      : hasPhoto
-                                        ? c.name
-                                        : `${c.name} — preview photo coming soon`
+                                    hasPhoto
+                                      ? c.name
+                                      : `${c.name} — preview photo coming soon`
                                   }
-                                  disabled={!hasPhoto || blockedByText}
+                                  disabled={!hasPhoto}
                                   onClick={(e) => {
                                     e.preventDefault();
-                                    if (!hasPhoto || blockedByText) return;
+                                    if (!hasPhoto) return;
                                     handleColorClick(c.value);
                                   }}
                                 >
@@ -12525,12 +12672,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           <div className="flex flex-col gap-2">
                             <div className="grid grid-cols-4 gap-2 w-fit">
                               {featuredColors.map((c) => {
-                                const blockedByText =
-                                  !c.isRainbow &&
-                                  badgeBackgroundConflictsWithTextColor(
-                                    c.value,
-                                    badge.lines,
-                                  );
                                 return (
                                 <div
                                   key={c.value}
@@ -12538,12 +12679,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                 >
                                   <button
                                     className={`w-12 h-12 border rounded ${
-                                      badge.backgroundColor === c.value &&
-                                      !blockedByText
+                                      badge.backgroundColor === c.value
                                         ? "ring-2 ring-offset-1 " + c.ring
-                                        : blockedByText
-                                          ? "opacity-50 cursor-not-allowed"
-                                          : ""
+                                        : ""
                                     }`}
                                     style={
                                       c.isRainbow
@@ -12555,15 +12693,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                             c.value,
                                           )
                                     }
-                                    title={
-                                      blockedByText
-                                        ? `${c.name} — same as text color`
-                                        : c.name
-                                    }
-                                    disabled={blockedByText}
+                                    title={c.name}
                                     onClick={(e) => {
                                       e.preventDefault();
-                                      if (blockedByText) return;
                                       if (c.isRainbow) {
                                         setShowColorModal(true);
                                       } else {
@@ -12719,7 +12851,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   summary={aqbBadgeStepHeaderModel.icon.summary}
                   open={Boolean(sectionsOpen.badgeIcon)}
                   onClick={() => {
-                    const msg = getIncompleteStepsMessage(badgeTextStepGuard);
+                    const msg = getIncompleteStepsMessage(
+                      badgeBackgroundStepGuard,
+                    );
                     if (msg) {
                       alert(msg);
                       return;
@@ -12752,16 +12886,43 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 >
                   <div className="finish-row">
                     <div className="aqb-badge-finish-lbl">
-                      Choose an icon or keep none
+                      Please choose an icon option
                     </div>
                     <AqbBadgeIconPicker
                       variant="inline"
                       value={
-                        isBadgeIconId(badge.badgeIconId)
-                          ? badge.badgeIconId
-                          : undefined
+                        !hasChosenBadgeIcon
+                          ? null
+                          : isBadgeIconId(badge.badgeIconId)
+                            ? badge.badgeIconId
+                            : "none"
                       }
-                      onChange={(iconId) => setBadgeIconForCurrent(iconId)}
+                      onChange={(choice) => {
+                        const firstChoice = !hasChosenBadgeIcon;
+                        const iconId =
+                          choice === "none" ? undefined : choice;
+                        setBadgeIconForCurrent(iconId);
+                        setHasChosenBadgeIcon(true);
+                        setSectionsOpened((prev) => ({
+                          ...prev,
+                          badgeIcon: true,
+                          ...(firstChoice ? { textLines: true } : {}),
+                        }));
+                        if (firstChoice) {
+                          setSectionsOpen({
+                            template: false,
+                            size: false,
+                            export: false,
+                            badgeStyle: false,
+                            background: false,
+                            badgeIcon: false,
+                            textLines: true,
+                            backing: false,
+                            border: false,
+                            plaqueFormat: false,
+                          });
+                        }
+                      }}
                     />
                   </div>
                   {multipleBadges.length > 1 ? (
@@ -13318,7 +13479,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         ? signBorderStepRequired
                           ? 5
                           : 4
-                        : badgeTextStepGuard,
+                        : badgeOpenTextGuard,
                     );
                     if (msg) {
                       alert(msg);
@@ -13842,7 +14003,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       <h3 className="text-lg font-semibold text-[#02132B]">
                         Step 4: Choose badge attachment
                       </h3>
-                      {sectionsOpened.backing && (
+                      {hasChosenBacking && (
                         <CheckCircleIcon className="h-5 w-5 text-green-600" />
                       )}
                     </div>
@@ -13874,13 +14035,22 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 >
                   {variant === "badge" ? (
                     <AqbBadgeBackingPicker
-                      value={badge.backing as BadgeBackingKey}
+                      value={
+                        hasChosenBacking
+                          ? (badge.backing as BadgeBackingKey)
+                          : null
+                      }
                       onChange={(value) => {
+                        const firstChoice = !hasChosenBacking;
                         applyBackingToAll(value);
+                        setHasChosenBacking(true);
                         setSectionsOpened((prev) => ({
                           ...prev,
                           backing: true,
                         }));
+                        if (firstChoice) {
+                          setShowBackingCompleteModal(true);
+                        }
                       }}
                     />
                   ) : (
@@ -15671,8 +15841,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       },
                       {
                         label: "Backing",
-                        done: sectionsOpened.backing,
-                        current: hasStep3TextEntered && !sectionsOpened.backing,
+                        done: hasChosenBacking,
+                        current: hasStep3TextEntered && !hasChosenBacking,
                       },
                     ];
               return mobileSteps.map((step, i) => (
@@ -16654,10 +16824,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 name: string;
                 ring: string;
               }) => {
-                const blockedByText = badgeBackgroundConflictsWithTextColor(
-                  c.value,
-                  badge.lines,
-                );
                 return (
                 <div
                   key={c.value}
@@ -16665,31 +16831,16 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 >
                   <button
                     className={`w-8 h-8 md:w-12 md:h-12 border-2 rounded transition-all ${
-                      badge.backgroundColor === c.value && !blockedByText
+                      badge.backgroundColor === c.value
                         ? "ring-2 ring-offset-1 " + c.ring + " scale-110"
-                        : blockedByText
-                          ? "border-gray-400 opacity-50 cursor-not-allowed"
-                          : "border-gray-300 hover:scale-105"
+                        : "border-gray-300 hover:scale-105"
                     }`}
                     style={{ backgroundColor: c.value }}
-                    title={
-                      blockedByText
-                        ? "Same as text color — choose a different background"
-                        : c.name
-                    }
-                    disabled={blockedByText}
+                    title={c.name}
                     onClick={(e) => {
                       e.preventDefault();
-                      if (blockedByText) return;
-                      // Check if the new background color is similar to any text line colors
-                      if (checkBackgroundColorSimilarity(c.value)) {
-                        setPendingBackgroundColor(c.value);
-                        setShowBackgroundColorWarning(true);
-                        setShowColorModal(false);
-                      } else {
-                        applyBackgroundColor(c.value);
-                        setShowColorModal(false);
-                      }
+                      applyBackgroundColor(c.value);
+                      setShowColorModal(false);
                     }}
                   />
                 </div>
@@ -16755,27 +16906,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 };
 
                 const previewColor = parseColorInput(customColorInput);
-                const blockedByText =
-                  previewColor !== null &&
-                  badgeBackgroundConflictsWithTextColor(
-                    previewColor,
-                    badge.lines,
-                  );
-                const isValidColor = previewColor !== null && !blockedByText;
+                const isValidColor = previewColor !== null;
 
                 const handleApplyCustomColor = () => {
-                  if (previewColor && !blockedByText) {
-                    // Check if the new background color is similar to any text line colors
-                    if (checkBackgroundColorSimilarity(previewColor)) {
-                      setPendingBackgroundColor(previewColor);
-                      setShowBackgroundColorWarning(true);
-                      setShowColorModal(false);
-                      setCustomColorInput("");
-                    } else {
-                      applyBackgroundColor(previewColor);
-                      setShowColorModal(false);
-                      setCustomColorInput("");
-                    }
+                  if (previewColor) {
+                    applyBackgroundColor(previewColor);
+                    setShowColorModal(false);
+                    setCustomColorInput("");
                   }
                 };
 
@@ -18260,6 +18397,24 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           onConfirm={handleResetConfirm}
           onCancel={closeResetConfirmModal}
           onDontShowAgain={handleResetConfirmDontShowAgain}
+        />
+      ) : null}
+
+      {showBackingCompleteModal ? (
+        <AqbBackingCompleteModal
+          priceLabel={addToCartPriceLabel}
+          labelProductPlural={config.labelProductPlural.toLowerCase()}
+          onCheckout={() => {
+            setShowBackingCompleteModal(false);
+            promptAddToCart();
+          }}
+          onAddMore={() => {
+            setShowBackingCompleteModal(false);
+            openAddMultipleModal();
+          }}
+          onBackToDesign={() => {
+            setShowBackingCompleteModal(false);
+          }}
         />
       ) : null}
 

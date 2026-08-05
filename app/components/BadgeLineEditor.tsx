@@ -2,8 +2,9 @@ import React from 'react';
 import { BadgeLine } from '../types/badge';
 import { BADGE_CONSTANTS } from '../constants/badge';
 import { FONT_COLORS } from '../constants/colors';
-import { FONT_FAMILIES } from '../constants/fonts';
+import { FONT_FAMILIES, DEFAULT_FONT } from '../constants/fonts';
 import { ColorPicker } from './ColorPicker';
+import { FontFamilySelect } from './FontFamilySelect';
 
 interface BadgeLineEditorProps {
   line: BadgeLine;
@@ -66,17 +67,18 @@ export const BadgeLineEditor: React.FC<BadgeLineEditorProps> = ({
 
         <div>
           <label className="block text-sm font-medium text-gray-700">Font Family</label>
-          <select
-            value={line.fontFamily}
-            onChange={(e) => onUpdate(index, { fontFamily: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          >
-            {FONT_FAMILIES.map((font) => (
-              <option key={font.value} value={font.value}>
-                {font.label}
-              </option>
-            ))}
-          </select>
+          <div className="mt-1">
+            <FontFamilySelect
+              variant="legacy"
+              value={line.fontFamily || DEFAULT_FONT}
+              options={FONT_FAMILIES.map((font) => ({
+                value: font.value,
+                label: font.label,
+              }))}
+              onChange={(fontFamily) => onUpdate(index, { fontFamily })}
+              ariaLabel={`Font for line ${index + 1}`}
+            />
+          </div>
         </div>
 
         <div>
