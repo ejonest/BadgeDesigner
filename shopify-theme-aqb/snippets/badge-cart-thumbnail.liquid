@@ -4,9 +4,10 @@
   Pass: item (cart item)
 {% endcomment %}
 {%- assign custom_thumb = item.properties._custom_thumbnail | default: item.properties['Custom Thumbnail'] -%}
+{%- capture cart_item_url -%}{% render 'badge-cart-edit-url', item: item %}{%- endcapture -%}
 {%- if custom_thumb != blank -%}
   {%- assign custom_thumb_url = custom_thumb | strip -%}
-  <a href="{{ item.url }}" class="cart-item__link" aria-hidden="true" tabindex="-1"> </a>
+  <a href="{{ cart_item_url }}" class="cart-item__link" aria-hidden="true" tabindex="-1"> </a>
   <div class="cart-item__image-container gradient global-media-settings">
     {%- comment -%} External badge thumbnail URL (Supabase); height set for theme-check ImgWidthAndHeight {%- endcomment -%}
     {% # theme-check-disable RemoteAsset %}
@@ -22,7 +23,7 @@
     {% # theme-check-enable RemoteAsset %}
   </div>
 {%- elsif item.image -%}
-  <a href="{{ item.url }}" class="cart-item__link" aria-hidden="true" tabindex="-1"> </a>
+  <a href="{{ cart_item_url }}" class="cart-item__link" aria-hidden="true" tabindex="-1"> </a>
   <div class="cart-item__image-container gradient global-media-settings">
     <img
       src="{{ item.image | image_url: width: 300 }}"

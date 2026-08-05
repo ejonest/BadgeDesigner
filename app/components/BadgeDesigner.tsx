@@ -6783,7 +6783,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         );
       }
 
-      if (isSignLikeVariant(variant)) {
+      // Bust CDN/browser cache: thumbs upsert to a stable path per design/line, so
+      // cart <img> must not reuse a prior draft bitmap (e.g. missing a later text line).
+      {
         const cb = Date.now();
         thumbnailUrls = thumbnailUrls.map((u) => {
           if (!u || u.startsWith("blob:")) return u;

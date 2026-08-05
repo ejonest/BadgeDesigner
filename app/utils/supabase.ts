@@ -1377,6 +1377,13 @@ export interface BadgeOrderItem {
   shopify_customer_id?: string;
   /** Number of units; 1 at add-to-cart, updated from order line at checkout. Used for badges, signs, stamps, etc. */
   quantity?: number;
+  /**
+   * Full designer Badge state for this line. The line_N_* columns are a manufacturing
+   * spec and cannot rebuild a design, so reopening a cart item for editing reads this.
+   */
+  badge_json?: unknown;
+  /** Design-level designer state that is not per-badge; index-0 row only. */
+  design_meta?: unknown;
   status?: "draft" | "in_cart" | "order_placed" | "fulfilled";
   created_at?: string;
   updated_at?: string;
@@ -1471,6 +1478,8 @@ export function convertBadgeToOrderItem(
     quantity?: number;
     /** Row/file prefix: badge-0 vs sign-0 (default badge). */
     lineIdPrefix?: string;
+    /** Design-level state (sign type/size, plaque layout/size); index-0 row only. */
+    design_meta?: unknown;
   },
 ): BadgeOrderItem {
   const lines = badge.lines || [];
@@ -1543,6 +1552,10 @@ export function convertBadgeToOrderItem(
     pdf_url: options?.pdf_url,
     shopify_customer_id: options?.shopify_customer_id,
     quantity: options?.quantity ?? 1,
+    badge_json: badge,
+    ...(badgeIndex === 0 && options?.design_meta
+      ? { design_meta: options.design_meta }
+      : {}),
   };
 }
 

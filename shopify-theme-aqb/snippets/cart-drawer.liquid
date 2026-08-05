@@ -131,9 +131,10 @@
                           role="cell"
                           headers="CartDrawer-ColumnProductImage"
                         >
+                          {%- capture cart_item_url -%}{% render 'badge-cart-edit-url', item: item %}{%- endcapture -%}
                           {% if item.image %}
                             {% comment %} Leave empty space due to a:empty CSS display: none rule {% endcomment %}
-                            <a href="{{ item.url }}" class="cart-item__link" tabindex="-1" aria-hidden="true"> </a>
+                            <a href="{{ cart_item_url }}" class="cart-item__link" tabindex="-1" aria-hidden="true"> </a>
                             <img
                               class="cart-item__image"
                               src="{{ item.image | image_url: width: 300 }}"
@@ -150,7 +151,7 @@
                             <p class="caption-with-letter-spacing light">{{ item.product.vendor }}</p>
                           {%- endif -%}
 
-                          <a href="{{ item.url }}" class="cart-item__name h4 break">
+                          <a href="{{ cart_item_url }}" class="cart-item__name h4 break">
                             {{- item.product.title | escape -}}
                           </a>
 
