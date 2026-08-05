@@ -98,6 +98,11 @@ export interface AqbPreviewActionsRowProps {
   showAddMultiple?: boolean;
   /** After Add Multiple: draw attention to View All. */
   highlightViewAll?: boolean;
+  /**
+   * The design is locked to a single item (editing one cart line), so every
+   * action here — duplicate, delete, add multiple, view all — is meaningless.
+   */
+  singleDesignMode?: boolean;
   onCopy: () => void;
   onDelete: () => void;
   onDeleteAll: () => void;
@@ -111,12 +116,14 @@ export const AqbPreviewActionsRow: React.FC<AqbPreviewActionsRowProps> = ({
   hasBadges,
   showAddMultiple = true,
   highlightViewAll = false,
+  singleDesignMode = false,
   onCopy,
   onDelete,
   onDeleteAll,
   onViewAll,
   onAddMultiple,
-}) => (
+}) =>
+  singleDesignMode ? null : (
   <div
     className="aqb-preview-actions-row"
     role="toolbar"
@@ -175,4 +182,4 @@ export const AqbPreviewActionsRow: React.FC<AqbPreviewActionsRowProps> = ({
       ) : null}
     </PreviewActionRow>
   </div>
-);
+  );

@@ -7,6 +7,8 @@ export interface AqbBackingCompleteModalProps {
   onCheckout: () => void;
   onAddMore: () => void;
   onBackToDesign: () => void;
+  /** Editing a single cart line: there is nothing to add more of. */
+  hideAddMore?: boolean;
 }
 
 export const AqbBackingCompleteModal: React.FC<
@@ -17,6 +19,7 @@ export const AqbBackingCompleteModal: React.FC<
   onCheckout,
   onAddMore,
   onBackToDesign,
+  hideAddMore = false,
 }) => {
   return (
     <div
@@ -59,13 +62,15 @@ export const AqbBackingCompleteModal: React.FC<
           >
             Checkout{priceLabel && priceLabel !== "—" ? ` · ${priceLabel}` : ""}
           </button>
-          <button
-            type="button"
-            className="aqb-backing-complete-modal__btn aqb-backing-complete-modal__btn--accent"
-            onClick={onAddMore}
-          >
-            Add more
-          </button>
+          {hideAddMore ? null : (
+            <button
+              type="button"
+              className="aqb-backing-complete-modal__btn aqb-backing-complete-modal__btn--accent"
+              onClick={onAddMore}
+            >
+              Add more
+            </button>
+          )}
           <button
             type="button"
             className="aqb-backing-complete-modal__btn aqb-backing-complete-modal__btn--secondary"

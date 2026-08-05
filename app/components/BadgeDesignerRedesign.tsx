@@ -3346,6 +3346,17 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const [cartEditDesignId, setCartEditDesignId] = useState<string | null>(null);
   const cartEditDesignIdRef = useRef<string | null>(null);
   cartEditDesignIdRef.current = cartEditDesignId;
+  /**
+   * Which line of that design is open. A design can span several cart lines, so
+   * only this one is reopened and only this one gets replaced on add to cart.
+   */
+  const [cartEditBadgeIndex, setCartEditBadgeIndex] = useState<number | null>(
+    null,
+  );
+  const cartEditBadgeIndexRef = useRef<number | null>(null);
+  cartEditBadgeIndexRef.current = cartEditBadgeIndex;
+  /** Editing one cart line: the designer holds exactly that badge, so it cannot add or delete badges. */
+  const isCartEditMode = cartEditDesignId != null;
   /** Guards against re-restoring when the parent re-sends the edit request. */
   const cartEditRestoreStartedRef = useRef(false);
   /** Debounce expensive sign `syncSignBadgeLinesSizeNorm` while typing plain text (Designer / ornate plates). */
@@ -7269,6 +7280,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setBadge(blankBadge);
     setSelectedBadgeIndex(0);
     setCartEditDesignId(null);
+    setCartEditBadgeIndex(null);
     setHasChosenBackgroundColor(false);
     setHasChosenDeskSignStandColor(false);
     setHasChosenBadgeStyle(false);
@@ -7438,6 +7450,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   };
 
   const openAddMultipleModal = () => {
+    // Editing a cart line is a one-item session; a CSV import would replace or
+    // append designs that have nowhere to go.
+    if (isCartEditMode) return;
     setCsvText("");
     setCsvPreview([]);
     setCsvError("");
@@ -7464,6 +7479,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     hasBadges: multipleBadges.length > 0,
     showAddMultiple: variant === "badge",
     highlightViewAll: highlightViewAllAfterBulk,
+    singleDesignMode: isCartEditMode,
     onCopy: duplicateCurrentBadge,
     onDelete: deleteCurrentBadgeFromPreview,
     onDeleteAll: deleteAllBadgesFromDesign,
@@ -8834,24 +8850,45 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           );
           return;
         }
+        // One cart line holds one badge, so reopen only that badge. Loading the
+        // design's other badges would let an edit of one line silently rewrite
+        // its siblings, and they are separate cart lines the customer did not click.
+        const designData = detail.design.design_data;
+        const savedBadges = Array.isArray(designData.allBadges)
+          ? designData.allBadges
+          : [];
+        const editIndex =
+          badgeIndex >= 0 && badgeIndex < savedBadges.length ? badgeIndex : 0;
+        const editedBadge = savedBadges[editIndex];
+        if (!editedBadge) {
+          restoredFromCacheRef.current = false;
+          cartEditRestoreStartedRef.current = false;
+          alert(
+            "We could not reopen that cart item for editing. You can build a new design here, then remove the old one from your cart.",
+          );
+          return;
+        }
         applyRestoredDesign({
           design_id: detail.design.design_id,
-          design_data: detail.design.design_data,
+          design_data: {
+            ...designData,
+            badge: editedBadge,
+            multipleBadges: [],
+            allBadges: [editedBadge],
+          },
           backing_type: detail.design.backing_type,
         });
-        const badgeCount = Array.isArray(detail.design.design_data.allBadges)
-          ? detail.design.design_data.allBadges.length
-          : 1;
-        const quantities = detail.design.quantities;
-        if (variant === "badge" && quantities?.length) {
+        const editedQuantity = detail.design.quantities?.[editIndex];
+        if (variant === "badge") {
           setBadgeLineQuantities(
-            syncBadgeLineQuantities(badgeCount, quantities),
+            syncBadgeLineQuantities(
+              1,
+              editedQuantity ? [editedQuantity] : undefined,
+            ),
           );
         }
-        if (badgeIndex > 0 && badgeIndex < badgeCount) {
-          setSelectedBadgeIndex(badgeIndex);
-        }
         setCartEditDesignId(designId);
+        setCartEditBadgeIndex(editIndex);
         skipCacheSaveRef.current = true;
       } catch (e) {
         console.warn("[BadgeDesignerRedesign] Cart design restore failed:", e);
@@ -9655,16 +9692,18 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       const preCartDesignId = designIdForSupabase;
       const preCartBadges = badgesForSupabase;
       const replacedCartDesignId = cartEditDesignIdRef.current;
+      const replacedCartBadgeIndex = cartEditBadgeIndexRef.current;
       resetDesignerToBlank();
       closeProofModal();
 
       const result = await api.addToCartMultiple(cartItems, {
         replaceDesignId: replacedCartDesignId,
+        replaceBadgeIndex: replacedCartBadgeIndex,
       });
       if (result.success) {
         if (replacedCartDesignId) {
           void api
-            .markCartDesignReplaced(replacedCartDesignId)
+            .markCartDesignReplaced(replacedCartDesignId, replacedCartBadgeIndex)
             .catch((err) =>
               console.warn(
                 "[BadgeDesignerRedesign] Replaced cart rows cleanup failed:",
@@ -10360,8 +10399,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           role="status"
         >
           <div className="rounded-lg border border-blue-200 bg-blue-50 text-blue-950 px-3 py-2.5 text-sm leading-snug">
-            <span className="font-semibold">Editing your cart item.</span>{" "}
-            Adding to cart will replace it.
+            <span className="font-semibold">Editing one item from your cart.</span>{" "}
+            Adding to cart replaces just that item — anything else in your cart
+            stays as it is.
           </div>
         </div>
       ) : null}
@@ -10532,7 +10572,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 </span>
               </div>
             )}
-            {multipleBadges.length > 0 && !usesAqbShell ? (
+            {multipleBadges.length > 0 && !usesAqbShell && !isCartEditMode ? (
               <div className="absolute z-20 left-2 top-2 flex items-center gap-1.5">
                 <button
                   type="button"
@@ -10662,6 +10702,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       hasBadges={multipleBadges.length > 0}
                       showAddMultiple={variant === "badge"}
                       highlightViewAll={highlightViewAllAfterBulk}
+                      singleDesignMode={isCartEditMode}
                       onViewAll={() => {
                         setHighlightViewAllAfterBulk(false);
                         setShowBadgeGridModal(true);
@@ -14273,7 +14314,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 qty={badgeOrderQty}
                 backingKey={badge.backing as BadgeBackingKey}
                 designCount={multipleBadges.length}
-                onFreeShippingUpsellClick={() => setShowCsvModal(true)}
+                onFreeShippingUpsellClick={openAddMultipleModal}
               />
             ) : null}
 
@@ -14429,27 +14470,25 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   </div>
                 )}
 
-                <div className="flex flex-col items-center gap-1">
-                  <button
-                    className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-blue-500 text-white hover:bg-blue-600 border border-blue-600 rounded transition-colors"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setCsvText("");
-                      setCsvPreview([]);
-                      setCsvError("");
-                      setCsvWarning("");
-                      setShowCsvModal(true);
-                    }}
-                    title={`Add multiple ${config.labelProductPlural.toLowerCase()} from CSV file or data`}
-                  >
-                    <SquaresPlusIcon className="w-5 h-5 md:w-6 md:h-6" />
-                  </button>
-                  <div className="text-[14px] text-gray-600 text-center leading-tight">
-                    Add Multiple
-                    <br />
-                    {config.labelProductPlural}
+                {!isCartEditMode ? (
+                  <div className="flex flex-col items-center gap-1">
+                    <button
+                      className="control-button w-11 h-11 md:w-14 md:h-14 flex items-center justify-center bg-blue-500 text-white hover:bg-blue-600 border border-blue-600 rounded transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openAddMultipleModal();
+                      }}
+                      title={`Add multiple ${config.labelProductPlural.toLowerCase()} from CSV file or data`}
+                    >
+                      <SquaresPlusIcon className="w-5 h-5 md:w-6 md:h-6" />
+                    </button>
+                    <div className="text-[14px] text-gray-600 text-center leading-tight">
+                      Add Multiple
+                      <br />
+                      {config.labelProductPlural}
+                    </div>
                   </div>
-                </div>
+                ) : null}
 
                 <div className="flex flex-col items-center gap-1">
                   <button
@@ -15201,7 +15240,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   </div>
                 ) : multipleBadges.length === 1 ? (
                   <div className="flex flex-col items-center justify-center w-full flex-shrink-0 min-w-0 relative">
-                    {!usesAqbShell ? (
+                    {!usesAqbShell && !isCartEditMode ? (
                       <div className="absolute z-20 left-2 top-2 flex items-center gap-1.5">
                         <button
                           type="button"
@@ -15306,7 +15345,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         );
                         return (
                           <div className="relative w-full border-2 border-[rgba(2, 19, 43,0.2)] rounded-lg bg-white/80 pt-2 pb-3 px-1 flex-shrink-0 shadow-sm">
-                            {!usesAqbShell ? (
+                            {!usesAqbShell && !isCartEditMode ? (
                               <div className="absolute z-20 left-2 top-2 flex items-center gap-1.5">
                                 <button
                                   type="button"
@@ -16142,13 +16181,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   Use − / + on each badge to change quantities, or set the same
                   count for all designs above.
                 </p>
-                <button
-                  type="button"
-                  className="aqb-grid-delete-all-btn"
-                  onClick={() => deleteAllBadgesFromDesign()}
-                >
-                  Delete all badges
-                </button>
+                {!isCartEditMode ? (
+                  <button
+                    type="button"
+                    className="aqb-grid-delete-all-btn"
+                    onClick={() => deleteAllBadgesFromDesign()}
+                  >
+                    Delete all badges
+                  </button>
+                ) : null}
               </div>
             ) : null}
             <div
@@ -16179,6 +16220,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   >
                     {/* Duplicate + delete (delete only when multiple) */}
                     <div className="absolute top-1 right-1 z-10 flex gap-0.5">
+                      {!isCartEditMode && (
                       <button
                         type="button"
                         className="aqb-grid-action-btn aqb-grid-action-btn--duplicate"
@@ -16194,7 +16236,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       >
                         <DocumentDuplicateIcon className="w-3.5 h-3.5" />
                       </button>
-                      {multipleBadges.length > 1 && (
+                      )}
+                      {multipleBadges.length > 1 && !isCartEditMode && (
                         <button
                           type="button"
                           className="aqb-grid-action-btn aqb-grid-action-btn--delete"
@@ -18544,6 +18587,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             setShowBackingCompleteModal(false);
             promptAddToCart();
           }}
+          hideAddMore={isCartEditMode}
           onAddMore={() => {
             setShowBackingCompleteModal(false);
             openAddMultipleModal();

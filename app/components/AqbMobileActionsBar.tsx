@@ -22,6 +22,11 @@ export interface AqbMobileActionsBarProps {
   hasBadges: boolean;
   showAddMultiple?: boolean;
   highlightViewAll?: boolean;
+  /**
+   * The design is locked to a single item (editing one cart line), so hide the
+   * actions that change how many designs there are. Undo/reset/save/help stay.
+   */
+  singleDesignMode?: boolean;
   onViewAll: () => void;
   onAddMultiple: () => void;
   onCopy: () => void;
@@ -103,6 +108,7 @@ export const AqbMobileActionsBar: React.FC<AqbMobileActionsBarProps> = ({
   hasBadges,
   showAddMultiple = true,
   highlightViewAll = false,
+  singleDesignMode = false,
   onViewAll,
   onAddMultiple,
   onCopy,
@@ -128,24 +134,26 @@ export const AqbMobileActionsBar: React.FC<AqbMobileActionsBarProps> = ({
       role="toolbar"
       aria-label="Design tools"
     >
-      <div className="aqb-tool-actions-row__row">
-        <BarButton
-          label="View All"
-          title={`View all ${labelProductPlural}`}
-          onClick={onViewAll}
-          highlight={highlightViewAll}
-          icon={<Squares2X2Icon className={iconClass} />}
-        />
-        {showAddMultiple ? (
+      {singleDesignMode ? null : (
+        <div className="aqb-tool-actions-row__row">
           <BarButton
-            label="Add Multiple"
-            title={`Add multiple ${labelProductPlural} from CSV file or data`}
-            onClick={onAddMultiple}
-            accent
-            icon={<AddMultipleGridIcon className={iconClass} />}
+            label="View All"
+            title={`View all ${labelProductPlural}`}
+            onClick={onViewAll}
+            highlight={highlightViewAll}
+            icon={<Squares2X2Icon className={iconClass} />}
           />
-        ) : null}
-      </div>
+          {showAddMultiple ? (
+            <BarButton
+              label="Add Multiple"
+              title={`Add multiple ${labelProductPlural} from CSV file or data`}
+              onClick={onAddMultiple}
+              accent
+              icon={<AddMultipleGridIcon className={iconClass} />}
+            />
+          ) : null}
+        </div>
+      )}
 
       <div className="aqb-tool-actions-row__row">
         <BarButton
@@ -182,7 +190,7 @@ export const AqbMobileActionsBar: React.FC<AqbMobileActionsBarProps> = ({
           role="group"
           aria-label="More design actions"
         >
-          {hasBadges ? (
+          {hasBadges && !singleDesignMode ? (
             <div className="aqb-tool-actions-row__row">
               <BarButton
                 label="Copy"

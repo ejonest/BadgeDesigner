@@ -4,11 +4,12 @@ import { getDesignerConfig, isDesignerId } from "~/config/designers";
 import { releaseReplacedCartOrderItems } from "~/lib/designers/orderItemsStorage";
 
 /**
- * POST /api/cart-design-replaced { designId, designer }
+ * POST /api/cart-design-replaced { designId, designer, badgeIndex? }
  *
  * Called after an edited design replaces its cart line, so the old rows do not
- * linger as in_cart. Housekeeping only: it never deletes assets and leaves
- * placed orders alone.
+ * linger as in_cart. `badgeIndex` scopes the release to the single line that was
+ * edited, leaving the design's other cart lines untouched. Housekeeping only: it
+ * never deletes assets and leaves placed orders alone.
  */
 export async function action({ request }: ActionFunctionArgs) {
   if (request.method !== "POST") {
@@ -17,9 +18,14 @@ export async function action({ request }: ActionFunctionArgs) {
   const body = (await request.json().catch(() => null)) as {
     designId?: string;
     designer?: string;
+    badgeIndex?: number;
   } | null;
   const designId = body?.designId?.trim() ?? "";
   const designer = body?.designer?.trim() || "badge";
+  const badgeIndex =
+    typeof body?.badgeIndex === "number" && Number.isInteger(body.badgeIndex)
+      ? body.badgeIndex
+      : null;
 
   if (!designId) {
     return json({ success: false, error: "designId is required" }, { status: 400 });
@@ -29,7 +35,11 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   try {
-    await releaseReplacedCartOrderItems(getDesignerConfig(designer), designId);
+    await releaseReplacedCartOrderItems(
+      getDesignerConfig(designer),
+      designId,
+      badgeIndex,
+    );
     return json({ success: true });
   } catch (error) {
     console.error("[api.cart-design-replaced] error:", error);
