@@ -3346,6 +3346,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const [cartEditDesignId, setCartEditDesignId] = useState<string | null>(null);
   const cartEditDesignIdRef = useRef<string | null>(null);
   cartEditDesignIdRef.current = cartEditDesignId;
+  /**
+   * Subtotal when the cart design was opened. Compared to the live total so the
+   * customer can see whether edits changed the price before finishing.
+   */
+  const [cartEditBaselinePrice, setCartEditBaselinePrice] = useState<
+    number | null
+  >(null);
   /** Guards against re-restoring when the parent re-sends the edit request. */
   const cartEditRestoreStartedRef = useRef(false);
   /** Debounce expensive sign `syncSignBadgeLinesSizeNorm` while typing plain text (Designer / ornate plates). */
@@ -7269,6 +7276,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setBadge(blankBadge);
     setSelectedBadgeIndex(0);
     setCartEditDesignId(null);
+    setCartEditBaselinePrice(null);
     setHasChosenBackgroundColor(false);
     setHasChosenDeskSignStandColor(false);
     setHasChosenBadgeStyle(false);
@@ -9965,6 +9973,76 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       ? "—"
       : `$${totalPriceAllBadges}`;
 
+  // Lock the "was" price once after cart restore so later edits don't move the baseline.
+  useEffect(() => {
+    if (!cartEditDesignId) {
+      setCartEditBaselinePrice(null);
+      return;
+    }
+    if (cartEditBaselinePrice != null) return;
+    if (
+      !addToCartPriceLabel ||
+      addToCartPriceLabel === "—" ||
+      addToCartPriceLabel === "…"
+    ) {
+      return;
+    }
+    const n = Number.parseFloat(addToCartPriceLabel.replace(/[^0-9.]/g, ""));
+    if (Number.isFinite(n)) setCartEditBaselinePrice(n);
+  }, [cartEditDesignId, addToCartPriceLabel, cartEditBaselinePrice]);
+
+  const cartEditPriceCompare = useMemo(() => {
+    if (cartEditDesignId == null || cartEditBaselinePrice == null) return null;
+    if (
+      !addToCartPriceLabel ||
+      addToCartPriceLabel === "—" ||
+      addToCartPriceLabel === "…"
+    ) {
+      return null;
+    }
+    const current = Number.parseFloat(
+      addToCartPriceLabel.replace(/[^0-9.]/g, ""),
+    );
+    if (!Number.isFinite(current)) return null;
+    const delta = current - cartEditBaselinePrice;
+    return {
+      baselineLabel: `$${cartEditBaselinePrice.toFixed(2)}`,
+      currentLabel: `$${current.toFixed(2)}`,
+      changed: Math.abs(delta) >= 0.005,
+      delta,
+      deltaLabel:
+        Math.abs(delta) < 0.005
+          ? "No price change"
+          : delta > 0
+            ? `+$${delta.toFixed(2)}`
+            : `-$${Math.abs(delta).toFixed(2)}`,
+    };
+  }, [cartEditDesignId, cartEditBaselinePrice, addToCartPriceLabel]);
+
+  const addToCartCtaLabel = cartEditDesignId
+    ? isAddingToCart
+      ? "Finishing…"
+      : isGeneratingDesigns
+        ? "Generating…"
+        : "Finish editing"
+    : isAddingToCart
+      ? "Adding…"
+      : isGeneratingDesigns
+        ? "Generating…"
+        : "Add to cart";
+
+  const addToCartCtaLabelLong = cartEditDesignId
+    ? isAddingToCart
+      ? "Finishing…"
+      : isGeneratingDesigns
+        ? "Generating…"
+        : "Finish editing"
+    : isAddingToCart
+      ? "Adding to Cart…"
+      : isGeneratingDesigns
+        ? "Generating…"
+        : "Add to cart";
+
   const badgePriceBreakdownLine =
     variant === "badge" && badgeOrderQtyUi && multipleBadges.length > 0
       ? (() => {
@@ -10267,11 +10345,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             <div className="aqb-mobile-checkout-bar__price">
               {addToCartPriceLabel}
             </div>
-            <p className="aqb-mobile-checkout-bar__meta">
-              {variant === "badge" && badgePriceBreakdownLine
-                ? badgePriceBreakdownLine
-                : "Finish the steps above to see your total."}
-            </p>
+            {cartEditPriceCompare ? (
+              <p className="aqb-mobile-checkout-bar__meta">
+                Was {cartEditPriceCompare.baselineLabel}
+                {cartEditPriceCompare.changed
+                  ? ` · Now ${cartEditPriceCompare.currentLabel} (${cartEditPriceCompare.deltaLabel})`
+                  : " · No price change"}
+              </p>
+            ) : (
+              <p className="aqb-mobile-checkout-bar__meta">
+                {variant === "badge" && badgePriceBreakdownLine
+                  ? badgePriceBreakdownLine
+                  : "Finish the steps above to see your total."}
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -10296,11 +10383,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               className="aqb-atc-btn--mobile__icon"
               aria-hidden
             />
-            {isAddingToCart
-              ? "Adding…"
-              : isGeneratingDesigns
-              ? "Generating…"
-              : "Add to cart"}
+            {addToCartCtaLabel}
           </button>
         </div>
       </div>
@@ -14519,10 +14602,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   disabled={isAddingToCart || isGeneratingDesigns}
                 >
                   {isAddingToCart
-                    ? "Adding to Cart..."
+                    ? cartEditDesignId
+                      ? "Finishing..."
+                      : "Adding to Cart..."
                     : isGeneratingDesigns
                     ? "Generating..."
-                    : "Add to Cart"}
+                    : cartEditDesignId
+                      ? "Finish editing"
+                      : "Add to Cart"}
                 </button>
               </div>
             ) : null}
@@ -15669,21 +15756,51 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     <div className="text-[26px] md:text-[28px] font-bold text-[#F5A84D] leading-none tracking-tight">
                       {addToCartPriceLabel}
                     </div>
-                    <p className="text-[14px] text-white/35 mt-2 leading-snug">
-                      {variant === "badge" && badgePriceBreakdownLine
-                        ? badgePriceBreakdownLine
-                        : multipleBadges.length > 0
-                        ? `Subtotal for ${multipleBadges.length} printed ${
-                            multipleBadges.length === 1
-                              ? config.labelProduct.toLowerCase()
-                              : config.labelProductPlural.toLowerCase()
-                          } — Shopify calculates tax & shipping at checkout.`
-                        : "Finish the steps on the left to see your total."}
-                    </p>
+                    {cartEditPriceCompare ? (
+                      <p className="text-[14px] text-white/55 mt-2 leading-snug">
+                        Was{" "}
+                        <span className="text-white/80">
+                          {cartEditPriceCompare.baselineLabel}
+                        </span>
+                        {cartEditPriceCompare.changed ? (
+                          <>
+                            {" "}
+                            → Now{" "}
+                            <span className="text-[#F5A84D] font-semibold">
+                              {cartEditPriceCompare.currentLabel}
+                            </span>
+                            <span
+                              className={`ml-1.5 font-semibold ${
+                                cartEditPriceCompare.delta > 0
+                                  ? "text-[#f0a0a0]"
+                                  : "text-[#7dcea0]"
+                              }`}
+                            >
+                              ({cartEditPriceCompare.deltaLabel})
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-white/45"> · No price change</span>
+                        )}
+                      </p>
+                    ) : (
+                      <p className="text-[14px] text-white/35 mt-2 leading-snug">
+                        {variant === "badge" && badgePriceBreakdownLine
+                          ? badgePriceBreakdownLine
+                          : multipleBadges.length > 0
+                          ? `Subtotal for ${multipleBadges.length} printed ${
+                              multipleBadges.length === 1
+                                ? config.labelProduct.toLowerCase()
+                                : config.labelProductPlural.toLowerCase()
+                            } — Shopify calculates tax & shipping at checkout.`
+                          : "Finish the steps on the left to see your total."}
+                      </p>
+                    )}
                   </div>
                   {variant === "badge" &&
                   badgeOrderQtyUi &&
-                  multipleBadges.length > 0 ? (
+                  multipleBadges.length > 0 &&
+                  !cartEditDesignId ? (
                     <div className="text-right shrink-0 pt-0.5">
                       <div className="text-[14px] font-semibold text-[#2d9e75] leading-tight">
                         Save ${badgeOrderQtyUi.savingAmount.toFixed(2)}
@@ -15717,11 +15834,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     className="aqb-atc-btn--panel__icon"
                     aria-hidden
                   />
-                  {isAddingToCart
-                    ? "Adding to Cart…"
-                    : isGeneratingDesigns
-                    ? "Generating…"
-                    : "Add to cart"}
+                  {addToCartCtaLabelLong}
                 </button>
                 <button
                   type="button"
@@ -18529,8 +18642,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   onClick={onProofConfirm}
                 >
                   {isAddingToCart
-                    ? "Adding to Cart..."
-                    : "Confirm and Add to Cart"}
+                    ? cartEditDesignId
+                      ? "Finishing..."
+                      : "Adding to Cart..."
+                    : cartEditDesignId
+                      ? "Confirm and Finish Editing"
+                      : "Confirm and Add to Cart"}
                 </button>
               </div>
             </div>
