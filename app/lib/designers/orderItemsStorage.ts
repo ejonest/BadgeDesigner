@@ -462,23 +462,26 @@ export async function updateDesignerOrderItemsStatusByDesignId(
 }
 
 /**
- * A cart line was replaced by an edited design, so its rows are no longer in a cart.
- * Only in_cart rows move back to draft; placed orders are never touched. Status has a
- * CHECK constraint, so draft is the accurate "not in a cart" state.
+ * The cart lines for this design were replaced by an edited copy, which is saved
+ * under its own design_id. Keeping the originals would leave a duplicate set of
+ * rows for every edit, so they are removed outright. Scoped to in_cart rows:
+ * placed orders keep their history, and unrelated drafts are untouched.
  */
-export async function releaseReplacedCartOrderItems(
+export async function deleteReplacedCartOrderItems(
   def: DesignerDefinition,
   designId: string,
-) {
+): Promise<number> {
   if (!supabaseAdmin) {
     throw new Error("Supabase is not configured.");
   }
-  const { error } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from(def.orderItemsTable)
-    .update({ status: "draft", updated_at: getPacificTimestamp() })
+    .delete()
     .eq("design_id", designId)
-    .eq("status", "in_cart");
+    .eq("status", "in_cart")
+    .select("id");
   if (error) throw error;
+  return data?.length ?? 0;
 }
 
 export async function updateDesignerPdfUrlByDesignId(

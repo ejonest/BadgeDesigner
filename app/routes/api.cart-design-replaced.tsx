@@ -1,14 +1,14 @@
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { getDesignerConfig, isDesignerId } from "~/config/designers";
-import { releaseReplacedCartOrderItems } from "~/lib/designers/orderItemsStorage";
+import { deleteReplacedCartOrderItems } from "~/lib/designers/orderItemsStorage";
 
 /**
  * POST /api/cart-design-replaced { designId, designer }
  *
- * Called after an edited design replaces its cart lines, so the old rows do not
- * linger as in_cart. Housekeeping only: it never deletes assets and leaves
- * placed orders alone.
+ * Called after an edited design replaces its cart lines. The edit is saved under
+ * a new design_id, so the original rows are deleted rather than left behind as a
+ * duplicate copy of the same design.
  */
 export async function action({ request }: ActionFunctionArgs) {
   if (request.method !== "POST") {
@@ -29,8 +29,11 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   try {
-    await releaseReplacedCartOrderItems(getDesignerConfig(designer), designId);
-    return json({ success: true });
+    const deleted = await deleteReplacedCartOrderItems(
+      getDesignerConfig(designer),
+      designId,
+    );
+    return json({ success: true, deleted });
   } catch (error) {
     console.error("[api.cart-design-replaced] error:", error);
     return json(
