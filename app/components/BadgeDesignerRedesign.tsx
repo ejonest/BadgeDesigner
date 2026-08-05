@@ -9227,7 +9227,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         return;
       }
 
-      if (isSignLikeVariant(variant)) {
+      // Bust CDN/browser cache: thumbs upsert to a stable path per design/line, so
+      // cart <img> must not reuse a prior draft bitmap (e.g. missing a later text line).
+      {
         const cb = Date.now();
         thumbnailUrls = thumbnailUrls.map((u) => {
           if (!u || u.startsWith("blob:")) return u;
@@ -18369,7 +18371,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   className="px-4 py-2 rounded shadow border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                   onClick={closeProofModal}
                 >
-                  Cancel
+                  Back to Edit
                 </button>
                 <button
                   type="button"

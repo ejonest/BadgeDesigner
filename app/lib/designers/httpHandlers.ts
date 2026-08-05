@@ -11,6 +11,7 @@ import {
   deleteDesignerOrderItemsByDesignId,
   downloadFromDesignerImageBucket,
   getDesignerOrderItemsByDesignId,
+  getTerminalDesignerOrderItemLineKeys,
   saveDraftDesignerOrderItemsMerge,
   saveDesignerOrderItems,
   updateDesignerOrderItemsStatusByDesignId,
@@ -79,9 +80,17 @@ export async function runSaveDraftDesigner(
     }
 
     const orderItems: ReturnType<typeof convertBadgeToOrderItem>[] = [];
+    // Draft merge already skips DB updates for in_cart/order_placed, but storage
+    // uploads used to run first and could overwrite cart thumbnails at the same path.
+    const terminalLineKeys = await getTerminalDesignerOrderItemLineKeys(
+      def,
+      designId,
+    );
 
     for (let badgeIndex = 0; badgeIndex < allBadges.length; badgeIndex++) {
       const badge = allBadges[badgeIndex];
+      const lineKey = `${def.lineIdPrefix}-${badgeIndex}`;
+      const skipStorageUpload = terminalLineKeys.has(lineKey);
       const thumbnailPngFile = formData.get(
         `thumbnail_png_${badgeIndex}`,
       ) as File | null;
@@ -96,7 +105,7 @@ export async function runSaveDraftDesigner(
 
       const uploadJobs: Promise<void>[] = [];
 
-      if (thumbnailPngFile?.size) {
+      if (!skipStorageUpload && thumbnailPngFile?.size) {
         const thumbType =
           thumbnailPngFile.type && thumbnailPngFile.type.startsWith("image/")
             ? thumbnailPngFile.type
@@ -126,7 +135,7 @@ export async function runSaveDraftDesigner(
         );
       }
 
-      if (svgFile?.size) {
+      if (!skipStorageUpload && svgFile?.size) {
         uploadJobs.push(
           (async () => {
             try {
@@ -147,7 +156,7 @@ export async function runSaveDraftDesigner(
         );
       }
 
-      if (printSvgFile?.size) {
+      if (!skipStorageUpload && printSvgFile?.size) {
         uploadJobs.push(
           (async () => {
             try {

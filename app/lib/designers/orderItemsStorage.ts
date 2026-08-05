@@ -463,6 +463,31 @@ export async function getDesignerOrderItemsByDesignId(
   );
 }
 
+/** Line keys already in cart / ordered — draft uploads must not overwrite their storage. */
+export async function getTerminalDesignerOrderItemLineKeys(
+  def: DesignerDefinition,
+  designId: string,
+): Promise<Set<string>> {
+  if (!supabaseAdmin) {
+    throw new Error("Supabase is not configured.");
+  }
+  const { data, error } = await supabaseAdmin
+    .from(def.orderItemsTable)
+    .select(def.lineIdColumn)
+    .eq("design_id", designId)
+    .in("status", ["in_cart", "order_placed"]);
+  if (error) throw error;
+  return new Set(
+    (data ?? [])
+      .map((r) => {
+        const row = r as Record<string, unknown>;
+        const key = row[def.lineIdColumn];
+        return typeof key === "string" ? key : "";
+      })
+      .filter(Boolean),
+  );
+}
+
 export async function updateDraftDesignerOrderItemsWithOrderInfo(
   def: DesignerDefinition,
   params: {
