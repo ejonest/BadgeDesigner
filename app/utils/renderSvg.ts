@@ -56,6 +56,13 @@ import {
   getBadgeIconTextInsetPx,
   renderBadgeIconLayer,
 } from "~/utils/badgeIconRender";
+
+/** Icon fill follows line 1 text color so it stays visible on dark plates. */
+function badgeIconFillFromLines(
+  lines: Array<{ color?: string }> | undefined,
+): string {
+  return lines?.[0]?.color?.trim() || "#000000";
+}
 import {
   getPhotoPlateViewBoxSize,
   resolvePhotoTextRect,
@@ -337,6 +344,7 @@ function renderBadgePrintProductionSvg(
       designBox,
       template.id,
       photo.iconRect,
+      badgeIconFillFromLines(badge.lines),
     );
     const textElements = lineLayout
       .map((item) => {
@@ -400,6 +408,8 @@ function renderBadgePrintProductionSvg(
       badge.badgeIconId,
       designBox,
       template.id,
+      undefined,
+      badgeIconFillFromLines(badge.lines),
     );
     const textElements = lineLayout
       .map((item) => {
@@ -692,6 +702,7 @@ function renderBadgePhotoPlateSvg(
     designBox,
     template.id,
     photo.iconRect,
+    badgeIconFillFromLines(badge.lines),
   );
 
   const textElements = lineLayout
@@ -2525,6 +2536,8 @@ export function renderBadgeToSvgString(
     badge.badgeIconId,
     designBox,
     template.id,
+    undefined,
+    badgeIconFillFromLines(badge.lines),
   );
 
   // Render text elements
@@ -2862,6 +2875,8 @@ export async function renderBadgeToSvgStringWithFonts(
     badge.badgeIconId,
     designBox,
     template.id,
+    undefined,
+    badgeIconFillFromLines(badge.lines),
   );
 
   // Render text elements
