@@ -40,18 +40,33 @@
       }
     }
 
+    /** 0-based position of a cart line within its design; lines predating the property count as 0. */
+    function aqbCartLineIndex(item) {
+      var props = item.properties || {};
+      var raw = props['Badge Index'];
+      if (raw === undefined || raw === null || raw === '') raw = props['Sign Index'];
+      if (raw === undefined || raw === null || raw === '') raw = props['Plaque Index'];
+      if (raw === undefined || raw === null || raw === '') return 0;
+      var n = parseInt(raw, 10);
+      return isNaN(n) ? 0 : n;
+    }
+
     /**
-     * Remove the cart lines the edited design replaces. The edited design always
+     * Remove the cart line the edited design replaces. The edited design always
      * carries a new Design ID, so matching the old one cannot hit the new lines.
+     * A design can span several lines, so when an index is given only that line
+     * goes — the other badges in the same design stay in the cart.
      */
-    function aqbRemoveReplacedCartLines(cartRoot, replaceDesignId) {
+    function aqbRemoveReplacedCartLines(cartRoot, replaceDesignId, replaceBadgeIndex) {
       if (!replaceDesignId) return Promise.resolve();
+      var scoped = typeof replaceBadgeIndex === 'number' && !isNaN(replaceBadgeIndex);
       var base = cartRoot.replace(/\/$/, '');
       return fetch(base + '/cart.js', { headers: { 'Accept': 'application/json' } })
         .then(function(res) { return res.json(); })
         .then(function(cart) {
           var stale = (cart.items || []).filter(function(item) {
-            return item.properties && item.properties['Design ID'] === replaceDesignId;
+            if (!item.properties || item.properties['Design ID'] !== replaceDesignId) return false;
+            return scoped ? aqbCartLineIndex(item) === replaceBadgeIndex : true;
           });
           // Sequential: each change.js response invalidates the previous line keys.
           return stale.reduce(function(chain, item) {
@@ -70,7 +85,7 @@
         });
     }
 
-    function aqbDesignerCartAdd(items, event, requestId, replaceDesignId) {
+    function aqbDesignerCartAdd(items, event, requestId, replaceDesignId, replaceBadgeIndex) {
       if (!items || !items.length) {
         console.error('Badge designer: no cart items to add');
         replyToDesigner(event, requestId, false, 'No cart items to add');
@@ -103,7 +118,7 @@
           });
         })
         .then(function() {
-          return aqbRemoveReplacedCartLines(cartRoot, replaceDesignId);
+          return aqbRemoveReplacedCartLines(cartRoot, replaceDesignId, replaceBadgeIndex);
         })
         .then(function() {
           replyToDesigner(event, requestId, true);
@@ -155,12 +170,12 @@
       }
 
       if (data.action === 'add-to-cart' && data.payload) {
-        aqbDesignerCartAdd([data.payload], event, data.requestId, data.payload.replaceDesignId);
+        aqbDesignerCartAdd([data.payload], event, data.requestId, data.payload.replaceDesignId, data.payload.replaceBadgeIndex);
         return;
       }
 
       if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
-        aqbDesignerCartAdd(data.payload.items, event, data.requestId, data.payload.replaceDesignId);
+        aqbDesignerCartAdd(data.payload.items, event, data.requestId, data.payload.replaceDesignId, data.payload.replaceBadgeIndex);
         return;
       }
 
