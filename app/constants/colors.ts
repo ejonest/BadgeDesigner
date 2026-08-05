@@ -146,10 +146,11 @@ export const BADGE_AQB_FEATURED_BACKGROUND_COLORS = [
     brushed: true,
   },
   { value: "#2C2C2C", name: "Black", light: false },
-  { value: "#0D1B2A", name: "Navy", light: false },
+  // Disabled until blank product photos exist for these plate colors.
+  // { value: "#0D1B2A", name: "Navy", light: false },
   { value: "#C0392B", name: "Red", light: false },
   { value: "#1A5C8E", name: "Blue", light: false },
-  { value: "#2D6A4F", name: "Green", light: false },
+  // { value: "#2D6A4F", name: "Green", light: false },
 ] as const;
 
 /** Badge redesign Step 3 — text colour swatches (reference mock). */
@@ -157,7 +158,6 @@ export const BADGE_AQB_TEXT_COLORS = [
   { value: "#FFFFFF", light: true, bordered: true },
   { value: "#0D1B2A", light: false },
   { value: "#C8962A", light: false },
-  { value: "#FFFFFF", light: true, bordered: false },
   { value: "#C0392B", light: false },
   { value: "#1A5C8E", light: false },
 ] as const;

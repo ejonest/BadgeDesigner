@@ -262,7 +262,7 @@ import {
   getEffectiveSignTextLayoutForBadge,
 } from "../utils/renderSvg";
 import {
-  badgeBackgroundConflictsWithTextColor,
+  areBadgePlateAndTextSameColor,
   badgeTextColorConflictsWithBackground,
 } from "~/utils/badgeColorContrast";
 import {
@@ -1986,12 +1986,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }
   };
 
-  // Apply background color change (called after user confirms or if no warning needed)
+  // Apply background color and auto-flip any text that would clash to black/white.
   const applyBackgroundColor = (colorValue: string) => {
-    if (badgeBackgroundConflictsWithTextColor(colorValue, badge.lines)) {
-      return;
-    }
-
     // Save to undo history before making changes
     saveToUndoHistory({
       type: "background-color",
@@ -1999,10 +1995,35 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     });
 
     setHasChosenBackgroundColor(true);
+    const contrastingText = getContrastingTextColor(colorValue);
+    const SIMILAR_THRESHOLD = 70;
+    const normalizedBg = (
+      colorValue.trim().startsWith("#")
+        ? colorValue.trim()
+        : `#${colorValue.trim()}`
+    ).toUpperCase();
+
+    const updatedLines = badge.lines.map((line) => {
+      if (!line.color) return line;
+      const normalizedLine = (
+        line.color.trim().startsWith("#")
+          ? line.color.trim()
+          : `#${line.color.trim()}`
+      ).toUpperCase();
+      if (
+        areBadgePlateAndTextSameColor(normalizedBg, normalizedLine) ||
+        areColorsSimilar(normalizedBg, normalizedLine, SIMILAR_THRESHOLD)
+      ) {
+        return { ...line, color: contrastingText };
+      }
+      return line;
+    });
+
     const updatedBadge = {
       ...badge,
       backgroundColor: colorValue,
       customBadgeBackgroundId: undefined,
+      lines: updatedLines,
     };
     console.log(`[COLOR TRACKING] Background color changed to: ${colorValue}`);
     setBadge(updatedBadge);
@@ -2097,135 +2118,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }
   };
 
-  // Apply background and set any text line whose color is similar to the new background to a contrasting color
+  // Kept for warning-modal confirm; contrast auto-fix now lives in applyBackgroundColor.
   const applyBackgroundColorWithContrastUpdate = (colorValue: string) => {
-    if (badgeBackgroundConflictsWithTextColor(colorValue, badge.lines)) {
-      setShowBackgroundColorWarning(false);
-      setPendingBackgroundColor(null);
-      return;
-    }
-
-    saveToUndoHistory({
-      type: "background-color",
-      badgeIndex: selectedBadgeIndex,
-    });
-
-    setHasChosenBackgroundColor(true);
-    const contrastingText = getContrastingTextColor(colorValue);
-    const SIMILAR_THRESHOLD = 70;
-    const normalizedBg = (
-      colorValue.trim().startsWith("#")
-        ? colorValue.trim()
-        : `#${colorValue.trim()}`
-    ).toUpperCase();
-
-    const updatedLines = badge.lines.map((line) => {
-      if (!line.color) return line;
-      const normalizedLine = (
-        line.color.trim().startsWith("#")
-          ? line.color.trim()
-          : `#${line.color.trim()}`
-      ).toUpperCase();
-      if (areColorsSimilar(normalizedBg, normalizedLine, SIMILAR_THRESHOLD)) {
-        return { ...line, color: contrastingText };
-      }
-      return line;
-    });
-
-    const updatedBadge = {
-      ...badge,
-      backgroundColor: colorValue,
-      customBadgeBackgroundId: undefined,
-      lines: updatedLines,
-    };
-    setBadge(updatedBadge);
-
-    const updatedMultipleBadges = [...multipleBadges];
-    if (updatedMultipleBadges[selectedBadgeIndex]) {
-      updatedMultipleBadges[selectedBadgeIndex] = updatedBadge;
-      setMultipleBadges(updatedMultipleBadges);
-    }
-
-    if (selectedBadgeIndex === 0) {
-      setBadge1Data(updatedBadge);
-    }
-
-    if (!guidedFlowCompletedRef.current) {
-      const needBorderStep =
-        isSignLikeVariant(variant) &&
-        config.hasBorder &&
-        signTemplateTypeShowsBorderStep(selectedSignTemplateType);
-      if (variant === "plaque") {
-        setSectionsOpen({
-          template: false,
-          size: false,
-          export: false,
-          badgeStyle: false,
-          background: false,
-          textLines: false,
-          backing: false,
-          border: false,
-        });
-        setSectionsOpened((prev) => ({
-          ...prev,
-          background: true,
-        }));
-        setSignLogoSectionOpen(true);
-      } else if (needBorderStep) {
-        setSectionsOpen({
-          template: false,
-          size: false,
-          export: false,
-          badgeStyle: false,
-          background: false,
-          textLines: false,
-          backing: false,
-          border: true,
-        });
-        setSectionsOpened((prev) => ({
-          ...prev,
-          background: true,
-        }));
-      } else if (
-        variant === "badge" &&
-        badgeTemplateSupportsIcon(universalTemplateId)
-      ) {
-        setSectionsOpen({
-          template: false,
-          size: false,
-          export: false,
-          badgeStyle: false,
-          background: false,
-          badgeIcon: true,
-          textLines: false,
-          backing: false,
-          border: false,
-          plaqueFormat: false,
-        });
-        setSectionsOpened((prev) => ({
-          ...prev,
-          background: true,
-          badgeIcon: true,
-        }));
-      } else {
-        setSectionsOpen({
-          template: false,
-          size: false,
-          export: false,
-          badgeStyle: false,
-          background: false,
-          textLines: true,
-          backing: false,
-          border: false,
-        });
-        setSectionsOpened((prev) => ({
-          ...prev,
-          background: true,
-          textLines: true,
-        }));
-      }
-      guidedFlowCompletedRef.current = true;
-    }
+    applyBackgroundColor(colorValue);
   };
 
   const syncBadgeStyleToMultiple = (updatedBadge: Badge) => {
@@ -12534,21 +12429,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     ];
 
                     const handleColorClick = (colorValue: string) => {
-                      if (
-                        badgeBackgroundConflictsWithTextColor(
-                          colorValue,
-                          badge.lines,
-                        )
-                      ) {
-                        return;
-                      }
-                      // Check if the new background color is similar to any text line colors
-                      if (checkBackgroundColorSimilarity(colorValue)) {
-                        setPendingBackgroundColor(colorValue);
-                        setShowBackgroundColorWarning(true);
-                      } else {
-                        applyBackgroundColor(colorValue);
-                      }
+                      applyBackgroundColor(colorValue);
                     };
 
                     // Parse hex or RGB input and convert to hex
@@ -12672,31 +12553,24 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                   c.value,
                                 );
                               const hasPhoto = badgeColorHasPhoto(c.value);
-                              const blockedByText =
-                                badgeBackgroundConflictsWithTextColor(
-                                  c.value,
-                                  badge.lines,
-                                );
                               return (
                                 <button
                                   key={c.value}
                                   type="button"
                                   className={`aqb-badge-colour-swatch ${
-                                    !hasPhoto || blockedByText
+                                    !hasPhoto
                                       ? "cursor-not-allowed opacity-45"
                                       : ""
                                   }`}
                                   title={
-                                    blockedByText
-                                      ? `${c.name} — same as text color`
-                                      : hasPhoto
-                                        ? c.name
-                                        : `${c.name} — preview photo coming soon`
+                                    hasPhoto
+                                      ? c.name
+                                      : `${c.name} — preview photo coming soon`
                                   }
-                                  disabled={!hasPhoto || blockedByText}
+                                  disabled={!hasPhoto}
                                   onClick={(e) => {
                                     e.preventDefault();
-                                    if (!hasPhoto || blockedByText) return;
+                                    if (!hasPhoto) return;
                                     handleColorClick(c.value);
                                   }}
                                 >
@@ -12798,12 +12672,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           <div className="flex flex-col gap-2">
                             <div className="grid grid-cols-4 gap-2 w-fit">
                               {featuredColors.map((c) => {
-                                const blockedByText =
-                                  !c.isRainbow &&
-                                  badgeBackgroundConflictsWithTextColor(
-                                    c.value,
-                                    badge.lines,
-                                  );
                                 return (
                                 <div
                                   key={c.value}
@@ -12811,12 +12679,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                 >
                                   <button
                                     className={`w-12 h-12 border rounded ${
-                                      badge.backgroundColor === c.value &&
-                                      !blockedByText
+                                      badge.backgroundColor === c.value
                                         ? "ring-2 ring-offset-1 " + c.ring
-                                        : blockedByText
-                                          ? "opacity-50 cursor-not-allowed"
-                                          : ""
+                                        : ""
                                     }`}
                                     style={
                                       c.isRainbow
@@ -12828,15 +12693,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                             c.value,
                                           )
                                     }
-                                    title={
-                                      blockedByText
-                                        ? `${c.name} — same as text color`
-                                        : c.name
-                                    }
-                                    disabled={blockedByText}
+                                    title={c.name}
                                     onClick={(e) => {
                                       e.preventDefault();
-                                      if (blockedByText) return;
                                       if (c.isRainbow) {
                                         setShowColorModal(true);
                                       } else {
@@ -16965,10 +16824,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 name: string;
                 ring: string;
               }) => {
-                const blockedByText = badgeBackgroundConflictsWithTextColor(
-                  c.value,
-                  badge.lines,
-                );
                 return (
                 <div
                   key={c.value}
@@ -16976,31 +16831,16 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 >
                   <button
                     className={`w-8 h-8 md:w-12 md:h-12 border-2 rounded transition-all ${
-                      badge.backgroundColor === c.value && !blockedByText
+                      badge.backgroundColor === c.value
                         ? "ring-2 ring-offset-1 " + c.ring + " scale-110"
-                        : blockedByText
-                          ? "border-gray-400 opacity-50 cursor-not-allowed"
-                          : "border-gray-300 hover:scale-105"
+                        : "border-gray-300 hover:scale-105"
                     }`}
                     style={{ backgroundColor: c.value }}
-                    title={
-                      blockedByText
-                        ? "Same as text color — choose a different background"
-                        : c.name
-                    }
-                    disabled={blockedByText}
+                    title={c.name}
                     onClick={(e) => {
                       e.preventDefault();
-                      if (blockedByText) return;
-                      // Check if the new background color is similar to any text line colors
-                      if (checkBackgroundColorSimilarity(c.value)) {
-                        setPendingBackgroundColor(c.value);
-                        setShowBackgroundColorWarning(true);
-                        setShowColorModal(false);
-                      } else {
-                        applyBackgroundColor(c.value);
-                        setShowColorModal(false);
-                      }
+                      applyBackgroundColor(c.value);
+                      setShowColorModal(false);
                     }}
                   />
                 </div>
@@ -17066,27 +16906,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 };
 
                 const previewColor = parseColorInput(customColorInput);
-                const blockedByText =
-                  previewColor !== null &&
-                  badgeBackgroundConflictsWithTextColor(
-                    previewColor,
-                    badge.lines,
-                  );
-                const isValidColor = previewColor !== null && !blockedByText;
+                const isValidColor = previewColor !== null;
 
                 const handleApplyCustomColor = () => {
-                  if (previewColor && !blockedByText) {
-                    // Check if the new background color is similar to any text line colors
-                    if (checkBackgroundColorSimilarity(previewColor)) {
-                      setPendingBackgroundColor(previewColor);
-                      setShowBackgroundColorWarning(true);
-                      setShowColorModal(false);
-                      setCustomColorInput("");
-                    } else {
-                      applyBackgroundColor(previewColor);
-                      setShowColorModal(false);
-                      setCustomColorInput("");
-                    }
+                  if (previewColor) {
+                    applyBackgroundColor(previewColor);
+                    setShowColorModal(false);
+                    setCustomColorInput("");
                   }
                 };
 
