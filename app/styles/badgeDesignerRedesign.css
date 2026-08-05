@@ -260,6 +260,71 @@
   background: #fff;
 }
 
+/* Mobile compact toolbar (View All / Add Multiple + Save / Load / More) */
+.aqb-redesign-root .aqb-mobile-actions-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 10px 12px;
+  background: #fff;
+}
+
+.aqb-redesign-root .aqb-mobile-actions-bar .aqb-ta-btn {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 6px;
+  min-height: 36px;
+}
+
+.aqb-redesign-root .aqb-mobile-actions-bar .aqb-ta-label--desktop {
+  display: none;
+}
+
+.aqb-redesign-root .aqb-mobile-actions-bar .aqb-ta-label--mobile {
+  display: block;
+  width: auto;
+  max-width: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7f92;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.aqb-redesign-root .aqb-mobile-actions-bar .aqb-ta-btn--accent .aqb-ta-label--mobile {
+  color: #02132b;
+  font-weight: 700;
+}
+
+.aqb-redesign-root .aqb-mobile-actions-bar .aqb-ta-btn .aqb-ta-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.aqb-redesign-root .aqb-ta-btn--more {
+  border-style: dashed;
+}
+
+.aqb-redesign-root .aqb-ta-btn--more.is-expanded {
+  border-style: solid;
+  border-color: var(--aqb-navy);
+  background: var(--aqb-cream);
+}
+
+.aqb-redesign-root .aqb-mobile-actions-bar__more {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px dashed var(--aqb-border);
+  margin-top: 2px;
+  padding-top: 8px;
+}
+
 /* Grid modal — per-badge duplicate/delete + delete all */
 .aqb-redesign-root .aqb-grid-action-btn {
   display: flex;
@@ -436,32 +501,80 @@
   line-height: 1.2;
 }
 
-/* Mobile badge designer — evenly spaced step nav with connector lines */
+/* Mobile badge designer — centered step nav on two lines */
 @media (max-width: 767px) {
   .aqb-redesign-root .aqb-badge-mobile-step-nav {
-    display: grid !important;
-    grid-template-columns:
-      auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto;
-    align-items: start;
+    display: flex !important;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    row-gap: 8px;
+    column-gap: 0;
     width: 100%;
     box-sizing: border-box;
-    padding-inline: 1.5rem;
+    padding-inline: 0.75rem;
   }
 
   .aqb-redesign-root .aqb-badge-mobile-step-nav .aqb-badge-step-item {
-    justify-self: center;
-    flex: none !important;
+    flex: 0 0 auto;
     min-width: 0;
+    padding: 2px 4px;
+  }
+
+  .aqb-redesign-root .aqb-badge-mobile-step-nav .aqb-badge-step-item > div:first-child {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .aqb-redesign-root .aqb-badge-mobile-step-nav .aqb-badge-step-item > div:first-child svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .aqb-redesign-root .aqb-badge-mobile-step-nav .aqb-badge-step-item > div:first-child span {
+    font-size: 13px !important;
+    font-weight: 700;
+  }
+
+  .aqb-redesign-root .aqb-badge-mobile-step-nav .aqb-badge-step-item > span {
+    margin-top: 5px !important;
+    font-size: 13px !important;
+    line-height: 1.15;
   }
 
   .aqb-redesign-root .aqb-badge-mobile-step-nav .aqb-badge-step-connector {
-    align-self: start;
+    flex: 0 0 18px;
+    align-self: flex-start;
+    width: 18px;
+    min-width: 18px;
+    max-width: 18px;
+    height: 2.5px;
+    margin-inline: 5px !important;
+    margin-top: 14px;
+  }
+
+  /* 6 steps (11 children): break after step 4; hide the between-row connector */
+  .aqb-redesign-root .aqb-badge-mobile-step-nav > :nth-child(8):nth-last-child(4) {
+    flex: 0 0 100%;
     width: 100%;
-    min-width: 0;
-    height: 2px;
-    flex: none !important;
-    margin-inline: 0 !important;
-    margin-top: 10px;
+    max-width: none;
+    height: 0;
+    margin: 0 !important;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  /* 5 steps (9 children): break after step 3 */
+  .aqb-redesign-root .aqb-badge-mobile-step-nav > :nth-child(6):nth-last-child(4) {
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: none;
+    height: 0;
+    margin: 0 !important;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
   }
 }
 
@@ -634,6 +747,39 @@
 
 .aqb-redesign-root .aqb-ta-btn--duplicate:hover:not(:disabled) .aqb-ta-icon {
   color: var(--aqb-green);
+}
+
+.aqb-redesign-root .aqb-ta-btn--accent {
+  border-color: var(--aqb-atc-ready);
+  background: var(--aqb-atc-ready);
+  color: #02132b;
+}
+
+.aqb-redesign-root .aqb-ta-btn--accent .aqb-ta-label {
+  color: #02132b;
+  font-weight: 700;
+}
+
+.aqb-redesign-root .aqb-ta-btn--accent .aqb-ta-icon {
+  color: #02132b;
+}
+
+.aqb-redesign-root .aqb-ta-btn--accent:hover:not(:disabled) {
+  border-color: var(--aqb-atc-ready-hover);
+  background: var(--aqb-atc-ready-hover);
+  color: #02132b;
+}
+
+.aqb-redesign-root .aqb-ta-btn--accent:hover:not(:disabled) .aqb-ta-label,
+.aqb-redesign-root .aqb-ta-btn--accent:hover:not(:disabled) .aqb-ta-icon {
+  color: #02132b;
+}
+
+@media (max-width: 767px) {
+  .aqb-redesign-root .aqb-ta-btn--accent .aqb-ta-label--mobile {
+    color: #02132b;
+    font-weight: 700;
+  }
 }
 
 .aqb-redesign-root .aqb-ta-btn:disabled {
@@ -2292,6 +2438,116 @@
   .aqb-redesign-root .aqb-mobile-badge-preview-dock {
     flex-shrink: 0;
     z-index: 20;
+    gap: 0;
+  }
+
+  .aqb-redesign-root .aqb-mobile-steps-chrome,
+  .aqb-redesign-root .aqb-mobile-controls-chrome {
+    flex-shrink: 0;
+    background: #f8f7f4;
+    border: 1px solid rgba(2, 19, 43, 0.1);
+  }
+
+  .aqb-redesign-root .aqb-mobile-steps-chrome {
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    overflow: hidden;
+  }
+
+  .aqb-redesign-root .aqb-mobile-controls-chrome {
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .aqb-redesign-root .aqb-mobile-preview-card {
+    border-radius: 0;
+    border-left: 1px solid rgba(2, 19, 43, 0.1);
+    border-right: 1px solid rgba(2, 19, 43, 0.1);
+    border-top: 1px solid rgba(2, 19, 43, 0.1);
+    border-bottom: 1px solid rgba(2, 19, 43, 0.1);
+  }
+
+  .aqb-redesign-root .aqb-mobile-chrome-bar {
+    display: flex;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    margin: 0;
+    border: none;
+    background: #f8f7f4;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .aqb-redesign-root .aqb-mobile-controls-chrome > .aqb-mobile-chrome-bar {
+    background: #fff;
+  }
+
+  .aqb-redesign-root .aqb-mobile-chrome-bar--collapse {
+    border-bottom: 1px solid rgba(2, 19, 43, 0.08);
+  }
+
+  .aqb-redesign-root .aqb-mobile-chrome-bar__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #02132b;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    text-align: left;
+  }
+
+  .aqb-redesign-root .aqb-mobile-chrome-bar__title--complete {
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .aqb-redesign-root .aqb-mobile-chrome-bar__action {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7f92;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .aqb-redesign-root .aqb-mobile-chrome-bar__chevron {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
+  .aqb-redesign-root .aqb-mobile-steps-portal {
+    width: 100%;
+  }
+
+  .aqb-redesign-root .aqb-mobile-steps-portal.is-collapsed,
+  .aqb-redesign-root .aqb-mobile-steps-portal[hidden] {
+    display: none !important;
+  }
+
+  .aqb-redesign-root .aqb-mobile-steps-portal .aqb-badge-mobile-step-nav {
+    border-bottom: none;
+    background: #f8f7f4;
+    padding-top: 4px;
+    padding-bottom: 10px;
+  }
+
+  .aqb-redesign-root .aqb-mobile-controls-chrome .aqb-mobile-badge-editor-tools {
+    border: none;
+    border-radius: 0;
+    background: #fff;
   }
 
   .aqb-redesign-root .aqb-mobile-badge-preview-dock > .overflow-hidden.rounded-lg {

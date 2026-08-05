@@ -9,6 +9,7 @@ import React, {
   useRef,
   useCallback,
 } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "@remix-run/react";
 import { ArrowPathIcon } from "@heroicons/react/24/solid";
 import {
@@ -60,6 +61,7 @@ import { AqbBadgeOrderQtySection } from "./AqbBadgeOrderQtySection";
 import { AqbDeskSignOrderSection } from "./AqbDeskSignOrderSection";
 import { BadgeQtyStepper } from "./BadgeQtyStepper";
 import { AqbToolActionsRow } from "./AqbToolActionsRow";
+import { AqbMobileActionsBar } from "./AqbMobileActionsBar";
 import {
   AqbResetDesignConfirmModal,
   type ResetDesignConfirmMode,
@@ -3368,6 +3370,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     return () => mq.removeEventListener("change", sync);
   }, []);
 
+  /** Mobile sticky chrome: steps + preview + control panel collapse. */
+  const [mobileStepsExpanded, setMobileStepsExpanded] = useState(true);
+  const [mobileControlPanelExpanded, setMobileControlPanelExpanded] =
+    useState(false);
+  const [mobileStepsPortalEl, setMobileStepsPortalEl] =
+    useState<HTMLDivElement | null>(null);
+
   const embeddedMobileBadgeShell =
     storeChromeless && usesAqbShell && isMobileViewport;
   /** User dismissed focus mode to browse store content; re-lock on next editor interaction. */
@@ -5371,6 +5380,98 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     badge.lines,
     hasStep3TextEntered,
   ]);
+
+  /** Collapsed mobile steps chrome — next incomplete step (not the open accordion). */
+  const mobileActiveStepSummary = useMemo(() => {
+    if (!usesAqbShell) return null;
+
+    type StepEntry = { label: string; done: boolean };
+
+    if (isDeskSignVariant(variant)) {
+      const materialDone = multipleBadges.length > 0;
+      const sizeDone = selectedDeskSignSize !== null;
+      const colorsDone = deskSignColorsStepComplete(
+        deskSignMaterial,
+        hasChosenBackgroundColor,
+        hasChosenDeskSignStandColor,
+      );
+      const textDone = hasStep3TextEntered;
+      const mountDone =
+        deskSignMaterial !== "plastic" ||
+        (Boolean(badge.deskSignMountType) &&
+          Boolean(badge.deskSignAluminumColor));
+
+      const entries: StepEntry[] = [
+        { label: "Material", done: materialDone },
+        { label: "Size", done: sizeDone },
+        ...(deskSignShowColorsStep
+          ? [{ label: "Colors", done: colorsDone }]
+          : []),
+        { label: "Text", done: textDone },
+        ...(deskSignMaterial === "plastic"
+          ? [{ label: "Mount", done: mountDone }]
+          : []),
+      ];
+      const idx = entries.findIndex((e) => !e.done);
+      if (idx < 0) {
+        return { allComplete: true as const };
+      }
+      return {
+        allComplete: false as const,
+        number: idx + 1,
+        label: entries[idx].label,
+      };
+    }
+
+    if (variant === "badge") {
+      const entries: StepEntry[] = [
+        { label: "Template", done: multipleBadges.length > 0 },
+        ...(needsBadgeStyleStep
+          ? [{ label: "Style", done: hasChosenBadgeStyle }]
+          : []),
+        { label: "Background", done: hasChosenBackgroundColor },
+        ...(showBadgeIconStep
+          ? [{ label: "Icon", done: true }]
+          : []),
+        { label: "Text", done: hasStep3TextValid },
+        { label: "Backing", done: sectionsOpened.backing },
+      ];
+      const idx = entries.findIndex((e) => !e.done);
+      if (idx < 0) {
+        return { allComplete: true as const };
+      }
+      return {
+        allComplete: false as const,
+        number: idx + 1,
+        label: entries[idx].label,
+      };
+    }
+
+    return null;
+  }, [
+    usesAqbShell,
+    variant,
+    multipleBadges.length,
+    selectedDeskSignSize,
+    deskSignMaterial,
+    deskSignShowColorsStep,
+    hasChosenBackgroundColor,
+    hasChosenDeskSignStandColor,
+    hasChosenBadgeStyle,
+    hasStep3TextEntered,
+    hasStep3TextValid,
+    needsBadgeStyleStep,
+    showBadgeIconStep,
+    sectionsOpened.backing,
+    badge.deskSignMountType,
+    badge.deskSignAluminumColor,
+  ]);
+
+  const mobileStepsChromeTitle = mobileActiveStepSummary?.allComplete
+    ? "Checkout or add more in the control panel"
+    : mobileActiveStepSummary
+      ? `Step ${mobileActiveStepSummary.number}: ${mobileActiveStepSummary.label}`
+      : "Steps";
 
   const totalPriceAllBadges = useMemo(() => {
     if (multipleBadges.length === 0) return "0.00";
@@ -10235,7 +10336,68 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             </div>
           ) : null}
 
-          <div className="overflow-hidden rounded-lg border border-[rgba(2, 19, 43,0.1)] bg-white">
+          {usesAqbShell ? (
+            <div className="aqb-mobile-steps-chrome">
+              {!mobileStepsExpanded ? (
+                <button
+                  type="button"
+                  className="aqb-mobile-chrome-bar"
+                  onClick={() => setMobileStepsExpanded(true)}
+                  aria-expanded={false}
+                >
+                  <span
+                    className={`aqb-mobile-chrome-bar__title${
+                      mobileActiveStepSummary?.allComplete
+                        ? " aqb-mobile-chrome-bar__title--complete"
+                        : ""
+                    }`}
+                  >
+                    {mobileStepsChromeTitle}
+                  </span>
+                  <span className="aqb-mobile-chrome-bar__action">
+                    Show all steps
+                    <ChevronDownIcon className="aqb-mobile-chrome-bar__chevron" />
+                  </span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="aqb-mobile-chrome-bar aqb-mobile-chrome-bar--collapse"
+                  onClick={() => setMobileStepsExpanded(false)}
+                  aria-expanded={true}
+                >
+                  <span
+                    className={`aqb-mobile-chrome-bar__title${
+                      mobileActiveStepSummary?.allComplete
+                        ? " aqb-mobile-chrome-bar__title--complete"
+                        : ""
+                    }`}
+                  >
+                    {mobileStepsChromeTitle}
+                  </span>
+                  <span className="aqb-mobile-chrome-bar__action">
+                    Hide steps
+                    <ChevronUpIcon className="aqb-mobile-chrome-bar__chevron" />
+                  </span>
+                </button>
+              )}
+              <div
+                ref={setMobileStepsPortalEl}
+                className={`aqb-mobile-steps-portal${
+                  mobileStepsExpanded ? "" : " is-collapsed"
+                }`}
+                hidden={!mobileStepsExpanded}
+              />
+            </div>
+          ) : null}
+
+          <div
+            className={`overflow-hidden border border-[rgba(2, 19, 43,0.1)] bg-white ${
+              usesAqbShell
+                ? "aqb-mobile-preview-card rounded-none"
+                : "rounded-lg"
+            }`}
+          >
             {!usesAqbShell ? (
               <AqbPreviewPanelHeader
                 centered
@@ -10381,6 +10543,76 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               <div className="shrink-0 md:hidden">{aqbBadgeToolActions}</div>
             ) : null}
           </div>
+
+          {usesAqbShell ? (
+            <div className="aqb-mobile-controls-chrome">
+              {!mobileControlPanelExpanded ? (
+                <button
+                  type="button"
+                  className="aqb-mobile-chrome-bar"
+                  onClick={() => setMobileControlPanelExpanded(true)}
+                  aria-expanded={false}
+                >
+                  <span className="aqb-mobile-chrome-bar__title">
+                    Control Panel
+                  </span>
+                  <span className="aqb-mobile-chrome-bar__action">
+                    View full Panel
+                    <ChevronDownIcon className="aqb-mobile-chrome-bar__chevron" />
+                  </span>
+                </button>
+              ) : (
+                <div className="aqb-mobile-controls-chrome__expanded">
+                  <button
+                    type="button"
+                    className="aqb-mobile-chrome-bar aqb-mobile-chrome-bar--collapse"
+                    onClick={() => setMobileControlPanelExpanded(false)}
+                    aria-expanded={true}
+                  >
+                    <span className="aqb-mobile-chrome-bar__title">
+                      Control Panel
+                    </span>
+                    <span className="aqb-mobile-chrome-bar__action">
+                      Hide panel
+                      <ChevronUpIcon className="aqb-mobile-chrome-bar__chevron" />
+                    </span>
+                  </button>
+                  <div className="aqb-mobile-badge-editor-tools">
+                    <AqbMobileActionsBar
+                      labelProduct={config.labelProduct.toLowerCase()}
+                      labelProductPlural={config.labelProductPlural.toLowerCase()}
+                      hasBadges={multipleBadges.length > 0}
+                      showAddMultiple={variant === "badge"}
+                      highlightViewAll={highlightViewAllAfterBulk}
+                      onViewAll={() => {
+                        setHighlightViewAllAfterBulk(false);
+                        setShowBadgeGridModal(true);
+                      }}
+                      onAddMultiple={openAddMultipleModal}
+                      onCopy={duplicateCurrentBadge}
+                      onDelete={deleteCurrentBadgeFromPreview}
+                      onDeleteAll={deleteAllBadgesFromDesign}
+                      onUndo={handleUndo}
+                      undoDisabled={undoHistory.length === 0}
+                      onReset={promptResetBadge}
+                      showResetAll={multipleBadges.length > 1}
+                      onResetAll={promptResetAllBadges}
+                      showApplyFormatToAll={multipleBadges.length > 1}
+                      onApplyFormatToAll={applyAllFormattingToAll}
+                      applyFormatLabel={`Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`}
+                      onHelp={() => setShowHelpModal(true)}
+                      onSave={() => {
+                        void saveBadge();
+                      }}
+                      onLoad={() => {
+                        void onLoadDesignClick();
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
 
         {/* LEFT COLUMN - Controls */}
@@ -10394,7 +10626,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           <div
             className={`w-full shrink-0 flex-col border-b border-[rgba(2, 19, 43,0.1)] bg-[#F8F7F4] flex ${
               usesAqbShell
-                ? "gap-0 px-0 py-0 md:py-[14px]"
+                ? "gap-0 px-0 py-0 md:py-[14px] max-md:contents"
                 : "hidden gap-3 px-5 py-4 sm:px-6 md:flex"
             }`}
           >
@@ -10421,14 +10653,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               </div>
               {usesAqbShell ? cloudLibrarySaveHint : null}
             </div>
-            <div
-              className={`flex w-full min-w-0 items-center gap-y-2 gap-x-0.5 sm:flex-nowrap sm:justify-between sm:gap-0 ${
-                usesAqbShell
-                  ? "aqb-badge-mobile-step-nav shrink-0 z-10 flex-nowrap border-b border-[rgba(2, 19, 43,0.1)] bg-[#F8F7F4] py-2.5 md:static md:border-0 md:bg-transparent md:py-0"
-                  : "flex-wrap"
-              }`}
-            >
-              {(() => {
+            {(() => {
+              const stepNavItems = (() => {
                 if (isDeskSignVariant(variant)) {
                   const materialDone = multipleBadges.length > 0;
                   const sizeDone = selectedDeskSignSize !== null;
@@ -11018,8 +11244,26 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   </React.Fragment>
                   );
                 });
-              })()}
-            </div>
+              })();
+              const stepNav = (
+                <div
+                  className={`flex w-full min-w-0 items-center justify-center gap-y-2 gap-x-0.5 sm:flex-nowrap sm:justify-between sm:gap-0 ${
+                    usesAqbShell
+                      ? "aqb-badge-mobile-step-nav shrink-0 z-10 flex-nowrap border-b border-[rgba(2, 19, 43,0.1)] bg-[#F8F7F4] py-2.5 md:static md:border-0 md:bg-transparent md:py-0"
+                      : "flex-wrap"
+                  }`}
+                >
+                  {stepNavItems}
+                </div>
+              );
+              if (usesAqbShell && isMobileViewport) {
+                if (mobileStepsExpanded && mobileStepsPortalEl) {
+                  return createPortal(stepNav, mobileStepsPortalEl);
+                }
+                return null;
+              }
+              return stepNav;
+            })()}
           </div>
 
           <div
@@ -11033,26 +11277,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 : "mb-4 px-4 md:px-5"
             }`}
           >
-            {usesAqbShell ? (
-              <div className="aqb-mobile-badge-editor-tools md:hidden overflow-hidden rounded-lg border border-[rgba(2, 19, 43,0.1)] bg-white mb-2">
-                <AqbPreviewActionsRow {...previewActionsRowProps} />
-                {aqbBadgeToolActions ? (
-                  <div className="shrink-0">{aqbBadgeToolActions}</div>
-                ) : null}
-              </div>
-            ) : null}
-
-            {/* <button
-              className="px-2 py-1 text-xs border rounded bg-gray-100 hover:bg-gray-200"
-              onClick={() => {
-                console.log("[BadgeDesignerRedesign] Refreshing templates...");
-                setTemplateRefreshKey((prev) => prev + 1);
-              }}
-              title="Refresh Templates (Ctrl+R)"
-            >
-              Refresh
-            </button> */}
-
             {/* Template Selector - Image Swatches / desk sign material */}
             <div
               ref={templateSectionRef}
