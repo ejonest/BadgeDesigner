@@ -3095,6 +3095,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const badgeTextStepGuard = needsBadgeStyleStep ? 4 : 3;
   /** Guard when opening text — includes icon choice when that step is shown. */
   const badgeOpenTextGuard = needsBadgeStyleStep ? 5 : 4;
+  /** Guard when opening backing — prior steps only (not backing itself). */
   const badgeBackingStepGuard = needsBadgeStyleStep ? 6 : 5;
 
   const badgeBackgroundStepTitle = "Step 2: Pick a background color";
@@ -3231,8 +3232,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           : "enter your text",
       );
     }
-    const backingGate = needsBadgeStyleStep ? 6 : 5;
-    if (forStep >= backingGate && config.hasBacking && !sBacking) {
+    // Cart / finalize only — opening the backing step uses badgeBackingStepGuard
+    // (textGate + 1), which must not require backing to already be chosen.
+    const backingCartGate = needsBadgeStyleStep ? 7 : 6;
+    if (forStep >= backingCartGate && config.hasBacking && !sBacking) {
       actions.push("choose a badge attachment");
     }
     return formatIncompleteStepActions(actions);
@@ -3252,10 +3255,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         ? 6
         : 5
       : config.hasBacking
-        ? // Style step shifts text→5 / backing→6; cart check must reach backing.
+        ? // Style step shifts text→6 / backing cart check→7.
           needsBadgeStyleStep
-          ? 6
-          : 5
+          ? 7
+          : 6
         : 3;
 
   // Refs for step sections to enable scroll-into-view
@@ -3447,7 +3450,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       | "badgeIcon"
       | "textLines"
       | "backing",
-    forStep?: 2 | 3 | 4 | 5 | 6,
+    forStep?: 2 | 3 | 4 | 5 | 6 | 7,
   ) => {
     if (forStep != null) {
       const msg = getIncompleteStepsMessage(forStep);
@@ -11077,11 +11080,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 )[] =
                   variant === "badge" && needsBadgeStyleStep
                     ? showBadgeIconStep
-                      ? [undefined, 2, 3, 4, 4, 5]
-                      : [undefined, 2, 3, 4, 5]
+                      ? [undefined, 2, 3, 4, badgeOpenTextGuard, badgeBackingStepGuard]
+                      : [undefined, 2, 3, badgeOpenTextGuard, badgeBackingStepGuard]
                     : showBadgeIconStep
-                      ? [undefined, 2, 3, 3, 4]
-                      : [undefined, 2, 3, 4];
+                      ? [undefined, 2, 3, badgeOpenTextGuard, badgeBackingStepGuard]
+                      : [undefined, 2, badgeOpenTextGuard, badgeBackingStepGuard];
                 return steps.map((step, i) => {
                   const badgeSectionKey =
                     variant === "badge" ? badgeMobileStepKeys[i] : undefined;
