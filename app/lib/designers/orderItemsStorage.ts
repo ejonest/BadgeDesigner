@@ -469,21 +469,15 @@ export async function updateDesignerOrderItemsStatusByDesignId(
 export async function releaseReplacedCartOrderItems(
   def: DesignerDefinition,
   designId: string,
-  lineIndex?: number | null,
 ) {
   if (!supabaseAdmin) {
     throw new Error("Supabase is not configured.");
   }
-  let query = supabaseAdmin
+  const { error } = await supabaseAdmin
     .from(def.orderItemsTable)
     .update({ status: "draft", updated_at: getPacificTimestamp() })
     .eq("design_id", designId)
     .eq("status", "in_cart");
-  // Editing one cart line must leave the design's other lines in the cart alone.
-  if (typeof lineIndex === "number" && Number.isInteger(lineIndex) && lineIndex >= 0) {
-    query = query.eq(def.lineIdColumn, `${def.lineIdPrefix}-${lineIndex}`);
-  }
-  const { error } = await query;
   if (error) throw error;
 }
 
