@@ -17,6 +17,7 @@
       "routes/api.delete-plaque-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.dev.badge-photo-calibrate.save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.delete-badge-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.dev.desk-sign-image-crop.save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-plaque-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-desk-sign-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.delete-sign-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -24,6 +25,7 @@
       "routes/api.saved-plaque-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-desk-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-desk-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.dev.plaque-calibrate.save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-sign-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-desk-sign-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-plaque-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -36,8 +38,10 @@
       "routes/api.upload-desk-sign-logo": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/dev.badge-photo-calibrate": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.cart-design-replaced": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-desk-sign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-plaque-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/dev.desk-sign-image-crop": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-plaque-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/badge-designer-redesign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -51,6 +55,7 @@
       "routes/api.save-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.upload-sign-logo": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/dev.plaque-calibrate": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-sign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.shopify-product": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -67,6 +72,7 @@
       "routes/api.update-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.upload-image": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.add-to-cart": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.cart-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-plaque": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/deployment-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -157,6 +163,15 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.dev.desk-sign-image-crop.save": {
+        "file": "app/routes/api.dev.desk-sign-image-crop.save.tsx",
+        "id": "routes/api.dev.desk-sign-image-crop.save",
+        "path": "api/dev/desk-sign-image-crop/save",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.link-order-plaque-to-supabase": {
         "file": "app/routes/api.link-order-plaque-to-supabase.tsx",
         "id": "routes/api.link-order-plaque-to-supabase",
@@ -215,6 +230,15 @@
         "file": "app/routes/api.autosave-desk-sign-design.tsx",
         "id": "routes/api.autosave-desk-sign-design",
         "path": "api/autosave-desk-sign-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.dev.plaque-calibrate.save": {
+        "file": "app/routes/api.dev.plaque-calibrate.save.tsx",
+        "id": "routes/api.dev.plaque-calibrate.save",
+        "path": "api/dev/plaque-calibrate/save",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -328,6 +352,15 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.cart-design-replaced": {
+        "file": "app/routes/api.cart-design-replaced.tsx",
+        "id": "routes/api.cart-design-replaced",
+        "path": "api/cart-design-replaced",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.save-draft-desk-sign": {
         "file": "app/routes/api.save-draft-desk-sign.tsx",
         "id": "routes/api.save-draft-desk-sign",
@@ -341,6 +374,15 @@
         "file": "app/routes/api.saved-plaque-designs.tsx",
         "id": "routes/api.saved-plaque-designs",
         "path": "api/saved-plaque-designs",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/dev.desk-sign-image-crop": {
+        "file": "app/routes/dev.desk-sign-image-crop.tsx",
+        "id": "routes/dev.desk-sign-image-crop",
+        "path": "dev/desk-sign-image-crop",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -458,6 +500,15 @@
         "file": "app/routes/api.upload-sign-logo.tsx",
         "id": "routes/api.upload-sign-logo",
         "path": "api/upload-sign-logo",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/dev.plaque-calibrate": {
+        "file": "app/routes/dev.plaque-calibrate.tsx",
+        "id": "routes/dev.plaque-calibrate",
+        "path": "dev/plaque-calibrate",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -602,6 +653,15 @@
         "file": "app/routes/api.add-to-cart.tsx",
         "id": "routes/api.add-to-cart",
         "path": "api/add-to-cart",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.cart-design": {
+        "file": "app/routes/api.cart-design.tsx",
+        "id": "routes/api.cart-design",
+        "path": "api/cart-design",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -843,6 +903,12 @@
         "path": "api/delete-badge-design-milestone",
         "parentId": "root"
       },
+      "routes/api.dev.desk-sign-image-crop.save": {
+        "file": "routes/api.dev.desk-sign-image-crop.save.tsx",
+        "id": "routes/api.dev.desk-sign-image-crop.save",
+        "path": "api/dev/desk-sign-image-crop/save",
+        "parentId": "root"
+      },
       "routes/api.link-order-plaque-to-supabase": {
         "file": "routes/api.link-order-plaque-to-supabase.tsx",
         "id": "routes/api.link-order-plaque-to-supabase",
@@ -883,6 +949,12 @@
         "file": "routes/api.autosave-desk-sign-design.tsx",
         "id": "routes/api.autosave-desk-sign-design",
         "path": "api/autosave-desk-sign-design",
+        "parentId": "root"
+      },
+      "routes/api.dev.plaque-calibrate.save": {
+        "file": "routes/api.dev.plaque-calibrate.save.tsx",
+        "id": "routes/api.dev.plaque-calibrate.save",
+        "path": "api/dev/plaque-calibrate/save",
         "parentId": "root"
       },
       "routes/api.saved-sign-design-detail": {
@@ -957,6 +1029,12 @@
         "path": "api/autosave-sign-design",
         "parentId": "root"
       },
+      "routes/api.cart-design-replaced": {
+        "file": "routes/api.cart-design-replaced.tsx",
+        "id": "routes/api.cart-design-replaced",
+        "path": "api/cart-design-replaced",
+        "parentId": "root"
+      },
       "routes/api.save-draft-desk-sign": {
         "file": "routes/api.save-draft-desk-sign.tsx",
         "id": "routes/api.save-draft-desk-sign",
@@ -967,6 +1045,12 @@
         "file": "routes/api.saved-plaque-designs.tsx",
         "id": "routes/api.saved-plaque-designs",
         "path": "api/saved-plaque-designs",
+        "parentId": "root"
+      },
+      "routes/dev.desk-sign-image-crop": {
+        "file": "routes/dev.desk-sign-image-crop.tsx",
+        "id": "routes/dev.desk-sign-image-crop",
+        "path": "dev/desk-sign-image-crop",
         "parentId": "root"
       },
       "routes/api.saved-design-detail": {
@@ -1045,6 +1129,12 @@
         "file": "routes/api.upload-sign-logo.tsx",
         "id": "routes/api.upload-sign-logo",
         "path": "api/upload-sign-logo",
+        "parentId": "root"
+      },
+      "routes/dev.plaque-calibrate": {
+        "file": "routes/dev.plaque-calibrate.tsx",
+        "id": "routes/dev.plaque-calibrate",
+        "path": "dev/plaque-calibrate",
         "parentId": "root"
       },
       "routes/api.autosave-design": {
@@ -1141,6 +1231,12 @@
         "file": "routes/api.add-to-cart.tsx",
         "id": "routes/api.add-to-cart",
         "path": "api/add-to-cart",
+        "parentId": "root"
+      },
+      "routes/api.cart-design": {
+        "file": "routes/api.cart-design.tsx",
+        "id": "routes/api.cart-design",
+        "path": "api/cart-design",
         "parentId": "root"
       },
       "routes/api.save-design": {

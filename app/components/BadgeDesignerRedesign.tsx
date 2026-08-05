@@ -10352,6 +10352,19 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           </div>
         </div>
       ) : null}
+      {cartEditDesignId ? (
+        <div
+          className={`max-w-[1320px] mx-auto w-full mb-2 ${
+            usesAqbShell ? "px-4 md:px-10" : "px-4 md:px-8"
+          }`}
+          role="status"
+        >
+          <div className="rounded-lg border border-blue-200 bg-blue-50 text-blue-950 px-3 py-2.5 text-sm leading-snug">
+            <span className="font-semibold">Editing your cart item.</span>{" "}
+            Adding to cart will replace it.
+          </div>
+        </div>
+      ) : null}
       {!usesAqbShell ? (
         <div
           className="max-w-[1320px] mx-auto w-full mb-3 px-4 md:px-8"
@@ -10377,13 +10390,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             : "gap-5 px-4 md:px-8 h-screen md:h-auto"
         }`}
       >
-        {cartEditDesignId ? (
-          <div className="flex-shrink-0 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
-            <strong className="font-semibold">Editing your cart item.</strong>{" "}
-            Adding to cart will replace it.
-          </div>
-        ) : null}
-
         {/* MOBILE: badge preview docked at top; editor scrolls below */}
         <div
           className={`md:hidden flex flex-col flex-shrink-0 ${
