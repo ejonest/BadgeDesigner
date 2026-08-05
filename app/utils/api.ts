@@ -19,16 +19,10 @@ function normalizeEnvString(val: any): string | undefined {
 
 export interface AddToCartOptions {
   /**
-   * Design id of the cart line this design replaces. The theme removes lines
-   * carrying that Design ID once the new lines are added.
+   * Design id of the cart lines this design replaces. The theme removes every
+   * line carrying that Design ID once the new lines are added.
    */
   replaceDesignId?: string | null;
-  /**
-   * Index of the single line being replaced. A design can span several cart
-   * lines, so without this the theme would drop the siblings the customer did
-   * not edit.
-   */
-  replaceBadgeIndex?: number | null;
 }
 
 export interface BadgeDesignData {
@@ -310,19 +304,12 @@ export function createApi(
       return response.json();
     },
 
-    /** Housekeeping after an edited design replaced its cart line; failures are not fatal. */
-    async markCartDesignReplaced(
-      designId: string,
-      badgeIndex?: number | null,
-    ): Promise<void> {
+    /** Housekeeping after an edited design replaced its cart lines; failures are not fatal. */
+    async markCartDesignReplaced(designId: string): Promise<void> {
       await fetch("/api/cart-design-replaced", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          designId,
-          designer: designerId,
-          ...(typeof badgeIndex === "number" ? { badgeIndex } : {}),
-        }),
+        body: JSON.stringify({ designId, designer: designerId }),
       });
     },
 
@@ -404,14 +391,10 @@ export function createApi(
       }
       const items = sanitizeCartLineItems(cartItems);
       const replaceDesignId = options?.replaceDesignId || undefined;
-      const replaceBadgeIndex =
-        typeof options?.replaceBadgeIndex === 'number'
-          ? options.replaceBadgeIndex
-          : undefined;
       const requestId = `cart-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       try {
         if (isDesignerEmbeddedInStorefront()) {
-          this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items, replaceDesignId, replaceBadgeIndex } });
+          this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items, replaceDesignId } });
           const ack = await waitForStorefrontCartAddAck(requestId);
           if (ack.success === false) {
             return {
@@ -442,7 +425,7 @@ export function createApi(
           this.sendToParent({ action: 'add-to-cart', payload: badgeData });
           return { success: true, message: 'Redirecting to add item to cart', cartData: { redirectUrl: cartUrl }, badgeData };
         }
-        this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items, replaceDesignId, replaceBadgeIndex } });
+        this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items, replaceDesignId } });
         const ack = await waitForStorefrontCartAddAck(requestId);
         if (ack.success === false) {
           return { success: false, message: ack.error || 'Failed to add to cart' };
@@ -459,7 +442,7 @@ export function createApi(
         if (items.length === 1) {
           this.sendToParent({ action: 'add-to-cart', payload: items[0] });
         } else {
-          this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items, replaceDesignId, replaceBadgeIndex } });
+          this.sendToParent({ action: 'add-to-cart-multiple', requestId, payload: { items, replaceDesignId } });
         }
         throw error;
       }
