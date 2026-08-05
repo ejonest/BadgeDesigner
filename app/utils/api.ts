@@ -304,12 +304,17 @@ export function createApi(
       return response.json();
     },
 
-    /** Housekeeping after an edited design replaced its cart lines; failures are not fatal. */
+    /**
+     * Housekeeping after an edited design replaced its cart lines; failures are not
+     * fatal. `keepalive` so the delete still lands when the theme redirects to the
+     * cart immediately after the add succeeds.
+     */
     async markCartDesignReplaced(designId: string): Promise<void> {
       await fetch("/api/cart-design-replaced", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ designId, designer: designerId }),
+        keepalive: true,
       });
     },
 
