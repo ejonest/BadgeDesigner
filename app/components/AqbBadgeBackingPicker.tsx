@@ -9,7 +9,7 @@ import {
 } from "../constants/badgeAqbBacking";
 
 interface AqbBadgeBackingPickerProps {
-  value: BadgeBackingKey;
+  value: BadgeBackingKey | null;
   onChange: (value: BadgeBackingKey) => void;
 }
 
@@ -19,7 +19,7 @@ export const AqbBadgeBackingPicker: React.FC<AqbBadgeBackingPickerProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const meta = BADGE_AQB_BACKING_META[value];
+  const meta = value ? BADGE_AQB_BACKING_META[value] : null;
 
   useEffect(() => {
     if (!open) return;
@@ -36,13 +36,15 @@ export const AqbBadgeBackingPicker: React.FC<AqbBadgeBackingPickerProps> = ({
         <button
           type="button"
           id="backing-select"
-          className={`aqb-backing-select-trigger ${open ? "is-open" : ""}`}
+          className={`aqb-backing-select-trigger ${open ? "is-open" : ""}${
+            !value ? " is-placeholder" : ""
+          }`}
           aria-haspopup="listbox"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
         >
           <span className="aqb-backing-select-trigger-label">
-            {badgeAqbBackingOptionLabel(value)}
+            {value ? badgeAqbBackingOptionLabel(value) : "Please choose one"}
           </span>
           <span className="aqb-backing-chevron" aria-hidden>
             ▼
@@ -81,28 +83,42 @@ export const AqbBadgeBackingPicker: React.FC<AqbBadgeBackingPickerProps> = ({
         ) : null}
       </div>
 
-      <div className="aqb-backing-info">
-        <div className="aqb-bi-icon" aria-hidden>
-          {meta.emoji}
-        </div>
-        <div className="aqb-bi-body">
-          <div className="aqb-bi-name">
-            <span>{meta.fullName}</span>
-            {meta.popular ? (
-              <span className="aqb-bi-popular">Most popular</span>
-            ) : null}
+      {meta ? (
+        <div className="aqb-backing-info">
+          <div className="aqb-bi-icon" aria-hidden>
+            {meta.emoji}
           </div>
-          <p className="aqb-bi-desc">{meta.description}</p>
-        </div>
-        <div className="aqb-bi-price">
-          <div className="aqb-bi-price-val">
-            {badgeAqbBackingPriceLabel(value) === "included"
-              ? "Included"
-              : badgeAqbBackingPriceLabel(value)}
+          <div className="aqb-bi-body">
+            <div className="aqb-bi-name">
+              <span>{meta.fullName}</span>
+              {meta.popular ? (
+                <span className="aqb-bi-popular">Most popular</span>
+              ) : null}
+            </div>
+            <p className="aqb-bi-desc">{meta.description}</p>
           </div>
-          <div className="aqb-bi-modifier">per badge</div>
+          <div className="aqb-bi-price">
+            <div className="aqb-bi-price-val">
+              {badgeAqbBackingPriceLabel(value!) === "included"
+                ? "Included"
+                : badgeAqbBackingPriceLabel(value!)}
+            </div>
+            <div className="aqb-bi-modifier">per badge</div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="aqb-backing-info aqb-backing-info--empty">
+          <div className="aqb-bi-body">
+            <div className="aqb-bi-name">
+              <span>Choose an attachment</span>
+            </div>
+            <p className="aqb-bi-desc">
+              Select magnetic, pin, or adhesive to finish this step. Magnetic is
+              our most popular option.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

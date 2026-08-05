@@ -7,9 +7,12 @@ import {
   BADGE_ICON_LABELS,
 } from "../constants/badgeIcons";
 
+/** `null` = no choice yet; `"none"` = explicit no icon; otherwise an icon id. */
+export type AqbBadgeIconPickerValue = BadgeIconId | "none" | null;
+
 interface AqbBadgeIconPickerProps {
-  value: BadgeIconId | undefined;
-  onChange: (value: BadgeIconId | undefined) => void;
+  value: AqbBadgeIconPickerValue;
+  onChange: (value: BadgeIconId | "none") => void;
   /** Compact grid for Step 2 background panel (with corner style). */
   variant?: "default" | "inline";
 }
@@ -19,7 +22,7 @@ export const AqbBadgeIconPicker: React.FC<AqbBadgeIconPickerProps> = ({
   onChange,
   variant = "default",
 }) => {
-  const noneSelected = value == null;
+  const noneSelected = value === "none";
   const inline = variant === "inline";
 
   return (
@@ -48,7 +51,7 @@ export const AqbBadgeIconPicker: React.FC<AqbBadgeIconPickerProps> = ({
           className={`aqb-badge-icon-picker__cell ${
             noneSelected ? "is-selected" : ""
           }`}
-          onClick={() => onChange(undefined)}
+          onClick={() => onChange("none")}
           title="No icon"
         >
           <span className="aqb-badge-icon-picker__none" aria-hidden>
