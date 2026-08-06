@@ -2363,15 +2363,25 @@
     height: 100dvh;
   }
 
+  /*
+   * iOS anchors `position: fixed` to the layout viewport, so opening the
+   * keyboard slides the top of the designer (the badge preview) above the
+   * visible area. --aqb-vv-top / --aqb-vv-height mirror the visual viewport so
+   * the embed tracks only the region actually on screen; the designer inside
+   * sizes itself in dvh/vh and re-fits automatically.
+   */
   html.aqb-designer-focus body.aqb-designer-product .aqb-designer-embed,
   html.aqb-designer-focus
     body.aqb-designer-product
     .badge-designer-iframe-outer {
     position: fixed;
-    inset: 0;
+    top: var(--aqb-vv-top, 0px);
+    left: 0;
+    right: 0;
+    bottom: auto;
     z-index: 80;
     width: 100%;
-    height: 100dvh;
+    height: var(--aqb-vv-height, 100dvh);
     margin: 0;
     background: #f0ede6;
   }
@@ -2381,7 +2391,7 @@
     body.aqb-designer-product
     .badge-designer-iframe-outer
     iframe {
-    height: 100dvh !important;
+    height: 100% !important;
     min-height: 0 !important;
     touch-action: auto;
   }

@@ -1,8 +1,10 @@
 /**
  * Gadget Global Action: on_order_paid — badge + sign + plaque (split POST to Vercel)
  *
- * Cart line items include property "Designer" = "badge" | "sign" | "plaque" (set by BadgeDesigner).
- * Lines without "Designer" are treated as badges (backward compatible).
+ * Cart line items include property "_Designer" (or legacy "Designer") =
+ * "badge" | "sign" | "plaque" (set by BadgeDesigner). Lines without Designer
+ * are treated as badges (backward compatible). Internal cart properties use a
+ * leading underscore so Shopify hides them from customer-facing checkout.
  *
  * Env vars (Gadget → Settings → Environment variables):
  *   LINK_ORDER_SECRET             — Bearer token; must match Vercel LINK_ORDER_SECRET
@@ -44,9 +46,18 @@ function getPropertiesMap(lineItem) {
   }, {});
 }
 
+function prop(props, name) {
+  if (!props) return undefined;
+  const hidden = `_${name}`;
+  const v = props[hidden] ?? props[name];
+  if (v == null) return undefined;
+  const s = String(v).trim();
+  return s === "" ? undefined : s;
+}
+
 /** @returns {"badge"|"sign"|"plaque"} */
 function designerLineKind(props) {
-  const d = props["Designer"];
+  const d = prop(props, "Designer");
   if (d == null || String(d).trim() === "") return "badge";
   const t = String(d).trim().toLowerCase();
   if (t === "sign") return "sign";
@@ -62,14 +73,14 @@ async function collectLinePayloads(order, api, logger) {
 
   for (const item of lineItems) {
     const props = getPropertiesMap(item);
-    const designId = props["Design ID"] ? String(props["Design ID"]).trim() : null;
-    const gadgetDesignId = props["Gadget Design ID"]
-      ? String(props["Gadget Design ID"]).trim()
-      : undefined;
+    const designId = prop(props, "Design ID");
+    const gadgetDesignId = prop(props, "Gadget Design ID");
     if (!designId && !gadgetDesignId) continue;
 
     const indexRaw =
-      props["Badge Index"] ?? props["Sign Index"] ?? props["Plaque Index"];
+      prop(props, "Badge Index") ??
+      prop(props, "Sign Index") ??
+      prop(props, "Plaque Index");
     let badgeIndex =
       indexRaw !== undefined && indexRaw !== null && indexRaw !== ""
         ? parseInt(String(indexRaw).trim(), 10)

@@ -7,7 +7,10 @@ export type CartLineItemPayload = {
   properties: Record<string, string>;
 };
 
-const CART_PROPERTY_OMIT_KEYS = new Set(["Proof PDF URL"]);
+const CART_PROPERTY_OMIT_KEYS = new Set([
+  "Proof PDF URL",
+  "_Proof PDF URL",
+]);
 
 /**
  * Prepare line item properties for Shopify cart/add.js.
@@ -24,7 +27,13 @@ export function prepareCartLineItemPropertiesForShopify(
     if (!v) continue;
     if (v.length > SHOPIFY_LINE_ITEM_PROPERTY_MAX) {
       // Long thumbnail URLs break cart/add.js; order rows still have thumbnails by Design ID.
-      if (key === "Custom Thumbnail") continue;
+      if (
+        key === "Custom Thumbnail" ||
+        key === "_Custom Thumbnail" ||
+        key === "_custom_thumbnail"
+      ) {
+        continue;
+      }
       out[k] = v.slice(0, SHOPIFY_LINE_ITEM_PROPERTY_MAX);
     } else {
       out[k] = v;

@@ -8,7 +8,7 @@
 {%- liquid
   assign aqb_badge_piece_count = 0
   for item in cart.items
-    assign aqb_designer = item.properties['Designer'] | default: '' | strip | downcase
+    assign aqb_designer = item.properties['_Designer'] | default: item.properties['Designer'] | default: '' | strip | downcase
     assign aqb_is_custom_badge = false
     assign aqb_fs_handle = item.product.handle | default: '' | strip | downcase
     if aqb_fs_handle == 'custom-1x3-badge'
@@ -25,8 +25,12 @@
     if aqb_is_custom_badge == false and item.product.tags contains 'custom-icon-badge'
       assign aqb_is_custom_badge = true
     endif
-    if aqb_is_custom_badge == false and item.properties['Custom Badge Design'] == 'Yes' and aqb_designer != 'sign' and aqb_designer != 'plaque'
-      assign aqb_is_custom_badge = true
+    if aqb_is_custom_badge == false
+      if item.properties['_Custom Badge Design'] == 'Yes' or item.properties['Custom Badge Design'] == 'Yes'
+        if aqb_designer != 'sign' and aqb_designer != 'plaque'
+          assign aqb_is_custom_badge = true
+        endif
+      endif
     endif
     if aqb_is_custom_badge
       assign aqb_badge_piece_count = aqb_badge_piece_count | plus: item.quantity

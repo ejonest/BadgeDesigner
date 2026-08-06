@@ -18,6 +18,14 @@
     return raw;
   }
 
+  function prop(props, name) {
+    if (!props) return undefined;
+    if (props['_' + name] != null && String(props['_' + name]).trim() !== '') {
+      return props['_' + name];
+    }
+    return props[name];
+  }
+
   function isBadgeCartLine(item) {
     if (!item) return false;
     var handle = String(
@@ -26,8 +34,8 @@
     if (handle === 'custom-1x3-badge') return true;
     if (/^custom-1x3-.+-badge$/.test(handle)) return true;
     var props = normalizeLineProperties(item);
-    if (props['Custom Badge Design'] === 'Yes') {
-      var designer = String(props['Designer'] || '')
+    if (prop(props, 'Custom Badge Design') === 'Yes') {
+      var designer = String(prop(props, 'Designer') || '')
         .trim()
         .toLowerCase();
       return designer !== 'sign' && designer !== 'plaque';

@@ -19,7 +19,11 @@ export async function action({ request }: ActionFunctionArgs) {
       line3: badgeData.properties['Badge Text Line 3'],
       line4: badgeData.properties['Badge Text Line 4']
     });
-    console.log('Custom thumbnail exists:', !!badgeData.properties['Custom Thumbnail']);
+    console.log('Custom thumbnail exists:', !!(
+      badgeData.properties['_Custom Thumbnail'] ||
+      badgeData.properties['Custom Thumbnail'] ||
+      badgeData.properties['_custom_thumbnail']
+    ));
 
     // Get Shopify store URL from environment or request
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL || 'your-store.myshopify.com';

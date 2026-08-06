@@ -245,6 +245,10 @@ import {
   effectiveSignTemplateIdForBadge,
   getSignLikeShopifyShapeSizeForTemplateId,
 } from "~/utils/signTemplateShopifyOptions";
+import {
+  buildDesignerCartLineProperties,
+  CART_PROP,
+} from "~/utils/cartLineProperties";
 
 import {
   loadTemplates,
@@ -527,6 +531,8 @@ const MOBILE_PREVIEW_EMBEDDED = {
   boxMarginYRem: 0.25,
   badgeMarginXRem: 1,
   badgeHeightVh: 9,
+  /** Floor for the badge width so the preview stays readable when the on-screen keyboard shortens the shell. */
+  badgeMinWidthVw: 62,
 } as const;
 
 /**
@@ -3098,8 +3104,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   /** Guard when opening backing — prior steps only (not backing itself). */
   const badgeBackingStepGuard = needsBadgeStyleStep ? 6 : 5;
 
-  const badgeBackgroundStepTitle = "Step 2: Pick a background color";
-  const badgeIconStepTitle = "Step 2b: Badge icon (optional)";
+  const badgeBackgroundStepTitle = "Pick a Color";
+  const badgeIconStepTitle = "Add an Icon (optional)";
 
   /** Actionable guard alerts when opening a later step (e.g. "Please select a background color"). */
   const formatIncompleteStepActions = (actions: string[]): string | null => {
@@ -3346,6 +3352,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const [cartEditDesignId, setCartEditDesignId] = useState<string | null>(null);
   const cartEditDesignIdRef = useRef<string | null>(null);
   cartEditDesignIdRef.current = cartEditDesignId;
+  /** Overlay copy for cart handoff (stable after success clears cartEditDesignId). */
+  const cartHandoffMessageRef = useRef("Adding to cart…");
   /**
    * Subtotal when the cart design was opened. Compared to the live total so the
    * customer can see whether edits changed the price before finishing.
@@ -5371,16 +5379,16 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
     if (variant === "badge") {
       const entries: StepEntry[] = [
-        { label: "Template", done: multipleBadges.length > 0 },
+        { label: "Pick a Shape", done: multipleBadges.length > 0 },
         ...(needsBadgeStyleStep
-          ? [{ label: "Style", done: hasChosenBadgeStyle }]
+          ? [{ label: "Pick a Style", done: hasChosenBadgeStyle }]
           : []),
-        { label: "Background", done: hasChosenBackgroundColor },
+        { label: "Pick a Color", done: hasChosenBackgroundColor },
         ...(showBadgeIconStep
-          ? [{ label: "Icon", done: hasChosenBadgeIcon }]
+          ? [{ label: "Add an Icon (optional)", done: hasChosenBadgeIcon }]
           : []),
-        { label: "Text", done: hasStep3TextValid },
-        { label: "Backing", done: hasChosenBacking },
+        { label: "Add Your Text", done: hasStep3TextValid },
+        { label: "Pick a Backing", done: hasChosenBacking },
       ];
       const idx = entries.findIndex((e) => !e.done);
       if (idx < 0) {
@@ -5417,7 +5425,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const mobileStepsChromeTitle = mobileActiveStepSummary?.allComplete
     ? "Checkout or add more in the control panel"
     : mobileActiveStepSummary
-      ? `Step ${mobileActiveStepSummary.number}: ${mobileActiveStepSummary.label}`
+      ? variant === "badge"
+        ? mobileActiveStepSummary.label
+        : `Step ${mobileActiveStepSummary.number}: ${mobileActiveStepSummary.label}`
       : "Steps";
 
   const totalPriceAllBadges = useMemo(() => {
@@ -5552,8 +5562,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       const previewVh = embeddedMobileBadgeShell
         ? MOBILE_PREVIEW_EMBEDDED.badgeHeightVh
         : MOBILE_PREVIEW.badgeHeightVh;
+      // Embedded shell height follows the visual viewport, so the vh sizing
+      // collapses while the keyboard is open. Floor it in vw to keep the badge
+      // readable, still capped by maxWidth so it never overflows.
+      const width = embeddedMobileBadgeShell
+        ? `max(${3 * previewVh}vh, ${MOBILE_PREVIEW_EMBEDDED.badgeMinWidthVw}vw)`
+        : `${3 * previewVh}vh`;
       return {
-        width: `${3 * previewVh}vh`,
+        width,
         maxWidth: "100%",
         aspectRatio: aspect,
         height: "auto",
@@ -9039,6 +9055,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     // }
 
     setIsAddingToCart(true);
+    cartHandoffMessageRef.current = cartEditDesignIdRef.current
+      ? "Updating your cart…"
+      : "Adding to cart…";
+    let cartHandoffComplete = false;
     try {
       let thumbnailUrls: string[] = [];
       let pdfUrlForCart: string | undefined;
@@ -9494,11 +9514,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               }
             : {}),
           ...(acrylicFinish
-            ? { "Acrylic Finish": acrylicFinish.label }
+            ? { [CART_PROP.acrylicFinish]: acrylicFinish.label }
             : {}),
           ...(b.deskSignMountType
             ? {
-                "Mount Type":
+                [CART_PROP.mountType]:
                   b.deskSignMountType === "wall-mount"
                     ? "Wall Mount"
                     : "Desk Stand",
@@ -9506,7 +9526,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             : {}),
           ...(b.deskSignAluminumColor
             ? {
-                "Aluminum Frame":
+                [CART_PROP.aluminumFrame]:
                   findDeskSignAluminumColor(b.deskSignAluminumColor)?.label ??
                   b.deskSignAluminumColor,
               }
@@ -9525,34 +9545,23 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     linePrice: getBadgePriceForBacking(b.backing).toFixed(2),
                   };
             const n = allBadgesForSupabase.length;
-            const lineIndexStr = String(i);
-            const indexProps: Record<string, string> = {
-              [designerConfig.cartIndexPropertyPrimary]: lineIndexStr,
-            };
-            for (const k of designerConfig.cartIndexPropertyFallbacks) {
-              indexProps[k] = lineIndexStr;
-            }
-            const properties: Record<string, string> = {
-              "Custom Badge Design": "Yes",
-              Designer: designerId,
-              "Badge Text Line 1": b.lines[0]?.text || "",
-              "Badge Text Line 2": b.lines[1]?.text || "",
-              "Badge Text Line 3": b.lines[2]?.text || "",
-              "Badge Text Line 4": b.lines[3]?.text || "",
-              "Background Color": b.backgroundColor,
-              "Font Family": b.lines[0]?.fontFamily || "Arial",
-              ...(isSignDesigner || isDeskSignDesigner
-                ? {}
-                : { "Backing Type": b.backing }),
-              ...deskSignCartProperties(b),
-              "Design ID": designIdForSupabase,
-              Price: `$${itemTotalPrice}`,
-              ...indexProps,
-              "Custom Thumbnail": thumbnailUrls[i] ?? "",
-              "Badge count": String(n),
-            };
-            if (gadgetDesignId) properties["Gadget Design ID"] = gadgetDesignId;
-            if (pdfUrlForCart) properties["Proof PDF URL"] = pdfUrlForCart;
+            const properties = buildDesignerCartLineProperties({
+              designerId,
+              designId: designIdForSupabase,
+              lineIndex: i,
+              indexPropertyPrimary: designerConfig.cartIndexPropertyPrimary,
+              indexPropertyFallbacks: designerConfig.cartIndexPropertyFallbacks,
+              lines: b.lines,
+              backgroundColor: b.backgroundColor,
+              backing: b.backing,
+              linePrice: itemTotalPrice,
+              thumbnailUrl: thumbnailUrls[i],
+              gadgetDesignId,
+              pdfUrl: pdfUrlForCart,
+              badgeCount: n,
+              includeBackingType: !isSignDesigner && !isDeskSignDesigner,
+              extraHidden: deskSignCartProperties(b),
+            });
             return {
               variantId,
               quantity: 2,
@@ -9568,36 +9577,26 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     variantId: getVariantId(b.backing),
                     linePrice: getBadgePriceForBacking(b.backing).toFixed(2),
                   };
-            const lineIndexStrSingle = String(i);
-            const indexPropsSingle: Record<string, string> = {
-              [designerConfig.cartIndexPropertyPrimary]: lineIndexStrSingle,
-            };
-            for (const k of designerConfig.cartIndexPropertyFallbacks) {
-              indexPropsSingle[k] = lineIndexStrSingle;
-            }
-            const properties: Record<string, string> = {
-              "Custom Badge Design": "Yes",
-              Designer: designerId,
-              "Badge Text Line 1": b.lines[0]?.text || "",
-              "Badge Text Line 2": b.lines[1]?.text || "",
-              "Badge Text Line 3": b.lines[2]?.text || "",
-              "Badge Text Line 4": b.lines[3]?.text || "",
-              "Background Color": b.backgroundColor,
-              "Font Family": b.lines[0]?.fontFamily || "Arial",
-              ...(isSignDesigner || isDeskSignDesigner
-                ? {}
-                : { "Backing Type": b.backing }),
-              ...deskSignCartProperties(b),
-              "Design ID": designIdForSupabase,
-              Price: `$${itemTotalPrice}`,
-              ...indexPropsSingle,
-              "Custom Thumbnail": thumbnailUrls[i] ?? "",
-              ...(!isSignDesigner && !isDeskSignDesigner
-                ? { "Order quantity": String(perLineQtysResolved[i] ?? 1) }
-                : {}),
-            };
-            if (gadgetDesignId) properties["Gadget Design ID"] = gadgetDesignId;
-            if (pdfUrlForCart) properties["Proof PDF URL"] = pdfUrlForCart;
+            const properties = buildDesignerCartLineProperties({
+              designerId,
+              designId: designIdForSupabase,
+              lineIndex: i,
+              indexPropertyPrimary: designerConfig.cartIndexPropertyPrimary,
+              indexPropertyFallbacks: designerConfig.cartIndexPropertyFallbacks,
+              lines: b.lines,
+              backgroundColor: b.backgroundColor,
+              backing: b.backing,
+              linePrice: itemTotalPrice,
+              thumbnailUrl: thumbnailUrls[i],
+              gadgetDesignId,
+              pdfUrl: pdfUrlForCart,
+              orderQuantity:
+                !isSignDesigner && !isDeskSignDesigner
+                  ? perLineQtysResolved[i] ?? 1
+                  : undefined,
+              includeBackingType: !isSignDesigner && !isDeskSignDesigner,
+              extraHidden: deskSignCartProperties(b),
+            });
             return {
               variantId,
               quantity:
@@ -9675,18 +9674,25 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         }
       }
 
-      // Clear the editor before cart redirect/embed so a return visit is a
-      // blank slate (standalone redirect can abort code after location change).
-      const preCartDesignId = designIdForSupabase;
-      const preCartBadges = badgesForSupabase;
-      const replacedCartDesignId = cartEditDesignIdRef.current;
-      resetDesignerToBlank();
+      // Keep the current design painted under a loading overlay while cart
+      // handoff runs. Resetting to blank Step 1 here caused a brief empty /
+      // $0.00 / "Adding…" flash before the cart redirect.
       closeProofModal();
+
+      const replacedCartDesignId = cartEditDesignIdRef.current;
 
       const result = await api.addToCartMultiple(cartItems, {
         replaceDesignId: replacedCartDesignId,
       });
       if (result.success) {
+        cartHandoffComplete = true;
+        // Clear draft cache so a later visit starts fresh, but leave the UI
+        // alone until the storefront navigates to the cart.
+        removeDesignerDraftCache(_shop, _productId, variant);
+        skipCacheSaveRef.current = true;
+        sessionDesignIdRef.current = null;
+        setCartEditDesignId(null);
+        setCartEditBaselinePrice(null);
         if (replacedCartDesignId) {
           void api
             .markCartDesignReplaced(replacedCartDesignId)
@@ -9707,17 +9713,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             proofUploadWarning,
           );
         }
+        // Safety: if the parent never redirects, drop the overlay eventually.
+        window.setTimeout(() => {
+          setIsAddingToCart(false);
+        }, 20_000);
       } else {
-        applyRestoredDesign({
-          design_id: preCartDesignId,
-          design_data: {
-            badge: preCartBadges[0],
-            multipleBadges:
-              preCartBadges.length > 1 ? preCartBadges.slice(1) : [],
-            allBadges: preCartBadges,
-          },
-        });
-        sessionDesignIdRef.current = preCartDesignId;
         // The old cart line is still there, so keep replacing it on the next try.
         setCartEditDesignId(replacedCartDesignId);
         const proofNote = proofUploadWarning
@@ -9732,7 +9732,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       console.error("Failed to complete add to cart:", error);
       alert("Failed to add badge to cart. Please try again.");
     } finally {
-      setIsAddingToCart(false);
+      if (!cartHandoffComplete) {
+        setIsAddingToCart(false);
+      }
     }
   };
 
@@ -10404,6 +10406,28 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         postDesignerFocus(true, { scrollTo: "designer" });
       }}
     >
+      {isAddingToCart ? (
+        <div
+          className="aqb-cart-handoff-overlay"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <div className="aqb-cart-handoff-overlay__card">
+            <div
+              className="aqb-cart-handoff-overlay__spinner"
+              aria-hidden
+            />
+            <p className="aqb-cart-handoff-overlay__title">
+              {cartHandoffMessageRef.current}
+            </p>
+            <p className="aqb-cart-handoff-overlay__sub">
+              Please keep this page open — you&apos;ll return to your cart in a
+              moment.
+            </p>
+          </div>
+        </div>
+      ) : null}
       {designLibraryDummy.enabled ? (
         <div
           className={`max-w-[1320px] mx-auto w-full mb-2 ${
@@ -11144,7 +11168,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 }
 
                 const backgroundLabel =
-                  config.templatesKey === "sign" ? "Backgrounds" : "Background";
+                  config.templatesKey === "sign"
+                    ? "Backgrounds"
+                    : variant === "badge"
+                      ? "Pick a Color"
+                      : "Background";
                 if (isDeskSignVariant(variant)) {
                   return null;
                 }
@@ -11158,19 +11186,22 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   label: string;
                   done: boolean;
                   current: boolean;
+                  circleLabel?: string;
                 }[] = [
                   {
-                    label: "Template",
+                    label: variant === "badge" ? "Pick a Shape" : "Template",
                     done: multipleBadges.length > 0,
                     current: multipleBadges.length === 0,
+                    circleLabel: variant === "badge" ? "1" : undefined,
                   },
                   ...(variant === "badge" && needsBadgeStyleStep
                     ? [
                         {
-                          label: "Style",
+                          label: "Pick a Style",
                           done: hasChosenBadgeStyle,
                           current:
                             multipleBadges.length > 0 && !hasChosenBadgeStyle,
+                          circleLabel: "1b",
                         },
                       ]
                     : []),
@@ -11197,14 +11228,16 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       (config.hasSizeStep
                         ? selectedSignSizeTemplateId != null
                         : true),
+                    circleLabel: variant === "badge" ? "2" : undefined,
                   },
                   ...(variant === "badge" && showBadgeIconStep
                     ? [
                         {
-                          label: "Icon · optional",
+                          label: "Add an Icon (optional)",
                           done: hasChosenBadgeIcon,
                           current:
                             hasChosenBackgroundColor && !hasChosenBadgeIcon,
+                          circleLabel: "2b",
                         },
                       ]
                     : []),
@@ -11218,7 +11251,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       ]
                     : []),
                   {
-                    label: "Text",
+                    label: variant === "badge" ? "Add Your Text" : "Text",
                     done:
                       variant === "badge"
                         ? hasStep3TextValid
@@ -11233,6 +11266,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         !(variant === "badge"
                           ? hasStep3TextValid
                           : hasStep3TextEntered),
+                    circleLabel: variant === "badge" ? "3" : undefined,
                   },
                   ...(isSignLikeVariant(variant) && signUserLogoUploadSupported
                     ? [
@@ -11246,13 +11280,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   ...(config.hasBacking
                     ? [
                         {
-                          label: "Backing",
+                          label:
+                            variant === "badge" ? "Pick a Backing" : "Backing",
                           done: hasChosenBacking,
                           current:
                             (variant === "badge"
                               ? hasStep3TextValid
                               : hasStep3TextEntered) &&
                             !hasChosenBacking,
+                          circleLabel: variant === "badge" ? "4" : undefined,
                         },
                       ]
                     : []),
@@ -11355,13 +11391,18 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           <span
                             className={`${
                               variant === "badge"
-                                ? "text-[12px] font-bold"
+                                ? `font-bold ${
+                                    step.circleLabel &&
+                                    String(step.circleLabel).length > 1
+                                      ? "text-[10px]"
+                                      : "text-[12px]"
+                                  }`
                                 : "text-[11px] font-semibold"
                             } ${
                               circleActive ? "text-white" : "text-[#6B7F92]"
                             }`}
                           >
-                            {i + 1}
+                            {step.circleLabel ?? i + 1}
                           </span>
                         )}
                       </div>
@@ -11479,7 +11520,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   title={
                     isDeskSignVariant(variant)
                       ? "Step 1: Choose material"
-                      : "Step 1: Pick a template"
+                      : "Pick a Shape"
                   }
                   summary={
                     isDeskSignVariant(variant)
@@ -11527,7 +11568,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     <h3 className="text-lg font-semibold text-[#02132B]">
                       {variant === "plaque"
                         ? "Step 1: Choose layout"
-                        : "Step 1: Pick a template"}
+                        : variant === "badge"
+                          ? "Pick a Shape"
+                          : "Step 1: Pick a template"}
                     </h3>
                     {(variant === "plaque"
                       ? selectedPlaqueLayoutId != null ||
@@ -12445,7 +12488,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     stepNumber={1}
                     stepLabel="1b"
                     visualState={aqbBadgeStepHeaderModel.style.state}
-                    title="Step 1b: Pick a badge style"
+                    title="Pick a Style"
                     summary={aqbBadgeStepHeaderModel.style.summary}
                     open={sectionsOpen.badgeStyle}
                     onClick={() => {
@@ -12591,7 +12634,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             : "Step 3: Metal plate finish"
                           : config.templatesKey === "sign"
                           ? "Step 3: Pick backgrounds"
-                          : "Step 2: Pick a background Color"}
+                          : "Pick a Color"}
                       </h3>
                       {hasChosenBackgroundColor && (
                         <CheckCircleIcon className="h-5 w-5 text-green-600" />
@@ -13117,25 +13160,28 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 <div
                   className={`overflow-hidden transition-all duration-300 ${
                     sectionsOpen.badgeIcon
-                      ? "max-h-[min(70vh,520px)] overflow-y-auto px-6 pb-5 pt-2 opacity-100"
+                      ? "max-h-[min(80vh,640px)] overflow-y-auto px-6 pb-5 pt-2 opacity-100"
                       : "max-h-0 p-0 opacity-0"
                   }`}
                 >
                   <div className="finish-row">
-                    <div className="aqb-badge-finish-lbl">
-                      Please choose an icon option
-                    </div>
                     <AqbBadgeIconPicker
-                      variant="inline"
+                      variant="gated"
                       value={
-                        !hasChosenBadgeIcon
+                        !hasChosenBadgeIcon &&
+                        !isBadgeIconId(badge.badgeIconId)
                           ? null
                           : isBadgeIconId(badge.badgeIconId)
                             ? badge.badgeIconId
                             : "none"
                       }
                       onChange={(choice) => {
-                        const firstChoice = !hasChosenBadgeIcon;
+                        // Preview only — step completes on Continue.
+                        setBadgeIconForCurrent(
+                          choice === "none" ? undefined : choice,
+                        );
+                      }}
+                      onContinue={(choice) => {
                         const iconId =
                           choice === "none" ? undefined : choice;
                         setBadgeIconForCurrent(iconId);
@@ -13143,22 +13189,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         setSectionsOpened((prev) => ({
                           ...prev,
                           badgeIcon: true,
-                          ...(firstChoice ? { textLines: true } : {}),
+                          textLines: true,
                         }));
-                        if (firstChoice) {
-                          setSectionsOpen({
-                            template: false,
-                            size: false,
-                            export: false,
-                            badgeStyle: false,
-                            background: false,
-                            badgeIcon: false,
-                            textLines: true,
-                            backing: false,
-                            border: false,
-                            plaqueFormat: false,
-                          });
-                        }
+                        setSectionsOpen({
+                          template: false,
+                          size: false,
+                          export: false,
+                          badgeStyle: false,
+                          background: false,
+                          badgeIcon: false,
+                          textLines: true,
+                          backing: false,
+                          border: false,
+                          plaqueFormat: false,
+                        });
                       }}
                     />
                   </div>
@@ -13700,7 +13744,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   title={
                     isDeskSignVariant(variant)
                       ? "Step 4: Enter your text"
-                      : "Step 3: Enter your text"
+                      : "Add Your Text"
                   }
                   summary={
                     isDeskSignVariant(variant)
@@ -13801,7 +13845,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         ? signBorderStepRequired
                           ? "Step 5: Enter your text"
                           : "Step 4: Enter your text"
-                        : "Step 3: Enter your text"}
+                        : "Add Your Text"}
                     </h3>
                     {hasStep3TextEntered &&
                       (badgeAqbTextOverflow || hasAqbCharLimitBlock ? (
@@ -14187,7 +14231,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   <AqbBadgeStepSectionToggle
                     stepNumber={4}
                     visualState={aqbBadgeStepHeaderModel.backing.state}
-                    title="Step 4: Choose badge attachment"
+                    title="Pick a Backing"
                     summary={aqbBadgeStepHeaderModel.backing.summary}
                     open={sectionsOpen.backing}
                     onClick={() => {
@@ -14238,7 +14282,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-semibold text-[#02132B]">
-                        Step 4: Choose badge attachment
+                        Pick a Backing
                       </h3>
                       {hasChosenBacking && (
                         <CheckCircleIcon className="h-5 w-5 text-green-600" />
@@ -16085,25 +16129,25 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     ]
                   : [
                       {
-                        label: "Template",
+                        label: "Pick a Shape",
                         done: multipleBadges.length > 0,
                         current: multipleBadges.length === 0,
                       },
                       {
-                        label: "Background",
+                        label: "Pick a Color",
                         done: hasChosenBackgroundColor,
                         current:
                           multipleBadges.length > 0 &&
                           !hasChosenBackgroundColor,
                       },
                       {
-                        label: "Text",
+                        label: "Add Your Text",
                         done: hasStep3TextEntered,
                         current:
                           hasChosenBackgroundColor && !hasStep3TextEntered,
                       },
                       {
-                        label: "Backing",
+                        label: "Pick a Backing",
                         done: hasChosenBacking,
                         current: hasStep3TextEntered && !hasChosenBacking,
                       },
