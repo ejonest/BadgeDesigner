@@ -176,7 +176,13 @@
                             </div>
                           {%- endif -%}
 
-                          {%- if item.product.has_only_default_variant == false
+                          {%- assign aqb_is_custom_line = false -%}
+                          {%- if item.properties['_Custom Badge Design'] == 'Yes' or item.properties['Custom Badge Design'] == 'Yes' -%}
+                            {%- assign aqb_is_custom_line = true -%}
+                          {%- endif -%}
+                          {%- if aqb_is_custom_line -%}
+                            {% render 'badge-cart-details', item: item %}
+                          {%- elsif item.product.has_only_default_variant == false
                             or item.properties.size != 0
                             or item.selling_plan_allocation != null
                           -%}

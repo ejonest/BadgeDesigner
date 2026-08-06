@@ -1,11 +1,18 @@
 {% comment %}
-  Renders only the badge details to show in cart: 4 text lines (if present), price, attachment option, background color.
-  Use for custom badge items so Design ID, Gadget Design ID, Badge Index, Custom Thumbnail URL, etc. are not shown.
+  Cart details for custom designer lines.
+  Internal props are underscore-prefixed (hidden in checkout); this snippet
+  reads `_Name` with fallback to legacy `Name` for older cart lines.
+  Customer-facing: text lines + attachment only.
   Pass: item (cart item)
 {% endcomment %}
-{%- if item.properties['Custom Badge Design'] != 'Yes' -%}
-  {%- comment -%} Not a custom badge; don't output this block (theme can show default options/properties) {%- endcomment -%}
-{%- else -%}
+{%- liquid
+  assign aqb_is_custom = false
+  if item.properties['_Custom Badge Design'] == 'Yes' or item.properties['Custom Badge Design'] == 'Yes'
+    assign aqb_is_custom = true
+  endif
+  assign aqb_backing = item.properties['_Backing Type'] | default: item.properties['Backing Type']
+-%}
+{%- if aqb_is_custom -%}
   <div class="badge-cart-details" style="margin-top: 8px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 0.9em;">
     {%- if item.properties['Badge Text Line 1'] != blank -%}
       <p style="margin: 2px 0;">{{ item.properties['Badge Text Line 1'] }}</p>
@@ -19,18 +26,8 @@
     {%- if item.properties['Badge Text Line 4'] != blank -%}
       <p style="margin: 2px 0;">{{ item.properties['Badge Text Line 4'] }}</p>
     {%- endif -%}
-    {%- if item.properties['Price'] != blank -%}
-      <p style="margin: 4px 0 2px 0;"><strong>Price:</strong> {{ item.properties['Price'] }}</p>
-    {%- endif -%}
-    {%- if item.properties['Backing Type'] != blank -%}
-      <p style="margin: 2px 0;"><strong>Attachment:</strong> {{ item.properties['Backing Type'] | capitalize }}</p>
-    {%- endif -%}
-    {%- if item.properties['Background Color'] != blank -%}
-      <p style="margin: 2px 0;">
-        <strong>Background:</strong>
-        <span style="display: inline-block; width: 14px; height: 14px; background: {{ item.properties['Background Color'] }}; border: 1px solid #ccc; border-radius: 2px; vertical-align: middle; margin-left: 4px;"></span>
-        {{ item.properties['Background Color'] }}
-      </p>
+    {%- if aqb_backing != blank -%}
+      <p style="margin: 2px 0;"><strong>Attachment:</strong> {{ aqb_backing | capitalize }}</p>
     {%- endif -%}
   </div>
 {%- endif -%}

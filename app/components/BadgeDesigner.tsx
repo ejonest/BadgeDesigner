@@ -125,6 +125,7 @@ import {
   effectiveSignTemplateIdForBadge,
   getSignLikeShopifyShapeSizeForTemplateId,
 } from "~/utils/signTemplateShopifyOptions";
+import { buildDesignerCartLineProperties } from "~/utils/cartLineProperties";
 
 import {
   loadTemplates,
@@ -6891,31 +6892,22 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   linePrice: getBadgePriceForBacking(b.backing).toFixed(2),
                 };
             const n = allBadgesForSupabase.length;
-            const lineIndexStr = String(i);
-            const indexProps: Record<string, string> = {
-              [designerConfig.cartIndexPropertyPrimary]: lineIndexStr,
-            };
-            for (const k of designerConfig.cartIndexPropertyFallbacks) {
-              indexProps[k] = lineIndexStr;
-            }
-            const properties: Record<string, string> = {
-              "Custom Badge Design": "Yes",
-              Designer: designerId,
-              "Badge Text Line 1": b.lines[0]?.text || "",
-              "Badge Text Line 2": b.lines[1]?.text || "",
-              "Badge Text Line 3": b.lines[2]?.text || "",
-              "Badge Text Line 4": b.lines[3]?.text || "",
-              "Background Color": b.backgroundColor,
-              "Font Family": b.lines[0]?.fontFamily || "Arial",
-              ...(isSignDesigner ? {} : { "Backing Type": b.backing }),
-              "Design ID": designIdForSupabase,
-              Price: `$${itemTotalPrice}`,
-              ...indexProps,
-              "Custom Thumbnail": thumbnailUrls[i] ?? "",
-              "Badge count": String(n),
-            };
-            if (gadgetDesignId) properties["Gadget Design ID"] = gadgetDesignId;
-            if (pdfUrlForCart) properties["Proof PDF URL"] = pdfUrlForCart;
+            const properties = buildDesignerCartLineProperties({
+              designerId,
+              designId: designIdForSupabase,
+              lineIndex: i,
+              indexPropertyPrimary: designerConfig.cartIndexPropertyPrimary,
+              indexPropertyFallbacks: designerConfig.cartIndexPropertyFallbacks,
+              lines: b.lines,
+              backgroundColor: b.backgroundColor,
+              backing: b.backing,
+              linePrice: itemTotalPrice,
+              thumbnailUrl: thumbnailUrls[i],
+              gadgetDesignId,
+              pdfUrl: pdfUrlForCart,
+              badgeCount: n,
+              includeBackingType: !isSignDesigner,
+            });
             return {
               variantId,
               quantity: 2,
@@ -6929,30 +6921,21 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   variantId: getVariantId(b.backing),
                   linePrice: getBadgePriceForBacking(b.backing).toFixed(2),
                 };
-            const lineIndexStrSingle = String(i);
-            const indexPropsSingle: Record<string, string> = {
-              [designerConfig.cartIndexPropertyPrimary]: lineIndexStrSingle,
-            };
-            for (const k of designerConfig.cartIndexPropertyFallbacks) {
-              indexPropsSingle[k] = lineIndexStrSingle;
-            }
-            const properties: Record<string, string> = {
-              "Custom Badge Design": "Yes",
-              Designer: designerId,
-              "Badge Text Line 1": b.lines[0]?.text || "",
-              "Badge Text Line 2": b.lines[1]?.text || "",
-              "Badge Text Line 3": b.lines[2]?.text || "",
-              "Badge Text Line 4": b.lines[3]?.text || "",
-              "Background Color": b.backgroundColor,
-              "Font Family": b.lines[0]?.fontFamily || "Arial",
-              ...(isSignDesigner ? {} : { "Backing Type": b.backing }),
-              "Design ID": designIdForSupabase,
-              Price: `$${itemTotalPrice}`,
-              ...indexPropsSingle,
-              "Custom Thumbnail": thumbnailUrls[i] ?? "",
-            };
-            if (gadgetDesignId) properties["Gadget Design ID"] = gadgetDesignId;
-            if (pdfUrlForCart) properties["Proof PDF URL"] = pdfUrlForCart;
+            const properties = buildDesignerCartLineProperties({
+              designerId,
+              designId: designIdForSupabase,
+              lineIndex: i,
+              indexPropertyPrimary: designerConfig.cartIndexPropertyPrimary,
+              indexPropertyFallbacks: designerConfig.cartIndexPropertyFallbacks,
+              lines: b.lines,
+              backgroundColor: b.backgroundColor,
+              backing: b.backing,
+              linePrice: itemTotalPrice,
+              thumbnailUrl: thumbnailUrls[i],
+              gadgetDesignId,
+              pdfUrl: pdfUrlForCart,
+              includeBackingType: !isSignDesigner,
+            });
             return {
               variantId,
               quantity: 1,
@@ -7023,28 +7006,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         }
       }
 
-      // Clear the editor before cart redirect/embed so a return visit is a
-      // blank slate (standalone redirect can abort code after location change).
-      const preCartDesignId = designIdForSupabase;
-      const preCartBadges = badgesForSupabase;
-      resetDesignerToBlank();
+      // Keep the design on screen while cart handoff runs (avoid blank Step 1 flash).
       closeProofModal();
 
       const result = await api.addToCartMultiple(cartItems);
-      if (!result.success) {
-        // Cart failed — put the design back so the customer can retry.
-        applyRestoredDesign({
-          design_id: preCartDesignId,
-          design_data: {
-            badge: preCartBadges[0],
-            multipleBadges:
-              preCartBadges.length > 1 ? preCartBadges.slice(1) : [],
-            allBadges: preCartBadges,
-          },
-        });
-        // applyRestoredDesign mints a copy id; keep the cart session id so
-        // finalize/draft rows still match this attempt.
-        sessionDesignIdRef.current = preCartDesignId;
+      if (result.success) {
+        removeDesignerDraftCache(_shop, _productId);
+        skipCacheSaveRef.current = true;
+        sessionDesignIdRef.current = null;
+      } else {
         alert(
           result.message || "Failed to add badge(s) to cart. Please try again.",
         );

@@ -53,7 +53,9 @@
         .then(function(res) { return res.json(); })
         .then(function(cart) {
           var stale = (cart.items || []).filter(function(item) {
-            return item.properties && item.properties['Design ID'] === replaceDesignId;
+            var props = item.properties || {};
+            var id = props['_Design ID'] || props['Design ID'];
+            return id === replaceDesignId;
           });
           // Sequential: each change.js response invalidates the previous line keys.
           return stale.reduce(function(chain, item) {
@@ -129,6 +131,34 @@
         designId: designId,
         badgeIndex: isNaN(badgeIndex) ? 0 : badgeIndex
       };
+    }
+
+    /**
+     * Mirror the visual viewport into CSS vars. When the software keyboard opens
+     * the visual viewport shrinks and scrolls inside the layout viewport, which
+     * would otherwise push the pinned designer's preview off the top of the
+     * screen while the customer types.
+     */
+    function aqbSyncVisualViewport() {
+      var vv = window.visualViewport;
+      if (!vv) return;
+      var root = document.documentElement;
+      root.style.setProperty('--aqb-vv-height', Math.round(vv.height) + 'px');
+      root.style.setProperty('--aqb-vv-top', Math.round(vv.offsetTop) + 'px');
+    }
+
+    if (window.visualViewport) {
+      var aqbVvFrame = null;
+      var aqbOnViewportChange = function() {
+        if (aqbVvFrame) return;
+        aqbVvFrame = window.requestAnimationFrame(function() {
+          aqbVvFrame = null;
+          aqbSyncVisualViewport();
+        });
+      };
+      window.visualViewport.addEventListener('resize', aqbOnViewportChange);
+      window.visualViewport.addEventListener('scroll', aqbOnViewportChange);
+      aqbSyncVisualViewport();
     }
 
     window.addEventListener('message', function(event) {
