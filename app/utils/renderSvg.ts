@@ -55,14 +55,8 @@ import { BADGE_CONSTANTS } from "../constants/badge";
 import {
   getBadgeIconTextInsetPx,
   renderBadgeIconLayer,
+  badgeIconFillFromLines,
 } from "~/utils/badgeIconRender";
-
-/** Icon fill follows line 1 text color so it stays visible on dark plates. */
-function badgeIconFillFromLines(
-  lines: Array<{ color?: string }> | undefined,
-): string {
-  return lines?.[0]?.color?.trim() || "#000000";
-}
 import {
   getPhotoPlateViewBoxSize,
   resolvePhotoTextRect,
@@ -345,6 +339,7 @@ function renderBadgePrintProductionSvg(
       template.id,
       photo.iconRect,
       badgeIconFillFromLines(badge.lines),
+      opts.svgDefScopeId,
     );
     const textElements = lineLayout
       .map((item) => {
@@ -410,6 +405,7 @@ function renderBadgePrintProductionSvg(
       template.id,
       undefined,
       badgeIconFillFromLines(badge.lines),
+      opts.svgDefScopeId,
     );
     const textElements = lineLayout
       .map((item) => {
@@ -703,6 +699,7 @@ function renderBadgePhotoPlateSvg(
     template.id,
     photo.iconRect,
     badgeIconFillFromLines(badge.lines),
+      opts.svgDefScopeId,
   );
 
   const textElements = lineLayout
@@ -2538,6 +2535,7 @@ export function renderBadgeToSvgString(
     template.id,
     undefined,
     badgeIconFillFromLines(badge.lines),
+      opts.svgDefScopeId,
   );
 
   // Render text elements
@@ -2877,6 +2875,7 @@ export async function renderBadgeToSvgStringWithFonts(
     template.id,
     undefined,
     badgeIconFillFromLines(badge.lines),
+      opts.svgDefScopeId,
   );
 
   // Render text elements

@@ -79,9 +79,19 @@ function normalizeIconFillColor(color: string | undefined): string {
   return "#000000";
 }
 
+/** Icon fill follows line 1 text color so it stays visible on dark plates. */
+export function badgeIconFillFromLines(
+  lines: Array<{ color?: string }> | undefined,
+): string {
+  return normalizeIconFillColor(lines?.[0]?.color);
+}
+
 /**
  * SVG layer for the left pictogram, tinted to match text.
  * Black PNG icons are recolored via feFlood using the given fill (typically line 1 text color).
+ *
+ * `filterScopeId` must be unique per inline SVG on the page so parallel previews
+ * do not steal each other's tint filter (a common cause of “icons stay black”).
  */
 export function renderBadgeIconLayer(
   iconId: string | undefined,
@@ -89,13 +99,17 @@ export function renderBadgeIconLayer(
   templateId?: string,
   iconRectOverride?: PixelRect,
   fillColor?: string,
+  filterScopeId?: string,
 ): string {
   if (!iconId || !badgeTemplateSupportsIcon(templateId)) return "";
   const href = BADGE_ICON_DATA_URLS[iconId];
   if (!href) return "";
 
   const fill = normalizeIconFillColor(fillColor);
-  const filterId = "badge-icon-tint";
+  const scope =
+    (filterScopeId ?? "").replace(/[^a-zA-Z0-9_-]/g, "") ||
+    Math.random().toString(36).slice(2, 10);
+  const filterId = `badge-icon-tint-${scope}`;
   const tintFilter = `<defs><filter id="${filterId}" color-interpolation-filters="sRGB"><feFlood flood-color="${fill}" result="flood"/><feComposite in="flood" in2="SourceGraphic" operator="in"/></filter></defs>`;
 
   if (iconRectOverride) {
