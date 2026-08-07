@@ -533,19 +533,22 @@ export const DESK_SIGN_MATERIALS: readonly {
   {
     id: "acrylic",
     label: "Acrylic",
-    description: "Laser-engraved acrylic in clear, frosted, or black",
+    description:
+      "Crisp UV print on clear, frosted, or black acrylic — modern and light-catching",
     exampleImageSrc: "/images/desk-sign/acrylicEx.jpg?v=4",
   },
   {
     id: "rosewood",
     label: "Piano Finished Rosewood",
-    description: "Piano-finish base with engraved gold & black plate",
+    description:
+      "Glossy piano-finish rosewood with a UV-printed metal plate — a polished desk presence",
     exampleImageSrc: "/images/desk-sign/RWSilver.png?v=1",
   },
   {
     id: "plastic",
     label: "Traditional",
-    description: "Engraved plastic plate with your choice of aluminum mount",
+    description:
+      "UV-printed plastic plate with your choice of aluminum desk stand or wall mount",
     exampleImageSrc: "/images/desk-sign/plasticEx.jpg?v=5",
   },
 ] as const;
@@ -643,7 +646,7 @@ export function getDeskSignTemplateTypesForMaterial(
   return DESK_SIGN_TEMPLATE_TYPES.filter((t) => t.material === material);
 }
 
-/** Plastic desk signs use the engraving-plastic color set. */
+/** Plastic desk signs use the traditional plate color set. */
 export function deskSignMaterialUsesPlasticFinishes(
   material: DeskSignMaterial | null,
 ): boolean {
