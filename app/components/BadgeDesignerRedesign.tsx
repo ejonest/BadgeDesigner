@@ -3730,6 +3730,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   // Restore badge designer state from localStorage cache (once, after templates are loaded)
   useEffect(() => {
     if (templates.length === 0 || restoredFromCacheRef.current) return;
+    // Cart-edit deep links / parent handshake own the restore slot — do not
+    // overwrite with a leftover blank draft from localStorage.
+    if (typeof window !== "undefined") {
+      const editId = new URLSearchParams(window.location.search)
+        .get("editDesignId")
+        ?.trim();
+      if (editId) return;
+    }
     const cacheKey = getDesignerDraftCacheKey(_shop, _productId, variant);
     const raw = localStorage.getItem(cacheKey);
     if (!raw) return;
@@ -8905,6 +8913,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     const params = new URLSearchParams(window.location.search);
     const directDesignId = params.get("editDesignId")?.trim();
     if (directDesignId) {
+      // Block localStorage draft restore for this edit session.
+      restoredFromCacheRef.current = true;
       const idx = Number.parseInt(params.get("editBadgeIndex") ?? "", 10);
       void restoreCartDesignForEdit(
         directDesignId,
@@ -11180,12 +11190,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     : true);
                 const steps: {
                   label: string;
+                  /** Compact label for the progress nav (keeps mobile to 1–2 rows). */
+                  navLabel?: string;
                   done: boolean;
                   current: boolean;
                   circleLabel?: string;
                 }[] = [
                   {
                     label: variant === "badge" ? "Pick a Shape" : "Template",
+                    navLabel: variant === "badge" ? "Shape" : undefined,
                     done: multipleBadges.length > 0,
                     current: multipleBadges.length === 0,
                     circleLabel: variant === "badge" ? "1" : undefined,
@@ -11194,6 +11207,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     ? [
                         {
                           label: "Pick a Style",
+                          navLabel: "Style",
                           done: hasChosenBadgeStyle,
                           current:
                             multipleBadges.length > 0 && !hasChosenBadgeStyle,
@@ -11214,6 +11228,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     : []),
                   {
                     label: backgroundLabel,
+                    navLabel: variant === "badge" ? "Color" : undefined,
                     done: hasChosenBackgroundColor,
                     current:
                       multipleBadges.length > 0 &&
@@ -11230,6 +11245,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     ? [
                         {
                           label: "Add an Icon (optional)",
+                          navLabel: "Icon",
                           done: hasChosenBadgeIcon,
                           current:
                             hasChosenBackgroundColor && !hasChosenBadgeIcon,
@@ -11248,6 +11264,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     : []),
                   {
                     label: variant === "badge" ? "Add Your Text" : "Text",
+                    navLabel: variant === "badge" ? "Text" : undefined,
                     done:
                       variant === "badge"
                         ? hasStep3TextValid
@@ -11278,6 +11295,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         {
                           label:
                             variant === "badge" ? "Pick a Backing" : "Backing",
+                          navLabel: variant === "badge" ? "Backing" : undefined,
                           done: hasChosenBacking,
                           current:
                             (variant === "badge"
@@ -11405,7 +11423,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       <span
                         className={`w-full text-center leading-tight ${
                           variant === "badge"
-                            ? "mt-[3px] text-[14px] max-md:mt-0.5 max-md:text-[11px]"
+                            ? "mt-[3px] text-[14px] max-md:mt-0.5 max-md:text-[10px]"
                             : "mt-0.5 whitespace-nowrap text-[14px]"
                         } ${
                           variant === "badge"
@@ -11422,7 +11440,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             : undefined
                         }
                       >
-                        {step.label}
+                        {isMobileViewport && step.navLabel
+                          ? step.navLabel
+                          : step.label}
                       </span>
                     </>
                   );
