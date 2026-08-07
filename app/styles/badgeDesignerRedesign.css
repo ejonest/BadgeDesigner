@@ -2661,6 +2661,11 @@
     flex-shrink: 0;
     background: #f8f7f4;
     border: 1px solid rgba(2, 19, 43, 0.1);
+    /* Inset labels here — not on the <button>, so Tailwind’s button
+       padding:0 reset and focus-mode layout can’t wipe it out */
+    padding-left: 16px;
+    padding-right: 16px;
+    box-sizing: border-box;
   }
 
   .aqb-redesign-root .aqb-mobile-steps-chrome {
@@ -2684,7 +2689,10 @@
     border-bottom: 1px solid rgba(2, 19, 43, 0.1);
   }
 
-  /* button. prefix beats Tailwind’s button { padding: 0 } reset */
+  /*
+   * Horizontal inset lives on the chrome wrappers above. Keep only vertical
+   * padding on the button, and force it so preflight can’t zero the bar.
+   */
   .aqb-redesign-root button.aqb-mobile-chrome-bar {
     display: flex;
     box-sizing: border-box;
@@ -2693,7 +2701,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 10px 16px;
+    padding: 10px 0 !important;
     margin: 0;
     border: none;
     background: #f8f7f4;
