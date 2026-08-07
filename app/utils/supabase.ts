@@ -9,6 +9,10 @@ import {
 import { DESIGN_LIBRARY_MILESTONE_LIMIT } from "~/constants/designLibrary";
 import type { SignLikeDesignsTable } from "~/config/designers";
 import { stableAutosaveDesignId } from "./stableDesignLibraryIds";
+import {
+  formatDeskSignAttachmentMethod,
+  formatDeskSignOrderFinish,
+} from "./deskSignRender";
 
 export { stableAutosaveDesignId, DESIGN_LIBRARY_MILESTONE_LIMIT };
 
@@ -1312,8 +1316,12 @@ export interface BadgeOrderItem {
   shopify_order_number?: string; // TEXT - human-readable order number (e.g. #1001)
   design_id: string; // TEXT - links to main order design_id
   badge_id?: string; // TEXT - unique ID for this specific badge
-  background_color?: string; // Format: "ColorName #hexcode" or "#hexcode"
-  backing_type?: string; // pin | magnetic | adhesive
+  background_color?: string; // Format: "ColorName #hexcode" or "#hexcode" (badges)
+  backing_type?: string; // pin | magnetic | adhesive (badges)
+  /** Desk signs only: "Acrylic · Clear · 2×8\"" etc. */
+  finish?: string;
+  /** Desk signs only: none | desk | wall */
+  attachment_method?: "none" | "desk" | "wall" | string;
   // Line 1 properties
   line_1_text?: string;
   line_1_font?: string;
@@ -1378,8 +1386,8 @@ export interface BadgeOrderItem {
   /** Number of units; 1 at add-to-cart, updated from order line at checkout. Used for badges, signs, stamps, etc. */
   quantity?: number;
   /**
-   * Full designer Badge state for this line. The line_N_* columns are a manufacturing
-   * spec and cannot rebuild a design, so reopening a cart item for editing reads this.
+   * Full designer state for this line (in-memory / badge tables).
+   * Desk-sign rows persist this as `data_json` in Supabase.
    */
   badge_json?: unknown;
   /** Design-level designer state that is not per-badge; index-0 row only. */
@@ -1484,6 +1492,7 @@ export function convertBadgeToOrderItem(
 ): BadgeOrderItem {
   const lines = badge.lines || [];
   const prefix = options?.lineIdPrefix ?? "badge";
+  const isDeskSign = Boolean(badge.deskSignMaterial) || prefix === "desk-sign";
 
   // Use badge-0, badge-1, ... so link-order (which uses line index from cart) can match
   return {
@@ -1491,8 +1500,15 @@ export function convertBadgeToOrderItem(
     badge_id: `${prefix}-${badgeIndex}`,
     shopify_order_id: options?.shopify_order_id,
     shopify_order_number: options?.shopify_order_number,
-    background_color: formatColor(badge.backgroundColor),
-    backing_type: badge.backing ?? undefined,
+    ...(isDeskSign
+      ? {
+          finish: formatDeskSignOrderFinish(badge),
+          attachment_method: formatDeskSignAttachmentMethod(badge),
+        }
+      : {
+          background_color: formatColor(badge.backgroundColor),
+          backing_type: badge.backing ?? undefined,
+        }),
     // Line 1 (index 0)
     line_1_text: lines[0]?.text,
     line_1_font: lines[0]?.fontFamily,

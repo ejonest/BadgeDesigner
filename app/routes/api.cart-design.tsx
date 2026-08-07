@@ -43,7 +43,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       .map((row) => row.badge_json)
       .filter((b): b is Record<string, unknown> => !!b && typeof b === "object");
 
-    // Rows saved before the badge_json migration cannot rebuild a design.
+    // Rows saved before the design-json migration cannot rebuild a design.
     if (allBadges.length !== ordered.length) {
       return json(
         { found: false, design: null, reason: "no_design_state" },
