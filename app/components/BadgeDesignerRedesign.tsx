@@ -67,6 +67,7 @@ import {
   type ResetDesignConfirmMode,
 } from "./AqbResetDesignConfirmModal";
 import { AqbBackingCompleteModal } from "./AqbBackingCompleteModal";
+import { AqbDeskSignCompleteModal } from "./AqbDeskSignCompleteModal";
 import {
   dismissResetDesignConfirm,
   isResetDesignConfirmDismissed,
@@ -2631,6 +2632,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showBackingCompleteModal, setShowBackingCompleteModal] =
     useState(false);
+  const [showDeskSignCompleteModal, setShowDeskSignCompleteModal] =
+    useState(false);
+  const deskSignCompleteModalShownRef = useRef(false);
   const [resetConfirmMode, setResetConfirmMode] =
     useState<ResetDesignConfirmMode | null>(null);
   const [templateSortBy, setTemplateSortBy] = useState<
@@ -3170,7 +3174,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             hasChosenDeskSignStandColor,
           )
         : true;
-      const sText = hasStep3TextEntered;
+      const sText = hasStep3TextValid;
       const sMount =
         deskSignMaterial !== "plastic" ||
         (Boolean(badge.deskSignMountType) &&
@@ -3181,7 +3185,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       if (deskSignShowColorsStep && forStep >= 4 && !sColors) {
         actions.push("select your colors");
       }
-      if (forStep >= 5 && !sText) actions.push("enter your text");
+      if (forStep >= 5 && !sText) {
+        actions.push(
+          hasStep3TextEntered
+            ? "fix text that fits on the desk sign"
+            : "enter your text",
+        );
+      }
       if (deskSignMaterial === "plastic" && forStep >= 6 && !sMount) {
         actions.push("choose wall mount or desk stand");
       }
@@ -3373,6 +3383,16 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       }
     };
   }, []);
+
+  // Desk sign: show completion modal once when the last required step becomes done.
+  useEffect(() => {
+    if (!isDeskSignVariant(variant)) return;
+    if (!stepsComplete) return;
+    if (deskSignCompleteModalShownRef.current) return;
+    if (cartEditDesignId) return;
+    deskSignCompleteModalShownRef.current = true;
+    setShowDeskSignCompleteModal(true);
+  }, [variant, stepsComplete, cartEditDesignId]);
   const multipleBadgesRef = useRef<Badge[]>(multipleBadges);
   const badgeRef = useRef<Badge>(badge);
   const selectedBadgeIndexRef = useRef<number>(selectedBadgeIndex);
@@ -5232,7 +5252,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       hasChosenBackgroundColor,
       hasChosenDeskSignStandColor,
     );
-    const textDone = hasStep3TextEntered;
+    const textDone = hasStep3TextValid;
     const mountDone =
       deskSignMaterial !== "plastic" ||
       (Boolean(badge.deskSignMountType) &&
@@ -5336,6 +5356,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     badge.deskSignAluminumColor,
     badge.lines,
     hasStep3TextEntered,
+    hasStep3TextValid,
   ]);
 
   /** Collapsed mobile steps chrome — next incomplete step (not the open accordion). */
@@ -5352,7 +5373,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         hasChosenBackgroundColor,
         hasChosenDeskSignStandColor,
       );
-      const textDone = hasStep3TextEntered;
+      const textDone = hasStep3TextValid;
       const mountDone =
         deskSignMaterial !== "plastic" ||
         (Boolean(badge.deskSignMountType) &&
@@ -5557,16 +5578,21 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         height: "auto",
       } as React.CSSProperties;
     }
-    if (variant === "badge") {
-      const aspect = activeBadgePhotoPreview
-        ? activeBadgePhotoPreview.previewCropRect.width /
-          activeBadgePhotoPreview.previewCropRect.height
-        : 3;
+    if (usesAqbShell) {
+      const aspect =
+        variant === "badge" && activeBadgePhotoPreview
+          ? activeBadgePhotoPreview.previewCropRect.width /
+            activeBadgePhotoPreview.previewCropRect.height
+          : activeTemplate &&
+              activeTemplate.widthPx > 0 &&
+              activeTemplate.heightPx > 0
+            ? activeTemplate.widthPx / activeTemplate.heightPx
+            : 3;
       const previewVh = embeddedMobileBadgeShell
         ? MOBILE_PREVIEW_EMBEDDED.badgeHeightVh
         : MOBILE_PREVIEW.badgeHeightVh;
       // Embedded shell height follows the visual viewport, so the vh sizing
-      // collapses while the keyboard is open. Floor it in vw to keep the badge
+      // collapses while the keyboard is open. Floor it in vw to keep the preview
       // readable, still capped by maxWidth so it never overflows.
       const width = embeddedMobileBadgeShell
         ? `max(${3 * previewVh}vh, ${MOBILE_PREVIEW_EMBEDDED.badgeMinWidthVw}vw)`
@@ -5586,6 +5612,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     } as React.CSSProperties;
   }, [
     variant,
+    usesAqbShell,
     activeTemplate,
     multipleBadges.length,
     activeBadgePhotoPreview,
@@ -7485,11 +7512,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     return () => window.clearTimeout(t);
   }, [highlightViewAllAfterBulk]);
 
+  const showAddMultiple =
+    variant === "badge" || isDeskSignVariant(variant);
+
   const previewActionsRowProps = {
     labelProduct: config.labelProduct.toLowerCase(),
     labelProductPlural: config.labelProductPlural.toLowerCase(),
     hasBadges: multipleBadges.length > 0,
-    showAddMultiple: variant === "badge",
+    showAddMultiple,
     highlightViewAll: highlightViewAllAfterBulk,
     onCopy: duplicateCurrentBadge,
     onDelete: deleteCurrentBadgeFromPreview,
@@ -9507,7 +9537,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           b.deskSignAcrylicFinish,
         );
         return {
-          Material:
+          [CART_PROP.material]:
             b.deskSignMaterial === "acrylic"
               ? "Acrylic"
               : b.deskSignMaterial === "rosewood"
@@ -9515,7 +9545,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 : "Traditional",
           ...(b.deskSignSize
             ? {
-                Size: b.deskSignSize === "2x8" ? '2×8"' : '2×10"',
+                [CART_PROP.size]:
+                  b.deskSignSize === "2x8" ? '2×8"' : '2×10"',
               }
             : {}),
           ...(acrylicFinish
@@ -10334,6 +10365,23 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         openBadgeStepSection("backing", badgeBackingStepGuard);
         return;
       }
+      // Desk sign: soft-open Colors or Mount when that is the only remaining gap.
+      if (
+        isDeskSignVariant(variant) &&
+        deskSignMaterial != null &&
+        selectedDeskSignSize !== null &&
+        hasStep3TextValid
+      ) {
+        const colorsDone = deskSignColorsComplete;
+        if (deskSignShowColorsStep && !colorsDone) {
+          openBadgeStepSection("background", 4);
+          return;
+        }
+        if (deskSignMaterial === "plastic" && !deskSignMountComplete) {
+          openBadgeStepSection("backing", 5);
+          return;
+        }
+      }
       const msg = getIncompleteStepsMessage(incompleteStepsForCart());
       alert(
         msg
@@ -10491,8 +10539,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         >
           <div className="rounded-lg border border-blue-200 bg-blue-50 text-blue-950 px-3 py-2.5 text-sm leading-snug">
             <span className="font-semibold">Editing your cart design.</span>{" "}
-            Adding to cart replaces this whole design (all badges in it) with
-            your updates.
+            {isDeskSignVariant(variant)
+              ? "Adding to cart replaces this design in your cart with your updates."
+              : "Adding to cart replaces this whole design (all badges in it) with your updates."}
           </div>
         </div>
       ) : null}
@@ -10791,7 +10840,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       labelProduct={config.labelProduct.toLowerCase()}
                       labelProductPlural={config.labelProductPlural.toLowerCase()}
                       hasBadges={multipleBadges.length > 0}
-                      showAddMultiple={variant === "badge"}
+                      showAddMultiple={showAddMultiple}
                       highlightViewAll={highlightViewAllAfterBulk}
                       onViewAll={() => {
                         setHighlightViewAllAfterBulk(false);
@@ -10902,16 +10951,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       : []),
                     {
                       label: "Text",
-                      done: hasStep3TextEntered,
-                      current:
-                        colorsDone && !hasStep3TextEntered,
+                      done: hasStep3TextValid,
+                      current: colorsDone && !hasStep3TextValid,
                     },
                     ...(deskSignMaterial === "plastic"
                       ? [
                           {
                             label: "Mount",
                             done: mountDone,
-                            current: hasStep3TextEntered && !mountDone,
+                            current: hasStep3TextValid && !mountDone,
                           },
                         ]
                       : []),
@@ -18741,6 +18789,24 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           }}
           onBackToDesign={() => {
             setShowBackingCompleteModal(false);
+          }}
+        />
+      ) : null}
+
+      {showDeskSignCompleteModal ? (
+        <AqbDeskSignCompleteModal
+          priceLabel={addToCartPriceLabel}
+          hideAddAnother={Boolean(cartEditDesignId)}
+          onCheckout={() => {
+            setShowDeskSignCompleteModal(false);
+            promptAddToCart();
+          }}
+          onAddAnother={() => {
+            setShowDeskSignCompleteModal(false);
+            openAddMultipleModal();
+          }}
+          onBackToEditing={() => {
+            setShowDeskSignCompleteModal(false);
           }}
         />
       ) : null}
