@@ -215,9 +215,11 @@ export const DESK_SIGN_DEFAULT_COLORS: Record<
     textColor: "#1A1A1A",
   },
   plastic: {
-    backgroundColor: "#1A1A1A",
-    standColor: "#1A1A1A",
-    textColor: "#FFFFFF",
+    // Preview-only default (brushed silver). Colors step still requires an
+    // explicit plate-color pick via hasChosenBackgroundColor.
+    backgroundColor: "#B8BDC4",
+    standColor: "#B8BDC4",
+    textColor: "#1A1A1A",
   },
 };
 
@@ -258,7 +260,7 @@ export function applyDeskSignPlasticPlateFinish(
 ): Badge {
   const finish =
     DESK_SIGN_PLASTIC_PLATE_FINISHES.find((f) => f.id === finishId) ??
-    DESK_SIGN_PLASTIC_PLATE_FINISHES.find((f) => f.id === "black") ??
+    DESK_SIGN_PLASTIC_PLATE_FINISHES.find((f) => f.id === "silver") ??
     DESK_SIGN_PLASTIC_PLATE_FINISHES[0];
   return {
     ...badge,

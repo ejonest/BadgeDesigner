@@ -5449,7 +5449,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const mobileStepsChromeTitle = mobileActiveStepSummary?.allComplete
     ? "Checkout or add more in the control panel"
     : mobileActiveStepSummary
-      ? variant === "badge"
+      ? usesAqbShell
         ? mobileActiveStepSummary.label
         : `Step ${mobileActiveStepSummary.number}: ${mobileActiveStepSummary.label}`
       : "Steps";
@@ -10215,12 +10215,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     deskSignMaterialRef.current = material;
     setDeskSignMaterial(material);
     setSelectedDeskSignSize(null);
-    // Rosewood/plastic retain their current default plate behavior. Acrylic now
-    // requires an explicit Clear, Frosted, or Black selection.
-    setHasChosenBackgroundColor(
-      material === "rosewood" ||
-        deskSignMaterialUsesPlasticFinishes(material),
-    );
+    // Rosewood keeps its preview plate as chosen. Acrylic and Traditional
+    // (plastic) show a preview default but require an explicit Colors pick.
+    setHasChosenBackgroundColor(material === "rosewood");
     setHasChosenDeskSignStandColor(false);
     const templateId = resolveDeskSignDefaultTemplateId(material);
     const prof = deskSignMaterialUsesPlasticFinishes(material)
@@ -10276,6 +10273,25 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }));
   };
 
+  const advanceDeskSignToTextStep = () => {
+    setSectionsOpen({
+      template: false,
+      size: false,
+      export: false,
+      badgeStyle: false,
+      background: false,
+      textLines: true,
+      backing: false,
+      border: false,
+      plaqueFormat: false,
+    });
+    setSectionsOpened((prev) => ({
+      ...prev,
+      background: true,
+      textLines: true,
+    }));
+  };
+
   const handleDeskSignAcrylicFinishChange = (
     finishId: DeskSignAcrylicFinishId,
   ) => {
@@ -10284,6 +10300,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setMultipleBadges((prev) =>
       prev.map((b) => applyDeskSignAcrylicFinish(b, finishId)),
     );
+    advanceDeskSignToTextStep();
   };
 
   const handleDeskSignPlateColorChange = (color: string) => {
@@ -10292,6 +10309,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setMultipleBadges((prev) =>
       prev.map((b) => ({ ...b, backgroundColor: color })),
     );
+    advanceDeskSignToTextStep();
   };
 
   const handleDeskSignRosewoodPlateFinishChange = (
@@ -10302,6 +10320,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setMultipleBadges((prev) =>
       prev.map((b) => applyDeskSignRosewoodPlateFinish(b, finishId)),
     );
+    advanceDeskSignToTextStep();
   };
 
   const handleDeskSignPlasticPlateFinishChange = (finishId: string) => {
@@ -10310,6 +10329,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setMultipleBadges((prev) =>
       prev.map((b) => applyDeskSignPlasticPlateFinish(b, finishId)),
     );
+    advanceDeskSignToTextStep();
   };
 
   const handleDeskSignStandColorChange = (color: string) => {
@@ -11583,7 +11603,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   }
                   title={
                     isDeskSignVariant(variant)
-                      ? "Step 1: Choose material"
+                      ? "Choose material"
                       : "Pick a Shape"
                   }
                   summary={
@@ -12394,7 +12414,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 <AqbBadgeStepSectionToggle
                   stepNumber={2}
                   visualState={aqbDeskSignStepHeaderModel.size.state}
-                  title="Step 2: Choose size"
+                  title="Choose size"
                   summary={aqbDeskSignStepHeaderModel.size.summary}
                   open={sectionsOpen.size}
                   onClick={() => {
@@ -12621,7 +12641,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     }
                     title={
                       isDeskSignVariant(variant)
-                        ? "Step 3: Colors"
+                        ? "Colors"
                         : badgeBackgroundStepTitle
                     }
                     summary={
@@ -12730,6 +12750,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     <DeskSignColorsPicker
                       material={deskSignMaterial}
                       badge={badge}
+                      hasChosenPlateColor={hasChosenBackgroundColor}
                       onPlateColorChange={handleDeskSignPlateColorChange}
                       onStandColorChange={handleDeskSignStandColorChange}
                       onAcrylicFinishChange={
@@ -13807,7 +13828,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   }
                   title={
                     isDeskSignVariant(variant)
-                      ? "Step 4: Enter your text"
+                      ? "Enter your text"
                       : "Add Your Text"
                   }
                   summary={
@@ -14104,7 +14125,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   visualState={
                     aqbDeskSignStepHeaderModel.mount?.state ?? "inactive"
                   }
-                  title="Step 5: Wall mount or desk stand"
+                  title="Wall mount or desk stand"
                   summary={aqbDeskSignStepHeaderModel.mount?.summary ?? null}
                   open={sectionsOpen.backing}
                   onClick={() => {
