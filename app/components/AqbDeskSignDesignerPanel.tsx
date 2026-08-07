@@ -158,6 +158,8 @@ export function DeskSignDesignPicker({
 type ColorsPickerProps = {
   material: DeskSignMaterial | null;
   badge: Badge;
+  /** False until the customer explicitly picks a finish (preview defaults don't count). */
+  hasChosenPlateColor?: boolean;
   onPlateColorChange: (color: string) => void;
   onStandColorChange: (color: string) => void;
   onAcrylicFinishChange?: (finishId: DeskSignAcrylicFinishId) => void;
@@ -168,6 +170,7 @@ type ColorsPickerProps = {
 export function DeskSignColorsPicker({
   material,
   badge,
+  hasChosenPlateColor = true,
   onAcrylicFinishChange,
   onRosewoodPlateFinishChange,
   onPlasticPlateFinishChange,
@@ -269,8 +272,9 @@ export function DeskSignColorsPicker({
   }
 
   if (deskSignMaterialUsesPlasticFinishes(material)) {
-    const selected =
-      findDeskSignPlasticPlateFinish(badge.backgroundColor)?.id ?? null;
+    const selected = hasChosenPlateColor
+      ? findDeskSignPlasticPlateFinish(badge.backgroundColor)?.id ?? null
+      : null;
     return (
       <div>
         <p className="text-xs font-bold text-[#02132B] mb-2">Plate color</p>
