@@ -13,11 +13,10 @@ import {
 const INCLUDE_PRINT_SVG_URL_IN_DB = true;
 
 /**
- * Persist designer state (Badge JSON) on order-item rows so a cart line can be
- * reopened for editing. Requires docs/migration_add_badge_json_to_order_items.sql
- * (adds badge_json + design_meta) to have been run in Supabase.
+ * Persist designer state on order-item rows so a cart line can be reopened for
+ * editing. Badges/signs/plaques use `badge_json`; desk signs use `data_json`.
  */
-const INCLUDE_BADGE_JSON_IN_DB = true;
+const INCLUDE_DESIGN_JSON_IN_DB = true;
 
 async function toUploadBuffer(file: File | Blob): Promise<Buffer> {
   const ab = await file.arrayBuffer();
@@ -27,8 +26,12 @@ async function toUploadBuffer(file: File | Blob): Promise<Buffer> {
 /** Columns added by later migrations; writes retry without them if a column is absent. */
 const OPTIONAL_ROW_COLUMNS = [
   "print_svg_url",
+  "full_image_url",
   "badge_json",
+  "data_json",
   "design_meta",
+  "finish",
+  "attachment_method",
 ] as const;
 
 /** Name of the optional column an error blames, so the caller can drop it and retry. */
@@ -62,6 +65,7 @@ function rowPayload(
     def.orderItemsTable === "plaque_order_items";
   const isDeskSignTable = def.orderItemsTable === "desk_sign_order_items";
   const supportsUploadedImage = isMultiLineSignTable || isDeskSignTable;
+  const designJsonColumn = isDeskSignTable ? "data_json" : "badge_json";
   const base: Record<string, unknown> = {
     design_id: item.design_id,
     shopify_order_id: item.shopify_order_id,
@@ -74,9 +78,9 @@ function rowPayload(
     ...(INCLUDE_PRINT_SVG_URL_IN_DB
       ? { print_svg_url: item.print_svg_url || null }
       : {}),
-    ...(INCLUDE_BADGE_JSON_IN_DB
+    ...(INCLUDE_DESIGN_JSON_IN_DB
       ? {
-          badge_json: item.badge_json ?? null,
+          [designJsonColumn]: item.badge_json ?? null,
           ...(item.design_meta ? { design_meta: item.design_meta } : {}),
         }
       : {}),
@@ -84,7 +88,6 @@ function rowPayload(
       ? { uploaded_image_url: item.uploaded_image_url }
       : {}),
     pdf_url: item.pdf_url,
-    background_color: item.background_color,
     line_1_text: item.line_1_text,
     line_1_font: item.line_1_font,
     line_1_font_size: item.line_1_font_size,
@@ -102,9 +105,15 @@ function rowPayload(
     line_2_color: item.line_2_color,
     line_2_alignment: item.line_2_alignment,
   };
-  // Badges + desk signs store backing/material; multi-line signs/plaques do not.
-  if (!isMultiLineSignTable) {
-    base.backing_type = item.backing_type;
+  if (isDeskSignTable) {
+    base.finish = item.finish ?? null;
+    base.attachment_method = item.attachment_method ?? null;
+  } else {
+    base.background_color = item.background_color;
+    // Badges store backing; multi-line signs/plaques do not.
+    if (!isMultiLineSignTable) {
+      base.backing_type = item.backing_type;
+    }
   }
   // Badges have 4 lines; signs/plaques have 6. Desk signs stop at 2.
   if (!isDeskSignTable) {
@@ -153,7 +162,16 @@ export function normalizeRowForPdf(
   def: DesignerDefinition,
 ): BadgeOrderItem {
   const lineVal = row[def.lineIdColumn] ?? row.badge_id;
-  return { ...row, badge_id: String(lineVal ?? "") } as BadgeOrderItem;
+  // Desk signs store designer state in data_json; other designers use badge_json.
+  const designJson =
+    row.badge_json ??
+    row.data_json ??
+    null;
+  return {
+    ...row,
+    badge_id: String(lineVal ?? ""),
+    badge_json: designJson ?? undefined,
+  } as BadgeOrderItem;
 }
 
 export async function uploadImageToDesignerBucket(

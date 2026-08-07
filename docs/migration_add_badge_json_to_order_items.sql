@@ -40,8 +40,25 @@ BEGIN
   END IF;
 
   IF to_regclass('public.desk_sign_order_items') IS NOT NULL THEN
+    -- Desk signs use data_json (not badge_json).
     ALTER TABLE public.desk_sign_order_items
-      ADD COLUMN IF NOT EXISTS badge_json JSONB,
+      ADD COLUMN IF NOT EXISTS data_json JSONB,
       ADD COLUMN IF NOT EXISTS design_meta JSONB;
+    -- If an older create left badge_json, copy then drop.
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'desk_sign_order_items'
+        AND column_name = 'badge_json'
+    ) THEN
+      EXECUTE $q$
+        UPDATE public.desk_sign_order_items
+        SET data_json = badge_json
+        WHERE data_json IS NULL AND badge_json IS NOT NULL
+      $q$;
+      ALTER TABLE public.desk_sign_order_items DROP COLUMN IF EXISTS badge_json;
+    END IF;
+    COMMENT ON COLUMN public.desk_sign_order_items.data_json IS
+      'Full designer state for this desk-sign line; used to reopen a cart item for editing.';
   END IF;
 END $$;

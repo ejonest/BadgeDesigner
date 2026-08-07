@@ -637,8 +637,9 @@ export const DESK_SIGN_TEMPLATE_TYPES: DeskSignTemplateType[] = [
 ];
 
 export function getDeskSignTemplateTypesForMaterial(
-  material: DeskSignMaterial,
+  material: DeskSignMaterial | null,
 ): DeskSignTemplateType[] {
+  if (!material) return [];
   return DESK_SIGN_TEMPLATE_TYPES.filter((t) => t.material === material);
 }
 

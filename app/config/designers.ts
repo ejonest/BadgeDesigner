@@ -220,8 +220,9 @@ export const DESIGNERS: Record<DesignerId, DesignerDefinition> = {
     gadget: {
       apiUrlEnv: "GADGET_DESK_SIGN_API_URL",
       apiKeyEnv: "GADGET_DESK_SIGN_API_KEY",
-      defaultApiUrl:
-        "https://signs-by-lita-connection--development.gadget.app",
+      // AQB uses badge-designer-order-handler; override with env if needed.
+      // Signs-by-Lita store can set GADGET_DESK_SIGN_API_URL to that app later.
+      defaultApiUrl: BADGE_DEFAULT_URL,
       createField: "createDeskSignDesign",
       inputVariable: "deskSignDesign",
       inputType: "CreateDeskSignDesignInput",
@@ -355,16 +356,32 @@ export function getDesignerApiPaths(id: DesignerId): {
 
 export function resolveGadgetUrl(def: DesignerDefinition): string {
   const fromEnv = process.env[def.gadget.apiUrlEnv];
-  return (
-    (typeof fromEnv === "string" && fromEnv.trim() !== ""
-      ? fromEnv.trim()
-      : null) ?? def.gadget.defaultApiUrl
-  );
+  if (typeof fromEnv === "string" && fromEnv.trim() !== "") {
+    return fromEnv.trim();
+  }
+  // AQB desk-sign / stamp / etc.: fall back to the badge Gadget app URL.
+  if (def.gadget.apiUrlEnv !== "GADGET_API_URL") {
+    const badgeUrl = process.env.GADGET_API_URL;
+    if (typeof badgeUrl === "string" && badgeUrl.trim() !== "") {
+      return badgeUrl.trim();
+    }
+  }
+  return def.gadget.defaultApiUrl;
 }
 
 export function resolveGadgetApiKey(def: DesignerDefinition): string | undefined {
   const v = process.env[def.gadget.apiKeyEnv];
-  return typeof v === "string" && v.trim() !== "" ? v.trim() : undefined;
+  if (typeof v === "string" && v.trim() !== "") {
+    return v.trim();
+  }
+  // Fall back to badge key when a designer-specific key is unset.
+  if (def.gadget.apiKeyEnv !== "GADGET_API_KEY") {
+    const fallback = process.env.GADGET_API_KEY;
+    if (typeof fallback === "string" && fallback.trim() !== "") {
+      return fallback.trim();
+    }
+  }
+  return undefined;
 }
 
 export function resolveLinkOrderSecret(def: DesignerDefinition): string | undefined {

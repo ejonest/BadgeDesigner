@@ -378,10 +378,11 @@ export function buildDeskSignStandMarkup(
 }
 
 export function deskSignColorsStepComplete(
-  material: DeskSignMaterial,
+  material: DeskSignMaterial | null,
   hasChosenPlateColor: boolean,
   _hasChosenStandColor?: boolean,
 ): boolean {
+  if (!material) return false;
   if (
     material === "acrylic" ||
     material === "rosewood" ||
@@ -390,4 +391,55 @@ export function deskSignColorsStepComplete(
     return hasChosenPlateColor;
   }
   return true;
+}
+
+/** Manufacturing summary for desk_sign_order_items.finish */
+export function formatDeskSignOrderFinish(badge: Badge): string | undefined {
+  const material = badge.deskSignMaterial;
+  if (!material) return undefined;
+
+  const materialLabel =
+    material === "acrylic"
+      ? "Acrylic"
+      : material === "rosewood"
+        ? "Rosewood"
+        : "Traditional";
+
+  let colorLabel = "";
+  if (material === "acrylic") {
+    colorLabel =
+      findDeskSignAcrylicFinish(badge.deskSignAcrylicFinish)?.label ?? "";
+  } else if (material === "rosewood") {
+    colorLabel =
+      findDeskSignRosewoodPlateFinish(badge.backgroundColor)?.label ?? "";
+  } else {
+    colorLabel =
+      findDeskSignPlasticPlateFinish(badge.backgroundColor)?.label ?? "";
+  }
+
+  const sizeLabel =
+    badge.deskSignSize === "2x8"
+      ? '2×8"'
+      : badge.deskSignSize === "2x10"
+        ? '2×10"'
+        : "";
+
+  return [materialLabel, colorLabel, sizeLabel].filter(Boolean).join(" · ");
+}
+
+/**
+ * desk_sign_order_items.attachment_method:
+ * - acrylic / rosewood → "none"
+ * - traditional wall-mount → "wall"
+ * - traditional desk-stand → "desk"
+ */
+export function formatDeskSignAttachmentMethod(
+  badge: Badge,
+): "none" | "desk" | "wall" | undefined {
+  const material = badge.deskSignMaterial;
+  if (!material) return undefined;
+  if (material === "acrylic" || material === "rosewood") return "none";
+  if (badge.deskSignMountType === "wall-mount") return "wall";
+  if (badge.deskSignMountType === "desk-stand") return "desk";
+  return "none";
 }

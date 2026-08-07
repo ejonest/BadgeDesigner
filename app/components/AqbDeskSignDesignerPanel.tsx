@@ -24,7 +24,7 @@ import {
 } from "~/utils/deskSignRender";
 
 type MaterialPickerProps = {
-  material: DeskSignMaterial;
+  material: DeskSignMaterial | null;
   onMaterialChange: (material: DeskSignMaterial) => void;
 };
 
@@ -156,7 +156,7 @@ export function DeskSignDesignPicker({
 }
 
 type ColorsPickerProps = {
-  material: DeskSignMaterial;
+  material: DeskSignMaterial | null;
   badge: Badge;
   onPlateColorChange: (color: string) => void;
   onStandColorChange: (color: string) => void;
@@ -172,6 +172,13 @@ export function DeskSignColorsPicker({
   onRosewoodPlateFinishChange,
   onPlasticPlateFinishChange,
 }: ColorsPickerProps) {
+  if (!material) {
+    return (
+      <p className="text-sm text-[#4a5568]">
+        Choose a material first to see finish options.
+      </p>
+    );
+  }
   if (material === "acrylic") {
     const selected = findDeskSignAcrylicFinish(
       badge.deskSignAcrylicFinish,

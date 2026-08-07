@@ -112,8 +112,8 @@ CREATE TABLE IF NOT EXISTS public.desk_sign_order_items (
   print_svg_url TEXT NULL,
   pdf_url TEXT NULL,
   uploaded_image_url TEXT NULL,
-  background_color TEXT NULL,
-  backing_type TEXT NULL,
+  finish TEXT NULL,
+  attachment_method TEXT NULL,
   status TEXT NOT NULL DEFAULT 'draft'::text,
   line_1_text TEXT NULL,
   line_1_font_size INTEGER NULL,
@@ -195,3 +195,9 @@ COMMENT ON COLUMN public.desk_sign_order_items.pdf_url IS
 
 COMMENT ON COLUMN public.desk_sign_order_items.uploaded_image_url IS
   'Optional user-uploaded logo for this line.';
+
+COMMENT ON COLUMN public.desk_sign_order_items.finish IS
+  'Material · colored finish · size (e.g. Acrylic · Clear · 2×8").';
+
+COMMENT ON COLUMN public.desk_sign_order_items.attachment_method IS
+  'none for acrylic/rosewood; desk or wall for traditional mounts.';
