@@ -10,7 +10,7 @@
 {% endcomment %}
 {%- liquid
   assign edit_design_id = item.properties['_Design ID'] | default: item.properties['Design ID'] | strip
-  assign edit_badge_index = item.properties['_Badge Index'] | default: item.properties['Badge Index'] | default: item.properties['_Sign Index'] | default: item.properties['Sign Index'] | default: item.properties['_Plaque Index'] | default: item.properties['Plaque Index']
+  assign edit_badge_index = item.properties['_Badge Index'] | default: item.properties['Badge Index'] | default: item.properties['_Desk Sign Index'] | default: item.properties['Desk Sign Index'] | default: item.properties['_Sign Index'] | default: item.properties['Sign Index'] | default: item.properties['_Plaque Index'] | default: item.properties['Plaque Index']
   assign is_custom_design = false
   if item.properties['_Custom Badge Design'] == 'Yes' or item.properties['Custom Badge Design'] == 'Yes'
     if edit_design_id != blank

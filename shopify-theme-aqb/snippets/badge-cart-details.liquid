@@ -2,7 +2,8 @@
   Cart details for custom designer lines.
   Internal props are underscore-prefixed (hidden in checkout); this snippet
   reads `_Name` with fallback to legacy `Name` for older cart lines.
-  Customer-facing: text lines + attachment only.
+  Badge lines: text + attachment.
+  Desk-sign lines: text + material/size/finish/mount (no badge Attachment).
   Pass: item (cart item)
 {% endcomment %}
 {%- liquid
@@ -10,7 +11,17 @@
   if item.properties['_Custom Badge Design'] == 'Yes' or item.properties['Custom Badge Design'] == 'Yes'
     assign aqb_is_custom = true
   endif
+  assign aqb_designer = item.properties['_Designer'] | default: item.properties['Designer'] | strip
+  assign aqb_is_desk_sign = false
+  if aqb_designer == 'desk-sign'
+    assign aqb_is_desk_sign = true
+  endif
   assign aqb_backing = item.properties['_Backing Type'] | default: item.properties['Backing Type']
+  assign aqb_material = item.properties['_Material'] | default: item.properties['Material']
+  assign aqb_size = item.properties['_Size'] | default: item.properties['Size']
+  assign aqb_acrylic_finish = item.properties['_Acrylic Finish'] | default: item.properties['Acrylic Finish']
+  assign aqb_mount_type = item.properties['_Mount Type'] | default: item.properties['Mount Type']
+  assign aqb_aluminum = item.properties['_Aluminum Frame'] | default: item.properties['Aluminum Frame']
 -%}
 {%- if aqb_is_custom -%}
   <div class="badge-cart-details" style="margin-top: 8px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 0.9em;">
@@ -26,7 +37,23 @@
     {%- if item.properties['Badge Text Line 4'] != blank -%}
       <p style="margin: 2px 0;">{{ item.properties['Badge Text Line 4'] }}</p>
     {%- endif -%}
-    {%- if aqb_backing != blank -%}
+    {%- if aqb_is_desk_sign -%}
+      {%- if aqb_material != blank -%}
+        <p style="margin: 2px 0;"><strong>Material:</strong> {{ aqb_material }}</p>
+      {%- endif -%}
+      {%- if aqb_size != blank -%}
+        <p style="margin: 2px 0;"><strong>Size:</strong> {{ aqb_size }}</p>
+      {%- endif -%}
+      {%- if aqb_acrylic_finish != blank -%}
+        <p style="margin: 2px 0;"><strong>Finish:</strong> {{ aqb_acrylic_finish }}</p>
+      {%- endif -%}
+      {%- if aqb_mount_type != blank -%}
+        <p style="margin: 2px 0;"><strong>Mount:</strong> {{ aqb_mount_type }}</p>
+      {%- endif -%}
+      {%- if aqb_aluminum != blank -%}
+        <p style="margin: 2px 0;"><strong>Frame:</strong> {{ aqb_aluminum }}</p>
+      {%- endif -%}
+    {%- elsif aqb_backing != blank -%}
       <p style="margin: 2px 0;"><strong>Attachment:</strong> {{ aqb_backing | capitalize }}</p>
     {%- endif -%}
   </div>
