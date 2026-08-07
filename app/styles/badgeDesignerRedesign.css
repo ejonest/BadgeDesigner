@@ -2610,6 +2610,10 @@
   .aqb-redesign-root.aqb-embedded-mobile-shell .aqb-tool-shell {
     flex: 1 1 auto;
     min-height: 0;
+    /* Keep a clear gutter so chrome labels aren’t flush to the screen edge */
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    box-sizing: border-box;
   }
 
   .aqb-redesign-root .aqb-designer-focus-exit {
@@ -2680,7 +2684,8 @@
     border-bottom: 1px solid rgba(2, 19, 43, 0.1);
   }
 
-  .aqb-redesign-root .aqb-mobile-chrome-bar {
+  /* button. prefix beats Tailwind’s button { padding: 0 } reset */
+  .aqb-redesign-root button.aqb-mobile-chrome-bar {
     display: flex;
     box-sizing: border-box;
     width: 100%;
@@ -2688,7 +2693,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 10px 14px;
+    padding: 10px 16px;
     margin: 0;
     border: none;
     background: #f8f7f4;
@@ -2698,11 +2703,11 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  .aqb-redesign-root .aqb-mobile-controls-chrome > .aqb-mobile-chrome-bar {
+  .aqb-redesign-root .aqb-mobile-controls-chrome > button.aqb-mobile-chrome-bar {
     background: #fff;
   }
 
-  .aqb-redesign-root .aqb-mobile-chrome-bar--collapse {
+  .aqb-redesign-root button.aqb-mobile-chrome-bar--collapse {
     border-bottom: 1px solid rgba(2, 19, 43, 0.08);
   }
 
