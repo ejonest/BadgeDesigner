@@ -2493,7 +2493,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     variant === "plaque"
       ? defaultPlaqueTemplateId()
       : variant === "desk-sign"
-        ? resolveDeskSignDefaultTemplateId("acrylic")
+        ? ""
         : config.templatesKey === "sign"
           ? SIGN_TEMPLATE_TYPES[0].sizes[0].templateId
           : "rect-1x3";
@@ -2587,15 +2587,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     string | null
   >(null);
   const [deskSignMaterial, setDeskSignMaterial] =
-    useState<DeskSignMaterial>("acrylic");
+    useState<DeskSignMaterial | null>(null);
   const [selectedDeskSignSize, setSelectedDeskSignSize] =
     useState<DeskSignSize | null>(null);
   /** Keep in sync for async template loads (React state is still stale right after setDeskSignMaterial). */
-  const deskSignMaterialRef = useRef<DeskSignMaterial>(deskSignMaterial);
+  const deskSignMaterialRef = useRef<DeskSignMaterial | null>(deskSignMaterial);
   deskSignMaterialRef.current = deskSignMaterial;
   const [deskSignProfessionId, setDeskSignProfessionId] = useState<
     string | null
-  >("doctor");
+  >(null);
   const deskSignActiveTypeId = isDeskSignVariant(variant)
     ? getDeskSignTemplateTypesForMaterial(deskSignMaterial)[0]?.id ?? null
     : null;
@@ -3070,7 +3070,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   const stepsComplete =
     multipleBadges.length > 0 &&
-    (!isDeskSignVariant(variant) || selectedDeskSignSize !== null) &&
+    (!isDeskSignVariant(variant) ||
+      (deskSignMaterial != null && selectedDeskSignSize !== null)) &&
     (isDeskSignVariant(variant)
       ? deskSignColorsComplete
       : hasChosenBackgroundColor) &&
@@ -3160,7 +3161,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }
 
     if (isDeskSignVariant(variant)) {
-      const s1 = multipleBadges.length > 0;
+      const s1 = deskSignMaterial != null;
       const sSize = selectedDeskSignSize !== null;
       const sColors = deskSignShowColorsStep
         ? deskSignColorsStepComplete(
@@ -3644,7 +3645,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             return variant === "plaque"
               ? defaultPlaqueTemplateId()
               : variant === "desk-sign"
-                ? resolveDeskSignDefaultTemplateId("acrylic")
+                ? ""
                 : list[0].id;
           });
         }
@@ -3660,14 +3661,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     };
   }, [templateRefreshKey, variant]);
 
-  // Desk sign: auto-create first design once templates load.
-  useEffect(() => {
-    if (variant !== "desk-sign" || templates.length === 0) return;
-    if (multipleBadges.length > 0) return;
-    const templateId = resolveDeskSignDefaultTemplateId(deskSignMaterial);
-    void handleUniversalTemplateChange(templateId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- init once per session
-  }, [variant, templates.length, multipleBadges.length]);
+  // Desk sign: do not auto-create a design — user must pick material first.
+  // (Material change handler creates the first design via handleUniversalTemplateChange.)
 
   // Build template picker thumbnails for sign/plaque/desk-sign (badge uses per-card BadgeTemplatePhotoPreview).
   useEffect(() => {
@@ -5222,7 +5217,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
   const aqbDeskSignStepHeaderModel = useMemo(() => {
     if (!isDeskSignVariant(variant)) return null;
-    const materialDone = multipleBadges.length > 0;
+    const materialDone = deskSignMaterial != null;
     const sizeDone = selectedDeskSignSize !== null;
     const colorsDone = deskSignColorsStepComplete(
       deskSignMaterial,
@@ -5342,7 +5337,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     type StepEntry = { label: string; done: boolean };
 
     if (isDeskSignVariant(variant)) {
-      const materialDone = multipleBadges.length > 0;
+      const materialDone = deskSignMaterial != null;
       const sizeDone = selectedDeskSignSize !== null;
       const colorsDone = deskSignColorsStepComplete(
         deskSignMaterial,
@@ -10212,6 +10207,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   };
 
   const handleDeskSignSizeChange = async (size: DeskSignSize) => {
+    if (!deskSignMaterial) return;
     setSelectedDeskSignSize(size);
     const templateId = resolveDeskSignTemplateIdForSize(
       deskSignMaterial,
@@ -10859,7 +10855,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             {(() => {
               const stepNavItems = (() => {
                 if (isDeskSignVariant(variant)) {
-                  const materialDone = multipleBadges.length > 0;
+                  const materialDone = deskSignMaterial != null;
                   const sizeDone = selectedDeskSignSize !== null;
                   const colorsDone = deskSignColorsStepComplete(
                     deskSignMaterial,

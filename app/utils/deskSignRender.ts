@@ -378,10 +378,11 @@ export function buildDeskSignStandMarkup(
 }
 
 export function deskSignColorsStepComplete(
-  material: DeskSignMaterial,
+  material: DeskSignMaterial | null,
   hasChosenPlateColor: boolean,
   _hasChosenStandColor?: boolean,
 ): boolean {
+  if (!material) return false;
   if (
     material === "acrylic" ||
     material === "rosewood" ||
