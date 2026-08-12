@@ -12,6 +12,11 @@ export const CART_PROP = {
   textLine2: "Badge Text Line 2",
   textLine3: "Badge Text Line 3",
   textLine4: "Badge Text Line 4",
+  gavelTextLine1: "Gavel Text Line 1",
+  gavelTextLine2: "Gavel Text Line 2",
+  gavelTextLine3: "Gavel Text Line 3",
+  gavelStyle: "_Gavel Style",
+  bandFinish: "_Band Finish",
 
   /** Hidden internals (underscore = Shopify “do not display”) */
   customDesign: "_Custom Badge Design",
@@ -76,11 +81,17 @@ export function buildDesignerCartLineProperties(
   }
 
   const thumb = (input.thumbnailUrl ?? "").trim();
+  const isGavel = input.designerId === "gavel";
   const properties: Record<string, string> = {
-    [CART_PROP.textLine1]: input.lines[0]?.text || "",
-    [CART_PROP.textLine2]: input.lines[1]?.text || "",
-    [CART_PROP.textLine3]: input.lines[2]?.text || "",
-    [CART_PROP.textLine4]: input.lines[3]?.text || "",
+    [isGavel ? CART_PROP.gavelTextLine1 : CART_PROP.textLine1]:
+      input.lines[0]?.text || "",
+    [isGavel ? CART_PROP.gavelTextLine2 : CART_PROP.textLine2]:
+      input.lines[1]?.text || "",
+    [isGavel ? CART_PROP.gavelTextLine3 : CART_PROP.textLine3]:
+      input.lines[2]?.text || "",
+    ...(isGavel
+      ? {}
+      : { [CART_PROP.textLine4]: input.lines[3]?.text || "" }),
     [CART_PROP.customDesign]: "Yes",
     [CART_PROP.designer]: input.designerId,
     [CART_PROP.backgroundColor]: input.backgroundColor || "",

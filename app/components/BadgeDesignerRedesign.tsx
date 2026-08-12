@@ -2966,12 +2966,27 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const signUserLogoUploadSupported = signTemplateSupportsUserLogoUpload(
     badge.templateId ?? universalTemplateId,
   );
-  /** Step 3 text: line 1 must be customized (non-empty and not placeholder). Extra lines may stay template defaults ("Title", "Line Text") or empty — typical for single-line badges, CSV, and duplicates. */
+  /** Step 3 text: line 1 must be customized (non-empty and not placeholder). Extra lines may stay template defaults ("Title", "Line Text") or empty — typical for single-line badges, CSV, and duplicates. Desk signs start with name + title and require every present line. */
   const getStep3DefaultText = (lineIndex: number) =>
     lineIndex === 0 ? "Your Name" : lineIndex === 1 ? "Title" : "Line Text";
+  const isDeskSignPlaceholderText = (text: string) => {
+    const t = text.trim();
+    return (
+      t === "" ||
+      t === "Your Name" ||
+      t === "Title" ||
+      t === "Your Title" ||
+      t === "Line Text"
+    );
+  };
   const hasStep3TextEntered =
     badge.lines.length > 0 &&
     (() => {
+      if (isDeskSignVariant(variant)) {
+        return badge.lines.every(
+          (line) => !isDeskSignPlaceholderText(line.text || ""),
+        );
+      }
       if (variant !== "plaque") {
         const t0 = (badge.lines[0]?.text || "").trim();
         return t0 !== "" && t0 !== getStep3DefaultText(0);
@@ -3384,15 +3399,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     };
   }, []);
 
-  // Desk sign: show completion modal once when the last required step becomes done.
-  useEffect(() => {
-    if (!isDeskSignVariant(variant)) return;
-    if (!stepsComplete) return;
-    if (deskSignCompleteModalShownRef.current) return;
-    if (cartEditDesignId) return;
-    deskSignCompleteModalShownRef.current = true;
-    setShowDeskSignCompleteModal(true);
-  }, [variant, stepsComplete, cartEditDesignId]);
   const multipleBadgesRef = useRef<Badge[]>(multipleBadges);
   const badgeRef = useRef<Badge>(badge);
   const selectedBadgeIndexRef = useRef<number>(selectedBadgeIndex);
@@ -3791,8 +3797,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     if (
       !Array.isArray(payload.multipleBadges) ||
       payload.multipleBadges.length === 0
-    )
+    ) {
       return;
+    }
     let migratedUniversal = migrateLegacyDesignerUniversalTemplateId(
       payload.universalTemplateId!,
     );
@@ -3933,11 +3940,16 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       plaqueLayoutGuidedAutoAdvanceDoneRef.current = true;
     }
     if (variant === "desk-sign") {
-      if (payload.deskSignMaterial) {
-        setDeskSignMaterial(payload.deskSignMaterial);
+      const restoredMaterial =
+        payload.deskSignMaterial ?? restoredBadge.deskSignMaterial ?? null;
+      if (restoredMaterial) {
+        setDeskSignMaterial(restoredMaterial);
+        deskSignMaterialRef.current = restoredMaterial;
       }
       if (payload.deskSignProfessionId !== undefined) {
         setDeskSignProfessionId(payload.deskSignProfessionId);
+      } else if (restoredBadge.deskSignProfessionId) {
+        setDeskSignProfessionId(restoredBadge.deskSignProfessionId);
       }
     }
     // Do not mark steps 3 or 4 as opened; user must open step 4 (and step 3 counts complete only when they have non-default text) in this session
@@ -4072,7 +4084,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     const cacheKey = getDesignerDraftCacheKey(_shop, _productId, variant);
     const timeoutId = window.setTimeout(() => {
       if (multipleBadges.length === 0) {
-        removeDesignerDraftCache(_shop, _productId, variant);
+        // Only wipe after an explicit reset (skipCacheSaveRef). On first paint
+        // multipleBadges is empty until localStorage restore runs — deleting here
+        // was wiping desk-sign drafts before templates finished loading.
+        if (skipCacheSaveRef.current) {
+          skipCacheSaveRef.current = false;
+          removeDesignerDraftCache(_shop, _productId, variant);
+        }
         return;
       }
       if (skipCacheSaveRef.current) {
@@ -4866,6 +4884,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
     const template = templates.find((t) => t.id === universalTemplateId);
     if (!template) {
+      // Desk sign: no material chosen yet — do not fall back to acrylic (templates[0]).
+      if (isDeskSignVariant(variant) && !universalTemplateId) {
+        return null;
+      }
       console.warn(
         "[BadgeDesignerRedesign] Universal template not found:",
         universalTemplateId,
@@ -4876,7 +4898,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       return templates[0] || null;
     }
     return template;
-  }, [templates, universalTemplateId]);
+  }, [templates, universalTemplateId, variant]);
 
   /**
    * Local SVG QA panel: customer preview (proof), print-ready, and overlap.
@@ -5703,11 +5725,38 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       (prev.border && !sectionsOpen.border) ||
       (prev.export && !sectionsOpen.export);
     const didCloseText = prev.textLines && !sectionsOpen.textLines;
+    const didCloseBacking = prev.backing && !sectionsOpen.backing;
     const didCloseIcon = Boolean(prev.badgeIcon) && !sectionsOpen.badgeIcon;
     const didOpenExport = !prev.export && sectionsOpen.export;
     prevSectionsOpenRef.current = sectionsOpen;
     if (didClose) setDraftSaveTrigger((t) => t + 1);
     if (didOpenExport && stepsComplete) setDraftSaveTrigger((t) => t + 1);
+    // Desk sign: only prompt checkout after the last required section is closed,
+    // not as soon as the first character makes text "valid".
+    if (
+      isDeskSignVariant(variant) &&
+      !deskSignCompleteModalShownRef.current &&
+      !cartEditDesignId &&
+      stepsComplete
+    ) {
+      const anyDesignerSectionOpen =
+        sectionsOpen.template ||
+        sectionsOpen.size ||
+        sectionsOpen.export ||
+        sectionsOpen.badgeStyle ||
+        sectionsOpen.background ||
+        Boolean(sectionsOpen.badgeIcon) ||
+        sectionsOpen.textLines ||
+        sectionsOpen.backing ||
+        sectionsOpen.border ||
+        Boolean(sectionsOpen.plaqueFormat);
+      const closedLastRequiredSection =
+        deskSignMaterial === "plastic" ? didCloseBacking : didCloseText;
+      if (closedLastRequiredSection && !anyDesignerSectionOpen) {
+        deskSignCompleteModalShownRef.current = true;
+        setShowDeskSignCompleteModal(true);
+      }
+    }
     // After icon step, advance to text when the user closes 2b after choosing.
     if (
       variant === "badge" &&
@@ -5762,6 +5811,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     variant,
     showBadgeIconStep,
     hasChosenBadgeIcon,
+    deskSignMaterial,
+    cartEditDesignId,
   ]);
 
   // Debounced draft save: only when stepsComplete, triggered by draftSaveTrigger (section close / apply-to-all / selectBadge)
@@ -7329,7 +7380,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setHasChosenBacking(false);
     setHasChosenBadgeIcon(false);
     if (variant === "desk-sign") {
+      setDeskSignMaterial(null);
+      deskSignMaterialRef.current = null;
       setSelectedDeskSignSize(null);
+      setDeskSignProfessionId(null);
     }
     setSectionsOpened({
       template: false,
@@ -7358,9 +7412,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setUniversalTemplateId(
       variant === "plaque"
         ? defaultPlaqueTemplateId()
-        : isSignLikeVariant(variant)
-        ? SIGN_TEMPLATE_TYPES[0].sizes[0].templateId
-        : "rect-1x3",
+        : variant === "desk-sign"
+          ? ""
+          : isSignLikeVariant(variant)
+            ? SIGN_TEMPLATE_TYPES[0].sizes[0].templateId
+            : "rect-1x3",
     );
     if (variant === "plaque") {
       setSelectedPlaqueSize(null);
@@ -7380,6 +7436,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     templateGuidedAutoAdvanceDoneRef.current = false;
     signSizeGuidedAutoAdvanceDoneRef.current = false;
     plaqueLayoutGuidedAutoAdvanceDoneRef.current = false;
+    deskSignCompleteModalShownRef.current = false;
+    setShowDeskSignCompleteModal(false);
     setUndoHistory([]);
   };
 
@@ -9165,23 +9223,18 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             proofUploadWarning =
               `Could not save badge draft (${draftRes.status}). ${draftText || "Will try full upload."}`.trim();
           } else {
-            // Finalize: PDF + status. Resend cached print SVGs (no re-render).
+            // Finalize: PDF + status. Print SVGs already uploaded in save-draft.
             const formDataFinalize = new FormData();
             formDataFinalize.append("designId", designIdForSupabase);
+            formDataFinalize.append(
+              "designer",
+              variant === "desk-sign" ? "desk-sign" : "badge",
+            );
             formDataFinalize.append("pdf", pdfBlob, "badge-design_proof.pdf");
             const currentBacking = badgesForSupabase[0]?.backing;
-            if (currentBacking) {
+            if (currentBacking && variant === "badge") {
               formDataFinalize.append("backingType", currentBacking);
             }
-            sortedCartAssets.forEach((asset, index) => {
-              if (asset.printSvgBlob?.size > 0) {
-                formDataFinalize.append(
-                  `print_svg_${index}`,
-                  asset.printSvgBlob,
-                  `badge-${index}-print.svg`,
-                );
-              }
-            });
             const finalizeRes = await fetch("/api/finalize-draft", {
               method: "POST",
               body: formDataFinalize,
@@ -10150,8 +10203,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     );
   }, [cloudLibraryEnabled, multipleBadges.length, cloudAutosaveStatus]);
 
-  // Early guard - don't render until we have a concrete template
-  if (!activeTemplate) {
+  // Early guard - don't render until we have a concrete template.
+  // Desk sign: templates can be loaded with no material chosen yet.
+  if (
+    !activeTemplate &&
+    !(isDeskSignVariant(variant) && templates.length > 0)
+  ) {
     return (
       <div className="aqb-redesign-root min-h-screen bg-[#F0EDE6] flex items-center justify-center">
         <div className="text-center max-w-md px-4">
@@ -10215,9 +10272,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     deskSignMaterialRef.current = material;
     setDeskSignMaterial(material);
     setSelectedDeskSignSize(null);
-    // Rosewood keeps its preview plate as chosen. Acrylic and Traditional
-    // (plastic) show a preview default but require an explicit Colors pick.
-    setHasChosenBackgroundColor(material === "rosewood");
+    // Preview may show a default plate; Colors still requires an explicit pick.
+    setHasChosenBackgroundColor(false);
     setHasChosenDeskSignStandColor(false);
     const templateId = resolveDeskSignDefaultTemplateId(material);
     const prof = deskSignMaterialUsesPlasticFinishes(material)
@@ -10792,7 +10848,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     ? selectedPlaqueLayoutId == null
                       ? "Choose a layout below to get started"
                       : "Choose a size below to get started"
-                    : "Select a shape below to get started"}
+                    : isDeskSignVariant(variant)
+                      ? "Choose a material below to get started"
+                      : "Select a shape below to get started"}
                 </div>
               ) : (
                 (() => {

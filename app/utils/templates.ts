@@ -116,6 +116,7 @@ export function getTemplateConfigsForVariant(
   if (variant === "plaque") return [...plaqueCfg];
   if (variant === "sign") return [...signCfg];
   if (variant === "desk-sign") return [...deskSignCfg];
+  if (variant === "gavel") return [];
   return [...badgeCfg];
 }
 
@@ -123,6 +124,7 @@ function getCfgForVariant(variant: DesignerVariant): TemplateConfig[] {
   if (variant === "plaque") return plaqueCfg;
   if (variant === "sign") return signCfg;
   if (variant === "desk-sign") return deskSignCfg;
+  if (variant === "gavel") return [];
   return badgeCfg;
 }
 

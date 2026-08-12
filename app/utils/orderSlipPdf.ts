@@ -57,12 +57,42 @@ async function fetchImageBytes(url: string): Promise<Uint8Array | null> {
 
 export type GetImageBytes = (url: string) => Promise<Uint8Array | null>;
 
-/**
- * Build line rows for one badge from BadgeOrderItem (up to 6 lines).
- * Only includes lines that have non-empty text, matching the client PDF behavior.
- */
-function getLineRows(item: BadgeOrderItem): Array<{ text: string; font: string; color: string; alignment: string }> {
-  const rows: Array<{ text: string; font: string; color: string; alignment: string }> = [];
+type SlipLineRow = {
+  text: string;
+  font: string;
+  color: string;
+  alignment: string;
+};
+
+/** Prefer badge_json / data_json (canonical designer state); fall back to flat columns for older rows. */
+function getLineRows(item: BadgeOrderItem): SlipLineRow[] {
+  const json = item.badge_json as
+    | {
+        lines?: Array<{
+          text?: string;
+          fontFamily?: string;
+          color?: string;
+          align?: string;
+        }>;
+      }
+    | null
+    | undefined;
+  if (json && Array.isArray(json.lines)) {
+    const rows: SlipLineRow[] = [];
+    for (const line of json.lines.slice(0, 6)) {
+      const trimmed = (line?.text ?? "").trim();
+      if (!trimmed) continue;
+      rows.push({
+        text: trimmed,
+        font: line.fontFamily?.trim() || "Roboto",
+        color: line.color?.trim() || "#000000",
+        alignment: line.align?.trim() || "Center",
+      });
+    }
+    if (rows.length > 0) return rows;
+  }
+
+  const rows: SlipLineRow[] = [];
   const rec = item as unknown as Record<string, unknown>;
   for (let i = 1; i <= 6; i++) {
     const text = rec[`line_${i}_text`] as string | undefined;
@@ -79,6 +109,15 @@ function getLineRows(item: BadgeOrderItem): Array<{ text: string; font: string; 
     });
   }
   return rows;
+}
+
+function getBackgroundColorField(item: BadgeOrderItem): string | undefined {
+  const json = item.badge_json as
+    | { backgroundColor?: string }
+    | null
+    | undefined;
+  if (json?.backgroundColor?.trim()) return json.backgroundColor.trim();
+  return item.background_color;
 }
 
 /**
@@ -156,7 +195,14 @@ export async function generateOrderSlipPdf(
     const tableWidth = PAGE_WIDTH - tableX - MARGIN;
     let tableY = sectionTopY - HEADER_HEIGHT - HEADER_GAP;
 
-    page.drawText(`Badge ${idx + 1}`, {
+    const jsonMeta = item.badge_json as
+      | { gavelStyle?: string; gavelBandFinish?: string }
+      | null
+      | undefined;
+    const isGavel =
+      Boolean(jsonMeta?.gavelStyle) ||
+      String(item.badge_id ?? "").startsWith("gavel-");
+    page.drawText(`${isGavel ? "Gavel" : "Badge"} ${idx + 1}`, {
       x: MARGIN,
       y: sectionTopY - HEADER_HEIGHT,
       size: 12,
@@ -275,10 +321,18 @@ export async function generateOrderSlipPdf(
     const tableHeight = rowIdx * ROW_HEIGHT;
     const contentHeight = Math.max(imageHeightPt, tableHeight);
     const contentBottomY = tableY - contentHeight;
-    const bgHex = extractHexFromColorField(item.background_color);
+    const bgHex = extractHexFromColorField(getBackgroundColorField(item));
     const bgColorInfo = getColorInfo(bgHex.startsWith("#") ? bgHex : `#${bgHex}`);
 
-    page.drawText(`Background: ${bgColorInfo.name} (${bgColorInfo.hex})`, {
+    const finishLabel =
+      typeof item.finish === "string" && item.finish.trim()
+        ? item.finish.trim()
+        : "";
+    page.drawText(
+      isGavel && finishLabel
+        ? `Finish: ${finishLabel}`
+        : `Background: ${bgColorInfo.name} (${bgColorInfo.hex})`,
+      {
       x: MARGIN,
       y: contentBottomY - IMAGE_BOTTOM_GAP - BACKGROUND_TEXT_HEIGHT,
       size: 9,

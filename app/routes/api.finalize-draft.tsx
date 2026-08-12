@@ -1,5 +1,9 @@
 import { json, type ActionFunctionArgs } from "@remix-run/node";
-import { getDesignerConfig } from "~/config/designers";
+import {
+  getDesignerConfig,
+  type DesignerId,
+  DESIGNERS,
+} from "~/config/designers";
 import {
   uploadImageToDesignerBucket,
   uploadPdfToDesignerBucket,
@@ -7,12 +11,21 @@ import {
 } from "~/lib/designers/orderItemsStorage";
 import { getPacificTimestamp, supabaseAdmin } from "~/utils/supabase";
 
+function resolveFinalizeDesigner(raw: string | null): DesignerId {
+  const id = (raw || "badge").trim() as DesignerId;
+  if (id in DESIGNERS) return id;
+  return "badge";
+}
+
 /**
  * Finalize draft on add-to-cart:
  * - upload proof PDF → pdf_url
- * - upload print-ready SVGs → print_svg_url (per badge line)
+ * - optionally upload print-ready SVGs when missing on the draft rows
  * - set status to in_cart
  * Returns thumbnailUrls / fullImageUrls / printSvgUrls for cart properties.
+ *
+ * Print SVGs are usually already uploaded by save-draft; re-sending them here
+ * only fills gaps (avoids a full duplicate upload on every ATC).
  */
 export async function action({ request }: ActionFunctionArgs) {
   if (request.method !== "POST") {
@@ -43,8 +56,11 @@ export async function action({ request }: ActionFunctionArgs) {
     }
     const backingType =
       (formData.get("backingType") as string)?.trim() || undefined;
-
-    const def = getDesignerConfig("badge");
+    const designerId = resolveFinalizeDesigner(
+      formData.get("designer") as string | null,
+    );
+    const def = getDesignerConfig(designerId);
+    const lineIdColumn = def.lineIdColumn;
 
     let pdfUrl: string;
     try {
@@ -64,7 +80,9 @@ export async function action({ request }: ActionFunctionArgs) {
 
     const { data: existingRows, error: selectError } = await supabaseAdmin
       .from(def.orderItemsTable)
-      .select("id, badge_id, thumbnail_url, full_image_url, print_svg_url, status")
+      .select(
+        `id, ${lineIdColumn}, thumbnail_url, full_image_url, print_svg_url, status`,
+      )
       .eq("design_id", designId)
       .in("status", ["draft", "in_cart"]);
 
@@ -76,14 +94,17 @@ export async function action({ request }: ActionFunctionArgs) {
       );
     }
 
-    const rows = (existingRows ?? []) as Array<{
-      id: string;
-      badge_id: string | null;
-      thumbnail_url: string | null;
-      full_image_url: string | null;
-      print_svg_url: string | null;
-      status: string;
-    }>;
+    const rows = (existingRows ?? []).map((r) => {
+      const rec = r as Record<string, unknown>;
+      return {
+        id: String(rec.id),
+        badge_id: (rec[lineIdColumn] ?? rec.badge_id ?? null) as string | null,
+        thumbnail_url: (rec.thumbnail_url as string | null) ?? null,
+        full_image_url: (rec.full_image_url as string | null) ?? null,
+        print_svg_url: (rec.print_svg_url as string | null) ?? null,
+        status: String(rec.status ?? ""),
+      };
+    });
 
     if (rows.length === 0) {
       return json({
@@ -107,9 +128,15 @@ export async function action({ request }: ActionFunctionArgs) {
     const printSvgUrlsByBadgeId = new Map<string, string>();
     const printUploadJobs: Promise<void>[] = [];
     for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      // Prefer draft URLs already written by save-draft — skip re-upload.
+      if (row.print_svg_url) {
+        if (row.badge_id) printSvgUrlsByBadgeId.set(row.badge_id, row.print_svg_url);
+        continue;
+      }
       const printSvgFile = formData.get(`print_svg_${i}`) as File | null;
       if (!printSvgFile?.size) continue;
-      const badgeId = rows[i]?.badge_id || `${def.lineIdPrefix}-${i}`;
+      const badgeId = row.badge_id || `${def.lineIdPrefix}-${i}`;
       printUploadJobs.push(
         (async () => {
           try {
@@ -133,25 +160,31 @@ export async function action({ request }: ActionFunctionArgs) {
     await Promise.all(printUploadJobs);
 
     const now = getPacificTimestamp();
-    for (const row of rows) {
-      const updatePayload: Record<string, unknown> = {
-        pdf_url: pdfUrl,
-        updated_at: now,
-      };
-      if (backingType) updatePayload.backing_type = backingType;
-      const printUrl =
-        row.badge_id && printSvgUrlsByBadgeId.get(row.badge_id);
-      if (printUrl) updatePayload.print_svg_url = printUrl;
+    await Promise.all(
+      rows.map(async (row) => {
+        const updatePayload: Record<string, unknown> = {
+          pdf_url: pdfUrl,
+          updated_at: now,
+        };
+        if (backingType && designerId === "badge") {
+          updatePayload.backing_type = backingType;
+        }
+        const printUrl =
+          row.badge_id && printSvgUrlsByBadgeId.get(row.badge_id);
+        if (printUrl && printUrl !== row.print_svg_url) {
+          updatePayload.print_svg_url = printUrl;
+        }
 
-      const { error: upErr } = await supabaseAdmin
-        .from(def.orderItemsTable)
-        .update(updatePayload)
-        .eq("id", row.id);
-      if (upErr) {
-        console.error("[finalize-draft] row update failed:", row.id, upErr);
-        throw upErr;
-      }
-    }
+        const { error: upErr } = await supabaseAdmin!
+          .from(def.orderItemsTable)
+          .update(updatePayload)
+          .eq("id", row.id);
+        if (upErr) {
+          console.error("[finalize-draft] row update failed:", row.id, upErr);
+          throw upErr;
+        }
+      }),
+    );
 
     try {
       await updateDesignerOrderItemsStatusByDesignId(def, designId, "in_cart");

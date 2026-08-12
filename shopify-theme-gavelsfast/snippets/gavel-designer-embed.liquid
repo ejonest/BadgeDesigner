@@ -1,0 +1,152 @@
+{% comment %}
+  Gavels Fast — custom gavel designer iframe embed.
+  Product handle: custom-gavel
+  Theme template: product.gavel-designer.json → {% render 'gavel-designer-embed' %}
+
+  Replace DESIGNER_ORIGIN with your Vercel app URL.
+  Optional variant query params: variantIdWalnut, variantIdOak, variantIdEbony
+  (also accepts American Walnut / Oak / Ebony as option1).
+  (or a single variantId / first product variant).
+{% endcomment %}
+
+{% assign gavel_designer_origin = 'https://all-quality-design-tool.vercel.app' %}
+
+<script>
+  (function() {
+    var DESIGNER_ORIGIN = {{ gavel_designer_origin | json }};
+
+    function isAllowedDesignerOrigin(origin) {
+      if (origin === DESIGNER_ORIGIN) return true;
+      if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+      if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return true;
+      return false;
+    }
+
+    function replyToDesigner(event, requestId, success, error) {
+      if (!requestId || !event || !event.source) return;
+      try {
+        event.source.postMessage({
+          action: 'add-to-cart-result',
+          requestId: requestId,
+          success: success,
+          error: error || null
+        }, event.origin);
+      } catch (e) {
+        console.error('Gavel designer: could not ack iframe', e);
+      }
+    }
+
+    function gfRemoveReplacedCartLines(cartRoot, replaceDesignId) {
+      if (!replaceDesignId) return Promise.resolve();
+      var base = cartRoot.replace(/\/$/, '');
+      return fetch(base + '/cart.js', { headers: { 'Accept': 'application/json' } })
+        .then(function(res) { return res.json(); })
+        .then(function(cart) {
+          var stale = (cart.items || []).filter(function(item) {
+            var props = item.properties || {};
+            var id = props['_Design ID'] || props['Design ID'];
+            return id === replaceDesignId;
+          });
+          return stale.reduce(function(chain, item) {
+            return chain.then(function() {
+              return fetch(base + '/cart/change.js', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: item.key, quantity: 0 })
+              });
+            });
+          }, Promise.resolve());
+        })
+        .catch(function(err) {
+          console.error('Gavel designer: could not remove replaced cart lines', err);
+        });
+    }
+
+    function gfDesignerCartAdd(items, event, requestId, replaceDesignId) {
+      if (!items || !items.length) {
+        replyToDesigner(event, requestId, false, 'No cart items to add');
+        return;
+      }
+      var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) ? window.Shopify.routes.root : '/';
+      var cartAddUrl = cartRoot.replace(/\/$/, '') + '/cart/add.js';
+      var payload = {
+        items: items.map(function(item) {
+          var variantId = parseInt(String(item.variantId), 10);
+          return {
+            id: variantId,
+            quantity: item.quantity || 1,
+            properties: item.properties || {}
+          };
+        })
+      };
+      fetch(cartAddUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function(res) {
+          return res.json().then(function(body) {
+            if (!res.ok) {
+              var msg = (body && (body.description || body.message)) || ('HTTP ' + res.status);
+              throw new Error(msg);
+            }
+            return body;
+          });
+        })
+        .then(function() {
+          return gfRemoveReplacedCartLines(cartRoot, replaceDesignId);
+        })
+        .then(function() {
+          replyToDesigner(event, requestId, true);
+          window.location.href = cartRoot.replace(/\/$/, '') + '/cart';
+        })
+        .catch(function(err) {
+          console.error('Gavel designer: cart/add.js failed', err);
+          var message = err && err.message ? err.message : String(err);
+          replyToDesigner(event, requestId, false, message);
+          alert('Could not add your design to the cart. Please try again.\n\n' + message);
+        });
+    }
+
+    window.addEventListener('message', function(event) {
+      if (!isAllowedDesignerOrigin(event.origin)) return;
+      var data = event.data;
+      if (!data || !data.action) return;
+
+      if (data.action === 'redirect-to-login') {
+        var returnTo = window.location.pathname + window.location.search;
+        window.location.href = '/customer_authentication/login?return_to=' + encodeURIComponent(returnTo);
+        return;
+      }
+
+      if (data.action === 'add-to-cart' && data.payload) {
+        gfDesignerCartAdd([data.payload], event, data.requestId, data.payload.replaceDesignId);
+        return;
+      }
+
+      if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
+        gfDesignerCartAdd(data.payload.items, event, data.requestId, data.payload.replaceDesignId);
+      }
+    });
+  })();
+</script>
+
+{% if product %}
+  {% assign gavel_v0 = product.selected_or_first_available_variant | default: product.variants[0] %}
+  {% assign gavel_walnut = product.variants | where: 'option1', 'Walnut' | first %}
+  {% if gavel_walnut == blank %}
+    {% assign gavel_walnut = product.variants | where: 'option1', 'American Walnut' | first %}
+  {% endif %}
+  {% assign gavel_oak = product.variants | where: 'option1', 'Oak' | first %}
+  {% assign gavel_ebony = product.variants | where: 'option1', 'Ebony' | first %}
+  <div class="gf-designer-embed" style="width:100%; min-height:900px;">
+    <iframe
+      id="gavel-designer-iframe"
+      title="Design your custom gavel"
+      src="{{ gavel_designer_origin }}/gavel-designer?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&amp;storeUrl={{ shop.permanent_domain | url_param_escape }}&amp;product={{ product.id | url_param_escape }}&amp;variantId={{ gavel_v0.id | url_param_escape }}{% if gavel_walnut %}&amp;variantIdWalnut={{ gavel_walnut.id | url_param_escape }}{% endif %}{% if gavel_oak %}&amp;variantIdOak={{ gavel_oak.id | url_param_escape }}{% endif %}{% if gavel_ebony %}&amp;variantIdEbony={{ gavel_ebony.id | url_param_escape }}{% endif %}{% if customer %}&amp;customerId={{ customer.id | url_param_escape }}{% endif %}"
+      style="width:100%; height:1000px; border:0;"
+      loading="lazy"
+      allow="clipboard-read; clipboard-write"
+    ></iframe>
+  </div>
+{% endif %}

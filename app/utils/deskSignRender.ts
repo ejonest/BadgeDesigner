@@ -210,6 +210,8 @@ export const DESK_SIGN_DEFAULT_COLORS: Record<
     textColor: DESK_SIGN_ACRYLIC_TEXT_COLOR,
   },
   rosewood: {
+    // Preview-only default (brushed gold). Colors step still requires an
+    // explicit plate-color pick via hasChosenBackgroundColor.
     backgroundColor: FEATURED_BRUSHED_GOLD_HEX,
     standColor: DESK_SIGN_ROSEWOOD_STAND_COLOR,
     textColor: "#1A1A1A",

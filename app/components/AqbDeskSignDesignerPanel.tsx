@@ -229,8 +229,9 @@ export function DeskSignColorsPicker({
   }
 
   if (material === "rosewood") {
-    const selected =
-      findDeskSignRosewoodPlateFinish(badge.backgroundColor)?.id ?? null;
+    const selected = hasChosenPlateColor
+      ? findDeskSignRosewoodPlateFinish(badge.backgroundColor)?.id ?? null
+      : null;
     return (
       <div>
         <p className="text-xs font-bold text-[#02132B] mb-2">Plate</p>

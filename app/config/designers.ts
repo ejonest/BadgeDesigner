@@ -10,6 +10,7 @@ export const DESIGNER_IDS = [
   "stamp",
   "nameplate",
   "desk-sign",
+  "gavel",
 ] as const;
 export type DesignerId = (typeof DESIGNER_IDS)[number];
 
@@ -17,20 +18,23 @@ export type LineIdColumn =
   | "badge_id"
   | "sign_id"
   | "plaque_id"
-  | "desk_sign_id";
+  | "desk_sign_id"
+  | "gavel_id";
 
 /** Supabase design-library tables (milestones + autosave). */
 export type DesignLibraryTable =
   | "badge_designs"
   | "sign_designs"
   | "plaque_designs"
-  | "desk_sign_designs";
+  | "desk_sign_designs"
+  | "gavel_designs";
 
 /** Sign and plaque share extended order-item rows and library shape. */
 export type SignLikeDesignsTable =
   | "sign_designs"
   | "plaque_designs"
-  | "desk_sign_designs";
+  | "desk_sign_designs"
+  | "gavel_designs";
 
 export interface DesignerGadgetGraphQL {
   /** Env var for API base URL */
@@ -234,6 +238,32 @@ export const DESIGNERS: Record<DesignerId, DesignerDefinition> = {
     orderSlipPdfRelativePath: (designId) =>
       `${designId}/desk-sign-design.pdf`,
   },
+  gavel: {
+    id: "gavel",
+    label: "Gavel",
+    orderItemsTable: "gavel_order_items",
+    imageBucket: "gavel-images",
+    pdfBucket: "gavel-pdfs",
+    lineIdPrefix: "gavel",
+    lineIdColumn: "gavel_id",
+    upsertOnConflict: "design_id,gavel_id",
+    cartIndexPropertyPrimary: "_Gavel Index",
+    cartIndexPropertyFallbacks: ["_Badge Index"],
+    gadget: {
+      apiUrlEnv: "GADGET_GAVEL_API_URL",
+      apiKeyEnv: "GADGET_GAVEL_API_KEY",
+      defaultApiUrl: BADGE_DEFAULT_URL,
+      createField: "createGavelDesign",
+      inputVariable: "gavelDesign",
+      inputType: "CreateGavelDesignInput",
+      resultSelection: "gavelDesign",
+    },
+    linkOrderSecretEnv: "LINK_ORDER_SECRET_GAVEL",
+    pdfProofRelativePath: (designId) =>
+      `${designId}/gavel-design_proof.pdf`,
+    orderSlipPdfRelativePath: (designId) =>
+      `${designId}/gavel-design.pdf`,
+  },
 };
 
 export function isDesignerId(value: string): value is DesignerId {
@@ -254,6 +284,7 @@ export function getDesignLibraryTable(
   if (id === "sign") return "sign_designs";
   if (id === "plaque") return "plaque_designs";
   if (id === "desk-sign") return "desk_sign_designs";
+  if (id === "gavel") return "gavel_designs";
   return null;
 }
 
@@ -263,6 +294,7 @@ export function getSignLikeLibraryTable(
   if (id === "sign") return "sign_designs";
   if (id === "plaque") return "plaque_designs";
   if (id === "desk-sign") return "desk_sign_designs";
+  if (id === "gavel") return "gavel_designs";
   return null;
 }
 
@@ -318,6 +350,17 @@ export function getDesignerLibraryApiPaths(id: DesignerId): {
       savedDesignDetail: "/api/saved-desk-sign-design-detail",
       deleteMilestone: "/api/delete-desk-sign-design-milestone",
       uploadLogo: "/api/upload-desk-sign-logo",
+    };
+  }
+  if (id === "gavel") {
+    return {
+      saveDesign: "/api/save-gavel-design",
+      autosaveDesign: "/api/autosave-gavel-design",
+      savedDesign: "/api/saved-gavel-design",
+      savedDesigns: "/api/saved-gavel-designs",
+      savedDesignDetail: "/api/saved-gavel-design-detail",
+      deleteMilestone: "/api/delete-gavel-design-milestone",
+      uploadLogo: "",
     };
   }
   return {

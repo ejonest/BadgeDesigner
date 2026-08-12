@@ -6,7 +6,7 @@ import { BACKGROUND_COLORS, EXTENDED_BACKGROUND_COLORS } from "./colors";
 import type { PlaqueLayoutOption } from "./plaqueLayouts";
 import { PLAQUE_LAYOUT_OPTIONS as PLAQUE_LAYOUT_OPTIONS_CONST } from "./plaqueLayouts";
 
-export type DesignerVariant = "badge" | "sign" | "plaque" | "desk-sign";
+export type DesignerVariant = "badge" | "sign" | "plaque" | "desk-sign" | "gavel";
 
 export type DeskSignMaterial =
   | "acrylic"
@@ -68,7 +68,7 @@ export interface DesignerVariantConfig {
   sizeOptions: readonly SizeOption[];
   labelProduct: string;
   labelProductPlural: string;
-  templatesKey: "badge" | "sign" | "plaque" | "desk-sign";
+  templatesKey: "badge" | "sign" | "plaque" | "desk-sign" | "gavel";
   backgroundColors: readonly BackgroundColorOption[];
   backgroundTextures: readonly BackgroundTextureOption[];
   borderOptions: readonly BorderOption[];
@@ -148,6 +148,20 @@ export const DESIGNER_VARIANT_CONFIG: Record<
     labelProduct: "Desk Sign",
     labelProductPlural: "Desk Signs",
     templatesKey: "desk-sign",
+    backgroundColors: signBackgroundColors,
+    backgroundTextures: [],
+    borderOptions: [],
+    helpContent: "sign",
+  },
+  gavel: {
+    maxLines: 3,
+    hasBacking: false,
+    hasBorder: false,
+    hasSizeStep: false,
+    sizeOptions: [],
+    labelProduct: "Gavel",
+    labelProductPlural: "Gavels",
+    templatesKey: "gavel",
     backgroundColors: signBackgroundColors,
     backgroundTextures: [],
     borderOptions: [],
