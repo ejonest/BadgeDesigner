@@ -125,6 +125,14 @@ export interface Badge {
   deskSignAluminumColor?: "black" | "silver" | "gold" | "rose-gold";
   /** Desk sign only: profession template family id (e.g. doctor, nurse). */
   deskSignProfessionId?: string;
+  /** Gavel designer only: wood body style. */
+  gavelStyle?: "walnut" | "oak" | "ebony" | "mahogany" | "metal";
+  /** Gavel designer only: band metal finish. */
+  gavelBandFinish?: "gold" | "silver";
+  /** Gavel designer only: band text size preset. */
+  gavelTextSizePreset?: "small" | "medium" | "large";
+  /** Gavel designer only: handle length. */
+  gavelHandleLength?: "short" | "standard" | "long";
 }
 
 export interface BadgeEditorPanelProps {

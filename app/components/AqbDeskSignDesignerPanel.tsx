@@ -94,7 +94,7 @@ export function DeskSignDesignPicker({
   if (deskSignMaterialUsesPlasticFinishes(material)) {
     return (
       <p className="text-sm text-[#4a5568]">
-        Engraved plastic plate — choose the plate color next.
+        UV-printed plastic plate — choose the plate color next.
       </p>
     );
   }
@@ -222,15 +222,16 @@ export function DeskSignColorsPicker({
           ))}
         </div>
         <p className="mt-2 text-xs text-[#6b7f92]">
-          Engraving color is fixed for the selected acrylic finish.
+          Print color is fixed for the selected acrylic finish.
         </p>
       </div>
     );
   }
 
   if (material === "rosewood") {
-    const selected =
-      findDeskSignRosewoodPlateFinish(badge.backgroundColor)?.id ?? null;
+    const selected = hasChosenPlateColor
+      ? findDeskSignRosewoodPlateFinish(badge.backgroundColor)?.id ?? null
+      : null;
     return (
       <div>
         <p className="text-xs font-bold text-[#02132B] mb-2">Plate</p>

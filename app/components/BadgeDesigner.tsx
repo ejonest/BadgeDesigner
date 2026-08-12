@@ -6538,52 +6538,15 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       try {
         // Badge-only: uploads to badge PDFs bucket and reads badge_order_items. Signs always use designer send-to-supabase below.
         if (!addDuplicates && !isSignLikeVariant(variant)) {
-          const printSvgBlobsForFinalize = await Promise.all(
-            allBadgesForSupabase.map(async (b, i) => {
-              const templateIdForBadge =
-                b.templateId || activeTemplate?.id || "rect-1x3";
-              const tmpl = await loadTemplateById(templateIdForBadge, variant);
-              if (!tmpl) {
-                console.warn(
-                  "[BadgeDesigner] finalize: template missing",
-                  templateIdForBadge,
-                );
-                return { i, blob: new Blob() };
-              }
-              try {
-                const blob = await generatePrintSVGAsBlob(b, tmpl, variant);
-                return {
-                  i,
-                  blob: blob && blob.size > 0 ? blob : new Blob(),
-                };
-              } catch (err) {
-                console.warn(
-                  "[BadgeDesigner] finalize: print SVG failed",
-                  i,
-                  err,
-                );
-                return { i, blob: new Blob() };
-              }
-            }),
-          );
-          printSvgBlobsForFinalize.sort((a, b) => a.i - b.i);
-
           const formDataFinalize = new FormData();
           formDataFinalize.append("designId", designIdForSupabase);
+          formDataFinalize.append("designer", "badge");
           formDataFinalize.append("pdf", pdfBlob, "badge-design_proof.pdf");
           const currentBacking = badgesForSupabase[0]?.backing;
           if (currentBacking) {
             formDataFinalize.append("backingType", currentBacking);
           }
-          printSvgBlobsForFinalize.forEach(({ blob }, index) => {
-            if (blob?.size > 0) {
-              formDataFinalize.append(
-                `print_svg_${index}`,
-                blob,
-                `badge-${index}-print.svg`,
-              );
-            }
-          });
+          // Print SVGs already on draft rows from save-draft — do not re-upload.
           const finalizeRes = await fetch("/api/finalize-draft", {
             method: "POST",
             body: formDataFinalize,

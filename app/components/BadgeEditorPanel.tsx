@@ -400,14 +400,14 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   if (panelLayout === "aqb-badge" || panelLayout === "aqb-desk-sign") {
     const isDeskSignPanel = panelLayout === "aqb-desk-sign";
     const lineInputValue = (line: BadgeLine, idx: number) => {
-      const defaultText =
+      const defaultTexts =
         idx === 0
-          ? "Your Name"
+          ? ["Your Name"]
           : idx === 1
             ? isDeskSignPanel
-              ? "Your Title"
-              : "Title"
-            : "Line Text";
+              ? ["Title", "Your Title"]
+              : ["Title"]
+            : ["Line Text"];
       const slotPh = linePlaceholders?.[idx];
       const rawTrim = (line.text ?? "").trim();
       const matchesSlotPlaceholder =
@@ -415,7 +415,9 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
         Boolean(slotPh?.trim()) &&
         plaqueUserLineTextMatchesPlaceholder(line.text, slotPh);
       const isEmptyOrDefault =
-        !rawTrim || line.text === defaultText || matchesSlotPlaceholder;
+        !rawTrim ||
+        defaultTexts.includes(line.text ?? "") ||
+        matchesSlotPlaceholder;
       return isEmptyOrDefault ? "" : line.text ?? "";
     };
 

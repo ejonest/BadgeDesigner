@@ -14,9 +14,17 @@ const INCLUDE_PRINT_SVG_URL_IN_DB = true;
 
 /**
  * Persist designer state on order-item rows so a cart line can be reopened for
- * editing. Badges/signs/plaques use `badge_json`; desk signs use `data_json`.
+ * editing. Badges/signs/plaques use `badge_json`; desk signs and gavels use `data_json`.
  */
 const INCLUDE_DESIGN_JSON_IN_DB = true;
+
+/**
+ * Flat line_* / background / backing columns duplicate badge_json and inflate
+ * every draft + ATC write. Order-slip PDF and cart-edit read JSON now; leave
+ * false unless a manufacturing SQL report still needs the denormalized columns.
+ * Run docs/migration_drop_flat_order_item_columns.sql after deploy to drop them.
+ */
+const INCLUDE_FLAT_MANUFACTURING_COLUMNS = false;
 
 async function toUploadBuffer(file: File | Blob): Promise<Buffer> {
   const ab = await file.arrayBuffer();
@@ -64,8 +72,10 @@ function rowPayload(
     def.orderItemsTable === "sign_order_items" ||
     def.orderItemsTable === "plaque_order_items";
   const isDeskSignTable = def.orderItemsTable === "desk_sign_order_items";
-  const supportsUploadedImage = isMultiLineSignTable || isDeskSignTable;
-  const designJsonColumn = isDeskSignTable ? "data_json" : "badge_json";
+  const isGavelTable = def.orderItemsTable === "gavel_order_items";
+  const usesDataJson = isDeskSignTable || isGavelTable;
+  const supportsUploadedImage = isMultiLineSignTable || usesDataJson;
+  const designJsonColumn = usesDataJson ? "data_json" : "badge_json";
   const base: Record<string, unknown> = {
     design_id: item.design_id,
     shopify_order_id: item.shopify_order_id,
@@ -88,70 +98,76 @@ function rowPayload(
       ? { uploaded_image_url: item.uploaded_image_url }
       : {}),
     pdf_url: item.pdf_url,
-    line_1_text: item.line_1_text,
-    line_1_font: item.line_1_font,
-    line_1_font_size: item.line_1_font_size,
-    line_1_bold: item.line_1_bold,
-    line_1_underline: item.line_1_underline,
-    line_1_italicize: item.line_1_italicize,
-    line_1_color: item.line_1_color,
-    line_1_alignment: item.line_1_alignment,
-    line_2_text: item.line_2_text,
-    line_2_font: item.line_2_font,
-    line_2_font_size: item.line_2_font_size,
-    line_2_bold: item.line_2_bold,
-    line_2_underline: item.line_2_underline,
-    line_2_italicize: item.line_2_italicize,
-    line_2_color: item.line_2_color,
-    line_2_alignment: item.line_2_alignment,
   };
-  if (isDeskSignTable) {
+
+  if (INCLUDE_FLAT_MANUFACTURING_COLUMNS) {
+    base.line_1_text = item.line_1_text;
+    base.line_1_font = item.line_1_font;
+    base.line_1_font_size = item.line_1_font_size;
+    base.line_1_bold = item.line_1_bold;
+    base.line_1_underline = item.line_1_underline;
+    base.line_1_italicize = item.line_1_italicize;
+    base.line_1_color = item.line_1_color;
+    base.line_1_alignment = item.line_1_alignment;
+    base.line_2_text = item.line_2_text;
+    base.line_2_font = item.line_2_font;
+    base.line_2_font_size = item.line_2_font_size;
+    base.line_2_bold = item.line_2_bold;
+    base.line_2_underline = item.line_2_underline;
+    base.line_2_italicize = item.line_2_italicize;
+    base.line_2_color = item.line_2_color;
+    base.line_2_alignment = item.line_2_alignment;
+    if (isDeskSignTable) {
+      base.finish = item.finish ?? null;
+      base.attachment_method = item.attachment_method ?? null;
+    } else {
+      base.background_color = item.background_color;
+      if (!isMultiLineSignTable) {
+        base.backing_type = item.backing_type;
+      }
+    }
+    if (!isDeskSignTable) {
+      base.line_3_text = item.line_3_text;
+      base.line_3_font = item.line_3_font;
+      base.line_3_font_size = item.line_3_font_size;
+      base.line_3_bold = item.line_3_bold;
+      base.line_3_underline = item.line_3_underline;
+      base.line_3_italicize = item.line_3_italicize;
+      base.line_3_color = item.line_3_color;
+      base.line_3_alignment = item.line_3_alignment;
+      base.line_4_text = item.line_4_text;
+      base.line_4_font = item.line_4_font;
+      base.line_4_font_size = item.line_4_font_size;
+      base.line_4_bold = item.line_4_bold;
+      base.line_4_underline = item.line_4_underline;
+      base.line_4_italicize = item.line_4_italicize;
+      base.line_4_color = item.line_4_color;
+      base.line_4_alignment = item.line_4_alignment;
+    }
+    if (isMultiLineSignTable) {
+      base.line_5_text = item.line_5_text;
+      base.line_5_font = item.line_5_font;
+      base.line_5_font_size = item.line_5_font_size;
+      base.line_5_bold = item.line_5_bold;
+      base.line_5_underline = item.line_5_underline;
+      base.line_5_italicize = item.line_5_italicize;
+      base.line_5_color = item.line_5_color;
+      base.line_5_alignment = item.line_5_alignment;
+      base.line_6_text = item.line_6_text;
+      base.line_6_font = item.line_6_font;
+      base.line_6_font_size = item.line_6_font_size;
+      base.line_6_bold = item.line_6_bold;
+      base.line_6_underline = item.line_6_underline;
+      base.line_6_italicize = item.line_6_italicize;
+      base.line_6_color = item.line_6_color;
+      base.line_6_alignment = item.line_6_alignment;
+    }
+  } else if (isDeskSignTable || isGavelTable) {
+    // Keep short manufacturing labels (not duplicated as line text).
     base.finish = item.finish ?? null;
     base.attachment_method = item.attachment_method ?? null;
-  } else {
-    base.background_color = item.background_color;
-    // Badges store backing; multi-line signs/plaques do not.
-    if (!isMultiLineSignTable) {
-      base.backing_type = item.backing_type;
-    }
   }
-  // Badges have 4 lines; signs/plaques have 6. Desk signs stop at 2.
-  if (!isDeskSignTable) {
-    base.line_3_text = item.line_3_text;
-    base.line_3_font = item.line_3_font;
-    base.line_3_font_size = item.line_3_font_size;
-    base.line_3_bold = item.line_3_bold;
-    base.line_3_underline = item.line_3_underline;
-    base.line_3_italicize = item.line_3_italicize;
-    base.line_3_color = item.line_3_color;
-    base.line_3_alignment = item.line_3_alignment;
-    base.line_4_text = item.line_4_text;
-    base.line_4_font = item.line_4_font;
-    base.line_4_font_size = item.line_4_font_size;
-    base.line_4_bold = item.line_4_bold;
-    base.line_4_underline = item.line_4_underline;
-    base.line_4_italicize = item.line_4_italicize;
-    base.line_4_color = item.line_4_color;
-    base.line_4_alignment = item.line_4_alignment;
-  }
-  if (isMultiLineSignTable) {
-    base.line_5_text = item.line_5_text;
-    base.line_5_font = item.line_5_font;
-    base.line_5_font_size = item.line_5_font_size;
-    base.line_5_bold = item.line_5_bold;
-    base.line_5_underline = item.line_5_underline;
-    base.line_5_italicize = item.line_5_italicize;
-    base.line_5_color = item.line_5_color;
-    base.line_5_alignment = item.line_5_alignment;
-    base.line_6_text = item.line_6_text;
-    base.line_6_font = item.line_6_font;
-    base.line_6_font_size = item.line_6_font_size;
-    base.line_6_bold = item.line_6_bold;
-    base.line_6_underline = item.line_6_underline;
-    base.line_6_italicize = item.line_6_italicize;
-    base.line_6_color = item.line_6_color;
-    base.line_6_alignment = item.line_6_alignment;
-  }
+
   base[def.lineIdColumn] = item.badge_id;
   return base;
 }
@@ -162,7 +178,7 @@ export function normalizeRowForPdf(
   def: DesignerDefinition,
 ): BadgeOrderItem {
   const lineVal = row[def.lineIdColumn] ?? row.badge_id;
-  // Desk signs store designer state in data_json; other designers use badge_json.
+  // Desk signs / gavels store designer state in data_json; others use badge_json.
   const designJson =
     row.badge_json ??
     row.data_json ??
@@ -366,53 +382,54 @@ export async function saveDraftDesignerOrderItemsMerge(
     if (error) throw error;
   };
 
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    const lineKey = `${def.lineIdPrefix}-${i}`;
-    const full = rowPayload(item, def);
-    const { data: existing, error: selErr } = await supabaseAdmin
-      .from(def.orderItemsTable)
-      .select("id, status")
-      .eq("design_id", designId)
-      .eq(def.lineIdColumn, lineKey)
-      .maybeSingle();
-    if (selErr) throw selErr;
+  await Promise.all(
+    items.map(async (item, i) => {
+      const lineKey = `${def.lineIdPrefix}-${i}`;
+      const full = rowPayload(item, def);
+      const { data: existing, error: selErr } = await supabaseAdmin!
+        .from(def.orderItemsTable)
+        .select("id, status")
+        .eq("design_id", designId)
+        .eq(def.lineIdColumn, lineKey)
+        .maybeSingle();
+      if (selErr) throw selErr;
 
-    if (existing) {
-      const terminal =
-        existing.status === "in_cart" || existing.status === "order_placed";
-      // Never mutate cart/order assets — a reused design_id must not rewrite
-      // what the customer already added to cart.
-      if (terminal) {
-        continue;
+      if (existing) {
+        const terminal =
+          existing.status === "in_cart" || existing.status === "order_placed";
+        // Never mutate cart/order assets — a reused design_id must not rewrite
+        // what the customer already added to cart.
+        if (terminal) {
+          return;
+        }
+        const updateBody: Record<string, unknown> = {
+          ...full,
+          updated_at: getPacificTimestamp(),
+        };
+        const cleaned = Object.fromEntries(
+          Object.entries(updateBody).filter(([, v]) => v !== undefined),
+        );
+        await writeDroppingMissingColumns(cleaned, (body) =>
+          supabaseAdmin!
+            .from(def.orderItemsTable)
+            .update(body)
+            .eq("id", existing.id),
+        );
+      } else {
+        const insertPayload = {
+          ...full,
+          created_at: item.created_at || getPacificTimestamp(),
+          updated_at: getPacificTimestamp(),
+        };
+        const cleanedInsert = Object.fromEntries(
+          Object.entries(insertPayload).filter(([, v]) => v !== undefined),
+        );
+        await writeDroppingMissingColumns(cleanedInsert, (body) =>
+          supabaseAdmin!.from(def.orderItemsTable).insert(body),
+        );
       }
-      const updateBody: Record<string, unknown> = {
-        ...full,
-        updated_at: getPacificTimestamp(),
-      };
-      const cleaned = Object.fromEntries(
-        Object.entries(updateBody).filter(([, v]) => v !== undefined),
-      );
-      await writeDroppingMissingColumns(cleaned, (body) =>
-        supabaseAdmin!
-          .from(def.orderItemsTable)
-          .update(body)
-          .eq("id", existing.id),
-      );
-    } else {
-      const insertPayload = {
-        ...full,
-        created_at: item.created_at || getPacificTimestamp(),
-        updated_at: getPacificTimestamp(),
-      };
-      const cleanedInsert = Object.fromEntries(
-        Object.entries(insertPayload).filter(([, v]) => v !== undefined),
-      );
-      await writeDroppingMissingColumns(cleanedInsert, (body) =>
-        supabaseAdmin!.from(def.orderItemsTable).insert(body),
-      );
-    }
-  }
+    }),
+  );
 }
 
 export async function deleteDesignerOrderItemsByDesignId(

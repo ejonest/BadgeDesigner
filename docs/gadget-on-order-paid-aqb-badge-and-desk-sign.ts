@@ -7,6 +7,8 @@
  *                 (default …/api/link-order-to-supabase)
  * Desk-sign    → POST VERCEL_LINK_ORDER_DESK_SIGN_URL
  *                 (default …/api/link-order-desk-sign-to-supabase)
+ * Gavel        → POST VERCEL_LINK_ORDER_GAVEL_URL
+ *                 (default …/api/link-order-gavel-to-supabase)
  *
  * Cart properties are underscore-prefixed (hidden in checkout), e.g.:
  *   _Designer, _Design ID, _Gadget Design ID, _Badge Index, _Desk Sign Index
@@ -32,9 +34,15 @@ const DESK_SIGN_LINK_ORDER_URL =
   process.env.VERCEL_LINK_ORDER_URL_DESK_SIGN ||
   "https://all-quality-design-tool.vercel.app/api/link-order-desk-sign-to-supabase";
 
+const GAVEL_LINK_ORDER_URL =
+  process.env.VERCEL_LINK_ORDER_GAVEL_URL ||
+  "https://all-quality-design-tool.vercel.app/api/link-order-gavel-to-supabase";
+
 const BADGE_SECRET = process.env.LINK_ORDER_SECRET;
 const DESK_SIGN_SECRET =
   process.env.LINK_ORDER_SECRET_DESK_SIGN || process.env.LINK_ORDER_SECRET;
+const GAVEL_SECRET =
+  process.env.LINK_ORDER_SECRET_GAVEL || process.env.LINK_ORDER_SECRET;
 
 function getPropertiesMap(lineItem: {
   properties?: unknown;
@@ -79,14 +87,17 @@ function readIntProp(
   return Number.isNaN(n) ? undefined : n;
 }
 
-/** @returns "badge" | "desk-sign" */
-function designerLineKind(props: Record<string, unknown>): "badge" | "desk-sign" {
+/** @returns "badge" | "desk-sign" | "gavel" */
+function designerLineKind(
+  props: Record<string, unknown>,
+): "badge" | "desk-sign" | "gavel" {
   const d = readProp(props, "Designer");
   if (d == null) return "badge";
   const t = d.toLowerCase();
   if (t === "desk-sign" || t === "desksign" || t === "desk_sign") {
     return "desk-sign";
   }
+  if (t === "gavel") return "gavel";
   return "badge";
 }
 
@@ -143,6 +154,7 @@ async function collectLinePayloads(
   const lineItems = order.line_items ?? order.lineItems ?? [];
   const badgePayload: PayloadLineItem[] = [];
   const deskSignPayload: PayloadLineItem[] = [];
+  const gavelPayload: PayloadLineItem[] = [];
 
   for (const item of lineItems) {
     const props = getPropertiesMap(
@@ -160,6 +172,9 @@ async function collectLinePayloads(
         ? readIntProp(props, "Desk Sign Index") ??
           readIntProp(props, "Sign Index") ??
           readIntProp(props, "Badge Index")
+        : kind === "gavel"
+          ? readIntProp(props, "Gavel Index") ??
+            readIntProp(props, "Badge Index")
         : readIntProp(props, "Badge Index") ??
           readIntProp(props, "Sign Index") ??
           readIntProp(props, "Desk Sign Index");
@@ -187,6 +202,17 @@ async function collectLinePayloads(
       );
       if (designData !== undefined) entry.designData = designData;
       deskSignPayload.push(entry);
+    } else if (kind === "gavel") {
+      const model = api?.gavelDesign ?? api?.GavelDesign;
+      const designData = await fetchDesignData(
+        model,
+        designId,
+        gadgetDesignId,
+        logger,
+        "GavelDesign",
+      );
+      if (designData !== undefined) entry.designData = designData;
+      gavelPayload.push(entry);
     } else {
       const model = api?.badgeDesign ?? api?.BadgeDesign;
       const designData = await fetchDesignData(
@@ -201,7 +227,7 @@ async function collectLinePayloads(
     }
   }
 
-  return { badgePayload, deskSignPayload };
+  return { badgePayload, deskSignPayload, gavelPayload };
 }
 
 async function postLink(
@@ -264,13 +290,17 @@ export async function run({ api, params, trigger, record, logger }: any) {
     return { success: false, reason: "no_order_id" };
   }
 
-  const { badgePayload, deskSignPayload } = await collectLinePayloads(
+  const { badgePayload, deskSignPayload, gavelPayload } = await collectLinePayloads(
     order as { line_items?: unknown[]; lineItems?: unknown[] },
     api,
     logger,
   );
 
-  if (badgePayload.length === 0 && deskSignPayload.length === 0) {
+  if (
+    badgePayload.length === 0 &&
+    deskSignPayload.length === 0 &&
+    gavelPayload.length === 0
+  ) {
     logger.info(
       "on_order_paid: no designer line items (no Design ID), skipping",
     );
@@ -307,9 +337,20 @@ export async function run({ api, params, trigger, record, logger }: any) {
     );
   }
 
+  if (gavelPayload.length > 0) {
+    results.gavel = await postLink(
+      GAVEL_LINK_ORDER_URL,
+      GAVEL_SECRET,
+      { ...baseBody, lineItems: gavelPayload },
+      logger,
+      "gavel",
+    );
+  }
+
   const anyFailed =
     (results.badge && !(results.badge as { ok?: boolean }).ok) ||
-    (results.deskSign && !(results.deskSign as { ok?: boolean }).ok);
+    (results.deskSign && !(results.deskSign as { ok?: boolean }).ok) ||
+    (results.gavel && !(results.gavel as { ok?: boolean }).ok);
 
   return {
     success: !anyFailed,

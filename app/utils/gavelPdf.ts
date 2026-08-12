@@ -1,0 +1,189 @@
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import type { BadgeLine } from "~/types/badge";
+import {
+  formatGavelOrderFinish,
+  type GavelStyleId,
+  type GavelBandFinishId,
+  type GavelHandleLengthId,
+  type GavelTextSizePreset,
+} from "~/constants/gavelStyles";
+
+const PAGE_WIDTH = 595.28;
+const PAGE_HEIGHT = 841.89;
+const MARGIN = 36;
+
+type GenerateGavelProofPdfInput = {
+  styleId: GavelStyleId | string;
+  bandFinishId?: GavelBandFinishId | string;
+  handleLengthId?: GavelHandleLengthId | string;
+  textSizePreset: GavelTextSizePreset;
+  lines: BadgeLine[];
+  quantity: number;
+  mockupDataUrl?: string | null;
+  unwrappedDataUrl?: string | null;
+};
+
+async function embedDataUrlImage(
+  pdfDoc: PDFDocument,
+  dataUrl: string | null | undefined,
+) {
+  if (!dataUrl || !dataUrl.startsWith("data:")) return null;
+  const comma = dataUrl.indexOf(",");
+  if (comma < 0) return null;
+  const header = dataUrl.slice(0, comma);
+  const b64 = dataUrl.slice(comma + 1);
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  try {
+    if (header.includes("image/jpeg") || header.includes("image/jpg")) {
+      return await pdfDoc.embedJpg(bytes);
+    }
+    return await pdfDoc.embedPng(bytes);
+  } catch {
+    try {
+      return await pdfDoc.embedJpg(bytes);
+    } catch {
+      return null;
+    }
+  }
+}
+
+export async function generateGavelProofPdf(
+  input: GenerateGavelProofPdfInput,
+): Promise<Blob> {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const navy = rgb(0.04, 0.09, 0.16);
+  const muted = rgb(0.35, 0.38, 0.42);
+
+  let y = PAGE_HEIGHT - MARGIN;
+  page.drawText("Gavels Fast — Custom band proof", {
+    x: MARGIN,
+    y,
+    size: 16,
+    font: fontBold,
+    color: navy,
+  });
+  y -= 18;
+  page.drawText("Review engraving before adding to cart.", {
+    x: MARGIN,
+    y,
+    size: 10,
+    font,
+    color: muted,
+  });
+  y -= 22;
+
+  const mockup = await embedDataUrlImage(pdfDoc, input.mockupDataUrl);
+  if (mockup) {
+    const maxW = 260;
+    const maxH = 240;
+    const scale = Math.min(maxW / mockup.width, maxH / mockup.height);
+    const w = mockup.width * scale;
+    const h = mockup.height * scale;
+    page.drawImage(mockup, { x: MARGIN, y: y - h, width: w, height: h });
+  }
+
+  const finish = formatGavelOrderFinish(
+    input.styleId,
+    input.bandFinishId,
+    input.handleLengthId,
+  );
+  const specX = 310;
+  let specY = y - 4;
+  const specLines = [
+    `Style: ${finish}`,
+    `Text size: ${input.textSizePreset}`,
+    `Quantity: ${Math.max(1, input.quantity)}`,
+  ];
+  for (const line of specLines) {
+    page.drawText(line, {
+      x: specX,
+      y: specY,
+      size: 11,
+      font: fontBold,
+      color: navy,
+    });
+    specY -= 16;
+  }
+
+  const filled = input.lines.filter((l) => (l.text ?? "").trim());
+  if (filled.length === 0) {
+    page.drawText("No engraving text entered.", {
+      x: specX,
+      y: specY,
+      size: 10,
+      font,
+      color: muted,
+    });
+    specY -= 14;
+  } else {
+    filled.forEach((line, i) => {
+      const text = (line.text ?? "").trim();
+      page.drawText(`Line ${i + 1}: ${text}`.slice(0, 60), {
+        x: specX,
+        y: specY,
+        size: 10,
+        font,
+        color: navy,
+      });
+      specY -= 13;
+      page.drawText(
+        `Font: ${line.fontFamily || "Georgia"}  ${line.bold ? "Bold " : ""}${line.italic ? "Italic " : ""}${line.align || "center"}`.slice(
+          0,
+          70,
+        ),
+        {
+          x: specX,
+          y: specY,
+          size: 9,
+          font,
+          color: muted,
+        },
+      );
+      specY -= 16;
+    });
+  }
+
+  y -= 260;
+  page.drawText("Unwrapped band (manufacturing artwork)", {
+    x: MARGIN,
+    y,
+    size: 11,
+    font: fontBold,
+    color: navy,
+  });
+  y -= 10;
+
+  const unwrap = await embedDataUrlImage(pdfDoc, input.unwrappedDataUrl);
+  if (unwrap) {
+    const w = PAGE_WIDTH - MARGIN * 2;
+    const h = Math.min(90, (unwrap.height / unwrap.width) * w);
+    page.drawImage(unwrap, { x: MARGIN, y: y - h, width: w, height: h });
+    y -= h + 16;
+  } else {
+    page.drawText("Band preview unavailable.", {
+      x: MARGIN,
+      y: y - 12,
+      size: 10,
+      font,
+      color: muted,
+    });
+    y -= 28;
+  }
+
+  page.drawText(
+    "Engraved metal may differ slightly from on-screen color and spacing.",
+    {
+      x: MARGIN,
+      y: Math.max(MARGIN + 24, y - 8),
+      size: 8,
+      font,
+      color: muted,
+    },
+  );
+
+  const bytes = await pdfDoc.save();
+  return new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
+}

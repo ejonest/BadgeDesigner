@@ -4,6 +4,8 @@
     (optional ?badgeIconId= from handle, e.g. custom-1x3-airplane-badge)
   - Desk sign: product handle custom-desk-sign → /desk-sign-designer
     (use product template: desk-sign-designer)
+  - Gavel: product handle custom-gavel → /gavel-designer
+    (use product template: gavel-designer)
   - Sign: product handle custom-sign → ?variant=sign or /sign-designer (Shape × Size variants, live price).
   - Plaque: product handle custom-plaque → ?variant=plaque or /plaque-designer (parallel to sign).
 
@@ -283,8 +285,22 @@
   })();
 </script>
 
+{% comment %} Custom gavel product (Gavels Fast / shared app) {% endcomment %}
+{% if product and product.handle == 'custom-gavel' %}
+
+{% assign gavel_v0 = product.selected_or_first_available_variant | default: product.variants[0] %}
+<div class="aqb-designer-embed">
+  <iframe
+    id="gavel-designer-iframe"
+    title="Design your custom gavel"
+    src="{{ badge_designer_origin }}/gavel-designer?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&amp;storeUrl={{ shop.permanent_domain | url_param_escape }}&amp;product={{ product.id | url_param_escape }}&amp;variantId={{ gavel_v0.id | url_param_escape }}{% if customer %}&amp;customerId={{ customer.id | url_param_escape }}{% endif %}"
+    loading="lazy"
+    allow="clipboard-read; clipboard-write"
+  ></iframe>
+</div>
+
 {% comment %} Custom desk sign product {% endcomment %}
-{% if product and product.handle == 'custom-desk-sign' %}
+{% elsif product and product.handle == 'custom-desk-sign' %}
 
 {% assign desk_sign_v0 = product.selected_or_first_available_variant | default: product.variants[0] %}
 <div class="aqb-designer-embed">

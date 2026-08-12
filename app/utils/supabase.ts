@@ -13,6 +13,7 @@ import {
   formatDeskSignAttachmentMethod,
   formatDeskSignOrderFinish,
 } from "./deskSignRender";
+import { formatGavelOrderFinish } from "~/constants/gavelStyles";
 
 export { stableAutosaveDesignId, DESIGN_LIBRARY_MILESTONE_LIMIT };
 
@@ -703,6 +704,13 @@ export async function getLatestSavedDeskSignDesign(
   return getLatestSavedSignLikeDesign("desk_sign_designs", userId, shopId);
 }
 
+export async function getLatestSavedGavelDesign(
+  userId: string,
+  shopId: string,
+) {
+  return getLatestSavedSignLikeDesign("gavel_designs", userId, shopId);
+}
+
 async function deleteSavedSignLikeDesignsForUser(
   table: SignLikeDesignsTable,
   userId: string,
@@ -903,6 +911,10 @@ export async function upsertDeskSignAutosaveDesign(row: SignDesign) {
   return upsertSignLikeAutosaveDesign("desk_sign_designs", row);
 }
 
+export async function upsertGavelAutosaveDesign(row: SignDesign) {
+  return upsertSignLikeAutosaveDesign("gavel_designs", row);
+}
+
 /** Insert or update a milestone row, then prune old milestones. */
 export async function saveBadgeDesignMilestone(row: BadgeDesign, saveKind: DesignSaveKind) {
   if (saveKind === "autosave") {
@@ -966,6 +978,13 @@ export async function saveDeskSignDesignMilestone(
   saveKind: DesignSaveKind,
 ) {
   return saveSignLikeDesignMilestone("desk_sign_designs", row, saveKind);
+}
+
+export async function saveGavelDesignMilestone(
+  row: SignDesign,
+  saveKind: DesignSaveKind,
+) {
+  return saveSignLikeDesignMilestone("gavel_designs", row, saveKind);
 }
 
 export type DesignGalleryListItem = {
@@ -1106,6 +1125,13 @@ export async function listDeskSignDesignGallery(
   return listSignLikeDesignGallery("desk_sign_designs", userId, shopId);
 }
 
+export async function listGavelDesignGallery(
+  userId: string,
+  shopId: string,
+): Promise<{ autosave: DesignGalleryListItem | null; milestones: DesignGalleryListItem[] }> {
+  return listSignLikeDesignGallery("gavel_designs", userId, shopId);
+}
+
 /** Remove one milestone row (manual/cart/ordered). Cannot delete the autosave draft row. */
 export async function deleteDesignLibraryMilestone(
   table: "badge_designs" | SignLikeDesignsTable,
@@ -1230,6 +1256,14 @@ export async function getDeskSignDesignForUserShop(
     shopId,
     designId,
   );
+}
+
+export async function getGavelDesignForUserShop(
+  userId: string,
+  shopId: string,
+  designId: string,
+) {
+  return getSignLikeDesignForUserShop("gavel_designs", userId, shopId, designId);
 }
 
 /**
@@ -1493,6 +1527,7 @@ export function convertBadgeToOrderItem(
   const lines = badge.lines || [];
   const prefix = options?.lineIdPrefix ?? "badge";
   const isDeskSign = Boolean(badge.deskSignMaterial) || prefix === "desk-sign";
+  const isGavel = Boolean(badge.gavelStyle) || prefix === "gavel";
 
   // Use badge-0, badge-1, ... so link-order (which uses line index from cart) can match
   return {
@@ -1505,6 +1540,15 @@ export function convertBadgeToOrderItem(
           finish: formatDeskSignOrderFinish(badge),
           attachment_method: formatDeskSignAttachmentMethod(badge),
         }
+      : isGavel
+        ? {
+            finish: formatGavelOrderFinish(
+              badge.gavelStyle,
+              badge.gavelBandFinish,
+              badge.gavelHandleLength,
+            ),
+            attachment_method: "none",
+          }
       : {
           background_color: formatColor(badge.backgroundColor),
           backing_type: badge.backing ?? undefined,
