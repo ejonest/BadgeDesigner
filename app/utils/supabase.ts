@@ -1426,6 +1426,11 @@ export interface BadgeOrderItem {
   badge_json?: unknown;
   /** Design-level designer state that is not per-badge; index-0 row only. */
   design_meta?: unknown;
+  /**
+   * True when created by Playwright / local QA (`?qaTest=1`).
+   * Filter or `DELETE … WHERE is_qa_test = true` without touching real orders.
+   */
+  is_qa_test?: boolean;
   status?: "draft" | "in_cart" | "order_placed" | "fulfilled";
   created_at?: string;
   updated_at?: string;
@@ -1522,6 +1527,8 @@ export function convertBadgeToOrderItem(
     lineIdPrefix?: string;
     /** Design-level state (sign type/size, plaque layout/size); index-0 row only. */
     design_meta?: unknown;
+    /** Playwright / local QA marker (`?qaTest=1`). */
+    is_qa_test?: boolean;
   },
 ): BadgeOrderItem {
   const lines = badge.lines || [];
@@ -1616,6 +1623,7 @@ export function convertBadgeToOrderItem(
     ...(badgeIndex === 0 && options?.design_meta
       ? { design_meta: options.design_meta }
       : {}),
+    ...(options?.is_qa_test ? { is_qa_test: true } : {}),
   };
 }
 
@@ -1674,6 +1682,7 @@ export async function saveBadgeOrderItem(item: BadgeOrderItem) {
       pdf_url: item.pdf_url,
       shopify_customer_id: item.shopify_customer_id,
       status: item.status ?? "draft",
+      ...(item.is_qa_test ? { is_qa_test: true } : {}),
       quantity: item.quantity ?? 1,
       created_at: item.created_at || getPacificTimestamp(),
       updated_at: getPacificTimestamp(),
@@ -1743,6 +1752,7 @@ export async function saveBadgeOrderItems(items: BadgeOrderItem[]) {
     pdf_url: item.pdf_url,
     shopify_customer_id: item.shopify_customer_id,
     status: item.status ?? "draft",
+    ...(item.is_qa_test ? { is_qa_test: true } : {}),
     created_at: item.created_at || getPacificTimestamp(),
     updated_at: getPacificTimestamp(),
   }));
@@ -1808,6 +1818,7 @@ function badgeOrderItemToRow(item: BadgeOrderItem) {
     pdf_url: item.pdf_url,
     shopify_customer_id: item.shopify_customer_id,
     status: item.status ?? "draft",
+    ...(item.is_qa_test ? { is_qa_test: true } : {}),
     updated_at: getPacificTimestamp(),
   };
 }

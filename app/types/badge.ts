@@ -126,13 +126,25 @@ export interface Badge {
   /** Desk sign only: profession template family id (e.g. doctor, nurse). */
   deskSignProfessionId?: string;
   /** Gavel designer only: wood body style. */
-  gavelStyle?: "walnut" | "oak" | "ebony" | "mahogany" | "metal";
+  gavelStyle?: "walnut" | "oak" | "ebony" | "purple" | "mahogany" | "metal";
   /** Gavel designer only: band metal finish. */
   gavelBandFinish?: "gold" | "silver";
   /** Gavel designer only: band text size preset. */
   gavelTextSizePreset?: "small" | "medium" | "large";
   /** Gavel designer only: handle length. */
   gavelHandleLength?: "short" | "standard" | "long";
+  /** Gavel designer only: gavel vs. gavel stand. */
+  gavelProductType?: "gavel" | "stand";
+  /** Gavel designer only: sound block add-on. */
+  gavelSoundBlock?: "none" | "plain" | "engraved";
+  /** Gavel designer only: sound block engraving (independent of the band). */
+  gavelSoundBlockText?: string;
+  /** Gavel designer only: suede bag add-on. */
+  gavelSuedeBag?: boolean;
+  /** Gavel stand only: plate finish. */
+  gavelStandFinish?: "gold" | "silver" | "white";
+  /** Gavel stand only: engraved vs. UV printed. */
+  gavelProductionMethod?: "engrave" | "uvprint";
 }
 
 export interface BadgeEditorPanelProps {

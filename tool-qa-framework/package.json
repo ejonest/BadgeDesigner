@@ -1,0 +1,19 @@
+{
+  "name": "tool-qa-framework",
+  "version": "1.0.0",
+  "description": "Generalized automated QA framework for LITA's custom Shopify design tools. AQB's badge designer is the first profile.",
+  "scripts": {
+    "generate-cases:aqb-badge-tool": "node profiles/aqb-badge-tool/generate-cases.js",
+    "test": "playwright test",
+    "test:aqb": "playwright test tests/aqb-badge-tool.spec.js tests/aqb-badge-tool.personas.spec.js",
+    "test:chrome": "playwright test --project=desktop-chrome",
+    "test:scenarios": "playwright test tests/aqb-badge-tool.spec.js --project=desktop-chrome -g \"Named real-order scenarios\"",
+    "test:personas": "playwright test tests/aqb-badge-tool.personas.spec.js --project=desktop-chrome",
+    "test:mobile": "playwright test --project=mobile-chrome --project=mobile-safari",
+    "report": "playwright show-report",
+    "codegen:aqb": "playwright codegen http://localhost:5173/badge-designer-redesign"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
+  }
+}

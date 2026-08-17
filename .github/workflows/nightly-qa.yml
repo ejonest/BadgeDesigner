@@ -1,0 +1,102 @@
+# Nightly AQB badge-designer QA (Playwright)
+#
+# Intentional non-blocking design:
+# - Does NOT run on push/PR — merging to main and going live is never gated on this.
+# - Runs once per night on a schedule (main tip).
+# - Can also be started manually from the Actions tab (workflow_dispatch).
+#
+# Results: Actions run summary + uploaded HTML report / failure artifacts.
+
+name: Nightly QA (desktop Chrome)
+
+on:
+  schedule:
+    # 09:00 UTC ≈ 2am Pacific (PST) / 3am Pacific (PDT)
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Which suite to run'
+        required: true
+        default: 'chrome-full'
+        type: choice
+        options:
+          - chrome-full
+          - chrome-smoke
+
+# Never stack overnight runs on top of each other.
+concurrency:
+  group: nightly-qa-chrome
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  playwright-chrome:
+    name: Desktop Chrome QA
+    runs-on: ubuntu-latest
+    # Full pairwise suite is long (PDF proof per case). Allow up to 3 hours.
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tool-qa-framework/package-lock.json
+
+      - name: Install app dependencies
+        run: npm ci
+
+      - name: Install QA framework dependencies
+        working-directory: tool-qa-framework
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: tool-qa-framework
+        run: npx playwright install chromium --with-deps
+
+      # Playwright's webServer will boot `npm run dev` from the repo root
+      # (see tool-qa-framework/playwright.config.js). No Shopify/Gadget secrets
+      # are required — the suite stops at the PDF proof on purpose.
+      - name: Run Chrome suite
+        working-directory: tool-qa-framework
+        env:
+          CI: true
+        run: |
+          SUITE="${{ github.event.inputs.suite || 'chrome-full' }}"
+          if [ "$SUITE" = "chrome-smoke" ]; then
+            npx playwright test --project=desktop-chrome \
+              tests/aqb-badge-tool.spec.js \
+              tests/aqb-badge-tool.personas.spec.js \
+              -g "Named real-order scenarios|Customer personas"
+          else
+            npm run test:chrome
+          fi
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-chrome
+          path: tool-qa-framework/report/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failures-chrome
+          path: tool-qa-framework/test-results/
+          retention-days: 14
+          if-no-files-found: ignore

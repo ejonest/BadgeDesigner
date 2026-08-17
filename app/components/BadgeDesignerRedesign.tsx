@@ -485,6 +485,23 @@ function draftThumbnailFileName(index: number, blob: Blob): string {
   return `badge-${index}-thumbnail.${ext}`;
 }
 
+/**
+ * Playwright / local QA opens the designer with `?qaTest=1`. That marks every
+ * badge_order_items row with is_qa_test=true so they can be filtered or deleted
+ * without touching real customer drafts/orders.
+ */
+function appendQaTestFlag(formData: FormData): void {
+  if (typeof window === "undefined") return;
+  try {
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("qaTest") === "1" || sp.get("isQaTest") === "1") {
+      formData.append("isQaTest", "1");
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 /** localStorage key prefix and version for badge designer draft cache (reload persistence). */
 const BADGE_DESIGNER_CACHE_PREFIX = "badge-designer-redesign-draft";
 const DESK_SIGN_DESIGNER_CACHE_PREFIX = "desk-sign-designer-draft";
@@ -5883,6 +5900,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         const formData = new FormData();
         formData.append("designId", designId);
         formData.append("designData", JSON.stringify(designDataForDraft));
+        appendQaTestFlag(formData);
         const shopifyCustomerIdFromUrl =
           typeof window !== "undefined"
             ? new URLSearchParams(window.location.search).get("customerId")
@@ -6000,6 +6018,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           const formData = new FormData();
           formData.append("designId", designId);
           formData.append("designData", JSON.stringify(designDataForDraft));
+          appendQaTestFlag(formData);
           const shopifyCustomerIdFromUrl =
             typeof window !== "undefined"
               ? new URLSearchParams(window.location.search).get("customerId")
@@ -8256,6 +8275,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       const formData = new FormData();
       formData.append("designId", designId);
       formData.append("designData", JSON.stringify(designData));
+      appendQaTestFlag(formData);
       if (shopifyCustomerId) {
         formData.append("shopifyCustomerId", shopifyCustomerId);
       }
@@ -9372,6 +9392,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 JSON.stringify(designDataForSupabase),
               );
               formDataForSupabase.append("storageOnly", "true");
+              appendQaTestFlag(formDataForSupabase);
               if (shopifyCustomerIdFromUrl) {
                 formDataForSupabase.append(
                   "shopifyCustomerId",

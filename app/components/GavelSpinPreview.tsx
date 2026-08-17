@@ -9,12 +9,25 @@ import {
 import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
-import { GavelModel, gavelGroundY } from "~/components/gavel/GavelModel";
+import { GavelModel } from "~/components/gavel/GavelModel";
 import type {
   GavelHandleLengthId,
   GavelStyleDef,
 } from "~/constants/gavelStyles";
-import { GAVEL_BAND_GOLD_HEX } from "~/constants/gavelStyles";
+import {
+  GAVEL_BAND_GOLD_HEX,
+  GAVEL_VIEW_CAMERA_POSITION,
+  GAVEL_VIEW_TARGET,
+  gavelGroundY,
+} from "~/constants/gavelStyles";
+
+/**
+ * Reflection/IBL strength for the whole model. This has to live on the
+ * Environment rather than per material: three.js replaces a material's
+ * envMapIntensity with scene.environmentIntensity whenever the material has no
+ * envMap of its own, which is the case for everything here.
+ */
+const GAVEL_ENV_INTENSITY = 0.5;
 
 export type GavelSpinPreviewHandle = {
   capturePngDataUrl: () => string | null;
@@ -75,24 +88,28 @@ export const GavelSpinPreview = forwardRef<GavelSpinPreviewHandle, Props>(
       <div className={`gf-spin-preview ${className}`.trim()}>
         <Canvas
           shadows
-          camera={{ position: [2.8, 1.85, 8.4], fov: 28 }}
+          camera={{ position: [...GAVEL_VIEW_CAMERA_POSITION], fov: 28 }}
           dpr={[1, 2]}
           gl={{ antialias: true, preserveDrawingBuffer: true, alpha: true }}
           onCreated={({ gl }) => {
-            gl.toneMappingExposure = 1.12;
+            gl.toneMappingExposure = 0.95;
           }}
           onPointerDown={() => setHintVisible(false)}
         >
           <color attach="background" args={["#f7f4ef"]} />
-          <ambientLight intensity={0.7} />
+          {/*
+            The studio Environment does nearly all the lighting (see
+            GAVEL_ENV_INTENSITY), so these only shape the turned beads.
+          */}
+          <ambientLight intensity={0.12} />
           <directionalLight
             position={[5, 8, 6]}
-            intensity={1.15}
+            intensity={0.45}
             castShadow
             shadow-mapSize={[1024, 1024]}
           />
-          <directionalLight position={[-5, 3, -2]} intensity={0.35} />
-          <directionalLight position={[0, 1.2, 4]} intensity={0.22} />
+          <directionalLight position={[-5, 3, -2]} intensity={0.16} />
+          <directionalLight position={[0, 1.2, 4]} intensity={0.1} />
           <CaptureBridge glRef={glRef} />
           <GavelModel
             style={style}
@@ -101,19 +118,22 @@ export const GavelSpinPreview = forwardRef<GavelSpinPreviewHandle, Props>(
             handleLength={handleLength}
           />
           <ContactShadows
-            position={[0, groundY - 0.02, -1.2]}
-            opacity={0.32}
-            scale={14}
+            position={[0, groundY - 0.02, -4.35]}
+            opacity={0.3}
+            scale={26}
             blur={2.4}
-            far={6}
+            far={8.7}
           />
-          <Environment preset="studio" />
+          <Environment
+            preset="studio"
+            environmentIntensity={GAVEL_ENV_INTENSITY}
+          />
           <OrbitControls
-            target={[0, 0.08, -2.0]}
+            target={[...GAVEL_VIEW_TARGET]}
             enablePan={false}
             enableZoom
-            minDistance={4}
-            maxDistance={16}
+            minDistance={7.2}
+            maxDistance={32}
             minPolarAngle={Math.PI / 2 - 0.42}
             maxPolarAngle={Math.PI / 2 + 0.22}
             rotateSpeed={0.85}

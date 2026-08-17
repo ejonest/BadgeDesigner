@@ -11,6 +11,7 @@
   --gf-gold: #c4a35a;
   --gf-gold-2: #d4a017;
   --gf-cream: #f7f4ef;
+  --gf-cream-dark: #edebe3;
   --gf-white: #ffffff;
   --gf-border: rgba(10, 22, 40, 0.12);
   --gf-muted: #5c6570;
@@ -24,6 +25,536 @@
 .gf-designer-root * {
   box-sizing: border-box;
 }
+
+/* ===== Wizard shell (4-step tool) ===== */
+
+.gf-wizard-root {
+  padding: 22px 22px 28px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.gf-page-title,
+.gf-hero {
+  width: 100%;
+  max-width: 1320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Hero and panel stretch so the tool fills the viewport instead of
+   leaving dead space under a short step. */
+.gf-hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.gf-page-title {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.gf-eyebrow {
+  color: var(--gf-gold-2);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 6px;
+}
+
+.gf-page-h1 {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--gf-navy);
+  margin: 0;
+}
+
+.gf-hero {
+  background: var(--gf-navy);
+  border-radius: 18px;
+  padding: 22px;
+}
+
+.gf-stepper {
+  display: flex;
+  align-items: flex-start;
+  /* width is required: auto margins would otherwise shrink this flex item. */
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto 20px;
+}
+
+.gf-stepper-step {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gf-stepper-line {
+  position: absolute;
+  top: 14px;
+  left: -50%;
+  width: 100%;
+  height: 1.5px;
+  background: #3a4a66;
+  z-index: 0;
+}
+
+.gf-stepper-line.is-done {
+  background: var(--gf-gold-2);
+}
+
+.gf-stepper-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  z-index: 1;
+  background: #12294a;
+  color: #7c8aa0;
+  border: 1px solid #3a4a66;
+  cursor: pointer;
+}
+
+.gf-stepper-circle:disabled {
+  cursor: default;
+}
+
+.gf-stepper-circle.is-done {
+  background: var(--gf-gold-2);
+  color: #2c1d02;
+  border-color: transparent;
+}
+
+.gf-stepper-circle.is-active {
+  background: #fff;
+  color: var(--gf-navy);
+  border-color: transparent;
+  box-shadow: 0 0 0 4px rgba(216, 169, 74, 0.35);
+}
+
+.gf-stepper-step small {
+  font-size: 10px;
+  color: #9aa6b8;
+  margin-top: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+
+.gf-stepper-step small.is-active {
+  color: #d9a94a;
+  font-weight: 700;
+}
+
+.gf-panel {
+  background: #fff;
+  border-radius: 14px;
+  padding: 22px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.gf-panel-title {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--gf-navy);
+  margin: 0 0 5px;
+}
+
+.gf-panel-sub {
+  font-size: 14px;
+  color: var(--gf-muted);
+  margin: 0 0 20px;
+}
+
+.gf-design-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 24px;
+  align-items: stretch;
+  flex: 1;
+}
+
+/* Steps without a preview: one centered column of choices. */
+.gf-design-grid.is-single {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+}
+
+.gf-design-grid.is-single .gf-controls-col {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+/* Product step: the two choices are the whole screen, so let them grow. */
+.gf-design-grid.is-product {
+  align-content: stretch;
+}
+
+.gf-design-grid.is-product .gf-controls-col {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+.gf-design-grid.is-product .gf-toggle-row {
+  flex: 1 1 auto;
+  max-height: 320px;
+}
+
+.gf-design-grid.is-product .gf-toggle-card {
+  min-height: 240px;
+  justify-content: flex-end;
+}
+
+.gf-design-grid.is-product .gf-toggle-photo {
+  min-height: 150px;
+  margin-bottom: 14px;
+}
+
+.gf-design-grid.is-product .gf-toggle-label {
+  font-size: 23px;
+}
+
+.gf-design-grid.is-product .gf-toggle-sub {
+  font-size: 15px;
+}
+
+/* Controls stay top-aligned while the preview column stretches. */
+.gf-design-grid .gf-controls-col {
+  align-self: start;
+}
+
+@media (max-width: 900px) {
+  .gf-design-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gf-controls-col {
+  min-width: 0;
+}
+
+.gf-preview-pane {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gf-preview-label {
+  font-size: 12.5px;
+  color: var(--gf-muted);
+  margin: 0;
+}
+
+.gf-plate-frame {
+  border-radius: 10px;
+  background: var(--gf-cream-dark);
+  flex: 1;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--gf-border);
+}
+
+.gf-plate-frame-note {
+  font-size: 12px;
+  color: var(--gf-muted);
+  text-align: center;
+  padding: 0 16px;
+}
+
+.gf-toggle-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.gf-toggle-card {
+  flex: 1;
+  min-height: 148px;
+  background: var(--gf-cream);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 26px 28px;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.gf-toggle-card.is-selected {
+  border-color: var(--gf-gold-2);
+  background: #fffbf2;
+}
+
+/* Product photo fills the card; the label sits beneath it. */
+.gf-toggle-photo {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  margin-bottom: 4px;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+
+.gf-toggle-label {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gf-navy);
+}
+
+.gf-toggle-sub {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--gf-muted);
+}
+
+.gf-sub-section {
+  background: var(--gf-cream);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+
+.gf-sub-section:last-child {
+  margin-bottom: 0;
+}
+
+.gf-sub-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gf-navy);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0 0 12px;
+}
+
+.gf-pill-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Pills share the row width so option groups fill the panel. */
+.gf-pill {
+  flex: 1 1 auto;
+  min-height: 54px;
+  background: #fff;
+  border: 1.5px solid var(--gf-border);
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--gf-navy);
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.gf-pill.is-selected {
+  border-color: var(--gf-gold-2);
+  background: #faeeda;
+}
+
+.gf-pill-hint {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gf-muted);
+}
+
+.gf-note {
+  font-size: 12.5px;
+  color: var(--gf-muted);
+  margin: 8px 0 0;
+  line-height: 1.45;
+}
+
+.gf-note.is-warn {
+  color: #8c5a0b;
+}
+
+.gf-upload {
+  display: block;
+  border: 1px dashed var(--gf-border);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 12px;
+  color: var(--gf-muted);
+  text-align: center;
+  background: #fff;
+  cursor: pointer;
+}
+
+.gf-upload input[type="file"] {
+  display: none;
+}
+
+.gf-swatch-row {
+  display: flex;
+  gap: 8px;
+}
+
+.gf-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.gf-swatch.is-selected {
+  border-color: var(--gf-navy);
+}
+
+.gf-calc-box {
+  background: var(--gf-cream);
+  border-radius: 12px;
+  padding: 30px 32px;
+}
+
+.gf-calc-qty-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.gf-range {
+  width: 100%;
+  margin-bottom: 22px;
+  accent-color: var(--gf-gold-2);
+}
+
+.gf-calc-summary {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--gf-border);
+  padding-top: 18px;
+}
+
+.gf-calc-item p:first-child {
+  font-size: 12px;
+  color: var(--gf-muted);
+  margin: 0 0 3px;
+}
+
+.gf-calc-item p:last-child {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--gf-navy);
+  margin: 0;
+}
+
+.gf-calc-item.is-right {
+  text-align: right;
+}
+
+.gf-summary-list {
+  margin-top: 20px;
+  border-top: 1px solid var(--gf-border);
+  padding-top: 16px;
+  display: grid;
+  gap: 11px;
+}
+
+.gf-summary-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13.5px;
+}
+
+.gf-summary-list span:first-child {
+  color: var(--gf-muted);
+}
+
+.gf-summary-list span:last-child {
+  color: var(--gf-text);
+  font-weight: 600;
+  text-align: right;
+}
+
+.gf-success {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2a6b47;
+}
+
+.gf-step-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.gf-nav-primary {
+  background: var(--gf-navy);
+  color: #fff;
+  border: 0;
+  padding: 14px 26px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.gf-nav-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.gf-nav-secondary {
+  background: transparent;
+  color: var(--gf-muted);
+  border: 0;
+  padding: 12px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.gf-wizard-root .gf-spin-preview {
+  flex: 1;
+  height: auto;
+  min-height: 360px;
+}
+
+.gf-wizard-root .gf-spin-fallback {
+  flex: 1;
+  height: auto;
+  min-height: 360px;
+}
+
 
 .gf-header {
   background: var(--gf-navy);
@@ -243,17 +774,17 @@
 .gf-style-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 8px;
+  gap: 10px;
 }
 
 .gf-style-card {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   align-items: center;
   text-align: left;
   border: 1px solid var(--gf-border);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 14px 16px;
   background: #fff;
   cursor: pointer;
   color: inherit;
@@ -277,8 +808,8 @@
 }
 
 .gf-style-thumb {
-  width: 72px;
-  height: 72px;
+  width: 86px;
+  height: 86px;
   border-radius: 8px;
   flex-shrink: 0;
   object-fit: cover;
@@ -288,13 +819,13 @@
 
 .gf-style-card-title {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .gf-style-card-desc {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--gf-muted);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .gf-line-block {

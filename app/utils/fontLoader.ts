@@ -18,7 +18,7 @@ const FONT_PATHS: { [key: string]: string } = {
   'Source Sans 3': '/Fonts/Source_Sans_3/static/SourceSans3-Regular.ttf',
   'Raleway': '/Fonts/Raleway/static/Raleway-Regular.ttf',
   'PT Sans': '/Fonts/PT_Sans/PTSans-Regular.ttf',
-  'Merriweather': '/Fonts/Merriweather/static/Merriweather-Regular.ttf',
+  'Merriweather': '/Fonts/Merriweather/static/Merriweather_36pt-Regular.ttf', // ships only as optical-size variants
   'Noto Sans': '/Fonts/Noto_Sans/static/NotoSans-Regular.ttf',
   'Noto Serif': '/Fonts/Noto_Serif/static/NotoSerif-Regular.ttf',
   'Georgia': 'system', // Georgia is a system font

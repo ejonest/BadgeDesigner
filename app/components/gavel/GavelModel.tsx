@@ -6,8 +6,13 @@ import {
   GAVEL_HANDLE_LENGTH_IN,
   GAVEL_HEAD_DIAMETER_IN,
   GAVEL_HEAD_LENGTH_IN,
+  GAVEL_BAND_DIAMETER_IN,
   GAVEL_BAND_HEIGHT_IN,
 } from "~/constants/gavelStyles";
+import {
+  applyLatheWoodUvs,
+  makeGavelWoodMaps,
+} from "~/utils/gavelWoodTexture";
 
 type Props = {
   style: GavelStyleDef;
@@ -19,43 +24,102 @@ type Props = {
 const HEAD_R = GAVEL_HEAD_DIAMETER_IN / 2;
 const HEAD_HALF = GAVEL_HEAD_LENGTH_IN / 2;
 const BAND_H = GAVEL_BAND_HEIGHT_IN;
-/** Band sits slightly inset of the large beads, flush with the inner beads. */
-const BAND_R = HEAD_R * 0.96;
-const HANDLE_TENON = HEAD_R * 0.95;
+/** Recessed below the wood beads, and the basis for the engraving wrap width. */
+const BAND_R = GAVEL_BAND_DIAMETER_IN / 2;
+const HANDLE_TENON = HEAD_R * 0.42;
+/** Widest point of the shaft, measured off the drawing at 36.5% of head radius. */
+const HANDLE_MAX_R = HEAD_R * 0.365;
+/**
+ * The band wraps like the physical strip: both ends meet at the handle (−Z) and
+ * the artwork centers on the face opposite it (+Z). Cylinder UVs start the seam
+ * at +Z, so a half turn moves it onto the handle.
+ */
+const BAND_TEXT_ROTATION_Y = Math.PI;
+
+/** Radial segments for each lathe; also the UV divisions around the wood. */
+const HEAD_SEGMENTS = 128;
+const HANDLE_SEGMENTS = 64;
+
+/**
+ * Inches of real wood covered by one tile of the scanned maps. Tuned so the
+ * grain reads at the scale of the product photos on a 2" head.
+ */
+const WOOD_TILE_IN = 6;
 
 function v2(x: number, y: number) {
   return new THREE.Vector2(x, y);
 }
 
 /**
- * Photo-matched head: dome → large bead → deep groove → small bead → band.
- * Striking faces at ±HEAD_HALF; band centered on Y.
+ * Half of the turned end cap, traced off the dimensioned product drawing.
+ * `u` runs 0 at the striking face to 1 at the edge of the metal band, `r` is a
+ * fraction of the head radius — so the features stay put if the head or band
+ * dimensions change.
  */
+const HEAD_CAP_PROFILE: readonly (readonly [number, number])[] = [
+  // striking face: shallow dome rolling over a generous rounded rim
+  [0.0, 0.0],
+  [0.004, 0.26],
+  [0.01, 0.4],
+  [0.017, 0.423],
+  [0.0416, 0.616],
+  [0.0662, 0.706],
+  [0.0908, 0.773],
+  [0.1154, 0.821],
+  [0.14, 0.849],
+  // brief shelf, then the outer bead swells
+  [0.1646, 0.857],
+  [0.1892, 0.864],
+  [0.2138, 0.892],
+  [0.2384, 0.932],
+  [0.263, 0.957],
+  [0.2876, 0.976],
+  [0.3122, 0.989],
+  [0.3368, 0.995],
+  [0.3614, 0.997],
+  // outer bead crown — domed, not flat
+  [0.386, 1.0],
+  [0.4106, 1.0],
+  [0.4352, 0.998],
+  [0.4598, 0.995],
+  [0.4844, 0.987],
+  [0.509, 0.971],
+  [0.5336, 0.951],
+  [0.5582, 0.923],
+  [0.5828, 0.889],
+  [0.6074, 0.866],
+  // rounded groove between the two beads
+  [0.632, 0.85],
+  [0.6566, 0.837],
+  [0.6812, 0.816],
+  [0.7058, 0.798],
+  [0.7304, 0.788],
+  [0.755, 0.811],
+  [0.7796, 0.858],
+  [0.8042, 0.912],
+  [0.8288, 0.959],
+  // inner bead crown, then it eases down to the band
+  [0.8534, 0.983],
+  [0.878, 0.993],
+  [0.9026, 0.997],
+  [0.9272, 0.997],
+  [0.9518, 0.988],
+  [0.9764, 0.986],
+  [1.0, 0.985],
+];
+
 function headProfilePoints(): THREE.Vector2[] {
   const R = HEAD_R;
   const H = HEAD_HALF;
   const BH = BAND_H / 2;
+  const capLength = H - BH;
   const lower = [
-    v2(0.001, -H),
-    v2(R * 0.42, -H + 0.01),
-    v2(R * 0.78, -H + 0.06),
-    v2(R * 0.92, -H + 0.12),
-    // large outer bead
-    v2(R * 0.98, -H + 0.2),
-    v2(R * 1.0, -H + 0.3),
-    v2(R * 0.97, -H + 0.38),
-    // deep groove
-    v2(R * 0.74, -H + 0.46),
-    v2(R * 0.64, -H + 0.52),
-    v2(R * 0.72, -H + 0.58),
-    // small bead bordering the band
-    v2(R * 0.92, -H + 0.66),
-    v2(R * 0.98, -BH - 0.06),
-    v2(R * 0.97, -BH - 0.02),
-    v2(BAND_R, -BH),
-    // recessed band channel
-    v2(BAND_R * 0.995, -BH + 0.01),
-    v2(BAND_R * 0.995, BH - 0.01),
+    ...HEAD_CAP_PROFILE.map(([u, r]) =>
+      v2(Math.max(r * R, 0.001), -H + u * capLength),
+    ),
+    // shallow channel so the band edge still reads against the wood
+    v2(BAND_R * 0.99, -BH + 0.01),
+    v2(BAND_R * 0.99, BH - 0.01),
     v2(BAND_R, BH),
   ];
   const upper = lower
@@ -65,92 +129,52 @@ function headProfilePoints(): THREE.Vector2[] {
   return [...lower, ...upper];
 }
 
+/**
+ * Handle traced off the same drawing: flare at the head, a turned waist and
+ * collar bead in the first fifth, then a long shaft that swells toward the
+ * grip and closes with a small finial. `e` fractions are positions along the
+ * exposed shaft in the drawing, so any handle length keeps the proportions.
+ */
 function handleProfilePoints(exposedLengthIn: number): THREE.Vector2[] {
   const t = HANDLE_TENON;
   const L = t + exposedLengthIn;
+  const hr = HANDLE_MAX_R;
+  const e = (frac: number) => t + exposedLengthIn * frac;
   return [
-    v2(0.11, 0),
-    v2(0.11, t - 0.05),
-    // small bead at the head
-    v2(0.18, t),
-    v2(0.22, t + 0.07),
-    // large collar
-    v2(0.3, t + 0.16),
-    v2(0.34, t + 0.26),
-    v2(0.28, t + 0.36),
-    // thin ring
-    v2(0.19, t + 0.42),
-    v2(0.23, t + 0.48),
-    v2(0.17, t + 0.55),
-    v2(0.155, t + 0.7),
-    // mid bead ~1/4 down the exposed shaft
-    v2(0.15, t + exposedLengthIn * 0.22),
-    v2(0.22, t + exposedLengthIn * 0.28),
-    v2(0.15, t + exposedLengthIn * 0.34),
-    v2(0.145, L - 0.78),
-    v2(0.15, L - 0.55),
-    // tip bead + pointed finial
-    v2(0.2, L - 0.4),
-    v2(0.23, L - 0.3),
-    v2(0.16, L - 0.16),
-    v2(0.07, L - 0.06),
-    v2(0.018, L),
+    v2(hr * 0.9, 0),
+    v2(hr * 1.0, t - 0.08),
+    // flare where the handle meets the band
+    v2(hr * 1.46, t),
+    v2(hr * 1.2, t + 0.05),
+    // waist, then the first small bead
+    v2(hr * 0.82, e(0.035)),
+    v2(hr * 0.98, e(0.051)),
+    v2(hr * 0.86, e(0.085)),
+    v2(hr * 0.74, e(0.117)),
+    v2(hr * 0.7, e(0.166)),
+    // collar bead about a fifth of the way down
+    v2(hr * 0.94, e(0.183)),
+    v2(hr * 1.02, e(0.2)),
+    v2(hr * 0.82, e(0.216)),
+    // thinnest point of the shaft, then a long swell to the grip
+    v2(hr * 0.7, e(0.249)),
+    v2(hr * 0.74, e(0.299)),
+    v2(hr * 0.8, e(0.365)),
+    v2(hr * 0.86, e(0.431)),
+    v2(hr * 0.92, e(0.496)),
+    v2(hr * 0.96, e(0.562)),
+    v2(hr * 1.0, e(0.66)),
+    v2(hr * 1.0, e(0.694)),
+    v2(hr * 0.96, e(0.777)),
+    v2(hr * 0.92, e(0.843)),
+    v2(hr * 0.86, e(0.909)),
+    // finial at the tip
+    v2(hr * 0.72, e(0.943)),
+    v2(hr * 0.62, e(0.975)),
+    v2(hr * 0.46, e(0.991)),
+    v2(hr * 0.12, L - 0.01),
     v2(0.001, L),
   ];
-}
-
-function makeWoodMap(style: GavelStyleDef): THREE.CanvasTexture | null {
-  if (typeof document === "undefined") return null;
-  const size = 1024;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-
-  ctx.fillStyle = style.bodyColor;
-  ctx.fillRect(0, 0, size, size);
-
-  if (!style.useWoodGrain) {
-    for (let i = 0; i < 50; i++) {
-      ctx.fillStyle = `rgba(255,255,255,${0.01 + (i % 5) * 0.008})`;
-      ctx.fillRect(0, (i / 50) * size, size, 2);
-    }
-  } else {
-    const isOak = style.id === "oak";
-    const lines = isOak ? 42 : 78;
-    for (let i = 0; i < lines; i++) {
-      const x = (i / lines) * size + Math.sin(i * 0.65) * (isOak ? 22 : 7);
-      ctx.strokeStyle = style.grainTint;
-      ctx.globalAlpha = isOak ? 0.18 + (i % 3) * 0.07 : 0.11 + (i % 5) * 0.045;
-      ctx.lineWidth = isOak ? 2.5 + (i % 6) : 1.2 + (i % 3);
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      for (let y = 0; y <= size; y += 6) {
-        ctx.lineTo(
-          x + Math.sin(y * (isOak ? 0.022 : 0.038) + i) * (isOak ? 18 : 8),
-          y,
-        );
-      }
-      ctx.stroke();
-    }
-    if (isOak) {
-      ctx.globalAlpha = 0.07;
-      ctx.fillStyle = "#fff4dc";
-      for (let i = 0; i < 10; i++) {
-        ctx.fillRect(50 + i * 92, 0, 5, size);
-      }
-    }
-  }
-  ctx.globalAlpha = 1;
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(1.5, 1);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
-  tex.needsUpdate = true;
-  return tex;
 }
 
 function makeBrushedBandMap(hex: string): THREE.CanvasTexture | null {
@@ -190,14 +214,19 @@ export function GavelModel({
 }: Props) {
   const handleIn = GAVEL_HANDLE_LENGTH_IN[handleLength];
 
-  const headGeom = useMemo(
-    () => new THREE.LatheGeometry(headProfilePoints(), 96),
-    [],
-  );
-  const handleGeom = useMemo(
-    () => new THREE.LatheGeometry(handleProfilePoints(handleIn), 48),
-    [handleIn],
-  );
+  const headGeom = useMemo(() => {
+    const profile = headProfilePoints();
+    const geom = new THREE.LatheGeometry(profile, HEAD_SEGMENTS);
+    applyLatheWoodUvs(geom, profile, HEAD_SEGMENTS, WOOD_TILE_IN);
+    return geom;
+  }, []);
+
+  const handleGeom = useMemo(() => {
+    const profile = handleProfilePoints(handleIn);
+    const geom = new THREE.LatheGeometry(profile, HANDLE_SEGMENTS);
+    applyLatheWoodUvs(geom, profile, HANDLE_SEGMENTS, WOOD_TILE_IN);
+    return geom;
+  }, [handleIn]);
 
   const bandMap = useMemo(() => {
     if (!bandTextureUrl) return makeBrushedBandMap(bandHex);
@@ -210,14 +239,16 @@ export function GavelModel({
     return tex;
   }, [bandTextureUrl, bandHex]);
 
-  const woodMap = useMemo(() => makeWoodMap(style), [style]);
+  const woodMaps = useMemo(() => makeGavelWoodMaps(style), [style]);
 
   useLayoutEffect(() => {
     return () => {
       bandMap?.dispose();
-      woodMap?.dispose();
+      woodMaps.map?.dispose();
+      woodMaps.normalMap?.dispose();
+      woodMaps.roughnessMap?.dispose();
     };
-  }, [bandMap, woodMap]);
+  }, [bandMap, woodMaps]);
 
   useLayoutEffect(() => {
     return () => handleGeom.dispose();
@@ -226,13 +257,15 @@ export function GavelModel({
   const bodyMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: woodMap ? "#ffffff" : style.bodyColor,
-        roughness: style.roughness,
+        color: woodMaps.map ? "#ffffff" : style.bodyColor,
+        roughness: woodMaps.roughness,
         metalness: style.metalness,
-        map: woodMap ?? undefined,
-        envMapIntensity: style.id === "ebony" ? 0.85 : 0.65,
+        map: woodMaps.map ?? undefined,
+        normalMap: woodMaps.normalMap ?? undefined,
+        normalScale: new THREE.Vector2(0.6, 0.6),
+        roughnessMap: woodMaps.roughnessMap ?? undefined,
       }),
-    [style.bodyColor, style.id, style.metalness, style.roughness, woodMap],
+    [style, woodMaps],
   );
 
   const bandMat = useMemo(
@@ -242,7 +275,6 @@ export function GavelModel({
         roughness: 0.28,
         metalness: 0.9,
         map: bandMap ?? undefined,
-        envMapIntensity: 1.4,
       }),
     [bandHex, bandMap],
   );
@@ -250,9 +282,9 @@ export function GavelModel({
   return (
     <group>
       <mesh geometry={headGeom} material={bodyMat} castShadow receiveShadow />
-      <mesh rotation={[0, Math.PI, 0]} material={bandMat} castShadow>
+      <mesh rotation={[0, BAND_TEXT_ROTATION_Y, 0]} material={bandMat} castShadow>
         <cylinderGeometry
-          args={[BAND_R * 1.012, BAND_R * 1.012, BAND_H * 0.97, 96, 1, true]}
+          args={[BAND_R * 1.004, BAND_R * 1.004, BAND_H * 0.965, 128, 1, true]}
         />
       </mesh>
       {/* Lathe along +Y, then −90° X so the tip goes −Z. Tenon sits inside the head. */}
@@ -261,8 +293,4 @@ export function GavelModel({
       </group>
     </group>
   );
-}
-
-export function gavelGroundY(): number {
-  return -HEAD_HALF;
 }

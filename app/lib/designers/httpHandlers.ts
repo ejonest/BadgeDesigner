@@ -55,6 +55,16 @@ function pickDesignMeta(
   return Object.keys(meta).length > 0 ? meta : undefined;
 }
 
+/** True when Playwright/local QA sent `isQaTest=1` (or designData.isQaTest). */
+function readIsQaTest(
+  formData: FormData,
+  designData: Record<string, unknown> | null | undefined,
+): boolean {
+  const fromForm = formData.get("isQaTest");
+  if (fromForm === "1" || fromForm === "true") return true;
+  return designData?.isQaTest === true || designData?.isQaTest === "1";
+}
+
 /** Draft autosave: uploads to designer image bucket + sign_order_items / badge_order_items. */
 export async function runSaveDraftDesigner(
   designerId: DesignerId,
@@ -90,6 +100,10 @@ export async function runSaveDraftDesigner(
     }
     const shopifyCustomerId =
       (formData.get("shopifyCustomerId") as string) || null;
+    const isQaTest = readIsQaTest(
+      formData,
+      designData as Record<string, unknown>,
+    );
 
     const allBadges =
       designData.allBadges || (designData.badge ? [designData.badge] : []);
@@ -208,6 +222,7 @@ export async function runSaveDraftDesigner(
             shopify_customer_id: shopifyCustomerId ?? undefined,
             lineIdPrefix: def.lineIdPrefix,
             design_meta: pickDesignMeta(designData),
+            is_qa_test: isQaTest || undefined,
           });
           item.status = "draft";
           return item;
@@ -396,6 +411,10 @@ export async function runSendOrderDraftToSupabase(
     const designData = JSON.parse(formData.get("designData") as string);
     const shopifyCustomerId =
       (formData.get("shopifyCustomerId") as string) || null;
+    const isQaTest = readIsQaTest(
+      formData,
+      designData as Record<string, unknown>,
+    );
 
     let pdfUrl = "";
     const pdfFile = formData.get("pdf") as File;
@@ -494,6 +513,7 @@ export async function runSendOrderDraftToSupabase(
         shopify_customer_id: shopifyCustomerId ?? undefined,
         lineIdPrefix: def.lineIdPrefix,
         design_meta: pickDesignMeta(designData),
+        is_qa_test: isQaTest || undefined,
       });
       item.status = "draft";
       orderItems.push(item);
