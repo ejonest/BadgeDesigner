@@ -2,7 +2,7 @@
  * Gavels Fast catalog — matched to product photos in app/temp/gavelImages.
  *
  * Same lathe-turned head on every SKU. Woods: American walnut, oak, ebony,
- * and stained purple. Ebony ships with a silver band; the others with gold.
+ * and stained purple. Band metal (gold or silver) is chosen separately.
  * Handle length varies (short / standard / long).
  *
  * Physical defaults estimated from side-photo aspect (~3.1× head diameter)
@@ -76,6 +76,38 @@ export const GAVEL_VIEW_TARGET: readonly [number, number, number] = [
   0, 0.07, -2.32,
 ];
 
+/** Framing for the engraved sound-block (three-quarter, same world scale as the gavel). */
+export const SOUND_BLOCK_VIEW_CAMERA_POSITION: readonly [
+  number,
+  number,
+  number,
+] = [6.4, 5.9, 10.4];
+
+export const SOUND_BLOCK_VIEW_TARGET: readonly [number, number, number] = [
+  0, 0.08, 0,
+];
+
+/**
+ * Stepped sound block from the product photos (inches): sized to the 2" gavel
+ * head so it doesn't dwarf the gavel in the same viewer.
+ */
+export const SOUND_BLOCK_BASE_W_IN = 3.15;
+export const SOUND_BLOCK_BASE_D_IN = 3.15;
+export const SOUND_BLOCK_BASE_H_IN = 1.05;
+export const SOUND_BLOCK_MID_W_IN = 2.98;
+export const SOUND_BLOCK_MID_D_IN = 2.98;
+export const SOUND_BLOCK_MID_H_IN = 0.17;
+export const SOUND_BLOCK_TOP_W_IN = 2.84;
+export const SOUND_BLOCK_TOP_D_IN = 2.84;
+export const SOUND_BLOCK_TOP_H_IN = 0.2;
+
+export const SOUND_BLOCK_BODY_H_IN =
+  SOUND_BLOCK_BASE_H_IN + SOUND_BLOCK_MID_H_IN + SOUND_BLOCK_TOP_H_IN;
+
+export function soundBlockGroundY(): number {
+  return -SOUND_BLOCK_BODY_H_IN / 2;
+}
+
 /**
  * Handle shaft length from collar to tip (inches), not including head.
  * `standard` is measured off the drawing (8.36" exposed → 10.25" overall);
@@ -91,7 +123,7 @@ export const GAVEL_HANDLE_LENGTH_IN: Record<GavelHandleLengthId, number> = {
 export const GAVEL_BAND_TEXTURE_WIDTH_PX = 2048;
 export const GAVEL_BAND_TEXTURE_HEIGHT_PX = 256;
 
-export const GAVEL_MAX_LINES = 3;
+export const GAVEL_MAX_LINES = 4;
 
 export const GAVEL_DEFAULT_FONT = "Georgia";
 
@@ -124,8 +156,6 @@ export type GavelStyleDef = {
    * fall back to the procedural canvas grain.
    */
   textureSet?: string;
-  /** Product photos: ebony uses silver; walnut/oak/purple use gold. */
-  bandFinish: GavelBandFinishId;
   thumbSrc: string;
 };
 
@@ -133,53 +163,49 @@ export const GAVEL_STYLES: readonly GavelStyleDef[] = [
   {
     id: "walnut",
     label: "American Walnut",
-    description: "Rich warm walnut with a brushed gold band.",
+    description: "Rich warm walnut.",
     bodyColor: "#765040",
     roughness: 1.8,
     metalness: 0,
     grainTint: "#38241c",
     useWoodGrain: true,
     textureSet: "walnut",
-    bandFinish: "gold",
     thumbSrc: "/images/gavel/thumb-walnut.jpg",
   },
   {
     id: "oak",
     label: "Oak",
-    description: "Honey oak grain with a brushed gold band.",
+    description: "Honey oak grain.",
     bodyColor: "#c4894e",
     roughness: 1.2,
     metalness: 0,
     grainTint: "#8a6238",
     useWoodGrain: true,
     textureSet: "oak",
-    bandFinish: "gold",
     thumbSrc: "/images/gavel/thumb-oak.jpg",
   },
   {
     id: "ebony",
     label: "Ebony",
-    description: "Matte ebony with a brushed silver band.",
+    description: "Matte ebony.",
     bodyColor: "#1a1412",
     roughness: 2.1,
     metalness: 0,
     grainTint: "#0a0a0c",
     useWoodGrain: true,
     textureSet: "ebony",
-    bandFinish: "silver",
     thumbSrc: "/images/gavel/thumb-ebony.jpg",
   },
   {
     id: "purple",
     label: "Purple",
-    description: "Stained plum walnut with a brushed gold band.",
+    description: "Stained plum walnut.",
     bodyColor: "#5a3848",
     roughness: 1.8,
     metalness: 0,
     grainTint: "#3a2330",
     useWoodGrain: true,
     textureSet: "purple",
-    bandFinish: "gold",
     thumbSrc: "/images/gavel/thumb-purple.jpg",
   },
 ] as const;
@@ -348,7 +374,7 @@ export function formatGavelOrderFinish(
   handleId: string | null | undefined = "standard",
 ): string {
   const style = getGavelStyle(styleId);
-  const band = getGavelBandFinish(bandFinishId ?? style.bandFinish);
+  const band = getGavelBandFinish(bandFinishId);
   const handle = getGavelHandleLength(handleId);
   return `${style.label} · ${band.label} band · ${handle.label} handle`;
 }

@@ -5,6 +5,7 @@ import {
   GAVEL_BAND_TEXTURE_WIDTH_PX,
   GAVEL_DEFAULT_FONT,
   GAVEL_DEFAULT_TEXT_COLOR,
+  GAVEL_MAX_LINES,
   GAVEL_TEXTURE_FONT_PX,
   type GavelTextSizePreset,
 } from "~/constants/gavelStyles";
@@ -13,20 +14,18 @@ export type GavelBandLineInput = {
   text?: string;
   fontFamily?: string;
   color?: string;
-  align?: "left" | "center" | "right";
   bold?: boolean;
   italic?: boolean;
 };
 
 function fontCss(
   line: GavelBandLineInput,
-  preset: GavelTextSizePreset,
+  sizePx: number,
 ): string {
-  const size = GAVEL_TEXTURE_FONT_PX[preset];
   const weight = line.bold ? "700" : "600";
   const style = line.italic ? "italic" : "normal";
   const family = line.fontFamily?.trim() || GAVEL_DEFAULT_FONT;
-  return `${style} ${weight} ${size}px "${family}", Georgia, serif`;
+  return `${style} ${weight} ${sizePx}px "${family}", Georgia, serif`;
 }
 
 function drawBrushedGold(
@@ -43,22 +42,36 @@ function drawBrushedGold(
     ctx.fillRect(0, y, width, 1.5);
   }
   const sheen = ctx.createLinearGradient(0, 0, width, 0);
-  sheen.addColorStop(0, "rgba(255,255,255,0.08)");
-  sheen.addColorStop(0.45, "rgba(255,255,255,0)");
-  sheen.addColorStop(0.55, "rgba(255,255,255,0.18)");
-  sheen.addColorStop(1, "rgba(0,0,0,0.08)");
+  sheen.addColorStop(0, "rgba(255,255,255,0.1)");
+  sheen.addColorStop(0.5, "rgba(255,255,255,0.04)");
+  sheen.addColorStop(1, "rgba(255,255,255,0.1)");
   ctx.fillStyle = sheen;
   ctx.fillRect(0, 0, width, height);
 }
 
 function activeLines(lines: readonly GavelBandLineInput[]): GavelBandLineInput[] {
   return lines
-    .slice(0, 3)
+    .slice(0, GAVEL_MAX_LINES)
     .filter((l) => (l.text ?? "").trim().length > 0);
 }
 
+function bandTextLayout(filledCount: number, preset: GavelTextSizePreset) {
+  const fontPx = GAVEL_TEXTURE_FONT_PX[preset];
+  const lineGap = fontPx * 0.22;
+  const rawBlock =
+    filledCount * fontPx + Math.max(0, filledCount - 1) * lineGap;
+  const maxBlock = GAVEL_BAND_TEXTURE_HEIGHT_PX * 0.86;
+  const scale = rawBlock > maxBlock ? maxBlock / rawBlock : 1;
+  const drawPx = fontPx * scale;
+  const drawGap = lineGap * scale;
+  const blockHeight =
+    filledCount * drawPx + Math.max(0, filledCount - 1) * drawGap;
+  const y0 = (GAVEL_BAND_TEXTURE_HEIGHT_PX - blockHeight) / 2 + drawPx * 0.78;
+  return { drawPx, drawGap, y0 };
+}
+
 /**
- * Paint the unwrapped band (gold + up to 3 centered text lines) onto a canvas.
+ * Paint the unwrapped band (metal + up to 4 centered text lines) onto a canvas.
  * Used for the 3D wrap texture, the flat proof strip, and print SVG raster.
  */
 export function paintGavelBandCanvas(
@@ -79,29 +92,16 @@ export function paintGavelBandCanvas(
   const filled = activeLines(lines);
   if (filled.length === 0) return canvas;
 
-  const fontPx = GAVEL_TEXTURE_FONT_PX[preset];
-  const lineGap = fontPx * 0.28;
-  const blockHeight =
-    filled.length * fontPx + Math.max(0, filled.length - 1) * lineGap;
-  let y = (height - blockHeight) / 2 + fontPx * 0.78;
+  const { drawPx, drawGap, y0 } = bandTextLayout(filled.length, preset);
+  let y = y0;
 
   for (const line of filled) {
-    ctx.font = fontCss(line, preset);
+    ctx.font = fontCss(line, drawPx);
     ctx.fillStyle = line.color?.trim() || GAVEL_DEFAULT_TEXT_COLOR;
     ctx.textBaseline = "alphabetic";
-    const text = (line.text ?? "").trim();
-    const align = line.align ?? "center";
-    if (align === "left") {
-      ctx.textAlign = "left";
-      ctx.fillText(text, width * 0.06, y);
-    } else if (align === "right") {
-      ctx.textAlign = "right";
-      ctx.fillText(text, width * 0.94, y);
-    } else {
-      ctx.textAlign = "center";
-      ctx.fillText(text, width / 2, y);
-    }
-    y += fontPx + lineGap;
+    ctx.textAlign = "center";
+    ctx.fillText((line.text ?? "").trim(), width / 2, y);
+    y += drawPx + drawGap;
   }
 
   return canvas;
@@ -127,11 +127,8 @@ export function gavelBandToSvgString(
   const width = GAVEL_BAND_TEXTURE_WIDTH_PX;
   const height = GAVEL_BAND_TEXTURE_HEIGHT_PX;
   const filled = activeLines(lines);
-  const fontPx = GAVEL_TEXTURE_FONT_PX[preset];
-  const lineGap = fontPx * 0.28;
-  const blockHeight =
-    filled.length * fontPx + Math.max(0, filled.length - 1) * lineGap;
-  let y = (height - blockHeight) / 2 + fontPx * 0.78;
+  const { drawPx, drawGap, y0 } = bandTextLayout(filled.length, preset);
+  let y = y0;
 
   const textEls = filled
     .map((line) => {
@@ -140,17 +137,8 @@ export function gavelBandToSvgString(
       const fontStyle = line.italic ? "italic" : "normal";
       const color = line.color?.trim() || GAVEL_DEFAULT_TEXT_COLOR;
       const text = escapeXml((line.text ?? "").trim());
-      const align = line.align ?? "center";
-      const anchor =
-        align === "left" ? "start" : align === "right" ? "end" : "middle";
-      const x =
-        align === "left"
-          ? width * 0.06
-          : align === "right"
-            ? width * 0.94
-            : width / 2;
-      const el = `<text x="${x}" y="${y}" text-anchor="${anchor}" font-family="${escapeXml(family)}, Georgia, serif" font-size="${fontPx}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(color)}">${text}</text>`;
-      y += fontPx + lineGap;
+      const el = `<text x="${width / 2}" y="${y}" text-anchor="middle" font-family="${escapeXml(family)}, Georgia, serif" font-size="${drawPx}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(color)}">${text}</text>`;
+      y += drawPx + drawGap;
       return el;
     })
     .join("\n");

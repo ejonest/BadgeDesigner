@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Badge, BadgeLine } from "~/types/badge";
 import {
+  GAVEL_BAND_FINISHES,
   GAVEL_DEFAULT_FONT,
   GAVEL_DEFAULT_TEXT_COLOR,
   GAVEL_FONT_OPTIONS,
@@ -26,6 +27,7 @@ import {
   getGavelStandFinish,
   getGavelStyle,
   quoteGavelPrice,
+  type GavelBandFinishId,
   type GavelHandleLengthId,
   type GavelProductionMethodId,
   type GavelProductType,
@@ -90,7 +92,12 @@ function newLine(partial?: Partial<BadgeLine>): BadgeLine {
 }
 
 function defaultLines(): BadgeLine[] {
-  return [newLine({ text: "GavelsFast" }), newLine(), newLine()];
+  return [
+    newLine({ text: "GavelsFast" }),
+    newLine(),
+    newLine(),
+    newLine(),
+  ];
 }
 
 function readQueryParam(name: string): string {
@@ -126,6 +133,7 @@ export default function GavelDesigner({
   const [uvTextColor, setUvTextColor] = useState(GAVEL_UV_TEXT_COLORS[0]);
 
   const [gavelStyle, setGavelStyle] = useState<GavelStyleId>("walnut");
+  const [bandFinish, setBandFinish] = useState<GavelBandFinishId>("gold");
   const [handleLength, setHandleLength] =
     useState<GavelHandleLengthId>("standard");
   const [textSize, setTextSize] = useState<GavelTextSizePreset>("medium");
@@ -158,7 +166,6 @@ export default function GavelDesigner({
 
   const isStand = productType === "stand";
   const styleDef = getGavelStyle(gavelStyle);
-  const bandFinish = styleDef.bandFinish;
   const bandDef = getGavelBandFinish(bandFinish);
   const standDef = getGavelStandFinish(standFinish);
   const maxChars = GAVEL_MAX_CHARS_PER_LINE[textSize];
@@ -182,6 +189,7 @@ export default function GavelDesigner({
     () =>
       lines.map((line) => ({
         ...line,
+        align: "center" as const,
         color: canPickTextColor ? uvTextColor : GAVEL_DEFAULT_TEXT_COLOR,
       })),
     [canPickTextColor, lines, uvTextColor],
@@ -202,7 +210,6 @@ export default function GavelDesigner({
           text: soundBlockArtText,
           fontFamily: lines[0]?.fontFamily || GAVEL_DEFAULT_FONT,
           color: GAVEL_DEFAULT_TEXT_COLOR,
-          align: "center",
         },
       ],
       textSize,
@@ -238,6 +245,9 @@ export default function GavelDesigner({
 
   useEffect(() => {
     setIsClient(true);
+    void import("~/utils/gavelWoodTexture").then(({ preloadGavelWoodMaps }) => {
+      preloadGavelWoodMaps(GAVEL_STYLES);
+    });
   }, []);
 
   useEffect(() => {
@@ -604,7 +614,7 @@ export default function GavelDesigner({
           <div
             className={`gf-design-grid ${showPreview ? "" : "is-single"} ${
               step === "product" ? "is-product" : ""
-            }`
+            } ${step === "style" ? "is-style" : ""}`
               .replace(/\s+/g, " ")
               .trim()}
           >
@@ -696,6 +706,27 @@ export default function GavelDesigner({
                   </div>
 
                   <div className="gf-sub-section">
+                    <p className="gf-sub-title">Band finish</p>
+                    <div className="gf-pill-row">
+                      {GAVEL_BAND_FINISHES.map((f) => (
+                        <button
+                          key={f.id}
+                          type="button"
+                          className={`gf-pill ${bandFinish === f.id ? "is-selected" : ""}`}
+                          onClick={() => setBandFinish(f.id)}
+                        >
+                          <span
+                            className="gf-swatch"
+                            style={{ background: f.color }}
+                            aria-hidden
+                          />
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="gf-sub-section">
                     <p className="gf-sub-title">Handle length</p>
                     <div className="gf-pill-row">
                       {GAVEL_HANDLE_LENGTHS.map((h) => (
@@ -767,7 +798,11 @@ export default function GavelDesigner({
                         value={line.text ?? ""}
                         maxLength={maxChars}
                         placeholder={
-                          index === 0 ? "Your name here" : "Title or organization"
+                          index === 0
+                            ? "Your name here"
+                            : index === 1
+                              ? "Title or organization"
+                              : "Optional line"
                         }
                         onChange={(e) =>
                           updateLine(index, { text: e.target.value })
@@ -807,18 +842,6 @@ export default function GavelDesigner({
                         >
                           Italic
                         </button>
-                        <div className="gf-chip-row">
-                          {(["left", "center", "right"] as const).map((a) => (
-                            <button
-                              key={a}
-                              type="button"
-                              className={`gf-chip ${(line.align ?? "center") === a ? "is-on" : ""}`}
-                              onClick={() => updateLine(index, { align: a })}
-                            >
-                              {a}
-                            </button>
-                          ))}
-                        </div>
                         <span
                           className={`gf-char-count ${(line.text ?? "").length >= maxChars ? "is-warn" : ""}`}
                         >
@@ -1000,22 +1023,26 @@ export default function GavelDesigner({
                     bandTextureUrl={bandTextureUrl}
                     bandHex={bandDef.color}
                     handleLength={handleLength}
+                    showSoundBlockToggle={soundBlockEngraved}
+                    soundBlockTextureUrl={soundBlockTextureUrl}
                   />
                 )}
-                <GavelUnwrappedBandStrip
-                  dataUrl={bandTextureUrl}
-                  empty={!hasText}
-                  label={
-                    isStand
-                      ? "Plate artwork (engraving proof)"
-                      : "Unwrapped band (engraving proof)"
-                  }
-                  emptyText={
-                    isStand
-                      ? "Enter text to see it laid out on the plate"
-                      : "Enter text to see it laid out on the band"
-                  }
-                />
+                {step === "design" ? (
+                  <GavelUnwrappedBandStrip
+                    dataUrl={bandTextureUrl}
+                    empty={!hasText}
+                    label={
+                      isStand
+                        ? "Plate artwork (engraving proof)"
+                        : "Unwrapped band (engraving proof)"
+                    }
+                    emptyText={
+                      isStand
+                        ? "Enter text to see it laid out on the plate"
+                        : "Enter text to see it laid out on the band"
+                    }
+                  />
+                ) : null}
                 {soundBlockEngraved && step === "design" ? (
                   <GavelUnwrappedBandStrip
                     dataUrl={soundBlockTextureUrl}

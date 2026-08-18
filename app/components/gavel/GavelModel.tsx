@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import type { GavelHandleLengthId, GavelStyleDef } from "~/constants/gavelStyles";
 import {
@@ -11,7 +11,9 @@ import {
 } from "~/constants/gavelStyles";
 import {
   applyLatheWoodUvs,
-  makeGavelWoodMaps,
+  getReadyGavelWoodMaps,
+  loadGavelWoodMaps,
+  type GavelWoodMaps,
 } from "~/utils/gavelWoodTexture";
 
 type Props = {
@@ -35,6 +37,46 @@ const HANDLE_MAX_R = HEAD_R * 0.365;
  * at +Z, so a half turn moves it onto the handle.
  */
 const BAND_TEXT_ROTATION_Y = Math.PI;
+
+function fallbackWoodMaps(style: GavelStyleDef): GavelWoodMaps {
+  return {
+    map: null,
+    normalMap: null,
+    roughnessMap: null,
+    roughness: style.roughness,
+  };
+}
+
+/**
+ * Keep the last fully-loaded wood on screen until the next set is ready.
+ * Assigning TextureLoader results before onLoad paints a 1×1 black map.
+ */
+export function useLoadedWoodMaps(style: GavelStyleDef): GavelWoodMaps {
+  const [maps, setMaps] = useState<GavelWoodMaps>(
+    () => getReadyGavelWoodMaps(style) ?? fallbackWoodMaps(style),
+  );
+
+  useLayoutEffect(() => {
+    const ready = getReadyGavelWoodMaps(style);
+    if (ready) {
+      setMaps(ready);
+      return;
+    }
+    let cancelled = false;
+    void loadGavelWoodMaps(style)
+      .then((loaded) => {
+        if (!cancelled) setMaps(loaded);
+      })
+      .catch(() => {
+        /* Keep showing the previous wood. */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [style]);
+
+  return maps;
+}
 
 /** Radial segments for each lathe; also the UV divisions around the wood. */
 const HEAD_SEGMENTS = 128;
@@ -239,16 +281,13 @@ export function GavelModel({
     return tex;
   }, [bandTextureUrl, bandHex]);
 
-  const woodMaps = useMemo(() => makeGavelWoodMaps(style), [style]);
+  const woodMaps = useLoadedWoodMaps(style);
 
   useLayoutEffect(() => {
     return () => {
       bandMap?.dispose();
-      woodMaps.map?.dispose();
-      woodMaps.normalMap?.dispose();
-      woodMaps.roughnessMap?.dispose();
     };
-  }, [bandMap, woodMaps]);
+  }, [bandMap]);
 
   useLayoutEffect(() => {
     return () => handleGeom.dispose();
@@ -272,8 +311,10 @@ export function GavelModel({
     () =>
       new THREE.MeshStandardMaterial({
         color: bandMap ? "#ffffff" : bandHex,
-        roughness: 0.28,
-        metalness: 0.9,
+        // Brushed metal: high enough roughness that studio HDR darks blur out
+        // instead of reading as black patches over the engraving.
+        roughness: 0.55,
+        metalness: 0.62,
         map: bandMap ?? undefined,
       }),
     [bandHex, bandMap],

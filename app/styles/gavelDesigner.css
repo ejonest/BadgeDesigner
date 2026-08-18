@@ -431,6 +431,15 @@
   border-color: var(--gf-navy);
 }
 
+.gf-pill .gf-swatch {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: inherit;
+  pointer-events: none;
+  border-color: rgba(10, 22, 40, 0.18);
+}
+
 .gf-calc-box {
   background: var(--gf-cream);
   border-radius: 12px;
@@ -555,6 +564,73 @@
   min-height: 360px;
 }
 
+/*
+  Desktop: keep every wizard step in the same viewport-sized frame as step 1.
+  Step 2 was growing with the wood list + 3D preview min-heights.
+*/
+@media (min-width: 901px) {
+  .gf-wizard-root {
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .gf-page-title,
+  .gf-stepper,
+  .gf-panel-title,
+  .gf-panel-sub,
+  .gf-step-nav {
+    flex-shrink: 0;
+  }
+
+  .gf-hero,
+  .gf-panel,
+  .gf-design-grid {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .gf-design-grid > * {
+    min-height: 0;
+  }
+
+  .gf-design-grid .gf-controls-col {
+    align-self: stretch;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .gf-preview-pane {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .gf-wizard-root .gf-spin-preview,
+  .gf-wizard-root .gf-spin-fallback,
+  .gf-wizard-root .gf-plate-frame {
+    min-height: 0;
+  }
+
+  .gf-wizard-root .gf-style-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .gf-wizard-root .gf-style-card {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .gf-wizard-root .gf-style-thumb {
+    width: 56px;
+    height: 56px;
+  }
+
+  .gf-design-grid.is-style .gf-sub-section {
+    padding: 14px 16px;
+  }
+}
+
 
 .gf-header {
   background: var(--gf-navy);
@@ -639,6 +715,37 @@
   display: block;
   width: 100% !important;
   height: 100% !important;
+}
+
+.gf-preview-switch {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  display: flex;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--gf-border);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(10, 22, 40, 0.12);
+}
+
+.gf-preview-switch button {
+  border: 0;
+  background: transparent;
+  padding: 7px 11px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gf-muted);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.gf-preview-switch button.is-on {
+  background: var(--gf-navy);
+  color: #fff;
 }
 
 .gf-spin-hint {

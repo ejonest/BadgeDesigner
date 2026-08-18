@@ -16,6 +16,14 @@ const EMPTY: GavelWoodMaps = {
   roughness: 1,
 };
 
+const loader = typeof document === "undefined" ? null : new THREE.TextureLoader();
+const inflight = new Map<string, Promise<GavelWoodMaps>>();
+const ready = new Map<string, GavelWoodMaps>();
+
+function emptyMaps(style: GavelStyleDef): GavelWoodMaps {
+  return { ...EMPTY, roughness: style.roughness };
+}
+
 /**
  * Scanned wood is tiled by the lathe UVs in inches (see applyLatheWoodUvs), so
  * every map repeats and needs no per-style offset.
@@ -25,29 +33,84 @@ function configure(tex: THREE.Texture, srgb: boolean): THREE.Texture {
   tex.wrapT = THREE.RepeatWrapping;
   tex.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
   tex.anisotropy = 16;
+  tex.needsUpdate = true;
   return tex;
+}
+
+function loadConfigured(url: string, srgb: boolean): Promise<THREE.Texture> {
+  return new Promise((resolve, reject) => {
+    if (!loader) {
+      reject(new Error("TextureLoader is not available"));
+      return;
+    }
+    loader.load(
+      url,
+      (tex) => resolve(configure(tex, srgb)),
+      undefined,
+      reject,
+    );
+  });
+}
+
+/** Instant if this wood has already finished loading; otherwise null. */
+export function getReadyGavelWoodMaps(
+  style: GavelStyleDef,
+): GavelWoodMaps | null {
+  if (!style.textureSet) return emptyMaps(style);
+  return ready.get(style.textureSet) ?? null;
 }
 
 /**
  * Loads the ambientCG (CC0) scans built by scripts/build-gavel-wood-textures.mjs.
- * Falls back to a flat material when a style has no scanned set.
+ * Resolves only after color/normal/roughness are in memory so the material never
+ * renders an unloaded (black) map. Results are cached per texture set.
  */
-export function makeGavelWoodMaps(style: GavelStyleDef): GavelWoodMaps {
-  if (typeof document === "undefined") return EMPTY;
-
-  if (!style.textureSet) {
-    return { ...EMPTY, roughness: style.roughness };
+export function loadGavelWoodMaps(
+  style: GavelStyleDef,
+): Promise<GavelWoodMaps> {
+  if (typeof document === "undefined" || !style.textureSet) {
+    return Promise.resolve(emptyMaps(style));
   }
 
-  const loader = new THREE.TextureLoader();
-  const base = `/textures/gavel/${style.textureSet}`;
+  const key = style.textureSet;
+  const cached = ready.get(key);
+  if (cached) return Promise.resolve(cached);
+  const pending = inflight.get(key);
+  if (pending) return pending;
 
-  return {
-    map: configure(loader.load(`${base}/color.jpg`), true),
-    normalMap: configure(loader.load(`${base}/normal.jpg`), false),
-    roughnessMap: configure(loader.load(`${base}/roughness.jpg`), false),
-    roughness: style.roughness,
-  };
+  const base = `/textures/gavel/${key}`;
+  const promise = Promise.all([
+    loadConfigured(`${base}/color.jpg`, true),
+    loadConfigured(`${base}/normal.jpg`, false),
+    loadConfigured(`${base}/roughness.jpg`, false),
+  ])
+    .then(([map, normalMap, roughnessMap]) => {
+      const maps: GavelWoodMaps = {
+        map,
+        normalMap,
+        roughnessMap,
+        roughness: style.roughness,
+      };
+      ready.set(key, maps);
+      inflight.delete(key);
+      return maps;
+    })
+    .catch((err) => {
+      inflight.delete(key);
+      throw err;
+    });
+
+  inflight.set(key, promise);
+  return promise;
+}
+
+/** Kick off every catalog wood so switching styles does not wait on the network. */
+export function preloadGavelWoodMaps(styles: readonly GavelStyleDef[]): void {
+  for (const style of styles) {
+    void loadGavelWoodMaps(style).catch(() => {
+      /* Keep the previous wood on screen if a set fails to load. */
+    });
+  }
 }
 
 /**

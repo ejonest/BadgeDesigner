@@ -15,6 +15,7 @@ export const CART_PROP = {
   gavelTextLine1: "Gavel Text Line 1",
   gavelTextLine2: "Gavel Text Line 2",
   gavelTextLine3: "Gavel Text Line 3",
+  gavelTextLine4: "Gavel Text Line 4",
   gavelStyle: "_Gavel Style",
   bandFinish: "_Band Finish",
 
@@ -89,9 +90,8 @@ export function buildDesignerCartLineProperties(
       input.lines[1]?.text || "",
     [isGavel ? CART_PROP.gavelTextLine3 : CART_PROP.textLine3]:
       input.lines[2]?.text || "",
-    ...(isGavel
-      ? {}
-      : { [CART_PROP.textLine4]: input.lines[3]?.text || "" }),
+    [isGavel ? CART_PROP.gavelTextLine4 : CART_PROP.textLine4]:
+      input.lines[3]?.text || "",
     [CART_PROP.customDesign]: "Yes",
     [CART_PROP.designer]: input.designerId,
     [CART_PROP.backgroundColor]: input.backgroundColor || "",
