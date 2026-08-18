@@ -6,7 +6,7 @@
  *
  * Cart properties (underscore-prefixed):
  *   _Designer=gavel, _Design ID, _Gadget Design ID, _Gavel Index
- *   Gavel Text Line 1–3, _Gavel Style, _Band Finish, _Handle Length
+ *   Gavel Text Line 1–4, _Gavel Style, _Band Finish, _Handle Length
  *
  * Gadget env:
  *   LINK_ORDER_SECRET_GAVEL   — optional; falls back to LINK_ORDER_SECRET

@@ -40,6 +40,7 @@ const OPTIONAL_ROW_COLUMNS = [
   "design_meta",
   "finish",
   "attachment_method",
+  "is_qa_test",
 ] as const;
 
 /** Name of the optional column an error blames, so the caller can drop it and retry. */
@@ -98,6 +99,7 @@ function rowPayload(
       ? { uploaded_image_url: item.uploaded_image_url }
       : {}),
     pdf_url: item.pdf_url,
+    ...(item.is_qa_test ? { is_qa_test: true } : {}),
   };
 
   if (INCLUDE_FLAT_MANUFACTURING_COLUMNS) {

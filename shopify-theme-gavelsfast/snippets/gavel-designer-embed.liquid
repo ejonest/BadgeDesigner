@@ -4,8 +4,8 @@
   Theme template: product.gavel-designer.json → {% render 'gavel-designer-embed' %}
 
   Replace DESIGNER_ORIGIN with your Vercel app URL.
-  Optional variant query params: variantIdWalnut, variantIdOak, variantIdEbony
-  (also accepts American Walnut / Oak / Ebony as option1).
+  Optional variant query params: variantIdWalnut, variantIdOak, variantIdEbony, variantIdPurple
+  (also accepts American Walnut / Oak / Ebony / Purple as option1).
   (or a single variantId / first product variant).
 {% endcomment %}
 
@@ -139,11 +139,12 @@
   {% endif %}
   {% assign gavel_oak = product.variants | where: 'option1', 'Oak' | first %}
   {% assign gavel_ebony = product.variants | where: 'option1', 'Ebony' | first %}
+  {% assign gavel_purple = product.variants | where: 'option1', 'Purple' | first %}
   <div class="gf-designer-embed" style="width:100%; min-height:900px;">
     <iframe
       id="gavel-designer-iframe"
       title="Design your custom gavel"
-      src="{{ gavel_designer_origin }}/gavel-designer?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&amp;storeUrl={{ shop.permanent_domain | url_param_escape }}&amp;product={{ product.id | url_param_escape }}&amp;variantId={{ gavel_v0.id | url_param_escape }}{% if gavel_walnut %}&amp;variantIdWalnut={{ gavel_walnut.id | url_param_escape }}{% endif %}{% if gavel_oak %}&amp;variantIdOak={{ gavel_oak.id | url_param_escape }}{% endif %}{% if gavel_ebony %}&amp;variantIdEbony={{ gavel_ebony.id | url_param_escape }}{% endif %}{% if customer %}&amp;customerId={{ customer.id | url_param_escape }}{% endif %}"
+      src="{{ gavel_designer_origin }}/gavel-designer?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&amp;storeUrl={{ shop.permanent_domain | url_param_escape }}&amp;product={{ product.id | url_param_escape }}&amp;variantId={{ gavel_v0.id | url_param_escape }}{% if gavel_walnut %}&amp;variantIdWalnut={{ gavel_walnut.id | url_param_escape }}{% endif %}{% if gavel_oak %}&amp;variantIdOak={{ gavel_oak.id | url_param_escape }}{% endif %}{% if gavel_ebony %}&amp;variantIdEbony={{ gavel_ebony.id | url_param_escape }}{% endif %}{% if gavel_purple %}&amp;variantIdPurple={{ gavel_purple.id | url_param_escape }}{% endif %}{% if customer %}&amp;customerId={{ customer.id | url_param_escape }}{% endif %}"
       style="width:100%; height:1000px; border:0;"
       loading="lazy"
       allow="clipboard-read; clipboard-write"

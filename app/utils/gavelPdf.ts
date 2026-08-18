@@ -1,10 +1,17 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import type { BadgeLine } from "~/types/badge";
 import {
+  formatGavelMoney,
+  formatGavelOptionSummary,
   formatGavelOrderFinish,
+  getGavelStandFinish,
   type GavelStyleId,
   type GavelBandFinishId,
   type GavelHandleLengthId,
+  type GavelProductionMethodId,
+  type GavelProductType,
+  type GavelSoundBlockId,
+  type GavelStandFinishId,
   type GavelTextSizePreset,
 } from "~/constants/gavelStyles";
 
@@ -21,6 +28,16 @@ type GenerateGavelProofPdfInput = {
   quantity: number;
   mockupDataUrl?: string | null;
   unwrappedDataUrl?: string | null;
+  productType?: GavelProductType;
+  soundBlock?: GavelSoundBlockId;
+  soundBlockText?: string;
+  soundBlockDataUrl?: string | null;
+  suedeBag?: boolean;
+  standFinish?: GavelStandFinishId;
+  productionMethod?: GavelProductionMethodId;
+  unitPrice?: number | null;
+  estimatedTotal?: number | null;
+  logoFileName?: string | null;
 };
 
 async function embedDataUrlImage(
@@ -57,14 +74,21 @@ export async function generateGavelProofPdf(
   const navy = rgb(0.04, 0.09, 0.16);
   const muted = rgb(0.35, 0.38, 0.42);
 
+  const isStand = input.productType === "stand";
+
   let y = PAGE_HEIGHT - MARGIN;
-  page.drawText("Gavels Fast — Custom band proof", {
-    x: MARGIN,
-    y,
-    size: 16,
-    font: fontBold,
-    color: navy,
-  });
+  page.drawText(
+    isStand
+      ? "Gavels Fast — Stand plate proof"
+      : "Gavels Fast — Custom band proof",
+    {
+      x: MARGIN,
+      y,
+      size: 16,
+      font: fontBold,
+      color: navy,
+    },
+  );
   y -= 18;
   page.drawText("Review engraving before adding to cart.", {
     x: MARGIN,
@@ -85,18 +109,41 @@ export async function generateGavelProofPdf(
     page.drawImage(mockup, { x: MARGIN, y: y - h, width: w, height: h });
   }
 
-  const finish = formatGavelOrderFinish(
-    input.styleId,
-    input.bandFinishId,
-    input.handleLengthId,
-  );
+  const finish = isStand
+    ? `${getGavelStandFinish(input.standFinish).label} plate`
+    : formatGavelOrderFinish(
+        input.styleId,
+        input.bandFinishId,
+        input.handleLengthId,
+      );
   const specX = 310;
   let specY = y - 4;
   const specLines = [
     `Style: ${finish}`,
+    `Options: ${formatGavelOptionSummary({
+      productType: input.productType ?? "gavel",
+      soundBlock: input.soundBlock ?? "none",
+      suedeBag: Boolean(input.suedeBag),
+      standFinish: input.standFinish,
+      productionMethod: input.productionMethod,
+    })}`,
     `Text size: ${input.textSizePreset}`,
     `Quantity: ${Math.max(1, input.quantity)}`,
   ];
+  if (typeof input.unitPrice === "number" && input.unitPrice > 0) {
+    specLines.push(
+      `Est. ${formatGavelMoney(input.unitPrice)} ea` +
+        (typeof input.estimatedTotal === "number" && input.estimatedTotal > 0
+          ? ` · ${formatGavelMoney(input.estimatedTotal)} total`
+          : ""),
+    );
+  }
+  if (input.soundBlock === "engraved" && (input.soundBlockText ?? "").trim()) {
+    specLines.push(`Sound block: ${(input.soundBlockText ?? "").trim()}`);
+  }
+  if ((input.logoFileName ?? "").trim()) {
+    specLines.push(`Logo file: ${(input.logoFileName ?? "").trim()}`);
+  }
   for (const line of specLines) {
     page.drawText(line, {
       x: specX,
@@ -147,13 +194,18 @@ export async function generateGavelProofPdf(
   }
 
   y -= 260;
-  page.drawText("Unwrapped band (manufacturing artwork)", {
-    x: MARGIN,
-    y,
-    size: 11,
-    font: fontBold,
-    color: navy,
-  });
+  page.drawText(
+    isStand
+      ? "Plate artwork (manufacturing)"
+      : "Unwrapped band (manufacturing artwork)",
+    {
+      x: MARGIN,
+      y,
+      size: 11,
+      font: fontBold,
+      color: navy,
+    },
+  );
   y -= 10;
 
   const unwrap = await embedDataUrlImage(pdfDoc, input.unwrappedDataUrl);
@@ -171,6 +223,25 @@ export async function generateGavelProofPdf(
       color: muted,
     });
     y -= 28;
+  }
+
+  const soundBlockArt = await embedDataUrlImage(
+    pdfDoc,
+    input.soundBlockDataUrl,
+  );
+  if (soundBlockArt) {
+    page.drawText("Sound block engraving (separate from the band)", {
+      x: MARGIN,
+      y,
+      size: 11,
+      font: fontBold,
+      color: navy,
+    });
+    y -= 10;
+    const w = PAGE_WIDTH - MARGIN * 2;
+    const h = Math.min(70, (soundBlockArt.height / soundBlockArt.width) * w);
+    page.drawImage(soundBlockArt, { x: MARGIN, y: y - h, width: w, height: h });
+    y -= h + 16;
   }
 
   page.drawText(

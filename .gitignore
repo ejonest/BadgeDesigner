@@ -10,3 +10,10 @@ node_modules
 app/temp/
 
 .venv-bleed/
+
+# Playwright QA framework — keep source; ignore run artifacts
+tool-qa-framework/test-results/
+tool-qa-framework/report/
+tool-qa-framework/playwright-report/
+tool-qa-framework/blob-report/
+tool-qa-framework/.auth/

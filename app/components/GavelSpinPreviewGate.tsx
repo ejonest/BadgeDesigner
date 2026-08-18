@@ -7,25 +7,14 @@ import {
 } from "react";
 import type {
   GavelSpinPreviewHandle,
+  GavelSpinPreviewProps,
 } from "~/components/GavelSpinPreview";
-import type {
-  GavelHandleLengthId,
-  GavelStyleDef,
-} from "~/constants/gavelStyles";
-
-type PreviewProps = {
-  style: GavelStyleDef;
-  bandTextureUrl: string;
-  bandHex?: string;
-  handleLength?: GavelHandleLengthId;
-  className?: string;
-};
 
 type PreviewComponent = ForwardRefExoticComponent<
-  PreviewProps & RefAttributes<GavelSpinPreviewHandle>
+  GavelSpinPreviewProps & RefAttributes<GavelSpinPreviewHandle>
 >;
 
-type Props = PreviewProps & {
+type Props = GavelSpinPreviewProps & {
   previewRef?: Ref<GavelSpinPreviewHandle>;
 };
 
