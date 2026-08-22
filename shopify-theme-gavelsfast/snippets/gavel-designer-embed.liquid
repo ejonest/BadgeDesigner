@@ -21,19 +21,38 @@
 {%- endif -%}
 
 <style>
+  /*
+    Ella wraps custom-liquid sections in .container (max 1200px), which makes
+    the tool noticeably narrower than it is standalone. --gf-bleed-width is the
+    viewport width excluding the scrollbar, measured in JS, so the designer can
+    span the full window without ever creating a horizontal scrollbar.
+  */
   .gf-designer-embed {
-    --gf-header-height: 120px;
-    width: 100%;
-    margin: 0 0 40px;
+    width: var(--gf-bleed-width, 100%);
+    max-width: var(--gf-bleed-width, 100%);
+    margin: 0 0 40px calc(50% - (var(--gf-bleed-width, 100%) / 2));
+    background: #f7f4ef;
   }
 
   .gf-designer-embed iframe {
     display: block;
     width: 100%;
     border: 0;
-    height: calc(100vh - var(--gf-header-height));
-    height: calc(100dvh - var(--gf-header-height));
-    min-height: 620px;
+    height: calc(100vh - var(--gf-header-height, 190px));
+    height: calc(100dvh - var(--gf-header-height, 190px));
+    min-height: 520px;
+  }
+
+  /*
+    On desktop the wizard needs ~900px before step 1 starts scrolling inside
+    its own controls column, which is more than most windows leave under
+    Ella's 190px header. Take the larger of the two so the step controls and
+    the Continue button are always reachable.
+  */
+  @media screen and (min-width: 990px) {
+    .gf-designer-embed iframe {
+      height: max(calc(100dvh - var(--gf-header-height, 190px)), 900px);
+    }
   }
 
   .gf-designer-info {
@@ -114,28 +133,44 @@
     /*
      * The iframe fills what is left of the viewport under whatever Ella
      * renders above <main>, so the store header stays visible while the
-     * designer is in use.
+     * designer is in use. Both values live on <html> so the embed can read
+     * them; declaring them on the embed itself would shadow these writes.
      */
+    function syncBleedWidth() {
+      document.documentElement.style.setProperty(
+        '--gf-bleed-width',
+        document.documentElement.clientWidth + 'px'
+      );
+    }
+
     function syncHeaderHeight() {
       var main = document.querySelector('main.main-content') || document.querySelector('main');
       if (!main) return;
       var offset = Math.round(main.getBoundingClientRect().top + (window.scrollY || window.pageYOffset || 0));
-      if (offset < 0 || offset > 400) return;
+      if (offset < 0 || offset > 600) return;
       document.documentElement.style.setProperty('--gf-header-height', offset + 'px');
     }
 
-    function watchHeaderHeight() {
+    function syncLayout() {
+      syncBleedWidth();
       syncHeaderHeight();
-      window.addEventListener('resize', syncHeaderHeight);
-      window.addEventListener('load', syncHeaderHeight);
-      setTimeout(syncHeaderHeight, 600);
-      setTimeout(syncHeaderHeight, 2000);
+    }
+
+    /* Set the width before first paint so the embed does not jump wider. */
+    syncBleedWidth();
+
+    function watchLayout() {
+      syncLayout();
+      window.addEventListener('resize', syncLayout);
+      window.addEventListener('load', syncLayout);
+      setTimeout(syncLayout, 600);
+      setTimeout(syncLayout, 2000);
     }
 
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', watchHeaderHeight);
+      document.addEventListener('DOMContentLoaded', watchLayout);
     } else {
-      watchHeaderHeight();
+      watchLayout();
     }
 
     function replyToDesigner(event, requestId, success, error) {
