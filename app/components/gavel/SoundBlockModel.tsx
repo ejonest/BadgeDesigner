@@ -1,356 +1,179 @@
-import { useLayoutEffect, useMemo } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import type { GavelStyleDef } from "~/constants/gavelStyles";
 import {
-  GAVEL_BAND_GOLD_HEX,
-  SOUND_BLOCK_BASE_D_IN,
-  SOUND_BLOCK_BASE_H_IN,
-  SOUND_BLOCK_BASE_W_IN,
   SOUND_BLOCK_BODY_H_IN,
-  SOUND_BLOCK_MID_D_IN,
-  SOUND_BLOCK_MID_H_IN,
-  SOUND_BLOCK_MID_W_IN,
-  SOUND_BLOCK_TOP_D_IN,
-  SOUND_BLOCK_TOP_H_IN,
-  SOUND_BLOCK_TOP_W_IN,
+  SOUND_BLOCK_D_IN,
+  SOUND_BLOCK_FOOT_H_IN,
+  SOUND_BLOCK_H_IN,
+  SOUND_BLOCK_PROFILE,
+  SOUND_BLOCK_TOP_FACE_W_IN,
+  SOUND_BLOCK_W_IN,
 } from "~/constants/gavelStyles";
+import { createMoldedBlockGeometry } from "~/utils/soundBlockGeometry";
 import { useLoadedWoodMaps } from "~/components/gavel/GavelModel";
 
 type Props = {
   style: GavelStyleDef;
-  plateTextureUrl: string;
-  plateHex?: string;
+  /** Transparent PNG of centered text, drawn on the wood top. */
+  topTextureUrl?: string;
 };
 
-const WOOD_TILE_IN = 6;
-/** Metal nameplate on the front of the base tier. */
-const PLATE_W = 2.7;
-const PLATE_H = 0.6;
-const PLATE_T = 0.04;
-const TOP_BEVEL = 0.075;
-const BEVEL_SEGS = 5;
+/** Keep personalization clear of the softened arris around the top panel. */
+const TOP_ART_IN = SOUND_BLOCK_TOP_FACE_W_IN - 0.22;
 
-const TIERS = [
-  {
-    w: SOUND_BLOCK_BASE_W_IN,
-    d: SOUND_BLOCK_BASE_D_IN,
-    h: SOUND_BLOCK_BASE_H_IN,
-  },
-  {
-    w: SOUND_BLOCK_MID_W_IN,
-    d: SOUND_BLOCK_MID_D_IN,
-    h: SOUND_BLOCK_MID_H_IN,
-  },
-  {
-    w: SOUND_BLOCK_TOP_W_IN,
-    d: SOUND_BLOCK_TOP_D_IN,
-    h: SOUND_BLOCK_TOP_H_IN,
-  },
-] as const;
+const FOOT_R_IN = 0.11;
+const FOOT_INSET_IN = 0.3;
 
-function cloneTiledMap(
-  source: THREE.Texture | null,
-  repeatX: number,
-  repeatY: number,
-): THREE.Texture | null {
+/**
+ * Tiling comes from the geometry's inch-based UVs, so the shared map is cloned
+ * only to give this mesh its own wrap settings.
+ */
+function cloneWoodMap(source: THREE.Texture | null): THREE.Texture | null {
   if (!source) return null;
   const tex = source.clone();
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(repeatX, repeatY);
+  tex.repeat.set(1, 1);
   tex.needsUpdate = true;
   return tex;
 }
 
-function pushTri(
-  positions: number[],
-  normals: number[],
-  uvs: number[],
-  a: THREE.Vector3,
-  b: THREE.Vector3,
-  c: THREE.Vector3,
-  uvA: readonly [number, number],
-  uvB: readonly [number, number],
-  uvC: readonly [number, number],
-) {
-  const n = new THREE.Vector3()
-    .subVectors(b, a)
-    .cross(new THREE.Vector3().subVectors(c, a))
-    .normalize();
-  for (const p of [a, b, c]) {
-    positions.push(p.x, p.y, p.z);
-    normals.push(n.x, n.y, n.z);
-  }
-  uvs.push(uvA[0], uvA[1], uvB[0], uvB[1], uvC[0], uvC[1]);
-}
-
-function pushQuad(
-  positions: number[],
-  normals: number[],
-  uvs: number[],
-  p00: THREE.Vector3,
-  p10: THREE.Vector3,
-  p11: THREE.Vector3,
-  p01: THREE.Vector3,
-  uv00: readonly [number, number],
-  uv10: readonly [number, number],
-  uv11: readonly [number, number],
-  uv01: readonly [number, number],
-) {
-  pushTri(positions, normals, uvs, p00, p10, p11, uv00, uv10, uv11);
-  pushTri(positions, normals, uvs, p00, p11, p01, uv00, uv11, uv01);
-}
-
 /**
- * Box with a roundover on the top rim only — bottoms of the steps stay sharp.
+ * Square striking block matching the Gavels Fast product photos: one molded
+ * body on rubber feet. Personalization is printed on the raised wood panel —
+ * there is no metal plate.
  */
-function createTopBeveledBoxGeometry(
-  width: number,
-  height: number,
-  depth: number,
-  bevel: number,
-  segments: number,
-): THREE.BufferGeometry {
-  const b = Math.min(bevel, width * 0.45, depth * 0.45, height * 0.42);
-  const hw = width / 2;
-  const hd = depth / 2;
-  const y0 = -height / 2;
-  const y1 = height / 2;
-  const yb = y1 - b;
-
-  type Ring = { y: number; inset: number };
-  const rings: Ring[] = [
-    { y: y0, inset: 0 },
-    { y: yb, inset: 0 },
-  ];
-  for (let i = 1; i <= segments; i++) {
-    const a = (i / segments) * (Math.PI / 2);
-    rings.push({
-      y: yb + b * Math.sin(a),
-      inset: b * (1 - Math.cos(a)),
-    });
-  }
-
-  const corners = (inset: number) => {
-    const x = hw - inset;
-    const z = hd - inset;
-    return [
-      new THREE.Vector3(-x, 0, -z),
-      new THREE.Vector3(x, 0, -z),
-      new THREE.Vector3(x, 0, z),
-      new THREE.Vector3(-x, 0, z),
-    ];
-  };
-
-  const positions: number[] = [];
-  const normals: number[] = [];
-  const uvs: number[] = [];
-
-  const bottom = corners(0).map((p) => p.clone().setY(y0));
-  pushQuad(
-    positions,
-    normals,
-    uvs,
-    bottom[0],
-    bottom[1],
-    bottom[2],
-    bottom[3],
-    [0, 0],
-    [1, 0],
-    [1, 1],
-    [0, 1],
-  );
-
-  for (let r = 0; r < rings.length - 1; r++) {
-    const a = rings[r];
-    const c = rings[r + 1];
-    const pa = corners(a.inset).map((p) => p.clone().setY(a.y));
-    const pc = corners(c.inset).map((p) => p.clone().setY(c.y));
-    const v0 = (a.y - y0) / height;
-    const v1 = (c.y - y0) / height;
-    for (let k = 0; k < 4; k++) {
-      const k1 = (k + 1) % 4;
-      pushQuad(
-        positions,
-        normals,
-        uvs,
-        pa[k],
-        pc[k],
-        pc[k1],
-        pa[k1],
-        [0, v0],
-        [0, v1],
-        [1, v1],
-        [1, v0],
-      );
-    }
-  }
-
-  const topRing = rings[rings.length - 1];
-  const top = corners(topRing.inset).map((p) => p.clone().setY(topRing.y));
-  pushQuad(
-    positions,
-    normals,
-    uvs,
-    top[0],
-    top[3],
-    top[2],
-    top[1],
-    [0, 0],
-    [0, 1],
-    [1, 1],
-    [1, 0],
-  );
-
-  const geom = new THREE.BufferGeometry();
-  geom.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-  geom.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
-  geom.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
-  geom.computeVertexNormals();
-  return geom;
-}
-
-function tierCentersY(): [number, number, number] {
-  const bottom = -SOUND_BLOCK_BODY_H_IN / 2;
-  const baseY = bottom + SOUND_BLOCK_BASE_H_IN / 2;
-  const midY = bottom + SOUND_BLOCK_BASE_H_IN + SOUND_BLOCK_MID_H_IN / 2;
-  const topY =
-    bottom +
-    SOUND_BLOCK_BASE_H_IN +
-    SOUND_BLOCK_MID_H_IN +
-    SOUND_BLOCK_TOP_H_IN / 2;
-  return [baseY, midY, topY];
-}
-
-/**
- * Three-step striking block matching the Gavels Fast product photos.
- * Custom artwork sits on a metal plate on the lower front of the base.
- */
-export function SoundBlockModel({
-  style,
-  plateTextureUrl,
-  plateHex = GAVEL_BAND_GOLD_HEX,
-}: Props) {
+export function SoundBlockModel({ style, topTextureUrl = "" }: Props) {
   const woodMaps = useLoadedWoodMaps(style);
-  const [baseY, midY, topY] = tierCentersY();
+  const [topMap, setTopMap] = useState<THREE.Texture | null>(null);
 
-  const plateMap = useMemo(() => {
-    if (!plateTextureUrl) return null;
+  const bottomY = -SOUND_BLOCK_BODY_H_IN / 2;
+  const bodyY = bottomY + SOUND_BLOCK_FOOT_H_IN;
+  const topSurfaceY = bodyY + SOUND_BLOCK_H_IN;
+
+  useLayoutEffect(() => {
+    if (!topTextureUrl) {
+      setTopMap(null);
+      return;
+    }
+    let cancelled = false;
     const loader = new THREE.TextureLoader();
-    const tex = loader.load(plateTextureUrl);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = 8;
-    return tex;
-  }, [plateTextureUrl]);
+    const tex = loader.load(topTextureUrl, (loaded) => {
+      loaded.colorSpace = THREE.SRGBColorSpace;
+      loaded.anisotropy = 8;
+      loaded.needsUpdate = true;
+      if (!cancelled) setTopMap(loaded);
+    });
+    return () => {
+      cancelled = true;
+      tex.dispose();
+    };
+  }, [topTextureUrl]);
 
-  const tierGeoms = useMemo(
+  const bodyGeom = useMemo(
     () =>
-      TIERS.map((tier) =>
-        createTopBeveledBoxGeometry(
-          tier.w,
-          tier.h,
-          tier.d,
-          Math.min(TOP_BEVEL, tier.h * 0.42),
-          BEVEL_SEGS,
-        ),
+      createMoldedBlockGeometry(
+        SOUND_BLOCK_W_IN,
+        SOUND_BLOCK_D_IN,
+        SOUND_BLOCK_PROFILE,
       ),
     [],
   );
 
   useLayoutEffect(() => {
-    return () => {
-      plateMap?.dispose();
-      for (const geom of tierGeoms) geom.dispose();
-    };
-  }, [plateMap, tierGeoms]);
+    return () => bodyGeom.dispose();
+  }, [bodyGeom]);
 
-  const tiledColor = useMemo(
-    () =>
-      cloneTiledMap(
-        woodMaps.map,
-        SOUND_BLOCK_BASE_W_IN / WOOD_TILE_IN,
-        SOUND_BLOCK_BASE_D_IN / WOOD_TILE_IN,
-      ),
-    [woodMaps.map],
-  );
-  const tiledNormal = useMemo(
-    () =>
-      cloneTiledMap(
-        woodMaps.normalMap,
-        SOUND_BLOCK_BASE_W_IN / WOOD_TILE_IN,
-        SOUND_BLOCK_BASE_D_IN / WOOD_TILE_IN,
-      ),
+  const woodColor = useMemo(() => cloneWoodMap(woodMaps.map), [woodMaps.map]);
+  const woodNormal = useMemo(
+    () => cloneWoodMap(woodMaps.normalMap),
     [woodMaps.normalMap],
   );
-  const tiledRough = useMemo(
-    () =>
-      cloneTiledMap(
-        woodMaps.roughnessMap,
-        SOUND_BLOCK_BASE_W_IN / WOOD_TILE_IN,
-        SOUND_BLOCK_BASE_D_IN / WOOD_TILE_IN,
-      ),
+  const woodRough = useMemo(
+    () => cloneWoodMap(woodMaps.roughnessMap),
     [woodMaps.roughnessMap],
   );
 
   const bodyMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: tiledColor ? "#ffffff" : style.bodyColor,
+        color: woodColor ? "#ffffff" : style.bodyColor,
         roughness: woodMaps.roughness,
         metalness: style.metalness,
-        map: tiledColor ?? undefined,
-        normalMap: tiledNormal ?? undefined,
+        map: woodColor ?? undefined,
+        normalMap: woodNormal ?? undefined,
         normalScale: new THREE.Vector2(0.55, 0.55),
-        roughnessMap: tiledRough ?? undefined,
+        roughnessMap: woodRough ?? undefined,
       }),
-    [style, tiledColor, tiledNormal, tiledRough, woodMaps.roughness],
+    [style, woodColor, woodNormal, woodRough, woodMaps.roughness],
   );
 
-  const plateMat = useMemo(
+  const footMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: plateMap ? "#ffffff" : plateHex,
-        roughness: 0.55,
-        metalness: 0.62,
-        map: plateMap ?? undefined,
+        color: "#1d1b19",
+        roughness: 0.85,
+        metalness: 0,
       }),
-    [plateHex, plateMap],
+    [],
   );
 
-  const plateSideMat = useMemo(
+  const topMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: plateHex,
-        roughness: 0.45,
-        metalness: 0.7,
+        color: "#ffffff",
+        roughness: 0.72,
+        metalness: 0,
+        map: topMap ?? undefined,
+        transparent: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
       }),
-    [plateHex],
+    [topMap],
   );
 
-  const plateZ = SOUND_BLOCK_BASE_D_IN / 2 + PLATE_T / 2;
-  const tierYs = [baseY, midY, topY];
+  const footX = SOUND_BLOCK_W_IN / 2 - FOOT_INSET_IN;
+  const footZ = SOUND_BLOCK_D_IN / 2 - FOOT_INSET_IN;
+  const feet: readonly (readonly [number, number])[] = [
+    [-footX, -footZ],
+    [footX, -footZ],
+    [-footX, footZ],
+    [footX, footZ],
+  ];
 
   return (
     <group>
-      {TIERS.map((tier, i) => (
-        <mesh
-          key={i}
-          geometry={tierGeoms[i]}
-          position={[0, tierYs[i], 0]}
-          material={bodyMat}
-          castShadow
-          receiveShadow
-        />
-      ))}
-      <mesh position={[0, baseY, plateZ]} material={plateSideMat} castShadow>
-        <boxGeometry args={[PLATE_W, PLATE_H, PLATE_T]} />
-      </mesh>
       <mesh
-        position={[0, baseY, plateZ + PLATE_T / 2 + 0.001]}
-        material={plateMat}
-      >
-        <planeGeometry args={[PLATE_W * 0.97, PLATE_H * 0.9]} />
-      </mesh>
+        geometry={bodyGeom}
+        position={[0, bodyY, 0]}
+        material={bodyMat}
+        castShadow
+        receiveShadow
+      />
+      {feet.map(([x, z]) => (
+        <mesh
+          key={`${x}:${z}`}
+          position={[x, bottomY + SOUND_BLOCK_FOOT_H_IN / 2, z]}
+          material={footMat}
+          castShadow
+        >
+          <cylinderGeometry
+            args={[FOOT_R_IN, FOOT_R_IN, SOUND_BLOCK_FOOT_H_IN, 20]}
+          />
+        </mesh>
+      ))}
+      {topMap ? (
+        <mesh
+          position={[0, topSurfaceY + 0.004, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          material={topMat}
+        >
+          <planeGeometry args={[TOP_ART_IN, TOP_ART_IN]} />
+        </mesh>
+      ) : null}
     </group>
   );
 }

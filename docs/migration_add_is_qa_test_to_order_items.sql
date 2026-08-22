@@ -5,7 +5,17 @@
 -- The app treats this column as optional until the migration is applied
 -- (writes retry without it if the column is missing).
 
+-- Only the badge suite is wired up today, but scripts/purge-qa-test-data.mjs
+-- checks every designer table, so add the column to all of them. It costs
+-- nothing on tables that never receive QA rows.
+
 ALTER TABLE badge_order_items
+  ADD COLUMN IF NOT EXISTS is_qa_test boolean NOT NULL DEFAULT false;
+ALTER TABLE sign_order_items
+  ADD COLUMN IF NOT EXISTS is_qa_test boolean NOT NULL DEFAULT false;
+ALTER TABLE plaque_order_items
+  ADD COLUMN IF NOT EXISTS is_qa_test boolean NOT NULL DEFAULT false;
+ALTER TABLE desk_sign_order_items
   ADD COLUMN IF NOT EXISTS is_qa_test boolean NOT NULL DEFAULT false;
 
 COMMENT ON COLUMN badge_order_items.is_qa_test IS
@@ -14,12 +24,26 @@ COMMENT ON COLUMN badge_order_items.is_qa_test IS
 CREATE INDEX IF NOT EXISTS idx_badge_order_items_is_qa_test
   ON badge_order_items (is_qa_test)
   WHERE is_qa_test = true;
+CREATE INDEX IF NOT EXISTS idx_sign_order_items_is_qa_test
+  ON sign_order_items (is_qa_test)
+  WHERE is_qa_test = true;
+CREATE INDEX IF NOT EXISTS idx_plaque_order_items_is_qa_test
+  ON plaque_order_items (is_qa_test)
+  WHERE is_qa_test = true;
+CREATE INDEX IF NOT EXISTS idx_desk_sign_order_items_is_qa_test
+  ON desk_sign_order_items (is_qa_test)
+  WHERE is_qa_test = true;
 
--- Optional: same flag on other designer order tables if those suites get wired later.
--- ALTER TABLE sign_order_items      ADD COLUMN IF NOT EXISTS is_qa_test boolean NOT NULL DEFAULT false;
--- ALTER TABLE plaque_order_items    ADD COLUMN IF NOT EXISTS is_qa_test boolean NOT NULL DEFAULT false;
--- ALTER TABLE desk_sign_order_items ADD COLUMN IF NOT EXISTS is_qa_test boolean NOT NULL DEFAULT false;
--- ALTER TABLE gavel_order_items     ADD COLUMN IF NOT EXISTS is_qa_test boolean NOT NULL DEFAULT false;
+DO $$
+BEGIN
+  IF to_regclass('public.gavel_order_items') IS NOT NULL THEN
+    ALTER TABLE public.gavel_order_items
+      ADD COLUMN IF NOT EXISTS is_qa_test boolean NOT NULL DEFAULT false;
+    CREATE INDEX IF NOT EXISTS idx_gavel_order_items_is_qa_test
+      ON public.gavel_order_items (is_qa_test)
+      WHERE is_qa_test = true;
+  END IF;
+END $$;
 
 -- Going forward, wipe QA rows anytime with:
 --   DELETE FROM badge_order_items WHERE is_qa_test = true;

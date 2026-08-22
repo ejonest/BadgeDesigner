@@ -9,8 +9,9 @@
 --   - Keeps every row with a real shopify_order_id (including the Aug 13
 --     order_placed design for Madison Flewellen / #1096).
 --   - Keeps everything created outside Aug 13–14 UTC.
---   - Does NOT delete Storage objects (thumbnails/PDFs). Those are orphaned
---     but harmless; purge later from Storage if disk matters.
+--   - Does NOT delete Storage objects (thumbnails/PDFs). For those, see
+--     docs/cleanup_playwright_badge_storage_aug2026.sql and
+--     scripts/purge-orphaned-badge-storage.mjs.
 --
 -- From the CSV export this targets ~1,400 rows and leaves ~207.
 

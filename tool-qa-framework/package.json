@@ -11,7 +11,9 @@
     "test:personas": "playwright test tests/aqb-badge-tool.personas.spec.js --project=desktop-chrome",
     "test:mobile": "playwright test --project=mobile-chrome --project=mobile-safari",
     "report": "playwright show-report",
-    "codegen:aqb": "playwright codegen http://localhost:5173/badge-designer-redesign"
+    "codegen:aqb": "playwright codegen http://localhost:5173/badge-designer-redesign",
+    "cleanup": "node --env-file=../.env ../scripts/purge-qa-test-data.mjs",
+    "cleanup:dry": "node --env-file=../.env ../scripts/purge-qa-test-data.mjs --dry-run"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1"

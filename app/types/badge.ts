@@ -126,25 +126,35 @@ export interface Badge {
   /** Desk sign only: profession template family id (e.g. doctor, nurse). */
   deskSignProfessionId?: string;
   /** Gavel designer only: wood body style. */
-  gavelStyle?: "walnut" | "oak" | "ebony" | "purple" | "mahogany" | "metal";
+  gavelStyle?:
+    | "walnut"
+    | "rubberwood"
+    | "ebony"
+    /** Retired woods kept so saved designs still load; see LEGACY_STYLE_ALIASES. */
+    | "oak"
+    | "purple"
+    | "mahogany"
+    | "metal";
   /** Gavel designer only: band metal finish. */
   gavelBandFinish?: "gold" | "silver";
   /** Gavel designer only: band text size preset. */
   gavelTextSizePreset?: "small" | "medium" | "large";
-  /** Gavel designer only: handle length. */
+  /** Gavel designer only: handle length. Always standard; kept for saved designs. */
   gavelHandleLength?: "short" | "standard" | "long";
-  /** Gavel designer only: gavel vs. gavel stand. */
+  /** Gavel designer only: gavel vs. gavel + stand. */
   gavelProductType?: "gavel" | "stand";
   /** Gavel designer only: sound block add-on. */
   gavelSoundBlock?: "none" | "plain" | "engraved";
-  /** Gavel designer only: sound block engraving (independent of the band). */
+  /** Gavel designer only: sound block personalization on the wood top. */
   gavelSoundBlockText?: string;
   /** Gavel designer only: suede bag add-on. */
   gavelSuedeBag?: boolean;
-  /** Gavel stand only: plate finish. */
+  /** Gavel + stand: plate finish. */
   gavelStandFinish?: "gold" | "silver" | "white";
-  /** Gavel stand only: engraved vs. UV printed. */
+  /** Gavel + stand: engraved vs. UV printed plate. */
   gavelProductionMethod?: "engrave" | "uvprint";
+  /** Gavel + stand: nameplate lines (independent of the band). */
+  gavelStandPlateLines?: BadgeLine[];
 }
 
 export interface BadgeEditorPanelProps {

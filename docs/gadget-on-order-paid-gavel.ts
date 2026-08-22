@@ -6,7 +6,8 @@
  *
  * Cart properties (underscore-prefixed):
  *   _Designer=gavel, _Design ID, _Gadget Design ID, _Gavel Index
- *   Gavel Text Line 1–4, _Gavel Style, _Band Finish, _Handle Length
+ *   Gavel Text Line 1–4, _Gavel Style, _Band Finish
+ *   _Product Type (Gavel | Gavel + stand), _Plate Finish, Stand Plate Line 1–2
  *
  * Gadget env:
  *   LINK_ORDER_SECRET_GAVEL   — optional; falls back to LINK_ORDER_SECRET
@@ -17,6 +18,8 @@
  *
  * If Gavels Fast shares the AQB Gadget app, merge this branch into
  * docs/gadget-on-order-paid-aqb-badge-and-desk-sign.ts instead.
+ *
+ * Full create-app checklist: docs/GADGET_GAVEL_SETUP.md
  */
 
 const GAVEL_LINK_ORDER_URL =

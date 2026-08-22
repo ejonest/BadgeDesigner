@@ -213,25 +213,27 @@
 
 .gf-design-grid.is-product .gf-toggle-row {
   flex: 1 1 auto;
-  max-height: 320px;
+  max-height: 228px;
+  margin-bottom: 12px;
 }
 
 .gf-design-grid.is-product .gf-toggle-card {
-  min-height: 240px;
+  min-height: 172px;
+  padding: 16px 18px;
   justify-content: flex-end;
 }
 
 .gf-design-grid.is-product .gf-toggle-photo {
-  min-height: 150px;
-  margin-bottom: 14px;
+  min-height: 100px;
+  margin-bottom: 10px;
 }
 
 .gf-design-grid.is-product .gf-toggle-label {
-  font-size: 23px;
+  font-size: 19px;
 }
 
 .gf-design-grid.is-product .gf-toggle-sub {
-  font-size: 15px;
+  font-size: 13.5px;
 }
 
 /* Controls stay top-aligned while the preview column stretches. */
@@ -243,6 +245,256 @@
   .gf-design-grid {
     grid-template-columns: 1fr;
   }
+
+  .gf-toggle-row {
+    flex-direction: column;
+  }
+
+  /* Three sound blocks stacked would push the step off-screen; keep them in a row. */
+  .gf-toggle-row.is-compact {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .gf-design-grid.is-product .gf-toggle-row {
+    max-height: none;
+    flex: 0 0 auto;
+  }
+
+  .gf-design-grid.is-product .gf-toggle-card {
+    min-height: 124px;
+    padding: 12px 14px;
+  }
+
+  .gf-design-grid.is-product .gf-toggle-photo {
+    min-height: 68px;
+  }
+
+  .gf-design-grid.is-product .gf-toggle-card.is-compact {
+    min-height: 92px;
+    padding: 8px 6px 10px;
+  }
+
+  .gf-design-grid.is-product .gf-toggle-card.is-compact .gf-toggle-photo {
+    min-height: 48px;
+    margin-bottom: 6px;
+  }
+
+  .gf-design-grid.is-product .gf-toggle-card.is-compact .gf-toggle-label {
+    font-size: 11px;
+  }
+
+  /*
+    Pin the tool to the visible phone screen. The cream gutter stays as a
+    thin frame around the navy window; the page itself cannot scroll past it.
+  */
+  .gf-designer-page {
+    min-height: 0;
+    height: 100svh;
+    max-height: 100svh;
+    overflow: hidden;
+  }
+
+  .gf-wizard-root {
+    position: fixed;
+    top: var(--gf-vv-top, 0px);
+    left: 0;
+    right: 0;
+    height: var(--gf-vv-height, 100svh);
+    max-height: var(--gf-vv-height, 100svh);
+    min-height: 0;
+    padding: 8px;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  .gf-wizard-root .gf-page-title {
+    display: none;
+  }
+
+  .gf-wizard-root .gf-hero {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding: 12px 12px 14px;
+  }
+
+  .gf-wizard-root .gf-stepper {
+    flex-shrink: 0;
+    margin-bottom: 12px;
+  }
+
+  .gf-wizard-root .gf-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* iOS zooms focused fields under 16px; keep scroll-into-view, skip the zoom. */
+  .gf-wizard-root .gf-input,
+  .gf-wizard-root .gf-select,
+  .gf-wizard-root input[type="text"],
+  .gf-wizard-root input:not([type]),
+  .gf-wizard-root select,
+  .gf-wizard-root textarea {
+    font-size: 16px;
+  }
+
+  /*
+    Steps 2–3: dock the gavel at the top of the white panel. Options and
+    Back/Continue scroll in the space below, so fields never sit under the
+    preview and nothing paints through it.
+  */
+  .gf-wizard-root.is-preview-step .gf-hero {
+    padding: 10px 10px 12px;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-stepper {
+    margin-bottom: 8px;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-panel {
+    overflow: hidden;
+    padding: 10px 12px 12px;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-panel-title,
+  .gf-wizard-root.is-preview-step .gf-panel-sub-lead {
+    display: none;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-panel-sub-follow {
+    display: block;
+    margin: 0 0 12px;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-design-grid:not(.is-single) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-preview-pane {
+    order: -1;
+    flex: 0 0 auto;
+    align-self: stretch;
+    width: 100%;
+    position: relative;
+    top: auto;
+    z-index: 2;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    box-shadow: none;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-preview-label {
+    display: none;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-design-grid .gf-controls-col {
+    flex: 1 1 auto;
+    align-self: stretch;
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-input,
+  .gf-wizard-root.is-preview-step select {
+    scroll-margin-top: 12px;
+    scroll-margin-bottom: 24px;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-sub-section,
+  .gf-wizard-root.is-preview-step .gf-style-grid,
+  .gf-wizard-root.is-preview-step .gf-pill-row {
+    width: 100%;
+    max-width: none;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-step-nav {
+    margin-top: 16px;
+    flex-shrink: 0;
+    position: static;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-preview-switch {
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    max-width: none;
+    justify-content: stretch;
+    border-radius: 7px;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-preview-switch button {
+    flex: 1;
+    padding: 5px 4px;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-switch-long {
+    display: none;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-switch-short {
+    display: inline;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-product-photo,
+  .gf-wizard-root.is-preview-step .gf-band-photo,
+  .gf-wizard-root.is-preview-step .gf-band-photo-empty {
+    padding-top: 36px;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-spin-preview,
+  .gf-wizard-root.is-preview-step .gf-spin-fallback,
+  .gf-wizard-root.is-preview-step .gf-plate-frame {
+    flex: none;
+    height: min(28svh, 200px);
+    min-height: 140px;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-band-strip {
+    display: none;
+  }
+
+  .gf-wizard-root.is-preview-step.is-keyboard .gf-stepper,
+  .gf-wizard-root.is-preview-step.is-keyboard .gf-panel-title,
+  .gf-wizard-root.is-preview-step:has(.gf-input:focus) .gf-stepper,
+  .gf-wizard-root.is-preview-step:has(.gf-input:focus) .gf-panel-title {
+    display: none;
+  }
+
+  .gf-wizard-root.is-preview-step.is-keyboard .gf-spin-preview,
+  .gf-wizard-root.is-preview-step.is-keyboard .gf-spin-fallback,
+  .gf-wizard-root.is-preview-step.is-keyboard .gf-plate-frame,
+  .gf-wizard-root.is-preview-step:has(.gf-input:focus) .gf-spin-preview,
+  .gf-wizard-root.is-preview-step:has(.gf-input:focus) .gf-spin-fallback,
+  .gf-wizard-root.is-preview-step:has(.gf-input:focus) .gf-plate-frame {
+    height: min(16svh, 120px);
+    min-height: 96px;
+  }
+
+  .gf-wizard-root.is-preview-step:has(.gf-input:focus) .gf-controls-col {
+    padding-bottom: max(24px, var(--gf-keyboard-inset, 0px));
+  }
+}
+
+.gf-panel-sub-follow {
+  display: none;
 }
 
 .gf-controls-col {
@@ -328,6 +580,56 @@
   font-size: 14px;
   line-height: 1.45;
   color: var(--gf-muted);
+}
+
+/*
+  Compact cards for the sound-block picker. They sit three-across inside a
+  cream sub-section, so they need a white face and a hairline border to read
+  as separate cards, and they have to out-specify the tall product-step
+  sizing above.
+*/
+.gf-toggle-row.is-compact {
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.gf-design-grid.is-product .gf-toggle-card.is-compact {
+  min-height: 108px;
+  padding: 10px 10px 11px;
+  background: #fff;
+  border: 1.5px solid var(--gf-border);
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.gf-design-grid.is-product .gf-toggle-card.is-compact.is-selected {
+  border-color: var(--gf-gold-2);
+  background: #fffbf2;
+}
+
+.gf-design-grid.is-product .gf-toggle-card.is-compact .gf-toggle-photo {
+  min-height: 60px;
+  margin-bottom: 6px;
+}
+
+.gf-design-grid.is-product .gf-toggle-card.is-compact .gf-toggle-label {
+  font-size: 12.5px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+/* Step 1 is meant to be read without scrolling, so its chrome stays tight. */
+.gf-design-grid.is-product .gf-sub-section {
+  padding: 12px 14px;
+  margin-bottom: 0;
+}
+
+.gf-design-grid.is-product .gf-sub-title {
+  margin-bottom: 8px;
+}
+
+.gf-design-grid.is-product .gf-note {
+  margin-top: 8px;
 }
 
 .gf-sub-section {
@@ -723,6 +1025,9 @@
   right: 10px;
   z-index: 3;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: calc(100% - 20px);
   overflow: hidden;
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--gf-border);
@@ -733,7 +1038,7 @@
 .gf-preview-switch button {
   border: 0;
   background: transparent;
-  padding: 7px 11px;
+  padding: 7px 10px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -741,11 +1046,110 @@
   color: var(--gf-muted);
   cursor: pointer;
   font-family: inherit;
+  white-space: nowrap;
 }
 
 .gf-preview-switch button.is-on {
   background: var(--gf-navy);
   color: #fff;
+}
+
+.gf-switch-short {
+  display: none;
+}
+
+.gf-product-photo {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 48px 16px 16px;
+  background: #fff;
+  pointer-events: none;
+}
+
+.gf-band-photo,
+.gf-band-photo-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  padding: 40px 14px 14px;
+  background: #fff;
+}
+
+.gf-band-photo {
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.gf-band-photo-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--gf-muted);
+  font-size: 13px;
+  padding: 48px 16px 16px;
+}
+
+/* Plate tab: the band and stand-plate artwork, flat, one above the other. */
+.gf-plate-proofs {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  padding: 52px 18px 18px;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.gf-plate-proof-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gf-olive);
+  font-weight: 600;
+}
+
+.gf-plate-proof-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  border: 1px solid rgba(10, 22, 40, 0.08);
+}
+
+/* Art already cut to its own silhouette, so a frame around it reads wrong. */
+.gf-plate-proof-img.is-shaped {
+  border: none;
+  border-radius: 0;
+}
+
+.gf-plate-proof-empty {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--gf-muted);
+  font-size: 13px;
+  background: repeating-linear-gradient(
+    -45deg,
+    #f3efe6,
+    #f3efe6 8px,
+    #faf7f1 8px,
+    #faf7f1 16px
+  );
+  border-radius: 4px;
 }
 
 .gf-spin-hint {
@@ -801,6 +1205,17 @@
   border: 1px solid rgba(10, 22, 40, 0.08);
 }
 
+.gf-band-strip-img.is-shaped {
+  border: none;
+  border-radius: 0;
+}
+
+.gf-band-strip-img.is-square {
+  width: min(100%, 240px);
+  margin: 0 auto;
+  background: #e8d9c4;
+}
+
 .gf-band-strip-empty {
   min-height: 56px;
   display: flex;
@@ -816,6 +1231,12 @@
     #faf7f1 16px
   );
   border-radius: 4px;
+}
+
+.gf-band-strip-empty.is-square {
+  min-height: 160px;
+  width: min(100%, 240px);
+  margin: 0 auto;
 }
 
 .gf-step {

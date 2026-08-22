@@ -17,21 +17,26 @@
       "routes/api.delete-plaque-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.dev.badge-photo-calibrate.save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.delete-badge-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.delete-gavel-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.dev.desk-sign-image-crop.save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-plaque-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-desk-sign-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.delete-sign-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.link-order-gavel-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-plaque-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-desk-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-desk-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.dev.plaque-calibrate.save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-gavel-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-sign-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-desk-sign-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-plaque-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-plaque-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-desk-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.send-gavel-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.autosave-gavel-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-desk-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.supabase-update-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -43,15 +48,19 @@
       "routes/api.saved-plaque-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/dev.desk-sign-image-crop": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-gavel-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-plaque-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/badge-designer-redesign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-plaque-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-gavel-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-sign-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.upload-plaque-logo": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.library-thumbnail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-badges": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-plaque": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-gavel-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-draft-gavel": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.upload-sign-logo": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -78,6 +87,8 @@
       "routes/deployment-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/plaque-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-gavel": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/gavel-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-sign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.test-save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/sign-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -163,6 +174,15 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.delete-gavel-design-milestone": {
+        "file": "app/routes/api.delete-gavel-design-milestone.tsx",
+        "id": "routes/api.delete-gavel-design-milestone",
+        "path": "api/delete-gavel-design-milestone",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.dev.desk-sign-image-crop.save": {
         "file": "app/routes/api.dev.desk-sign-image-crop.save.tsx",
         "id": "routes/api.dev.desk-sign-image-crop.save",
@@ -194,6 +214,15 @@
         "file": "app/routes/api.delete-sign-design-milestone.tsx",
         "id": "routes/api.delete-sign-design-milestone",
         "path": "api/delete-sign-design-milestone",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.link-order-gavel-to-supabase": {
+        "file": "app/routes/api.link-order-gavel-to-supabase.tsx",
+        "id": "routes/api.link-order-gavel-to-supabase",
+        "path": "api/link-order-gavel-to-supabase",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -239,6 +268,15 @@
         "file": "app/routes/api.dev.plaque-calibrate.save.tsx",
         "id": "routes/api.dev.plaque-calibrate.save",
         "path": "api/dev/plaque-calibrate/save",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.saved-gavel-design-detail": {
+        "file": "app/routes/api.saved-gavel-design-detail.tsx",
+        "id": "routes/api.saved-gavel-design-detail",
+        "path": "api/saved-gavel-design-detail",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -293,6 +331,24 @@
         "file": "app/routes/api.saved-desk-sign-design.tsx",
         "id": "routes/api.saved-desk-sign-design",
         "path": "api/saved-desk-sign-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.send-gavel-to-supabase": {
+        "file": "app/routes/api.send-gavel-to-supabase.tsx",
+        "id": "routes/api.send-gavel-to-supabase",
+        "path": "api/send-gavel-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.autosave-gavel-design": {
+        "file": "app/routes/api.autosave-gavel-design.tsx",
+        "id": "routes/api.autosave-gavel-design",
+        "path": "api/autosave-gavel-design",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -397,6 +453,15 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.saved-gavel-designs": {
+        "file": "app/routes/api.saved-gavel-designs.tsx",
+        "id": "routes/api.saved-gavel-designs",
+        "path": "api/saved-gavel-designs",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.saved-plaque-design": {
         "file": "app/routes/api.saved-plaque-design.tsx",
         "id": "routes/api.saved-plaque-design",
@@ -419,6 +484,15 @@
         "file": "app/routes/api.save-plaque-design.tsx",
         "id": "routes/api.save-plaque-design",
         "path": "api/save-plaque-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.saved-gavel-design": {
+        "file": "app/routes/api.saved-gavel-design.tsx",
+        "id": "routes/api.saved-gavel-design",
+        "path": "api/saved-gavel-design",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -469,10 +543,28 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.save-gavel-design": {
+        "file": "app/routes/api.save-gavel-design.tsx",
+        "id": "routes/api.save-gavel-design",
+        "path": "api/save-gavel-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.saved-sign-design": {
         "file": "app/routes/api.saved-sign-design.tsx",
         "id": "routes/api.saved-sign-design",
         "path": "api/saved-sign-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.save-draft-gavel": {
+        "file": "app/routes/api.save-draft-gavel.tsx",
+        "id": "routes/api.save-draft-gavel",
+        "path": "api/save-draft-gavel",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -712,6 +804,24 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.save-gavel": {
+        "file": "app/routes/api.save-gavel.tsx",
+        "id": "routes/api.save-gavel",
+        "path": "api/save-gavel",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/gavel-designer": {
+        "file": "app/routes/gavel-designer.tsx",
+        "id": "routes/gavel-designer",
+        "path": "gavel-designer",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.save-sign": {
         "file": "app/routes/api.save-sign.tsx",
         "id": "routes/api.save-sign",
@@ -903,6 +1013,12 @@
         "path": "api/delete-badge-design-milestone",
         "parentId": "root"
       },
+      "routes/api.delete-gavel-design-milestone": {
+        "file": "routes/api.delete-gavel-design-milestone.tsx",
+        "id": "routes/api.delete-gavel-design-milestone",
+        "path": "api/delete-gavel-design-milestone",
+        "parentId": "root"
+      },
       "routes/api.dev.desk-sign-image-crop.save": {
         "file": "routes/api.dev.desk-sign-image-crop.save.tsx",
         "id": "routes/api.dev.desk-sign-image-crop.save",
@@ -925,6 +1041,12 @@
         "file": "routes/api.delete-sign-design-milestone.tsx",
         "id": "routes/api.delete-sign-design-milestone",
         "path": "api/delete-sign-design-milestone",
+        "parentId": "root"
+      },
+      "routes/api.link-order-gavel-to-supabase": {
+        "file": "routes/api.link-order-gavel-to-supabase.tsx",
+        "id": "routes/api.link-order-gavel-to-supabase",
+        "path": "api/link-order-gavel-to-supabase",
         "parentId": "root"
       },
       "routes/api.link-order-sign-to-supabase": {
@@ -955,6 +1077,12 @@
         "file": "routes/api.dev.plaque-calibrate.save.tsx",
         "id": "routes/api.dev.plaque-calibrate.save",
         "path": "api/dev/plaque-calibrate/save",
+        "parentId": "root"
+      },
+      "routes/api.saved-gavel-design-detail": {
+        "file": "routes/api.saved-gavel-design-detail.tsx",
+        "id": "routes/api.saved-gavel-design-detail",
+        "path": "api/saved-gavel-design-detail",
         "parentId": "root"
       },
       "routes/api.saved-sign-design-detail": {
@@ -991,6 +1119,18 @@
         "file": "routes/api.saved-desk-sign-design.tsx",
         "id": "routes/api.saved-desk-sign-design",
         "path": "api/saved-desk-sign-design",
+        "parentId": "root"
+      },
+      "routes/api.send-gavel-to-supabase": {
+        "file": "routes/api.send-gavel-to-supabase.tsx",
+        "id": "routes/api.send-gavel-to-supabase",
+        "path": "api/send-gavel-to-supabase",
+        "parentId": "root"
+      },
+      "routes/api.autosave-gavel-design": {
+        "file": "routes/api.autosave-gavel-design.tsx",
+        "id": "routes/api.autosave-gavel-design",
+        "path": "api/autosave-gavel-design",
         "parentId": "root"
       },
       "routes/api.save-desk-sign-design": {
@@ -1059,6 +1199,12 @@
         "path": "api/saved-design-detail",
         "parentId": "root"
       },
+      "routes/api.saved-gavel-designs": {
+        "file": "routes/api.saved-gavel-designs.tsx",
+        "id": "routes/api.saved-gavel-designs",
+        "path": "api/saved-gavel-designs",
+        "parentId": "root"
+      },
       "routes/api.saved-plaque-design": {
         "file": "routes/api.saved-plaque-design.tsx",
         "id": "routes/api.saved-plaque-design",
@@ -1075,6 +1221,12 @@
         "file": "routes/api.save-plaque-design.tsx",
         "id": "routes/api.save-plaque-design",
         "path": "api/save-plaque-design",
+        "parentId": "root"
+      },
+      "routes/api.saved-gavel-design": {
+        "file": "routes/api.saved-gavel-design.tsx",
+        "id": "routes/api.saved-gavel-design",
+        "path": "api/saved-gavel-design",
         "parentId": "root"
       },
       "routes/api.saved-sign-designs": {
@@ -1107,10 +1259,22 @@
         "path": "api/save-draft-plaque",
         "parentId": "root"
       },
+      "routes/api.save-gavel-design": {
+        "file": "routes/api.save-gavel-design.tsx",
+        "id": "routes/api.save-gavel-design",
+        "path": "api/save-gavel-design",
+        "parentId": "root"
+      },
       "routes/api.saved-sign-design": {
         "file": "routes/api.saved-sign-design.tsx",
         "id": "routes/api.saved-sign-design",
         "path": "api/saved-sign-design",
+        "parentId": "root"
+      },
+      "routes/api.save-draft-gavel": {
+        "file": "routes/api.save-draft-gavel.tsx",
+        "id": "routes/api.save-draft-gavel",
+        "path": "api/save-draft-gavel",
         "parentId": "root"
       },
       "routes/api.save-sign-design": {
@@ -1267,6 +1431,18 @@
         "file": "routes/api.save-badge.tsx",
         "id": "routes/api.save-badge",
         "path": "api/save-badge",
+        "parentId": "root"
+      },
+      "routes/api.save-gavel": {
+        "file": "routes/api.save-gavel.tsx",
+        "id": "routes/api.save-gavel",
+        "path": "api/save-gavel",
+        "parentId": "root"
+      },
+      "routes/gavel-designer": {
+        "file": "routes/gavel-designer.tsx",
+        "id": "routes/gavel-designer",
+        "path": "gavel-designer",
         "parentId": "root"
       },
       "routes/api.save-sign": {

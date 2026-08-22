@@ -97,18 +97,32 @@ export async function action({ request }: ActionFunctionArgs) {
       (top.thumbnailUrl as string | undefined) ??
       (top.thumbnail_url as string | undefined);
 
+    const designJson = {
+      ...fullDesignData,
+      gavelBandColor:
+        (fullDesignData as { gavelBandColor?: string }).gavelBandColor ??
+        (inner.gavelBandColor as string | undefined) ??
+        (firstBadge?.backgroundColor as string | undefined) ??
+        null,
+      gavelPlateColor:
+        (fullDesignData as { gavelProductType?: string }).gavelProductType ===
+          "stand" || firstBadge?.gavelProductType === "stand"
+          ? ((fullDesignData as { gavelPlateColor?: string }).gavelPlateColor ??
+            (inner.gavelPlateColor as string | undefined) ??
+            null)
+          : null,
+    };
+
     const row: SignDesign = {
       design_id: designId,
       product_id: productId ?? "",
       shop_id: shopId.trim(),
       user_id: userId.trim(),
-      background_color:
-        (firstBadge?.backgroundColor as string | undefined) ?? "#D4A017",
-      backing_type: firstBadge?.backing as string | undefined,
-      backing_price: (top.backingPrice as number | undefined) ?? 0,
-      base_price: (top.basePrice as number | undefined) ?? 0,
-      total_price: (top.totalPrice as number | undefined) ?? 0,
-      design_data: fullDesignData,
+      total_price:
+        (typeof top.totalPrice === "number" ? top.totalPrice : undefined) ??
+        (typeof inner.totalPrice === "number" ? inner.totalPrice : undefined) ??
+        0,
+      design_data: designJson,
       status: "saved",
       thumbnail_url: thumb,
       uploaded_image_url: uploadedImageUrlFromBadgeRecord(firstBadge),

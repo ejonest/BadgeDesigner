@@ -29,7 +29,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
         design_id: row.design_id,
         design_data: row.design_data,
         updated_at: row.updated_at,
-        backing_type: row.backing_type ?? undefined,
+        total_price: row.total_price ?? undefined,
         save_kind: row.save_kind ?? undefined,
       },
     });

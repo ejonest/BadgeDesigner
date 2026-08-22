@@ -252,6 +252,7 @@ export const DESIGNERS: Record<DesignerId, DesignerDefinition> = {
     gadget: {
       apiUrlEnv: "GADGET_GAVEL_API_URL",
       apiKeyEnv: "GADGET_GAVEL_API_KEY",
+      // Override with GADGET_GAVEL_API_URL — badge fallback has no createGavelDesign.
       defaultApiUrl: BADGE_DEFAULT_URL,
       createField: "createGavelDesign",
       inputVariable: "gavelDesign",
