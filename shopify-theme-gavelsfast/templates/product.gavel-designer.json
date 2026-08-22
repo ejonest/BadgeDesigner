@@ -1,12 +1,21 @@
+/*
+ * ------------------------------------------------------------
+ * Gavels Fast — custom gavel designer product template.
+ *
+ * Assign this template ("gavel-designer") to:
+ *   custom-wooden-gavel
+ *   custom-wooden-gavel-stand
+ *
+ * The Ella header, announcement bar and footer come from
+ * layout/theme.liquid, so only the page body is replaced here.
+ * ------------------------------------------------------------
+ */
 {
   "sections": {
     "designer_embed": {
       "type": "custom-liquid",
       "settings": {
-        "custom_liquid": "{% render 'gavel-designer-embed' %}",
-        "color_scheme": "scheme-1",
-        "padding_top": 0,
-        "padding_bottom": 0
+        "custom_liquid": "{% render 'gavel-designer-embed' %}"
       }
     }
   },
