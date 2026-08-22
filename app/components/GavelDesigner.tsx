@@ -1,7 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { Badge, BadgeLine } from "~/types/badge";
 import {
   GAVEL_BAND_FINISHES,
+  GAVEL_BAND_FINISH_IDS,
   GAVEL_DEFAULT_FONT,
   GAVEL_DEFAULT_TEXT_COLOR,
   GAVEL_FONT_OPTIONS,
@@ -9,10 +17,14 @@ import {
   GAVEL_MAX_LINES,
   GAVEL_PRODUCT_TYPE_OPTIONS,
   GAVEL_PRODUCT_TYPES,
+  GAVEL_PRODUCTION_METHOD_IDS,
   GAVEL_PRODUCTION_METHOD_OPTIONS,
   GAVEL_SAMPLE_PRICING,
+  GAVEL_SOUND_BLOCK_IDS,
   GAVEL_SOUND_BLOCK_OPTIONS,
+  GAVEL_STAND_FINISH_IDS,
   GAVEL_STAND_FINISH_OPTIONS,
+  GAVEL_STYLE_IDS,
   GAVEL_STYLES,
   GAVEL_TEXT_SIZE_PRESETS,
   GAVEL_UV_TEXT_COLORS,
@@ -63,6 +75,115 @@ import "../styles/gavelDesigner.css";
 /** One decision per screen — the gavel flow adds a wood/handle step. */
 type StepId = "product" | "style" | "design" | "quantity" | "done";
 
+const STEP_IDS: StepId[] = ["product", "style", "design", "quantity", "done"];
+
+/** localStorage draft so refresh keeps wizard progress (same idea as badge designer). */
+const GAVEL_DESIGNER_CACHE_PREFIX = "gavel-designer-draft";
+const GAVEL_CACHE_VERSION = 1;
+/** Skip caching huge logos so we do not blow the 5MB localStorage quota. */
+const GAVEL_CACHE_MAX_LOGO_CHARS = 1_500_000;
+
+function getGavelDesignerDraftCacheKey(
+  shop?: string | null,
+  productId?: string | null,
+): string {
+  return `${GAVEL_DESIGNER_CACHE_PREFIX}-${shop ?? "default"}-${
+    productId ?? "default"
+  }`;
+}
+
+function removeGavelDesignerDraftCache(
+  shop?: string | null,
+  productId?: string | null,
+): void {
+  try {
+    localStorage.removeItem(getGavelDesignerDraftCacheKey(shop, productId));
+  } catch {
+    // ignore quota or other storage errors
+  }
+}
+
+function isStepId(value: unknown): value is StepId {
+  return typeof value === "string" && STEP_IDS.includes(value as StepId);
+}
+
+function includesId<T extends string>(ids: readonly T[], value: unknown): value is T {
+  return typeof value === "string" && (ids as readonly string[]).includes(value);
+}
+
+function sanitizeCachedLines(
+  raw: unknown,
+  count: number,
+  fallback: () => BadgeLine[],
+): BadgeLine[] {
+  if (!Array.isArray(raw)) return fallback();
+  const next = raw.slice(0, count).map((item, index): BadgeLine => {
+    const line =
+      item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+    const align =
+      line.align === "left" || line.align === "right" || line.align === "center"
+        ? line.align
+        : "center";
+    return {
+      id: typeof line.id === "string" ? line.id : `gavel-line-${index}`,
+      text: typeof line.text === "string" ? line.text : "",
+      xNorm: typeof line.xNorm === "number" ? line.xNorm : 0.5,
+      yNorm: typeof line.yNorm === "number" ? line.yNorm : 0.5,
+      sizeNorm: typeof line.sizeNorm === "number" ? line.sizeNorm : 0.2,
+      color: typeof line.color === "string" ? line.color : GAVEL_DEFAULT_TEXT_COLOR,
+      align,
+      fontFamily:
+        typeof line.fontFamily === "string" ? line.fontFamily : GAVEL_DEFAULT_FONT,
+      bold: Boolean(line.bold),
+      italic: Boolean(line.italic),
+      underline: Boolean(line.underline),
+    };
+  });
+  while (next.length < count) next.push(newLine());
+  return next;
+}
+
+function dataUrlToFile(
+  dataUrl: string,
+  name: string,
+  type: string,
+): File | null {
+  try {
+    const comma = dataUrl.indexOf(",");
+    if (comma < 0) return null;
+    const header = dataUrl.slice(0, comma);
+    const mime =
+      type || header.match(/data:([^;]+)/)?.[1] || "application/octet-stream";
+    const binary = atob(dataUrl.slice(comma + 1));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new File([bytes], name || "logo", { type: mime });
+  } catch {
+    return null;
+  }
+}
+
+type GavelDesignerCachePayload = {
+  version?: number;
+  step?: StepId;
+  visited?: StepId[];
+  productType?: GavelProductType;
+  soundBlock?: GavelSoundBlockId;
+  soundBlockText?: string;
+  suedeBag?: boolean;
+  standFinish?: GavelStandFinishId;
+  productionMethod?: GavelProductionMethodId;
+  uvTextColor?: string;
+  plateLines?: BadgeLine[];
+  gavelStyle?: GavelStyleId;
+  bandFinish?: GavelBandFinishId;
+  textSize?: GavelTextSizePreset;
+  lines?: BadgeLine[];
+  qty?: number;
+  designId?: string;
+  logo?: { name: string; type: string; dataUrl: string } | null;
+};
+
 const STEP_LABELS: Record<StepId, string> = {
   product: "Product",
   style: "Gavel",
@@ -110,6 +231,13 @@ function defaultLines(): BadgeLine[] {
 function defaultPlateLines(): BadgeLine[] {
   return Array.from({ length: STAND_PLATE_MAX_LINES }, () => newLine());
 }
+
+/**
+ * Restoring the cached draft has to happen before the browser paints, or the
+ * user sees step 1 flash first. On the server there is no layout phase.
+ */
+const useBeforePaintEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 function readQueryParam(name: string): string {
   if (typeof window === "undefined") return "";
@@ -160,11 +288,21 @@ export default function GavelDesigner({
   const [storeUnitPrice, setStoreUnitPrice] = useState<number | null>(null);
   /** Canvas textures only exist in the browser; keep first paint SSR-identical. */
   const [isClient, setIsClient] = useState(false);
+  /**
+   * The server cannot read the saved draft, so it renders a neutral shell and
+   * the wizard itself only mounts once the cached step has been restored.
+   */
+  const [hydrated, setHydrated] = useState(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const designIdRef = useRef(
     `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
   );
+  /** True after we have tried localStorage restore once (prevents writing defaults over a draft). */
+  const cacheHydratedRef = useRef(false);
+  /** Skip one cache write after add-to-cart so we do not persist the completed flow. */
+  const skipCacheSaveRef = useRef(false);
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const previewRef = useRef<GavelSpinPreviewHandle>(null);
   /** Last 3D capture, kept so the proof works after the canvas unmounts. */
   const mockupRef = useRef<{ dataUrl: string | null; blob: Blob | null }>({
@@ -308,13 +446,198 @@ export default function GavelDesigner({
     });
   }, []);
 
-  /** Storefront product pages each map to one product type, e.g. ?productType=stand. */
-  useEffect(() => {
+  /** Restore wizard progress from localStorage (once), then let the product URL win. */
+  useBeforePaintEffect(() => {
+    if (cacheHydratedRef.current) return;
+    try {
+      const raw = localStorage.getItem(
+        getGavelDesignerDraftCacheKey(shop, productId),
+      );
+      if (raw) {
+        const payload = JSON.parse(raw) as GavelDesignerCachePayload;
+        if (payload.version === GAVEL_CACHE_VERSION) {
+          const restoredStep = isStepId(payload.step) ? payload.step : "product";
+          const activeStep =
+            restoredStep === "done" ? "quantity" : restoredStep;
+          setStep(activeStep);
+          const impliedVisited = STEP_IDS.slice(
+            0,
+            STEP_IDS.indexOf(activeStep) + 1,
+          ).filter((id) => id !== "done");
+          const restoredVisited = Array.isArray(payload.visited)
+            ? payload.visited.filter(isStepId)
+            : [];
+          setVisited(
+            [...impliedVisited, ...restoredVisited].filter(
+              (id, i, all) => id !== "done" && all.indexOf(id) === i,
+            ),
+          );
+          if (includesId(GAVEL_PRODUCT_TYPES, payload.productType)) {
+            setProductType(payload.productType);
+          }
+          if (includesId(GAVEL_SOUND_BLOCK_IDS, payload.soundBlock)) {
+            setSoundBlock(payload.soundBlock);
+          }
+          if (typeof payload.soundBlockText === "string") {
+            setSoundBlockText(payload.soundBlockText);
+          }
+          if (typeof payload.suedeBag === "boolean") {
+            setSuedeBag(payload.suedeBag);
+          }
+          if (includesId(GAVEL_STAND_FINISH_IDS, payload.standFinish)) {
+            setStandFinish(payload.standFinish);
+          }
+          if (includesId(GAVEL_PRODUCTION_METHOD_IDS, payload.productionMethod)) {
+            setProductionMethod(payload.productionMethod);
+          }
+          if (
+            typeof payload.uvTextColor === "string" &&
+            (GAVEL_UV_TEXT_COLORS as readonly string[]).includes(
+              payload.uvTextColor,
+            )
+          ) {
+            setUvTextColor(payload.uvTextColor);
+          }
+          setPlateLines(
+            sanitizeCachedLines(
+              payload.plateLines,
+              STAND_PLATE_MAX_LINES,
+              defaultPlateLines,
+            ),
+          );
+          if (includesId(GAVEL_STYLE_IDS, payload.gavelStyle)) {
+            setGavelStyle(payload.gavelStyle);
+          }
+          if (includesId(GAVEL_BAND_FINISH_IDS, payload.bandFinish)) {
+            setBandFinish(payload.bandFinish);
+          }
+          if (includesId(GAVEL_TEXT_SIZE_PRESETS, payload.textSize)) {
+            setTextSize(payload.textSize);
+          }
+          setLines(
+            sanitizeCachedLines(payload.lines, GAVEL_MAX_LINES, defaultLines),
+          );
+          if (typeof payload.qty === "number") {
+            setQty(clampBadgeLineQty(payload.qty));
+          }
+          if (typeof payload.designId === "string" && payload.designId) {
+            designIdRef.current = payload.designId;
+          }
+          const logo = payload.logo;
+          if (
+            logo &&
+            typeof logo.dataUrl === "string" &&
+            logo.dataUrl.startsWith("data:") &&
+            logo.dataUrl.length <= GAVEL_CACHE_MAX_LOGO_CHARS
+          ) {
+            const file = dataUrlToFile(
+              logo.dataUrl,
+              typeof logo.name === "string" ? logo.name : "logo",
+              typeof logo.type === "string" ? logo.type : "",
+            );
+            if (file) {
+              setLogoFile(file);
+              setLogoDataUrl(logo.dataUrl);
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore quota, parse, or private-mode errors
+    }
+    cacheHydratedRef.current = true;
+
     const requested = readQueryParam("productType") as GavelProductType;
-    if (!GAVEL_PRODUCT_TYPES.includes(requested)) return;
-    setProductType(requested);
-    if (requested === "stand") setSoundBlock("none");
-  }, []);
+    if (GAVEL_PRODUCT_TYPES.includes(requested)) {
+      setProductType(requested);
+      if (requested === "stand") setSoundBlock("none");
+    }
+    setHydrated(true);
+  }, [productId, shop]);
+
+  useEffect(() => {
+    if (!logoFile) {
+      setLogoDataUrl(null);
+      return;
+    }
+    let cancelled = false;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (cancelled || typeof reader.result !== "string") return;
+      if (reader.result.length > GAVEL_CACHE_MAX_LOGO_CHARS) return;
+      setLogoDataUrl(reader.result);
+    };
+    reader.readAsDataURL(logoFile);
+    return () => {
+      cancelled = true;
+    };
+  }, [logoFile]);
+
+  useEffect(() => {
+    const cacheKey = getGavelDesignerDraftCacheKey(shop, productId);
+    const timeoutId = window.setTimeout(() => {
+      if (!cacheHydratedRef.current) return;
+      if (skipCacheSaveRef.current) {
+        skipCacheSaveRef.current = false;
+        return;
+      }
+      const payload: GavelDesignerCachePayload = {
+        version: GAVEL_CACHE_VERSION,
+        step,
+        visited,
+        productType,
+        soundBlock,
+        soundBlockText,
+        suedeBag,
+        standFinish,
+        productionMethod,
+        uvTextColor,
+        plateLines,
+        gavelStyle,
+        bandFinish,
+        textSize,
+        lines,
+        qty,
+        designId: designIdRef.current,
+        logo:
+          logoFile &&
+          logoDataUrl &&
+          logoDataUrl.length <= GAVEL_CACHE_MAX_LOGO_CHARS
+            ? {
+                name: logoFile.name,
+                type: logoFile.type,
+                dataUrl: logoDataUrl,
+              }
+            : null,
+      };
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(payload));
+      } catch {
+        // ignore quota or other storage errors
+      }
+    }, 600);
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    bandFinish,
+    gavelStyle,
+    lines,
+    logoDataUrl,
+    logoFile,
+    plateLines,
+    productId,
+    productType,
+    productionMethod,
+    qty,
+    shop,
+    soundBlock,
+    soundBlockText,
+    standFinish,
+    step,
+    suedeBag,
+    textSize,
+    uvTextColor,
+    visited,
+  ]);
 
   useEffect(() => {
     const key = `variantId${gavelStyle.charAt(0).toUpperCase()}${gavelStyle.slice(1)}`;
@@ -420,7 +743,8 @@ export default function GavelDesigner({
       root.style.removeProperty("--gf-vv-top");
       root.style.removeProperty("--gf-keyboard-inset");
     };
-  }, []);
+    // `hydrated` gates the wizard markup, so the root node only exists after it flips.
+  }, [hydrated]);
 
   useEffect(() => {
     return () => {
@@ -741,6 +1065,8 @@ export default function GavelDesigner({
       if (!result.success) {
         throw new Error(result.message || "Add to cart failed");
       }
+      removeGavelDesignerDraftCache(shop, productId);
+      skipCacheSaveRef.current = true;
       setProofOpen(false);
       goToStep("done");
     } catch (err) {
@@ -783,6 +1109,32 @@ export default function GavelDesigner({
     style: "Continue to design →",
     design: "Continue to quantity →",
   };
+
+  if (!hydrated) {
+    return (
+      <div className="gf-designer-root gf-wizard-root">
+        <div className="gf-page-title">
+          <p className="gf-eyebrow">Personalization tool</p>
+          <h1 className="gf-page-h1">Customize your gavel</h1>
+        </div>
+        <div className="gf-hero">
+          <div className="gf-stepper" aria-hidden="true">
+            {sequence.map((id, i) => (
+              <div className="gf-stepper-step" key={id}>
+                {i > 0 ? <span className="gf-stepper-line" /> : null}
+                <span className="gf-stepper-circle is-todo">{i + 1}</span>
+                <small>{STEP_LABELS[id]}</small>
+              </div>
+            ))}
+          </div>
+          <div className="gf-panel gf-boot-panel" role="status">
+            <span className="gf-boot-spinner" aria-hidden="true" />
+            <p className="gf-boot-text">Loading your design…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -177,6 +177,41 @@
   flex-direction: column;
 }
 
+/* Shown until the saved draft is restored, so the wizard never paints step 1
+   before jumping to the step the shopper left off on. */
+.gf-boot-panel {
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.gf-boot-spinner {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2.5px solid #e3ded3;
+  border-top-color: var(--gf-gold-2);
+  animation: gf-boot-spin 0.8s linear infinite;
+}
+
+.gf-boot-text {
+  font-size: 14px;
+  color: var(--gf-muted);
+  margin: 0;
+}
+
+@keyframes gf-boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gf-boot-spinner {
+    animation: none;
+  }
+}
+
 .gf-panel-title {
   font-family: "Playfair Display", Georgia, serif;
   font-size: 24px;

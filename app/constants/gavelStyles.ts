@@ -3,8 +3,8 @@
  * "app/temp/Gavels Fast - Core Products/Gavels & Sound Blocks".
  *
  * Same lathe-turned head on every SKU, in the three woods we offer: American
- * walnut, rubberwood, and ebony. Band metal (gold or silver) is chosen
- * separately. Handle length is always the standard size.
+ * walnut, hardwood (cherry-finished rubberwood), and ebony. Band metal (gold
+ * or silver) is chosen separately. Handle length is always the standard size.
  *
  * Physical defaults estimated from side-photo aspect (~3.1× head diameter)
  * and typical 2.1" head. Update inches when manufacturing confirms.
@@ -25,7 +25,7 @@ export type GavelProductType = (typeof GAVEL_PRODUCT_TYPES)[number];
 export const GAVEL_SOUND_BLOCK_IDS = ["none", "plain", "engraved"] as const;
 export type GavelSoundBlockId = (typeof GAVEL_SOUND_BLOCK_IDS)[number];
 
-export const GAVEL_STAND_FINISH_IDS = ["gold", "silver", "white"] as const;
+export const GAVEL_STAND_FINISH_IDS = ["gold", "silver"] as const;
 export type GavelStandFinishId = (typeof GAVEL_STAND_FINISH_IDS)[number];
 
 export const GAVEL_PRODUCTION_METHOD_IDS = ["engrave", "uvprint"] as const;
@@ -451,8 +451,8 @@ export const GAVEL_STYLES: readonly GavelStyleDef[] = [
   },
   {
     id: "rubberwood",
-    label: "Rubberwood",
-    description: "Warm red-brown rubberwood.",
+    label: "Hardwood",
+    description: "Hardwood with a cherry finish",
     bodyColor: "#805346",
     roughness: 1.7,
     metalness: 0,
@@ -530,7 +530,7 @@ export const GAVEL_STAND_FINISH_OPTIONS: readonly {
   id: GavelStandFinishId;
   label: string;
   plateHex: string;
-  /** White plates can be personalized in a single color or in full color. */
+  /** Full-color UV print is not offered on gold/silver plates. */
   allowsUvPrint: boolean;
   note: string;
 }[] = [
@@ -547,13 +547,6 @@ export const GAVEL_STAND_FINISH_OPTIONS: readonly {
     plateHex: GAVEL_BAND_SILVER_HEX,
     allowsUvPrint: false,
     note: "Gold and silver plates are personalized — text or logo, single color.",
-  },
-  {
-    id: "white",
-    label: "White",
-    plateHex: "#ffffff",
-    allowsUvPrint: true,
-    note: "White plates can be personalized in a single color or in full color — choose in the next step.",
   },
 ];
 
@@ -649,11 +642,17 @@ export function formatGavelOrderFinish(
   return `${style.label} · ${band.label} band`;
 }
 
+/** Retired plate finishes mapped so old drafts still resolve. */
+const LEGACY_STAND_FINISH_ALIASES: Record<string, GavelStandFinishId> = {
+  white: "gold",
+};
+
 export function getGavelStandFinish(
   id: string | null | undefined,
 ): (typeof GAVEL_STAND_FINISH_OPTIONS)[number] {
+  const mapped = id ? LEGACY_STAND_FINISH_ALIASES[id] ?? id : "gold";
   return (
-    GAVEL_STAND_FINISH_OPTIONS.find((f) => f.id === id) ??
+    GAVEL_STAND_FINISH_OPTIONS.find((f) => f.id === mapped) ??
     GAVEL_STAND_FINISH_OPTIONS[0]
   );
 }
