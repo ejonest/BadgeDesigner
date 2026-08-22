@@ -234,8 +234,9 @@ export async function run({ api, params, trigger, record, logger }: any) {
   return { success: result.ok, result };
 }
 
-export const options = {
-  triggers: {
-    shopify: { triggerKey: "on_order_paid" },
-  },
-};
+/**
+ * Do NOT add `export const options = { triggers: { shopify: { triggerKey: … } } }`
+ * when the triggers were added through the Gadget TRIGGERS panel. A hand-written
+ * triggerKey must already exist in shopify.app.toml, otherwise the editor reports
+ * `"on_order_paid" must be a valid trigger key identified in your TOML.`
+ */

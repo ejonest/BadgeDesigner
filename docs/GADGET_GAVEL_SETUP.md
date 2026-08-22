@@ -65,7 +65,8 @@ Then unique-index `designId` in the Gadget editor if you want lookups by cart de
 1. **Actions → New global action** named `on_order_paid` (or `on_order_paid_gavel`).
 2. **TRIGGERS → + → Shopify → `orders/paid`**. If that topic never fires on this store, add **`orders/create`** as a second trigger (same as signs).
 3. Paste [`docs/gadget-on-order-paid-gavel.ts`](gadget-on-order-paid-gavel.ts) into the action (keep Gadget’s `run` / `logger` imports if the editor already generated them).
-4. Save. Let Gadget update `shopify.app.toml`. On **development**, register webhooks on the Shopify connection if the editor asks.
+4. Do **not** hand-write `export const options = { triggers: { shopify: { triggerKey: "on_order_paid" } } }`. With UI triggers, Gadget owns the key in `shopify.app.toml`, and a hand-written one fails with `"on_order_paid" must be a valid trigger key identified in your TOML.`
+5. Save. Let Gadget update `shopify.app.toml`. On **development**, register webhooks on the Shopify connection if the editor asks.
 
 ### Gadget environment variables
 
