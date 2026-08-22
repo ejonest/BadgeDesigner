@@ -24,6 +24,7 @@
       "routes/api.delete-sign-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-gavel-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.shopify-order-webhook-gavel": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-plaque-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-desk-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-desk-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -232,6 +233,15 @@
         "file": "app/routes/api.link-order-sign-to-supabase.tsx",
         "id": "routes/api.link-order-sign-to-supabase",
         "path": "api/link-order-sign-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.shopify-order-webhook-gavel": {
+        "file": "app/routes/api.shopify-order-webhook-gavel.tsx",
+        "id": "routes/api.shopify-order-webhook-gavel",
+        "path": "api/shopify-order-webhook-gavel",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -1053,6 +1063,12 @@
         "file": "routes/api.link-order-sign-to-supabase.tsx",
         "id": "routes/api.link-order-sign-to-supabase",
         "path": "api/link-order-sign-to-supabase",
+        "parentId": "root"
+      },
+      "routes/api.shopify-order-webhook-gavel": {
+        "file": "routes/api.shopify-order-webhook-gavel.tsx",
+        "id": "routes/api.shopify-order-webhook-gavel",
+        "path": "api/shopify-order-webhook-gavel",
         "parentId": "root"
       },
       "routes/api.saved-plaque-design-detail": {

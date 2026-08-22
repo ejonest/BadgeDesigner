@@ -1,18 +1,36 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { Badge, BadgeLine } from "~/types/badge";
 import {
+  clampGavelLogoGapScale,
+  clampGavelLogoScale,
   GAVEL_BAND_FINISHES,
+  GAVEL_BAND_FINISH_IDS,
   GAVEL_DEFAULT_FONT,
+  GAVEL_LOGO_GAP_SCALE_MAX,
+  GAVEL_LOGO_GAP_SCALE_MIN,
+  GAVEL_LOGO_SCALE_MAX,
+  GAVEL_LOGO_SCALE_MIN,
   GAVEL_DEFAULT_TEXT_COLOR,
   GAVEL_FONT_OPTIONS,
   GAVEL_MAX_CHARS_PER_LINE,
   GAVEL_MAX_LINES,
   GAVEL_PRODUCT_TYPE_OPTIONS,
   GAVEL_PRODUCT_TYPES,
+  GAVEL_PRODUCTION_METHOD_IDS,
   GAVEL_PRODUCTION_METHOD_OPTIONS,
   GAVEL_SAMPLE_PRICING,
+  GAVEL_SOUND_BLOCK_IDS,
   GAVEL_SOUND_BLOCK_OPTIONS,
   GAVEL_STAND_FINISH_OPTIONS,
+  GAVEL_STYLE_IDS,
   GAVEL_STYLES,
   GAVEL_TEXT_SIZE_PRESETS,
   GAVEL_UV_TEXT_COLORS,
@@ -33,7 +51,6 @@ import {
   type GavelProductionMethodId,
   type GavelProductType,
   type GavelSoundBlockId,
-  type GavelStandFinishId,
   type GavelStyleId,
   type GavelTextSizePreset,
 } from "~/constants/gavelStyles";
@@ -48,7 +65,9 @@ import {
   gavelBandToSvgString,
   gavelStandPlateToDataUrl,
   gavelStandPlateToSvgString,
+  paintGavelStandPlateCanvas,
   soundBlockTopToDataUrl,
+  type GavelPlateLogo,
 } from "~/utils/gavelBandTexture";
 import { generateGavelProofPdf } from "~/utils/gavelPdf";
 import { createApi } from "~/utils/api";
@@ -63,6 +82,116 @@ import "../styles/gavelDesigner.css";
 /** One decision per screen — the gavel flow adds a wood/handle step. */
 type StepId = "product" | "style" | "design" | "quantity" | "done";
 
+const STEP_IDS: StepId[] = ["product", "style", "design", "quantity", "done"];
+
+/** localStorage draft so refresh keeps wizard progress (same idea as badge designer). */
+const GAVEL_DESIGNER_CACHE_PREFIX = "gavel-designer-draft";
+const GAVEL_CACHE_VERSION = 1;
+/** Skip caching huge logos so we do not blow the 5MB localStorage quota. */
+const GAVEL_CACHE_MAX_LOGO_CHARS = 1_500_000;
+
+function getGavelDesignerDraftCacheKey(
+  shop?: string | null,
+  productId?: string | null,
+): string {
+  return `${GAVEL_DESIGNER_CACHE_PREFIX}-${shop ?? "default"}-${
+    productId ?? "default"
+  }`;
+}
+
+function removeGavelDesignerDraftCache(
+  shop?: string | null,
+  productId?: string | null,
+): void {
+  try {
+    localStorage.removeItem(getGavelDesignerDraftCacheKey(shop, productId));
+  } catch {
+    // ignore quota or other storage errors
+  }
+}
+
+function isStepId(value: unknown): value is StepId {
+  return typeof value === "string" && STEP_IDS.includes(value as StepId);
+}
+
+function includesId<T extends string>(ids: readonly T[], value: unknown): value is T {
+  return typeof value === "string" && (ids as readonly string[]).includes(value);
+}
+
+function sanitizeCachedLines(
+  raw: unknown,
+  count: number,
+  fallback: () => BadgeLine[],
+): BadgeLine[] {
+  if (!Array.isArray(raw)) return fallback();
+  const next = raw.slice(0, count).map((item, index): BadgeLine => {
+    const line =
+      item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+    const align =
+      line.align === "left" || line.align === "right" || line.align === "center"
+        ? line.align
+        : "center";
+    return {
+      id: typeof line.id === "string" ? line.id : `gavel-line-${index}`,
+      text: typeof line.text === "string" ? line.text : "",
+      xNorm: typeof line.xNorm === "number" ? line.xNorm : 0.5,
+      yNorm: typeof line.yNorm === "number" ? line.yNorm : 0.5,
+      sizeNorm: typeof line.sizeNorm === "number" ? line.sizeNorm : 0.2,
+      color: typeof line.color === "string" ? line.color : GAVEL_DEFAULT_TEXT_COLOR,
+      align,
+      fontFamily:
+        typeof line.fontFamily === "string" ? line.fontFamily : GAVEL_DEFAULT_FONT,
+      bold: Boolean(line.bold),
+      italic: Boolean(line.italic),
+      underline: Boolean(line.underline),
+    };
+  });
+  while (next.length < count) next.push(newLine());
+  return next;
+}
+
+function dataUrlToFile(
+  dataUrl: string,
+  name: string,
+  type: string,
+): File | null {
+  try {
+    const comma = dataUrl.indexOf(",");
+    if (comma < 0) return null;
+    const header = dataUrl.slice(0, comma);
+    const mime =
+      type || header.match(/data:([^;]+)/)?.[1] || "application/octet-stream";
+    const binary = atob(dataUrl.slice(comma + 1));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new File([bytes], name || "logo", { type: mime });
+  } catch {
+    return null;
+  }
+}
+
+type GavelDesignerCachePayload = {
+  version?: number;
+  step?: StepId;
+  visited?: StepId[];
+  productType?: GavelProductType;
+  soundBlock?: GavelSoundBlockId;
+  soundBlockText?: string;
+  suedeBag?: boolean;
+  productionMethod?: GavelProductionMethodId;
+  logoScale?: number;
+  logoGapScale?: number;
+  uvTextColor?: string;
+  plateLines?: BadgeLine[];
+  gavelStyle?: GavelStyleId;
+  bandFinish?: GavelBandFinishId;
+  textSize?: GavelTextSizePreset;
+  lines?: BadgeLine[];
+  qty?: number;
+  designId?: string;
+  logo?: { name: string; type: string; dataUrl: string } | null;
+};
+
 const STEP_LABELS: Record<StepId, string> = {
   product: "Product",
   style: "Gavel",
@@ -72,6 +201,11 @@ const STEP_LABELS: Record<StepId, string> = {
 };
 
 const QTY_SLIDER_MAX = 50;
+
+/** The logo sliders move continuously; keep stored values tidy for the payload. */
+function roundAdjust(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
 
 type GavelDesignerProps = {
   productId?: string | null;
@@ -111,6 +245,13 @@ function defaultPlateLines(): BadgeLine[] {
   return Array.from({ length: STAND_PLATE_MAX_LINES }, () => newLine());
 }
 
+/**
+ * Restoring the cached draft has to happen before the browser paints, or the
+ * user sees step 1 flash first. On the server there is no layout phase.
+ */
+const useBeforePaintEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
+
 function readQueryParam(name: string): string {
   if (typeof window === "undefined") return "";
   return new URLSearchParams(window.location.search).get(name)?.trim() || "";
@@ -137,10 +278,11 @@ export default function GavelDesigner({
   const [soundBlock, setSoundBlock] = useState<GavelSoundBlockId>("none");
   const [soundBlockText, setSoundBlockText] = useState("");
   const [suedeBag, setSuedeBag] = useState(false);
-  const [standFinish, setStandFinish] = useState<GavelStandFinishId>("gold");
   const [productionMethod, setProductionMethod] =
     useState<GavelProductionMethodId>("engrave");
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoScale, setLogoScale] = useState(1);
+  const [logoGapScale, setLogoGapScale] = useState(1);
   const [uvTextColor, setUvTextColor] = useState(GAVEL_UV_TEXT_COLORS[0]);
   const [plateLines, setPlateLines] = useState<BadgeLine[]>(defaultPlateLines);
 
@@ -148,7 +290,7 @@ export default function GavelDesigner({
   const [bandFinish, setBandFinish] = useState<GavelBandFinishId>("gold");
   const [textSize, setTextSize] = useState<GavelTextSizePreset>("medium");
   const [lines, setLines] = useState<BadgeLine[]>(defaultLines);
-  const [qty, setQty] = useState(10);
+  const [qty, setQty] = useState(1);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -160,11 +302,23 @@ export default function GavelDesigner({
   const [storeUnitPrice, setStoreUnitPrice] = useState<number | null>(null);
   /** Canvas textures only exist in the browser; keep first paint SSR-identical. */
   const [isClient, setIsClient] = useState(false);
+  /**
+   * The server cannot read the saved draft, so it renders a neutral shell and
+   * the wizard itself only mounts once the cached step has been restored.
+   */
+  const [hydrated, setHydrated] = useState(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const designIdRef = useRef(
     `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
   );
+  /** True after we have tried localStorage restore once (prevents writing defaults over a draft). */
+  const cacheHydratedRef = useRef(false);
+  /** Skip one cache write after add-to-cart so we do not persist the completed flow. */
+  const skipCacheSaveRef = useRef(false);
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  /** Decoded logo, needed before it can be painted into the plate artwork. */
+  const [logoImage, setLogoImage] = useState<HTMLImageElement | null>(null);
   const previewRef = useRef<GavelSpinPreviewHandle>(null);
   /** Last 3D capture, kept so the proof works after the canvas unmounts. */
   const mockupRef = useRef<{ dataUrl: string | null; blob: Blob | null }>({
@@ -178,7 +332,12 @@ export default function GavelDesigner({
   const isStand = productType === "stand";
   const styleDef = getGavelStyle(gavelStyle);
   const bandDef = getGavelBandFinish(bandFinish);
-  const standDef = getGavelStandFinish(standFinish);
+  /**
+   * The band and the stand plate are the same metal on the physical product, so
+   * one choice drives both — picking a finish on either step moves the other.
+   */
+  const standDef = getGavelStandFinish(bandFinish);
+  const standFinish = standDef.id;
   const maxChars = GAVEL_MAX_CHARS_PER_LINE[textSize];
 
   const canPickTextColor = isStand && productionMethod === "uvprint";
@@ -240,26 +399,88 @@ export default function GavelDesigner({
     [bandArtLines, bandDef.color, isClient, textSize],
   );
 
-  const plateTextureUrl = useMemo(() => {
-    if (!isClient || !isStand) return "";
-    return gavelStandPlateToDataUrl(
-      plateArtLines,
-      textSize,
-      standDef.plateHex,
-      {
-      solidFill: standDef.id === "white",
-      },
-    );
-  }, [isClient, isStand, plateArtLines, standDef, textSize]);
+  /** Logo art for the plate; SVG uploads can report no intrinsic size. */
+  const makePlateLogo = useCallback(
+    (scale: number, gapScale: number): GavelPlateLogo | null => {
+      if (!logoImage) return null;
+      const w = logoImage.naturalWidth || logoImage.width;
+      const h = logoImage.naturalHeight || logoImage.height;
+      return {
+        image: logoImage,
+        href: logoDataUrl,
+        aspect: w > 0 && h > 0 ? w / h : 1,
+        scale,
+        gapScale,
+      };
+    },
+    [logoDataUrl, logoImage],
+  );
 
-  /** Same art cut to the plaque silhouette, for the flat proofs. */
-  const plateProofUrl = useMemo(() => {
-    if (!isClient || !isStand) return "";
-    return gavelStandPlateToDataUrl(plateArtLines, textSize, standDef.plateHex, {
-      solidFill: standDef.id === "white",
-      shaped: true,
+  /** The placement the customer has committed to: proof PDF and print SVG. */
+  const plateLogo = useMemo(
+    () => makePlateLogo(logoScale, logoGapScale),
+    [logoGapScale, logoScale, makePlateLogo],
+  );
+
+  const renderPlateTexture = useCallback(
+    (logo: GavelPlateLogo | null, shaped = false) => {
+      if (!isClient || !isStand) return "";
+      return gavelStandPlateToDataUrl(
+        plateArtLines,
+        textSize,
+        standDef.plateHex,
+        { shaped, logo },
+      );
+    },
+    [isClient, isStand, plateArtLines, standDef.plateHex, textSize],
+  );
+
+  /**
+   * The 3D plaque reads this canvas directly. It is repainted in place, once per
+   * animation frame at most, so dragging the logo sliders costs one repaint per
+   * frame instead of a PNG encode and decode per pointer event.
+   */
+  const plateCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [plateCanvas, setPlateCanvas] = useState<HTMLCanvasElement | null>(null);
+  const [plateCanvasVersion, setPlateCanvasVersion] = useState(0);
+
+  useEffect(() => {
+    if (!isClient || !isStand) return;
+    if (!plateCanvasRef.current) {
+      plateCanvasRef.current = document.createElement("canvas");
+    }
+    const canvas = plateCanvasRef.current;
+    const frame = requestAnimationFrame(() => {
+      paintGavelStandPlateCanvas(
+        canvas,
+        plateArtLines,
+        textSize,
+        standDef.plateHex,
+        { logo: plateLogo },
+      );
+      setPlateCanvas(canvas);
+      setPlateCanvasVersion((v) => v + 1);
     });
-  }, [isClient, isStand, plateArtLines, standDef, textSize]);
+    return () => cancelAnimationFrame(frame);
+  }, [
+    isClient,
+    isStand,
+    plateArtLines,
+    plateLogo,
+    standDef.plateHex,
+    textSize,
+  ]);
+
+  /**
+   * Same art cut to the plaque silhouette for the flat proof strips. This one
+   * still costs a PNG encode for the `<img>`, so it trails the sliders by a
+   * deferred render rather than running mid-drag.
+   */
+  const deferredPreviewLogo = useDeferredValue(plateLogo);
+  const plateProofUrl = useMemo(
+    () => renderPlateTexture(deferredPreviewLogo, true),
+    [deferredPreviewLogo, renderPlateTexture],
+  );
 
   const soundBlockEngraved = !isStand && soundBlock === "engraved";
   const soundBlockArtText = soundBlockText.trim() || lines[0]?.text?.trim() || "";
@@ -308,13 +529,221 @@ export default function GavelDesigner({
     });
   }, []);
 
-  /** Storefront product pages each map to one product type, e.g. ?productType=stand. */
-  useEffect(() => {
+  /** Restore wizard progress from localStorage (once), then let the product URL win. */
+  useBeforePaintEffect(() => {
+    if (cacheHydratedRef.current) return;
+    try {
+      const raw = localStorage.getItem(
+        getGavelDesignerDraftCacheKey(shop, productId),
+      );
+      if (raw) {
+        const payload = JSON.parse(raw) as GavelDesignerCachePayload;
+        if (payload.version === GAVEL_CACHE_VERSION) {
+          const restoredStep = isStepId(payload.step) ? payload.step : "product";
+          const activeStep =
+            restoredStep === "done" ? "quantity" : restoredStep;
+          setStep(activeStep);
+          const impliedVisited = STEP_IDS.slice(
+            0,
+            STEP_IDS.indexOf(activeStep) + 1,
+          ).filter((id) => id !== "done");
+          const restoredVisited = Array.isArray(payload.visited)
+            ? payload.visited.filter(isStepId)
+            : [];
+          setVisited(
+            [...impliedVisited, ...restoredVisited].filter(
+              (id, i, all) => id !== "done" && all.indexOf(id) === i,
+            ),
+          );
+          if (includesId(GAVEL_PRODUCT_TYPES, payload.productType)) {
+            setProductType(payload.productType);
+          }
+          if (includesId(GAVEL_SOUND_BLOCK_IDS, payload.soundBlock)) {
+            setSoundBlock(payload.soundBlock);
+          }
+          if (typeof payload.soundBlockText === "string") {
+            setSoundBlockText(payload.soundBlockText);
+          }
+          if (typeof payload.suedeBag === "boolean") {
+            setSuedeBag(payload.suedeBag);
+          }
+          if (includesId(GAVEL_PRODUCTION_METHOD_IDS, payload.productionMethod)) {
+            setProductionMethod(payload.productionMethod);
+          }
+          if (typeof payload.logoScale === "number") {
+            setLogoScale(clampGavelLogoScale(payload.logoScale));
+          }
+          if (typeof payload.logoGapScale === "number") {
+            setLogoGapScale(clampGavelLogoGapScale(payload.logoGapScale));
+          }
+          if (
+            typeof payload.uvTextColor === "string" &&
+            (GAVEL_UV_TEXT_COLORS as readonly string[]).includes(
+              payload.uvTextColor,
+            )
+          ) {
+            setUvTextColor(payload.uvTextColor);
+          }
+          setPlateLines(
+            sanitizeCachedLines(
+              payload.plateLines,
+              STAND_PLATE_MAX_LINES,
+              defaultPlateLines,
+            ),
+          );
+          if (includesId(GAVEL_STYLE_IDS, payload.gavelStyle)) {
+            setGavelStyle(payload.gavelStyle);
+          }
+          if (includesId(GAVEL_BAND_FINISH_IDS, payload.bandFinish)) {
+            setBandFinish(payload.bandFinish);
+          }
+          if (includesId(GAVEL_TEXT_SIZE_PRESETS, payload.textSize)) {
+            setTextSize(payload.textSize);
+          }
+          setLines(
+            sanitizeCachedLines(payload.lines, GAVEL_MAX_LINES, defaultLines),
+          );
+          if (typeof payload.qty === "number") {
+            setQty(clampBadgeLineQty(payload.qty));
+          }
+          if (typeof payload.designId === "string" && payload.designId) {
+            designIdRef.current = payload.designId;
+          }
+          const logo = payload.logo;
+          if (
+            logo &&
+            typeof logo.dataUrl === "string" &&
+            logo.dataUrl.startsWith("data:") &&
+            logo.dataUrl.length <= GAVEL_CACHE_MAX_LOGO_CHARS
+          ) {
+            const file = dataUrlToFile(
+              logo.dataUrl,
+              typeof logo.name === "string" ? logo.name : "logo",
+              typeof logo.type === "string" ? logo.type : "",
+            );
+            if (file) {
+              setLogoFile(file);
+              setLogoDataUrl(logo.dataUrl);
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore quota, parse, or private-mode errors
+    }
+    cacheHydratedRef.current = true;
+
     const requested = readQueryParam("productType") as GavelProductType;
-    if (!GAVEL_PRODUCT_TYPES.includes(requested)) return;
-    setProductType(requested);
-    if (requested === "stand") setSoundBlock("none");
-  }, []);
+    if (GAVEL_PRODUCT_TYPES.includes(requested)) {
+      setProductType(requested);
+      if (requested === "stand") setSoundBlock("none");
+    }
+    setHydrated(true);
+  }, [productId, shop]);
+
+  useEffect(() => {
+    if (!logoFile) {
+      setLogoDataUrl(null);
+      return;
+    }
+    let cancelled = false;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (cancelled || typeof reader.result !== "string") return;
+      setLogoDataUrl(reader.result);
+    };
+    reader.readAsDataURL(logoFile);
+    return () => {
+      cancelled = true;
+    };
+  }, [logoFile]);
+
+  useEffect(() => {
+    if (!logoDataUrl) {
+      setLogoImage(null);
+      return;
+    }
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (!cancelled) setLogoImage(img);
+    };
+    img.onerror = () => {
+      if (!cancelled) setLogoImage(null);
+    };
+    img.src = logoDataUrl;
+    return () => {
+      cancelled = true;
+    };
+  }, [logoDataUrl]);
+
+  useEffect(() => {
+    const cacheKey = getGavelDesignerDraftCacheKey(shop, productId);
+    const timeoutId = window.setTimeout(() => {
+      if (!cacheHydratedRef.current) return;
+      if (skipCacheSaveRef.current) {
+        skipCacheSaveRef.current = false;
+        return;
+      }
+      const payload: GavelDesignerCachePayload = {
+        version: GAVEL_CACHE_VERSION,
+        step,
+        visited,
+        productType,
+        soundBlock,
+        soundBlockText,
+        suedeBag,
+        productionMethod,
+        logoScale,
+        logoGapScale,
+        uvTextColor,
+        plateLines,
+        gavelStyle,
+        bandFinish,
+        textSize,
+        lines,
+        qty,
+        designId: designIdRef.current,
+        logo:
+          logoFile &&
+          logoDataUrl &&
+          logoDataUrl.length <= GAVEL_CACHE_MAX_LOGO_CHARS
+            ? {
+                name: logoFile.name,
+                type: logoFile.type,
+                dataUrl: logoDataUrl,
+              }
+            : null,
+      };
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(payload));
+      } catch {
+        // ignore quota or other storage errors
+      }
+    }, 600);
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    bandFinish,
+    gavelStyle,
+    lines,
+    logoDataUrl,
+    logoFile,
+    logoGapScale,
+    logoScale,
+    plateLines,
+    productId,
+    productType,
+    productionMethod,
+    qty,
+    shop,
+    soundBlock,
+    soundBlockText,
+    step,
+    suedeBag,
+    textSize,
+    uvTextColor,
+    visited,
+  ]);
 
   useEffect(() => {
     const key = `variantId${gavelStyle.charAt(0).toUpperCase()}${gavelStyle.slice(1)}`;
@@ -420,7 +849,8 @@ export default function GavelDesigner({
       root.style.removeProperty("--gf-vv-top");
       root.style.removeProperty("--gf-keyboard-inset");
     };
-  }, []);
+    // `hydrated` gates the wizard markup, so the root node only exists after it flips.
+  }, [hydrated]);
 
   useEffect(() => {
     return () => {
@@ -543,6 +973,8 @@ export default function GavelDesigner({
       gavelBandColor: bandDef.color,
       gavelPlateColor: isStand ? standDef.plateHex : null,
       gavelLogoFileName: logoFile?.name ?? null,
+      gavelLogoScale: logoFile ? logoScale : null,
+      gavelLogoGapScale: logoFile ? logoGapScale : null,
       totalPrice: quote.total,
       timestamp: new Date().toISOString(),
       shopId: shop || readQueryParam("shop") || "test-shop",
@@ -586,6 +1018,7 @@ export default function GavelDesigner({
               plateArtLines,
               textSize,
               standDef.plateHex,
+              { logo: plateLogo },
             ),
           ],
           { type: "image/svg+xml" },
@@ -636,7 +1069,9 @@ export default function GavelDesigner({
         standFinish: isStand ? standFinish : undefined,
         productionMethod: isStand ? productionMethod : undefined,
         plateLines: isStand ? plateArtLines : undefined,
-        plateDataUrl: plateTextureUrl || null,
+        // Rendered from the committed placement, since the on-screen texture can
+        // still be a deferred render behind the sliders.
+        plateDataUrl: renderPlateTexture(plateLogo) || null,
         unitPrice: quote.unitPrice,
         estimatedTotal: quote.total,
         logoFileName: logoFile?.name ?? null,
@@ -741,6 +1176,8 @@ export default function GavelDesigner({
       if (!result.success) {
         throw new Error(result.message || "Add to cart failed");
       }
+      removeGavelDesignerDraftCache(shop, productId);
+      skipCacheSaveRef.current = true;
       setProofOpen(false);
       goToStep("done");
     } catch (err) {
@@ -783,6 +1220,32 @@ export default function GavelDesigner({
     style: "Continue to design →",
     design: "Continue to quantity →",
   };
+
+  if (!hydrated) {
+    return (
+      <div className="gf-designer-root gf-wizard-root">
+        <div className="gf-page-title">
+          <p className="gf-eyebrow">Personalization tool</p>
+          <h1 className="gf-page-h1">Customize your gavel</h1>
+        </div>
+        <div className="gf-hero">
+          <div className="gf-stepper" aria-hidden="true">
+            {sequence.map((id, i) => (
+              <div className="gf-stepper-step" key={id}>
+                {i > 0 ? <span className="gf-stepper-line" /> : null}
+                <span className="gf-stepper-circle is-todo">{i + 1}</span>
+                <small>{STEP_LABELS[id]}</small>
+              </div>
+            ))}
+          </div>
+          <div className="gf-panel gf-boot-panel" role="status">
+            <span className="gf-boot-spinner" aria-hidden="true" />
+            <p className="gf-boot-text">Loading your design…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -828,7 +1291,16 @@ export default function GavelDesigner({
 
         <div className="gf-panel">
           <p className="gf-panel-title">{panelCopy[step].title}</p>
-          <p className="gf-panel-sub gf-panel-sub-lead">{panelCopy[step].sub}</p>
+          {/* The preview label shares this row so the preview frame below it
+              starts level with the first card in the controls column. */}
+          <div className="gf-panel-lead">
+            <p className="gf-panel-sub gf-panel-sub-lead">
+              {panelCopy[step].sub}
+            </p>
+            {showPreview ? (
+              <p className="gf-preview-label">Live preview</p>
+            ) : null}
+          </div>
 
           <div
             className={`gf-design-grid ${showPreview ? "" : "is-single"} ${
@@ -869,21 +1341,27 @@ export default function GavelDesigner({
 
                   {isStand ? (
                     <div className="gf-sub-section">
-                      <p className="gf-sub-title">Stand plate finish</p>
+                      <p className="gf-sub-title">Metal finish</p>
                       <div className="gf-pill-row">
                         {GAVEL_STAND_FINISH_OPTIONS.map((f) => (
                           <button
                             key={f.id}
                             type="button"
                             className={`gf-pill ${standFinish === f.id ? "is-selected" : ""}`}
-                            onClick={() => setStandFinish(f.id)}
+                            onClick={() => setBandFinish(f.id)}
                           >
+                            <span
+                              className="gf-swatch"
+                              style={{ background: f.plateHex }}
+                              aria-hidden
+                            />
                             {f.label}
                           </button>
                         ))}
                       </div>
                       <p className="gf-note">
-                        {standDef.note} The stand is the same wood as the gavel.
+                        {standDef.note} The band and stand plate always match,
+                        and the stand is the same wood as the gavel.
                       </p>
                     </div>
                   ) : (
@@ -941,7 +1419,9 @@ export default function GavelDesigner({
                   </div>
 
                   <div className="gf-sub-section">
-                    <p className="gf-sub-title">Band finish</p>
+                    <p className="gf-sub-title">
+                      {isStand ? "Metal finish (band & plate)" : "Band finish"}
+                    </p>
                     <div className="gf-pill-row">
                       {GAVEL_BAND_FINISHES.map((f) => (
                         <button
@@ -1162,9 +1642,72 @@ export default function GavelDesigner({
                                 : "Upload logo — vector or silhouette (JPG, PNG, SVG)"}
                           </span>
                         </label>
+                        {logoFile ? (
+                          <div className="gf-logo-adjust">
+                            <div className="gf-logo-adjust-row">
+                              <label htmlFor="gf-logo-size">Logo size</label>
+                              <span className="gf-logo-adjust-value">
+                                {Math.round(logoScale * 100)}%
+                              </span>
+                            </div>
+                            <input
+                              id="gf-logo-size"
+                              type="range"
+                              className="gf-range is-inline"
+                              min={GAVEL_LOGO_SCALE_MIN}
+                              max={GAVEL_LOGO_SCALE_MAX}
+                              step="any"
+                              value={logoScale}
+                              onChange={(e) =>
+                                setLogoScale(
+                                  clampGavelLogoScale(
+                                    roundAdjust(Number(e.target.value)),
+                                  ),
+                                )
+                              }
+                            />
+                            <div className="gf-logo-adjust-row">
+                              <label htmlFor="gf-logo-gap">
+                                Space before text
+                              </label>
+                              <span className="gf-logo-adjust-value">
+                                {Math.round(logoGapScale * 100)}%
+                              </span>
+                            </div>
+                            <input
+                              id="gf-logo-gap"
+                              type="range"
+                              className="gf-range is-inline"
+                              min={GAVEL_LOGO_GAP_SCALE_MIN}
+                              max={GAVEL_LOGO_GAP_SCALE_MAX}
+                              step="any"
+                              value={logoGapScale}
+                              onChange={(e) =>
+                                setLogoGapScale(
+                                  clampGavelLogoGapScale(
+                                    roundAdjust(Number(e.target.value)),
+                                  ),
+                                )
+                              }
+                            />
+                            {logoScale !== 1 || logoGapScale !== 1 ? (
+                              <button
+                                type="button"
+                                className="gf-link-btn"
+                                onClick={() => {
+                                  setLogoScale(1);
+                                  setLogoGapScale(1);
+                                }}
+                              >
+                                Reset logo placement
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
                         <p className="gf-note">
-                          Logo art is attached to your order for our team to
-                          place — it is not shown in the preview yet.
+                          Your logo prints to the left of the plate text. The
+                          original file is attached to your order so our team
+                          works from full-quality art.
                         </p>
                       </div>
                     </>
@@ -1354,7 +1897,6 @@ export default function GavelDesigner({
 
             {showPreview ? (
               <div className="gf-preview-pane">
-                <p className="gf-preview-label">Live preview</p>
                 <GavelSpinPreviewGate
                   previewRef={previewRef}
                   style={styleDef}
@@ -1364,14 +1906,15 @@ export default function GavelDesigner({
                   soundBlockTextureUrl={soundBlockTextureUrl}
                   showStandToggle={isStand}
                   showFlatProofTabs={isNarrow}
-                  plateTextureUrl={plateTextureUrl}
+                  plateCanvas={plateCanvas}
+                  plateCanvasVersion={plateCanvasVersion}
                   plateProofUrl={plateProofUrl}
                   plateHex={standDef.plateHex}
                   productPhotoSrc={getGavelProductPhoto(
                     styleDef.id,
                     productType,
                     soundBlock,
-                    isStand ? standFinish : bandFinish,
+                    bandFinish,
                   )}
                 />
                 {step === "design" ? (

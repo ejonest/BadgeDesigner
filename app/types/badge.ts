@@ -149,7 +149,7 @@ export interface Badge {
   gavelSoundBlockText?: string;
   /** Gavel designer only: suede bag add-on. */
   gavelSuedeBag?: boolean;
-  /** Gavel + stand: plate finish. */
+  /** Gavel + stand: plate finish. `"white"` is retired; drafts map to gold. */
   gavelStandFinish?: "gold" | "silver" | "white";
   /** Gavel + stand: engraved vs. UV printed plate. */
   gavelProductionMethod?: "engrave" | "uvprint";

@@ -1,5 +1,7 @@
 import type { BadgeLine } from "~/types/badge";
 import {
+  clampGavelLogoGapScale,
+  clampGavelLogoScale,
   GAVEL_BAND_GOLD_HEX,
   GAVEL_BAND_TEXTURE_HEIGHT_PX,
   GAVEL_BAND_TEXTURE_WIDTH_PX,
@@ -8,6 +10,7 @@ import {
   GAVEL_MAX_LINES,
   GAVEL_TEXTURE_FONT_PX,
   SOUND_BLOCK_TOP_TEXTURE_PX,
+  STAND_PLATE_CORNER_R_IN,
   STAND_PLATE_H_IN,
   STAND_PLATE_KEYLINE_INSET_IN,
   STAND_PLATE_KEYLINE_W_IN,
@@ -93,11 +96,59 @@ function mulberry32(seed: number) {
 }
 
 /**
+ * Painted metal backgrounds, keyed by size and color. Synthesizing the grain
+ * costs thousands of strokes plus a per-pixel pass, and the result depends only
+ * on the key — so live text and logo edits blit a finished copy instead of
+ * repainting it for every keystroke and slider move.
+ */
+const brushedMetalCache = new Map<string, HTMLCanvasElement>();
+const BRUSHED_METAL_CACHE_MAX = 6;
+
+function brushedMetalCanvas(
+  width: number,
+  height: number,
+  bandHex: string,
+): HTMLCanvasElement | null {
+  if (typeof document === "undefined") return null;
+  const key = `${width}x${height}:${bandHex.trim().toLowerCase()}`;
+  const cached = brushedMetalCache.get(key);
+  if (cached) return cached;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  paintBrushedMetalBand(ctx, width, height, bandHex);
+
+  if (brushedMetalCache.size >= BRUSHED_METAL_CACHE_MAX) {
+    const oldest = brushedMetalCache.keys().next().value;
+    if (oldest !== undefined) brushedMetalCache.delete(oldest);
+  }
+  brushedMetalCache.set(key, canvas);
+  return canvas;
+}
+
+/**
  * Satin brushed metal matching the physical gavel band: warm (or cool) mid-tone,
  * bright rim highlights, and fine horizontal grain. Seeded so the grain is stable
  * across re-renders.
  */
 export function fillBrushedMetalBand(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  bandHex: string,
+) {
+  const cached = brushedMetalCanvas(width, height, bandHex);
+  if (cached) {
+    ctx.drawImage(cached, 0, 0);
+    return;
+  }
+  paintBrushedMetalBand(ctx, width, height, bandHex);
+}
+
+function paintBrushedMetalBand(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
@@ -309,6 +360,128 @@ function standPlateKeylinePx(): number {
   );
 }
 
+/** A customer logo placed on the stand plate, left of the personalized text. */
+export type GavelPlateLogo = {
+  /** Decoded art for canvas painting (3D texture and flat proof). */
+  image?: CanvasImageSource | null;
+  /** Same art as a data URL, so the manufacturing SVG can embed it. */
+  href?: string | null;
+  /** Source width ÷ height, so the art is placed without stretching. */
+  aspect: number;
+  /** Customer size adjustment; 1 is the tuned default. */
+  scale?: number;
+  /** Customer margin adjustment; 1 is the tuned default. */
+  gapScale?: number;
+};
+
+const STAND_PLATE_PX_PER_IN = STAND_PLATE_TEXTURE_W_PX / STAND_PLATE_W_IN;
+
+/** Plate edge → usable artwork: the keyline inset plus the keyline itself. */
+function standPlateSafeInsetPx(): number {
+  return (
+    STAND_PLATE_KEYLINE_INSET_IN * STAND_PLATE_PX_PER_IN +
+    standPlateKeylinePx()
+  );
+}
+
+/**
+ * Logo height as a multiple of the text block height, its share of the plate
+ * width, and the margin before the text as a share of plate height. All three
+ * are tuned against the proof rather than derived.
+ */
+const STAND_PLATE_LOGO_TEXT_RATIO = 3;
+const STAND_PLATE_LOGO_MAX_W_FRACTION = 0.26;
+const STAND_PLATE_LOGO_GAP_FRACTION = 0.12;
+
+/** Widest line and total block height of the plate text, in canvas px. */
+function plateTextMetrics(
+  ctx: CanvasRenderingContext2D | null,
+  filled: readonly GavelBandLineInput[],
+  drawPx: number,
+  drawGap: number,
+): { width: number; height: number } {
+  if (!filled.length) return { width: 0, height: 0 };
+  let width = 0;
+  for (const line of filled) {
+    const text = (line.text ?? "").trim();
+    if (ctx) {
+      ctx.font = fontCss(line, drawPx);
+      width = Math.max(width, ctx.measureText(text).width);
+    } else {
+      // Server render has no canvas to measure with; estimate so the lockup is
+      // still roughly centered.
+      width = Math.max(width, text.length * drawPx * 0.52);
+    }
+  }
+  return {
+    width,
+    height: filled.length * drawPx + Math.max(0, filled.length - 1) * drawGap,
+  };
+}
+
+/**
+ * Artwork layout for the plate. With a logo, the logo and the text are set as
+ * one lockup — logo immediately left of the text with a small margin — and the
+ * pair is centered on the plate. The canvas painter and the print SVG both read
+ * this, so the proof and the manufacturing file cannot drift apart.
+ */
+function standPlateArtLayout(input: {
+  logoAspect?: number | null;
+  logoScale?: number | null;
+  logoGapScale?: number | null;
+  textWidth: number;
+  textHeight: number;
+}) {
+  const width = STAND_PLATE_TEXTURE_W_PX;
+  const height = STAND_PLATE_TEXTURE_H_PX;
+  const inset = standPlateSafeInsetPx();
+  const usableHeight = height - 2 * inset;
+  const aspect = input.logoAspect;
+
+  if (!aspect || !Number.isFinite(aspect) || aspect <= 0) {
+    return { logo: null, textCenterX: width / 2, textMaxWidth: width * 0.86 };
+  }
+
+  const scale = clampGavelLogoScale(input.logoScale ?? 1);
+  const defaultGap = height * STAND_PLATE_LOGO_GAP_FRACTION;
+  /** Breathing room between the logo and the first letter. */
+  const gap = defaultGap * clampGavelLogoGapScale(input.logoGapScale ?? 1);
+  // Scale the logo to the text so the two read as one lockup rather than a
+  // stamp at the end of the plate. With no text the logo carries the plate.
+  const base =
+    input.textHeight > 0
+      ? input.textHeight * STAND_PLATE_LOGO_TEXT_RATIO
+      : usableHeight;
+  let h = Math.min(usableHeight, base * scale);
+  let w = h * aspect;
+  const maxWidth = width * STAND_PLATE_LOGO_MAX_W_FRACTION * scale;
+  if (w > maxWidth) {
+    w = maxWidth;
+    h = w / aspect;
+  }
+
+  const slotGap = input.textWidth > 0 ? gap : 0;
+  const available = width - 2 * inset - w - slotGap;
+  const textWidth = Math.max(0, Math.min(input.textWidth, available));
+  const groupWidth = w + slotGap + textWidth;
+  // Keep the logo clear of the concave notch cut into the plate's left end.
+  // This clearance ignores the customer's margin so a 0% margin cannot push the
+  // art into the notch.
+  const notch = STAND_PLATE_CORNER_R_IN * STAND_PLATE_PX_PER_IN;
+  // Staying inside the safe area wins over the notch clearance, so a large logo
+  // cannot push the text off the right end of the plate.
+  const x = Math.min(
+    Math.max((width - groupWidth) / 2, notch + defaultGap),
+    Math.max(inset, width - inset - groupWidth),
+  );
+
+  return {
+    logo: { x, y: (height - h) / 2, w, h },
+    textCenterX: x + w + slotGap + textWidth / 2,
+    textMaxWidth: Math.max(1, available),
+  };
+}
+
 /**
  * Personalized stand plaque matching the product photos: brushed metal with a
  * dark keyline following the shouldered-cove silhouette.
@@ -322,7 +495,7 @@ export function paintGavelStandPlateCanvas(
   lines: readonly GavelBandLineInput[] | readonly BadgeLine[],
   preset: GavelTextSizePreset,
   plateHex: string = GAVEL_BAND_GOLD_HEX,
-  options?: { solidFill?: boolean; shaped?: boolean },
+  options?: { shaped?: boolean; logo?: GavelPlateLogo | null },
 ): HTMLCanvasElement {
   const width = STAND_PLATE_TEXTURE_W_PX;
   const height = STAND_PLATE_TEXTURE_H_PX;
@@ -340,12 +513,7 @@ export function paintGavelStandPlateCanvas(
     ctx.clip();
   }
 
-  if (options?.solidFill) {
-    ctx.fillStyle = plateHex;
-    ctx.fillRect(0, 0, width, height);
-  } else {
-    fillBrushedMetalBand(ctx, width, height, plateHex);
-  }
+  fillBrushedMetalBand(ctx, width, height, plateHex);
 
   const dark = plateHex.trim().toLowerCase() === "#ffffff" ? "#4f5359" : "#231c13";
   tracePath(ctx, standPlateKeylinePath());
@@ -357,15 +525,44 @@ export function paintGavelStandPlateCanvas(
   if (options?.shaped) ctx.restore();
 
   const filled = activeLines(lines).slice(0, 2);
+  const { drawPx, drawGap, y0 } = bandTextLayout(
+    Math.max(1, filled.length),
+    preset,
+    height,
+    0.62,
+  );
+  const metrics = plateTextMetrics(ctx, filled, drawPx, drawGap);
+  const layout = standPlateArtLayout({
+    logoAspect: options?.logo?.aspect,
+    logoScale: options?.logo?.scale,
+    logoGapScale: options?.logo?.gapScale,
+    textWidth: metrics.width,
+    textHeight: metrics.height,
+  });
+
+  if (options?.logo?.image && layout.logo) {
+    ctx.drawImage(
+      options.logo.image,
+      layout.logo.x,
+      layout.logo.y,
+      layout.logo.w,
+      layout.logo.h,
+    );
+  }
+
   if (!filled.length) return canvas;
-  const { drawPx, drawGap, y0 } = bandTextLayout(filled.length, preset, height, 0.62);
   let y = y0;
   for (const line of filled) {
     ctx.font = fontCss(line, drawPx);
     ctx.fillStyle = line.color?.trim() || GAVEL_DEFAULT_TEXT_COLOR;
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "center";
-    ctx.fillText((line.text ?? "").trim(), width / 2, y, width * 0.86);
+    ctx.fillText(
+      (line.text ?? "").trim(),
+      layout.textCenterX,
+      y,
+      layout.textMaxWidth,
+    );
     y += drawPx + drawGap;
   }
   return canvas;
@@ -375,7 +572,7 @@ export function gavelStandPlateToDataUrl(
   lines: readonly GavelBandLineInput[] | readonly BadgeLine[],
   preset: GavelTextSizePreset,
   plateHex: string = GAVEL_BAND_GOLD_HEX,
-  options?: { solidFill?: boolean; shaped?: boolean },
+  options?: { shaped?: boolean; logo?: GavelPlateLogo | null },
 ): string {
   if (typeof document === "undefined") return "";
   const canvas = document.createElement("canvas");
@@ -420,6 +617,7 @@ export function gavelStandPlateToSvgString(
   lines: readonly GavelBandLineInput[] | readonly BadgeLine[],
   preset: GavelTextSizePreset,
   plateHex: string = GAVEL_BAND_GOLD_HEX,
+  options?: { logo?: GavelPlateLogo | null },
 ): string {
   const width = STAND_PLATE_TEXTURE_W_PX;
   const height = STAND_PLATE_TEXTURE_H_PX;
@@ -430,6 +628,22 @@ export function gavelStandPlateToSvgString(
     height,
     0.62,
   );
+  const measureCtx =
+    typeof document !== "undefined"
+      ? document.createElement("canvas").getContext("2d")
+      : null;
+  const metrics = plateTextMetrics(measureCtx, filled, drawPx, drawGap);
+  const layout = standPlateArtLayout({
+    logoAspect: options?.logo?.aspect,
+    logoScale: options?.logo?.scale,
+    logoGapScale: options?.logo?.gapScale,
+    textWidth: metrics.width,
+    textHeight: metrics.height,
+  });
+  const logoEl =
+    options?.logo?.href && layout.logo
+      ? `<image x="${layout.logo.x.toFixed(2)}" y="${layout.logo.y.toFixed(2)}" width="${layout.logo.w.toFixed(2)}" height="${layout.logo.h.toFixed(2)}" preserveAspectRatio="xMidYMid meet" href="${escapeXml(options.logo.href)}"/>`
+      : "";
   let y = y0;
   const textEls = filled
     .map((line) => {
@@ -438,7 +652,7 @@ export function gavelStandPlateToSvgString(
       const fontStyle = line.italic ? "italic" : "normal";
       const color = line.color?.trim() || GAVEL_DEFAULT_TEXT_COLOR;
       const text = escapeXml((line.text ?? "").trim());
-      const el = `<text x="${width / 2}" y="${y}" text-anchor="middle" font-family="${escapeXml(family)}, Georgia, serif" font-size="${drawPx}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(color)}">${text}</text>`;
+      const el = `<text x="${layout.textCenterX.toFixed(2)}" y="${y}" text-anchor="middle" font-family="${escapeXml(family)}, Georgia, serif" font-size="${drawPx}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(color)}">${text}</text>`;
       y += drawPx + drawGap;
       return el;
     })
@@ -459,6 +673,7 @@ export function gavelStandPlateToSvgString(
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <path d="${cutPath}" fill="${escapeXml(plateHex)}"/>
   <path d="${toPath(standPlateKeylinePath())}" fill="none" stroke="${dark}" stroke-width="${standPlateKeylinePx().toFixed(2)}" stroke-linejoin="round"/>
+  ${logoEl}
   ${textEls}
 </svg>`;
 }

@@ -73,8 +73,13 @@ export type GavelSpinPreviewProps = {
   /** Personalized sound-block top art; toggle is shown when this is set. */
   soundBlockTextureUrl?: string;
   showSoundBlockToggle?: boolean;
-  /** Personalized stand-plate art; toggle is shown when this is set. */
-  plateTextureUrl?: string;
+  /**
+   * Live stand-plate art for the 3D plaque. A canvas rather than a data URL, so
+   * edits reach the mesh without a PNG encode and image decode in between.
+   */
+  plateCanvas?: HTMLCanvasElement | null;
+  /** Bumped by the owner after each repaint of `plateCanvas`. */
+  plateCanvasVersion?: number;
   /** Same art cut to the plaque silhouette, shown flat on the Plate tab. */
   plateProofUrl?: string;
   plateHex?: string;
@@ -129,7 +134,8 @@ export const GavelSpinPreview = forwardRef<
     className = "",
     soundBlockTextureUrl = "",
     showSoundBlockToggle = false,
-    plateTextureUrl = "",
+    plateCanvas = null,
+    plateCanvasVersion = 0,
     plateProofUrl = "",
     plateHex = GAVEL_BAND_GOLD_HEX,
     showStandToggle = false,
@@ -321,9 +327,9 @@ export const GavelSpinPreview = forwardRef<
             <span className="gf-plate-proof-label">
               Stand plate (custom proof)
             </span>
-            {plateProofUrl || plateTextureUrl ? (
+            {plateProofUrl ? (
               <img
-                src={plateProofUrl || plateTextureUrl}
+                src={plateProofUrl}
                 alt="Stand plate with your custom text"
                 className="gf-plate-proof-img is-shaped"
               />
@@ -370,7 +376,8 @@ export const GavelSpinPreview = forwardRef<
             <StandModel
               key={`stand-v${STAND_GEOMETRY_REVISION}`}
               style={style}
-              plateTextureUrl={plateTextureUrl}
+              plateCanvas={plateCanvas}
+              plateCanvasVersion={plateCanvasVersion}
               plateHex={plateHex}
             />
             <group
