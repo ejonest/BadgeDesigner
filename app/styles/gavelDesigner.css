@@ -56,6 +56,17 @@
   margin-bottom: 20px;
 }
 
+/* Storefront embeds sit under the product page's own heading, so the in-tool
+   title is duplicate chrome costing ~90px the wizard needs to fit step 1
+   inside the iframe without an inner scrollbar. */
+.gf-designer-page.gf-embedded .gf-page-title {
+  display: none;
+}
+
+.gf-designer-page.gf-embedded .gf-wizard-root {
+  padding-top: 14px;
+}
+
 .gf-eyebrow {
   color: var(--gf-gold-2);
   font-size: 12px;

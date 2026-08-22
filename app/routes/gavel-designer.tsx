@@ -29,6 +29,7 @@ export const loader: LoaderFunction = async ({ request }) => {
       productId,
       shop,
       customerId: customerId ?? null,
+      embedded: url.searchParams.get("embedded") === "1",
       timestamp: Date.now(),
       GADGET_API_URL: resolveGadgetUrl(gavelCfg),
       GADGET_API_KEY: undefined,
@@ -38,11 +39,15 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 export default function GavelDesignerRoute() {
-  const { productId, shop, customerId, GADGET_API_URL, GADGET_API_KEY } =
+  const { productId, shop, customerId, embedded, GADGET_API_URL, GADGET_API_KEY } =
     useLoaderData<typeof loader>();
 
   return (
-    <div className="gf-designer-page min-h-screen h-full bg-[#f7f4ef]">
+    <div
+      className={`gf-designer-page min-h-screen h-full bg-[#f7f4ef]${
+        embedded ? " gf-embedded" : ""
+      }`}
+    >
       <GavelDesigner
         productId={productId}
         shop={shop}
