@@ -65,6 +65,7 @@ import {
   gavelBandToSvgString,
   gavelStandPlateToDataUrl,
   gavelStandPlateToSvgString,
+  paintGavelStandPlateCanvas,
   soundBlockTopToDataUrl,
   type GavelPlateLogo,
 } from "~/utils/gavelBandTexture";
@@ -289,7 +290,7 @@ export default function GavelDesigner({
   const [bandFinish, setBandFinish] = useState<GavelBandFinishId>("gold");
   const [textSize, setTextSize] = useState<GavelTextSizePreset>("medium");
   const [lines, setLines] = useState<BadgeLine[]>(defaultLines);
-  const [qty, setQty] = useState(10);
+  const [qty, setQty] = useState(1);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -421,11 +422,6 @@ export default function GavelDesigner({
     [logoGapScale, logoScale, makePlateLogo],
   );
 
-  // Repainting the plate is expensive, so the preview trails the sliders by a
-  // deferred render: the thumb keeps up with the pointer while React coalesces
-  // repaints instead of encoding a texture for every pixel of the drag.
-  const deferredPreviewLogo = useDeferredValue(plateLogo);
-
   const renderPlateTexture = useCallback(
     (logo: GavelPlateLogo | null, shaped = false) => {
       if (!isClient || !isStand) return "";
@@ -439,12 +435,48 @@ export default function GavelDesigner({
     [isClient, isStand, plateArtLines, standDef.plateHex, textSize],
   );
 
-  const plateTextureUrl = useMemo(
-    () => renderPlateTexture(deferredPreviewLogo),
-    [deferredPreviewLogo, renderPlateTexture],
-  );
+  /**
+   * The 3D plaque reads this canvas directly. It is repainted in place, once per
+   * animation frame at most, so dragging the logo sliders costs one repaint per
+   * frame instead of a PNG encode and decode per pointer event.
+   */
+  const plateCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [plateCanvas, setPlateCanvas] = useState<HTMLCanvasElement | null>(null);
+  const [plateCanvasVersion, setPlateCanvasVersion] = useState(0);
 
-  /** Same art cut to the plaque silhouette, for the flat proofs. */
+  useEffect(() => {
+    if (!isClient || !isStand) return;
+    if (!plateCanvasRef.current) {
+      plateCanvasRef.current = document.createElement("canvas");
+    }
+    const canvas = plateCanvasRef.current;
+    const frame = requestAnimationFrame(() => {
+      paintGavelStandPlateCanvas(
+        canvas,
+        plateArtLines,
+        textSize,
+        standDef.plateHex,
+        { logo: plateLogo },
+      );
+      setPlateCanvas(canvas);
+      setPlateCanvasVersion((v) => v + 1);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [
+    isClient,
+    isStand,
+    plateArtLines,
+    plateLogo,
+    standDef.plateHex,
+    textSize,
+  ]);
+
+  /**
+   * Same art cut to the plaque silhouette for the flat proof strips. This one
+   * still costs a PNG encode for the `<img>`, so it trails the sliders by a
+   * deferred render rather than running mid-drag.
+   */
+  const deferredPreviewLogo = useDeferredValue(plateLogo);
   const plateProofUrl = useMemo(
     () => renderPlateTexture(deferredPreviewLogo, true),
     [deferredPreviewLogo, renderPlateTexture],
@@ -1874,7 +1906,8 @@ export default function GavelDesigner({
                   soundBlockTextureUrl={soundBlockTextureUrl}
                   showStandToggle={isStand}
                   showFlatProofTabs={isNarrow}
-                  plateTextureUrl={plateTextureUrl}
+                  plateCanvas={plateCanvas}
+                  plateCanvasVersion={plateCanvasVersion}
                   plateProofUrl={plateProofUrl}
                   plateHex={standDef.plateHex}
                   productPhotoSrc={getGavelProductPhoto(

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useState } from "react";
+import { useLayoutEffect, useMemo } from "react";
 import * as THREE from "three";
 import type { GavelStyleDef } from "~/constants/gavelStyles";
 import {
@@ -33,7 +33,14 @@ import {
 
 type Props = {
   style: GavelStyleDef;
-  plateTextureUrl?: string;
+  /**
+   * Live plate artwork. Taking the canvas rather than a PNG data URL keeps
+   * encode and image-decode work off the path from an edit to the screen, which
+   * matters while the logo sliders are being dragged.
+   */
+  plateCanvas?: HTMLCanvasElement | null;
+  /** Bumped by the owner after each repaint, to re-upload the texture. */
+  plateCanvasVersion?: number;
   plateHex: string;
 };
 
@@ -87,11 +94,11 @@ const BODY_DEPS = [
 
 export function StandModel({
   style,
-  plateTextureUrl = "",
+  plateCanvas = null,
+  plateCanvasVersion = 0,
   plateHex,
 }: Props) {
   const woodMaps = useLoadedWoodMaps(style);
-  const [plateMap, setPlateMap] = useState<THREE.Texture | null>(null);
   const bodyGeom = useMemo(() => createStandBodyGeometry(), [...BODY_DEPS]);
   const footerGeom = useMemo(() => createStandFooterGeometry(), [...BODY_DEPS]);
   const topGeom = useMemo(() => createStandTopGeometry(), [...BODY_DEPS]);
@@ -128,24 +135,22 @@ export function StandModel({
     };
   }, [bodyGeom, footerGeom, plateGeom, topGeom, wellGeoms]);
 
+  const plateMap = useMemo(() => {
+    if (!plateCanvas) return null;
+    const tex = new THREE.CanvasTexture(plateCanvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    return tex;
+  }, [plateCanvas]);
+
   useLayoutEffect(() => {
-    if (!plateTextureUrl) {
-      setPlateMap(null);
-      return;
-    }
-    let cancelled = false;
-    const loader = new THREE.TextureLoader();
-    const tex = loader.load(plateTextureUrl, (loaded) => {
-      loaded.colorSpace = THREE.SRGBColorSpace;
-      loaded.anisotropy = 8;
-      loaded.needsUpdate = true;
-      if (!cancelled) setPlateMap(loaded);
-    });
-    return () => {
-      cancelled = true;
-      tex.dispose();
-    };
-  }, [plateTextureUrl]);
+    return () => plateMap?.dispose();
+  }, [plateMap]);
+
+  // The canvas is repainted in place, so the texture only needs re-uploading.
+  useLayoutEffect(() => {
+    if (plateMap) plateMap.needsUpdate = true;
+  }, [plateMap, plateCanvasVersion]);
 
   const tiledColor = useMemo(
     () =>

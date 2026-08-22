@@ -96,11 +96,59 @@ function mulberry32(seed: number) {
 }
 
 /**
+ * Painted metal backgrounds, keyed by size and color. Synthesizing the grain
+ * costs thousands of strokes plus a per-pixel pass, and the result depends only
+ * on the key — so live text and logo edits blit a finished copy instead of
+ * repainting it for every keystroke and slider move.
+ */
+const brushedMetalCache = new Map<string, HTMLCanvasElement>();
+const BRUSHED_METAL_CACHE_MAX = 6;
+
+function brushedMetalCanvas(
+  width: number,
+  height: number,
+  bandHex: string,
+): HTMLCanvasElement | null {
+  if (typeof document === "undefined") return null;
+  const key = `${width}x${height}:${bandHex.trim().toLowerCase()}`;
+  const cached = brushedMetalCache.get(key);
+  if (cached) return cached;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  paintBrushedMetalBand(ctx, width, height, bandHex);
+
+  if (brushedMetalCache.size >= BRUSHED_METAL_CACHE_MAX) {
+    const oldest = brushedMetalCache.keys().next().value;
+    if (oldest !== undefined) brushedMetalCache.delete(oldest);
+  }
+  brushedMetalCache.set(key, canvas);
+  return canvas;
+}
+
+/**
  * Satin brushed metal matching the physical gavel band: warm (or cool) mid-tone,
  * bright rim highlights, and fine horizontal grain. Seeded so the grain is stable
  * across re-renders.
  */
 export function fillBrushedMetalBand(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  bandHex: string,
+) {
+  const cached = brushedMetalCanvas(width, height, bandHex);
+  if (cached) {
+    ctx.drawImage(cached, 0, 0);
+    return;
+  }
+  paintBrushedMetalBand(ctx, width, height, bandHex);
+}
+
+function paintBrushedMetalBand(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
