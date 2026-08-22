@@ -22,7 +22,6 @@ import {
   GAVEL_SAMPLE_PRICING,
   GAVEL_SOUND_BLOCK_IDS,
   GAVEL_SOUND_BLOCK_OPTIONS,
-  GAVEL_STAND_FINISH_IDS,
   GAVEL_STAND_FINISH_OPTIONS,
   GAVEL_STYLE_IDS,
   GAVEL_STYLES,
@@ -45,7 +44,6 @@ import {
   type GavelProductionMethodId,
   type GavelProductType,
   type GavelSoundBlockId,
-  type GavelStandFinishId,
   type GavelStyleId,
   type GavelTextSizePreset,
 } from "~/constants/gavelStyles";
@@ -171,7 +169,6 @@ type GavelDesignerCachePayload = {
   soundBlock?: GavelSoundBlockId;
   soundBlockText?: string;
   suedeBag?: boolean;
-  standFinish?: GavelStandFinishId;
   productionMethod?: GavelProductionMethodId;
   uvTextColor?: string;
   plateLines?: BadgeLine[];
@@ -265,7 +262,6 @@ export default function GavelDesigner({
   const [soundBlock, setSoundBlock] = useState<GavelSoundBlockId>("none");
   const [soundBlockText, setSoundBlockText] = useState("");
   const [suedeBag, setSuedeBag] = useState(false);
-  const [standFinish, setStandFinish] = useState<GavelStandFinishId>("gold");
   const [productionMethod, setProductionMethod] =
     useState<GavelProductionMethodId>("engrave");
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -316,7 +312,12 @@ export default function GavelDesigner({
   const isStand = productType === "stand";
   const styleDef = getGavelStyle(gavelStyle);
   const bandDef = getGavelBandFinish(bandFinish);
-  const standDef = getGavelStandFinish(standFinish);
+  /**
+   * The band and the stand plate are the same metal on the physical product, so
+   * one choice drives both — picking a finish on either step moves the other.
+   */
+  const standDef = getGavelStandFinish(bandFinish);
+  const standFinish = standDef.id;
   const maxChars = GAVEL_MAX_CHARS_PER_LINE[textSize];
 
   const canPickTextColor = isStand && productionMethod === "uvprint";
@@ -380,21 +381,13 @@ export default function GavelDesigner({
 
   const plateTextureUrl = useMemo(() => {
     if (!isClient || !isStand) return "";
-    return gavelStandPlateToDataUrl(
-      plateArtLines,
-      textSize,
-      standDef.plateHex,
-      {
-      solidFill: standDef.id === "white",
-      },
-    );
+    return gavelStandPlateToDataUrl(plateArtLines, textSize, standDef.plateHex);
   }, [isClient, isStand, plateArtLines, standDef, textSize]);
 
   /** Same art cut to the plaque silhouette, for the flat proofs. */
   const plateProofUrl = useMemo(() => {
     if (!isClient || !isStand) return "";
     return gavelStandPlateToDataUrl(plateArtLines, textSize, standDef.plateHex, {
-      solidFill: standDef.id === "white",
       shaped: true,
     });
   }, [isClient, isStand, plateArtLines, standDef, textSize]);
@@ -483,9 +476,6 @@ export default function GavelDesigner({
           }
           if (typeof payload.suedeBag === "boolean") {
             setSuedeBag(payload.suedeBag);
-          }
-          if (includesId(GAVEL_STAND_FINISH_IDS, payload.standFinish)) {
-            setStandFinish(payload.standFinish);
           }
           if (includesId(GAVEL_PRODUCTION_METHOD_IDS, payload.productionMethod)) {
             setProductionMethod(payload.productionMethod);
@@ -589,7 +579,6 @@ export default function GavelDesigner({
         soundBlock,
         soundBlockText,
         suedeBag,
-        standFinish,
         productionMethod,
         uvTextColor,
         plateLines,
@@ -631,7 +620,6 @@ export default function GavelDesigner({
     shop,
     soundBlock,
     soundBlockText,
-    standFinish,
     step,
     suedeBag,
     textSize,
@@ -1221,21 +1209,27 @@ export default function GavelDesigner({
 
                   {isStand ? (
                     <div className="gf-sub-section">
-                      <p className="gf-sub-title">Stand plate finish</p>
+                      <p className="gf-sub-title">Metal finish</p>
                       <div className="gf-pill-row">
                         {GAVEL_STAND_FINISH_OPTIONS.map((f) => (
                           <button
                             key={f.id}
                             type="button"
                             className={`gf-pill ${standFinish === f.id ? "is-selected" : ""}`}
-                            onClick={() => setStandFinish(f.id)}
+                            onClick={() => setBandFinish(f.id)}
                           >
+                            <span
+                              className="gf-swatch"
+                              style={{ background: f.plateHex }}
+                              aria-hidden
+                            />
                             {f.label}
                           </button>
                         ))}
                       </div>
                       <p className="gf-note">
-                        {standDef.note} The stand is the same wood as the gavel.
+                        {standDef.note} The band and stand plate always match,
+                        and the stand is the same wood as the gavel.
                       </p>
                     </div>
                   ) : (
@@ -1293,7 +1287,9 @@ export default function GavelDesigner({
                   </div>
 
                   <div className="gf-sub-section">
-                    <p className="gf-sub-title">Band finish</p>
+                    <p className="gf-sub-title">
+                      {isStand ? "Metal finish (band & plate)" : "Band finish"}
+                    </p>
                     <div className="gf-pill-row">
                       {GAVEL_BAND_FINISHES.map((f) => (
                         <button
@@ -1723,7 +1719,7 @@ export default function GavelDesigner({
                     styleDef.id,
                     productType,
                     soundBlock,
-                    isStand ? standFinish : bandFinish,
+                    bandFinish,
                   )}
                 />
                 {step === "design" ? (
