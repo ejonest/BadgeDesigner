@@ -302,21 +302,44 @@ export async function runSaveToGadget(
     (badgeDesignData as { lines?: unknown }).lines ??
     [];
 
-  const gadgetPayload = {
-    shopId: shopData?.shopId || "75389960447",
-    productId: designData.productId,
-    designId:
-      designData.designId ||
-      `design_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    status: "saved" as const,
-    designData: JSON.stringify(fullDesignDataForStorage),
-    backgroundColor: badgeDesignData.backgroundColor || "#FFFFFF",
-    backingType: badgeDesignData.backing || "magnetic",
-    basePrice: "9.99",
-    backingPrice: "0",
-    totalPrice: "9.99",
-    textLines: JSON.stringify(textLinesForGadget),
-  };
+  const shopifyCustomerId =
+    typeof shopData?.customerId === "string" && shopData.customerId.trim()
+      ? shopData.customerId.trim()
+      : typeof shopData?.userId === "string" && shopData.userId.trim()
+        ? shopData.userId.trim()
+        : typeof shopData?.customer_id === "string" &&
+            shopData.customer_id.trim()
+          ? shopData.customer_id.trim()
+          : undefined;
+
+  const jsonFirstGadget = designerId === "gavel";
+  const gadgetPayload = jsonFirstGadget
+    ? {
+        shopId: shopData?.shopId || "75389960447",
+        productId: designData.productId,
+        designId:
+          designData.designId ||
+          `design_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        status: "saved" as const,
+        designData: JSON.stringify(fullDesignDataForStorage),
+        ...(shopifyCustomerId ? { userId: shopifyCustomerId } : {}),
+      }
+    : {
+        shopId: shopData?.shopId || "75389960447",
+        productId: designData.productId,
+        designId:
+          designData.designId ||
+          `design_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        status: "saved" as const,
+        designData: JSON.stringify(fullDesignDataForStorage),
+        backgroundColor: badgeDesignData.backgroundColor || "#FFFFFF",
+        backingType: badgeDesignData.backing || "magnetic",
+        basePrice: "9.99",
+        backingPrice: "0",
+        totalPrice: "9.99",
+        textLines: JSON.stringify(textLinesForGadget),
+        ...(shopifyCustomerId ? { userId: shopifyCustomerId } : {}),
+      };
 
   const g = def.gadget;
   const graphqlUrl = `${GADGET_API_URL.replace(/\/$/, "")}/api/graphql`;
@@ -465,12 +488,21 @@ export async function runSendOrderDraftToSupabase(
 
       if (thumbnailPngFile && thumbnailPngFile.size > 0) {
         try {
-          const thumbName = `${designId}/${def.lineIdPrefix}-${i}-thumbnail.png`;
+          const thumbType =
+            thumbnailPngFile.type && thumbnailPngFile.type.startsWith("image/")
+              ? thumbnailPngFile.type
+              : "image/jpeg";
+          const thumbExt = thumbType.includes("png")
+            ? "png"
+            : thumbType.includes("webp")
+              ? "webp"
+              : "jpg";
+          const thumbName = `${designId}/${def.lineIdPrefix}-${i}-thumbnail.${thumbExt}`;
           thumbnailUrl = await uploadImageToDesignerBucket(
             def,
             thumbnailPngFile,
             thumbName,
-            "image/png",
+            thumbType,
           );
         } catch (e) {
           console.error(`Thumbnail upload failed line ${i}:`, e);
@@ -831,19 +863,6 @@ export async function runLinkPaidOrderToSupabase(
           .filter((x): x is NonNullable<typeof x> => x != null);
         if (orderSlipItems.length === 0) continue;
 
-        for (const slipItem of orderSlipItems) {
-          const badgeId = slipItem.item.badge_id ?? "";
-          const idx =
-            parseInt(badgeId.replace(new RegExp(`^${def.lineIdPrefix}-`), ""), 10) ||
-            0;
-          slipItem.imageBytes =
-            (await downloadFromDesignerImageBucket(
-              def,
-              designId,
-              `${def.lineIdPrefix}-${idx}-thumbnail.png`,
-            )) ?? undefined;
-        }
-
         const getImageBytes = async (url: string): Promise<Uint8Array | null> => {
           if (url.includes("/storage/v1/object/public/")) {
             const bytes = await downloadBytesFromStorageUrl(url);
@@ -858,6 +877,27 @@ export async function runLinkPaidOrderToSupabase(
             return null;
           }
         };
+
+        for (const slipItem of orderSlipItems) {
+          const badgeId = slipItem.item.badge_id ?? "";
+          const idx =
+            parseInt(badgeId.replace(new RegExp(`^${def.lineIdPrefix}-`), ""), 10) ||
+            0;
+          // Thumbnails are jpg on newer designs and png on older ones, so trust
+          // the stored URL first and only guess at the extension as a fallback.
+          let bytes: Uint8Array | null = null;
+          const storedUrl = slipItem.item.thumbnail_url;
+          if (storedUrl) bytes = await getImageBytes(storedUrl);
+          for (const ext of ["jpg", "png", "webp"]) {
+            if (bytes) break;
+            bytes = await downloadFromDesignerImageBucket(
+              def,
+              designId,
+              `${def.lineIdPrefix}-${idx}-thumbnail.${ext}`,
+            );
+          }
+          slipItem.imageBytes = bytes ?? undefined;
+        }
 
         const pdfBytes = await generateOrderSlipPdf(orderSlipItems, getImageBytes);
         const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });

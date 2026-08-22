@@ -586,6 +586,28 @@ export async function deleteSavedDesignsForUser(
 /** Same row shape as {@link BadgeDesign}; stored in `sign_designs` for the sign designer. */
 export type SignDesign = BadgeDesign;
 
+const GAVEL_DESIGNS_OMIT_COLUMNS = [
+  "background_color",
+  "backing_price",
+  "backing_type",
+  "base_price",
+] as const;
+
+function rowForSignLikeInsert(
+  table: SignLikeDesignsTable,
+  design: SignDesign,
+): SignDesign | Omit<
+  SignDesign,
+  "background_color" | "backing_price" | "backing_type" | "base_price"
+> {
+  if (table !== "gavel_designs") return design;
+  const next = { ...design };
+  for (const col of GAVEL_DESIGNS_OMIT_COLUMNS) {
+    delete next[col];
+  }
+  return next;
+}
+
 /** Persistable logo URL for sign tables — skips empty and data URLs. */
 export function persistedSignUploadedImageUrl(
   src: string | undefined | null,
@@ -632,7 +654,7 @@ async function saveSignLikeDesign(
 
   const { data, error } = await supabaseAdmin
     .from(table)
-    .insert(design)
+    .insert(rowForSignLikeInsert(table, design))
     .select()
     .single();
 
@@ -1314,14 +1336,18 @@ export async function insertOrderedDesignSnapshotFromCart(params: {
     product_id: c.product_id ?? "",
     shop_id: c.shop_id,
     user_id: c.user_id,
-    background_color:
-      (firstBadge?.backgroundColor as string | undefined) ??
-      c.background_color ??
-      "#FFFFFF",
-    backing_type:
-      (firstBadge?.backing as string | undefined) ?? c.backing_type,
-    backing_price: c.backing_price ?? 0,
-    base_price: c.base_price ?? 9.99,
+    ...(params.table === "gavel_designs"
+      ? {}
+      : {
+          background_color:
+            (firstBadge?.backgroundColor as string | undefined) ??
+            c.background_color ??
+            "#FFFFFF",
+          backing_type:
+            (firstBadge?.backing as string | undefined) ?? c.backing_type,
+          backing_price: c.backing_price ?? 0,
+          base_price: c.base_price ?? 9.99,
+        }),
     total_price: c.total_price ?? 9.99,
     design_data: c.design_data,
     thumbnail_url: c.thumbnail_url,
@@ -1552,7 +1578,6 @@ export function convertBadgeToOrderItem(
             finish: formatGavelOrderFinish(
               badge.gavelStyle,
               badge.gavelBandFinish,
-              badge.gavelHandleLength,
             ),
             attachment_method: "none",
           }

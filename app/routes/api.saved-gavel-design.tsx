@@ -28,7 +28,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
         design_id: design.design_id,
         design_data: design.design_data,
         updated_at: design.updated_at,
-        backing_type: design.backing_type ?? undefined,
+        total_price: design.total_price ?? undefined,
       },
     });
   } catch (error) {

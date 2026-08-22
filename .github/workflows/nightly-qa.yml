@@ -83,6 +83,17 @@ jobs:
             npm run test:chrome
           fi
 
+      # Safety net. CI currently runs without Supabase credentials, so the app
+      # uploads nothing and this is a no-op. If secrets are ever added so the
+      # suite exercises the real save path, this keeps QA rows and their
+      # images/PDFs from accumulating the way the local runs did in Aug 2026.
+      - name: Purge QA rows and storage
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/purge-qa-test-data.mjs
+
       - name: Upload HTML report
         if: always()
         uses: actions/upload-artifact@v4

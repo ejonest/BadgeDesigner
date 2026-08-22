@@ -95,6 +95,7 @@ import {
   SIGN_DEFAULT_LINE_TEXTS,
 } from "../constants/signDesignerText";
 import {
+  DRAFT_FULL_BADGE_IMAGE_OPTIONS,
   generateFullBadgeImage,
   generateThumbnailFromFullImage,
 } from "../utils/badgeThumbnail";
@@ -362,6 +363,21 @@ function dataURLToBlob(dataUrl: string): Blob {
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new Blob([bytes], { type: mime });
+}
+
+/**
+ * Thumbnails are rasterised as JPEG (see DRAFT_FULL_BADGE_IMAGE_OPTIONS), so the
+ * uploaded name has to follow the blob's actual type — the server derives the
+ * stored content type from it.
+ */
+function thumbnailFileName(prefix: string, index: number, blob: Blob): string {
+  const type = blob.type || "";
+  const ext = type.includes("webp")
+    ? "webp"
+    : type.includes("jpeg") || type.includes("jpg")
+      ? "jpg"
+      : "png";
+  return `${prefix}-${index}-thumbnail.${ext}`;
 }
 
 /** localStorage key prefix and version for badge designer draft cache (reload persistence). */
@@ -3930,7 +3946,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               }
               try {
                 const [pngBlob, svgBlob, printSvgBlob] = await Promise.all([
-                  generateFullBadgeImage(b, variant).then(dataURLToBlob),
+                  generateFullBadgeImage(
+                    b,
+                    variant,
+                    DRAFT_FULL_BADGE_IMAGE_OPTIONS,
+                  ).then(dataURLToBlob),
                   generateSVGAsBlob(b, tmpl, variant, {
                     forRemoteStorage: true,
                   }),
@@ -3997,7 +4017,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               formData.append(
                 `thumbnail_png_${index}`,
                 pngBlob,
-                `badge-${index}-thumbnail.png`,
+                thumbnailFileName("badge", index, pngBlob),
               );
           });
           svgBlobs.forEach((svgBlob, index) => {
@@ -5905,7 +5925,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       }-design_proof.pdf`;
       const badgePromises = allBadges.map((badge, i) =>
         Promise.all([
-          generateFullBadgeImage(badge, variant).then(dataURLToBlob),
+          generateFullBadgeImage(
+            badge,
+            variant,
+            DRAFT_FULL_BADGE_IMAGE_OPTIONS,
+          ).then(dataURLToBlob),
           generateSVGAsBlob(badge, template, variant),
           generatePrintSVGAsBlob(badge, template, variant),
         ])
@@ -5968,7 +5992,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           formData.append(
             `thumbnail_png_${index}`,
             pngBlob,
-            `${thumbBase}-${index}-thumbnail.png`,
+            thumbnailFileName(thumbBase, index, pngBlob),
           );
         }
       });
@@ -6647,7 +6671,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 if (tmpl) {
                   try {
                     const generated = await Promise.all([
-                      generateFullBadgeImage(b, variant).then(dataURLToBlob),
+                      generateFullBadgeImage(
+                        b,
+                        variant,
+                        DRAFT_FULL_BADGE_IMAGE_OPTIONS,
+                      ).then(dataURLToBlob),
                       generateSVGAsBlob(b, tmpl, variant, storageOpts),
                       generatePrintSVGAsBlob(b, tmpl, variant, storageOpts),
                     ]);
@@ -6694,7 +6722,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   formDataLine.append(
                     `thumbnail_png_${i}`,
                     pngBlob,
-                    `${designerConfig.lineIdPrefix}-${i}-thumbnail.png`,
+                    thumbnailFileName(designerConfig.lineIdPrefix, i, pngBlob),
                   );
                 }
                 if (svgBlob.size > 0) {

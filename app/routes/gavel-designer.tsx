@@ -42,7 +42,7 @@ export default function GavelDesignerRoute() {
     useLoaderData<typeof loader>();
 
   return (
-    <div className="min-h-screen h-full bg-[#f7f4ef]">
+    <div className="gf-designer-page min-h-screen h-full bg-[#f7f4ef]">
       <GavelDesigner
         productId={productId}
         shop={shop}

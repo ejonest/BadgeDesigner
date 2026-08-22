@@ -276,6 +276,13 @@ export async function generateFullBadgeImage(
             canvas.width = Math.max(1, Math.round(viewBoxW * scale));
             canvas.height = Math.max(1, Math.round(viewBoxH * scale));
 
+            // JPEG has no alpha, so anything transparent flattens to black
+            // unless the canvas is painted first.
+            if (rasterFormat === 'image/jpeg') {
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);

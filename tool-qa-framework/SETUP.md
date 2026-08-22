@@ -124,13 +124,58 @@ add-to-cart is blocked, but the Supabase draft path is not). Those runs filled
 **Going forward — `is_qa_test` flag:**
 
 1. Run once: [`docs/migration_add_is_qa_test_to_order_items.sql`](../docs/migration_add_is_qa_test_to_order_items.sql)
+   — **required**, the cleanup below does nothing until the column exists.
 2. Playwright opens `/badge-designer-redesign?qaTest=1`, which marks every new
    row with `is_qa_test = true`.
-3. Later cleanup is just:
-   ```sql
-   DELETE FROM badge_order_items WHERE is_qa_test = true;
+3. After a local run, clear the rows *and* their images/PDFs:
+   ```bash
+   npm run cleanup:dry     # from tool-qa-framework/
+   npm run cleanup
    ```
 4. Dashboards / admin views should filter `WHERE coalesce(is_qa_test, false) = false`.
+
+Rows carrying a `shopify_order_id` are never deleted, so a mis-set flag on a
+real order cannot remove customer data.
+
+Note the nightly GitHub run has **no** Supabase credentials, so the app uploads
+nothing there and only local runs accumulate data. The workflow still calls the
+cleanup as a safety net in case those secrets are added later.
+
+**Storage buckets.** Deleting rows does not free the images and PDFs — those
+live in Supabase Storage and have to be removed through the Storage API.
+Deleting from `storage.objects` in SQL only drops catalog rows and leaves the
+blobs behind, so use the scripts:
+
+```bash
+node --env-file=.env scripts/inspect-supabase-storage.mjs            # read-only inventory
+node --env-file=.env scripts/purge-orphaned-designer-storage.mjs --dry-run
+node --env-file=.env scripts/purge-orphaned-designer-storage.mjs
+```
+
+The purge covers every designer bucket and keeps any `design_*` folder still
+referenced by its order-items table. Files newer than 7 days are left alone
+(`--min-age-days=`) so an in-progress draft is never caught. The Aug 2026 run
+took storage from ~1.9 GB to 285 MB.
+
+**Thumbnail size.** Thumbnails used to be rasterised as full-scale PNG, which
+produced 5–6 MB files for something displayed at a few hundred pixels. Both
+designers now use `DRAFT_FULL_BADGE_IMAGE_OPTIONS` (JPEG, 2x scale, q0.88), and
+the server derives the stored extension and content type from the uploaded
+blob. To re-compress anything already stored:
+
+```bash
+node --env-file=.env scripts/recompress-oversized-thumbnails.mjs --dry-run
+node --env-file=.env scripts/recompress-oversized-thumbnails.mjs
+node --env-file=.env scripts/repair-thumbnail-urls.mjs   # after, to verify
+```
+
+`repair-thumbnail-urls.mjs` finds rows whose `thumbnail_url` points at a file
+that is no longer in the bucket and repoints them at the sibling that is. Run
+it after any conversion; a clean run reports 0 repointed and 0 missing.
+
+Note that Supabase enforces the storage quota on the **billing-period average**
+(GB-Hrs), not live size, so deleting files lowers the reported number gradually
+rather than immediately.
 
 ## Nightly CI on GitHub (non-blocking)
 
