@@ -770,6 +770,45 @@
   display: none;
 }
 
+.gf-logo-adjust {
+  margin-top: 12px;
+}
+
+.gf-logo-adjust-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--gf-muted);
+  margin-bottom: 4px;
+}
+
+.gf-logo-adjust-row label {
+  font-weight: 600;
+  color: var(--gf-navy);
+}
+
+.gf-logo-adjust-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The quantity slider carries a large bottom margin; stacked sliders sit tighter. */
+.gf-range.is-inline {
+  margin-bottom: 12px;
+}
+
+.gf-link-btn {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gf-navy);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .gf-swatch-row {
   display: flex;
   gap: 8px;

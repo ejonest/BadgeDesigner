@@ -558,6 +558,28 @@ export const GAVEL_PRODUCTION_METHOD_OPTIONS: readonly {
   { id: "uvprint", label: "Custom — full color" },
 ];
 
+/**
+ * Customer adjustments for the stand-plate logo, as multipliers of the tuned
+ * default placement: 1 is the size and margin the layout picks on its own.
+ */
+export const GAVEL_LOGO_SCALE_MIN = 0.5;
+export const GAVEL_LOGO_SCALE_MAX = 2;
+export const GAVEL_LOGO_GAP_SCALE_MIN = 0;
+export const GAVEL_LOGO_GAP_SCALE_MAX = 3;
+
+function clampRange(n: number, min: number, max: number): number {
+  if (!Number.isFinite(n)) return 1;
+  return Math.max(min, Math.min(max, n));
+}
+
+export function clampGavelLogoScale(n: number): number {
+  return clampRange(n, GAVEL_LOGO_SCALE_MIN, GAVEL_LOGO_SCALE_MAX);
+}
+
+export function clampGavelLogoGapScale(n: number): number {
+  return clampRange(n, GAVEL_LOGO_GAP_SCALE_MIN, GAVEL_LOGO_GAP_SCALE_MAX);
+}
+
 /** UV-print text colors (single-color engraving always uses the default). */
 export const GAVEL_UV_TEXT_COLORS: readonly string[] = [
   "#1c2430",

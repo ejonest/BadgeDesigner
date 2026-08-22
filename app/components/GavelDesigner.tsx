@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useDeferredValue,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -8,9 +9,15 @@ import {
 } from "react";
 import type { Badge, BadgeLine } from "~/types/badge";
 import {
+  clampGavelLogoGapScale,
+  clampGavelLogoScale,
   GAVEL_BAND_FINISHES,
   GAVEL_BAND_FINISH_IDS,
   GAVEL_DEFAULT_FONT,
+  GAVEL_LOGO_GAP_SCALE_MAX,
+  GAVEL_LOGO_GAP_SCALE_MIN,
+  GAVEL_LOGO_SCALE_MAX,
+  GAVEL_LOGO_SCALE_MIN,
   GAVEL_DEFAULT_TEXT_COLOR,
   GAVEL_FONT_OPTIONS,
   GAVEL_MAX_CHARS_PER_LINE,
@@ -59,6 +66,7 @@ import {
   gavelStandPlateToDataUrl,
   gavelStandPlateToSvgString,
   soundBlockTopToDataUrl,
+  type GavelPlateLogo,
 } from "~/utils/gavelBandTexture";
 import { generateGavelProofPdf } from "~/utils/gavelPdf";
 import { createApi } from "~/utils/api";
@@ -170,6 +178,8 @@ type GavelDesignerCachePayload = {
   soundBlockText?: string;
   suedeBag?: boolean;
   productionMethod?: GavelProductionMethodId;
+  logoScale?: number;
+  logoGapScale?: number;
   uvTextColor?: string;
   plateLines?: BadgeLine[];
   gavelStyle?: GavelStyleId;
@@ -190,6 +200,11 @@ const STEP_LABELS: Record<StepId, string> = {
 };
 
 const QTY_SLIDER_MAX = 50;
+
+/** The logo sliders move continuously; keep stored values tidy for the payload. */
+function roundAdjust(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
 
 type GavelDesignerProps = {
   productId?: string | null;
@@ -265,6 +280,8 @@ export default function GavelDesigner({
   const [productionMethod, setProductionMethod] =
     useState<GavelProductionMethodId>("engrave");
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoScale, setLogoScale] = useState(1);
+  const [logoGapScale, setLogoGapScale] = useState(1);
   const [uvTextColor, setUvTextColor] = useState(GAVEL_UV_TEXT_COLORS[0]);
   const [plateLines, setPlateLines] = useState<BadgeLine[]>(defaultPlateLines);
 
@@ -299,6 +316,8 @@ export default function GavelDesigner({
   /** Skip one cache write after add-to-cart so we do not persist the completed flow. */
   const skipCacheSaveRef = useRef(false);
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  /** Decoded logo, needed before it can be painted into the plate artwork. */
+  const [logoImage, setLogoImage] = useState<HTMLImageElement | null>(null);
   const previewRef = useRef<GavelSpinPreviewHandle>(null);
   /** Last 3D capture, kept so the proof works after the canvas unmounts. */
   const mockupRef = useRef<{ dataUrl: string | null; blob: Blob | null }>({
@@ -379,18 +398,57 @@ export default function GavelDesigner({
     [bandArtLines, bandDef.color, isClient, textSize],
   );
 
-  const plateTextureUrl = useMemo(() => {
-    if (!isClient || !isStand) return "";
-    return gavelStandPlateToDataUrl(plateArtLines, textSize, standDef.plateHex);
-  }, [isClient, isStand, plateArtLines, standDef, textSize]);
+  /** Logo art for the plate; SVG uploads can report no intrinsic size. */
+  const makePlateLogo = useCallback(
+    (scale: number, gapScale: number): GavelPlateLogo | null => {
+      if (!logoImage) return null;
+      const w = logoImage.naturalWidth || logoImage.width;
+      const h = logoImage.naturalHeight || logoImage.height;
+      return {
+        image: logoImage,
+        href: logoDataUrl,
+        aspect: w > 0 && h > 0 ? w / h : 1,
+        scale,
+        gapScale,
+      };
+    },
+    [logoDataUrl, logoImage],
+  );
+
+  /** The placement the customer has committed to: proof PDF and print SVG. */
+  const plateLogo = useMemo(
+    () => makePlateLogo(logoScale, logoGapScale),
+    [logoGapScale, logoScale, makePlateLogo],
+  );
+
+  // Repainting the plate is expensive, so the preview trails the sliders by a
+  // deferred render: the thumb keeps up with the pointer while React coalesces
+  // repaints instead of encoding a texture for every pixel of the drag.
+  const deferredPreviewLogo = useDeferredValue(plateLogo);
+
+  const renderPlateTexture = useCallback(
+    (logo: GavelPlateLogo | null, shaped = false) => {
+      if (!isClient || !isStand) return "";
+      return gavelStandPlateToDataUrl(
+        plateArtLines,
+        textSize,
+        standDef.plateHex,
+        { shaped, logo },
+      );
+    },
+    [isClient, isStand, plateArtLines, standDef.plateHex, textSize],
+  );
+
+  const plateTextureUrl = useMemo(
+    () => renderPlateTexture(deferredPreviewLogo),
+    [deferredPreviewLogo, renderPlateTexture],
+  );
 
   /** Same art cut to the plaque silhouette, for the flat proofs. */
-  const plateProofUrl = useMemo(() => {
-    if (!isClient || !isStand) return "";
-    return gavelStandPlateToDataUrl(plateArtLines, textSize, standDef.plateHex, {
-      shaped: true,
-    });
-  }, [isClient, isStand, plateArtLines, standDef, textSize]);
+  const plateProofUrl = useMemo(
+    () => renderPlateTexture(deferredPreviewLogo, true),
+    [deferredPreviewLogo, renderPlateTexture],
+  );
 
   const soundBlockEngraved = !isStand && soundBlock === "engraved";
   const soundBlockArtText = soundBlockText.trim() || lines[0]?.text?.trim() || "";
@@ -480,6 +538,12 @@ export default function GavelDesigner({
           if (includesId(GAVEL_PRODUCTION_METHOD_IDS, payload.productionMethod)) {
             setProductionMethod(payload.productionMethod);
           }
+          if (typeof payload.logoScale === "number") {
+            setLogoScale(clampGavelLogoScale(payload.logoScale));
+          }
+          if (typeof payload.logoGapScale === "number") {
+            setLogoGapScale(clampGavelLogoGapScale(payload.logoGapScale));
+          }
           if (
             typeof payload.uvTextColor === "string" &&
             (GAVEL_UV_TEXT_COLORS as readonly string[]).includes(
@@ -554,7 +618,6 @@ export default function GavelDesigner({
     const reader = new FileReader();
     reader.onload = () => {
       if (cancelled || typeof reader.result !== "string") return;
-      if (reader.result.length > GAVEL_CACHE_MAX_LOGO_CHARS) return;
       setLogoDataUrl(reader.result);
     };
     reader.readAsDataURL(logoFile);
@@ -562,6 +625,25 @@ export default function GavelDesigner({
       cancelled = true;
     };
   }, [logoFile]);
+
+  useEffect(() => {
+    if (!logoDataUrl) {
+      setLogoImage(null);
+      return;
+    }
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (!cancelled) setLogoImage(img);
+    };
+    img.onerror = () => {
+      if (!cancelled) setLogoImage(null);
+    };
+    img.src = logoDataUrl;
+    return () => {
+      cancelled = true;
+    };
+  }, [logoDataUrl]);
 
   useEffect(() => {
     const cacheKey = getGavelDesignerDraftCacheKey(shop, productId);
@@ -580,6 +662,8 @@ export default function GavelDesigner({
         soundBlockText,
         suedeBag,
         productionMethod,
+        logoScale,
+        logoGapScale,
         uvTextColor,
         plateLines,
         gavelStyle,
@@ -612,6 +696,8 @@ export default function GavelDesigner({
     lines,
     logoDataUrl,
     logoFile,
+    logoGapScale,
+    logoScale,
     plateLines,
     productId,
     productType,
@@ -855,6 +941,8 @@ export default function GavelDesigner({
       gavelBandColor: bandDef.color,
       gavelPlateColor: isStand ? standDef.plateHex : null,
       gavelLogoFileName: logoFile?.name ?? null,
+      gavelLogoScale: logoFile ? logoScale : null,
+      gavelLogoGapScale: logoFile ? logoGapScale : null,
       totalPrice: quote.total,
       timestamp: new Date().toISOString(),
       shopId: shop || readQueryParam("shop") || "test-shop",
@@ -898,6 +986,7 @@ export default function GavelDesigner({
               plateArtLines,
               textSize,
               standDef.plateHex,
+              { logo: plateLogo },
             ),
           ],
           { type: "image/svg+xml" },
@@ -948,7 +1037,9 @@ export default function GavelDesigner({
         standFinish: isStand ? standFinish : undefined,
         productionMethod: isStand ? productionMethod : undefined,
         plateLines: isStand ? plateArtLines : undefined,
-        plateDataUrl: plateTextureUrl || null,
+        // Rendered from the committed placement, since the on-screen texture can
+        // still be a deferred render behind the sliders.
+        plateDataUrl: renderPlateTexture(plateLogo) || null,
         unitPrice: quote.unitPrice,
         estimatedTotal: quote.total,
         logoFileName: logoFile?.name ?? null,
@@ -1519,9 +1610,72 @@ export default function GavelDesigner({
                                 : "Upload logo — vector or silhouette (JPG, PNG, SVG)"}
                           </span>
                         </label>
+                        {logoFile ? (
+                          <div className="gf-logo-adjust">
+                            <div className="gf-logo-adjust-row">
+                              <label htmlFor="gf-logo-size">Logo size</label>
+                              <span className="gf-logo-adjust-value">
+                                {Math.round(logoScale * 100)}%
+                              </span>
+                            </div>
+                            <input
+                              id="gf-logo-size"
+                              type="range"
+                              className="gf-range is-inline"
+                              min={GAVEL_LOGO_SCALE_MIN}
+                              max={GAVEL_LOGO_SCALE_MAX}
+                              step="any"
+                              value={logoScale}
+                              onChange={(e) =>
+                                setLogoScale(
+                                  clampGavelLogoScale(
+                                    roundAdjust(Number(e.target.value)),
+                                  ),
+                                )
+                              }
+                            />
+                            <div className="gf-logo-adjust-row">
+                              <label htmlFor="gf-logo-gap">
+                                Space before text
+                              </label>
+                              <span className="gf-logo-adjust-value">
+                                {Math.round(logoGapScale * 100)}%
+                              </span>
+                            </div>
+                            <input
+                              id="gf-logo-gap"
+                              type="range"
+                              className="gf-range is-inline"
+                              min={GAVEL_LOGO_GAP_SCALE_MIN}
+                              max={GAVEL_LOGO_GAP_SCALE_MAX}
+                              step="any"
+                              value={logoGapScale}
+                              onChange={(e) =>
+                                setLogoGapScale(
+                                  clampGavelLogoGapScale(
+                                    roundAdjust(Number(e.target.value)),
+                                  ),
+                                )
+                              }
+                            />
+                            {logoScale !== 1 || logoGapScale !== 1 ? (
+                              <button
+                                type="button"
+                                className="gf-link-btn"
+                                onClick={() => {
+                                  setLogoScale(1);
+                                  setLogoGapScale(1);
+                                }}
+                              >
+                                Reset logo placement
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
                         <p className="gf-note">
-                          Logo art is attached to your order for our team to
-                          place — it is not shown in the preview yet.
+                          Your logo prints to the left of the plate text. The
+                          original file is attached to your order so our team
+                          works from full-quality art.
                         </p>
                       </div>
                     </>
