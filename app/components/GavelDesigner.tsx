@@ -1168,7 +1168,16 @@ export default function GavelDesigner({
 
         <div className="gf-panel">
           <p className="gf-panel-title">{panelCopy[step].title}</p>
-          <p className="gf-panel-sub gf-panel-sub-lead">{panelCopy[step].sub}</p>
+          {/* The preview label shares this row so the preview frame below it
+              starts level with the first card in the controls column. */}
+          <div className="gf-panel-lead">
+            <p className="gf-panel-sub gf-panel-sub-lead">
+              {panelCopy[step].sub}
+            </p>
+            {showPreview ? (
+              <p className="gf-preview-label">Live preview</p>
+            ) : null}
+          </div>
 
           <div
             className={`gf-design-grid ${showPreview ? "" : "is-single"} ${
@@ -1702,7 +1711,6 @@ export default function GavelDesigner({
 
             {showPreview ? (
               <div className="gf-preview-pane">
-                <p className="gf-preview-label">Live preview</p>
                 <GavelSpinPreviewGate
                   previewRef={previewRef}
                   style={styleDef}

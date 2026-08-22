@@ -16,6 +16,10 @@
   --gf-border: rgba(10, 22, 40, 0.12);
   --gf-muted: #5c6570;
   --gf-text: #0a1628;
+  /* Shared by the controls/preview grid and the description row above it, so
+     the "Live preview" label stays over the preview column. */
+  --gf-design-cols: minmax(0, 1fr) minmax(0, 1.2fr);
+  --gf-design-col-gap: 24px;
   min-height: 100%;
   background: var(--gf-cream);
   color: var(--gf-text);
@@ -228,10 +232,19 @@
 
 .gf-design-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
-  gap: 24px;
+  grid-template-columns: var(--gf-design-cols);
+  gap: var(--gf-design-col-gap);
   align-items: stretch;
   flex: 1;
+}
+
+/* Preview steps put the step description and the preview label on one line,
+   each over its own column of the grid below. */
+.gf-wizard-root.is-preview-step .gf-panel-lead {
+  display: grid;
+  grid-template-columns: var(--gf-design-cols);
+  gap: var(--gf-design-col-gap);
+  align-items: baseline;
 }
 
 /* Steps without a preview: one centered column of choices. */
@@ -407,7 +420,7 @@
   }
 
   .gf-wizard-root.is-preview-step .gf-panel-title,
-  .gf-wizard-root.is-preview-step .gf-panel-sub-lead {
+  .gf-wizard-root.is-preview-step .gf-panel-lead {
     display: none;
   }
 
@@ -439,10 +452,6 @@
     padding: 0;
     background: #fff;
     box-shadow: none;
-  }
-
-  .gf-wizard-root.is-preview-step .gf-preview-label {
-    display: none;
   }
 
   .gf-wizard-root.is-preview-step .gf-design-grid .gf-controls-col {
@@ -927,6 +936,7 @@
   .gf-page-title,
   .gf-stepper,
   .gf-panel-title,
+  .gf-panel-lead,
   .gf-panel-sub,
   .gf-step-nav {
     flex-shrink: 0;
