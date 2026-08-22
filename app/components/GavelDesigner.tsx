@@ -8,6 +8,7 @@ import {
   GAVEL_MAX_CHARS_PER_LINE,
   GAVEL_MAX_LINES,
   GAVEL_PRODUCT_TYPE_OPTIONS,
+  GAVEL_PRODUCT_TYPES,
   GAVEL_PRODUCTION_METHOD_OPTIONS,
   GAVEL_SAMPLE_PRICING,
   GAVEL_SOUND_BLOCK_OPTIONS,
@@ -305,6 +306,14 @@ export default function GavelDesigner({
     void import("~/utils/gavelWoodTexture").then(({ preloadGavelWoodMaps }) => {
       preloadGavelWoodMaps(GAVEL_STYLES);
     });
+  }, []);
+
+  /** Storefront product pages each map to one product type, e.g. ?productType=stand. */
+  useEffect(() => {
+    const requested = readQueryParam("productType") as GavelProductType;
+    if (!GAVEL_PRODUCT_TYPES.includes(requested)) return;
+    setProductType(requested);
+    if (requested === "stand") setSoundBlock("none");
   }, []);
 
   useEffect(() => {
