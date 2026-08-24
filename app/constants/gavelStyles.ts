@@ -25,6 +25,11 @@ export type GavelProductType = (typeof GAVEL_PRODUCT_TYPES)[number];
 export const GAVEL_SOUND_BLOCK_IDS = ["none", "plain", "engraved"] as const;
 export type GavelSoundBlockId = (typeof GAVEL_SOUND_BLOCK_IDS)[number];
 
+/** Block silhouette, chosen after the wood since availability depends on it. */
+export const GAVEL_SOUND_BLOCK_SHAPE_IDS = ["square", "round"] as const;
+export type GavelSoundBlockShapeId =
+  (typeof GAVEL_SOUND_BLOCK_SHAPE_IDS)[number];
+
 export const GAVEL_STAND_FINISH_IDS = ["gold", "silver"] as const;
 export type GavelStandFinishId = (typeof GAVEL_STAND_FINISH_IDS)[number];
 
@@ -526,6 +531,24 @@ export const GAVEL_SOUND_BLOCK_OPTIONS: readonly {
   },
 ];
 
+export const GAVEL_SOUND_BLOCK_SHAPE_OPTIONS: readonly {
+  id: GavelSoundBlockShapeId;
+  label: string;
+}[] = [
+  { id: "square", label: "Square" },
+  { id: "round", label: "Round" },
+];
+
+/**
+ * The round block comes undecorated in every wood — engraving is offered on
+ * the square top only, so there is no priced personalized round variant.
+ */
+export function isGavelRoundSoundBlockAvailable(
+  soundBlock: GavelSoundBlockId,
+): boolean {
+  return soundBlock === "plain";
+}
+
 export const GAVEL_STAND_FINISH_OPTIONS: readonly {
   id: GavelStandFinishId;
   label: string;
@@ -688,6 +711,15 @@ export function getGavelSoundBlock(
   );
 }
 
+export function getGavelSoundBlockShape(
+  id: string | null | undefined,
+): (typeof GAVEL_SOUND_BLOCK_SHAPE_OPTIONS)[number] {
+  return (
+    GAVEL_SOUND_BLOCK_SHAPE_OPTIONS.find((o) => o.id === id) ??
+    GAVEL_SOUND_BLOCK_SHAPE_OPTIONS[0]
+  );
+}
+
 export function getGavelProductionMethod(
   id: string | null | undefined,
 ): (typeof GAVEL_PRODUCTION_METHOD_OPTIONS)[number] {
@@ -706,6 +738,7 @@ export function getGavelProductionMethod(
 const GAVEL_PRODUCT_PHOTOS: Readonly<Record<string, string>> = {
   "walnut|gavel": "/images/gavel/product-walnut-gavel.jpg",
   "walnut|block": "/images/gavel/product-walnut-block.jpg",
+  "walnut|round": "/images/gavel/product-walnut-round-block.svg",
   "walnut|stand": "/images/gavel/product-walnut-stand.jpg",
   "walnut|stand|silver": "/images/gavel/product-walnut-stand-silver.jpg",
   "rubberwood|gavel": "/images/gavel/product-rubberwood-gavel.jpg",
@@ -726,6 +759,10 @@ const GAVEL_PRODUCT_PHOTOS: Readonly<Record<string, string>> = {
 const GAVEL_PRODUCT_PHOTO_FALLBACKS: Readonly<Record<string, string>> = {
   "ebony|gavel": "ebony|block",
   "ebony|stand": "walnut|stand",
+  // Only the walnut round block was photographed; the others borrow their own
+  // wood's square shot rather than showing the wrong colour.
+  "rubberwood|round": "rubberwood|block",
+  "ebony|round": "ebony|block",
 };
 
 /** Photo of the real product matching the configuration being designed. */
@@ -734,14 +771,18 @@ export function getGavelProductPhoto(
   productType: string | null | undefined,
   soundBlockId: string | null | undefined,
   finishId: string | null | undefined,
+  soundBlockShapeId: GavelSoundBlockShapeId = "square",
 ): string {
   const wood = getGavelStyle(styleId).id;
+  const block = getGavelSoundBlock(soundBlockId).id;
   const kit =
     productType === "stand"
       ? "stand"
-      : getGavelSoundBlock(soundBlockId).id === "none"
+      : block === "none"
         ? "gavel"
-        : "block";
+        : soundBlockShapeId === "round"
+          ? "round"
+          : "block";
 
   const key = `${wood}|${kit}`;
   const resolved = GAVEL_PRODUCT_PHOTO_FALLBACKS[key] ?? key;
@@ -855,6 +896,7 @@ export function formatGavelOptionSummary(input: {
   suedeBag: boolean;
   standFinish?: GavelStandFinishId;
   productionMethod?: GavelProductionMethodId;
+  soundBlockShape?: GavelSoundBlockShapeId;
 }): string {
   if (input.productType === "stand") {
     const finish = getGavelStandFinish(input.standFinish);
@@ -863,6 +905,9 @@ export function formatGavelOptionSummary(input: {
     return `Gavel + stand · ${finish.label} plate · ${method.label} · ${bag}`;
   }
   const parts = [getGavelSoundBlock(input.soundBlock).label];
+  if (input.soundBlock !== "none") {
+    parts.push(`${getGavelSoundBlockShape(input.soundBlockShape).label} block`);
+  }
   parts.push(input.suedeBag ? "Suede bag" : "No bag");
   return parts.join(" · ");
 }

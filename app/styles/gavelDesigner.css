@@ -737,6 +737,11 @@
   background: #faeeda;
 }
 
+.gf-pill:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .gf-pill-hint {
   font-size: 12px;
   font-weight: 500;

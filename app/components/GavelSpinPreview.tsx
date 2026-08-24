@@ -72,6 +72,7 @@ export type GavelSpinPreviewProps = {
   className?: string;
   /** Personalized sound-block top art; toggle is shown when this is set. */
   soundBlockTextureUrl?: string;
+  soundBlockShape?: "square" | "round";
   showSoundBlockToggle?: boolean;
   /**
    * Live stand-plate art for the 3D plaque. A canvas rather than a data URL, so
@@ -133,6 +134,7 @@ export const GavelSpinPreview = forwardRef<
     bandHex = GAVEL_BAND_GOLD_HEX,
     className = "",
     soundBlockTextureUrl = "",
+    soundBlockShape = "square",
     showSoundBlockToggle = false,
     plateCanvas = null,
     plateCanvasVersion = 0,
@@ -370,6 +372,7 @@ export const GavelSpinPreview = forwardRef<
           <SoundBlockModel
             style={style}
             topTextureUrl={soundBlockTextureUrl || ""}
+            shape={soundBlockShape}
           />
         ) : viewingStandSet ? (
           <>

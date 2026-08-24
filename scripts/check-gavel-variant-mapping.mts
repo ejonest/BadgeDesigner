@@ -13,7 +13,9 @@ import {
 } from "../app/utils/gavelShopifyCatalog";
 import {
   GAVEL_SOUND_BLOCK_IDS,
+  GAVEL_SOUND_BLOCK_SHAPE_IDS,
   GAVEL_STYLE_IDS,
+  isGavelRoundSoundBlockAvailable,
   type GavelProductType,
 } from "../app/constants/gavelStyles";
 import type { ShopifyProductJs } from "../app/utils/signShopifyCatalog";
@@ -35,23 +37,30 @@ for (const productType of ["gavel", "stand"] as GavelProductType[]) {
 
   for (const styleId of GAVEL_STYLE_IDS) {
     for (const soundBlock of soundBlocks) {
-      const match = resolveGavelVariant(product, {
-        productType,
-        styleId,
-        soundBlock,
-      });
-      const label = `${productType} / ${styleId} / ${soundBlock}`;
-      if (!match) {
-        failures.push(`${label}: no variant matched`);
-        continue;
+      for (const shape of GAVEL_SOUND_BLOCK_SHAPE_IDS) {
+        if (shape === "round" && soundBlock === "none") continue;
+        if (shape === "round" && !isGavelRoundSoundBlockAvailable(soundBlock)) {
+          continue;
+        }
+        const match = resolveGavelVariant(product, {
+          productType,
+          styleId,
+          soundBlock,
+          soundBlockShape: shape,
+        });
+        const label = `${productType} / ${styleId} / ${soundBlock} / ${shape}`;
+        if (!match) {
+          failures.push(`${label}: no variant matched`);
+          continue;
+        }
+        if (!(match.price > 0)) {
+          failures.push(`${label}: price ${match.price}`);
+          continue;
+        }
+        console.log(
+          `ok  ${label.padEnd(44)} → ${match.variantId}  $${match.price.toFixed(2)}  ${match.title}`,
+        );
       }
-      if (!(match.price > 0)) {
-        failures.push(`${label}: price ${match.price}`);
-        continue;
-      }
-      console.log(
-        `ok  ${label.padEnd(34)} → ${match.variantId}  $${match.price.toFixed(2)}  ${match.title}`,
-      );
     }
   }
 }

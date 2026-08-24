@@ -29,6 +29,8 @@ import {
   GAVEL_SAMPLE_PRICING,
   GAVEL_SOUND_BLOCK_IDS,
   GAVEL_SOUND_BLOCK_OPTIONS,
+  GAVEL_SOUND_BLOCK_SHAPE_IDS,
+  GAVEL_SOUND_BLOCK_SHAPE_OPTIONS,
   GAVEL_STAND_FINISH_OPTIONS,
   GAVEL_STYLE_IDS,
   GAVEL_STYLES,
@@ -43,14 +45,17 @@ import {
   getGavelProductPhoto,
   getGavelProductionMethod,
   getGavelSoundBlock,
+  getGavelSoundBlockShape,
   getGavelStandFinish,
   getGavelStyle,
   getSoundBlockTopTextColor,
+  isGavelRoundSoundBlockAvailable,
   quoteGavelPrice,
   type GavelBandFinishId,
   type GavelProductionMethodId,
   type GavelProductType,
   type GavelSoundBlockId,
+  type GavelSoundBlockShapeId,
   type GavelStyleId,
   type GavelTextSizePreset,
 } from "~/constants/gavelStyles";
@@ -186,6 +191,7 @@ type GavelDesignerCachePayload = {
   visited?: StepId[];
   productType?: GavelProductType;
   soundBlock?: GavelSoundBlockId;
+  soundBlockShape?: GavelSoundBlockShapeId;
   soundBlockText?: string;
   suedeBag?: boolean;
   productionMethod?: GavelProductionMethodId;
@@ -316,6 +322,8 @@ export default function GavelDesigner({
 
   const [productType, setProductType] = useState<GavelProductType>("gavel");
   const [soundBlock, setSoundBlock] = useState<GavelSoundBlockId>("none");
+  const [soundBlockShape, setSoundBlockShape] =
+    useState<GavelSoundBlockShapeId>("square");
   const [soundBlockText, setSoundBlockText] = useState("");
   const [suedeBag, setSuedeBag] = useState(false);
   const [productionMethod, setProductionMethod] =
@@ -529,6 +537,12 @@ export default function GavelDesigner({
   );
 
   const soundBlockEngraved = !isStand && soundBlock === "engraved";
+  const hasSoundBlock = !isStand && soundBlock !== "none";
+  const roundBlockAvailable =
+    hasSoundBlock && isGavelRoundSoundBlockAvailable(soundBlock);
+  /** Never price or draw a round block the store cannot make. */
+  const effectiveSoundBlockShape: GavelSoundBlockShapeId =
+    soundBlockShape === "round" && roundBlockAvailable ? "round" : "square";
   const soundBlockArtText = soundBlockText.trim() || lines[0]?.text?.trim() || "";
   const soundBlockTextureUrl = useMemo(() => {
     if (!isClient || !soundBlockEngraved || !soundBlockArtText) return "";
@@ -594,6 +608,7 @@ export default function GavelDesigner({
     suedeBag,
     standFinish,
     productionMethod,
+    soundBlockShape: effectiveSoundBlockShape,
   });
   const finishSummary = isStand
     ? `${formatGavelOrderFinish(gavelStyle, bandFinish)} · ${standDef.label} plate`
@@ -637,6 +652,11 @@ export default function GavelDesigner({
           }
           if (includesId(GAVEL_SOUND_BLOCK_IDS, payload.soundBlock)) {
             setSoundBlock(payload.soundBlock);
+          }
+          if (
+            includesId(GAVEL_SOUND_BLOCK_SHAPE_IDS, payload.soundBlockShape)
+          ) {
+            setSoundBlockShape(payload.soundBlockShape);
           }
           if (typeof payload.soundBlockText === "string") {
             setSoundBlockText(payload.soundBlockText);
@@ -768,6 +788,7 @@ export default function GavelDesigner({
         visited,
         productType,
         soundBlock,
+        soundBlockShape,
         soundBlockText,
         suedeBag,
         productionMethod,
@@ -814,6 +835,7 @@ export default function GavelDesigner({
     qty,
     shop,
     soundBlock,
+    soundBlockShape,
     soundBlockText,
     step,
     suedeBag,
@@ -832,6 +854,7 @@ export default function GavelDesigner({
       productType,
       styleId: gavelStyle,
       soundBlock: productType === "stand" ? "none" : soundBlock,
+      soundBlockShape: effectiveSoundBlockShape,
     });
     if (match) {
       setVariantId(match.variantId);
@@ -845,7 +868,13 @@ export default function GavelDesigner({
       readQueryParam("variantIdSign");
     setVariantId(styleVariant);
     setStoreUnitPrice(parsePrice(readQueryParam("price")));
-  }, [gavelStyle, productType, soundBlock, storeProduct]);
+  }, [
+    effectiveSoundBlockShape,
+    gavelStyle,
+    productType,
+    soundBlock,
+    storeProduct,
+  ]);
 
   useEffect(() => {
     setPlateLines((prev) =>
@@ -859,6 +888,11 @@ export default function GavelDesigner({
   useEffect(() => {
     if (!standDef.allowsUvPrint) setProductionMethod("engrave");
   }, [standDef.allowsUvPrint]);
+
+  /** Drop back to the square block when the round one is not offered. */
+  useEffect(() => {
+    if (!roundBlockAvailable) setSoundBlockShape("square");
+  }, [roundBlockAvailable]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -961,6 +995,7 @@ export default function GavelDesigner({
       gavelHandleLength: "standard",
       gavelProductType: productType,
       gavelSoundBlock: isStand ? "none" : soundBlock,
+      gavelSoundBlockShape: isStand ? "square" : effectiveSoundBlockShape,
       gavelSoundBlockText: soundBlockEngraved ? soundBlockArtText : "",
       gavelSuedeBag: suedeBag,
       gavelStandFinish: isStand ? standFinish : undefined,
@@ -971,6 +1006,7 @@ export default function GavelDesigner({
     bandArtLines,
     bandDef.color,
     bandFinish,
+    effectiveSoundBlockShape,
     gavelStyle,
     isStand,
     plateArtLines,
@@ -1057,6 +1093,7 @@ export default function GavelDesigner({
       gavelHandleLength: "standard" as const,
       gavelProductType: productType,
       gavelSoundBlock: soundBlock,
+      gavelSoundBlockShape: effectiveSoundBlockShape,
       gavelSoundBlockText: soundBlockEngraved ? soundBlockArtText : "",
       gavelSuedeBag: suedeBag,
       gavelStandFinish: isStand ? standFinish : null,
@@ -1155,6 +1192,7 @@ export default function GavelDesigner({
         unwrappedDataUrl: bandTextureUrl,
         productType,
         soundBlock: isStand ? "none" : soundBlock,
+        soundBlockShape: effectiveSoundBlockShape,
         soundBlockText: soundBlockEngraved ? soundBlockArtText : "",
         soundBlockDataUrl: soundBlockTextureUrl || null,
         suedeBag,
@@ -1249,6 +1287,13 @@ export default function GavelDesigner({
               }
             : {
                 "_Sound Block": getGavelSoundBlock(soundBlock).label,
+                ...(hasSoundBlock
+                  ? {
+                      "_Sound Block Shape": getGavelSoundBlockShape(
+                        effectiveSoundBlockShape,
+                      ).label,
+                    }
+                  : {}),
                 ...(soundBlockEngraved && soundBlockArtText
                   ? { "Sound Block Text": soundBlockArtText }
                   : {}),
@@ -1498,7 +1543,8 @@ export default function GavelDesigner({
                       <p className="gf-note">
                         Personalization goes on the wood top of the sound block,
                         independent of the gavel band — you can customize one,
-                        both, or neither.
+                        both, or neither. You pick the block shape in the next
+                        step.
                       </p>
                     </div>
                   )}
@@ -1557,6 +1603,38 @@ export default function GavelDesigner({
                         : ""}
                     </p>
                   </div>
+
+                  {hasSoundBlock ? (
+                    <div className="gf-sub-section">
+                      <p className="gf-sub-title">Sound block shape</p>
+                      <div className="gf-pill-row">
+                        {GAVEL_SOUND_BLOCK_SHAPE_OPTIONS.map((s) => {
+                          const unavailable =
+                            s.id === "round" && !roundBlockAvailable;
+                          return (
+                            <button
+                              key={s.id}
+                              type="button"
+                              className={`gf-pill ${
+                                effectiveSoundBlockShape === s.id
+                                  ? "is-selected"
+                                  : ""
+                              }`}
+                              disabled={unavailable}
+                              onClick={() => setSoundBlockShape(s.id)}
+                            >
+                              {s.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="gf-note">
+                        {roundBlockAvailable
+                          ? "The round block is plain in every wood — personalization is on the square top only."
+                          : "Personalized sound blocks are square. Choose the plain block in step 1 for the round option."}
+                      </p>
+                    </div>
+                  ) : null}
                 </>
               ) : null}
 
@@ -2013,8 +2091,9 @@ export default function GavelDesigner({
                   style={styleDef}
                   bandTextureUrl={bandTextureUrl}
                   bandHex={bandDef.color}
-                  showSoundBlockToggle={soundBlockEngraved}
+                  showSoundBlockToggle={hasSoundBlock}
                   soundBlockTextureUrl={soundBlockTextureUrl}
+                  soundBlockShape={effectiveSoundBlockShape}
                   showStandToggle={isStand}
                   showFlatProofTabs={isNarrow}
                   plateCanvas={plateCanvas}
@@ -2026,6 +2105,7 @@ export default function GavelDesigner({
                     productType,
                     soundBlock,
                     bandFinish,
+                    effectiveSoundBlockShape,
                   )}
                 />
                 {step === "design" ? (
