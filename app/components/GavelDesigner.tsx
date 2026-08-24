@@ -72,6 +72,16 @@ import {
 import { generateGavelProofPdf } from "~/utils/gavelPdf";
 import { createApi } from "~/utils/api";
 import {
+  GAVEL_PRODUCT_HANDLES,
+  SUEDE_BAG_PRODUCT_HANDLE,
+  resolveGavelVariant,
+  resolveSuedeBagVariant,
+} from "~/utils/gavelShopifyCatalog";
+import {
+  isShopifyProductJsPayload,
+  type ShopifyProductJs,
+} from "~/utils/signShopifyCatalog";
+import {
   getDesignerApiPaths,
   getDesignerConfig,
 } from "~/config/designers";
@@ -264,6 +274,36 @@ function parsePrice(raw: string): number | null {
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
+/**
+ * Which Shopify product prices the chosen kit. The embed passes the handle of
+ * the page the designer is on, so that one wins for its own product type;
+ * switching type inside the wizard falls back to the known handles.
+ */
+function gavelProductHandleFor(productType: GavelProductType): string {
+  const embedHandle = readQueryParam("productHandle");
+  if (embedHandle && readQueryParam("productType") === productType) {
+    return embedHandle;
+  }
+  return GAVEL_PRODUCT_HANDLES[productType];
+}
+
+/** Live variants/prices for one product handle, or null when unavailable. */
+async function fetchStoreProduct(
+  handle: string,
+  shopHost: string,
+): Promise<ShopifyProductJs | null> {
+  const params = new URLSearchParams({ handle });
+  if (shopHost) params.set("shop", shopHost);
+  try {
+    const res = await fetch(`/api/shopify-product?${params.toString()}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return isShopifyProductJsPayload(data) ? data : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function GavelDesigner({
   productId,
   shop,
@@ -300,6 +340,12 @@ export default function GavelDesigner({
   const [pendingPdfBlob, setPendingPdfBlob] = useState<Blob | null>(null);
   const [variantId, setVariantId] = useState("");
   const [storeUnitPrice, setStoreUnitPrice] = useState<number | null>(null);
+  /** Live catalog for the current product type, used to price wood + sound block. */
+  const [storeProduct, setStoreProduct] = useState<ShopifyProductJs | null>(
+    null,
+  );
+  /** Suede bag add-on product; billed as its own cart line. */
+  const [bagProduct, setBagProduct] = useState<ShopifyProductJs | null>(null);
   /** Canvas textures only exist in the browser; keep first paint SSR-identical. */
   const [isClient, setIsClient] = useState(false);
   /**
@@ -503,6 +549,36 @@ export default function GavelDesigner({
     soundBlockEngraved,
   ]);
 
+  const shopHost =
+    shop || readQueryParam("shop") || readQueryParam("storeUrl");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchStoreProduct(gavelProductHandleFor(productType), shopHost).then(
+      (product) => {
+        if (!cancelled) setStoreProduct(product);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [productType, shopHost]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchStoreProduct(SUEDE_BAG_PRODUCT_HANDLE, shopHost).then((product) => {
+      if (!cancelled) setBagProduct(product);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [shopHost]);
+
+  const bagVariant = useMemo(
+    () => resolveSuedeBagVariant(bagProduct),
+    [bagProduct],
+  );
+
   const hasText = lines.some((l) => (l.text ?? "").trim());
   const quote = quoteGavelPrice({
     productType,
@@ -510,6 +586,7 @@ export default function GavelDesigner({
     suedeBag,
     quantity: qty,
     storeUnitPrice,
+    suedeBagUnitPrice: bagVariant?.price ?? null,
   });
   const optionSummary = formatGavelOptionSummary({
     productType,
@@ -745,7 +822,22 @@ export default function GavelDesigner({
     visited,
   ]);
 
+  /**
+   * Price and variant follow the wood + sound block the customer picked. The
+   * `variantId`/`price` query params the embed passes are only a fallback: they
+   * describe the product's first variant, not the chosen combination.
+   */
   useEffect(() => {
+    const match = resolveGavelVariant(storeProduct, {
+      productType,
+      styleId: gavelStyle,
+      soundBlock: productType === "stand" ? "none" : soundBlock,
+    });
+    if (match) {
+      setVariantId(match.variantId);
+      setStoreUnitPrice(match.price);
+      return;
+    }
     const key = `variantId${gavelStyle.charAt(0).toUpperCase()}${gavelStyle.slice(1)}`;
     const styleVariant =
       readQueryParam(key) ||
@@ -753,7 +845,7 @@ export default function GavelDesigner({
       readQueryParam("variantIdSign");
     setVariantId(styleVariant);
     setStoreUnitPrice(parsePrice(readQueryParam("price")));
-  }, [gavelStyle]);
+  }, [gavelStyle, productType, soundBlock, storeProduct]);
 
   useEffect(() => {
     setPlateLines((prev) =>
@@ -1166,13 +1258,32 @@ export default function GavelDesigner({
       });
 
       const vid = variantId || "0";
-      const result = await apiRef.current.addToCartMultiple([
+      const lineQty = clampBadgeLineQty(qty);
+      const cartLines = [
         {
           variantId: vid,
-          quantity: clampBadgeLineQty(qty),
+          quantity: lineQty,
           properties,
         },
-      ]);
+      ];
+      /**
+       * The bag is its own product, so it bills as a second line carrying the
+       * same Design ID — that is what the theme matches on when an edited
+       * design replaces the lines it came from. It deliberately omits
+       * `_Designer`, which is how the order webhook tells design lines apart
+       * from add-ons; tagging it would queue a duplicate proof for production.
+       */
+      if (suedeBag && bagVariant) {
+        cartLines.push({
+          variantId: bagVariant.variantId,
+          quantity: lineQty,
+          properties: {
+            "_Design ID": designId,
+            For: `${styleDef.label} ${isStand ? "gavel + stand" : "gavel"}`,
+          },
+        });
+      }
+      const result = await apiRef.current.addToCartMultiple(cartLines);
       if (!result.success) {
         throw new Error(result.message || "Add to cart failed");
       }

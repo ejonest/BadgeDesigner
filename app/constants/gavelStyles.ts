@@ -775,12 +775,18 @@ export type GavelPriceQuote = {
   /** True when tiers come from the sample table, not the store. */
   isSample: boolean;
   tierNote: string;
+  /** Suede bag charge folded into unitPrice, so the cart can bill it as its own line. */
+  suedeBagUnitPrice: number;
 };
 
 /**
  * Quantity pricing for the designer's estimate panel.
  * With a store price we show it flat (no invented volume discounts);
  * without one we fall back to the sample tier table for demos.
+ *
+ * The store price already covers the sound block — it is a product option — so
+ * only the suede bag is added on top of it. The sample table still adds the
+ * block, since those tiers describe a bare gavel.
  */
 export function quoteGavelPrice(input: {
   productType: GavelProductType;
@@ -788,22 +794,38 @@ export function quoteGavelPrice(input: {
   suedeBag: boolean;
   quantity: number;
   storeUnitPrice?: number | null;
+  /** Live price of the suede bag product, when the catalog resolved it. */
+  suedeBagUnitPrice?: number | null;
 }): GavelPriceQuote {
   const qty = Math.max(1, Math.round(input.quantity));
-  const addOns =
-    (input.soundBlock !== "none" ? GAVEL_SAMPLE_PRICING.soundBlockAdd : 0) +
-    (input.suedeBag ? GAVEL_SAMPLE_PRICING.suedeBagAdd : 0);
+  const bagFromStore =
+    typeof input.suedeBagUnitPrice === "number" &&
+    Number.isFinite(input.suedeBagUnitPrice) &&
+    input.suedeBagUnitPrice > 0
+      ? input.suedeBagUnitPrice
+      : null;
+  const bagAdd = input.suedeBag
+    ? bagFromStore ?? GAVEL_SAMPLE_PRICING.suedeBagAdd
+    : 0;
 
   const store = input.storeUnitPrice;
   if (typeof store === "number" && Number.isFinite(store) && store > 0) {
-    const unitPrice = store + addOns;
+    const unitPrice = store + bagAdd;
     return {
       unitPrice,
       total: unitPrice * qty,
       isSample: false,
-      tierNote: "Store pricing — add-ons estimated.",
+      tierNote:
+        input.suedeBag && !bagFromStore
+          ? "Store pricing — suede bag estimated."
+          : "Store pricing.",
+      suedeBagUnitPrice: bagAdd,
     };
   }
+
+  const addOns =
+    (input.soundBlock !== "none" ? GAVEL_SAMPLE_PRICING.soundBlockAdd : 0) +
+    bagAdd;
 
   const table = GAVEL_SAMPLE_PRICING[input.productType];
   const tier =
@@ -818,6 +840,7 @@ export function quoteGavelPrice(input: {
     total: unitPrice * qty,
     isSample: true,
     tierNote: "Sample pricing for demo — not final.",
+    suedeBagUnitPrice: bagAdd,
   };
 }
 
