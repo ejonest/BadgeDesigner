@@ -2082,6 +2082,14 @@ export default function GavelDesigner({
                   best.
                 </p>
               ) : null}
+
+              {showPreview ? (
+                <p className="gf-disclaimer">
+                  The 3D preview is an illustration to help you place your
+                  personalization. The actual product may differ — see the
+                  product photo in the preview for accurate product details.
+                </p>
+              ) : null}
             </div>
 
             {showPreview ? (
