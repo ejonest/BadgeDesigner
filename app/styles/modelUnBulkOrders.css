@@ -1,0 +1,503 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap");
+
+.mun-page {
+  min-height: 100vh;
+  color: #172238;
+  background: linear-gradient(#fff 0, #fbfaf7 100%);
+  font-family: "DM Sans", system-ui, sans-serif;
+}
+
+.mun-page * {
+  box-sizing: border-box;
+}
+
+.mun-trustbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 28px;
+  padding: 13px max(24px, calc((100vw - 1450px) / 2));
+  color: white;
+  background: #0b2341;
+}
+
+.mun-trustbar > div {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  column-gap: 10px;
+  align-items: center;
+}
+
+.mun-trustbar > div > span {
+  grid-row: 1 / 3;
+  color: #d88900;
+  font-size: 25px;
+  text-align: center;
+}
+
+.mun-trustbar strong {
+  font-size: 12px;
+}
+
+.mun-trustbar small {
+  color: #d6deea;
+  font-size: 10px;
+}
+
+.mun-wrap {
+  width: min(1450px, calc(100% - 48px));
+  margin: 0 auto;
+}
+
+.mun-breadcrumb {
+  padding: 24px 0 8px;
+  color: #6e737b;
+  font-size: 12px;
+}
+
+.mun-breadcrumb span {
+  margin: 0 10px;
+  color: #a6abb2;
+}
+
+.mun-title {
+  padding: 4px 12px 25px;
+  text-align: center;
+}
+
+.mun-title p {
+  margin: 0 0 4px;
+  color: #b66f00;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mun-title h1 {
+  margin: 0 0 8px;
+  color: #0b2341;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(34px, 4vw, 50px);
+}
+
+.mun-title span {
+  color: #5f6470;
+  font-size: 15px;
+}
+
+.mun-tool {
+  padding: 24px 28px;
+  border: 1px solid #eee8de;
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 8px 28px rgba(16, 38, 68, 0.08);
+}
+
+.mun-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 38px;
+  padding: 0 55px 23px;
+  border-bottom: 1px solid #e6e2d9;
+}
+
+.mun-steps > div {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.mun-steps > div:not(:last-child)::after {
+  position: absolute;
+  right: -20px;
+  color: #afb5bd;
+  content: "›";
+  font-size: 28px;
+}
+
+.mun-steps b {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: #f1f1ef;
+}
+
+.mun-steps .is-active b {
+  color: white;
+  background: #0b2341;
+}
+
+.mun-steps span {
+  display: grid;
+}
+
+.mun-steps strong {
+  color: #172238;
+  font-size: 13px;
+}
+
+.mun-steps small {
+  color: #6a6f78;
+  font-size: 11px;
+}
+
+.mun-tool-grid {
+  display: grid;
+  grid-template-columns: minmax(450px, 1.15fr) minmax(310px, 0.9fr) minmax(260px, 0.72fr);
+  gap: 27px;
+  padding-top: 24px;
+}
+
+.mun-tool-grid h2 {
+  margin: 0 0 13px;
+  color: #172238;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.mun-products {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.mun-products button {
+  display: flex;
+  min-width: 0;
+  padding: 7px 7px 10px;
+  flex-direction: column;
+  border: 1px solid #ddd7cd;
+  border-radius: 11px;
+  color: #172238;
+  background: white;
+  cursor: pointer;
+}
+
+.mun-products button.is-selected {
+  border-color: #d88900;
+  box-shadow: 0 0 0 1px #d88900;
+}
+
+.mun-products button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.mun-product-photo {
+  width: 100%;
+  /* Product photos are roughly 2.3:1, so a square tile cropped off the handle. */
+  aspect-ratio: 3 / 2;
+  margin-bottom: 8px;
+  padding: 8px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f2eee8;
+}
+
+.mun-product-photo img,
+.mun-preview-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* Photos ship on white; multiply drops it into the tile background. */
+  mix-blend-mode: multiply;
+}
+
+.mun-products strong {
+  width: 100%;
+  overflow: hidden;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 12px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mun-products small {
+  width: 100%;
+  margin-top: 2px;
+  color: #5b6069;
+  font-size: 10px;
+  text-align: center;
+}
+
+.mun-bulk-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.mun-bulk-toggle input {
+  position: absolute;
+  opacity: 0;
+}
+
+.mun-bulk-toggle > span {
+  width: 42px;
+  padding: 3px;
+  border-radius: 20px;
+  background: #d9d9d6;
+}
+
+.mun-bulk-toggle i {
+  display: block;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  transition: transform 160ms ease;
+}
+
+.mun-bulk-toggle input:checked + span {
+  background: #d88900;
+}
+
+.mun-bulk-toggle input:checked + span i {
+  transform: translateX(17px);
+}
+
+.mun-helper {
+  margin: 7px 0 0 52px;
+  color: #6a6f78;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.mun-preview,
+.mun-summary {
+  padding-left: 25px;
+  border-left: 1px solid #e6e2d9;
+}
+
+.mun-preview-photo {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  aspect-ratio: 1.6;
+  padding: 18px;
+  border-radius: 11px;
+  background: #f1ede7;
+}
+
+.mun-view-pills {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mun-view-pills span {
+  padding: 7px 11px;
+  border-radius: 6px;
+  color: #536070;
+  background: #eee;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.mun-view-pills span:first-child {
+  color: white;
+  background: #0b2341;
+}
+
+.mun-plaque {
+  display: grid;
+  min-height: 80px;
+  padding: 14px 10px;
+  place-content: center;
+  border: 2px solid #9f6807;
+  border-radius: 8px;
+  color: #2d2108;
+  background: linear-gradient(120deg, #b87906, #e2b457 55%, #b87906);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2);
+  font-family: Georgia, serif;
+  text-align: center;
+}
+
+.mun-plaque strong {
+  font-size: 14px;
+}
+
+.mun-plaque span {
+  margin-top: 3px;
+  font-size: 12px;
+}
+
+.mun-summary dl {
+  margin: 14px 0;
+}
+
+.mun-summary dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 9px 0;
+  font-size: 11px;
+}
+
+.mun-summary dt {
+  color: #606672;
+}
+
+.mun-summary dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+}
+
+.mun-cta {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: white;
+  background: #d88900;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.mun-cta:hover {
+  background: #bd7600;
+}
+
+.mun-benefits {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 16px 0 34px;
+  padding: 20px;
+  border: 1px solid #ece6dc;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.mun-benefits > div {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 0 18px;
+}
+
+.mun-benefits > div + div {
+  border-left: 1px solid #e6e2d9;
+}
+
+.mun-benefits b {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 11px;
+  color: #d88900;
+  background: #fff3df;
+  font-size: 22px;
+}
+
+.mun-benefits span {
+  display: grid;
+}
+
+.mun-benefits strong {
+  font-size: 11px;
+}
+
+.mun-benefits small {
+  margin-top: 3px;
+  color: #5d6470;
+  font-size: 10px;
+}
+
+@media (max-width: 1080px) {
+  .mun-trustbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mun-tool-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mun-summary {
+    grid-column: 1 / -1;
+    padding: 22px 0 0;
+    border-top: 1px solid #e6e2d9;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .mun-wrap {
+    width: min(100% - 28px, 1450px);
+  }
+
+  .mun-trustbar {
+    grid-template-columns: 1fr;
+    padding: 12px 18px;
+  }
+
+  .mun-trustbar > div:nth-child(n + 3) {
+    display: none;
+  }
+
+  .mun-tool {
+    padding: 18px;
+  }
+
+  .mun-steps {
+    gap: 8px;
+    padding: 0 0 18px;
+  }
+
+  .mun-steps > div:not(:last-child)::after,
+  .mun-steps small {
+    display: none;
+  }
+
+  .mun-steps > div {
+    justify-content: center;
+  }
+
+  .mun-steps strong {
+    font-size: 10px;
+  }
+
+  .mun-tool-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mun-products {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mun-preview,
+  .mun-summary {
+    grid-column: auto;
+    padding: 20px 0 0;
+    border-top: 1px solid #e6e2d9;
+    border-left: 0;
+  }
+
+  .mun-benefits {
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .mun-benefits > div {
+    padding: 0;
+  }
+
+  .mun-benefits > div + div {
+    border-left: 0;
+  }
+}
