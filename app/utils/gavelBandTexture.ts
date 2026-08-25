@@ -836,7 +836,12 @@ export function paintSoundBlockTopCanvas(
     const logoW = Math.min(size * 0.52, maxLogoH * aspect);
     const logoH = logoW / aspect;
     const logoY = text ? size * 0.17 : (size - logoH) / 2;
+    ctx.save();
     ctx.drawImage(logo.image, (size - logoW) / 2, logoY, logoW, logoH);
+    ctx.globalCompositeOperation = "source-in";
+    ctx.fillStyle = "#000000";
+    ctx.fillRect((size - logoW) / 2, logoY, logoW, logoH);
+    ctx.restore();
   }
 
   ctx.textAlign = "center";
@@ -904,7 +909,7 @@ export function soundBlockTopToSvgString(
   const logoY = text ? size * 0.17 : (size - logoH) / 2;
   const logoEl =
     logo?.href
-      ? `<image x="${((size - logoW) / 2).toFixed(2)}" y="${logoY.toFixed(2)}" width="${logoW.toFixed(2)}" height="${logoH.toFixed(2)}" preserveAspectRatio="xMidYMid meet" href="${escapeXml(logo.href)}"/>`
+      ? `<image x="${((size - logoW) / 2).toFixed(2)}" y="${logoY.toFixed(2)}" width="${logoW.toFixed(2)}" height="${logoH.toFixed(2)}" preserveAspectRatio="xMidYMid meet" href="${escapeXml(logo.href)}" filter="url(#black-ink-logo)"/>`
       : "";
   const family = line.fontFamily?.trim() || GAVEL_DEFAULT_FONT;
   const weight = line.bold ? 700 : 600;
@@ -919,6 +924,15 @@ export function soundBlockTopToSvgString(
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  ${
+    logo?.href
+      ? `<defs>
+    <filter id="black-ink-logo" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"/>
+    </filter>
+  </defs>`
+      : ""
+  }
   ${logoEl}
   ${textEls}
 </svg>`;

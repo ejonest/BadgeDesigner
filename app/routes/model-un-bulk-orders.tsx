@@ -103,24 +103,23 @@ export default function ModelUnBulkOrdersRoute() {
         : "Band";
   const defaultLogoSurface =
     selected.productType === "stand"
-      ? "Stand plate"
+      ? "Stand plate (full color)"
       : selected.soundBlock === "engraved"
-        ? "Sound block top"
-        : "Gavel band";
+        ? "Sound block top (black ink)"
+        : "Not available";
 
   const designerUrl = useMemo(() => {
     const params = new URLSearchParams({
       productType: selected.productType,
       soundBlock: selected.soundBlock,
-      logoSurface:
-        selected.productType === "stand"
-          ? "stand"
-          : selected.soundBlock === "engraved"
-            ? "sound-block"
-            : "band",
       bulk: "1",
       audience: "model-un",
     });
+    if (selected.productType === "stand") {
+      params.set("logoSurface", "stand");
+    } else if (selected.soundBlock === "engraved") {
+      params.set("logoSurface", "sound-block");
+    }
     if (shop) params.set("shop", shop);
     if (customerId) params.set("customerId", customerId);
     if (embedded) params.set("embedded", "1");
