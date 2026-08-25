@@ -1,0 +1,1022 @@
+/* ==========================================================================
+   Gavels Fast — homepage styles.
+
+   Every rule in this file is namespaced under .gf-home so it cannot reach any
+   other template. The palette tokens mirror app/styles/gavelDesigner.css so the
+   homepage and the live design tool read as one product.
+   ========================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,400&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap");
+
+.gf-home {
+  --gf-navy: #0a1628;
+  --gf-navy-2: #12203a;
+  --gf-navy-3: #1b2c4a;
+  --gf-gold: #c4a35a;
+  --gf-gold-2: #d4a017;
+  --gf-gold-3: #e8bc4f;
+  --gf-gold-pale: #faeeda;
+  --gf-mahogany: #6b2b1f;
+  --gf-cream: #f7f4ef;
+  --gf-cream-2: #edebe3;
+  --gf-white: #ffffff;
+  --gf-text: #0a1628;
+  --gf-muted: #5c6570;
+  --gf-border: rgba(10, 22, 40, 0.12);
+  --gf-shadow: 0 18px 50px rgba(10, 22, 40, 0.14);
+  --gf-radius: 14px;
+
+  font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+  color: var(--gf-text);
+  background: var(--gf-cream);
+}
+
+.gf-home *,
+.gf-home *::before,
+.gf-home *::after {
+  box-sizing: border-box;
+}
+
+.gf-home :where(img) {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* The base theme sets `svg { fill: currentColor; stroke: currentColor; width:
+   20px; height: 20px }` globally, which fills in these outline icons. Restore
+   the stroke-only rendering for this template's icons. */
+.gf-home svg {
+  fill: none;
+  stroke: currentColor;
+  width: 100%;
+  height: 100%;
+}
+
+.gf-home svg [fill="none"],
+.gf-home svg path,
+.gf-home svg circle {
+  fill: none;
+}
+
+/* `:where()` keeps this reset at the specificity of `.gf-home` alone, so the
+   component rules further down this file still win while the base theme's
+   element-level defaults are overridden. */
+.gf-home :where(h1, h2, h3, h4, p, ul, ol, figure, blockquote) {
+  margin: 0;
+  padding: 0;
+}
+
+.gf-home :where(ul, ol) {
+  list-style: none;
+}
+
+.gf-home :where(a) {
+  color: inherit;
+  text-decoration: none;
+}
+
+.gf-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.gf-section {
+  padding: 68px 0;
+}
+
+.gf-section--tight {
+  padding: 44px 0;
+}
+
+.gf-section--cream {
+  background: var(--gf-cream);
+}
+
+.gf-section--white {
+  background: var(--gf-white);
+}
+
+.gf-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gf-gold-2);
+}
+
+.gf-h2 {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(28px, 3.2vw, 40px);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--gf-navy);
+}
+
+.gf-lede {
+  margin-top: 12px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--gf-muted);
+}
+
+.gf-section-head {
+  text-align: center;
+  max-width: 680px;
+  margin: 0 auto 44px;
+}
+
+/* --- Buttons -------------------------------------------------------------- */
+
+.gf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px 28px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease, color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.gf-btn:hover {
+  transform: translateY(-2px);
+}
+
+.gf-btn--gold {
+  background: var(--gf-gold-2);
+  color: var(--gf-navy);
+  box-shadow: 0 10px 26px rgba(212, 160, 23, 0.32);
+}
+
+.gf-btn--gold:hover {
+  background: var(--gf-gold-3);
+  color: var(--gf-navy);
+}
+
+.gf-btn--navy {
+  background: var(--gf-navy);
+  color: var(--gf-white);
+}
+
+.gf-btn--navy:hover {
+  background: var(--gf-navy-2);
+  color: var(--gf-white);
+}
+
+.gf-btn--ghost {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.45);
+  color: var(--gf-white);
+}
+
+.gf-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--gf-white);
+  color: var(--gf-white);
+}
+
+.gf-btn--outline {
+  background: transparent;
+  border-color: var(--gf-navy);
+  color: var(--gf-navy);
+}
+
+.gf-btn--outline:hover {
+  background: var(--gf-navy);
+  color: var(--gf-white);
+}
+
+/* ==========================================================================
+   Hero
+   ========================================================================== */
+
+.gf-hero {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(
+      120% 120% at 12% 0%,
+      var(--gf-navy-3) 0%,
+      rgba(27, 44, 74, 0) 55%
+    ),
+    linear-gradient(160deg, var(--gf-navy) 0%, #060f1d 100%);
+  color: var(--gf-white);
+}
+
+.gf-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(196, 163, 90, 0.6),
+    transparent
+  );
+}
+
+.gf-hero__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: 52px;
+  align-items: center;
+  padding: 62px 0 68px;
+}
+
+.gf-hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gf-gold);
+}
+
+.gf-hero__eyebrow::before {
+  content: "";
+  width: 26px;
+  height: 1px;
+  background: var(--gf-gold);
+}
+
+.gf-hero__title {
+  margin-top: 18px;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(34px, 4.1vw, 54px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  color: var(--gf-white);
+}
+
+.gf-hero__title em {
+  display: block;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--gf-gold-3);
+}
+
+.gf-hero__sub {
+  margin-top: 20px;
+  max-width: 46ch;
+  font-size: 16px;
+  line-height: 1.62;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.gf-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 30px;
+}
+
+.gf-hero__perks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 20px 16px;
+  margin-top: 42px;
+  padding-top: 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.gf-hero__perk {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.gf-hero__perk-icon {
+  display: block;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  color: var(--gf-gold-3);
+}
+
+.gf-hero__perk-title {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--gf-white);
+}
+
+.gf-hero__perk-text {
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+/* --- Hero: designer screenshot ------------------------------------------- */
+
+/* A real screenshot of the live designer, captured by
+   scripts/gf-shot-designer.mjs. The image already carries the tool's own navy
+   frame and stepper, so it needs no chrome of its own beyond the lift shadow. */
+
+.gf-hero__shot-link,
+.gf-hero__shot-link picture {
+  display: block;
+  border-radius: 16px;
+}
+
+.gf-hero__shot {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.42);
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.gf-hero__shot-link:hover .gf-hero__shot {
+  transform: translateY(-4px);
+  box-shadow: 0 38px 84px rgba(0, 0, 0, 0.5);
+}
+
+.gf-hero__shot-caption {
+  margin-top: 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+/* ==========================================================================
+   Trust bar
+   ========================================================================== */
+
+.gf-trust {
+  background: var(--gf-white);
+  border-bottom: 1px solid var(--gf-border);
+}
+
+.gf-trust__list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px;
+  padding: 26px 0;
+}
+
+.gf-trust__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.gf-trust__icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: var(--gf-gold-pale);
+  color: var(--gf-mahogany);
+}
+
+.gf-trust__icon svg {
+  width: 21px;
+  height: 21px;
+  display: block;
+}
+
+.gf-trust__title {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--gf-navy);
+}
+
+.gf-trust__text {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--gf-muted);
+}
+
+/* ==========================================================================
+   Steps / how it works
+   ========================================================================== */
+
+.gf-steps__track {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.gf-steps__item {
+  position: relative;
+  padding: 28px 22px;
+  background: var(--gf-white);
+  border: 1px solid var(--gf-border);
+  border-radius: var(--gf-radius);
+  text-align: center;
+}
+
+.gf-steps__item::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -13px;
+  width: 10px;
+  height: 10px;
+  border-top: 2px solid var(--gf-gold);
+  border-right: 2px solid var(--gf-gold);
+  transform: translateY(-50%) rotate(45deg);
+  opacity: 0.55;
+}
+
+.gf-steps__item:last-child::after {
+  display: none;
+}
+
+.gf-steps__num {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: var(--gf-navy);
+  color: var(--gf-gold-3);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.gf-steps__icon {
+  display: block;
+  width: 30px;
+  height: 30px;
+  margin: 0 auto 12px;
+  color: var(--gf-mahogany);
+}
+
+.gf-steps__title {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--gf-navy);
+}
+
+.gf-steps__text {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--gf-muted);
+}
+
+.gf-steps__cta {
+  margin-top: 40px;
+  text-align: center;
+}
+
+/* ==========================================================================
+   Bestsellers
+   ========================================================================== */
+
+.gf-best__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.gf-best__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--gf-white);
+  border: 1px solid var(--gf-border);
+  border-radius: var(--gf-radius);
+  overflow: hidden;
+  transition: transform 180ms ease, box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+.gf-best__card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(196, 163, 90, 0.6);
+  box-shadow: var(--gf-shadow);
+}
+
+.gf-best__rank {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 2;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--gf-gold-2);
+  color: var(--gf-navy);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+/* Product photos here are shot on white, which reads as a hard white block
+   inside these cream frames.
+
+   `darken` takes the per-channel minimum of photo and frame, which is what we
+   want on all three counts:
+     - any backdrop lighter than the frame collapses to exactly the frame
+       colour, so both pure white (#ffffff) and off-white (#f9f8f7) backdrops
+       match rather than only the pure ones;
+     - drop shadows are darker than the frame, so they pass through untouched
+       instead of being deepened;
+     - the product itself is far darker than the frame, so its colour is not
+       tinted at all.
+   `multiply` fails the first two: it only resolves to the frame colour from
+   pure white, and it darkens shadows and wood tones along the way.
+
+   `isolation` keeps the blend from reaching the section background. A photo on
+   a genuinely tinted backdrop still won't match; that needs a different photo,
+   not a blend mode. */
+.gf-cats__media,
+.gf-best__media {
+  isolation: isolate;
+}
+
+.gf-cats__media img,
+.gf-best__img {
+  mix-blend-mode: darken;
+}
+
+/* Product photography here is predominantly square, so these frames use a 1:1
+   box with even padding. That makes the content box square as well, letting a
+   square photo fill it exactly rather than being scaled down inside it. The
+   occasional 5:4 or 3:2 photo is still contained rather than cropped. */
+.gf-best__media {
+  aspect-ratio: 1 / 1;
+  background: var(--gf-cream);
+  padding: 14px;
+  overflow: hidden;
+}
+
+.gf-best__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.gf-best__media-placeholder {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1 / 1;
+  font-size: 12px;
+  color: var(--gf-muted);
+}
+
+.gf-best__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 9px;
+  padding: 20px;
+  border-top: 1px solid var(--gf-border);
+}
+
+.gf-best__title {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--gf-navy);
+}
+
+.gf-best__vendor {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gf-muted);
+}
+
+.gf-best__price {
+  margin-top: auto;
+  padding-top: 8px;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gf-mahogany);
+}
+
+.gf-best__price s {
+  margin-left: 8px;
+  font-family: "DM Sans", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--gf-muted);
+}
+
+.gf-best__link {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--gf-navy);
+}
+
+.gf-best__card:hover .gf-best__link {
+  color: var(--gf-mahogany);
+}
+
+.gf-best__foot {
+  margin-top: 40px;
+  text-align: center;
+}
+
+/* ==========================================================================
+   Category cards
+   ========================================================================== */
+
+.gf-cats__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.gf-cats__card {
+  display: flex;
+  flex-direction: column;
+  background: var(--gf-white);
+  border: 1px solid var(--gf-border);
+  border-radius: var(--gf-radius);
+  overflow: hidden;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.gf-cats__card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--gf-shadow);
+}
+
+.gf-cats__media {
+  aspect-ratio: 1 / 1;
+  padding: 14px;
+  background: var(--gf-cream);
+  overflow: hidden;
+}
+
+.gf-cats__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 400ms ease;
+}
+
+.gf-cats__card:hover .gf-cats__media img {
+  transform: scale(1.03);
+}
+
+.gf-cats__media-placeholder {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  font-size: 12px;
+  color: var(--gf-muted);
+}
+
+.gf-cats__body {
+  padding: 20px;
+}
+
+.gf-cats__title {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gf-navy);
+}
+
+.gf-cats__text {
+  margin-top: 7px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--gf-muted);
+}
+
+.gf-cats__cta {
+  display: inline-block;
+  margin-top: 13px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--gf-mahogany);
+}
+
+/* ==========================================================================
+   Bulk + social proof + FAQ
+   ========================================================================== */
+
+.gf-bulk__cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 24px;
+}
+
+/* With only one of the two cards showing, it takes the full width rather than
+   leaving a gap where the other one was. */
+.gf-bulk__cards--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.gf-bulk__card {
+  padding: 34px;
+  border-radius: var(--gf-radius);
+}
+
+.gf-bulk__card--navy {
+  background: linear-gradient(155deg, var(--gf-navy) 0%, #060f1d 100%);
+  color: var(--gf-white);
+}
+
+.gf-bulk__card--quote {
+  background: var(--gf-white);
+  border: 1px solid var(--gf-border);
+}
+
+.gf-bulk__title {
+  margin-top: 12px;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--gf-white);
+}
+
+.gf-bulk__text {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.gf-bulk__list {
+  display: grid;
+  gap: 11px;
+  margin: 22px 0 26px;
+}
+
+.gf-bulk__list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.gf-bulk__check {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: rgba(212, 160, 23, 0.2);
+  color: var(--gf-gold-3);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.gf-quote__stars {
+  display: flex;
+  gap: 3px;
+  color: var(--gf-gold-2);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+}
+
+/* The base theme gives every blockquote a grey fill and heavy padding. */
+.gf-quote__text {
+  margin-top: 16px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 19px;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--gf-navy);
+}
+
+.gf-quote__who {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--gf-border);
+  font-size: 12px;
+  color: var(--gf-muted);
+}
+
+.gf-quote__who strong {
+  display: block;
+  font-size: 13px;
+  color: var(--gf-navy);
+}
+
+.gf-faq {
+  margin-top: 44px;
+}
+
+/* The gap above the FAQ separates it from the cards, so it is not wanted when
+   the cards are switched off and the FAQ leads the section. */
+.gf-faq:first-child {
+  margin-top: 0;
+}
+
+.gf-faq__head {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gf-navy);
+  margin-bottom: 16px;
+}
+
+.gf-faq__item {
+  border: 1px solid var(--gf-border);
+  border-radius: 10px;
+  background: var(--gf-white);
+  margin-bottom: 10px;
+}
+
+.gf-faq__q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gf-navy);
+  cursor: pointer;
+  list-style: none;
+}
+
+.gf-faq__q::-webkit-details-marker {
+  display: none;
+}
+
+.gf-faq__icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--gf-gold-pale);
+  color: var(--gf-mahogany);
+  font-size: 15px;
+  line-height: 1;
+  transition: transform 180ms ease;
+}
+
+.gf-faq__item[open] .gf-faq__icon {
+  transform: rotate(45deg);
+}
+
+.gf-faq__a {
+  padding: 0 20px 18px;
+  font-size: 13px;
+  line-height: 1.62;
+  color: var(--gf-muted);
+}
+
+/* ==========================================================================
+   Closing CTA
+   ========================================================================== */
+
+.gf-close__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.gf-close__card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 40px;
+  border-radius: var(--gf-radius);
+}
+
+.gf-close__card--gold {
+  background: linear-gradient(150deg, var(--gf-gold-3) 0%, var(--gf-gold-2) 100%);
+  color: var(--gf-navy);
+}
+
+.gf-close__card--navy {
+  background: linear-gradient(150deg, var(--gf-navy-2) 0%, var(--gf-navy) 100%);
+  color: var(--gf-white);
+}
+
+.gf-close__eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.gf-close__title {
+  margin-top: 12px;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* The card selector is needed on the bottom margin: the base theme sets
+   `p:last-child, p:last-of-type { margin-bottom: 0 }`, and that pseudo-class
+   outranks a lone class, so this text sits tight against the button without it. */
+.gf-close__card .gf-close__text {
+  margin-top: 12px;
+  margin-bottom: 34px;
+  font-size: 14px;
+  line-height: 1.6;
+  opacity: 0.84;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media screen and (max-width: 1024px) {
+  .gf-hero__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+    padding: 46px 0 52px;
+  }
+
+  .gf-hero__sub {
+    max-width: none;
+  }
+
+  .gf-best__grid,
+  .gf-cats__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gf-steps__track {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gf-steps__item:nth-child(2)::after {
+    display: none;
+  }
+
+  .gf-bulk__cards,
+  .gf-close__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gf-trust__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media screen and (max-width: 749px) {
+  .gf-container {
+    padding: 0 18px;
+  }
+
+  .gf-section {
+    padding: 48px 0;
+  }
+
+  .gf-hero__perks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 16px;
+    margin-top: 34px;
+  }
+
+  .gf-hero__actions .gf-btn {
+    flex: 1 1 100%;
+  }
+
+  .gf-best__grid,
+  .gf-cats__grid,
+  .gf-steps__track {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gf-steps__item::after {
+    display: none;
+  }
+
+  .gf-bulk__card,
+  .gf-close__card {
+    padding: 26px;
+  }
+}

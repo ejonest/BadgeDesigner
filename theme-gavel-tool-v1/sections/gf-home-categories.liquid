@@ -1,0 +1,172 @@
+{%- comment -%}
+  Gavels Fast — homepage category cards.
+
+  Each block points at a real collection; the card artwork falls back to that
+  collection's own image, then to its first product's photo, so no new uploads
+  are required.
+{%- endcomment -%}
+
+{{ 'gf-homepage.css' | asset_url | stylesheet_tag }}
+
+<section class="gf-home gf-section gf-section--cream gf-cats">
+  <div class="gf-container">
+    <div class="gf-section-head">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="gf-eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      <h2 class="gf-h2">{{ section.settings.title | escape }}</h2>
+      {%- if section.settings.subtitle != blank -%}
+        <p class="gf-lede">{{ section.settings.subtitle | escape }}</p>
+      {%- endif -%}
+    </div>
+
+    <div class="gf-cats__grid">
+      {%- for block in section.blocks -%}
+        {%- assign cat = block.settings.collection -%}
+
+        {%- if block.settings.link != blank -%}
+          {%- assign cat_url = block.settings.link -%}
+        {%- elsif cat != blank -%}
+          {%- assign cat_url = cat.url -%}
+        {%- else -%}
+          {%- assign cat_url = '#' -%}
+        {%- endif -%}
+
+        {%- comment -%}
+          Artwork preference: an uploaded override, then a chosen product's
+          photo, then the collection's own image, then its first product.
+        {%- endcomment -%}
+        {%- assign cat_image = block.settings.image -%}
+        {%- if cat_image == blank and block.settings.image_product != blank -%}
+          {%- assign cat_image = block.settings.image_product.featured_image -%}
+        {%- endif -%}
+        {%- if cat_image == blank and cat != blank -%}
+          {%- if cat.image != blank -%}
+            {%- assign cat_image = cat.image -%}
+          {%- elsif cat.products.first != blank -%}
+            {%- assign cat_image = cat.products.first.featured_image -%}
+          {%- endif -%}
+        {%- endif -%}
+
+        {%- assign cat_title = block.settings.title -%}
+        {%- if cat_title == blank and cat != blank -%}
+          {%- assign cat_title = cat.title -%}
+        {%- endif -%}
+
+        <a class="gf-cats__card" href="{{ cat_url }}" {{ block.shopify_attributes }}>
+          <div class="gf-cats__media">
+            {%- if cat_image != blank -%}
+              <img
+                src="{{ cat_image | image_url: width: 720 }}"
+                alt="{{ cat_title | escape }}"
+                loading="lazy"
+                width="720"
+                height="450"
+              >
+            {%- else -%}
+              <div class="gf-cats__media-placeholder">{{ cat_title | escape }}</div>
+            {%- endif -%}
+          </div>
+          <div class="gf-cats__body">
+            <h3 class="gf-cats__title">{{ cat_title | escape }}</h3>
+            {%- if block.settings.text != blank -%}
+              <p class="gf-cats__text">{{ block.settings.text | escape }}</p>
+            {%- endif -%}
+            <span class="gf-cats__cta">
+              {{ block.settings.cta_label | default: 'Shop now' | escape }} &rarr;
+            </span>
+          </div>
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "GF Categories",
+  "class": "gf-home-cats-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Shop by category"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Heading",
+      "default": "Everything for the occasion"
+    },
+    {
+      "type": "textarea",
+      "id": "subtitle",
+      "label": "Subheading",
+      "default": "Gavels, presentation sets, plaques and desk signs — all customized in our own shop."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "category",
+      "name": "Category",
+      "limit": 6,
+      "settings": [
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "Collection"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title override",
+          "info": "Defaults to the collection title."
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Description"
+        },
+        {
+          "type": "product",
+          "id": "image_product",
+          "label": "Use this product's photo",
+          "info": "Handy when the collection has no image of its own."
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image override",
+          "info": "Defaults to the product above, then the collection image."
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link override"
+        },
+        {
+          "type": "text",
+          "id": "cta_label",
+          "label": "Link label",
+          "default": "Shop now"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "GF Categories",
+      "category": "Gavels Fast",
+      "blocks": [
+        { "type": "category" },
+        { "type": "category" },
+        { "type": "category" },
+        { "type": "category" },
+        { "type": "category" },
+        { "type": "category" }
+      ]
+    }
+  ]
+}
+{% endschema %}

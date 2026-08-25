@@ -1,0 +1,220 @@
+{%- comment -%}
+  Gavels Fast — homepage bulk ordering card, testimonial and FAQ accordion.
+{%- endcomment -%}
+
+{{ 'gf-homepage.css' | asset_url | stylesheet_tag }}
+
+{%- comment -%}
+  The bulk card and the testimonial are each switchable, so they can be turned
+  back on from the theme editor once those offers and real reviews exist. When
+  both are off only the FAQ renders.
+{%- endcomment -%}
+{%- assign card_count = 0 -%}
+{%- if section.settings.show_bulk_card -%}
+  {%- assign card_count = card_count | plus: 1 -%}
+{%- endif -%}
+{%- if section.settings.show_quote -%}
+  {%- assign card_count = card_count | plus: 1 -%}
+{%- endif -%}
+
+<section class="gf-home gf-section gf-section--white gf-bulk">
+  <div class="gf-container">
+    {%- if card_count > 0 -%}
+      <div class="gf-bulk__cards{% if card_count == 1 %} gf-bulk__cards--single{% endif %}">
+        {%- if section.settings.show_bulk_card -%}
+          <article class="gf-bulk__card gf-bulk__card--navy">
+            <p class="gf-eyebrow">{{ section.settings.bulk_eyebrow | escape }}</p>
+            <h2 class="gf-bulk__title">{{ section.settings.bulk_title | escape }}</h2>
+            {%- if section.settings.bulk_text != blank -%}
+              <p class="gf-bulk__text">{{ section.settings.bulk_text | escape }}</p>
+            {%- endif -%}
+
+            {%- assign bulk_points = section.settings.bulk_points | split: '|' -%}
+            {%- if bulk_points.size > 0 -%}
+              <ul class="gf-bulk__list">
+                {%- for point in bulk_points -%}
+                  <li class="gf-bulk__list-item">
+                    <span class="gf-bulk__check">&#10003;</span>
+                    <span>{{ point | strip | escape }}</span>
+                  </li>
+                {%- endfor -%}
+              </ul>
+            {%- endif -%}
+
+            {%- if section.settings.bulk_cta_label != blank -%}
+              <a
+                href="{{ section.settings.bulk_cta_link | default: '#' }}"
+                class="gf-btn gf-btn--gold"
+              >
+                {{ section.settings.bulk_cta_label | escape }}
+              </a>
+            {%- endif -%}
+          </article>
+        {%- endif -%}
+
+        {%- if section.settings.show_quote -%}
+          <article class="gf-bulk__card gf-bulk__card--quote">
+            <div class="gf-quote__stars" aria-hidden="true">
+              &#9733;&#9733;&#9733;&#9733;&#9733;
+            </div>
+            {%- if section.settings.quote != blank -%}
+              <blockquote class="gf-quote__text">
+                &ldquo;{{ section.settings.quote | escape }}&rdquo;
+              </blockquote>
+            {%- endif -%}
+            <div class="gf-quote__who">
+              <strong>{{ section.settings.quote_name | escape }}</strong>
+              {{ section.settings.quote_role | escape }}
+            </div>
+          </article>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    {%- if section.blocks.size > 0 -%}
+      <div class="gf-faq">
+        {%- if section.settings.faq_title != blank -%}
+          <h2 class="gf-faq__head">{{ section.settings.faq_title | escape }}</h2>
+        {%- endif -%}
+
+        {%- for block in section.blocks -%}
+          <details class="gf-faq__item" {{ block.shopify_attributes }}>
+            <summary class="gf-faq__q">
+              {{ block.settings.question | escape }}
+              <span class="gf-faq__icon" aria-hidden="true">+</span>
+            </summary>
+            <div class="gf-faq__a">{{ block.settings.answer }}</div>
+          </details>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "GF Bulk & reviews",
+  "class": "gf-home-bulk-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Bulk card"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_bulk_card",
+      "label": "Show bulk card",
+      "info": "Turn on once volume pricing and terms are confirmed.",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "bulk_eyebrow",
+      "label": "Eyebrow",
+      "default": "Bulk & custom orders"
+    },
+    {
+      "type": "text",
+      "id": "bulk_title",
+      "label": "Heading",
+      "default": "Outfitting a whole chapter, court or class?"
+    },
+    {
+      "type": "textarea",
+      "id": "bulk_text",
+      "label": "Text",
+      "default": "Tell us how many you need and how you want each item customized. We quote within one business day and handle the artwork for you."
+    },
+    {
+      "type": "textarea",
+      "id": "bulk_points",
+      "label": "Checklist",
+      "info": "Separate each point with a | character.",
+      "default": "Volume pricing on 10 or more | Free customization setup — no artwork fees | Matching sets for officers and honorees | Purchase orders and net terms welcome"
+    },
+    {
+      "type": "text",
+      "id": "bulk_cta_label",
+      "label": "Button label",
+      "default": "Request a bulk quote"
+    },
+    {
+      "type": "url",
+      "id": "bulk_cta_link",
+      "label": "Button link"
+    },
+    {
+      "type": "header",
+      "content": "Testimonial"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_quote",
+      "label": "Show testimonial",
+      "info": "Turn on once a real customer review is in place.",
+      "default": true
+    },
+    {
+      "type": "textarea",
+      "id": "quote",
+      "label": "Quote",
+      "default": "The design tool showed me exactly what our customized gavel would look like, so there were no surprises. Our outgoing president was thrilled."
+    },
+    {
+      "type": "text",
+      "id": "quote_name",
+      "label": "Name",
+      "default": "Karen D."
+    },
+    {
+      "type": "text",
+      "id": "quote_role",
+      "label": "Role",
+      "default": "Bar association secretary"
+    },
+    {
+      "type": "header",
+      "content": "FAQ"
+    },
+    {
+      "type": "text",
+      "id": "faq_title",
+      "label": "FAQ heading",
+      "default": "Common questions"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "faq",
+      "name": "FAQ item",
+      "limit": 8,
+      "settings": [
+        {
+          "type": "text",
+          "id": "question",
+          "label": "Question",
+          "default": "How long does customization take?"
+        },
+        {
+          "type": "richtext",
+          "id": "answer",
+          "label": "Answer",
+          "default": "<p>Most personalized orders ship in 2–3 business days.</p>"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "GF Bulk & reviews",
+      "category": "Gavels Fast",
+      "blocks": [
+        { "type": "faq" },
+        { "type": "faq" },
+        { "type": "faq" },
+        { "type": "faq" }
+      ]
+    }
+  ]
+}
+{% endschema %}

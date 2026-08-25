@@ -1,0 +1,505 @@
+<div class="container">
+  {% render 'breadcrumb' %}
+  
+  <header class="page-header">
+    <h1>
+      {% render 'multilang' with page.title %}
+    </h1>  
+  </header>
+  
+  <section id="faqs_page">
+    {% if section.settings.des_faqs != blank %}
+    <div class="des_faqs">
+      {% render 'multilang' with section.settings.des_faqs %}
+    </div>
+    {% endif %}
+    
+    <div class="panel-group">
+      {% for block in section.blocks %}
+      {% if block.settings.question_faqs_1 != blank %}
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h4 class="panel-title">
+            <a class="{% unless forloop.first %}collapsed{% endunless %}" data-toggle="collapse" href="#faqs-1-{{block.id}}" >
+              {% if settings.enable_multilang %}
+              <span class="lang1" data-title="{{section.settings.icon_faqs | split: '|' | first }}" data-show="{{ section.settings.icon_show | split: '|' | first }}" data-hide="{{ section.settings.icon_hide | split: '|' | first }}">
+                {{ block.settings.question_faqs_1 | split: '|' | first | strip }}
+              </span>
+              <span class="lang2" data-title="{{section.settings.icon_faqs | split: '|' | last }}" data-show="{{ section.settings.icon_show | split: '|' | last }}" data-hide="{{ section.settings.icon_hide | split: '|' | last }}">
+                {{ block.settings.question_faqs_1 | split: '|' | last | strip }}
+              </span>
+              {% else %}
+              <span data-title="{{section.settings.icon_faqs | split: '|' | first }}" data-show="{{ section.settings.icon_show | split: '|' | first }}" data-hide="{{ section.settings.icon_hide | split: '|' | first }}">
+                {{ block.settings.question_faqs_1 | split: '|' | first }}
+              </span>
+              {% endif %}
+            </a>
+          </h4>    
+        </div>
+        <div id="faqs-1-{{block.id}}" class="panel-collapse collapse{% if forloop.first %} show{% endif %}">
+          <div class="panel-body">
+            {% if settings.enable_multilang %}
+            <div class="lang1" data-title="{{section.settings.icon_answer | split: '|' | first }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_1 | split: '|' | first }}
+              </div>
+            </div>
+            <div class="lang2" data-title="{{section.settings.icon_answer | split: '|' | last }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_1 | split: '|' | last }}
+              </div>
+            </div>
+            {% else %}
+            <div data-title="{{section.settings.icon_answer | split: '|' | first }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_1 | split: '|' | first }}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {% if block.settings.question_faqs_2 != blank %}
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h4 class="panel-title">
+            <a class="collapsed" data-toggle="collapse" href="#faqs-2-{{block.id}}" >
+              {% if settings.enable_multilang %}
+              <span class="lang1" data-title="{{section.settings.icon_faqs | split: '|' | first }}" data-show="{{ section.settings.icon_show | split: '|' | first }}" data-hide="{{ section.settings.icon_hide | split: '|' | first }}">
+                {{ block.settings.question_faqs_2 | split: '|' | first | strip }}
+              </span>
+              <span class="lang2" data-title="{{section.settings.icon_faqs | split: '|' | last }}" data-show="{{ section.settings.icon_show | split: '|' | last }}" data-hide="{{ section.settings.icon_hide | split: '|' | last }}">
+                {{ block.settings.question_faqs_2 | split: '|' | last | strip }}
+              </span>
+              {% else %}
+              <span data-title="{{section.settings.icon_faqs | split: '|' | first }}" data-show="{{ section.settings.icon_show | split: '|' | first }}" data-hide="{{ section.settings.icon_hide | split: '|' | first }}">
+                {{ block.settings.question_faqs_2 | split: '|' | first }}
+              </span>
+              {% endif %}
+            </a>
+          </h4>    
+        </div>
+        <div id="faqs-2-{{block.id}}" class="panel-collapse collapse">
+          <div class="panel-body">
+            {% if settings.enable_multilang %}
+            <div class="lang1" data-title="{{section.settings.icon_answer | split: '|' | first }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_2 | split: '|' | first }}
+              </div>
+            </div>
+            <div class="lang2" data-title="{{section.settings.icon_answer | split: '|' | last }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_2 | split: '|' | last }}
+              </div>
+            </div>
+            {% else %}
+            <div data-title="{{section.settings.icon_answer | split: '|' | first }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_2 | split: '|' | first }}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {% if block.settings.question_faqs_3 != blank %}
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h4 class="panel-title">
+            <a class="collapsed" data-toggle="collapse" href="#faqs-3-{{block.id}}" >
+              {% if settings.enable_multilang %}
+              <span class="lang1" data-title="{{section.settings.icon_faqs | split: '|' | first }}" data-show="{{ section.settings.icon_show | split: '|' | first }}" data-hide="{{ section.settings.icon_hide | split: '|' | first }}">
+                {{ block.settings.question_faqs_3 | split: '|' | first | strip }}
+              </span>
+              <span class="lang2" data-title="{{section.settings.icon_faqs | split: '|' | last }}" data-show="{{ section.settings.icon_show | split: '|' | last }}" data-hide="{{ section.settings.icon_hide | split: '|' | last }}">
+                {{ block.settings.question_faqs_3 | split: '|' | last | strip }}
+              </span>
+              {% else %}
+              <span data-title="{{section.settings.icon_faqs | split: '|' | first }}" data-show="{{ section.settings.icon_show | split: '|' | first }}" data-hide="{{ section.settings.icon_hide | split: '|' | first }}">
+                {{ block.settings.question_faqs_3 | split: '|' | first }}
+              </span>
+              {% endif %}
+            </a>
+          </h4>    
+        </div>
+        <div id="faqs-3-{{block.id}}" class="panel-collapse collapse">
+          <div class="panel-body">
+            {% if settings.enable_multilang %}
+            <div class="lang1" data-title="{{section.settings.icon_answer | split: '|' | first }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_3 | split: '|' | first }}
+              </div>
+            </div>
+            <div class="lang2" data-title="{{section.settings.icon_answer | split: '|' | last }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_3 | split: '|' | last }}
+              </div>
+            </div>
+            {% else %}
+            <div data-title="{{section.settings.icon_answer | split: '|' | first }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_3 | split: '|' | first }}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {% if block.settings.question_faqs_4 != blank %}
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h4 class="panel-title">
+            <a class="collapsed" data-toggle="collapse" href="#faqs-4-{{block.id}}" >
+              {% if settings.enable_multilang %}
+              <span class="lang1" data-title="{{section.settings.icon_faqs | split: '|' | first }}" data-show="{{ section.settings.icon_show | split: '|' | first }}" data-hide="{{ section.settings.icon_hide | split: '|' | first }}">
+                {{ block.settings.question_faqs_4 | split: '|' | first | strip }}
+              </span>
+              <span class="lang2" data-title="{{section.settings.icon_faqs | split: '|' | last }}" data-show="{{ section.settings.icon_show | split: '|' | last }}" data-hide="{{ section.settings.icon_hide | split: '|' | last }}">
+                {{ block.settings.question_faqs_4 | split: '|' | last | strip }}
+              </span>
+              {% else %}
+              <span data-title="{{section.settings.icon_faqs | split: '|' | first }}" data-show="{{ section.settings.icon_show | split: '|' | first }}" data-hide="{{ section.settings.icon_hide | split: '|' | first }}">
+                {{ block.settings.question_faqs_4 | split: '|' | first }}
+              </span>
+              {% endif %}
+            </a>
+          </h4>    
+        </div>
+        <div id="faqs-4-{{block.id}}" class="panel-collapse collapse">
+          <div class="panel-body">
+            {% if settings.enable_multilang %}
+            <div class="lang1" data-title="{{section.settings.icon_answer | split: '|' | first }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_4 | split: '|' | first }}
+              </div>
+            </div>
+            <div class="lang2" data-title="{{section.settings.icon_answer | split: '|' | last }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_4 | split: '|' | last }}
+              </div>
+            </div>
+            {% else %}
+            <div data-title="{{section.settings.icon_answer | split: '|' | first }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_4 | split: '|' | first }}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {% if block.settings.question_faqs_5 != blank %}
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h4 class="panel-title">
+            <a class="collapsed" data-toggle="collapse" href="#faqs-5-{{block.id}}" >
+              {% if settings.enable_multilang %}
+              <span class="lang1" data-title="{{section.settings.icon_faqs | split: '|' | first }}" data-show="{{ section.settings.icon_show | split: '|' | first }}" data-hide="{{ section.settings.icon_hide | split: '|' | first }}">
+                {{ block.settings.question_faqs_5 | split: '|' | first | strip }}
+              </span>
+              <span class="lang2" data-title="{{section.settings.icon_faqs | split: '|' | last }}" data-show="{{ section.settings.icon_show | split: '|' | last }}" data-hide="{{ section.settings.icon_hide | split: '|' | last }}">
+                {{ block.settings.question_faqs_5 | split: '|' | last | strip }}
+              </span>
+              {% else %}
+              <span data-title="{{section.settings.icon_faqs | split: '|' | first }}" data-show="{{ section.settings.icon_show | split: '|' | first }}" data-hide="{{ section.settings.icon_hide | split: '|' | first }}">
+                {{ block.settings.question_faqs_5 | split: '|' | first }}
+              </span>
+              {% endif %}
+            </a>
+          </h4>    
+        </div>
+        <div id="faqs-5-{{block.id}}" class="panel-collapse collapse">
+          <div class="panel-body">
+            {% if settings.enable_multilang %}
+            <div class="lang1" data-title="{{section.settings.icon_answer | split: '|' | first }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_5 | split: '|' | first }}
+              </div>
+            </div>
+            <div class="lang2" data-title="{{section.settings.icon_answer | split: '|' | last }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_5 | split: '|' | last }}
+              </div>
+            </div>
+            {% else %}
+            <div data-title="{{section.settings.icon_answer | split: '|' | first }}">
+              <div class="rte">
+                {{ block.settings.answer_faqs_5 | split: '|' | first }}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% endfor %}
+    </div>
+    
+    {% if section.settings.contact_text != blank or section.settings.contact_link_text != blank %}
+    <div class="contact-link">
+      {% if section.settings.contact_text != blank %}
+      <span class="text">
+        {% render 'multilang' with section.settings.contact_text  %}
+      </span>
+      {% endif %}
+      {% if section.settings.contact_link_text != blank %}
+      <a href="{{ section.settings.contact_link }}" class="btn">
+        {% render 'multilang' with section.settings.contact_link_text  %}
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+</div>
+
+
+<style>
+  .faqs-page .panel-title {
+    font-size: {{ section.settings.font_size_qs }}px;
+  }
+  
+  .faqs-page .panel-title > a {
+    color: {{ section.settings.color_question }};
+    background-color: {{ section.settings.bg_question }};
+  }
+  
+  .faqs-page .panel-title > a span:before {
+    content: attr(data-title) "";
+    background-color: {{ section.settings.bg_icon_qs }};
+    color: {{ section.settings.color_icon_qs }};
+  }  
+  
+  .faqs-page .panel-title > a:not(.collapsed) {
+    background-color: {{ section.settings.bg_question_acitve }};
+    color: {{ section.settings.color_question_acitve }};
+  }
+  
+  .faqs-page .panel-group .panel-body {
+    font-size: {{ section.settings.font_size_answer }}px;
+    color: {{ section.settings.color_question_answer }};
+  }
+  
+  .faqs-page .panel-group .panel-body > div:before {
+    content: attr(data-title) "";
+    background-color: {{ section.settings.bg_icon_answer }};
+    color: {{ section.settings.color_icon_answer }};
+    border-color: {{ section.settings.color_icon_answer }};
+  }
+  
+  .faqs-page .des_faqs a,
+  .faqs-page.panel-group .panel-body a {
+    color: {{ section.settings.color_question_link }};
+  }
+</style>
+
+
+{% schema %}
+  {
+    "name": "FAQS Page",
+    "settings": [
+      {
+       "type": "textarea",
+       "id" : "des_faqs",
+       "label" : "Description"
+      },
+    {
+        "type" : "header",
+        "content" : "Contact"
+      },
+    {
+       "type" : "textarea",
+       "id" : "contact_text",
+       "label" : "Contact Text",
+       "default" : "Unable to find satisfactory answers ?"
+      },
+    {
+       "type" : "textarea",
+       "id" : "contact_link_text",
+       "label" : "Contact Link Text",
+       "default" : "Contact Support"
+      },
+    {
+        "type" : "url",
+        "id" : "contact_link",
+        "label" : "Contact link"
+      },
+
+      {
+        "type": "header",
+        "content": "Question"
+      },
+      {
+       "type" : "text",
+       "id" : "icon_faqs",
+       "label" : "Icon Faqs",
+       "default" : "Q"
+      },
+      {
+       "type" : "color",
+       "id" : "bg_icon_qs",
+       "label" : "Background Icon",
+       "default" : "#000"
+      },
+      {
+       "type" : "color",
+       "id" : "color_icon_qs",
+       "label" : "Icon Color",
+       "default" : "#fff"
+      },
+      {
+       "type" : "color",
+       "id" : "bg_question",
+       "label" : "Background Question",
+       "default" : "#f5f5f5"
+      },
+      {
+       "type" : "color",
+       "id" : "color_question",
+       "label" : "Color Question",
+       "default" : "#000"
+      },
+    {
+       "type" : "text",
+       "id" : "font_size_qs",
+       "label" : "Font size Question",
+       "default" : "13"
+      },
+      {
+       "type" : "color",
+       "id" : "bg_question_acitve",
+       "label" : "Background Icons Question Active",
+       "default" : "#FF8B21"
+      },
+      {
+       "type" : "color",
+       "id" : "color_question_acitve",
+       "label" : "Color Question Active",
+       "default" : "#fff"
+      },
+
+      {
+        "type": "header",
+        "content": "Answer"
+      },
+      {
+       "type" : "text",
+       "id" : "icon_answer",
+       "label" : "Icon Answer",
+       "default" : "A"
+      },
+      {
+       "type" : "color",
+       "id" : "bg_icon_answer",
+       "label" : "Background Icon Answer",
+       "default" : "#fff"
+      },
+      {
+       "type" : "color",
+       "id" : "color_icon_answer",
+       "label" : "Icon Color",
+       "default" : "#FF8B21"
+      },      
+      {
+       "type" : "color",
+       "id" : "color_question_answer",
+       "label" : "Color Answer",
+       "default" : "#000"
+      },
+    {
+       "type" : "text",
+       "id" : "font_size_answer",
+       "label" : "Font size Answer",
+       "default" : "12"
+      },
+      {
+       "type" : "color",
+       "id" : "color_question_link",
+       "label" : "Color Link",
+       "default" : "#FF8B21"
+      },
+      {
+        "type": "header",
+        "content": "Show / Hide"
+      },
+      {
+       "type" : "text",
+       "id" : "icon_show",
+       "label" : "Icon Show",
+       "default" : "Show"
+      },
+      {
+       "type" : "text",
+       "id" : "icon_hide",
+       "label" : "Icon Hide",
+       "default" : "Hide"
+      }
+  ],
+    "blocks": [
+      {
+        "type" : "text",
+        "name" : "Question",
+        "settings":[
+          {
+            "type" : "textarea",
+            "id" : "question_faqs_1",
+            "label" : "Question 1"
+          },
+          {
+            "type" : "textarea",
+            "id" : "answer_faqs_1",
+            "label" : "Answer 1",
+            "info": "=========================="
+          },
+          {
+            "type" : "textarea",
+            "id" : "question_faqs_2",
+            "label" : "Question 2"
+          },
+          {
+            "type" : "textarea",
+            "id" : "answer_faqs_2",
+            "label" : "Answer 2",
+            "info": "=========================="
+          },
+          {
+            "type" : "textarea",
+            "id" : "question_faqs_3",
+            "label" : "Question 3"
+          },
+          {
+            "type" : "textarea",
+            "id" : "answer_faqs_3",
+            "label" : "Answer 3",
+            "info": "=========================="
+          },
+          {
+            "type" : "textarea",
+            "id" : "question_faqs_4",
+            "label" : "Question 4"
+          },
+          {
+            "type" : "textarea",
+            "id" : "answer_faqs_4",
+            "label" : "Answer 4",
+            "info": "=========================="
+          },
+          {
+            "type" : "textarea",
+            "id" : "question_faqs_5",
+            "label" : "Question 5"
+          },
+          {
+            "type" : "textarea",
+            "id" : "answer_faqs_5",
+            "label" : "Answer 5"
+          }
+        ]
+      }
+    ]
+  }
+{% endschema %}

@@ -1,0 +1,790 @@
+{% if section.blocks.size > 0 %}
+<link rel="stylesheet" href="{{ 'component-brand-tab-block.css' | asset_url }}" media="print" onload="this.media='all'">
+<noscript>{{ 'component-brand-tab-block.css' | asset_url | stylesheet_tag }}</noscript>
+{%- assign numer_lg = section.settings.brand_item_limit -%}
+<div class="brand-tab-block section-block-{{section.id}}" id="brands-{{section.id}}">
+    <div class="brands-block">
+        <div class="{% if section.settings.layout == 'default' %}container{% elsif section.settings.layout == 'padd_60' %}container-padd60{% endif %}">
+            {% if section.settings.brand_title != blank %}
+                <div class="widget-title text-{{ section.settings.title_align }}{% if section.settings.title_style == 'style_2' %} title_style_2{% endif %}{% if section.settings.title_style == 'style_3' %} title_style_3{% endif %}">   
+                    <h3 class="box-title">
+                        <span class="title">
+                        {{ section.settings.brand_title }}
+                        </span>
+                    </h3>
+                    {% if section.settings.brand_des != blank %}
+                    <div class="rte subtext-brand">
+                        {{ section.settings.brand_des }}
+                    </div>        
+                    {% endif %}
+                </div>
+            {% endif %}
+            <brand-tab class="brand__custom--tab">
+                <ul class="tab-panel tab-title disable-srollbar text-{{ section.settings.title_align }}{% if section.blocks.size <= 4 %} center-tablet{% endif%}{% if section.blocks.size <= 3 %} center-tablet-small{% endif%}">
+                    {% for block in section.blocks %}
+                        <li {% if forloop.first %}class="active"{% endif %}>
+                            <a tab-title-action href="javascript:void(0)" data-target="#block-{{block.id}}">{{ block.settings.title }}</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+                <div class="tab-panel-content"> 
+                    {% for block in section.blocks %}
+                        {%- liquid
+                            assign link_size = block.settings.menu.links | size
+                            assign class_btn = ''
+                            if link_size <= 6
+                                assign class_btn = 'hidden'
+                            else
+                                if link_size <= 9
+                                    assign class_btn = 'hidden-md'
+                                elsif link_size <= numer_lg
+                                    assign class_btn = 'hidden-lg'
+                                endif
+                            endif
+                        -%}
+                        <div class="tab-content--block {% if forloop.first %}active{% endif %} text-center" id="block-{{block.id}}">
+                            <div class="halo-row column-{{ section.settings.brand_rows }} sm-column-2 md-column-3">
+                             {% assign class_hidden_button = 'hidden-button' -%}
+                              
+                            {% for link in block.settings.menu.links %}
+                                {%- liquid
+                                    assign class_hidden = ''
+                                    if forloop.index > 6
+                                        assign class_hidden = class_hidden | append: 'hidden-sm'
+                                    endif
+                                    if forloop.index > 9
+                                        assign class_hidden = class_hidden | append: ' hidden-md'
+                                    endif
+                                    if forloop.index > numer_lg
+                                        assign class_hidden = class_hidden | append: ' hidden-lg'
+                                    endif
+                                    if forloop.index > numer_lg
+                                        assign class_hidden_button = ''
+                                    else
+                                        assign class_hidden_button = 'hidden-button'
+                                    endif
+                                -%}
+                                
+                                <div class="halo-item {{ class_hidden }}">
+                                    <div class="wrapper-image">
+                                        <a title="{{ link.title }}" href="{{ link.url }}">
+                                            <img data-srcset="{{ link.title | handle | append: '.png' | file_url }}" class="lazyload" />
+                                            {% if settings.enable_lazyload %}<span class="data-lazy-loading"></span>{% endif %}
+                                            
+                                        </a>
+                                    </div>
+                                    <div class="content">
+                                        <a title="{{ link.title }}" href="{{ link.url }}">
+                                            <span class="title">{{ link.title }}</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            </div>
+                            <a href="javascript:void(0)" title="{{ section.settings.brand_button_text | split: '|' | first }}" class="btn button {{ class_btn }} {{ class_hidden_button }}" data-load-more-block data-buttonMore="{{ section.settings.brand_button_text }}" data-buttonLess="{{ section.settings.brand_button_text_less }}" data-rowlg={{numer_lg}}>
+                                {{ section.settings.brand_button_icon }}
+                                <span>{{ section.settings.brand_button_text }}</span>
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
+            </brand-tab>
+        </div>
+    </div>
+</div>
+
+<style>
+    {%- liquid
+        assign brand_bg = section.settings.brand_bg
+
+        assign color_title = section.settings.color_title
+        assign fontsize_title = section.settings.fontsize_title
+        assign fontsize_title_mb = section.settings.fontsize_title_mb
+        assign font_weight_title = section.settings.font_weight_title
+        assign text_transform_title = section.settings.text_transform_title
+
+        assign color_des = section.settings.color_des
+        assign fontsize_des = section.settings.fontsize_des
+
+        assign mg_bottom_desktop = section.settings.mg_bottom_desktop
+        assign mg_bottom_tablet = section.settings.mg_bottom_tablet
+        assign mg_bottom_mobile = section.settings.mg_bottom_mobile
+
+        assign fontsize_tab = section.settings.fontsize_tab
+        assign fontsize_tab_mb = section.settings.fontsize_tab_mb
+        assign font_weight_tab = section.settings.font_weight_tab
+        assign color_tab = section.settings.color_tab
+        assign bg_tab = section.settings.bg_tab
+        assign border_tab = section.settings.border_tab
+        assign color_tab_active = section.settings.color_tab_active
+        assign bg_tab_active = section.settings.bg_tab_active
+        assign border_active = section.settings.border_active
+
+        assign text_color = section.settings.text_color
+        assign text_color_hover = section.settings.text_color_hover
+        assign font_weight_text = section.settings.font_weight_text
+        assign fontsize_text = section.settings.fontsize_text
+        assign fontsize_text_mb = section.settings.fontsize_text_mb
+
+        assign button_color = section.settings.button_color
+        assign button_bg_color = section.settings.button_bg_color
+        assign button_border_color = section.settings.button_border_color
+    -%}
+
+    .section-block-{{section.id}} {
+        background-color: {{ brand_bg }};
+        padding: 20px 0;
+        {% if section.settings.display_brand_border %}
+            border-top: 1px solid #ebebeb;
+        {% endif %}
+    }
+
+    .section-block-{{section.id}} .widget-title .box-title .title {
+        background-color: {{ brand_bg }};
+    }
+
+    .section-block-{{section.id}} .widget-title .box-title {
+        color: {{ color_title }};
+        font-size: {{ fontsize_title | append: 'px'  }};
+        font-weight: {{ font_weight_title }};
+        text-transform: {{ text_transform_title }};
+        {% if section.settings.brand_des != blank %}
+            {% if section.settings.title_style == 'style_3' %}
+                margin-bottom: 27px;
+            {% else %}
+                margin-bottom: 10px;
+            {% endif %}
+            
+        {% else %}
+            {% if section.settings.title_style == 'style_3' %}
+                margin-bottom: 60px;
+            {% else %}
+                margin-bottom: 34px;
+            {% endif %}
+        {% endif %}
+    }
+
+    .section-block-{{section.id}} .widget-title .box-title:before {
+        display: none;
+    }
+
+    .section-block-{{section.id}} .widget-title .rte {
+        color: {{ color_des }};
+        font-size: {{ fontsize_des | append: 'px'  }};
+        margin-bottom: 32px
+    }
+
+    .section-block-{{section.id}} .halo-item .not_img{
+        font-size: 16px;
+    }
+
+    .section-block-{{section.id}} .halo-item .title {
+        font-size: {{ fontsize_text | append: 'px'}};
+    }
+
+    .section-block-{{section.id}} .halo-item .title b{
+        display: inherit;
+        position: relative;
+        top: 3px;
+        margin-top: 26px;
+    }
+
+    .section-block-{{section.id}} .halo-item .title br{
+        display: none;
+    }
+
+    .section-block-{{section.id}} [tab-title-action] {
+        color: {{ color_tab }};
+        background: {{ bg_tab }};
+        border: 1px solid {{ border_tab }};
+        font-size: {{ fontsize_tab | append: 'px' }};
+        font-weight: {{ font_weight_tab }}
+    }
+
+    .section-block-{{section.id}} li.active [tab-title-action] {
+        color: {{ color_tab_active }};
+        border-color: {{ border_active }};
+        background: {{ bg_tab_active }};
+    }
+
+    .section-block-{{section.id}} .brand__custom--tab .halo-item .content > a {
+        color: {{ text_color }};
+    }
+
+    .section-block-{{section.id}} .brand__custom--tab .halo-item .content > a:hover {
+        color: {{ text_color_hover }};
+        text-decoration-color: {{ text_color_hover | color_modify: 'alpha', 0.3}}
+    }
+
+    .section-block-{{section.id}} .brand__custom--tab .halo-item .content > a .title {
+        color: inherit;
+    }
+
+    .section-block-{{section.id}} .brand__custom--tab .button{
+        color: {{ button_color }};
+        background-color: {{ button_bg_color }};
+        border-color: {{ button_border_color }};
+    }
+
+    @media (min-width: 1200px) {
+        .section-block-{{section.id}} {
+            margin-bottom: {{ mg_bottom_desktop | append: 'px' }};
+        }
+      
+      	.hidden-button{
+          	display: none !important;
+        }
+    }
+
+    @media (min-width: 768px) and (max-width: 1199px) {
+        .section-block-{{section.id}} {
+            margin-bottom: {{ mg_bottom_tablet | append: 'px' }};
+        }
+    }
+
+    @media (max-width: 767px) {
+        .section-block-{{section.id}} {
+            margin-bottom: {{ mg_bottom_mobile | append: 'px' }};
+        }
+
+        .section-block-{{section.id}} .widget-title .box-title {
+            font-size: {{ fontsize_title_mb | append: 'px'  }};
+        }
+
+        .section-block-{{section.id}} [tab-title-action] {
+            font-size: {{ fontsize_tab_mb | append: 'px' }};
+        }
+        .section-block-{{section.id}} .halo-item .title {
+            font-size: {{ fontsize_text_mb | append: 'px'}};
+        }
+    }
+</style>
+
+{% endif %}
+
+{% javascript %}
+    class BrandsTab extends HTMLElement {
+        constructor() {
+            super();
+            this.tabTitle = this.querySelector('.tab-title');
+            this.tabContent = this.querySelector('.tab-panel-content');
+            const ele = this.querySelectorAll('[tab-title-action]');
+            const actionLoadMore = this.querySelectorAll('[data-load-more-block]');
+            this.widthWindow = 0;
+            if (ele.length) {
+                ele.forEach((button) => button.addEventListener('click', this.onActive.bind(this)));
+            }
+            if (actionLoadMore.length) {
+                actionLoadMore.forEach((button) => button.addEventListener('click', this.onLoadMore.bind(this)));
+            }
+        }
+        onActive(e) {
+            this.tabTitle.querySelector('.active').classList.remove('active');
+            this.tabContent.querySelector('.active').classList.remove('active');
+            this.querySelector(e.target.dataset.target).classList.add('active');
+            e.target.parentElement.classList.add('active');
+        }
+        onLoadMore(e) {
+            this.resize();
+            if (this.widthWindow > 1024) {
+                var eleHide = (e.target.parentElement).querySelectorAll('.hidden-lg');
+                var _number = e.target.dataset.rowlg;
+                var _class = 'hidden-lg';
+            } else if(this.widthWindow > 551) {
+                var eleHide = (e.target.parentElement).querySelectorAll('.hidden-md');
+                var _number = 9;
+                var _class = 'hidden-md';
+            } else {
+                var eleHide = (e.target.parentElement).querySelectorAll('.hidden-sm');
+                var _number = 6;
+                var _class = 'hidden-sm';
+            }
+            if (eleHide.length) {
+                // let number_show = (eleHide.length > number ? number : eleHide.length);
+                if (e.target.classList.contains('more')) {
+                    for (let i = 0; i < eleHide.length; i++) {
+                        eleHide[i].classList.remove('show');
+                    }
+                    e.target.querySelector('span').textContent = e.target.dataset.buttonmore;
+                    e.target.classList.remove('more');
+                } else {
+                    for (let i = 0; i < eleHide.length; i++) {
+                        eleHide[i].classList.add('show');
+                    }
+                    e.target.querySelector('span').textContent = e.target.dataset.buttonless;
+                    e.target.classList.add('more');
+                }
+
+                // (eleHide.length > _number ? '' : e.target.classList.add('hidden'));
+            }
+        }
+        resize() {
+            this.widthWindow = window.innerWidth;
+        }
+    }
+    customElements.define('brand-tab', BrandsTab);
+{% endjavascript %}
+
+{% schema %}
+{
+    "name": "Brand Tab",
+    "class": "sections-brand-tab-block",
+    "settings": [
+    {
+        "type": "header",
+        "content": "GENERAL"
+    },
+    {
+        "type": "select",
+        "id": "layout",
+        "label": "Layout:",
+        "default": "default",
+        "options": [
+        {
+            "value": "default",
+            "label": "Default"
+        },
+        {
+            "value": "padd_60",
+            "label": "Boxed"
+        }]
+    },
+    {
+        "type": "checkbox",
+        "id": "display_brand_border",
+        "label": "Display Border?",
+        "default": true
+    },
+    {
+        "type" : "color",
+        "id" : "brand_bg",
+        "label" : "Background Color",
+        "default" : "#f5f5f5"
+    },
+    {
+        "type": "text",
+        "id": "brand_title",
+        "label": "Title"
+    },
+    {
+        "type" : "color",
+        "id" : "color_title",
+        "label": "Title Color",
+        "default" : "#232323"
+    },
+    {
+        "type": "range",
+        "id": "fontsize_title",
+        "label": "Title Font Size",
+        "min": 10,
+        "max": 50,
+        "step": 1,
+        "unit": "px",
+        "default": 24
+    },
+    {
+        "type": "range",
+        "id": "fontsize_title_mb",
+        "label": "Title Font Size Mobile",
+        "min": 10,
+        "max": 50,
+        "step": 1,
+        "unit": "px",
+        "default": 24
+    },
+    {
+        "type": "select",
+        "id": "font_weight_title",
+        "label": "Title Font Weight",
+        "default": "700",
+        "options": [
+        {
+            "value": "400",
+            "label": "Regular"
+        },
+        {
+            "value": "500",
+            "label": "Medium"
+        },
+        {
+            "value": "600",
+            "label": "SemiBold"
+        },
+        {
+            "value": "700",
+            "label": "Bold"
+        },
+        {
+            "value": "900",
+            "label": "ExtraBold"
+        }]
+    },
+    {
+        "type": "select",
+        "id": "text_transform_title",
+        "label": "Title Text Transform",
+        "options": [
+        {
+            "value": "none",
+            "label": "None"
+        },
+        {
+            "value": "uppercase",
+            "label": "Uppercase"
+        },
+        {
+            "value": "capitalize",
+            "label": "Capitalize"
+        },
+        {
+            "value": "lowercase",
+            "label": "Lowercase"
+        }],
+        "default": "capitalize"
+    },
+    {
+        "type": "select",
+        "id": "title_style",
+        "label": "Title Style:",
+
+        "options": [
+            {
+                "value": "style_1",
+                "label": "Style 1"
+            },
+            {
+                "value": "style_2",
+                "label": "Style 2"
+            },
+            {
+                "value": "style_3",
+                "label": "Style 3"
+            }
+        ],
+        "default": "style_1"
+    },
+    {
+        "type" : "textarea",
+        "id" : "brand_des",
+        "label" : "Description"
+    },
+    {
+        "type" : "color",
+        "id" : "color_des",
+        "label": "Description Color",
+        "default" : "#3c3c3c"
+    },
+    {
+        "type": "range",
+        "id": "fontsize_des",
+        "label": "Description Font Size",
+        "min": 10,
+        "max": 50,
+        "step": 1,
+        "unit": "px",
+        "default": 16
+    },
+    {
+        "type": "select",
+        "id": "title_align",
+        "label": "Alignment",
+        "options": [
+        {
+            "value": "left",
+            "label": "Left"
+        },
+        {
+            "value": "center",
+            "label": "Center"
+        },
+        {
+            "value": "right",
+            "label": "Right"
+        }],
+        "default": "center"
+    },
+    {
+        "type": "range",
+        "id": "brand_item_limit",
+        "label": "Maximum Brands To Show",
+        "min": 4,
+        "max": 24,
+        "step": 1,
+        "default": 18
+    },
+    {
+        "type": "select",
+        "id": "brand_rows",
+        "label": "Item Per Row",
+        "options": [
+            {
+                "value": "4",
+                "label": "4"
+            },
+            {
+                "value": "5",
+                "label": "5"
+            },
+            {
+                "value": "6",
+                "label": "6"
+            }
+        ],
+        "default": "5"
+    },
+    {
+        "type": "header",
+        "content": "SETTINGS FOR TAB"
+    },
+    {
+        "type": "paragraph",
+        "content": "TAB TITLE"
+    },
+    {
+        "type": "range",
+        "id": "fontsize_tab",
+        "label": "Font Size",
+        "min": 10,
+        "max": 50,
+        "step": 1,
+        "unit": "px",
+        "default": 16
+    },
+    {
+        "type": "range",
+        "id": "fontsize_tab_mb",
+        "label": "Font Size Mobile",
+        "min": 10,
+        "max": 50,
+        "step": 1,
+        "unit": "px",
+        "default": 16
+    },
+    {
+        "type": "select",
+        "id": "font_weight_tab",
+        "label": "Font Weight",
+        "default": "600",
+        "options": [
+        {
+            "value": "400",
+            "label": "Regular"
+        },
+        {
+            "value": "500",
+            "label": "Medium"
+        },
+        {
+            "value": "600",
+            "label": "SemiBold"
+        },
+        {
+            "value": "700",
+            "label": "Bold"
+        },
+        {
+            "value": "900",
+            "label": "ExtraBold"
+        }]
+    },
+    {
+        "type" : "color",
+        "id" : "bg_tab",
+        "label" : "Background Color",
+        "default" : "#ffffff"
+    },
+    {
+        "type" : "color",
+        "id" : "color_tab",
+        "label" : "Text Color",
+        "default" : "#051c42"
+    },
+    {
+        "type" : "color",
+        "id" : "border_tab",
+        "label" : "Border Color",
+        "default" : "#051c42"
+    },
+    {
+        "type" : "color",
+        "id" : "bg_tab_active",
+        "label" : "Background Color Active",
+        "default" : "#e1732c"
+    },
+    {
+        "type" : "color",
+        "id" : "color_tab_active",
+        "label" : "Text Color Active",
+        "default" : "#ffffff"
+    },
+    {
+        "type" : "color",
+        "id" : "border_active",
+        "label" : "Border Color Active",
+        "default" : "#e1732c",
+        "info": "=========================="
+    },
+    {
+        "type": "paragraph",
+        "content": "TEXT"
+    },
+    {
+        "type": "range",
+        "id": "fontsize_text",
+        "label": "Font Size",
+        "min": 10,
+        "max": 50,
+        "step": 1,
+        "unit": "px",
+        "default": 16
+    },
+    {
+        "type": "range",
+        "id": "fontsize_text_mb",
+        "label": "Font Size Mobile",
+        "min": 10,
+        "max": 50,
+        "step": 1,
+        "unit": "px",
+        "default": 16
+    },
+    {
+        "type": "select",
+        "id": "font_weight_text",
+        "label": "Font Weight",
+        "default": "600",
+        "options": [
+        {
+            "value": "400",
+            "label": "Regular"
+        },
+        {
+            "value": "500",
+            "label": "Medium"
+        },
+        {
+            "value": "600",
+            "label": "SemiBold"
+        },
+        {
+            "value": "700",
+            "label": "Bold"
+        },
+        {
+            "value": "900",
+            "label": "ExtraBold"
+        }]
+    },
+    {
+        "type" : "color",
+        "id" : "text_color",
+        "label" : "Color",
+        "default" : "#051c42"
+    },
+    {
+        "type" : "color",
+        "id" : "text_color_hover",
+        "label" : "Color Hover",
+        "default" : "#234bbb",
+        "info": "=========================="
+    },
+    {
+        "type": "paragraph",
+        "content": "BUTTON"
+    },
+    {
+        "type": "text",
+        "id": "brand_button_text",
+        "label": "Button Show More",
+        "default": "Show More"
+    },
+    {
+        "type": "text",
+        "id": "brand_button_text_less",
+        "label": "Button Show Less",
+        "default": "Show Less"
+    },
+    {
+        "type": "textarea",
+        "id": "brand_button_icon",
+        "label": "Button Icon",
+        "info" : "[Find your Icon](https://fontawesome.com/v5.15/icons?d=gallery&p=2)."
+    },
+    {
+        "type" : "color",
+        "id" : "button_color",
+        "label" : "Button Color",
+        "default" : "#ffffff"
+    }, 
+    {
+        "type" : "color",
+        "id" : "button_bg_color",
+        "label" : "Button Background Color",
+        "default" : "#4dac8b"
+    },
+    {
+        "type" : "color",
+        "id" : "button_border_color",
+        "label" : "Button Border Color",
+        "default" : "#4dac8b"
+    },
+    {
+        "type": "header",
+        "content": "MARGIN BOTTOM:"
+    },
+    {
+        "type": "range",
+        "id": "mg_bottom_desktop",
+        "label": "Desktop",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "unit": "px",
+        "default": 50
+    },
+    {
+        "type": "range",
+        "id": "mg_bottom_tablet",
+        "label": "Tablet",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "unit": "px",
+        "default": 50
+    },
+    {
+        "type": "range",
+        "id": "mg_bottom_mobile",
+        "label": "Mobile",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "unit": "px",
+        "default": 50
+    }
+    ],
+    "blocks": [
+        {
+            "type": "tab",
+            "name": "Tab Item",
+            "settings": [
+            {
+                "type": "text",
+                "id": "title",
+                "label": "Title Tab"
+            },
+            {
+                "type": "link_list",
+                "id": "menu",
+                "label": "Menu Brand Tab"
+            }
+        ]
+        }
+    ],
+    "presets": [
+        {
+            "name": "Brand Tab"
+        }
+    ]
+}
+{% endschema %}

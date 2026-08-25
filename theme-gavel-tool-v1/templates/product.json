@@ -1,0 +1,263 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "main": {
+      "type": "main-product",
+      "blocks": {
+        "9e63d273-20b8-48d8-a3dc-f60a538db1ed": {
+          "type": "sidebar_product",
+          "settings": {
+            "display_sidebar": false,
+            "show_sidebar": "left",
+            "enable_categories": true,
+            "title_categories": "CATEGORIES",
+            "style_categories": "style_little",
+            "link_list": "",
+            "enable_product": true,
+            "title_product": "FEATURED PRODUCTS",
+            "collection": "cosmopolis",
+            "limit": "1",
+            "enable_img_1": true,
+            "link_img_1": "shopify://collections/cosmopolitan",
+            "enable_img_2": true,
+            "link_img_2": "shopify://collections/cosmopolis",
+            "enable_custom_block": true,
+            "title_custom_block": "Custom Block",
+            "quote_custom_block": "<p>Custom CMS block displayed at the left sidebar on the Catalog Page. Put your own content here: text, html, images, media... whatever you like.</p><p></p><p>There are many similar sample content placeholders across the store. All editable from admin panel.</p>"
+          }
+        },
+        "2952443b-94a9-4eef-939b-0877dad2d5cd": {
+          "type": "image",
+          "settings": {
+            "main_pr_look": "aeque-mollis-urnan-lementum",
+            "lb_product_1_1": "dempus-an-lortis-tempus-posuere",
+            "top_position_1_1": "10",
+            "left_position_1_1": "10",
+            "dots_color_1_1": "#ffffff",
+            "dots_bg_color_1_1": "#323232",
+            "dots_shadow_color_1_1": "#ffffff",
+            "lb_product_1_2": "",
+            "top_position_1_2": "10",
+            "left_position_1_2": "10",
+            "dots_color_1_2": "#ffffff",
+            "dots_bg_color_1_2": "#323232",
+            "dots_shadow_color_1_2": "#ffffff",
+            "lb_product_1_3": "",
+            "top_position_1_3": "10",
+            "left_position_1_3": "10",
+            "dots_color_1_3": "#ffffff",
+            "dots_bg_color_1_3": "#323232",
+            "dots_shadow_color_1_3": "#ffffff",
+            "lb_product_2_1": "",
+            "top_position_2_1": "20",
+            "left_position_2_1": "50",
+            "dots_color_2_1": "#ffffff",
+            "dots_bg_color_2_1": "#323232",
+            "dots_shadow_color_2_1": "#ffffff",
+            "lb_product_2_2": "",
+            "top_position_2_2": "10",
+            "left_position_2_2": "10",
+            "dots_color_2_2": "#ffffff",
+            "dots_bg_color_2_2": "#323232",
+            "dots_shadow_color_2_2": "#ffffff",
+            "lb_product_2_3": "",
+            "top_position_2_3": "10",
+            "left_position_2_3": "10",
+            "dots_color_2_3": "#ffffff",
+            "dots_bg_color_2_3": "#323232",
+            "dots_shadow_color_2_3": "#ffffff",
+            "lb_product_3_1": "",
+            "top_position_3_1": "10",
+            "left_position_3_1": "10",
+            "dots_color_3_1": "#ffffff",
+            "dots_bg_color_3_1": "#323232",
+            "dots_shadow_color_3_1": "#ffffff",
+            "lb_product_3_2": "",
+            "top_position_3_2": "10",
+            "left_position_3_2": "10",
+            "dots_color_3_2": "#ffffff",
+            "dots_bg_color_3_2": "#323232",
+            "dots_shadow_color_3_2": "#ffffff",
+            "lb_product_3_3": "",
+            "top_position_3_3": "10",
+            "left_position_3_3": "10",
+            "dots_color_3_3": "#ffffff",
+            "dots_bg_color_3_3": "#323232",
+            "dots_shadow_color_3_3": "#ffffff"
+          }
+        },
+        "bf9a40c8-0a1a-401b-b635-e3f5e99b4673": {
+          "type": "recommend",
+          "settings": {
+            "display_related_products": true,
+            "related_products_title": "Related Products",
+            "number_of_related_products": "8",
+            "related_products_per_row": "4"
+          }
+        },
+        "ebe8ded2-b7f9-4494-8b5a-35c41801863d": {
+          "type": "product-banner",
+          "settings": {
+            "display": false,
+            "alignment": "center",
+            "video_type": "mp4",
+            "video_link": "",
+            "banner_heading": "Metropolis",
+            "font_size_banner_heading": "40px",
+            "color_banner_heading": "#ffffff",
+            "banner_heading_sub": "",
+            "font_size_banner_heading_sub": "16px",
+            "color_banner_heading_sub": "#ffffff",
+            "banner_des": "Pellentesque posuere orci lobortis scelerisque blandit. Donec id tellus lacinia an tincidunt risus an consequat delit quisquemos.",
+            "font_size_banner_des": "12p16px",
+            "color_banner_des": "#ffffff",
+            "banner_button": "Shop Now",
+            "link": "",
+            "bg_banner_button": "#ffffff",
+            "border_banner_button": "#5a5a5a",
+            "color_banner_button": "#232323",
+            "bg_banner_button_hover": "",
+            "border_banner_button_hover": "",
+            "color_banner_button_hover": ""
+          }
+        },
+        "bd1606ce-082c-41d6-b43c-40e6433bfbf5": {
+          "type": "popup_information",
+          "settings": {
+            "icon": "<svg aria-hidden=\"true\" focusable=\"false\" data-prefix=\"fal\" data-icon=\"shipping-fast\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\" viewbox=\"0 0 640 512\"><path fill=\"currentColor\" d=\"M280 192c4.4 0 8-3.6 8-8v-16c0-4.4-3.6-8-8-8H40c-4.4 0-8 3.6-8 8v16c0 4.4 3.6 8 8 8h240zm352 192h-24V275.9c0-16.8-6.8-33.3-18.8-45.2l-83.9-83.9c-11.8-12-28.3-18.8-45.2-18.8H416V78.6c0-25.7-22.2-46.6-49.4-46.6H113.4C86.2 32 64 52.9 64 78.6V96H8c-4.4 0-8 3.6-8 8v16c0 4.4 3.6 8 8 8h240c4.4 0 8-3.6 8-8v-16c0-4.4-3.6-8-8-8H96V78.6c0-8.1 7.8-14.6 17.4-14.6h253.2c9.6 0 17.4 6.5 17.4 14.6V384H207.6C193 364.7 170 352 144 352c-18.1 0-34.6 6.2-48 16.4V288H64v144c0 44.2 35.8 80 80 80s80-35.8 80-80c0-5.5-.6-10.8-1.6-16h195.2c-1.1 5.2-1.6 10.5-1.6 16 0 44.2 35.8 80 80 80s80-35.8 80-80c0-5.5-.6-10.8-1.6-16H632c4.4 0 8-3.6 8-8v-16c0-4.4-3.6-8-8-8zm-488 96c-26.5 0-48-21.5-48-48s21.5-48 48-48 48 21.5 48 48-21.5 48-48 48zm272-320h44.1c8.4 0 16.7 3.4 22.6 9.4l83.9 83.9c.8.8 1.1 1.9 1.8 2.8H416V160zm80 320c-26.5 0-48-21.5-48-48s21.5-48 48-48 48 21.5 48 48-21.5 48-48 48zm80-96h-16.4C545 364.7 522 352 496 352s-49 12.7-63.6 32H416v-96h160v96zM256 248v-16c0-4.4-3.6-8-8-8H8c-4.4 0-8 3.6-8 8v16c0 4.4 3.6 8 8 8h240c4.4 0 8-3.6 8-8z\"></path></svg>",
+            "title": "Free Shipping",
+            "content": "<p>Free standard shipping on orders over $99</p>\n<p>Estimated to be delivered on 12/01/2022 - 15/10/2022.</p>",
+            "content_popup": "<h3>Shipping</h3>\n<p>We can ship to virtually any address in the world. Note that there are restrictions on some products, and some products cannot be shipped to international destinations.</p>\n<p>When you place an order, we will estimate shipping and delivery dates for you based on the availability of your items and the shipping options you choose. Depending on the shipping provider you choose, shipping date estimates may appear on the shipping quotes page.</p>\n<p>Please also note that the shipping rates for many items we sell are weight-based. The weight of any such item can be found on its detail page. To reflect the policies of the shipping companies we use, all weights will be rounded up to the next full pound.</p>"
+          }
+        },
+        "ac8f2971-4aa5-4c94-8042-311a73cf24c8": {
+          "type": "popup_information",
+          "settings": {
+            "icon": "<svg aria-hidden=\"true\" focusable=\"false\" data-prefix=\"fal\" data-icon=\"shield-alt\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\" viewbox=\"0 0 512 512\">\n    <path fill=\"currentColor\" d=\"M466.5 83.7l-192-80a48.15 48.15 0 0 0-36.9 0l-192 80C27.7 91.1 16 108.6 16 128c0 198.5 114.5 335.7 221.5 380.3 11.8 4.9 25.1 4.9 36.9 0C360.1 472.6 496 349.3 496 128c0-19.4-11.7-36.9-29.5-44.3zM262.2 478.8c-4 1.6-8.4 1.6-12.3 0C152 440 48 304 48 128c0-6.5 3.9-12.3 9.8-14.8l192-80c3.9-1.6 8.4-1.6 12.3 0l192 80c6 2.5 9.9 8.3 9.8 14.8.1 176-103.9 312-201.7 350.8zM256 411V100l-142.7 59.5c10.1 120.1 77.1 215 142.7 251.5zm-32-66.8c-36.4-39.9-65.8-97.8-76.1-164.5L224 148z\"></path>\n</svg>",
+            "title": "Free Returns",
+            "content": "<p>Learn More.</p>",
+            "content_popup": "<h3>Returns Policy</h3>\n<p>You may return most new, unopened items within 30 days of delivery for a full refund. We'll also pay the return shipping costs if the return is a result of our error (you received an incorrect or defective item, etc.).</p>\n<p>You should expect to receive your refund within four weeks of giving your package to the return shipper, however, in many cases you will receive a refund more quickly. This time period includes the transit time for us to receive your return from the shipper (5 to 10 business days), the time it takes us to process your return once we receive it (3 to 5 business days), and the time it takes your bank to process our refund request (5 to 10 business days).</p>\n<p>If you need to return an item, simply login to your account, view the order using the \"Complete Orders\" link under the My Account menu and click the Return Item(s) button. We'll notify you via e-mail of your refund once we've received and processed the returned item.</p>"
+          }
+        },
+        "36499c9c-c811-4e8d-a5a9-32897f95ed3f": {
+          "type": "popup_information",
+          "settings": {
+            "icon": "<svg aria-hidden=\"true\" focusable=\"false\" data-prefix=\"fal\" data-icon=\"exclamation-triangle\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\" viewbox=\"0 0 576 512\"><path fill=\"currentColor\" d=\"M270.2 160h35.5c3.4 0 6.1 2.8 6 6.2l-7.5 196c-.1 3.2-2.8 5.8-6 5.8h-20.5c-3.2 0-5.9-2.5-6-5.8l-7.5-196c-.1-3.4 2.6-6.2 6-6.2zM288 388c-15.5 0-28 12.5-28 28s12.5 28 28 28 28-12.5 28-28-12.5-28-28-28zm281.5 52L329.6 24c-18.4-32-64.7-32-83.2 0L6.5 440c-18.4 31.9 4.6 72 41.6 72H528c36.8 0 60-40 41.5-72zM528 480H48c-12.3 0-20-13.3-13.9-24l240-416c6.1-10.6 21.6-10.7 27.7 0l240 416c6.2 10.6-1.5 24-13.8 24z\"></path></svg>",
+            "title": "Covid-19 Shipping Delay Notice",
+            "content": "",
+            "content_popup": "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "9e63d273-20b8-48d8-a3dc-f60a538db1ed",
+        "2952443b-94a9-4eef-939b-0877dad2d5cd",
+        "bf9a40c8-0a1a-401b-b635-e3f5e99b4673",
+        "ebe8ded2-b7f9-4494-8b5a-35c41801863d",
+        "bd1606ce-082c-41d6-b43c-40e6433bfbf5",
+        "ac8f2971-4aa5-4c94-8042-311a73cf24c8",
+        "36499c9c-c811-4e8d-a5a9-32897f95ed3f"
+      ],
+      "settings": {
+        "style_moreview": "left_vertical",
+        "enable_zoom_image": true,
+        "enable_zoom_text": false,
+        "enable_payment_button": true,
+        "enable_hot_stock": true,
+        "number_stock": "5",
+        "show_sold_in": true,
+        "item_prd": "3,5,6,7,8,10,12,15",
+        "item_prds": "sold in last",
+        "hours_prs": "10,15,16,17,18,20,25,35",
+        "item_hours": "hours",
+        "display_vendor": true,
+        "text_vendor": "Vendor:",
+        "display_product_sku": true,
+        "text_product_sku": "SKU:",
+        "display_availability": true,
+        "text_availability": "Availability:",
+        "display_product_type": true,
+        "text_product_type": "Product Type:",
+        "enable_countdown": true,
+        "countdown": "countdown_1",
+        "text_countdown": "Limited-Time Offers, End in:",
+        "option_countdown": "different_product",
+        "count_down_timer": "2022-07-17 22:11:00",
+        "custombox_text": "",
+        "progressbar_1": "Please hurry, only",
+        "progressbar_2": "left in stock",
+        "total_items": "100",
+        "min_items_left": "8",
+        "max_items_left": "26",
+        "progressbar_color": "#f5f5f5",
+        "progressbar_active_color": "#69c69c",
+        "dpl_customers_view": true,
+        "title_view": "customers are viewing this product",
+        "number_view": "283, 100, 59, 11, 14, 185, 193, 165, 50, 38, 99, 112, 46, 10, 125, 200, 250, 18",
+        "show_desc": "short",
+        "display_subtotal": true,
+        "display_qty": true,
+        "display_product_detail_tag": false,
+        "display_product_detail_share": true,
+        "share_text": "Share",
+        "display_trust_img": true,
+        "show_tab": "horizontal",
+        "display_product_detail_description": true,
+        "product_description_title": "Description",
+        "display_product_reviews": true,
+        "product_review_title": "Customer Reviews",
+        "display_custom_tab_1": false,
+        "custom_tab_title_1": "Shipping & Returns",
+        "custom_tab_content_1": "<h4>RETURNS POLICY</h4>\n<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi ut blandit risus. Donec mollis nec tellus et rutrum. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Ut consequat quam a purus faucibus scelerisque. Mauris ac dui ante. Pellentesque congue porttitor tempus. Donec sodales dapibus urna sed dictum. Duis congue posuere libero, a aliquam est porta quis.</p>\n<p>\nDonec ullamcorper magna enim, vitae fermentum turpis elementum quis. Interdum et malesuada fames ac ante ipsum primis in faucibus. </p>\n<p>\nCurabitur vel sem mi. Proin in lobortis ipsum. Aliquam rutrum tempor ex ac rutrum. Maecenas nunc nulla, placerat at eleifend in, viverra etos sem. Nam sagittis lacus metus, dignissim blandit magna euismod eget. Suspendisse a nisl lacus. Phasellus eget augue tincidunt, sollicitudin lectus sed, convallis desto. Pellentesque vitae dui lacinia, venenatis erat sit amet, fringilla felis. Nullam maximus nisi nec mi facilisis.</p>\n<h4>SHIPPING</h4>\n<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi ut blandit risus. Donec mollis nec tellus et rutrum. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Ut consequat quam a purus faucibus scelerisque. Mauris ac dui ante. Pellentesque congue porttitor tempus. Donec sodales dapibus urna sed dictum. Duis congue posuere libero, a aliquam est porta quis.</p>\n<p>\nDonec ullamcorper magna enim, vitae fermentum turpis elementum quis. Interdum et malesuada fames ac ante ipsum primis in faucibus. </p>\n<p>\nCurabitur vel sem mi. Proin in lobortis ipsum. Aliquam rutrum tempor ex ac rutrum. Maecenas nunc nulla, placerat at eleifend in, viverra etos sem. Nam sagittis lacus metus, dignissim blandit magna euismod eget. Suspendisse a nisl lacus. Phasellus eget augue tincidunt, sollicitudin lectus sed, convallis desto. Pellentesque vitae dui lacinia, venenatis erat sit amet, fringilla felis. Nullam maximus nisi nec mi facilisis.</p>",
+        "display_custom_tab_2": false,
+        "custom_tab_title_2": "Custom Product Tab",
+        "custom_tab_content_2": "<p>Nam tempus turpis at metus scelerisque placerat nulla deumantos solicitud felis. Pellentesque diam dolor, elementum etos lobortis des mollis ut risus. Sedcus faucibus an sullamcorper mattis drostique des commodo pharetras loremos.Donec pretium egestas sapien et mollis. Pellentesque diam dolor cosmopolis etos lobortis.</p>\n<dl>\n<dt>Comodous:</dt>\n<dd>Comodous in tempor ullamcorper miaculis</dd>\n</dl>\n<dl>\n<dt>Mattis laoreet:</dt>\n<dd>Pellentesque vitae neque mollis urna mattis laoreet.</dd>\n</dl>\n<dl>\n<dt>Divamus de ametos:</dt>\n<dd>Divamus sit amet purus justo.</dd>\n</dl>\n<dl>\n<dt>Molestie:</dt>\n<dd>Proin molestie egestas orci ac suscipit risus posuere loremous</dd>\n</dl>",
+        "display_custom_tab_3": false,
+        "custom_tab_title_3": "Custom Tab 3",
+        "custom_tab_content_3": "Custom Tab Content 3",
+        "display_custom_tab_4": false,
+        "custom_tab_title_4": "Custom Tab 4",
+        "custom_tab_content_4": "Custom Tab Content 4",
+        "display_custom_tab_5": false,
+        "custom_tab_title_5": "Custom Tab 5",
+        "custom_tab_content_5": "Custom Tab Content 5",
+        "dpl_lookbook_description": false,
+        "style_lookbook_description": "all_product",
+        "quote_title": "Sample Block Quote",
+        "quote_des": "Praesent vestibulum congue tellus at fringilla. Curabitur vitae semper sem, eu convallis est. Cras felis nunc commodo loremous convallis vitae interdum non nisl. Maecenas ac est sit amet augue pharetra convallis nec danos.",
+        "quote_title_2": "Sample Paragraph Text",
+        "quote_des_2": "<p>\nPraesent vestibulum congue tellus at fringilla. Curabitur vitae semper sem, eu convallis est. Cras felis nunc commodo eu convallis vitae interdum non nisl. Maecenas ac est sit amet augue pharetra convallis nec danos dui.\n</p>\n<p>\nCras suscipit quam et turpis eleifend vitae malesuada magna congue. Damus id ullamcorper neque. Sed vitae mi a mi pretium aliquet ac sed elitos. Pellentesque nulla eros accumsan quis justo at tincidunt lobortis denimes loremous. Suspendisse vestibulum lectus in lectus volutpat, ut dapibus purus pulvinar. Vestibulum sit amet auctor ipsum.\n</p>",
+        "dpl_gallery_lookbook": false,
+        "style_lookbook_gallery": "all_product",
+        "dpl_grouped_product": true,
+        "grouped_product_style": "style_1",
+        "grouped_title": "Frequently Bought Together",
+        "grouped_choose_options_text": "Please choose options for all selected products",
+        "choose_options": "Choose Options",
+        "enable_bundle_discount": true,
+        "bundle_discount_text": "Get a [discount]% discount buying these products together | Erhalten Sie einen Rabatt von [discount]%, wenn Sie diese Produkte zusammen kaufen"
+      }
+    },
+    "recently-view": {
+      "type": "recently-viewed-products",
+      "settings": {
+        "display_recently_viewed_products": true,
+        "recently_viewed_products_title": "Recently Viewed Products",
+        "number_of_recently_viewed_products": "8",
+        "recently_viewed_products_per_row": "4"
+      }
+    }
+  },
+  "order": [
+    "main",
+    "recently-view"
+  ]
+}
