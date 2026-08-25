@@ -66,6 +66,7 @@
       "routes/api.send-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.upload-sign-logo": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/dev.plaque-calibrate": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/model-un-bulk-orders": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-sign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.shopify-product": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -611,6 +612,15 @@
         "file": "app/routes/dev.plaque-calibrate.tsx",
         "id": "routes/dev.plaque-calibrate",
         "path": "dev/plaque-calibrate",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/model-un-bulk-orders": {
+        "file": "app/routes/model-un-bulk-orders.tsx",
+        "id": "routes/model-un-bulk-orders",
+        "path": "model-un-bulk-orders",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -1315,6 +1325,12 @@
         "file": "routes/dev.plaque-calibrate.tsx",
         "id": "routes/dev.plaque-calibrate",
         "path": "dev/plaque-calibrate",
+        "parentId": "root"
+      },
+      "routes/model-un-bulk-orders": {
+        "file": "routes/model-un-bulk-orders.tsx",
+        "id": "routes/model-un-bulk-orders",
+        "path": "model-un-bulk-orders",
         "parentId": "root"
       },
       "routes/api.autosave-design": {

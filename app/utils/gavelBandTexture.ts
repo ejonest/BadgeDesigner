@@ -14,6 +14,7 @@ import {
   STAND_PLATE_H_IN,
   STAND_PLATE_KEYLINE_INSET_IN,
   STAND_PLATE_KEYLINE_W_IN,
+  STAND_PLATE_MAX_LINES,
   STAND_PLATE_TEXTURE_H_PX,
   STAND_PLATE_TEXTURE_W_PX,
   STAND_PLATE_W_IN,
@@ -407,30 +408,67 @@ const STAND_PLATE_LOGO_TEXT_RATIO = 3;
 const STAND_PLATE_LOGO_MAX_W_FRACTION = 0.26;
 const STAND_PLATE_LOGO_GAP_FRACTION = 0.12;
 
+/**
+ * Plate copy is set as a hierarchy rather than at one size: a large headline
+ * with a smaller line beneath it, the way the engraved plaques read. Sizes are
+ * fractions of the plate height instead of the band's presets, so the type
+ * fills the plaque rather than the band's much shorter canvas.
+ */
+const STAND_PLATE_HEADLINE_FONT_FRACTION = 0.3;
+const STAND_PLATE_SOLO_FONT_FRACTION = 0.36;
+const STAND_PLATE_SUBTITLE_FONT_RATIO = 0.5;
+const STAND_PLATE_LINE_GAP_RATIO = 0.16;
+/** The text-size step still nudges the plate, around the tuned default. */
+const STAND_PLATE_PRESET_SCALE: Record<GavelTextSizePreset, number> = {
+  small: 0.88,
+  medium: 1,
+  large: 1.1,
+};
+
+function standPlateFontSizes(
+  count: number,
+  preset: GavelTextSizePreset,
+): number[] {
+  if (count <= 0) return [];
+  const scale = STAND_PLATE_PRESET_SCALE[preset] ?? 1;
+  if (count === 1) {
+    return [
+      STAND_PLATE_TEXTURE_H_PX * STAND_PLATE_SOLO_FONT_FRACTION * scale,
+    ];
+  }
+  const headline =
+    STAND_PLATE_TEXTURE_H_PX * STAND_PLATE_HEADLINE_FONT_FRACTION * scale;
+  return [headline, headline * STAND_PLATE_SUBTITLE_FONT_RATIO];
+}
+
+/** Leading is set off the headline, so both lines stay one lockup. */
+function standPlateLineGap(fontSizes: readonly number[]): number {
+  return (fontSizes[0] ?? 0) * STAND_PLATE_LINE_GAP_RATIO;
+}
+
 /** Widest line and total block height of the plate text, in canvas px. */
 function plateTextMetrics(
   ctx: CanvasRenderingContext2D | null,
   filled: readonly GavelBandLineInput[],
-  drawPx: number,
-  drawGap: number,
+  fontSizes: readonly number[],
 ): { width: number; height: number } {
   if (!filled.length) return { width: 0, height: 0 };
   let width = 0;
-  for (const line of filled) {
+  let height = Math.max(0, filled.length - 1) * standPlateLineGap(fontSizes);
+  filled.forEach((line, index) => {
+    const fontPx = fontSizes[index] ?? fontSizes[0];
     const text = (line.text ?? "").trim();
     if (ctx) {
-      ctx.font = fontCss(line, drawPx);
+      ctx.font = fontCss(line, fontPx);
       width = Math.max(width, ctx.measureText(text).width);
     } else {
       // Server render has no canvas to measure with; estimate so the lockup is
       // still roughly centered.
-      width = Math.max(width, text.length * drawPx * 0.52);
+      width = Math.max(width, text.length * fontPx * 0.52);
     }
-  }
-  return {
-    width,
-    height: filled.length * drawPx + Math.max(0, filled.length - 1) * drawGap,
-  };
+    height += fontPx;
+  });
+  return { width, height };
 }
 
 /**
@@ -496,6 +534,60 @@ function standPlateArtLayout(input: {
   };
 }
 
+type StandPlateTextRow = {
+  line: GavelBandLineInput;
+  fontPx: number;
+  baseline: number;
+};
+
+/**
+ * One plan for the whole plate: the type size and baseline of each line plus
+ * the logo box. The 3D texture, the flat proof, and the manufacturing SVG all
+ * read this, so none of them can drift apart.
+ */
+function standPlateArtPlan(
+  ctx: CanvasRenderingContext2D | null,
+  lines: readonly GavelBandLineInput[] | readonly BadgeLine[],
+  preset: GavelTextSizePreset,
+  logo?: GavelPlateLogo | null,
+): {
+  rows: StandPlateTextRow[];
+  layout: ReturnType<typeof standPlateArtLayout>;
+} {
+  const filled = activeLines(lines).slice(0, STAND_PLATE_MAX_LINES);
+  const layoutFor = (metrics: { width: number; height: number }) =>
+    standPlateArtLayout({
+      logoAspect: logo?.aspect,
+      logoScale: logo?.scale,
+      logoGapScale: logo?.gapScale,
+      textWidth: metrics.width,
+      textHeight: metrics.height,
+    });
+
+  let fontSizes = standPlateFontSizes(filled.length, preset);
+  let metrics = plateTextMetrics(ctx, filled, fontSizes);
+  let layout = layoutFor(metrics);
+  // Copy longer than the space the logo leaves is set smaller rather than
+  // condensed into it, so the two lines keep their proportions.
+  if (metrics.width > layout.textMaxWidth) {
+    const shrink = layout.textMaxWidth / metrics.width;
+    fontSizes = fontSizes.map((fontPx) => fontPx * shrink);
+    metrics = plateTextMetrics(ctx, filled, fontSizes);
+    layout = layoutFor(metrics);
+  }
+
+  const gap = standPlateLineGap(fontSizes);
+  let top = (STAND_PLATE_TEXTURE_H_PX - metrics.height) / 2;
+  const rows = filled.map((line, index) => {
+    const fontPx = fontSizes[index] ?? fontSizes[0];
+    const baseline = top + fontPx * 0.78;
+    top += fontPx + gap;
+    return { line, fontPx, baseline };
+  });
+
+  return { rows, layout };
+}
+
 /**
  * Personalized stand plaque matching the product photos: brushed metal with a
  * dark keyline following the shouldered-cove silhouette.
@@ -538,21 +630,12 @@ export function paintGavelStandPlateCanvas(
 
   if (options?.shaped) ctx.restore();
 
-  const filled = activeLines(lines).slice(0, 2);
-  const { drawPx, drawGap, y0 } = bandTextLayout(
-    Math.max(1, filled.length),
+  const { rows, layout } = standPlateArtPlan(
+    ctx,
+    lines,
     preset,
-    height,
-    0.62,
+    options?.logo,
   );
-  const metrics = plateTextMetrics(ctx, filled, drawPx, drawGap);
-  const layout = standPlateArtLayout({
-    logoAspect: options?.logo?.aspect,
-    logoScale: options?.logo?.scale,
-    logoGapScale: options?.logo?.gapScale,
-    textWidth: metrics.width,
-    textHeight: metrics.height,
-  });
 
   if (options?.logo?.image && layout.logo) {
     ctx.drawImage(
@@ -564,20 +647,17 @@ export function paintGavelStandPlateCanvas(
     );
   }
 
-  if (!filled.length) return canvas;
-  let y = y0;
-  for (const line of filled) {
-    ctx.font = fontCss(line, drawPx);
-    ctx.fillStyle = line.color?.trim() || GAVEL_DEFAULT_TEXT_COLOR;
+  for (const row of rows) {
+    ctx.font = fontCss(row.line, row.fontPx);
+    ctx.fillStyle = row.line.color?.trim() || GAVEL_DEFAULT_TEXT_COLOR;
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "center";
     ctx.fillText(
-      (line.text ?? "").trim(),
+      (row.line.text ?? "").trim(),
       layout.textCenterX,
-      y,
+      row.baseline,
       layout.textMaxWidth,
     );
-    y += drawPx + drawGap;
   }
   return canvas;
 }
@@ -651,40 +731,28 @@ export function gavelStandPlateToSvgString(
 ): string {
   const width = STAND_PLATE_TEXTURE_W_PX;
   const height = STAND_PLATE_TEXTURE_H_PX;
-  const filled = activeLines(lines).slice(0, 2);
-  const { drawPx, drawGap, y0 } = bandTextLayout(
-    filled.length,
-    preset,
-    height,
-    0.62,
-  );
   const measureCtx =
     typeof document !== "undefined"
       ? document.createElement("canvas").getContext("2d")
       : null;
-  const metrics = plateTextMetrics(measureCtx, filled, drawPx, drawGap);
-  const layout = standPlateArtLayout({
-    logoAspect: options?.logo?.aspect,
-    logoScale: options?.logo?.scale,
-    logoGapScale: options?.logo?.gapScale,
-    textWidth: metrics.width,
-    textHeight: metrics.height,
-  });
+  const { rows, layout } = standPlateArtPlan(
+    measureCtx,
+    lines,
+    preset,
+    options?.logo,
+  );
   const logoEl =
     options?.logo?.href && layout.logo
       ? `<image x="${layout.logo.x.toFixed(2)}" y="${layout.logo.y.toFixed(2)}" width="${layout.logo.w.toFixed(2)}" height="${layout.logo.h.toFixed(2)}" preserveAspectRatio="xMidYMid meet" href="${escapeXml(options.logo.href)}"/>`
       : "";
-  let y = y0;
-  const textEls = filled
-    .map((line) => {
+  const textEls = rows
+    .map(({ line, fontPx, baseline }) => {
       const family = line.fontFamily?.trim() || GAVEL_DEFAULT_FONT;
       const weight = line.bold ? 700 : 600;
       const fontStyle = line.italic ? "italic" : "normal";
       const color = line.color?.trim() || GAVEL_DEFAULT_TEXT_COLOR;
       const text = escapeXml((line.text ?? "").trim());
-      const el = `<text x="${layout.textCenterX.toFixed(2)}" y="${y}" text-anchor="middle" font-family="${escapeXml(family)}, Georgia, serif" font-size="${drawPx}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(color)}">${text}</text>`;
-      y += drawPx + drawGap;
-      return el;
+      return `<text x="${layout.textCenterX.toFixed(2)}" y="${baseline.toFixed(2)}" text-anchor="middle" font-family="${escapeXml(family)}, Georgia, serif" font-size="${fontPx.toFixed(2)}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(color)}">${text}</text>`;
     })
     .join("\n");
   const toPath = (pts: { x: number; y: number }[]) =>
@@ -836,7 +904,12 @@ export function paintSoundBlockTopCanvas(
     const logoW = Math.min(size * 0.52, maxLogoH * aspect);
     const logoH = logoW / aspect;
     const logoY = text ? size * 0.17 : (size - logoH) / 2;
+    ctx.save();
     ctx.drawImage(logo.image, (size - logoW) / 2, logoY, logoW, logoH);
+    ctx.globalCompositeOperation = "source-in";
+    ctx.fillStyle = "#000000";
+    ctx.fillRect((size - logoW) / 2, logoY, logoW, logoH);
+    ctx.restore();
   }
 
   ctx.textAlign = "center";
@@ -904,7 +977,7 @@ export function soundBlockTopToSvgString(
   const logoY = text ? size * 0.17 : (size - logoH) / 2;
   const logoEl =
     logo?.href
-      ? `<image x="${((size - logoW) / 2).toFixed(2)}" y="${logoY.toFixed(2)}" width="${logoW.toFixed(2)}" height="${logoH.toFixed(2)}" preserveAspectRatio="xMidYMid meet" href="${escapeXml(logo.href)}"/>`
+      ? `<image x="${((size - logoW) / 2).toFixed(2)}" y="${logoY.toFixed(2)}" width="${logoW.toFixed(2)}" height="${logoH.toFixed(2)}" preserveAspectRatio="xMidYMid meet" href="${escapeXml(logo.href)}" filter="url(#black-ink-logo)"/>`
       : "";
   const family = line.fontFamily?.trim() || GAVEL_DEFAULT_FONT;
   const weight = line.bold ? 700 : 600;
@@ -919,6 +992,15 @@ export function soundBlockTopToSvgString(
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  ${
+    logo?.href
+      ? `<defs>
+    <filter id="black-ink-logo" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"/>
+    </filter>
+  </defs>`
+      : ""
+  }
   ${logoEl}
   ${textEls}
 </svg>`;

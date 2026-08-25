@@ -103,13 +103,13 @@ import "../styles/gavelDesigner.css";
 
 /** One decision per screen — the gavel flow adds a wood/handle step. */
 type StepId = "product" | "style" | "design" | "quantity" | "done";
-type GavelLogoSurface = "band" | "stand" | "sound-block";
+type GavelLogoSurface = "stand" | "sound-block";
 
 const STEP_IDS: StepId[] = ["product", "style", "design", "quantity", "done"];
 
 /** localStorage draft so refresh keeps wizard progress (same idea as badge designer). */
 const GAVEL_DESIGNER_CACHE_PREFIX = "gavel-designer-draft";
-const GAVEL_CACHE_VERSION = 1;
+const GAVEL_CACHE_VERSION = 2;
 /** Skip caching huge logos so we do not blow the 5MB localStorage quota. */
 const GAVEL_CACHE_MAX_LOGO_CHARS = 1_500_000;
 
@@ -227,6 +227,13 @@ const STEP_LABELS: Record<StepId, string> = {
 
 const QTY_SLIDER_MAX = 50;
 
+/**
+ * Copy from the product photography. A fresh design opens with it so the
+ * preview reads like the plaque the customer is buying.
+ */
+const GAVEL_EXAMPLE_HEADLINE = "JUSTICE SERVES ALL";
+const GAVEL_EXAMPLE_SUBTITLE = "WITH INTEGRITY AND FAIRNESS";
+
 /** The logo sliders move continuously; keep stored values tidy for the payload. */
 function roundAdjust(value: number): number {
   return Math.round(value * 1000) / 1000;
@@ -258,12 +265,18 @@ function newLine(partial?: Partial<BadgeLine>): BadgeLine {
 }
 
 function defaultLines(): BadgeLine[] {
-  return [
-    newLine({ text: "GavelsFast" }),
-    newLine(),
-    newLine(),
-    newLine(),
-  ];
+  return [newLine(), newLine(), newLine(), newLine()];
+}
+
+/**
+ * The example copy as artwork. It stands in for the customer's text in the
+ * preview only, so an untouched designer shows a finished-looking plaque
+ * instead of a blank plate.
+ */
+function exampleArtLines(): BadgeLine[] {
+  return [GAVEL_EXAMPLE_HEADLINE, GAVEL_EXAMPLE_SUBTITLE].map((text, index) =>
+    newLine({ id: `gavel-example-${index}`, text }),
+  );
 }
 
 function defaultPlateLines(): BadgeLine[] {
@@ -340,7 +353,8 @@ export default function GavelDesigner({
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoScale, setLogoScale] = useState(1);
   const [logoGapScale, setLogoGapScale] = useState(1);
-  const [logoSurface, setLogoSurface] = useState<GavelLogoSurface>("band");
+  const [logoSurface, setLogoSurface] =
+    useState<GavelLogoSurface>("sound-block");
   const [uvTextColor, setUvTextColor] = useState(GAVEL_UV_TEXT_COLORS[0]);
   const [plateLines, setPlateLines] = useState<BadgeLine[]>(defaultPlateLines);
 
@@ -413,6 +427,9 @@ export default function GavelDesigner({
 
   const canPickTextColor = isStand && productionMethod === "uvprint";
   const showProductionMethod = isStand && standDef.allowsUvPrint;
+  const soundBlockEngraved = !isStand && soundBlock === "engraved";
+  const hasSoundBlock = !isStand && soundBlock !== "none";
+  const logoAllowed = isStand || soundBlockEngraved;
 
   const sequence: StepId[] = useMemo(
     () => ["product", "style", "design", "quantity", "done"],
@@ -434,6 +451,16 @@ export default function GavelDesigner({
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
+
+  /**
+   * With nothing typed anywhere, the preview shows the example copy from the
+   * product photography rather than bare metal. This never reaches a proof or
+   * the cart: ordering already requires the customer's own band text.
+   */
+  const usingExampleCopy =
+    !lines.some((line) => (line.text ?? "").trim()) &&
+    !plateLines.some((line) => (line.text ?? "").trim()) &&
+    !soundBlockText.trim();
 
   /** Band/plate art always renders with the color the flow allows. */
   const bandArtLines = useMemo(
@@ -462,6 +489,23 @@ export default function GavelDesigner({
     [canPickTextColor, plateSourceLines, uvTextColor],
   );
 
+  /** What the preview draws: the customer's copy, or the example standing in. */
+  const bandPreviewLines = useMemo(
+    () => (usingExampleCopy ? exampleArtLines() : bandArtLines),
+    [bandArtLines, usingExampleCopy],
+  );
+
+  const platePreviewLines = useMemo(
+    () =>
+      usingExampleCopy
+        ? exampleArtLines().map((line) => ({
+            ...line,
+            color: canPickTextColor ? uvTextColor : GAVEL_DEFAULT_TEXT_COLOR,
+          }))
+        : plateArtLines,
+    [canPickTextColor, plateArtLines, usingExampleCopy, uvTextColor],
+  );
+
   /** Logo art for the plate; SVG uploads can report no intrinsic size. */
   const makePlateLogo = useCallback(
     (scale: number, gapScale: number): GavelPlateLogo | null => {
@@ -484,31 +528,29 @@ export default function GavelDesigner({
     () => makePlateLogo(logoScale, logoGapScale),
     [logoGapScale, logoScale, makePlateLogo],
   );
-  const bandLogo = logoSurface === "band" ? plateLogo : null;
-  const standLogo = logoSurface === "stand" ? plateLogo : null;
-  const soundBlockLogo = logoSurface === "sound-block" ? plateLogo : null;
+  const standLogo = isStand && logoSurface === "stand" ? plateLogo : null;
+  const soundBlockLogo =
+    soundBlockEngraved && logoSurface === "sound-block" ? plateLogo : null;
 
   const bandTextureUrl = useMemo(
     () =>
       isClient
-        ? gavelBandToDataUrl(bandArtLines, textSize, bandDef.color, {
-            logo: bandLogo,
-          })
+        ? gavelBandToDataUrl(bandPreviewLines, textSize, bandDef.color)
         : "",
-    [bandArtLines, bandDef.color, bandLogo, isClient, textSize],
+    [bandDef.color, bandPreviewLines, isClient, textSize],
   );
 
   const renderPlateTexture = useCallback(
     (logo: GavelPlateLogo | null, shaped = false) => {
       if (!isClient || !isStand) return "";
       return gavelStandPlateToDataUrl(
-        plateArtLines,
+        platePreviewLines,
         textSize,
         standDef.plateHex,
         { shaped, logo },
       );
     },
-    [isClient, isStand, plateArtLines, standDef.plateHex, textSize],
+    [isClient, isStand, platePreviewLines, standDef.plateHex, textSize],
   );
 
   /**
@@ -529,7 +571,7 @@ export default function GavelDesigner({
     const frame = requestAnimationFrame(() => {
       paintGavelStandPlateCanvas(
         canvas,
-        plateArtLines,
+        platePreviewLines,
         textSize,
         standDef.plateHex,
         { logo: standLogo },
@@ -541,7 +583,7 @@ export default function GavelDesigner({
   }, [
     isClient,
     isStand,
-    plateArtLines,
+    platePreviewLines,
     standLogo,
     standDef.plateHex,
     textSize,
@@ -558,25 +600,26 @@ export default function GavelDesigner({
     [deferredPreviewLogo, renderPlateTexture],
   );
 
-  const soundBlockEngraved = !isStand && soundBlock === "engraved";
-  const hasSoundBlock = !isStand && soundBlock !== "none";
   const roundBlockAvailable =
     hasSoundBlock && isGavelRoundSoundBlockAvailable(soundBlock);
   /** Never price or draw a round block the store cannot make. */
   const effectiveSoundBlockShape: GavelSoundBlockShapeId =
     soundBlockShape === "round" && roundBlockAvailable ? "round" : "square";
   const soundBlockArtText = soundBlockText.trim() || lines[0]?.text?.trim() || "";
+  const soundBlockPreviewText = usingExampleCopy
+    ? GAVEL_EXAMPLE_HEADLINE
+    : soundBlockArtText;
   const soundBlockTextureUrl = useMemo(() => {
     if (
       !isClient ||
       !soundBlockEngraved ||
-      (!soundBlockArtText && !soundBlockLogo)
+      (!soundBlockPreviewText && !soundBlockLogo)
     ) {
       return "";
     }
     return soundBlockTopToDataUrl(
       {
-        text: soundBlockArtText,
+        text: soundBlockPreviewText,
         fontFamily: lines[0]?.fontFamily || GAVEL_DEFAULT_FONT,
         bold: lines[0]?.bold,
         italic: lines[0]?.italic,
@@ -588,9 +631,9 @@ export default function GavelDesigner({
     gavelStyle,
     isClient,
     lines,
-    soundBlockArtText,
     soundBlockEngraved,
     soundBlockLogo,
+    soundBlockPreviewText,
   ]);
 
   const shopHost =
@@ -721,7 +764,6 @@ export default function GavelDesigner({
             setLogoGapScale(clampGavelLogoGapScale(payload.logoGapScale));
           }
           if (
-            payload.logoSurface === "band" ||
             payload.logoSurface === "stand" ||
             payload.logoSurface === "sound-block"
           ) {
@@ -805,14 +847,13 @@ export default function GavelDesigner({
     }
     const requestedLogoSurface = readQueryParam("logoSurface");
     if (
-      requestedLogoSurface === "band" ||
       requestedLogoSurface === "stand" ||
       requestedLogoSurface === "sound-block"
     ) {
       setLogoSurface(requestedLogoSurface);
     } else if (requested === "stand") {
       setLogoSurface("stand");
-    } else if (requestedSoundBlock === "engraved") {
+    } else {
       setLogoSurface("sound-block");
     }
     setHydrated(true);
@@ -977,18 +1018,12 @@ export default function GavelDesigner({
   }, [roundBlockAvailable]);
 
   useEffect(() => {
-    if (isStand && logoSurface === "sound-block") {
+    if (isStand && logoSurface !== "stand") {
       setLogoSurface("stand");
-    } else if (!isStand && logoSurface === "stand") {
-      setLogoSurface("band");
-    } else if (
-      !isStand &&
-      !soundBlockEngraved &&
-      logoSurface === "sound-block"
-    ) {
-      setLogoSurface("band");
+    } else if (!isStand && logoSurface !== "sound-block") {
+      setLogoSurface("sound-block");
     }
-  }, [isStand, logoSurface, soundBlockEngraved]);
+  }, [isStand, logoSurface]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -1294,10 +1329,12 @@ export default function GavelDesigner({
       gavelStandPlateLines: isStand ? plateArtLines : null,
       gavelBandColor: bandDef.color,
       gavelPlateColor: isStand ? standDef.plateHex : null,
-      gavelLogoFileName: logoFile?.name ?? null,
-      gavelLogoScale: logoFile ? logoScale : null,
-      gavelLogoGapScale: logoFile ? logoGapScale : null,
-      gavelLogoSurface: logoFile ? logoSurface : null,
+      gavelLogoFileName: logoAllowed ? (logoFile?.name ?? null) : null,
+      gavelLogoScale: logoFile && logoAllowed ? logoScale : null,
+      gavelLogoGapScale: logoFile && logoAllowed ? logoGapScale : null,
+      gavelLogoSurface: logoFile && logoAllowed ? logoSurface : null,
+      gavelLogoColorMode:
+        logoFile && logoAllowed ? (isStand ? "full-color" : "black") : null,
       totalPrice: quote.total,
       timestamp: new Date().toISOString(),
       shopId: shop || readQueryParam("shop") || "test-shop",
@@ -1318,7 +1355,9 @@ export default function GavelDesigner({
     if (opts?.thumbnailBlob && opts.thumbnailBlob.size > 0) {
       form.append("thumbnail_png_0", opts.thumbnailBlob, "gavel-0-thumbnail.png");
     }
-    if (logoFile) form.append("logo_0", logoFile, logoFile.name);
+    if (logoFile && logoAllowed) {
+      form.append("logo_0", logoFile, logoFile.name);
+    }
     const rowsToSave =
       bulkRows.length > 0
         ? bulkRows.map(linesForBulkRow)
@@ -1345,9 +1384,7 @@ export default function GavelDesigner({
                 getSoundBlockTopTextColor(gavelStyle),
                 { logo: soundBlockLogo },
               )
-            : gavelBandToSvgString(rowLines, textSize, bandDef.color, {
-                logo: bandLogo,
-              });
+            : gavelBandToSvgString(rowLines, textSize, bandDef.color);
       form.append(
         `svg_${index}`,
         new Blob([svg], { type: "image/svg+xml" }),
@@ -1423,7 +1460,7 @@ export default function GavelDesigner({
         plateDataUrl: renderPlateTexture(standLogo) || null,
         unitPrice: quote.unitPrice,
         estimatedTotal: quote.total,
-        logoFileName: logoFile?.name ?? null,
+        logoFileName: logoAllowed ? (logoFile?.name ?? null) : null,
       });
       if (proofUrl) URL.revokeObjectURL(proofUrl);
       const url = URL.createObjectURL(pdfBlob);
@@ -1499,15 +1536,14 @@ export default function GavelDesigner({
             "_Gavel Style": styleDef.label,
             "_Band Finish": bandDef.label,
             "_Suede Bag": suedeBag ? "Yes" : "No",
-            ...(logoFile
+            ...(logoFile && logoAllowed
               ? {
                   "_Logo File": logoFile.name,
                   "_Logo Surface":
                     logoSurface === "stand"
                       ? "Stand plate"
-                      : logoSurface === "sound-block"
-                        ? "Sound block top"
-                        : "Gavel band",
+                      : "Sound block top",
+                  "_Logo Ink": isStand ? "Full color" : "Black ink only",
                 }
               : {}),
             ...(isStand
@@ -1607,9 +1643,7 @@ export default function GavelDesigner({
   }
 
   const designSubtitle = isStand
-    ? standDef.allowsUvPrint && productionMethod === "uvprint"
-      ? "Custom band, plus a full-color plate on the matching wood stand."
-      : "Custom band, plus a personalized plate on the matching wood stand."
+    ? "Custom band, plus a personalized plate with optional full-color logo."
     : "Custom gavel band — black text on the metal band.";
 
   const panelCopy: Record<StepId, { title: string; sub: string }> = {
@@ -2092,6 +2126,13 @@ export default function GavelDesigner({
                     </span>
                   </div>
 
+                  {usingExampleCopy ? (
+                    <p className="gf-note" style={{ marginBottom: 12 }}>
+                      The preview shows example wording. Enter your own text
+                      below and it replaces it.
+                    </p>
+                  ) : null}
+
                   {!bulkMode ? lines.map((line, index) => (
                     <div key={line.id} className="gf-line-block">
                       <div className="gf-line-label">
@@ -2104,9 +2145,9 @@ export default function GavelDesigner({
                         maxLength={maxChars}
                         placeholder={
                           index === 0
-                            ? "Your name here"
+                            ? GAVEL_EXAMPLE_HEADLINE
                             : index === 1
-                              ? "Title or organization"
+                              ? GAVEL_EXAMPLE_SUBTITLE
                               : "Optional line"
                         }
                         onChange={(e) =>
@@ -2196,13 +2237,15 @@ export default function GavelDesigner({
                         ) : null}
                         <p className="gf-note">
                           {bulkMode
-                            ? "Stand plate text comes from the first two CSV columns."
-                            : "Independent of the band — leave blank to repeat the band text on the plate."}
+                            ? "Stand plate text comes from the first two CSV columns — column one prints large, column two smaller beneath it."
+                            : "Independent of the band — leave blank to repeat the band text on the plate. Line 1 prints large, line 2 smaller beneath it."}
                         </p>
                         {!bulkMode ? plateLines.map((line, index) => (
                           <div key={line.id} className="gf-line-block">
                             <div className="gf-line-label">
-                              Plate line {index + 1} (optional)
+                              {index === 0
+                                ? "Plate line 1 — large (optional)"
+                                : "Plate line 2 — smaller (optional)"}
                             </div>
                             <input
                               className="gf-input"
@@ -2210,8 +2253,8 @@ export default function GavelDesigner({
                               maxLength={maxChars}
                               placeholder={
                                 index === 0
-                                  ? "Name or title"
-                                  : "Second line"
+                                  ? GAVEL_EXAMPLE_HEADLINE
+                                  : GAVEL_EXAMPLE_SUBTITLE
                               }
                               onChange={(e) =>
                                 updatePlateLine(index, { text: e.target.value })
@@ -2264,23 +2307,9 @@ export default function GavelDesigner({
                         )) : null}
                       </div>
                       <div className="gf-sub-section" style={{ marginTop: 12 }}>
-                        <p className="gf-sub-title">Shared logo (optional)</p>
-                        <div className="gf-pill-row" style={{ marginBottom: 10 }}>
-                          <button
-                            type="button"
-                            className={`gf-pill ${logoSurface === "band" ? "is-selected" : ""}`}
-                            onClick={() => setLogoSurface("band")}
-                          >
-                            Gavel band
-                          </button>
-                          <button
-                            type="button"
-                            className={`gf-pill ${logoSurface === "stand" ? "is-selected" : ""}`}
-                            onClick={() => setLogoSurface("stand")}
-                          >
-                            Stand plate
-                          </button>
-                        </div>
+                        <p className="gf-sub-title">
+                          Full-color stand logo (optional)
+                        </p>
                         <label className="gf-upload">
                           <input
                             type="file"
@@ -2292,9 +2321,7 @@ export default function GavelDesigner({
                           <span>
                             {logoFile
                               ? logoFile.name
-                              : canPickTextColor
-                                ? "Upload logo — full color (JPG, PNG, SVG)"
-                                : "Upload logo — vector or silhouette (JPG, PNG, SVG)"}
+                              : "Upload full-color logo (JPG, PNG, SVG)"}
                           </span>
                         </label>
                         {logoFile ? (
@@ -2360,35 +2387,19 @@ export default function GavelDesigner({
                           </div>
                         ) : null}
                         <p className="gf-note">
-                          The same logo is applied to every CSV row on the{" "}
-                          {logoSurface === "stand" ? "stand plate" : "gavel band"}.
-                          The original file is attached to the order.
+                          The logo is printed in color on every stand plate. The
+                          original file is attached to the order. Logos are not
+                          available on the gavel band.
                         </p>
                       </div>
                     </>
                   ) : null}
 
-                  {!isStand ? (
+                  {!isStand && soundBlockEngraved ? (
                     <div className="gf-sub-section" style={{ marginTop: 12 }}>
-                      <p className="gf-sub-title">Shared logo (optional)</p>
-                      <div className="gf-pill-row" style={{ marginBottom: 10 }}>
-                        <button
-                          type="button"
-                          className={`gf-pill ${logoSurface === "band" ? "is-selected" : ""}`}
-                          onClick={() => setLogoSurface("band")}
-                        >
-                          Gavel band
-                        </button>
-                        {soundBlockEngraved ? (
-                          <button
-                            type="button"
-                            className={`gf-pill ${logoSurface === "sound-block" ? "is-selected" : ""}`}
-                            onClick={() => setLogoSurface("sound-block")}
-                          >
-                            Sound block top
-                          </button>
-                        ) : null}
-                      </div>
+                      <p className="gf-sub-title">
+                        Black-ink sound block logo (optional)
+                      </p>
                       <label className="gf-upload">
                         <input
                           type="file"
@@ -2400,7 +2411,7 @@ export default function GavelDesigner({
                         <span>
                           {logoFile
                             ? logoFile.name
-                            : "Upload school or organization logo (JPG, PNG, SVG)"}
+                            : "Upload logo for black-ink printing (JPG, PNG, SVG)"}
                         </span>
                       </label>
                       {logoFile ? (
@@ -2430,10 +2441,9 @@ export default function GavelDesigner({
                         </div>
                       ) : null}
                       <p className="gf-note">
-                        The same logo is applied to every CSV row on the{" "}
-                        {logoSurface === "sound-block"
-                          ? "square sound block top"
-                          : "metal gavel band"}.
+                        The same logo is converted to black ink on every square
+                        sound block top. A transparent-background file works
+                        best. Logos are not available on the gavel band.
                       </p>
                     </div>
                   ) : null}
@@ -2670,8 +2680,12 @@ export default function GavelDesigner({
                 {step === "design" ? (
                   <GavelUnwrappedBandStrip
                     dataUrl={bandTextureUrl}
-                    empty={!designReady}
-                    label="Unwrapped band (custom proof)"
+                    empty={!designReady && !usingExampleCopy}
+                    label={
+                      usingExampleCopy
+                        ? "Unwrapped band (example)"
+                        : "Unwrapped band (custom proof)"
+                    }
                     emptyText="Enter text to see it laid out on the band"
                   />
                 ) : null}
@@ -2680,16 +2694,24 @@ export default function GavelDesigner({
                     dataUrl={plateProofUrl}
                     empty={!plateProofUrl}
                     shaped
-                    label="Stand plate (custom proof)"
+                    label={
+                      usingExampleCopy
+                        ? "Stand plate (example)"
+                        : "Stand plate (custom proof)"
+                    }
                     emptyText="Enter band or plate text"
                   />
                 ) : null}
                 {soundBlockEngraved && step === "design" ? (
                   <GavelUnwrappedBandStrip
                     dataUrl={soundBlockTextureUrl}
-                    empty={!soundBlockArtText}
+                    empty={!soundBlockPreviewText}
                     square
-                    label="Sound block top (custom proof)"
+                    label={
+                      usingExampleCopy
+                        ? "Sound block top (example)"
+                        : "Sound block top (custom proof)"
+                    }
                     emptyText="Enter band or sound block text"
                   />
                 ) : null}

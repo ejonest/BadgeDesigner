@@ -1,0 +1,83 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "wrapper": "div.page-tpl",
+  "sections": {
+    "main": {
+      "type": "portfolio-1-section",
+      "blocks": {
+        "c9dd0835-07f2-47cb-b117-ca9f15e8e66b": {
+          "type": "images",
+          "settings": {
+            "categories": "all",
+            "title": "Habitasse Molateas",
+            "subtitle": "Dosuere an morci lobortis scelerisque blandit cosmopolis.",
+            "link_to": "shopify://collections/all"
+          }
+        },
+        "5118c67c-574f-4a50-9672-8639bf433f41": {
+          "type": "images",
+          "settings": {
+            "categories": "",
+            "title": "Habitasse Molateas",
+            "subtitle": "Dosuere an morci lobortis scelerisque blandit cosmopolis.",
+            "link_to": "shopify://collections/all"
+          }
+        },
+        "19d05f35-69bc-407c-a15d-a1166fa39567": {
+          "type": "images",
+          "settings": {
+            "categories": "",
+            "title": "Habitasse Molateas",
+            "subtitle": "Dosuere an morci lobortis scelerisque blandit cosmopolis.",
+            "link_to": "shopify://collections/all"
+          }
+        },
+        "ee634efe-d2bc-45ca-81c3-836208153655": {
+          "type": "images",
+          "settings": {
+            "categories": "",
+            "title": "Habitasse Molateas",
+            "subtitle": "Dosuere an morci lobortis scelerisque blandit cosmopolis.",
+            "link_to": "shopify://collections/all"
+          }
+        },
+        "129fb501-d30d-4102-b0aa-c64c6792e995": {
+          "type": "images",
+          "settings": {
+            "categories": "",
+            "title": "Habitasse Molateas",
+            "subtitle": "Dosuere an morci lobortis scelerisque blandit cosmopolis.",
+            "link_to": "shopify://collections/all"
+          }
+        }
+      },
+      "block_order": [
+        "c9dd0835-07f2-47cb-b117-ca9f15e8e66b",
+        "5118c67c-574f-4a50-9672-8639bf433f41",
+        "19d05f35-69bc-407c-a15d-a1166fa39567",
+        "ee634efe-d2bc-45ca-81c3-836208153655",
+        "129fb501-d30d-4102-b0aa-c64c6792e995"
+      ],
+      "settings": {
+        "header_text_color": "",
+        "page_description": "",
+        "display_filter": true,
+        "filter_list": "Cosmopolis;\nSuitó;\nMilancelos;\nBlazero;\nGlamos",
+        "text_color": "#ffffff",
+        "overlay_color": "#232323",
+        "overlay_opacity": "0.7"
+      }
+    }
+  },
+  "order": [
+    "main"
+  ]
+}
