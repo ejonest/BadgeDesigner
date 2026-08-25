@@ -145,6 +145,8 @@ export interface Badge {
   gavelProductType?: "gavel" | "stand";
   /** Gavel designer only: sound block add-on. */
   gavelSoundBlock?: "none" | "plain" | "engraved";
+  /** Gavel designer only: sound block silhouette. Round is walnut/plain only. */
+  gavelSoundBlockShape?: "square" | "round";
   /** Gavel designer only: sound block personalization on the wood top. */
   gavelSoundBlockText?: string;
   /** Gavel designer only: suede bag add-on. */

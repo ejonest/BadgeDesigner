@@ -10,6 +10,7 @@ import {
   type GavelProductionMethodId,
   type GavelProductType,
   type GavelSoundBlockId,
+  type GavelSoundBlockShapeId,
   type GavelStandFinishId,
   type GavelTextSizePreset,
 } from "~/constants/gavelStyles";
@@ -28,6 +29,7 @@ type GenerateGavelProofPdfInput = {
   unwrappedDataUrl?: string | null;
   productType?: GavelProductType;
   soundBlock?: GavelSoundBlockId;
+  soundBlockShape?: GavelSoundBlockShapeId;
   soundBlockText?: string;
   soundBlockDataUrl?: string | null;
   suedeBag?: boolean;
@@ -119,6 +121,7 @@ export async function generateGavelProofPdf(
     `Options: ${formatGavelOptionSummary({
       productType: input.productType ?? "gavel",
       soundBlock: input.soundBlock ?? "none",
+      soundBlockShape: input.soundBlockShape ?? "square",
       suedeBag: Boolean(input.suedeBag),
       standFinish: input.standFinish,
       productionMethod: input.productionMethod,

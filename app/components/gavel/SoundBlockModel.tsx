@@ -17,6 +17,8 @@ type Props = {
   style: GavelStyleDef;
   /** Transparent PNG of centered text, drawn on the wood top. */
   topTextureUrl?: string;
+  /** The round block is the plain American-walnut option from the product photos. */
+  shape?: "square" | "round";
 };
 
 /** Keep personalization clear of the softened arris around the top panel. */
@@ -44,7 +46,11 @@ function cloneWoodMap(source: THREE.Texture | null): THREE.Texture | null {
  * body on rubber feet. Personalization is printed on the raised wood panel —
  * there is no metal plate.
  */
-export function SoundBlockModel({ style, topTextureUrl = "" }: Props) {
+export function SoundBlockModel({
+  style,
+  topTextureUrl = "",
+  shape = "square",
+}: Props) {
   const woodMaps = useLoadedWoodMaps(style);
   const [topMap, setTopMap] = useState<THREE.Texture | null>(null);
 
@@ -146,26 +152,82 @@ export function SoundBlockModel({ style, topTextureUrl = "" }: Props) {
 
   return (
     <group>
-      <mesh
-        geometry={bodyGeom}
-        position={[0, bodyY, 0]}
-        material={bodyMat}
-        castShadow
-        receiveShadow
-      />
-      {feet.map(([x, z]) => (
-        <mesh
-          key={`${x}:${z}`}
-          position={[x, bottomY + SOUND_BLOCK_FOOT_H_IN / 2, z]}
-          material={footMat}
-          castShadow
-        >
-          <cylinderGeometry
-            args={[FOOT_R_IN, FOOT_R_IN, SOUND_BLOCK_FOOT_H_IN, 20]}
+      {shape === "round" ? (
+        <>
+          <mesh
+            position={[0, bottomY + SOUND_BLOCK_FOOT_H_IN / 2, 0]}
+            material={footMat}
+            castShadow
+          >
+            <cylinderGeometry
+              args={[1.5, 1.5, SOUND_BLOCK_FOOT_H_IN, 64]}
+            />
+          </mesh>
+          <mesh
+            position={[0, bodyY + 0.31, 0]}
+            material={bodyMat}
+            castShadow
+            receiveShadow
+          >
+            <cylinderGeometry args={[2.02, 2.08, 0.62, 64]} />
+          </mesh>
+          <mesh
+            position={[0, bodyY + 0.68, 0]}
+            material={bodyMat}
+            castShadow
+            receiveShadow
+          >
+            <cylinderGeometry args={[1.9, 1.98, 0.14, 64]} />
+          </mesh>
+          <mesh
+            position={[0, bodyY + 0.82, 0]}
+            material={bodyMat}
+            castShadow
+            receiveShadow
+          >
+            <cylinderGeometry args={[1.72, 1.88, 0.16, 64]} />
+          </mesh>
+          <mesh
+            position={[0, bodyY + 0.93, 0]}
+            material={bodyMat}
+            castShadow
+            receiveShadow
+          >
+            <cylinderGeometry args={[1.6, 1.72, 0.08, 64]} />
+          </mesh>
+          <mesh
+            position={[0, bodyY + 0.79, 0]}
+            rotation={[Math.PI / 2, 0, 0]}
+            material={bodyMat}
+            castShadow
+          >
+            <torusGeometry args={[1.77, 0.055, 12, 64]} />
+          </mesh>
+        </>
+      ) : (
+        <>
+          <mesh
+            geometry={bodyGeom}
+            position={[0, bodyY, 0]}
+            material={bodyMat}
+            castShadow
+            receiveShadow
           />
-        </mesh>
-      ))}
-      {topMap ? (
+          {feet.map(([x, z]) => (
+            <mesh
+              key={`${x}:${z}`}
+              position={[x, bottomY + SOUND_BLOCK_FOOT_H_IN / 2, z]}
+              material={footMat}
+              castShadow
+            >
+              <cylinderGeometry
+                args={[FOOT_R_IN, FOOT_R_IN, SOUND_BLOCK_FOOT_H_IN, 20]}
+              />
+            </mesh>
+          ))}
+        </>
+      )}
+      {shape === "square" && topMap ? (
         <mesh
           position={[0, topSurfaceY + 0.004, 0]}
           rotation={[-Math.PI / 2, 0, 0]}

@@ -13,6 +13,7 @@
 import type {
   GavelProductType,
   GavelSoundBlockId,
+  GavelSoundBlockShapeId,
   GavelStyleId,
 } from "~/constants/gavelStyles";
 import {
@@ -37,6 +38,13 @@ const SOUND_BLOCK_OPTION_VALUES: Record<GavelSoundBlockId, string> = {
   engraved: "+ Sound block, personalized",
 };
 
+/**
+ * The round block is its own option value on the store rather than a third
+ * option, so the shape collapses into the sound-block value here. Only the
+ * plain round block is priced (see isGavelRoundSoundBlockAvailable).
+ */
+const ROUND_SOUND_BLOCK_OPTION_VALUE = "+ Round sound block, plain";
+
 export const GAVEL_PRODUCT_HANDLES: Record<GavelProductType, string> = {
   gavel: "custom-wooden-gavel",
   stand: "custom-wooden-gavel-stand",
@@ -48,6 +56,7 @@ export type GavelVariantSelection = {
   productType: GavelProductType;
   styleId: GavelStyleId;
   soundBlock: GavelSoundBlockId;
+  soundBlockShape?: GavelSoundBlockShapeId;
 };
 
 export type GavelVariantMatch = {
@@ -110,7 +119,11 @@ export function gavelWoodOptionValue(styleId: GavelStyleId): string {
 
 export function gavelSoundBlockOptionValue(
   soundBlock: GavelSoundBlockId,
+  shape: GavelSoundBlockShapeId = "square",
 ): string {
+  if (soundBlock !== "none" && shape === "round") {
+    return ROUND_SOUND_BLOCK_OPTION_VALUE;
+  }
   return SOUND_BLOCK_OPTION_VALUES[soundBlock];
 }
 
@@ -139,6 +152,7 @@ export function findGavelVariant(
   const wantSoundBlock = normOptionText(
     gavelSoundBlockOptionValue(
       selection.productType === "stand" ? "none" : selection.soundBlock,
+      selection.soundBlockShape ?? "square",
     ),
   );
 
