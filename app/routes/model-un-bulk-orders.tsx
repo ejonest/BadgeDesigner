@@ -33,58 +33,99 @@ export async function loader({ request }: LoaderFunctionArgs) {
   );
 }
 
-type ProductChoice = "block" | "stand";
+type ProductChoice = "block" | "stand" | "sound-block" | "band";
 
-const PRODUCTS = [
+/**
+ * Every card maps to a combination the store actually sells, since there is no
+ * standalone sound block or band SKU. Prices are the lowest custom wood
+ * (rubberwood) from the Gavels Fast product sheet; the designer resolves the
+ * live variant price once a wood is chosen.
+ */
+const PRODUCTS: readonly {
+  id: ProductChoice;
+  title: string;
+  note: string;
+  price: string;
+  image: string;
+  productType: "gavel" | "stand";
+  soundBlock: "none" | "plain" | "engraved";
+}[] = [
   {
     id: "block",
     title: "Gavel on Block",
-    price: "From $19.98",
+    note: "Engraved band, plain sound block",
+    price: "From $24.98",
     image: "/images/gavel/product-walnut-block-angle.jpg",
-    available: true,
+    productType: "gavel",
+    soundBlock: "plain",
   },
   {
     id: "stand",
     title: "Gavel on Stand",
-    price: "From $19.98",
+    note: "Engraved band and stand plate",
+    price: "From $34.95",
     image: "/images/gavel/product-walnut-stand-front.jpg",
-    available: true,
+    productType: "stand",
+    soundBlock: "none",
   },
   {
     id: "sound-block",
     title: "Sound Block",
-    price: "Coming soon",
+    note: "Personalized block top, gavel included",
+    price: "From $34.98",
     image: "/images/gavel/product-soundblock-engraved.jpg",
-    available: false,
+    productType: "gavel",
+    soundBlock: "engraved",
   },
   {
     id: "band",
     title: "Gavel Band",
-    price: "Included with gavels",
+    note: "Gavel only, engraved band",
+    price: "From $19.99",
     image: "/images/gavel/product-walnut-gavel.jpg",
-    available: false,
+    productType: "gavel",
+    soundBlock: "none",
   },
-] as const;
+];
 
 export default function ModelUnBulkOrdersRoute() {
   const { shop, customerId, embedded } = useLoaderData<typeof loader>();
   const [product, setProduct] = useState<ProductChoice>("block");
-  const [bulk, setBulk] = useState(true);
+
+  const selected = PRODUCTS.find((item) => item.id === product) ?? PRODUCTS[0];
+
+  /** Only the stand carries a plate, and only the square block top is engravable. */
+  const engravingSurface =
+    selected.productType === "stand"
+      ? "Band + stand plate"
+      : selected.soundBlock === "engraved"
+        ? "Band + block top"
+        : "Band";
+  const defaultLogoSurface =
+    selected.productType === "stand"
+      ? "Stand plate"
+      : selected.soundBlock === "engraved"
+        ? "Sound block top"
+        : "Gavel band";
 
   const designerUrl = useMemo(() => {
     const params = new URLSearchParams({
-      productType: product === "stand" ? "stand" : "gavel",
-      bulk: bulk ? "1" : "0",
+      productType: selected.productType,
+      soundBlock: selected.soundBlock,
+      logoSurface:
+        selected.productType === "stand"
+          ? "stand"
+          : selected.soundBlock === "engraved"
+            ? "sound-block"
+            : "band",
+      bulk: "1",
       audience: "model-un",
     });
-    if (product === "block") params.set("soundBlock", "engraved");
     if (shop) params.set("shop", shop);
     if (customerId) params.set("customerId", customerId);
     if (embedded) params.set("embedded", "1");
     return `/gavel-designer?${params.toString()}`;
-  }, [bulk, customerId, embedded, product, shop]);
-
-  const selected = PRODUCTS.find((item) => item.id === product) ?? PRODUCTS[0];
+  }, [customerId, embedded, selected, shop]);
 
   return (
     <div className="mun-page">
@@ -124,33 +165,26 @@ export default function ModelUnBulkOrdersRoute() {
                   <button
                     key={item.id}
                     type="button"
-                    disabled={!item.available}
                     className={product === item.id ? "is-selected" : ""}
-                    onClick={() => {
-                      if (item.available) setProduct(item.id);
-                    }}
+                    onClick={() => setProduct(item.id)}
                   >
                     <span className="mun-product-photo">
                       <img src={item.image} alt="" />
                     </span>
                     <strong>{item.title}</strong>
+                    <em className="mun-product-note">{item.note}</em>
                     <small>{item.price}</small>
                   </button>
                 ))}
               </div>
-              <label className="mun-bulk-toggle">
-                <input
-                  type="checkbox"
-                  checked={bulk}
-                  onChange={(event) => setBulk(event.target.checked)}
-                />
+              <div className="mun-bulk-toggle is-locked">
                 <span aria-hidden><i /></span>
-                <b>I need a personalized bulk order</b>
-              </label>
+                <b>Personalized bulk order</b>
+              </div>
               <p className="mun-helper">
-                {bulk
-                  ? "Upload names in the designer using our CSV template. Your wood, finish, font, and optional school logo stay consistent."
-                  : "You can also create one design and choose a standard quantity."}
+                Upload the CSV template or paste rows directly — one gavel per
+                line, commas between text lines. Your wood, finish, font, and
+                shared logo stay consistent across the order.
               </p>
             </div>
 
@@ -172,9 +206,12 @@ export default function ModelUnBulkOrdersRoute() {
               </div>
               <dl>
                 <div><dt>Product</dt><dd>{selected.title}</dd></div>
-                <div><dt>Style</dt><dd>Choose next</dd></div>
-                <div><dt>Personalization</dt><dd>{bulk ? "CSV names" : "One design"}</dd></div>
-                <div><dt>School logo</dt><dd>Optional</dd></div>
+                <div><dt>Engraving</dt><dd>{engravingSurface}</dd></div>
+                <div><dt>Personalization</dt><dd>CSV names</dd></div>
+                <div>
+                  <dt>Logo placement</dt>
+                  <dd>{defaultLogoSurface}</dd>
+                </div>
               </dl>
               <Link className="mun-cta" to={designerUrl}>
                 Continue to design

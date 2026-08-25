@@ -121,6 +121,29 @@ export async function runSaveDraftDesigner(
       designId,
     );
 
+    // Gavel bulk orders use one shared organization logo across every CSV row.
+    // Upload it once, then attach the durable URL to each order-item record.
+    const sharedLogoFile = formData.get("logo_0") as File | null;
+    let sharedLogoUrl = "";
+    if (sharedLogoFile?.size && terminalLineKeys.size === 0) {
+      try {
+        const rawExt = sharedLogoFile.name.split(".").pop()?.toLowerCase();
+        const safeExt =
+          rawExt && /^[a-z0-9]{2,5}$/.test(rawExt) ? rawExt : "png";
+        sharedLogoUrl = await uploadImageToDesignerBucket(
+          def,
+          sharedLogoFile,
+          `${designId}/${def.lineIdPrefix}-shared-logo.${safeExt}`,
+          sharedLogoFile.type || "image/png",
+        );
+      } catch (err) {
+        console.warn(
+          `[save-draft-${designerId}] Shared logo upload failed:`,
+          err,
+        );
+      }
+    }
+
     const orderItems: ReturnType<typeof convertBadgeToOrderItem>[] =
       await Promise.all(
         allBadges.map(async (badge, badgeIndex) => {
@@ -224,6 +247,7 @@ export async function runSaveDraftDesigner(
             design_meta: pickDesignMeta(designData),
             is_qa_test: isQaTest || undefined,
           });
+          if (sharedLogoUrl) item.uploaded_image_url = sharedLogoUrl;
           item.status = "draft";
           return item;
         }),

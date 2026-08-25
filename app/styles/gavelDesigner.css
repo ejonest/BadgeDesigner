@@ -96,6 +96,10 @@
   transform: translateX(19px);
 }
 
+.gf-bulk-switch:disabled {
+  cursor: default;
+}
+
 .gf-bulk-import {
   margin-bottom: 18px;
   padding: 15px;
@@ -142,8 +146,127 @@
   font-size: 13px;
 }
 
+.gf-bulk-paste {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(10, 22, 40, 0.1);
+}
+
+.gf-bulk-paste-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gf-ink);
+}
+
+.gf-bulk-paste-example {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--gf-muted);
+}
+
+.gf-bulk-paste-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--gf-border);
+  border-radius: 8px;
+  background: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--gf-ink);
+  resize: vertical;
+}
+
+.gf-bulk-paste-input:focus-visible {
+  outline: 2px solid var(--gf-gold, #c4a35a);
+  outline-offset: 1px;
+}
+
+.gf-bulk-paste-error,
+.gf-bulk-paste-warning {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+
+.gf-bulk-paste-error {
+  border: 1px solid #f2b8b5;
+  background: #fdeceb;
+  color: #96261f;
+}
+
+.gf-bulk-paste-warning {
+  border: 1px solid #f0d9a8;
+  background: #fdf5e4;
+  color: #7a5610;
+}
+
+.gf-bulk-paste-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.gf-bulk-paste-foot .gf-nav-primary {
+  min-height: 36px;
+  padding: 8px 14px;
+  font-size: 12px;
+}
+
+.gf-bulk-paste-foot .gf-nav-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .gf-bulk-status span {
   color: var(--gf-muted);
+}
+
+.gf-bulk-text-preview {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--gf-border);
+  border-radius: 10px;
+  background: var(--gf-cream);
+}
+
+.gf-bulk-text-preview > .gf-sub-title,
+.gf-bulk-text-preview > .gf-note {
+  margin: 0;
+}
+
+.gf-bulk-text-preview > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 12px;
+}
+
+.gf-bulk-text-preview > div span {
+  color: var(--gf-muted);
+}
+
+.gf-bulk-empty {
+  margin-bottom: 14px;
+  padding: 18px;
+  border: 1px dashed rgba(10, 22, 40, 0.28);
+  border-radius: 10px;
+  color: var(--gf-muted);
+  background: var(--gf-cream);
+  font-size: 13px;
+  text-align: center;
 }
 
 .gf-bulk-row-list {
