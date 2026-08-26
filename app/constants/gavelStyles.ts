@@ -452,7 +452,7 @@ export const GAVEL_STYLES: readonly GavelStyleDef[] = [
     grainTint: "#38241c",
     useWoodGrain: true,
     textureSet: "walnut",
-    thumbSrc: "/images/gavel/thumb-walnut.jpg",
+    thumbSrc: "/images/gavel/thumb-walnut.png",
   },
   {
     id: "rubberwood",
@@ -464,7 +464,7 @@ export const GAVEL_STYLES: readonly GavelStyleDef[] = [
     grainTint: "#4a2b22",
     useWoodGrain: true,
     textureSet: "rubberwood",
-    thumbSrc: "/images/gavel/thumb-rubberwood.jpg",
+    thumbSrc: "/images/gavel/thumb-rubberwood.png",
   },
   {
     id: "ebony",
@@ -476,7 +476,7 @@ export const GAVEL_STYLES: readonly GavelStyleDef[] = [
     grainTint: "#0a0a0c",
     useWoodGrain: true,
     textureSet: "ebony",
-    thumbSrc: "/images/gavel/thumb-ebony.jpg",
+    thumbSrc: "/images/gavel/thumb-ebony.png",
   },
 ] as const;
 
@@ -498,7 +498,7 @@ export const GAVEL_PRODUCT_TYPE_OPTIONS: readonly {
   {
     id: "gavel",
     label: "Gavel",
-    description: "Custom band, with or without sound block",
+    description: "Custom band, with an optional sound block",
     photoSrc: "/images/gavel/product-walnut-block-angle.jpg",
   },
   {
@@ -540,13 +540,36 @@ export const GAVEL_SOUND_BLOCK_SHAPE_OPTIONS: readonly {
 ];
 
 /**
- * The round block comes undecorated in every wood — engraving is offered on
- * the square top only, so there is no priced personalized round variant.
+ * Ebony is gavel-only in the catalog: no stand, and the matching block is
+ * blank square only (no personalized top, no round silhouette).
+ */
+export function isGavelStandOffered(
+  styleId: string | null | undefined,
+): boolean {
+  return getGavelStyle(styleId).id !== "ebony";
+}
+
+export function isGavelSoundBlockOffered(
+  soundBlock: GavelSoundBlockId,
+  styleId: string | null | undefined,
+): boolean {
+  if (soundBlock === "engraved" && getGavelStyle(styleId).id === "ebony") {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * The round block comes undecorated — engraving is offered on the square top
+ * only, so there is no priced personalized round variant. Ebony is square-only.
  */
 export function isGavelRoundSoundBlockAvailable(
   soundBlock: GavelSoundBlockId,
+  styleId?: string | null,
 ): boolean {
-  return soundBlock === "plain";
+  if (soundBlock !== "plain") return false;
+  if (styleId != null && getGavelStyle(styleId).id === "ebony") return false;
+  return true;
 }
 
 export const GAVEL_STAND_FINISH_OPTIONS: readonly {

@@ -16,6 +16,8 @@ import {
   GAVEL_SOUND_BLOCK_SHAPE_IDS,
   GAVEL_STYLE_IDS,
   isGavelRoundSoundBlockAvailable,
+  isGavelSoundBlockOffered,
+  isGavelStandOffered,
   type GavelProductType,
 } from "../app/constants/gavelStyles";
 import type { ShopifyProductJs } from "../app/utils/signShopifyCatalog";
@@ -36,10 +38,17 @@ for (const productType of ["gavel", "stand"] as GavelProductType[]) {
     productType === "stand" ? (["none"] as const) : GAVEL_SOUND_BLOCK_IDS;
 
   for (const styleId of GAVEL_STYLE_IDS) {
+    if (productType === "stand" && !isGavelStandOffered(styleId)) continue;
+
     for (const soundBlock of soundBlocks) {
+      if (!isGavelSoundBlockOffered(soundBlock, styleId)) continue;
+
       for (const shape of GAVEL_SOUND_BLOCK_SHAPE_IDS) {
         if (shape === "round" && soundBlock === "none") continue;
-        if (shape === "round" && !isGavelRoundSoundBlockAvailable(soundBlock)) {
+        if (
+          shape === "round" &&
+          !isGavelRoundSoundBlockAvailable(soundBlock, styleId)
+        ) {
           continue;
         }
         const match = resolveGavelVariant(product, {
