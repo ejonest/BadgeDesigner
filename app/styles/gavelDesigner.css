@@ -569,20 +569,24 @@
 }
 
 .gf-design-grid.is-product .gf-toggle-row {
-  flex: 1 1 auto;
-  max-height: 228px;
+  flex: 0 0 auto;
   margin-bottom: 12px;
 }
 
 .gf-design-grid.is-product .gf-toggle-card {
-  min-height: 172px;
-  padding: 16px 18px;
+  padding: 12px 16px;
   justify-content: flex-end;
 }
 
+/*
+  Fixed rather than flexible: only the stand card carries an availability note,
+  and a flexible photo would let that extra line shrink one photo but not the
+  other, so the two cards would disagree on where the product sits.
+*/
 .gf-design-grid.is-product .gf-toggle-photo {
-  min-height: 100px;
-  margin-bottom: 10px;
+  flex: 0 0 auto;
+  height: 88px;
+  margin-bottom: 8px;
 }
 
 .gf-design-grid.is-product .gf-toggle-label {
@@ -613,32 +617,41 @@
     gap: 8px;
   }
 
-  .gf-design-grid.is-product .gf-toggle-row {
-    max-height: none;
-    flex: 0 0 auto;
-  }
-
   .gf-design-grid.is-product .gf-toggle-card {
-    min-height: 124px;
     padding: 12px 14px;
   }
 
   .gf-design-grid.is-product .gf-toggle-photo {
-    min-height: 68px;
+    height: 68px;
   }
 
-  .gf-design-grid.is-product .gf-toggle-card.is-compact {
+  .gf-toggle-card.is-compact {
     min-height: 92px;
     padding: 8px 6px 10px;
   }
 
-  .gf-design-grid.is-product .gf-toggle-card.is-compact .gf-toggle-photo {
+  .gf-toggle-card.is-compact .gf-toggle-photo {
     min-height: 48px;
     margin-bottom: 6px;
   }
 
-  .gf-design-grid.is-product .gf-toggle-card.is-compact .gf-toggle-label {
+  .gf-toggle-card.is-compact .gf-toggle-label {
     font-size: 11px;
+  }
+
+  .gf-design-grid.is-product .gf-style-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gf-design-grid.is-product .gf-style-card {
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+  }
+
+  .gf-design-grid.is-product .gf-style-thumb {
+    width: 56px;
+    height: 56px;
   }
 
   /*
@@ -913,6 +926,20 @@
   background: #fffbf2;
 }
 
+.gf-toggle-card:disabled,
+.gf-style-card:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.gf-toggle-card:disabled:hover {
+  border-color: transparent;
+}
+
+.gf-style-card:disabled:hover {
+  border-color: var(--gf-border);
+}
+
 /* Product photo fills the card; the label sits beneath it. */
 .gf-toggle-photo {
   flex: 1;
@@ -935,6 +962,28 @@
   color: var(--gf-muted);
 }
 
+.gf-availability-note,
+.gf-option-price {
+  display: block;
+  width: fit-content;
+  margin-top: 4px;
+  color: var(--gf-navy);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.gf-availability-note,
+.gf-option-price.is-unavailable {
+  color: #8c3b2c;
+}
+
+.gf-availability-note {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #f9e8e4;
+}
+
 /*
   Compact cards for the sound-block picker. They sit three-across inside a
   cream sub-section, so they need a white face and a hairline border to read
@@ -946,7 +995,7 @@
   margin-bottom: 0;
 }
 
-.gf-design-grid.is-product .gf-toggle-card.is-compact {
+.gf-toggle-card.is-compact {
   min-height: 108px;
   padding: 10px 10px 11px;
   background: #fff;
@@ -955,19 +1004,51 @@
   gap: 2px;
 }
 
-.gf-design-grid.is-product .gf-toggle-card.is-compact.is-selected {
+.gf-toggle-card.is-compact.is-selected {
   border-color: var(--gf-gold-2);
   background: #fffbf2;
 }
 
-.gf-design-grid.is-product .gf-toggle-card.is-compact .gf-toggle-photo {
+.gf-toggle-card.is-compact .gf-toggle-photo {
   min-height: 60px;
   margin-bottom: 6px;
 }
 
-.gf-design-grid.is-product .gf-toggle-card.is-compact .gf-toggle-label {
+.gf-toggle-card.is-compact .gf-toggle-label {
   font-size: 12.5px;
   line-height: 1.3;
+  text-align: center;
+}
+
+.gf-toggle-card.is-compact .gf-option-price {
+  align-self: center;
+  text-align: center;
+}
+
+.gf-design-grid.is-product .gf-style-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gf-design-grid.is-product .gf-style-card {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 10px;
+  gap: 8px;
+  text-align: center;
+}
+
+.gf-design-grid.is-product .gf-style-thumb {
+  width: 100%;
+  height: 92px;
+}
+
+.gf-design-grid.is-product .gf-style-card-desc {
+  display: block;
+  font-size: 12px;
+}
+
+.gf-design-grid.is-product .gf-option-price {
+  width: 100%;
   text-align: center;
 }
 
@@ -1314,6 +1395,10 @@
 
   .gf-wizard-root .gf-style-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .gf-wizard-root .gf-design-grid.is-product .gf-style-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .gf-wizard-root .gf-style-card {
@@ -1733,14 +1818,12 @@
   border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+/* Cut-out PNGs with their own shadow, so no frame or fill behind them. */
 .gf-style-thumb {
   width: 86px;
   height: 86px;
-  border-radius: 8px;
   flex-shrink: 0;
-  object-fit: cover;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: #f3efe6;
+  object-fit: contain;
 }
 
 .gf-style-card-title {

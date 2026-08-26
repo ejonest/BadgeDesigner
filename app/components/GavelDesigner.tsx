@@ -31,7 +31,6 @@ import {
   GAVEL_SOUND_BLOCK_OPTIONS,
   GAVEL_SOUND_BLOCK_SHAPE_IDS,
   GAVEL_SOUND_BLOCK_SHAPE_OPTIONS,
-  GAVEL_STAND_FINISH_OPTIONS,
   GAVEL_STYLE_IDS,
   GAVEL_STYLES,
   GAVEL_TEXT_SIZE_PRESETS,
@@ -50,6 +49,8 @@ import {
   getGavelStyle,
   getSoundBlockTopTextColor,
   isGavelRoundSoundBlockAvailable,
+  isGavelSoundBlockOffered,
+  isGavelStandOffered,
   quoteGavelPrice,
   type GavelBandFinishId,
   type GavelProductionMethodId,
@@ -219,7 +220,7 @@ type GavelDesignerCachePayload = {
 
 const STEP_LABELS: Record<StepId, string> = {
   product: "Product",
-  style: "Gavel",
+  style: "Options",
   design: "Design",
   quantity: "Quantity",
   done: "Checkout",
@@ -383,6 +384,7 @@ export default function GavelDesigner({
   const [storeProduct, setStoreProduct] = useState<ShopifyProductJs | null>(
     null,
   );
+  const [storeProductLoading, setStoreProductLoading] = useState(true);
   /** Suede bag add-on product; billed as its own cart line. */
   const [bagProduct, setBagProduct] = useState<ShopifyProductJs | null>(null);
   /** Canvas textures only exist in the browser; keep first paint SSR-identical. */
@@ -601,7 +603,7 @@ export default function GavelDesigner({
   );
 
   const roundBlockAvailable =
-    hasSoundBlock && isGavelRoundSoundBlockAvailable(soundBlock);
+    hasSoundBlock && isGavelRoundSoundBlockAvailable(soundBlock, gavelStyle);
   /** Never price or draw a round block the store cannot make. */
   const effectiveSoundBlockShape: GavelSoundBlockShapeId =
     soundBlockShape === "round" && roundBlockAvailable ? "round" : "square";
@@ -641,9 +643,14 @@ export default function GavelDesigner({
 
   useEffect(() => {
     let cancelled = false;
+    setStoreProduct(null);
+    setStoreProductLoading(true);
     fetchStoreProduct(gavelProductHandleFor(productType), shopHost).then(
       (product) => {
-        if (!cancelled) setStoreProduct(product);
+        if (!cancelled) {
+          setStoreProduct(product);
+          setStoreProductLoading(false);
+        }
       },
     );
     return () => {
@@ -665,6 +672,45 @@ export default function GavelDesigner({
     () => resolveSuedeBagVariant(bagProduct),
     [bagProduct],
   );
+
+  /** Prices shown alongside the choices come from the same live variants used at checkout. */
+  const woodPrices = useMemo(() => {
+    const prices = {} as Partial<Record<GavelStyleId, number>>;
+    for (const style of GAVEL_STYLES) {
+      if (productType === "stand" && !isGavelStandOffered(style.id)) continue;
+      const match = resolveGavelVariant(storeProduct, {
+        productType,
+        styleId: style.id,
+        soundBlock: "none",
+        soundBlockShape: "square",
+      });
+      if (match) prices[style.id] = match.price;
+    }
+    return prices;
+  }, [productType, storeProduct]);
+
+  const soundBlockPriceAdds = useMemo(() => {
+    const adds = {} as Partial<Record<GavelSoundBlockId, number>>;
+    const base = resolveGavelVariant(storeProduct, {
+      productType: "gavel",
+      styleId: gavelStyle,
+      soundBlock: "none",
+      soundBlockShape: "square",
+    });
+    if (!base) return adds;
+    adds.none = 0;
+    for (const option of GAVEL_SOUND_BLOCK_OPTIONS) {
+      if (!isGavelSoundBlockOffered(option.id, gavelStyle)) continue;
+      const match = resolveGavelVariant(storeProduct, {
+        productType: "gavel",
+        styleId: gavelStyle,
+        soundBlock: option.id,
+        soundBlockShape: "square",
+      });
+      if (match) adds[option.id] = Math.max(0, match.price - base.price);
+    }
+    return adds;
+  }, [gavelStyle, storeProduct]);
 
   const hasText = lines.some((l) => (l.text ?? "").trim());
   const designReady = bulkMode ? bulkRows.length > 0 : hasText;
@@ -1016,6 +1062,19 @@ export default function GavelDesigner({
   useEffect(() => {
     if (!roundBlockAvailable) setSoundBlockShape("square");
   }, [roundBlockAvailable]);
+
+  /** Ebony has no stand and no personalized sound block. */
+  useEffect(() => {
+    if (productType === "stand" && !isGavelStandOffered(gavelStyle)) {
+      setGavelStyle("walnut");
+    }
+  }, [gavelStyle, productType]);
+
+  useEffect(() => {
+    if (!isGavelSoundBlockOffered(soundBlock, gavelStyle)) {
+      setSoundBlock("plain");
+    }
+  }, [gavelStyle, soundBlock]);
 
   useEffect(() => {
     if (isStand && logoSurface !== "stand") {
@@ -1649,13 +1708,13 @@ export default function GavelDesigner({
   const panelCopy: Record<StepId, { title: string; sub: string }> = {
     product: {
       title: "What are you customizing?",
-      sub: "Choose your product to see the right options.",
+      sub: "Choose your product and wood tone to see the right options.",
     },
     style: {
-      title: "Choose your gavel",
+      title: isStand ? "Customize the finish" : "Sound block & finish",
       sub: isStand
-        ? "The stand uses the same wood. Pick the wood and band finish."
-        : "Every gavel shares the same head — pick the wood and band finish.",
+        ? "The stand uses the same wood. Pick the matching band and plate metal."
+        : "Add a sound block if you want one, then pick the band finish.",
     },
     design: { title: "Design it", sub: designSubtitle },
     quantity: {
@@ -1669,7 +1728,7 @@ export default function GavelDesigner({
   };
 
   const continueLabel: Partial<Record<StepId, string>> = {
-    product: "Continue to gavel →",
+    product: "Continue to options →",
     style: "Continue to design →",
     design: "Continue to quantity →",
   };
@@ -1778,7 +1837,12 @@ export default function GavelDesigner({
                         className={`gf-toggle-card ${productType === p.id ? "is-selected" : ""}`}
                         onClick={() => {
                           setProductType(p.id);
-                          if (p.id === "stand") setSoundBlock("none");
+                          if (p.id === "stand") {
+                            setSoundBlock("none");
+                            if (!isGavelStandOffered(gavelStyle)) {
+                              setGavelStyle("walnut");
+                            }
+                          }
                         }}
                       >
                         <img
@@ -1788,63 +1852,72 @@ export default function GavelDesigner({
                         />
                         <span className="gf-toggle-label">{p.label}</span>
                         <span className="gf-toggle-sub">{p.description}</span>
+                        {p.id === "stand" ? (
+                          <span className="gf-availability-note">
+                            Ebony is not available with the stand
+                          </span>
+                        ) : null}
                       </button>
                     ))}
                   </div>
 
-                  {isStand ? (
-                    <div className="gf-sub-section">
-                      <p className="gf-sub-title">Metal finish</p>
-                      <div className="gf-pill-row">
-                        {GAVEL_STAND_FINISH_OPTIONS.map((f) => (
+                  <div className="gf-sub-section">
+                    <p className="gf-sub-title">Wood tone</p>
+                    <div className="gf-style-grid">
+                      {GAVEL_STYLES.map((s) => {
+                        const unavailable =
+                          isStand && !isGavelStandOffered(s.id);
+                        const price = woodPrices[s.id];
+                        return (
                           <button
-                            key={f.id}
+                            key={s.id}
                             type="button"
-                            className={`gf-pill ${standFinish === f.id ? "is-selected" : ""}`}
-                            onClick={() => setBandFinish(f.id)}
-                          >
-                            <span
-                              className="gf-swatch"
-                              style={{ background: f.plateHex }}
-                              aria-hidden
-                            />
-                            {f.label}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="gf-note">
-                        {standDef.note} The band and stand plate always match,
-                        and the stand is the same wood as the gavel.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="gf-sub-section">
-                      <p className="gf-sub-title">Include a sound block?</p>
-                      <div className="gf-toggle-row is-compact">
-                        {GAVEL_SOUND_BLOCK_OPTIONS.map((o) => (
-                          <button
-                            key={o.id}
-                            type="button"
-                            className={`gf-toggle-card is-compact ${soundBlock === o.id ? "is-selected" : ""}`}
-                            onClick={() => setSoundBlock(o.id)}
+                            className={`gf-style-card ${gavelStyle === s.id ? "is-selected" : ""}`}
+                            disabled={unavailable}
+                            onClick={() => {
+                              if (unavailable) return;
+                              setGavelStyle(s.id);
+                              if (!isGavelSoundBlockOffered(soundBlock, s.id)) {
+                                setSoundBlock("plain");
+                              }
+                            }}
                           >
                             <img
-                              className="gf-toggle-photo"
-                              src={o.photoSrc}
-                              alt=""
+                              className="gf-style-thumb"
+                              src={s.thumbSrc}
+                              alt={`${s.label} gavel`}
                             />
-                            <span className="gf-toggle-label">{o.label}</span>
+                            <span>
+                              <span className="gf-style-card-title">{s.label}</span>
+                              <span className="gf-style-card-desc">
+                                {s.description}
+                              </span>
+                              <span
+                                className={`gf-option-price ${
+                                  unavailable ? "is-unavailable" : ""
+                                }`}
+                              >
+                                {unavailable
+                                  ? "Not available with stand"
+                                  : price != null
+                                    ? `${isStand ? "Gavel + stand" : "Gavel"}: ${formatGavelMoney(price)}`
+                                    : storeProductLoading
+                                      ? "Loading price…"
+                                      : "Price shown at checkout"}
+                              </span>
+                            </span>
                           </button>
-                        ))}
-                      </div>
-                      <p className="gf-note">
-                        Personalization goes on the wood top of the sound block,
-                        independent of the gavel band — you can customize one,
-                        both, or neither. You pick the block shape in the next
-                        step.
-                      </p>
+                        );
+                      })}
                     </div>
-                  )}
+                    <p className="gf-note">
+                      {gavelStyle === "ebony"
+                        ? "Ebony is a gavel only — no stand, and no personalized sound block."
+                        : isStand
+                          ? "The stand is the same wood as the gavel."
+                          : "Every gavel shares the same head — this sets the wood for the gavel and any sound block."}
+                    </p>
+                  </div>
 
                   <div className="gf-bulk-callout">
                     <button
@@ -1882,27 +1955,59 @@ export default function GavelDesigner({
 
               {step === "style" ? (
                 <>
-                  <div className="gf-sub-section">
-                    <p className="gf-sub-title">Wood</p>
-                    <div className="gf-style-grid">
-                      {GAVEL_STYLES.map((s) => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          className={`gf-style-card ${gavelStyle === s.id ? "is-selected" : ""}`}
-                          onClick={() => setGavelStyle(s.id)}
-                        >
-                          <img className="gf-style-thumb" src={s.thumbSrc} alt="" />
-                          <span>
-                            <div className="gf-style-card-title">{s.label}</div>
-                            <div className="gf-style-card-desc">
-                              {s.description}
-                            </div>
-                          </span>
-                        </button>
-                      ))}
+                  {isStand ? null : (
+                    <div className="gf-sub-section">
+                      <p className="gf-sub-title">Include a sound block?</p>
+                      <div className="gf-toggle-row is-compact">
+                        {GAVEL_SOUND_BLOCK_OPTIONS.map((o) => {
+                          const blocked = !isGavelSoundBlockOffered(
+                            o.id,
+                            gavelStyle,
+                          );
+                          const priceAdd = soundBlockPriceAdds[o.id];
+                          return (
+                            <button
+                              key={o.id}
+                              type="button"
+                              className={`gf-toggle-card is-compact ${soundBlock === o.id ? "is-selected" : ""}`}
+                              disabled={blocked}
+                              onClick={() => {
+                                if (blocked) return;
+                                setSoundBlock(o.id);
+                              }}
+                            >
+                              <img
+                                className="gf-toggle-photo"
+                                src={o.photoSrc}
+                                alt=""
+                              />
+                              <span className="gf-toggle-label">{o.label}</span>
+                              <span
+                                className={`gf-option-price ${
+                                  blocked ? "is-unavailable" : ""
+                                }`}
+                              >
+                                {blocked
+                                  ? "Not available in ebony"
+                                  : priceAdd != null
+                                    ? priceAdd === 0
+                                      ? "Included"
+                                      : `+${formatGavelMoney(priceAdd)}`
+                                    : storeProductLoading
+                                      ? "Loading price…"
+                                      : "Price shown at checkout"}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="gf-note">
+                        {gavelStyle === "ebony"
+                          ? "Ebony is not offered with a personalized sound block. A blank square block is available."
+                          : "Personalization goes on the wood top of the sound block, independent of the gavel band — you can customize one, both, or neither."}
+                      </p>
                     </div>
-                  </div>
+                  )}
 
                   <div className="gf-sub-section">
                     <p className="gf-sub-title">
@@ -1928,7 +2033,7 @@ export default function GavelDesigner({
                     <p className="gf-note">
                       Drag the preview to spin it.
                       {isStand
-                        ? " The stand uses this wood, with a plate on the front."
+                        ? " The stand uses this wood, with a plate on the front. The band and stand plate always match."
                         : ""}
                     </p>
                   </div>
@@ -1960,7 +2065,9 @@ export default function GavelDesigner({
                       <p className="gf-note">
                         {roundBlockAvailable
                           ? "The round block is plain in every wood — personalization is on the square top only."
-                          : "Personalized sound blocks are square. Choose the plain block in step 1 for the round option."}
+                          : gavelStyle === "ebony"
+                            ? "Ebony sound blocks are square only."
+                            : "Personalized sound blocks are square. Choose the plain block above for the round option."}
                       </p>
                     </div>
                   ) : null}
