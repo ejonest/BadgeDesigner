@@ -109,7 +109,6 @@ export function buildPlaqueLayoutPreviewBadge(params: {
     templateId: params.templateId,
     backgroundColor: params.plateBackgroundHex ?? PLAQUE_DEFAULT_BRUSH_GOLD_HEX,
     backing: "magnetic",
-    plaqueDetachedPhotoFrameFinish: "gold",
     lines: DETACHED_LAYOUT_PREVIEW_TEXT.map((entry, i) => ({
       ...params.defaultLineShape,
       id: `${params.layoutId}-preview-${i}`,

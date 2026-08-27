@@ -297,6 +297,7 @@ import {
   isPlaqueAttachedTemplateId,
   isPlaqueDetachedTemplateId,
   normalizeFeaturedBrushedMetalBaseHex,
+  plaqueDetachedPhotoFrameFinishForPlate,
   plaqueMetalBrushCssBackgroundImage,
 } from "~/utils/plaqueRender";
 import {
@@ -508,8 +509,8 @@ const DESK_SIGN_DESIGNER_CACHE_PREFIX = "desk-sign-designer-draft";
 const CACHE_VERSION = 1;
 
 function getDesignerDraftCacheKey(
-  shop?: string,
-  productId?: string,
+  shop?: string | null,
+  productId?: string | null,
   variant?: DesignerVariant,
 ): string {
   const prefix =
@@ -520,8 +521,8 @@ function getDesignerDraftCacheKey(
 }
 
 function removeDesignerDraftCache(
-  shop?: string,
-  productId?: string,
+  shop?: string | null,
+  productId?: string | null,
   variant?: DesignerVariant,
 ): void {
   try {
@@ -3386,8 +3387,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   /** Icon listing products: bootstrap template/style/background+icon once (steps 1–2). */
   const iconListingBootstrapDoneRef = useRef(false);
   /** True after we have asked to load previous design this session (don't show modal again until next visit). */
-  /** When true, debounced cache save will skip one write (set after add-to-cart success so we don't write old state back). */
+  /** When true, debounced cache save will skip one write (set after restoring a saved design). */
   const skipCacheSaveRef = useRef(false);
+  /**
+   * True once the design has been handed off to the cart. That design is finished, so it must never
+   * be written back to the draft cache — the next visit starts a new design instead of restoring it.
+   * Cleared by {@link resetDesignerToBlank} when a fresh design begins.
+   */
+  const cartHandoffDoneRef = useRef(false);
   /**
    * Design id of the cart line being edited. Adding to cart replaces that line
    * instead of appending a second one. Null for a normal design session.
@@ -4100,6 +4107,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   useEffect(() => {
     const cacheKey = getDesignerDraftCacheKey(_shop, _productId, variant);
     const timeoutId = window.setTimeout(() => {
+      if (cartHandoffDoneRef.current) {
+        removeDesignerDraftCache(_shop, _productId, variant);
+        return;
+      }
       if (multipleBadges.length === 0) {
         // Only wipe after an explicit reset (skipCacheSaveRef). On first paint
         // multipleBadges is empty until localStorage restore runs — deleting here
@@ -4583,6 +4594,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   useEffect(() => {
     const cacheKey = getDesignerDraftCacheKey(_shop, _productId, variant);
     const handler = () => {
+      if (cartHandoffDoneRef.current) {
+        removeDesignerDraftCache(_shop, _productId, variant);
+        return;
+      }
       if (multipleBadges.length === 0) {
         removeDesignerDraftCache(_shop, _productId, variant);
         return;
@@ -7451,6 +7466,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     sessionDesignIdRef.current = null;
     removeDesignerDraftCache(_shop, _productId, variant);
     skipCacheSaveRef.current = true;
+    cartHandoffDoneRef.current = false;
     guidedFlowCompletedRef.current = false;
     templateGuidedAutoAdvanceDoneRef.current = false;
     signSizeGuidedAutoAdvanceDoneRef.current = false;
@@ -7459,6 +7475,24 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setShowDeskSignCompleteModal(false);
     setUndoHistory([]);
   };
+
+  const resetDesignerToBlankRef = useRef(resetDesignerToBlank);
+  useEffect(() => {
+    resetDesignerToBlankRef.current = resetDesignerToBlank;
+  });
+
+  /**
+   * Back-navigation from the cart can restore this page from the browser's back/forward cache with
+   * the design that was already ordered still on screen — start a new design in that case.
+   */
+  useEffect(() => {
+    const handler = (event: PageTransitionEvent) => {
+      if (!event.persisted || !cartHandoffDoneRef.current) return;
+      resetDesignerToBlankRef.current();
+    };
+    window.addEventListener("pageshow", handler);
+    return () => window.removeEventListener("pageshow", handler);
+  }, []);
 
   /** Remove one badge by index; selects the following badge when possible, else the previous. */
   const removeBadgeAtIndex = (indexToRemove: number) => {
@@ -9798,6 +9832,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         cartHandoffComplete = true;
         // Clear draft cache so a later visit starts fresh, but leave the UI
         // alone until the storefront navigates to the cart.
+        cartHandoffDoneRef.current = true;
         removeDesignerDraftCache(_shop, _productId, variant);
         skipCacheSaveRef.current = true;
         sessionDesignIdRef.current = null;
@@ -13210,66 +13245,18 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             badge.templateId ?? universalTemplateId,
                           ) && (
                             <div className="mt-3 ml-1.5 border-t border-gray-200 pt-3 w-full max-w-md">
-                              <p className="text-sm text-gray-700 mb-2">
-                                Photo frame finish
+                              <p className="text-sm text-gray-700">
+                                The trim around the photo is the same metal as
+                                the plate —{" "}
+                                <span className="font-medium">
+                                  {plaqueDetachedPhotoFrameFinishForPlate(
+                                    badge.backgroundColor,
+                                  ) === "silver"
+                                    ? "silver"
+                                    : "gold"}
+                                </span>{" "}
+                                with this plate finish.
                               </p>
-                              <div className="flex flex-wrap gap-3">
-                                {(
-                                  [
-                                    {
-                                      id: "gold" as const,
-                                      label: "Gold",
-                                      src: "/images/plaque/plaque-detached-photo-frame-gold.png",
-                                    },
-                                    {
-                                      id: "silver" as const,
-                                      label: "Silver",
-                                      src: "/images/plaque/plaque-detached-photo-frame-silver.png",
-                                    },
-                                  ] as const
-                                ).map((opt) => {
-                                  const cur =
-                                    badge.plaqueDetachedPhotoFrameFinish ??
-                                    "gold";
-                                  const active = cur === opt.id;
-                                  return (
-                                    <button
-                                      key={opt.id}
-                                      type="button"
-                                      onClick={() => {
-                                        const next: Badge = {
-                                          ...badge,
-                                          plaqueDetachedPhotoFrameFinish:
-                                            opt.id,
-                                        };
-                                        setBadge(next);
-                                        const ub = [...multipleBadges];
-                                        if (ub[selectedBadgeIndex]) {
-                                          ub[selectedBadgeIndex] = next;
-                                        }
-                                        setMultipleBadges(ub);
-                                        if (selectedBadgeIndex === 0) {
-                                          setBadge1Data(next);
-                                        }
-                                      }}
-                                      className={`flex flex-col items-center gap-1 rounded border px-2 py-2 transition-colors ${
-                                        active
-                                          ? "border-blue-600 bg-blue-50 ring-2 ring-blue-200"
-                                          : "border-gray-200 bg-white hover:bg-gray-50"
-                                      }`}
-                                    >
-                                      <img
-                                        src={opt.src}
-                                        alt=""
-                                        className="h-14 w-10 object-cover rounded-sm border border-gray-200"
-                                      />
-                                      <span className="text-[14px] font-medium text-gray-700">
-                                        {opt.label}
-                                      </span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
                             </div>
                           )}
                       </>

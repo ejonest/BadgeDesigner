@@ -229,6 +229,20 @@ export function normalizeFeaturedBrushedMetalBaseHex(
   return raw;
 }
 
+/**
+ * Detached photo plaques ship as a single metal: the trim around the photo opening always
+ * matches the engraving plate, so the finish is derived from the plate color instead of
+ * being picked separately. Warm plates (brushed gold, red) read gold; everything else silver.
+ */
+export function plaqueDetachedPhotoFrameFinishForPlate(
+  plateBackgroundHex: string | undefined | null,
+): PlaqueDetachedPhotoFrameFinish {
+  const normalized = normalizeFeaturedBrushedMetalBaseHex(plateBackgroundHex);
+  const rgb = parseHexRgb(normalized || (plateBackgroundHex ?? ""));
+  if (!rgb) return "gold";
+  return rgb.r - rgb.b >= 24 ? "gold" : "silver";
+}
+
 function parseHexRgb(
   input: string,
 ): { r: number; g: number; b: number } | null {

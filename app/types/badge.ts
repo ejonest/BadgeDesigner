@@ -17,7 +17,10 @@ export interface BadgeLine {
   fontFamily?: string;
 }
 
-/** Detached plaque wood photo opening: metallic frame overlay (PNG asset). */
+/**
+ * Detached plaque wood photo opening: metallic frame trim. Derived from the plate finish
+ * (see `plaqueDetachedPhotoFrameFinishForPlate`) — plate and trim are always the same metal.
+ */
 export type PlaqueDetachedPhotoFrameFinish = "gold" | "silver";
 
 /** Sign Designer user logo: edge band with image centered in the band. */
@@ -96,11 +99,6 @@ export interface Badge {
    * {@link plaqueUseDefaultAttachedAwardVisual} supplies the default Standard look).
    */
   plaqueFormatId?: string;
-  /**
-   * Plaque detached wood photo slot only: metallic frame stroke around the photo opening.
-   * Omitted on legacy payloads → render as gold (matches default brushed-gold plate previews).
-   */
-  plaqueDetachedPhotoFrameFinish?: PlaqueDetachedPhotoFrameFinish;
   backing: 'pin' | 'magnetic' | 'adhesive';
   /** Name badge tool: optional left-side pictogram id from {@link BADGE_ICON_IDS}. Omit = none. */
   badgeIconId?: string;
