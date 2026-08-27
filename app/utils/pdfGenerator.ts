@@ -29,6 +29,7 @@ import {
   isPlaqueAttachedTemplateId,
   isPlaqueDetachedTemplateId,
   isPlaqueTemplateId,
+  plaqueDetachedPhotoFrameFinishForPlate,
 } from "./plaqueRender";
 
 const HEADER_HEIGHT = 18;
@@ -221,7 +222,9 @@ function getPlaquePdfSpecRows(
   }
 
   if (isPlaqueDetachedTemplateId(template.id)) {
-    const finish = badge.plaqueDetachedPhotoFrameFinish ?? "gold";
+    const finish = plaqueDetachedPhotoFrameFinishForPlate(
+      badge.backgroundColor,
+    );
     rows.push(
       `Photo frame finish: ${finish.charAt(0).toUpperCase()}${finish.slice(1)}`,
     );

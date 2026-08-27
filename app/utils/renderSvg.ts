@@ -88,6 +88,7 @@ import {
   plaqueAttachedLogoDrawRectFixed,
   plaqueAttachedTextPlateRect,
   plaqueDetachedPhotoFrameDecor,
+  plaqueDetachedPhotoFrameFinishForPlate,
   PLAQUE_DETACHED_LANDSCAPE_STOCK_PATH,
   PLAQUE_DETACHED_PORTRAIT_STOCK_PATH,
   plaqueDetachedWoodStockPhotoHref,
@@ -2308,7 +2309,7 @@ function renderPlaqueBadgeSvg(
       : null;
 
   const detachedPhotoFrameFinish: PlaqueDetachedPhotoFrameFinish =
-    badge.plaqueDetachedPhotoFrameFinish ?? "gold";
+    plaqueDetachedPhotoFrameFinishForPlate(badge.backgroundColor);
   const detachedPhotoFrameDecor =
     detached && slot
       ? plaqueDetachedPhotoFrameDecor({
