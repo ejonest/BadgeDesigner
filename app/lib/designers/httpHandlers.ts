@@ -274,6 +274,9 @@ export async function runSaveDraftDesigner(
   }
 }
 
+/** Best-effort legacy Gadget mirror: bounded so it can never hold up add-to-cart. */
+const GADGET_SAVE_TIMEOUT_MS = 8_000;
+
 export async function runSaveToGadget(
   designerId: DesignerId,
   request: Request,
@@ -398,6 +401,9 @@ export async function runSaveToGadget(
         query: createMutation,
         variables: { [g.inputVariable]: gadgetPayload },
       }),
+      // Order fulfillment runs on the native Shopify webhooks, so this save is best-effort:
+      // never let a sleeping or removed Gadget environment stall an add-to-cart request.
+      signal: AbortSignal.timeout(GADGET_SAVE_TIMEOUT_MS),
     });
     const data = await res.json();
     if (data.errors?.length) {

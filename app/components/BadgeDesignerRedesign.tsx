@@ -575,7 +575,6 @@ interface ProofPendingPayload {
   /** Shopify cart line quantity per design row; length matches allBadgesForSupabase. */
   perLineQuantities: number[];
   shopData: ShopAuthData;
-  gadgetPromise: Promise<{ id?: string } | undefined>;
   shopifyCustomerIdFromUrl: string | null;
   /**
    * One-shot JPEG + print SVG per badge (generated before the proof modal).
@@ -8548,27 +8547,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     });
 
     const designIdForSupabase = designId;
-    const firstBadge = allBadgesForSupabase[0];
-    const minimalDesignData = {
-      designId: designIdForSupabase,
-      productId: _productId || "test-product",
-      shopId: shopData.shopId || "test-shop",
-      textLines: firstBadge?.lines ?? [],
-      badge: firstBadge
-        ? {
-            lines: firstBadge.lines,
-            backgroundColor: firstBadge.backgroundColor,
-            backing: firstBadge.backing,
-          }
-        : undefined,
-      allBadges: allBadgesForSupabase.map((b) => ({
-        lines: b.lines,
-        backgroundColor: b.backgroundColor,
-        backing: b.backing,
-      })),
-      ...(variant === "badge" ? { badgeOrderQty: totalPieces } : {}),
-    };
-    const gadgetPromise = api.saveBadgeDesign(minimalDesignData, shopData);
 
     // One-shot JPEG + print SVG per badge; PDF reuses the JPEGs (no second raster).
     let cartProofAssets: CartProofBadgeAssets[] | undefined;
@@ -8621,7 +8599,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       badgeOrderQty: badgeOrderQtyForProof,
       perLineQuantities,
       shopData,
-      gadgetPromise,
       shopifyCustomerIdFromUrl,
       cartProofAssets,
     };
@@ -9149,7 +9126,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       designIdForSupabase,
       allBadgesForSupabase,
       shopData,
-      gadgetPromise,
       shopifyCustomerIdFromUrl,
       perLineQuantities,
       cartProofAssets,
@@ -9637,17 +9613,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         return fromUrl || null;
       };
 
-      let gadgetDesignId: string | undefined;
-      try {
-        const savedDesign = await gadgetPromise;
-        gadgetDesignId = savedDesign?.id;
-      } catch (gadgetErr) {
-        console.warn(
-          "Gadget save at add-to-cart failed (cart will still add):",
-          gadgetErr,
-        );
-      }
-
       const deskSignCartProperties = (b: Badge): Record<string, string> => {
         if (!isDeskSignVariant(variant)) return {};
         const acrylicFinish = findDeskSignAcrylicFinish(
@@ -9709,7 +9674,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               backing: b.backing,
               linePrice: itemTotalPrice,
               thumbnailUrl: thumbnailUrls[i],
-              gadgetDesignId,
               pdfUrl: pdfUrlForCart,
               badgeCount: n,
               includeBackingType: !isSignDesigner && !isDeskSignDesigner,
@@ -9741,7 +9705,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               backing: b.backing,
               linePrice: itemTotalPrice,
               thumbnailUrl: thumbnailUrls[i],
-              gadgetDesignId,
               pdfUrl: pdfUrlForCart,
               orderQuantity:
                 !isSignDesigner && !isDeskSignDesigner
