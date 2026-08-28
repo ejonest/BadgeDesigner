@@ -51,7 +51,7 @@
         "life_1": { "type": "lifestyle_photo", "settings": { "size": "large", "image_asset": "aqb-cat-banner-desk.png", "alt": "Acrylic desk sign on office desk" } },
         "life_2": { "type": "lifestyle_photo", "settings": { "size": "small", "image_asset": "aqb-tile-desk-signs.png", "alt": "Rosewood desk sign gift" } },
         "spec_1": { "type": "rosewood_spec", "settings": { "text": "Piano-finish rosewood base" } },
-        "spec_2": { "type": "rosewood_spec", "settings": { "text": "Black & gold engraved plate" } },
+        "spec_2": { "type": "rosewood_spec", "settings": { "text": "Black & gold personalized plate" } },
         "spec_3": { "type": "rosewood_spec", "settings": { "text": "Premium gift-ready packaging available" } },
         "acrylic_1": {
           "type": "acrylic_profession",
@@ -147,7 +147,7 @@
         "product_tag": "custom",
         "rosewood_tag": "rosewood",
         "eyebrow": "Custom & Personalized",
-        "heading": "Engraved with your name.<br><em>Built for your profession.</em>",
+        "heading": "Personalized with your name.<br><em>Built for your profession.</em>",
         "description": "Acrylic and rosewood desk signs personalized with a buyer's name and title. Vector art by profession — Doctor, Legal Secretary, Financial Planner, and 70+ more.",
         "cta_label": "Personalize Your Sign →",
         "cta_link": "/pages/desk-signs-catalogue?type=profession",
@@ -157,8 +157,8 @@
         "view_all_subtext": "Nurse · Principal · Realtor · Engineer & more",
         "view_all_label": "View All",
         "view_all_link": "/pages/desk-signs-catalogue?material=acrylic&type=profession",
-        "rosewood_heading": "Premium rosewood.<br><em>Gold-engraved elegance.</em>",
-        "rosewood_description": "Piano-finish rosewood with a black and gold engraved plate. A premium gift for executives, pastors, and office leaders.",
+        "rosewood_heading": "Premium rosewood.<br><em>Personalized elegance.</em>",
+        "rosewood_description": "Piano-finish rosewood with a black and gold personalized plate. A premium gift for executives, pastors, and office leaders.",
         "rosewood_cta_label": "Shop Rosewood Signs →",
         "rosewood_cta_link": "/pages/desk-signs-catalogue?material=rosewood&type=profession",
         "rosewood_image_asset": "aqb-cat-banner-desk.png"

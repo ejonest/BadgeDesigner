@@ -278,7 +278,7 @@ export interface BadgeEditorPanelProps {
   panelLayout?: "default" | "aqb-badge" | "aqb-desk-sign";
   /** Lines flagged after layout refit (e.g. icon added) truncated text to fit. */
   layoutCharLimitByLine?: Record<number, boolean>;
-  /** Acrylic desk signs: laser-engraved text color is fixed — hide color controls. */
+  /** Acrylic desk signs: personalized text color is fixed — hide color controls. */
   textColorLocked?: boolean;
 }
 
@@ -685,7 +685,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 </>
               ) : isDeskSignPanel ? (
                 <p className="mt-1 text-xs text-[#6b7f92]">
-                  Text color is fixed — acrylic is laser-engraved.
+                  Text color is fixed — acrylic is personalized.
                 </p>
               ) : null}
 

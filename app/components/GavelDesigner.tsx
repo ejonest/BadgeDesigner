@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import type { Badge, BadgeLine } from "~/types/badge";
 import {
@@ -76,6 +77,12 @@ import {
   soundBlockTopToSvgString,
   type GavelPlateLogo,
 } from "~/utils/gavelBandTexture";
+import {
+  getGavelMetalTexturesVersion,
+  getServerGavelMetalTexturesVersion,
+  preloadGavelMetalTextures,
+  subscribeGavelMetalTextures,
+} from "~/utils/gavelMetalTexture";
 import { generateGavelProofPdf } from "~/utils/gavelPdf";
 import { createApi } from "~/utils/api";
 import {
@@ -534,12 +541,28 @@ export default function GavelDesigner({
   const soundBlockLogo =
     soundBlockEngraved && logoSurface === "sound-block" ? plateLogo : null;
 
+  /**
+   * The scanned brushed finishes arrive after first paint. Tracking their
+   * version repaints the band and plate artwork off the scan once it lands,
+   * instead of leaving the procedural stand-in on screen.
+   */
+  const metalScanVersion = useSyncExternalStore(
+    subscribeGavelMetalTextures,
+    getGavelMetalTexturesVersion,
+    getServerGavelMetalTexturesVersion,
+  );
+
+  useEffect(() => {
+    if (isClient) preloadGavelMetalTextures();
+  }, [isClient]);
+
   const bandTextureUrl = useMemo(
     () =>
       isClient
         ? gavelBandToDataUrl(bandPreviewLines, textSize, bandDef.color)
         : "",
-    [bandDef.color, bandPreviewLines, isClient, textSize],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- metalScanVersion busts this when the scanned finish lands; the painter reads it out of module state
+    [bandDef.color, bandPreviewLines, isClient, metalScanVersion, textSize],
   );
 
   const renderPlateTexture = useCallback(
@@ -552,7 +575,15 @@ export default function GavelDesigner({
         { shaped, logo },
       );
     },
-    [isClient, isStand, platePreviewLines, standDef.plateHex, textSize],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- metalScanVersion busts this when the scanned finish lands; the painter reads it out of module state
+    [
+      isClient,
+      isStand,
+      metalScanVersion,
+      platePreviewLines,
+      standDef.plateHex,
+      textSize,
+    ],
   );
 
   /**
@@ -585,6 +616,7 @@ export default function GavelDesigner({
   }, [
     isClient,
     isStand,
+    metalScanVersion,
     platePreviewLines,
     standLogo,
     standDef.plateHex,
@@ -2549,8 +2581,9 @@ export default function GavelDesigner({
                       ) : null}
                       <p className="gf-note">
                         The same logo is converted to black ink on every square
-                        sound block top. A transparent-background file works
-                        best. Logos are not available on the gavel band.
+                        sound block top: plain backgrounds drop out and colors
+                        become ink, so a JPG or PNG both work. Logos are not
+                        available on the gavel band.
                       </p>
                     </div>
                   ) : null}

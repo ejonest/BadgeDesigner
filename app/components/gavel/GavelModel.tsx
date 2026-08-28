@@ -3,6 +3,9 @@ import * as THREE from "three";
 import type { GavelStyleDef } from "~/constants/gavelStyles";
 import {
   GAVEL_BAND_GOLD_HEX,
+  GAVEL_BAND_TEXTURE_HEIGHT_PX,
+  GAVEL_BAND_TEXTURE_WIDTH_PX,
+  gavelMetalTextureSet,
   GAVEL_HANDLE_LENGTH_IN,
 } from "~/constants/gavelStyles";
 import {
@@ -17,7 +20,8 @@ import {
   loadGavelWoodMaps,
   type GavelWoodMaps,
 } from "~/utils/gavelWoodTexture";
-import { fillBrushedMetalBand } from "~/utils/gavelBandTexture";
+import { fillGavelMetalSurface } from "~/utils/gavelBandTexture";
+import { useGavelMetalMaps } from "~/components/gavel/useGavelMetalMaps";
 
 type Props = {
   style: GavelStyleDef;
@@ -82,7 +86,7 @@ const HANDLE_SEGMENTS = 64;
  */
 const WOOD_TILE_IN = 6;
 
-function makeBrushedBandMap(hex: string): THREE.CanvasTexture | null {
+function makeBandMetalMap(hex: string): THREE.CanvasTexture | null {
   if (typeof document === "undefined") return null;
   const w = 1024;
   const h = 256;
@@ -91,7 +95,7 @@ function makeBrushedBandMap(hex: string): THREE.CanvasTexture | null {
   canvas.height = h;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
-  fillBrushedMetalBand(ctx, w, h, hex);
+  fillGavelMetalSurface(ctx, w, h, hex);
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
@@ -128,7 +132,7 @@ export function GavelModel({
   }, [handleIn]);
 
   const bandMap = useMemo(() => {
-    if (!bandTextureUrl) return makeBrushedBandMap(bandHex);
+    if (!bandTextureUrl) return makeBandMetalMap(bandHex);
     const loader = new THREE.TextureLoader();
     const tex = loader.load(bandTextureUrl);
     tex.colorSpace = THREE.SRGBColorSpace;
@@ -164,17 +168,33 @@ export function GavelModel({
     [style, woodMaps],
   );
 
+  const metalMaps = useGavelMetalMaps(
+    gavelMetalTextureSet(bandHex),
+    GAVEL_BAND_TEXTURE_WIDTH_PX,
+    GAVEL_BAND_TEXTURE_HEIGHT_PX,
+  );
+
   const bandMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
         color: bandMap ? "#ffffff" : bandHex,
-        // Satin brushed metal: enough roughness to blur studio HDR, enough
-        // metalness that the baked grain still reads as shiny.
-        roughness: 0.42,
-        metalness: 0.78,
+        // Brushed, not polished. The scanned roughness map holds the absolute
+        // values, so the multiplier here is 1; its relief scatters the studio
+        // HDR into a soft sheen rather than the hard glare a mirror gives.
+        //
+        // Metalness is well under a real brass ring's. At the physical value
+        // almost all of the band's brightness comes from reflection, so it
+        // tracks whatever the environment happens to put in front of it and the
+        // engraving swings from blown out to unreadable as the gavel spins.
+        // Holding it down lets the even scanned albedo carry the surface.
+        roughness: metalMaps.roughnessMap ? 1 : 0.52,
+        metalness: 0.42,
         map: bandMap ?? undefined,
+        normalMap: metalMaps.normalMap ?? undefined,
+        normalScale: new THREE.Vector2(0.35, 0.35),
+        roughnessMap: metalMaps.roughnessMap ?? undefined,
       }),
-    [bandHex, bandMap],
+    [bandHex, bandMap, metalMaps],
   );
 
   return (

@@ -8,7 +8,7 @@ import {
 } from "~/constants/colors";
 
 export const DESK_SIGN_ACRYLIC_PREVIEW_FILL = "#FFFFFF";
-/** Fixed UV-print preview text on acrylic (customers can’t pick a print color). */
+/** Fixed preview text on acrylic (customers can’t pick a text color). */
 export const DESK_SIGN_ACRYLIC_TEXT_COLOR = "#1A1A1A";
 
 export type DeskSignAcrylicFinishId = "clear" | "frosted" | "black";
@@ -27,7 +27,7 @@ export const DESK_SIGN_ACRYLIC_FINISHES: readonly {
     label: "Clear",
     plateColor: "#FFFFFF",
     textColor: "#1A1A1A",
-    description: "Polished clear acrylic with sharp UV print",
+    description: "Polished clear acrylic — personalized",
     imageSrc: "/images/desk-sign/ClearAcrylic.jpg?v=1",
   },
   {
@@ -35,7 +35,7 @@ export const DESK_SIGN_ACRYLIC_FINISHES: readonly {
     label: "Frosted",
     plateColor: "#E5E7EB",
     textColor: "#1A1A1A",
-    description: "Soft frosted acrylic with crisp UV print",
+    description: "Soft frosted acrylic — personalized",
     imageSrc: "/images/desk-sign/FrostedAcrylic.jpg?v=1",
   },
   {
@@ -43,7 +43,7 @@ export const DESK_SIGN_ACRYLIC_FINISHES: readonly {
     label: "Black",
     plateColor: "#171717",
     textColor: "#FFFFFF",
-    description: "Gloss black acrylic with bright UV print",
+    description: "Gloss black acrylic — personalized",
     imageSrc: "/images/desk-sign/BlackAcrylic.jpg?v=1",
   },
 ] as const;
@@ -164,7 +164,7 @@ export const DESK_SIGN_ROSEWOOD_PLATE_FINISHES: readonly {
     label: "Brushed Gold",
     plateColor: FEATURED_BRUSHED_GOLD_HEX,
     textColor: "#1A1A1A",
-    description: "Brushed gold plate with UV-printed black text",
+    description: "Brushed gold plate with personalized black text",
     imageSrc: "/images/desk-sign/RWGold.png?v=1",
   },
   {
@@ -172,7 +172,7 @@ export const DESK_SIGN_ROSEWOOD_PLATE_FINISHES: readonly {
     label: "Brushed Silver",
     plateColor: FEATURED_BRUSHED_SILVER_HEX,
     textColor: "#1A1A1A",
-    description: "Brushed silver plate with UV-printed black text",
+    description: "Brushed silver plate with personalized black text",
     imageSrc: "/images/desk-sign/RWSilver.png?v=1",
   },
   {
@@ -180,7 +180,7 @@ export const DESK_SIGN_ROSEWOOD_PLATE_FINISHES: readonly {
     label: "Black Gold",
     plateColor: FEATURED_BRUSHED_BLACK_HEX,
     textColor: DESK_SIGN_BLACK_GOLD_TEXT_HEX,
-    description: "Brushed black plate with UV-printed gold text",
+    description: "Brushed black plate with personalized gold text",
     imageSrc: "/images/desk-sign/RWBlackGold.png?v=1",
   },
 ] as const;

@@ -548,21 +548,21 @@ export const DESK_SIGN_MATERIALS: readonly {
     id: "acrylic",
     label: "Acrylic",
     description:
-      "Crisp UV print on clear, frosted, or black acrylic — modern and light-catching",
+      "Personalized on clear, frosted, or black acrylic — modern and light-catching",
     exampleImageSrc: "/images/desk-sign/acrylicEx.jpg?v=4",
   },
   {
     id: "rosewood",
     label: "Piano Finished Rosewood",
     description:
-      "Glossy piano-finish rosewood with a UV-printed metal plate — a polished desk presence",
+      "Glossy piano-finish rosewood with a personalized metal plate — a polished desk presence",
     exampleImageSrc: "/images/desk-sign/RWSilver.png?v=1",
   },
   {
     id: "plastic",
     label: "Traditional",
     description:
-      "UV-printed plastic plate with your choice of aluminum desk stand or wall mount",
+      "Personalized plastic plate with your choice of aluminum desk stand or wall mount",
     exampleImageSrc: "/images/desk-sign/plasticEx.jpg?v=5",
   },
 ] as const;
