@@ -3395,6 +3395,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
    * Cleared by {@link resetDesignerToBlank} when a fresh design begins.
    */
   const cartHandoffDoneRef = useRef(false);
+  /** Bumped to force one draft-cache write after a failed cart handoff cleared it. */
+  const [draftCacheWriteNonce, setDraftCacheWriteNonce] = useState(0);
   /**
    * Design id of the cart line being edited. Adding to cart replaces that line
    * instead of appending a second one. Null for a normal design session.
@@ -4183,6 +4185,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     _productId,
     badgeOrderQty,
     badgeLineQuantities,
+    draftCacheWriteNonce,
   ]);
 
   /** First-line preview PNG → Supabase public URL for design library gallery. */
@@ -7476,6 +7479,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setUndoHistory([]);
   };
 
+  /** Nothing reached the cart, so let the draft cache take over again for the retry. */
+  const resumeDraftCacheAfterFailedCartHandoff = () => {
+    cartHandoffDoneRef.current = false;
+    setDraftCacheWriteNonce((n) => n + 1);
+  };
+
   const resetDesignerToBlankRef = useRef(resetDesignerToBlank);
   useEffect(() => {
     resetDesignerToBlankRef.current = resetDesignerToBlank;
@@ -9825,15 +9834,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
       const replacedCartDesignId = cartEditDesignIdRef.current;
 
+      /**
+       * Retire the draft before handing off, not after. The theme acks and navigates the top window
+       * to the cart in the same task, so this iframe can unload before `addToCartMultiple` resolves —
+       * anything we do afterwards may never run, and the unload handler would save the finished
+       * design back to the cache for the next visit to restore. The UI keeps the design painted.
+       */
+      cartHandoffDoneRef.current = true;
+      removeDesignerDraftCache(_shop, _productId, variant);
+
       const result = await api.addToCartMultiple(cartItems, {
         replaceDesignId: replacedCartDesignId,
       });
       if (result.success) {
         cartHandoffComplete = true;
-        // Clear draft cache so a later visit starts fresh, but leave the UI
-        // alone until the storefront navigates to the cart.
-        cartHandoffDoneRef.current = true;
-        removeDesignerDraftCache(_shop, _productId, variant);
         skipCacheSaveRef.current = true;
         sessionDesignIdRef.current = null;
         setCartEditDesignId(null);
@@ -9865,6 +9879,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       } else {
         // The old cart line is still there, so keep replacing it on the next try.
         setCartEditDesignId(replacedCartDesignId);
+        resumeDraftCacheAfterFailedCartHandoff();
         const proofNote = proofUploadWarning
           ? `\n\nProof upload also failed: ${proofUploadWarning}`
           : "";
@@ -9874,6 +9889,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         );
       }
     } catch (error) {
+      resumeDraftCacheAfterFailedCartHandoff();
       console.error("Failed to complete add to cart:", error);
       alert("Failed to add badge to cart. Please try again.");
     } finally {

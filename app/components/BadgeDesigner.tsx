@@ -2578,6 +2578,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
    * Cleared by {@link resetDesignerToBlank} when a fresh design begins.
    */
   const cartHandoffDoneRef = useRef(false);
+  /** Bumped to force one draft-cache write after a failed cart handoff cleared it. */
+  const [draftCacheWriteNonce, setDraftCacheWriteNonce] = useState(0);
   /** Debounce expensive sign `syncSignBadgeLinesSizeNorm` while typing plain text (Designer / ornate plates). */
   const signTextSyncTimerRef = useRef<ReturnType<
     typeof window.setTimeout
@@ -3050,6 +3052,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     variant,
     _shop,
     _productId,
+    draftCacheWriteNonce,
   ]);
 
   /** First-line preview PNG → Supabase public URL for design library gallery. */
@@ -5323,6 +5326,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     setUndoHistory([]);
   };
 
+  /** Nothing reached the cart, so let the draft cache take over again for the retry. */
+  const resumeDraftCacheAfterFailedCartHandoff = () => {
+    cartHandoffDoneRef.current = false;
+    setDraftCacheWriteNonce((n) => n + 1);
+  };
+
   const resetDesignerToBlankRef = useRef(resetDesignerToBlank);
   useEffect(() => {
     resetDesignerToBlankRef.current = resetDesignerToBlank;
@@ -7040,18 +7049,27 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       // Keep the design on screen while cart handoff runs (avoid blank Step 1 flash).
       closeProofModal();
 
+      /**
+       * Retire the draft before handing off, not after. The theme acks and navigates the top window
+       * to the cart in the same task, so this iframe can unload before `addToCartMultiple` resolves —
+       * anything we do afterwards may never run, and the unload handler would save the finished
+       * design back to the cache for the next visit to restore.
+       */
+      cartHandoffDoneRef.current = true;
+      removeDesignerDraftCache(_shop, _productId);
+
       const result = await api.addToCartMultiple(cartItems);
       if (result.success) {
-        cartHandoffDoneRef.current = true;
-        removeDesignerDraftCache(_shop, _productId);
         skipCacheSaveRef.current = true;
         sessionDesignIdRef.current = null;
       } else {
+        resumeDraftCacheAfterFailedCartHandoff();
         alert(
           result.message || "Failed to add badge(s) to cart. Please try again.",
         );
       }
     } catch (error) {
+      resumeDraftCacheAfterFailedCartHandoff();
       console.error("Failed to complete add to cart:", error);
       alert("Failed to add badge to cart. Please try again.");
     } finally {
