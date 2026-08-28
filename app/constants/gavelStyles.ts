@@ -534,24 +534,57 @@ export const GAVEL_PRODUCT_TYPE_OPTIONS: readonly {
 export const GAVEL_SOUND_BLOCK_OPTIONS: readonly {
   id: GavelSoundBlockId;
   label: string;
-  photoSrc: string;
 }[] = [
   {
     id: "none",
     label: "Gavel only",
-    photoSrc: "/images/gavel/product-rubberwood-gavel.jpg",
   },
   {
     id: "plain",
     label: "+ Sound block, plain",
-    photoSrc: "/images/gavel/product-ebony-block.jpg",
   },
   {
     id: "engraved",
     label: "+ Sound block, personalized",
-    photoSrc: "/images/gavel/product-soundblock-engraved.jpg",
   },
 ];
+
+/**
+ * Actual catalog photography for the sound-block choice cards. Keeping this
+ * keyed by wood makes step 2 reflect the material selected in step 1 instead
+ * of showing the same generic product for every choice.
+ */
+const GAVEL_SOUND_BLOCK_PHOTOS: Record<
+  GavelStyleId,
+  Partial<Record<GavelSoundBlockId, string>>
+> = {
+  walnut: {
+    none: "/images/gavel/options/walnut-gavel.png",
+    plain: "/images/gavel/options/walnut-block.png",
+    engraved: "/images/gavel/options/walnut-personalized-block.png",
+  },
+  rubberwood: {
+    none: "/images/gavel/options/rubberwood-gavel.png",
+    plain: "/images/gavel/options/rubberwood-block.png",
+    engraved: "/images/gavel/options/rubberwood-personalized-block.png",
+  },
+  ebony: {
+    none: "/images/gavel/options/ebony-gavel.png",
+    plain: "/images/gavel/options/ebony-block.png",
+  },
+};
+
+export function getGavelSoundBlockPhoto(
+  soundBlock: GavelSoundBlockId,
+  styleId: string | null | undefined,
+): string {
+  const style = getGavelStyle(styleId).id;
+  return (
+    GAVEL_SOUND_BLOCK_PHOTOS[style][soundBlock] ??
+    GAVEL_SOUND_BLOCK_PHOTOS[style].none ??
+    GAVEL_SOUND_BLOCK_PHOTOS.walnut.none!
+  );
+}
 
 export const GAVEL_SOUND_BLOCK_SHAPE_OPTIONS: readonly {
   id: GavelSoundBlockShapeId;
@@ -776,38 +809,44 @@ export function getGavelProductionMethod(
 
 /**
  * Studio photos keyed by `wood|kit` and, where a second finish was shot,
- * `wood|kit|finish`. Coverage is uneven: there is no ebony gavel-only or
- * ebony stand shot, and silver only exists for the walnut stand and the
- * ebony sound block. Add files here as more shots arrive.
+ * `wood|kit|finish`.
+ *
+ * The gavel, block and personalized-block entries share the cut-out set built
+ * by scripts/build-gavel-choice-images.py, so this tab and the step-2 choice
+ * cards show the same photo of the same wood. Stands still come from the older
+ * one-off shots — there is no stand in that set.
  */
 const GAVEL_PRODUCT_PHOTOS: Readonly<Record<string, string>> = {
-  "walnut|gavel": "/images/gavel/product-walnut-gavel.jpg",
-  "walnut|block": "/images/gavel/product-walnut-block.jpg",
+  "walnut|gavel": "/images/gavel/options/walnut-gavel.png",
+  "walnut|block": "/images/gavel/options/walnut-block.png",
+  "walnut|engraved": "/images/gavel/options/walnut-personalized-block.png",
   "walnut|round": "/images/gavel/product-walnut-round-block.svg",
   "walnut|stand": "/images/gavel/product-walnut-stand.jpg",
   "walnut|stand|silver": "/images/gavel/product-walnut-stand-silver.jpg",
-  "rubberwood|gavel": "/images/gavel/product-rubberwood-gavel.jpg",
-  "rubberwood|block": "/images/gavel/product-rubberwood-block.jpg",
+  "rubberwood|gavel": "/images/gavel/options/rubberwood-gavel.png",
+  "rubberwood|block": "/images/gavel/options/rubberwood-block.png",
+  "rubberwood|engraved":
+    "/images/gavel/options/rubberwood-personalized-block.png",
   "rubberwood|stand": "/images/gavel/product-rubberwood-stand.jpg",
-  "ebony|block": "/images/gavel/product-ebony-block.jpg",
+  "ebony|gavel": "/images/gavel/options/ebony-gavel.png",
+  "ebony|block": "/images/gavel/options/ebony-block.png",
   "ebony|block|silver": "/images/gavel/product-ebony-block-silver.jpg",
 };
 
 /**
  * Closest real photo for a wood/kit we never shot.
  *
- * Ebony gavel-only falls back to the ebony sound-block shot: the wood the
- * customer just picked is what this tab exists to show, so matching the
- * colour beats matching the exact bundle. The ebony stand has no ebony
- * photo at all, so it borrows the walnut stand.
+ * The ebony stand has no ebony photo at all, so it borrows the walnut stand.
  */
 const GAVEL_PRODUCT_PHOTO_FALLBACKS: Readonly<Record<string, string>> = {
-  "ebony|gavel": "ebony|block",
   "ebony|stand": "walnut|stand",
   // Only the walnut round block was photographed; the others borrow their own
   // wood's square shot rather than showing the wrong colour.
   "rubberwood|round": "rubberwood|block",
   "ebony|round": "ebony|block",
+  // Ebony is never offered with a personalized top, but a stale saved design
+  // should still land on ebony rather than another wood.
+  "ebony|engraved": "ebony|block",
 };
 
 /** Photo of the real product matching the configuration being designed. */
@@ -820,6 +859,8 @@ export function getGavelProductPhoto(
 ): string {
   const wood = getGavelStyle(styleId).id;
   const block = getGavelSoundBlock(soundBlockId).id;
+  // Shape outranks the engraving: a round block reads as a different product,
+  // while the sample engraving is a detail on an otherwise identical block.
   const kit =
     productType === "stand"
       ? "stand"
@@ -827,7 +868,9 @@ export function getGavelProductPhoto(
         ? "gavel"
         : soundBlockShapeId === "round"
           ? "round"
-          : "block";
+          : block === "engraved"
+            ? "engraved"
+            : "block";
 
   const key = `${wood}|${kit}`;
   const resolved = GAVEL_PRODUCT_PHOTO_FALLBACKS[key] ?? key;

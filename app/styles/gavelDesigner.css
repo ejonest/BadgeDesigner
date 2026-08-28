@@ -1012,6 +1012,8 @@
 .gf-toggle-card.is-compact .gf-toggle-photo {
   min-height: 60px;
   margin-bottom: 6px;
+  /* These wood-specific assets already have transparent backgrounds. */
+  mix-blend-mode: normal;
 }
 
 .gf-toggle-card.is-compact .gf-toggle-label {
