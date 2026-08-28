@@ -45,6 +45,7 @@ import {
   getGavelProductPhoto,
   getGavelProductionMethod,
   getGavelSoundBlock,
+  getGavelSoundBlockPhoto,
   getGavelSoundBlockShape,
   getGavelStandFinish,
   getGavelStyle,
@@ -1991,7 +1992,9 @@ export default function GavelDesigner({
                     <div className="gf-sub-section">
                       <p className="gf-sub-title">Include a sound block?</p>
                       <div className="gf-toggle-row is-compact">
-                        {GAVEL_SOUND_BLOCK_OPTIONS.map((o) => {
+                        {GAVEL_SOUND_BLOCK_OPTIONS.filter((o) =>
+                          isGavelSoundBlockOffered(o.id, gavelStyle),
+                        ).map((o) => {
                           const blocked = !isGavelSoundBlockOffered(
                             o.id,
                             gavelStyle,
@@ -2010,8 +2013,11 @@ export default function GavelDesigner({
                             >
                               <img
                                 className="gf-toggle-photo"
-                                src={o.photoSrc}
-                                alt=""
+                                src={getGavelSoundBlockPhoto(
+                                  o.id,
+                                  gavelStyle,
+                                )}
+                                alt={`${getGavelStyle(gavelStyle).label} ${o.label.toLowerCase()}`}
                               />
                               <span className="gf-toggle-label">{o.label}</span>
                               <span
