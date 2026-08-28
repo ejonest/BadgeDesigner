@@ -411,9 +411,31 @@ export const GAVEL_DEFAULT_FONT = "Georgia";
 
 export const GAVEL_DEFAULT_TEXT_COLOR = "#1a1a1a";
 
-export const GAVEL_BAND_GOLD_HEX = "#d2a84a";
+/**
+ * Sampled off the product photography rather than picked by eye: the gold
+ * hardware reads as a saturated yellow brass, and the silver as a warm-neutral
+ * satin nickel rather than the cool blue-steel this used to specify.
+ */
+export const GAVEL_BAND_GOLD_HEX = "#d7a63a";
 export const GAVEL_BAND_GOLD_DARK_HEX = "#8a6a1e";
-export const GAVEL_BAND_SILVER_HEX = "#c8ccd2";
+export const GAVEL_BAND_SILVER_HEX = "#bfbdb8";
+
+/**
+ * Which scanned brushed finish backs each metal color. The white stand plate is
+ * painted rather than metal, so it has no set and stays a flat fill.
+ */
+export function gavelMetalTextureSet(
+  hex: string,
+): "metal-gold" | "metal-silver" | null {
+  switch (hex.trim().toLowerCase()) {
+    case GAVEL_BAND_GOLD_HEX:
+      return "metal-gold";
+    case GAVEL_BAND_SILVER_HEX:
+      return "metal-silver";
+    default:
+      return null;
+  }
+}
 
 export type GavelStyleDef = {
   id: GavelStyleId;

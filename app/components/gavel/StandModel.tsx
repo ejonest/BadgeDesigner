@@ -13,14 +13,18 @@ import {
   STAND_PLATE_CORNER_R_IN,
   STAND_PLATE_H_IN,
   STAND_PLATE_T_IN,
+  STAND_PLATE_TEXTURE_H_PX,
+  STAND_PLATE_TEXTURE_W_PX,
   STAND_PLATE_W_IN,
   STAND_WIDTH_IN,
+  gavelMetalTextureSet,
   standFooterTopY,
   standLedgeFrontZ,
   standSlopeBottomZ,
   standTopFrontZ,
 } from "~/constants/gavelStyles";
 import { useLoadedWoodMaps } from "~/components/gavel/GavelModel";
+import { useGavelMetalMaps } from "~/components/gavel/useGavelMetalMaps";
 import {
   STAND_WELLS,
   WOOD_TILE_IN,
@@ -194,15 +198,28 @@ export function StandModel({
     [style, tiledColor, tiledNormal, tiledRough, woodMaps.roughness],
   );
 
+  const metalMaps = useGavelMetalMaps(
+    gavelMetalTextureSet(plateHex),
+    STAND_PLATE_TEXTURE_W_PX,
+    STAND_PLATE_TEXTURE_H_PX,
+  );
+
   const plateMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
         color: plateMap ? "#ffffff" : plateHex,
-        roughness: isWhite ? 0.38 : 0.42,
-        metalness: isWhite ? 0.12 : 0.78,
+        // Brushed metal, so the scanned roughness map carries the absolute
+        // values and the multiplier is 1. Its relief spreads the highlight
+        // across the plate instead of collapsing it into a reflection that
+        // would sit on top of the engraving.
+        roughness: metalMaps.roughnessMap ? 1 : isWhite ? 0.38 : 0.52,
+        metalness: isWhite ? 0.12 : 0.42,
         map: plateMap ?? undefined,
+        normalMap: metalMaps.normalMap ?? undefined,
+        normalScale: new THREE.Vector2(0.3, 0.3),
+        roughnessMap: metalMaps.roughnessMap ?? undefined,
       }),
-    [isWhite, plateHex, plateMap],
+    [isWhite, metalMaps, plateHex, plateMap],
   );
 
   const footMat = useMemo(

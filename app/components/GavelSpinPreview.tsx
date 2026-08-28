@@ -37,8 +37,14 @@ import { gavelRestPoseInWells } from "~/utils/gavelProfiles";
  * Environment rather than per material: three.js replaces a material's
  * envMapIntensity with scene.environmentIntensity whenever the material has no
  * envMap of its own, which is the case for everything here.
+ *
+ * This, not the ambient lights, is what sets how bright the model reads: it
+ * scales the diffuse half of the IBL too, so raising it lifts the wood far more
+ * per unit than ambientLight does. Turning it down to tame the band's highlight
+ * only made the whole scene murky — the highlight belongs to the band's own
+ * metalness, and is handled there.
  */
-const GAVEL_ENV_INTENSITY = 0.5;
+const GAVEL_ENV_INTENSITY = 0.62;
 
 /**
  * How the gavel lies on the stand, as in the product photos: turned a quarter
@@ -350,22 +356,29 @@ export const GavelSpinPreview = forwardRef<
         gl={{ antialias: true, preserveDrawingBuffer: true, alpha: true }}
         style={{ visibility: hideCanvas ? "hidden" : "visible" }}
         onCreated={({ gl }) => {
-          gl.toneMappingExposure = 0.95;
+          gl.toneMappingExposure = 1.06;
         }}
         onPointerDown={() => setHintVisible(false)}
       >
         <color attach="background" args={["#f7f4ef"]} />
-        <ambientLight intensity={0.28} />
-        <hemisphereLight args={["#fff4e4", "#b7aa96", 0.32]} />
+        {/*
+          Most of the light is ambient and hemispherical on purpose. Directional
+          lights put a specular stripe down the band, which is a mirror of a
+          light source rather than illumination: it blew out one edge of the
+          engraving and left the rest of the ring in shadow. Carrying the
+          brightness in non-directional light lifts the whole model instead.
+        */}
+        <ambientLight intensity={0.95} />
+        <hemisphereLight args={["#fff4e4", "#b7aa96", 0.68]} />
         <directionalLight
           position={[5, 8, 6]}
-          intensity={0.38}
+          intensity={0.26}
           castShadow
           shadow-mapSize={[1024, 1024]}
         />
-        <directionalLight position={[-5, 3, -2]} intensity={0.22} />
-        <directionalLight position={[2, 3.5, 12]} intensity={0.42} />
-        <directionalLight position={[0, 1.2, 4]} intensity={0.16} />
+        <directionalLight position={[-5, 3, -2]} intensity={0.16} />
+        <directionalLight position={[2, 3.5, 12]} intensity={0.14} />
+        <directionalLight position={[0, 1.2, 4]} intensity={0.1} />
         <CaptureBridge glRef={glRef} />
         <FrameView subject={cameraSubject} />
         {viewingBlock ? (

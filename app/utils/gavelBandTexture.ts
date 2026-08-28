@@ -3,6 +3,7 @@ import {
   clampGavelLogoGapScale,
   clampGavelLogoScale,
   GAVEL_BAND_GOLD_HEX,
+  gavelMetalTextureSet,
   GAVEL_BAND_TEXTURE_HEIGHT_PX,
   GAVEL_BAND_TEXTURE_WIDTH_PX,
   GAVEL_DEFAULT_FONT,
@@ -20,6 +21,8 @@ import {
   STAND_PLATE_W_IN,
   type GavelTextSizePreset,
 } from "~/constants/gavelStyles";
+import { getReadyGavelMetalAlbedo } from "~/utils/gavelMetalTexture";
+import { blackInkLogo, blackInkLogoDataUrl } from "~/utils/logoBlackInk";
 import { standPlateOutline } from "~/utils/standPlateOutline";
 
 export type GavelBandLineInput = {
@@ -57,26 +60,6 @@ function parseHexRgb(
   };
 }
 
-function clamp255(n: number): number {
-  return Math.max(0, Math.min(255, n));
-}
-
-function rgbCss(r: number, g: number, b: number): string {
-  return `rgb(${Math.round(clamp255(r))},${Math.round(clamp255(g))},${Math.round(clamp255(b))})`;
-}
-
-function mixRgb(
-  a: { r: number; g: number; b: number },
-  b: { r: number; g: number; b: number },
-  t: number,
-) {
-  return {
-    r: a.r + (b.r - a.r) * t,
-    g: a.g + (b.g - a.g) * t,
-    b: a.b + (b.b - a.b) * t,
-  };
-}
-
 function hashHex(hex: string): number {
   let h = 2166136261;
   for (let i = 0; i < hex.length; i++) {
@@ -96,23 +79,166 @@ function mulberry32(seed: number) {
   };
 }
 
-/**
- * Painted metal backgrounds, keyed by size and color. Synthesizing the grain
- * costs thousands of strokes plus a per-pixel pass, and the result depends only
- * on the key — so live text and logo edits blit a finished copy instead of
- * repainting it for every keystroke and slider move.
- */
-const brushedMetalCache = new Map<string, HTMLCanvasElement>();
-const BRUSHED_METAL_CACHE_MAX = 6;
+type Rgb = { r: number; g: number; b: number };
 
-function brushedMetalCanvas(
+/**
+ * How far the light and dark ends of the surface travel from the base color.
+ * All stay near 1: the photographed band and plaque vary only about 10% across
+ * their own face, and a wider range is what buried engraved text in shadow.
+ *
+ * This is only the stand-in drawn before the scanned finish loads, so it is
+ * tuned to sit close to the scan rather than to be interesting on its own.
+ */
+const METAL_TONE = {
+  across: 1,
+  along: 1.3,
+  grain: 0.15,
+  reflection: 0.012,
+};
+
+/** Light falloff across the height of the surface, as a multiple of the base. */
+const METAL_ACROSS_STOPS: readonly (readonly [number, number])[] = [
+  [0, 1.05],
+  [0.1, 1.015],
+  [0.42, 1],
+  [0.74, 0.985],
+  [0.93, 0.968],
+  [1, 1.008],
+];
+
+/** The specular sweep along the surface — the part that reads as mirroring. */
+const METAL_ALONG_STOPS: readonly (readonly [number, number])[] = [
+  [0, 0.955],
+  [0.13, 1.05],
+  [0.25, 1.085],
+  [0.39, 1.005],
+  [0.53, 0.962],
+  [0.67, 1.005],
+  [0.81, 1.055],
+  [0.92, 0.99],
+  [1, 0.952],
+];
+
+function smoothstep(t: number): number {
+  return t * t * (3 - 2 * t);
+}
+
+/** Piecewise stops eased into a per-pixel multiplier for one axis. */
+function toneRamp(
+  stops: readonly (readonly [number, number])[],
+  length: number,
+  amplitude: number,
+): Float32Array {
+  const out = new Float32Array(length);
+  let seg = 0;
+  for (let i = 0; i < length; i++) {
+    const t = length === 1 ? 0 : i / (length - 1);
+    while (seg < stops.length - 2 && t > stops[seg + 1][0]) seg++;
+    const [t0, v0] = stops[seg];
+    const [t1, v1] = stops[seg + 1];
+    const span = t1 - t0;
+    const k = span <= 0 ? 0 : smoothstep(Math.min(1, Math.max(0, (t - t0) / span)));
+    out[i] = 1 + (v0 + (v1 - v0) * k - 1) * amplitude;
+  }
+  return out;
+}
+
+/**
+ * A seeded band of fine variation along one axis, used for brush grain across
+ * the plate and for the soft columns a polished surface reflects. Two octaves
+ * keep it from reading as even pinstriping.
+ */
+function grainRamp(
+  length: number,
+  rand: () => number,
+  amplitude: number,
+): Float32Array {
+  const fine = new Float32Array(length);
+  for (let i = 0; i < length; i++) fine[i] = rand() * 2 - 1;
+
+  const coarseCount = Math.max(2, Math.round(length / 9));
+  const coarse = new Float32Array(coarseCount);
+  for (let i = 0; i < coarseCount; i++) coarse[i] = rand() * 2 - 1;
+
+  const out = new Float32Array(length);
+  for (let i = 0; i < length; i++) {
+    // Softening the fine octave keeps each line a hairline rather than noise.
+    const smoothed =
+      (fine[(i - 1 + length) % length] + fine[i] * 2 + fine[(i + 1) % length]) / 4;
+    const c = (i / length) * coarseCount;
+    const c0 = Math.floor(c) % coarseCount;
+    const c1 = (c0 + 1) % coarseCount;
+    const wide = coarse[c0] + (coarse[c1] - coarse[c0]) * smoothstep(c - Math.floor(c));
+    out[i] = 1 + (smoothed * 0.62 + wide * 0.38) * amplitude;
+  }
+  return out;
+}
+
+/**
+ * Scale a metal color toward its highlight or shadow while holding its hue.
+ * Blending toward cream and brown (what this did before) desaturated gold into
+ * sand and dropped the dark end far enough to swallow the engraving.
+ */
+function toneMetal(base: Rgb, warm: boolean, factor: number): Rgb {
+  if (factor <= 1) {
+    return {
+      r: base.r * factor,
+      g: base.g * factor,
+      // Warm metals lose blue as they fall off, so gold darkens to bronze.
+      b: base.b * (warm ? factor * 0.93 : factor),
+    };
+  }
+  // Highlights climb each channel's own headroom to white, which keeps the
+  // brightest stops saturated instead of blowing out to a pale tint.
+  const t = Math.min(1, (factor - 1) * 1.7);
+  return {
+    r: base.r + (255 - base.r) * t,
+    g: base.g + (255 - base.g) * t * 0.93,
+    b: base.b + (255 - base.b) * t * (warm ? 0.55 : 0.88),
+  };
+}
+
+/** Quantized tone lookup, so the pixel loop does no per-pixel color math. */
+const TONE_LUT_MIN = 0.82;
+const TONE_LUT_MAX = 1.22;
+const TONE_LUT_SIZE = 512;
+
+function toneLut(base: Rgb, warm: boolean): Uint8ClampedArray {
+  const lut = new Uint8ClampedArray(TONE_LUT_SIZE * 3);
+  for (let i = 0; i < TONE_LUT_SIZE; i++) {
+    const factor =
+      TONE_LUT_MIN +
+      ((TONE_LUT_MAX - TONE_LUT_MIN) * i) / (TONE_LUT_SIZE - 1);
+    const { r, g, b } = toneMetal(base, warm, factor);
+    lut[i * 3] = r;
+    lut[i * 3 + 1] = g;
+    lut[i * 3 + 2] = b;
+  }
+  return lut;
+}
+
+/**
+ * Painted metal backgrounds, keyed by size and color. Synthesizing a surface
+ * walks every pixel and the result depends only on the key — so live text and
+ * logo edits blit a finished copy instead of repainting it for every keystroke
+ * and slider move.
+ */
+const metalSurfaceCache = new Map<string, HTMLCanvasElement>();
+const METAL_SURFACE_CACHE_MAX = 8;
+
+function metalSurfaceCanvas(
   width: number,
   height: number,
-  bandHex: string,
+  hex: string,
 ): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
-  const key = `${width}x${height}:${bandHex.trim().toLowerCase()}`;
-  const cached = brushedMetalCache.get(key);
+
+  const set = gavelMetalTextureSet(hex);
+  const scan = set ? getReadyGavelMetalAlbedo(set) : null;
+  // The scan arrives after first paint, so it is part of the key: the cached
+  // stand-in has to be superseded rather than kept.
+  const key = `${width}x${height}:${hex.trim().toLowerCase()}:${scan ? set : "flat"}`;
+  const cached = metalSurfaceCache.get(key);
   if (cached) return cached;
 
   const canvas = document.createElement("canvas");
@@ -120,119 +246,124 @@ function brushedMetalCanvas(
   canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
-  paintBrushedMetalBand(ctx, width, height, bandHex);
-
-  if (brushedMetalCache.size >= BRUSHED_METAL_CACHE_MAX) {
-    const oldest = brushedMetalCache.keys().next().value;
-    if (oldest !== undefined) brushedMetalCache.delete(oldest);
+  if (scan) {
+    paintScannedMetalSurface(ctx, width, height, scan);
+  } else {
+    paintGavelMetalSurface(ctx, width, height, hex);
   }
-  brushedMetalCache.set(key, canvas);
+
+  if (metalSurfaceCache.size >= METAL_SURFACE_CACHE_MAX) {
+    const oldest = metalSurfaceCache.keys().next().value;
+    if (oldest !== undefined) metalSurfaceCache.delete(oldest);
+  }
+  metalSurfaceCache.set(key, canvas);
   return canvas;
 }
 
 /**
- * Satin brushed metal matching the physical gavel band: warm (or cool) mid-tone,
- * bright rim highlights, and fine horizontal grain. Seeded so the grain is stable
- * across re-renders.
+ * Shading laid over the scan. It is far shallower than the procedural finish
+ * carries on its own: the scan already reads as metal, and a specular sweep on
+ * top of it is what turned the band into a glare in the 3D viewer.
  */
-export function fillBrushedMetalBand(
+const SCAN_ACROSS_AMPLITUDE = 0.3;
+
+/**
+ * The scanned brushed finish, tiled texel for texel. Fitting a repeat to each
+ * surface instead would shrink the band's grain against the plaque's, when on
+ * the real hardware both are cut from stock brushed to the same weight — and
+ * shrinking it far enough averages the brush away into a flat fill.
+ */
+function paintScannedMetalSurface(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
-  bandHex: string,
+  scan: HTMLImageElement,
 ) {
-  const cached = brushedMetalCanvas(width, height, bandHex);
+  const pattern = ctx.createPattern(scan, "repeat");
+  if (!pattern) return;
+  ctx.fillStyle = pattern;
+  ctx.fillRect(0, 0, width, height);
+
+  const across = toneRamp(METAL_ACROSS_STOPS, height, SCAN_ACROSS_AMPLITUDE);
+  const img = ctx.getImageData(0, 0, width, height);
+  const data = img.data;
+  for (let y = 0; y < height; y++) {
+    const factor = across[y];
+    if (factor === 1) continue;
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      data[i] *= factor;
+      data[i + 1] *= factor;
+      data[i + 2] *= factor;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/**
+ * The brushed metal the band and the stand plaque are both cut from: an even
+ * mid-tone held close enough to the base color that engraved text keeps its
+ * contrast everywhere on the surface.
+ */
+export function fillGavelMetalSurface(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  hex: string,
+) {
+  // Always composited with drawImage: the surface is built as raw pixels, and
+  // putImageData would ignore the silhouette clip the shaped plate draws under.
+  const cached = metalSurfaceCanvas(width, height, hex);
   if (cached) {
     ctx.drawImage(cached, 0, 0);
     return;
   }
-  paintBrushedMetalBand(ctx, width, height, bandHex);
+  ctx.fillStyle = hex;
+  ctx.fillRect(0, 0, width, height);
 }
 
-function paintBrushedMetalBand(
+function paintGavelMetalSurface(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
-  bandHex: string,
+  hex: string,
 ) {
-  const base =
-    parseHexRgb(bandHex) ?? parseHexRgb(GAVEL_BAND_GOLD_HEX)!;
+  const base = parseHexRgb(hex) ?? parseHexRgb(GAVEL_BAND_GOLD_HEX)!;
   const warm = base.r > base.b + 20;
-  const highlightTint = warm
-    ? { r: 253, g: 245, b: 166 }
-    : { r: 244, g: 246, b: 248 };
-  const shadowTint = warm
-    ? { r: 88, g: 60, b: 16 }
-    : { r: 70, g: 74, b: 82 };
+  const rand = mulberry32(hashHex(hex.toLowerCase()) ^ 0x9e3779b9);
 
-  const highlight = mixRgb(base, highlightTint, 0.7);
-  const light = mixRgb(base, highlightTint, 0.36);
-  const rich = mixRgb(base, shadowTint, 0.26);
-  const shadow = mixRgb(base, shadowTint, 0.5);
-
-  const vert = ctx.createLinearGradient(0, 0, 0, height);
-  vert.addColorStop(0, rgbCss(highlight.r, highlight.g, highlight.b));
-  vert.addColorStop(0.1, rgbCss(light.r, light.g, light.b));
-  vert.addColorStop(0.36, rgbCss(base.r, base.g, base.b));
-  vert.addColorStop(0.58, rgbCss(rich.r, rich.g, rich.b));
-  vert.addColorStop(0.86, rgbCss(shadow.r, shadow.g, shadow.b));
-  vert.addColorStop(
-    1,
-    rgbCss(light.r * 0.9, light.g * 0.9, light.b * 0.9),
+  const across = toneRamp(METAL_ACROSS_STOPS, height, METAL_TONE.across);
+  const along = toneRamp(METAL_ALONG_STOPS, width, METAL_TONE.along);
+  const grain = grainRamp(height, rand, METAL_TONE.grain);
+  const reflection = grainRamp(
+    Math.max(2, Math.round(width / 24)),
+    rand,
+    METAL_TONE.reflection,
   );
-  ctx.fillStyle = vert;
-  ctx.fillRect(0, 0, width, height);
+  const lut = toneLut(base, warm);
+  const lutScale = (TONE_LUT_SIZE - 1) / (TONE_LUT_MAX - TONE_LUT_MIN);
 
-  const sheen = ctx.createLinearGradient(0, 0, width, 0);
-  sheen.addColorStop(0, "rgba(255,255,255,0.03)");
-  sheen.addColorStop(0.2, "rgba(255,255,255,0.1)");
-  sheen.addColorStop(0.42, "rgba(255,255,255,0.02)");
-  sheen.addColorStop(0.61, "rgba(255,255,255,0.09)");
-  sheen.addColorStop(0.8, "rgba(0,0,0,0.06)");
-  sheen.addColorStop(1, "rgba(255,255,255,0.04)");
-  ctx.fillStyle = sheen;
-  ctx.fillRect(0, 0, width, height);
-
-  const rand = mulberry32(hashHex(bandHex.toLowerCase()) ^ 0x9e3779b9);
-  const lightRgb = warm ? "255,246,196" : "255,255,255";
-  const darkRgb = warm ? "68,46,12" : "38,42,48";
-  const strokeCount = Math.max(2200, Math.round(width * height * 0.0065));
-  for (let i = 0; i < strokeCount; i++) {
-    const roll = rand();
-    const len =
-      roll < 0.62
-        ? 18 + rand() * 70
-        : roll < 0.9
-          ? 70 + rand() * 110
-          : 140 + rand() * 160;
-    const x0 = rand() * Math.max(1, width - len);
-    const y = rand() * height;
-    const brighter = rand() > 0.38;
-    const alpha = 0.05 + rand() * (brighter ? 0.2 : 0.14);
-    const thickness = rand() > 0.88 ? 2 : 1;
-    ctx.fillStyle = `rgba(${brighter ? lightRgb : darkRgb},${alpha})`;
-    ctx.fillRect(x0, y, len, thickness);
-  }
-
-  const img = ctx.getImageData(0, 0, width, height);
+  const img = ctx.createImageData(width, height);
   const data = img.data;
   for (let y = 0; y < height; y++) {
-    let x = 0;
-    while (x < width) {
-      const run = 6 + Math.floor(rand() * 36);
-      const amp = (rand() - 0.5) * 20;
-      for (let dx = 0; dx < run && x + dx < width; dx++) {
-        const edge = Math.min(dx, run - 1 - dx);
-        const fade = Math.min(1, edge / 3);
-        const delta = amp * fade;
-        const i = (y * width + x + dx) * 4;
-        data[i] = clamp255(data[i] + delta);
-        data[i + 1] = clamp255(data[i + 1] + delta * 0.95);
-        data[i + 2] = clamp255(
-          data[i + 2] + delta * (warm ? 0.82 : 0.98),
-        );
-      }
-      x += run;
+    const rowFactor = across[y] * grain[y];
+    for (let x = 0; x < width; x++) {
+      const factor =
+        rowFactor *
+        along[x] *
+        reflection[Math.floor((x / width) * reflection.length) % reflection.length];
+      const slot = Math.max(
+        0,
+        Math.min(
+          TONE_LUT_SIZE - 1,
+          Math.round((factor - TONE_LUT_MIN) * lutScale),
+        ),
+      );
+      const i = (y * width + x) * 4;
+      data[i] = lut[slot * 3];
+      data[i + 1] = lut[slot * 3 + 1];
+      data[i + 2] = lut[slot * 3 + 2];
+      data[i + 3] = 255;
     }
   }
   ctx.putImageData(img, 0, 0);
@@ -286,7 +417,7 @@ export function paintGavelBandCanvas(
     ctx.fillStyle = bandHex;
     ctx.fillRect(0, 0, width, height);
   } else {
-    fillBrushedMetalBand(ctx, width, height, bandHex);
+    fillGavelMetalSurface(ctx, width, height, bandHex);
   }
 
   const filled = activeLines(lines);
@@ -619,7 +750,7 @@ export function paintGavelStandPlateCanvas(
     ctx.clip();
   }
 
-  fillBrushedMetalBand(ctx, width, height, plateHex);
+  fillGavelMetalSurface(ctx, width, height, plateHex);
 
   const dark = plateHex.trim().toLowerCase() === "#ffffff" ? "#4f5359" : "#231c13";
   tracePath(ctx, standPlateKeylinePath());
@@ -899,16 +1030,22 @@ export function paintSoundBlockTopCanvas(
     : (size - blockH) / 2 + fontPx * 0.78;
 
   if (logo?.image) {
-    const aspect = Number.isFinite(logo.aspect) && logo.aspect > 0 ? logo.aspect : 1;
+    const ink = blackInkLogo(logo.image);
+    const fallbackAspect =
+      Number.isFinite(logo.aspect) && logo.aspect > 0 ? logo.aspect : 1;
+    const aspect = ink ? ink.aspect : fallbackAspect;
     const maxLogoH = size * 0.34 * clampGavelLogoScale(logo.scale ?? 1);
     const logoW = Math.min(size * 0.52, maxLogoH * aspect);
     const logoH = logoW / aspect;
     const logoY = text ? size * 0.17 : (size - logoH) / 2;
     ctx.save();
-    ctx.drawImage(logo.image, (size - logoW) / 2, logoY, logoW, logoH);
-    ctx.globalCompositeOperation = "source-in";
-    ctx.fillStyle = "#000000";
-    ctx.fillRect((size - logoW) / 2, logoY, logoW, logoH);
+    ctx.drawImage(ink?.canvas ?? logo.image, (size - logoW) / 2, logoY, logoW, logoH);
+    if (!ink) {
+      // Unreadable art (cross-origin): keep the alpha mask as a last resort.
+      ctx.globalCompositeOperation = "source-in";
+      ctx.fillStyle = "#000000";
+      ctx.fillRect((size - logoW) / 2, logoY, logoW, logoH);
+    }
     ctx.restore();
   }
 
@@ -942,7 +1079,11 @@ export function soundBlockTopToSvgString(
   const size = SOUND_BLOCK_TOP_TEXTURE_PX;
   const text = (line.text ?? "").trim();
   const logo = options?.logo;
-  if (!text && !logo?.href) {
+  // The converted art carries the black-ink reduction in its own pixels, so
+  // the SVG only needs the alpha-mask filter when the conversion is skipped.
+  const ink = logo?.image ? blackInkLogoDataUrl(logo.image) : null;
+  const logoHref = ink?.href ?? logo?.href ?? null;
+  if (!text && !logoHref) {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"></svg>`;
   }
@@ -952,7 +1093,7 @@ export function soundBlockTopToSvgString(
   const ctx = canvas?.getContext("2d") ?? null;
   const inset = size * 0.14;
   const maxWidth = size - inset * 2;
-  const hasLogo = Boolean(logo?.href);
+  const hasLogo = Boolean(logoHref);
   const maxHeight = hasLogo ? size * 0.34 : size - inset * 2;
   const colored = { ...line, color: textColor };
   let lines = text ? [text] : [];
@@ -969,16 +1110,16 @@ export function soundBlockTopToSvgString(
     ? size * 0.62 + fontPx * 0.78
     : (size - blockH) / 2 + fontPx * 0.78;
   const logoAspect =
-    logo && Number.isFinite(logo.aspect) && logo.aspect > 0 ? logo.aspect : 1;
+    ink?.aspect ??
+    (logo && Number.isFinite(logo.aspect) && logo.aspect > 0 ? logo.aspect : 1);
   const maxLogoH =
     size * 0.34 * clampGavelLogoScale(logo?.scale ?? 1);
   const logoW = Math.min(size * 0.52, maxLogoH * logoAspect);
   const logoH = logoW / logoAspect;
   const logoY = text ? size * 0.17 : (size - logoH) / 2;
-  const logoEl =
-    logo?.href
-      ? `<image x="${((size - logoW) / 2).toFixed(2)}" y="${logoY.toFixed(2)}" width="${logoW.toFixed(2)}" height="${logoH.toFixed(2)}" preserveAspectRatio="xMidYMid meet" href="${escapeXml(logo.href)}" filter="url(#black-ink-logo)"/>`
-      : "";
+  const logoEl = logoHref
+    ? `<image x="${((size - logoW) / 2).toFixed(2)}" y="${logoY.toFixed(2)}" width="${logoW.toFixed(2)}" height="${logoH.toFixed(2)}" preserveAspectRatio="xMidYMid meet" href="${escapeXml(logoHref)}"${ink ? "" : ' filter="url(#black-ink-logo)"'}/>`
+    : "";
   const family = line.fontFamily?.trim() || GAVEL_DEFAULT_FONT;
   const weight = line.bold ? 700 : 600;
   const fontStyle = line.italic ? "italic" : "normal";
@@ -993,7 +1134,7 @@ export function soundBlockTopToSvgString(
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   ${
-    logo?.href
+    logoHref && !ink
       ? `<defs>
     <filter id="black-ink-logo" color-interpolation-filters="sRGB">
       <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"/>

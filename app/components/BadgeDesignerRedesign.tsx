@@ -6464,7 +6464,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     if (typeof changes.text !== "undefined") {
       sessionHadLineTextEditRef.current = true;
     }
-    // Acrylic engraving color is fixed — ignore color edits from the UI/modal.
+    // Acrylic personalized text color is fixed — ignore color edits from the UI/modal.
     if (
       isDeskSignVariant(variant) &&
       deskSignMaterial === "acrylic" &&

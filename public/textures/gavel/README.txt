@@ -1,4 +1,7 @@
-Gavel designer wood textures
+Gavel designer textures
+
+Wood
+====
 
 walnut/, rubberwood/, and ebony/ hold 1K PBR maps (color, normal, roughness)
 used by the 3D preview — the three woods we offer.
@@ -25,3 +28,30 @@ ship. Keep the archive in app/temp/gavelImages (gitignored).
 
 The build rotates each map 90 degrees so the grain runs along the turned axis,
 which is the direction LatheGeometry maps V.
+
+Metal
+=====
+
+metal-gold/ and metal-silver/ hold 1K maps for the gavel band and the stand
+plaque. Unlike the woods, the albedo is not handed straight to the material:
+the band and plate artwork is composited on a canvas alongside the engraving,
+so color.jpg is tiled into that canvas as a pattern and only normal.jpg and
+roughness.jpg reach the 3D material.
+
+  Source: ambientCG Metal042A (gold) and Metal041A (silver), licensed CC0 — no
+  attribution required, free for commercial use.
+
+  node scripts/build-gavel-metal-textures.mjs
+
+Keep the 4K-JPG sets in app/temp (gitignored); the build finds them by name.
+
+The scans supply micro-relief only. The hues come from the product photos, the
+albedo is high-passed so the scans' cloudy mottling cannot sit under the
+engraving, roughness is remapped well above the scanned near-mirror values, and
+a directional brush is added — the scans are hammered, the hardware is brushed.
+Together those are what keep the metal from throwing a glare in the viewer.
+
+Both maps tile texel for texel with the artwork rather than fitting one repeat
+per surface, so the band and plaque share a brush of the same real-world size.
+Anything that changes GAVEL_BAND_TEXTURE_*_PX or STAND_PLATE_TEXTURE_*_PX
+therefore changes the grain size on that part.
