@@ -430,6 +430,50 @@ const DESIGNER_UI_TYPOGRAPHY = {
   nowEditingFontRem: 1,
 } as const;
 
+/**
+ * Add-to-cart runs a long chain of asset uploads before the cart handoff. Log each phase with
+ * elapsed ms so a stalled step is identifiable from the browser console.
+ */
+function createAddToCartPhaseLog(): (phase: string) => void {
+  const start = Date.now();
+  return (phase: string) =>
+    console.info(
+      `[BadgeDesigner] add-to-cart: ${phase} (+${Date.now() - start}ms)`,
+    );
+}
+
+/**
+ * Stop waiting on optional side work (proof uploads, design library saves) after `ms`. The request
+ * keeps running server-side, so assets still land in Supabase; only the cart handoff stops blocking.
+ */
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    );
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        window.clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
+/** Proof/asset uploads can be several MB per plaque; generous but bounded. */
+const PROOF_UPLOAD_TIMEOUT_MS = 60_000;
+/** Design library milestone rows are small JSON writes. */
+const DESIGN_LIBRARY_SAVE_TIMEOUT_MS = 15_000;
+
 /** Payload stored when proof modal is open; used by onProofConfirm to complete add-to-cart. */
 interface ProofPendingPayload {
   pdfBlob: Blob;
@@ -437,7 +481,6 @@ interface ProofPendingPayload {
   designIdForSupabase: string;
   allBadgesForSupabase: Badge[];
   shopData: ShopAuthData;
-  gadgetPromise: Promise<{ id?: string } | undefined>;
   shopifyCustomerIdFromUrl: string | null;
 }
 
@@ -6338,30 +6381,8 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             : badge,
       });
 
-      // Design metadata and files go only to Supabase (no Gadget at add-to-cart). designData is cached in Supabase for link-order when order is paid.
+      // Design metadata and files go only to Supabase. designData is cached in Supabase for link-order when order is paid.
       const designIdForSupabase = designId;
-
-      // Start Gadget save in parallel with generation + upload so it doesn't block the critical path
-      const firstBadge = badgesReadyForOrder[0];
-      const minimalDesignData = {
-        designId: designIdForSupabase,
-        productId: _productId || "test-product",
-        shopId: shopData.shopId || "test-shop",
-        textLines: firstBadge?.lines ?? [],
-        badge: firstBadge
-          ? {
-              lines: firstBadge.lines,
-              backgroundColor: firstBadge.backgroundColor,
-              backing: firstBadge.backing,
-            }
-          : undefined,
-        allBadges: badgesReadyForOrder.map((b) => ({
-          lines: b.lines,
-          backgroundColor: b.backgroundColor,
-          backing: b.backing,
-        })),
-      };
-      const gadgetPromise = api.saveBadgeDesign(minimalDesignData, shopData);
 
       // Phase 1: Generate PDF only and show proof modal; add-to-cart completes in onProofConfirm
       const pdfBlob = await generatePDFAsBlob(
@@ -6379,7 +6400,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         designIdForSupabase,
         allBadgesForSupabase: badgesReadyForOrder,
         shopData,
-        gadgetPromise,
         shopifyCustomerIdFromUrl,
       };
       const objectUrl = URL.createObjectURL(pdfBlob);
@@ -6553,7 +6573,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       designIdForSupabase,
       allBadgesForSupabase,
       shopData,
-      gadgetPromise,
       shopifyCustomerIdFromUrl,
     } = pending;
     const urlParams =
@@ -6600,10 +6619,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     // }
 
     setIsAddingToCart(true);
+    const logPhase = createAddToCartPhaseLog();
     try {
+      logPhase("proof confirmed");
       if (draftSaveInProgressRef.current) {
-        await draftSaveInProgressRef.current;
+        await withTimeout(
+          draftSaveInProgressRef.current,
+          PROOF_UPLOAD_TIMEOUT_MS,
+          "draft save",
+        ).catch((err) => {
+          console.warn("[BadgeDesigner] draft save wait skipped:", err);
+        });
       }
+      logPhase("draft save settled");
       draftSaveGenerationRef.current += 1;
       let thumbnailUrls: string[] = [];
       let pdfUrlForCart: string | undefined;
@@ -6620,10 +6648,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
             formDataFinalize.append("backingType", currentBacking);
           }
           // Print SVGs already on draft rows from save-draft — do not re-upload.
-          const finalizeRes = await fetch("/api/finalize-draft", {
-            method: "POST",
-            body: formDataFinalize,
-          });
+          const finalizeRes = await withTimeout(
+            fetch("/api/finalize-draft", {
+              method: "POST",
+              body: formDataFinalize,
+            }),
+            PROOF_UPLOAD_TIMEOUT_MS,
+            "finalize-draft",
+          );
           const finalizeJson = await finalizeRes.json().catch(() => ({}));
           usedFinalize =
             finalizeRes.ok &&
@@ -6657,9 +6689,13 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               const storageOpts = { forRemoteStorage: true as const };
 
               const postProofChunk = async (formData: FormData) => {
-                const supabaseResponse = await fetch(
-                  designerApiPaths.sendToSupabase,
-                  { method: "POST", body: formData },
+                const supabaseResponse = await withTimeout(
+                  fetch(designerApiPaths.sendToSupabase, {
+                    method: "POST",
+                    body: formData,
+                  }),
+                  PROOF_UPLOAD_TIMEOUT_MS,
+                  "proof asset upload",
                 );
                 if (!supabaseResponse.ok) {
                   const errData = await supabaseResponse
@@ -6698,6 +6734,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 formDataPdf.append("pdf", pdfBlobToUse, designProofFilename);
                 const pdfJson = await postProofChunk(formDataPdf);
                 pdfUrlForCart = pdfJson.pdfUrl || pdfUrlForCart;
+                logPhase("proof PDF uploaded");
               }
 
               // Chunks 1..N: one plaque/badge assets per request.
@@ -6705,6 +6742,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                 badgesForSupabase.length,
               ).fill("");
               for (let i = 0; i < badgesForSupabase.length; i++) {
+                logPhase(
+                  `line ${i + 1}/${badgesForSupabase.length} generating assets`,
+                );
                 const b = badgesForSupabase[i];
                 const templateIdForBadge =
                   b.templateId ||
@@ -6789,6 +6829,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
                   );
                 }
                 const lineJson = await postProofChunk(formDataLine);
+                logPhase(`line ${i + 1}/${badgesForSupabase.length} uploaded`);
                 if (Array.isArray(lineJson.thumbnailUrls)) {
                   lineJson.thumbnailUrls.forEach((u: string, idx: number) => {
                     if (u) collectedThumbs[idx] = u;
@@ -6912,17 +6953,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         return fromUrl || null;
       };
 
-      let gadgetDesignId: string | undefined;
-      try {
-        const savedDesign = await gadgetPromise;
-        gadgetDesignId = savedDesign?.id;
-      } catch (gadgetErr) {
-        console.warn(
-          "Gadget save at add-to-cart failed (cart will still add):",
-          gadgetErr,
-        );
-      }
-
       const cartItems = addDuplicates
         ? allBadgesForSupabase.map((b, i) => {
             const { variantId, linePrice: itemTotalPrice } = isSignDesigner
@@ -6943,7 +6973,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               backing: b.backing,
               linePrice: itemTotalPrice,
               thumbnailUrl: thumbnailUrls[i],
-              gadgetDesignId,
               pdfUrl: pdfUrlForCart,
               badgeCount: n,
               includeBackingType: !isSignDesigner,
@@ -6972,7 +7001,6 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               backing: b.backing,
               linePrice: itemTotalPrice,
               thumbnailUrl: thumbnailUrls[i],
-              gadgetDesignId,
               pdfUrl: pdfUrlForCart,
               includeBackingType: !isSignDesigner,
             });
@@ -7036,14 +7064,19 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           thumbnailUrl: thumbnailUrls[0] ?? undefined,
         };
         try {
-          await api.saveDesignToSupabase(
-            cartMilestonePayload,
-            { ...shopData, customerId: cid },
-            { saveKind: "cart" },
+          await withTimeout(
+            api.saveDesignToSupabase(
+              cartMilestonePayload,
+              { ...shopData, customerId: cid },
+              { saveKind: "cart" },
+            ),
+            DESIGN_LIBRARY_SAVE_TIMEOUT_MS,
+            "cart milestone save",
           );
         } catch (err) {
           console.warn("[BadgeDesigner] Cart milestone save failed:", err);
         }
+        logPhase("cart milestone settled");
       }
 
       // Keep the design on screen while cart handoff runs (avoid blank Step 1 flash).
@@ -7058,7 +7091,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       cartHandoffDoneRef.current = true;
       removeDesignerDraftCache(_shop, _productId);
 
+      logPhase("cart handoff starting");
       const result = await api.addToCartMultiple(cartItems);
+      logPhase(`cart handoff returned success=${result.success}`);
       if (result.success) {
         skipCacheSaveRef.current = true;
         sessionDesignIdRef.current = null;
