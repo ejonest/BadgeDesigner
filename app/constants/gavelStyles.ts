@@ -815,21 +815,24 @@ export function getGavelProductionMethod(
  * by scripts/build-gavel-choice-images.py, so this tab and the step-2 choice
  * cards show the same photo of the same wood. Stands still come from the older
  * one-off shots — there is no stand in that set.
+ *
+ * These point at the `-large` renders rather than the cards' small PNGs: the
+ * tab magnifies on hover and opens a lightbox, which needs the resolution.
  */
 const GAVEL_PRODUCT_PHOTOS: Readonly<Record<string, string>> = {
-  "walnut|gavel": "/images/gavel/options/walnut-gavel.png",
-  "walnut|block": "/images/gavel/options/walnut-block.png",
-  "walnut|engraved": "/images/gavel/options/walnut-personalized-block.png",
+  "walnut|gavel": "/images/gavel/options/walnut-gavel-large.jpg",
+  "walnut|block": "/images/gavel/options/walnut-block-large.jpg",
+  "walnut|engraved": "/images/gavel/options/walnut-personalized-block-large.jpg",
   "walnut|round": "/images/gavel/product-walnut-round-block.svg",
   "walnut|stand": "/images/gavel/product-walnut-stand.jpg",
   "walnut|stand|silver": "/images/gavel/product-walnut-stand-silver.jpg",
-  "rubberwood|gavel": "/images/gavel/options/rubberwood-gavel.png",
-  "rubberwood|block": "/images/gavel/options/rubberwood-block.png",
+  "rubberwood|gavel": "/images/gavel/options/rubberwood-gavel-large.jpg",
+  "rubberwood|block": "/images/gavel/options/rubberwood-block-large.jpg",
   "rubberwood|engraved":
-    "/images/gavel/options/rubberwood-personalized-block.png",
+    "/images/gavel/options/rubberwood-personalized-block-large.jpg",
   "rubberwood|stand": "/images/gavel/product-rubberwood-stand.jpg",
-  "ebony|gavel": "/images/gavel/options/ebony-gavel.png",
-  "ebony|block": "/images/gavel/options/ebony-block.png",
+  "ebony|gavel": "/images/gavel/options/ebony-gavel-large.jpg",
+  "ebony|block": "/images/gavel/options/ebony-block-large.jpg",
   "ebony|block|silver": "/images/gavel/product-ebony-block-silver.jpg",
 };
 

@@ -1,11 +1,13 @@
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
   useState,
   type MutableRefObject,
+  type PointerEvent as ReactPointerEvent,
 } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, OrbitControls } from "@react-three/drei";
@@ -155,6 +157,12 @@ export const GavelSpinPreview = forwardRef<
   const glRef = useRef<THREE.WebGLRenderer | null>(null);
   const [hintVisible, setHintVisible] = useState(true);
   const [subject, setSubject] = useState<GavelPreviewSubject>("gavel");
+  /** Cursor position the product photo magnifies around, in percent. */
+  const [zoomOrigin, setZoomOrigin] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [enlarged, setEnlarged] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
   // A stand's Plate tab already stacks the band proof above the plate proof,
   // so offering Band alongside it would be a second route to the same image.
   const bandTabVisible = showFlatProofTabs && !showStandToggle;
@@ -173,6 +181,7 @@ export const GavelSpinPreview = forwardRef<
       ? standGroundY()
       : gavelGroundY();
   const photoSrc = productPhotoSrc || style.thumbSrc;
+  const photoAlt = `Actual ${style.label} ${showStandToggle ? "gavel and stand" : "gavel"}`;
   const cameraSubject: CameraSubject = viewingBlock
     ? "soundBlock"
     : viewingStandSet
@@ -187,6 +196,35 @@ export const GavelSpinPreview = forwardRef<
   useEffect(() => {
     if (!showSoundBlockToggle && subject === "soundBlock") setSubject("gavel");
   }, [showSoundBlockToggle, subject]);
+
+  // Leaving the tab (or swapping wood) should not strand a lens or a lightbox.
+  useEffect(() => {
+    if (!viewingProduct) {
+      setZoomOrigin(null);
+      setEnlarged(false);
+    }
+  }, [viewingProduct]);
+
+  useEffect(() => {
+    setEnlarged(false);
+  }, [photoSrc]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (enlarged && !dialog.open) dialog.showModal();
+    else if (!enlarged && dialog.open) dialog.close();
+  }, [enlarged, viewingProduct]);
+
+  const trackZoom = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+    // Touch and pen taps go straight to the lightbox; only a mouse gets a lens.
+    if (event.pointerType !== "mouse") return;
+    const box = event.currentTarget.getBoundingClientRect();
+    setZoomOrigin({
+      x: ((event.clientX - box.left) / box.width) * 100,
+      y: ((event.clientY - box.top) / box.height) * 100,
+    });
+  }, []);
 
   useEffect(() => {
     if (showStandToggle) {
@@ -294,11 +332,74 @@ export const GavelSpinPreview = forwardRef<
         </button>
       </div>
       {viewingProduct ? (
-        <img
-          src={photoSrc}
-          alt={`Actual ${style.label} ${showStandToggle ? "gavel and stand" : "gavel"}`}
-          className="gf-product-photo"
-        />
+        <>
+          <button
+            type="button"
+            className={`gf-product-zoom${zoomOrigin ? " is-zoomed" : ""}`}
+            onPointerMove={trackZoom}
+            onPointerLeave={() => setZoomOrigin(null)}
+            onClick={() => setEnlarged(true)}
+            aria-label={`${photoAlt}. View larger`}
+          >
+            <img
+              src={photoSrc}
+              alt={photoAlt}
+              className="gf-product-photo"
+              style={
+                zoomOrigin
+                  ? { transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%` }
+                  : undefined
+              }
+            />
+            <span className="gf-product-zoom-hint">
+              <span className="gf-zoom-hint-hover">
+                Hover to zoom · click to enlarge
+              </span>
+              <span className="gf-zoom-hint-tap">Tap to enlarge</span>
+            </span>
+          </button>
+          {/*
+            A modal <dialog> renders in the top layer, so it escapes the
+            preview frame's clipped overflow without a portal, and it brings
+            Escape-to-close and a focus trap with it.
+          */}
+          <dialog
+            ref={dialogRef}
+            className="gf-lightbox-dialog"
+            aria-label={photoAlt}
+            onClose={() => setEnlarged(false)}
+          >
+            <button
+              type="button"
+              className="gf-lightbox-dismiss"
+              aria-label="Close larger view"
+              onClick={() => setEnlarged(false)}
+            />
+            <div className="gf-lightbox">
+              <img
+                src={photoSrc}
+                alt={photoAlt}
+                className="gf-lightbox-img"
+                onLoad={(event) => {
+                  const { naturalWidth, naturalHeight } = event.currentTarget;
+                  if (naturalHeight > 0) {
+                    event.currentTarget.style.setProperty(
+                      "--gf-lightbox-ar",
+                      String(naturalWidth / naturalHeight),
+                    );
+                  }
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              className="gf-lightbox-close"
+              onClick={() => setEnlarged(false)}
+            >
+              Close
+            </button>
+          </dialog>
+        </>
       ) : null}
       {viewingBand ? (
         bandTextureUrl ? (
