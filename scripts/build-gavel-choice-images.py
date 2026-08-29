@@ -32,18 +32,26 @@ from rembg import new_session, remove
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "app/temp/gavelImages/ImagesToUse"
 OUTPUT = ROOT / "public/images/gavel/options"
-MAX_SIZE = (900, 560)
 MODEL = "isnet-general-use"
 
+# Two renders per photo. The transparent PNG is for the choice cards, which draw
+# it 60-90px tall over a cream panel. The `-large` JPEG feeds the preview pane's
+# Actual product tab, where it is magnified on hover and opened in a lightbox,
+# so it needs real pixels; that tab sits on white, so matting the alpha onto
+# white costs nothing and keeps the file a fraction of the PNG's size.
+CARD_SIZE = (900, 560)
+ZOOM_SIZE = (1600, 1400)
+ZOOM_QUALITY = 88
+
 JOBS = {
-    "WalnutGavel.jpg": "walnut-gavel.png",
-    "WalnutWithBlock.jpg": "walnut-block.png",
-    "WalnutPersonalBlock.jpg": "walnut-personalized-block.png",
-    "StandardGavel.jpg": "rubberwood-gavel.png",
-    "StandardGavelWithBlock.jpg": "rubberwood-block.png",
-    "StandardGavelPersonalBlock.jpg": "rubberwood-personalized-block.png",
-    "EbonyGavel.jpg": "ebony-gavel.png",
-    "EbonyWithBlock.jpg": "ebony-block.png",
+    "WalnutGavel.jpg": "walnut-gavel",
+    "WalnutWithBlock.jpg": "walnut-block",
+    "WalnutPersonalBlock.jpg": "walnut-personalized-block",
+    "StandardGavel.jpg": "rubberwood-gavel",
+    "StandardGavelWithBlock.jpg": "rubberwood-block",
+    "StandardGavelPersonalBlock.jpg": "rubberwood-personalized-block",
+    "EbonyGavel.jpg": "ebony-gavel",
+    "EbonyWithBlock.jpg": "ebony-block",
 }
 
 
@@ -186,39 +194,63 @@ def add_personalization(
     return image
 
 
-def trim_and_size(image: Image.Image) -> tuple[Image.Image, SourceToOutput]:
+def trim(image: Image.Image) -> tuple[Image.Image, int, int]:
+    """Crop away the empty margin the cutout left, keeping the offset."""
     alpha = image.getchannel("A")
     bounds = alpha.point(lambda a: 255 if a >= 12 else 0).getbbox()
-    left, top = 0, 0
-    if bounds:
-        left, top, right, bottom = bounds
-        pad = round(max(right - left, bottom - top) * 0.035)
-        left = max(0, left - pad)
-        top = max(0, top - pad)
-        bounds = (
-            left,
-            top,
-            min(image.width, right + pad),
-            min(image.height, bottom + pad),
-        )
-        image = image.crop(bounds)
-    cropped_width = image.width
-    image.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
-    return image, SourceToOutput(left, top, image.width / cropped_width)
+    if not bounds:
+        return image, 0, 0
+    left, top, right, bottom = bounds
+    pad = round(max(right - left, bottom - top) * 0.035)
+    left = max(0, left - pad)
+    top = max(0, top - pad)
+    box = (left, top, min(image.width, right + pad), min(image.height, bottom + pad))
+    return image.crop(box), left, top
+
+
+def render(
+    cropped: Image.Image,
+    crop_left: int,
+    crop_top: int,
+    source_name: str,
+    max_size: tuple[int, int],
+) -> Image.Image:
+    """Resize the cutout to fit, then engrave at that resolution."""
+    out = cropped.copy()
+    out.thumbnail(max_size, Image.Resampling.LANCZOS)
+    to_output = SourceToOutput(crop_left, crop_top, out.width / cropped.width)
+    return add_personalization(out, source_name, to_output)
 
 
 def main() -> None:
     OUTPUT.mkdir(parents=True, exist_ok=True)
     session = new_session(MODEL)
-    for source_name, output_name in JOBS.items():
+    for source_name, stem in JOBS.items():
         source_path = SOURCE / source_name
         result = remove(source_path.read_bytes(), session=session)
-        product = Image.open(BytesIO(result)).convert("RGBA")
-        product, to_output = trim_and_size(product)
-        product = add_personalization(product, source_name, to_output)
-        destination = OUTPUT / output_name
-        product.save(destination, "PNG", optimize=True)
-        print(f"{source_name} -> {destination.relative_to(ROOT)} {product.size}")
+        cutout = Image.open(BytesIO(result)).convert("RGBA")
+        cropped, crop_left, crop_top = trim(cutout)
+
+        card = render(cropped, crop_left, crop_top, source_name, CARD_SIZE)
+        card_path = OUTPUT / f"{stem}.png"
+        card.save(card_path, "PNG", optimize=True)
+
+        zoom = render(cropped, crop_left, crop_top, source_name, ZOOM_SIZE)
+        matted = Image.new("RGB", zoom.size, (255, 255, 255))
+        matted.paste(zoom, mask=zoom.getchannel("A"))
+        zoom_path = OUTPUT / f"{stem}-large.jpg"
+        matted.save(
+            zoom_path,
+            "JPEG",
+            quality=ZOOM_QUALITY,
+            optimize=True,
+            progressive=True,
+        )
+
+        print(
+            f"{source_name} -> {card_path.name} {card.size}"
+            f" + {zoom_path.name} {matted.size}"
+        )
 
 
 if __name__ == "__main__":
