@@ -202,6 +202,10 @@ import { ProofPdfViewer } from "./ProofPdfViewer";
 import { stableAutosaveDesignId } from "../utils/stableDesignLibraryIds";
 import { createApi, type DesignLibraryListItem } from "../utils/api";
 import {
+  createDesignerAnalytics,
+  type DesignerAnalyticsTool,
+} from "../utils/designerAnalytics";
+import {
   getDesignerApiPaths,
   getDesignerConfig,
   getDesignerLibraryApiPaths,
@@ -2546,6 +2550,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       searchParams.get("completeEarlySteps") === "1",
     [variant, presetBadgeIconId, searchParams],
   );
+  const analytics = useMemo(
+    () =>
+      createDesignerAnalytics({
+        tool: designerId as DesignerAnalyticsTool,
+        getEntry: () => (completeEarlySteps ? "icon-listing" : "full-funnel"),
+      }),
+    [designerId, completeEarlySteps],
+  );
   const initialDefaultBadge: Badge = {
     ...INITIAL_BADGE,
     templateId: defaultTemplateId,
@@ -3124,6 +3136,54 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       : true) &&
     (config.hasSizeStep ? selectedSignSizeTemplateId != null : true) &&
     (signBorderStepRequired ? signBorderConfigured : true);
+
+  useEffect(() => {
+    if (isDeskSignVariant(variant)) {
+      if (deskSignMaterial != null) analytics.stepCompleted("material");
+      if (selectedDeskSignSize !== null) analytics.stepCompleted("size");
+      if (deskSignShowColorsStep && deskSignColorsComplete) {
+        analytics.stepCompleted("color");
+      }
+      if (hasStep3TextValid) analytics.stepCompleted("text");
+      if (
+        deskSignMaterial === "plastic" &&
+        Boolean(badge.deskSignMountType) &&
+        Boolean(badge.deskSignAluminumColor)
+      ) {
+        analytics.stepCompleted("mount");
+      }
+      return;
+    }
+    if (variant === "badge") {
+      if (multipleBadges.length > 0) analytics.stepCompleted("shape");
+      if (needsBadgeStyleStep && hasChosenBadgeStyle) {
+        analytics.stepCompleted("style");
+      }
+      if (hasChosenBackgroundColor) analytics.stepCompleted("color");
+      if (showBadgeIconStep && hasChosenBadgeIcon) {
+        analytics.stepCompleted("icon");
+      }
+      if (hasStep3TextValid) analytics.stepCompleted("text");
+      if (hasChosenBacking) analytics.stepCompleted("backing");
+    }
+  }, [
+    analytics,
+    variant,
+    deskSignMaterial,
+    selectedDeskSignSize,
+    deskSignShowColorsStep,
+    deskSignColorsComplete,
+    hasStep3TextValid,
+    badge.deskSignMountType,
+    badge.deskSignAluminumColor,
+    multipleBadges.length,
+    needsBadgeStyleStep,
+    hasChosenBadgeStyle,
+    hasChosenBackgroundColor,
+    showBadgeIconStep,
+    hasChosenBadgeIcon,
+    hasChosenBacking,
+  ]);
 
   const badgeStyleSelection = useMemo((): "plain" | string | null => {
     if (!needsBadgeStyleStep || !hasChosenBadgeStyle) return null;
@@ -8548,6 +8608,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
     const designIdForSupabase = designId;
 
+    analytics.addToCartClicked();
+
     // One-shot JPEG + print SVG per badge; PDF reuses the JPEGs (no second raster).
     let cartProofAssets: CartProofBadgeAssets[] | undefined;
     let pdfBlob: Blob;
@@ -8607,6 +8669,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setProofAcknowledged(false);
     setProofAddDuplicates(false);
     setShowProofModal(true);
+    analytics.previewGenerated();
   };
 
   const addToCart = async () => {
@@ -8657,6 +8720,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       );
     } catch (error) {
       console.error("Failed to add to cart:", error);
+      analytics.previewError(
+        error instanceof Error ? error.message : "proof_failed",
+      );
       alert(
         error instanceof Error
           ? error.message
@@ -8713,6 +8779,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       );
     } catch (e) {
       console.error("Failed to add to cart:", e);
+      analytics.previewError(
+        e instanceof Error ? e.message : "proof_failed",
+      );
       alert(
         e instanceof Error
           ? e.message
@@ -9065,8 +9134,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     };
     window.addEventListener("message", onMessage);
     api.sendToParent({ action: "designer-ready" });
+    analytics.opened();
     return () => window.removeEventListener("message", onMessage);
-  }, [templates.length, restoreCartDesignForEdit, api]);
+  }, [templates.length, restoreCartDesignForEdit, api, analytics]);
 
   const closeDesignGalleryModal = useCallback(() => {
     setShowDesignGalleryModal(false);
@@ -9121,6 +9191,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     if (!proofAcknowledged) return;
     const pending = proofPendingAddToCartRef.current;
     if (!pending) return;
+    analytics.addToCartClicked();
     const {
       pdfBlob,
       designIdForSupabase,
@@ -9809,6 +9880,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       const result = await api.addToCartMultiple(cartItems, {
         replaceDesignId: replacedCartDesignId,
       });
+      analytics.addToCartResult(
+        Boolean(result.success),
+        result.success ? undefined : result.message,
+      );
       if (result.success) {
         cartHandoffComplete = true;
         skipCacheSaveRef.current = true;
@@ -9854,6 +9929,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     } catch (error) {
       resumeDraftCacheAfterFailedCartHandoff();
       console.error("Failed to complete add to cart:", error);
+      analytics.addToCartResult(
+        false,
+        error instanceof Error ? error.message : "cart_failed",
+      );
       alert("Failed to add badge to cart. Please try again.");
     } finally {
       if (!cartHandoffComplete) {

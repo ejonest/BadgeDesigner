@@ -2,7 +2,7 @@
  * Gavels Fast catalog — matched to the product photos in
  * "app/temp/Gavels Fast - Core Products/Gavels & Sound Blocks".
  *
- * Same lathe-turned head on every SKU, in the three woods we offer: American
+ * Same lathe-turned head on every SKU, in the three woods we offer: wooden
  * walnut, hardwood (cherry-finished rubberwood), and ebony. Band metal (gold
  * or silver) is chosen separately. Handle length is always the standard size.
  *
@@ -466,7 +466,7 @@ export type GavelStyleDef = {
 export const GAVEL_STYLES: readonly GavelStyleDef[] = [
   {
     id: "walnut",
-    label: "American Walnut",
+    label: "Wooden Walnut",
     description: "Rich warm walnut.",
     bodyColor: "#6a4736",
     roughness: 1.8,

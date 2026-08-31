@@ -17,7 +17,7 @@ type Props = {
   style: GavelStyleDef;
   /** Transparent PNG of centered text, drawn on the wood top. */
   topTextureUrl?: string;
-  /** The round block is the plain American-walnut option from the product photos. */
+  /** The round block is the plain wooden-walnut option from the product photos. */
   shape?: "square" | "round";
 };
 

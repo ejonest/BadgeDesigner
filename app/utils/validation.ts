@@ -129,6 +129,24 @@ export const deleteDesignMilestoneBodySchema = z
   })
   .strict();
 
+/** POST /api/track-designer-event – body (no PII) */
+export const trackDesignerEventBodySchema = z
+  .object({
+    event: z
+      .string()
+      .min(1)
+      .max(80)
+      .regex(/^aqb:[a-z0-9_]+$/),
+    tool: z.enum(["badge", "desk-sign", "sign", "plaque", "gavel"]),
+    session_id: z.string().min(1).max(80),
+    step: z.string().max(80).optional(),
+    entry: z.string().max(80).optional(),
+    duration_ms: z.number().int().min(0).max(3_600_000).optional(),
+    error_code: z.string().max(200).optional(),
+    page_path: z.string().max(500).optional(),
+  })
+  .strict();
+
 /** POST /api/library-thumbnail – body (PNG data URL → Supabase badge-images public URL) */
 export const libraryThumbnailBodySchema = z
   .object({
