@@ -34,6 +34,7 @@ async function toUploadBuffer(file: File | Blob): Promise<Buffer> {
 /** Columns added by later migrations; writes retry without them if a column is absent. */
 const OPTIONAL_ROW_COLUMNS = [
   "print_svg_url",
+  "secondary_svg_url",
   "full_image_url",
   "badge_json",
   "data_json",
@@ -89,6 +90,9 @@ function rowPayload(
     ...(INCLUDE_PRINT_SVG_URL_IN_DB
       ? { print_svg_url: item.print_svg_url || null }
       : {}),
+    // Only gavels have a second engraved surface, and only gavel_order_items has
+    // the column; sending it elsewhere would cost a failed write plus a retry.
+    ...(isGavelTable ? { secondary_svg_url: item.secondary_svg_url || null } : {}),
     ...(INCLUDE_DESIGN_JSON_IN_DB
       ? {
           [designJsonColumn]: item.badge_json ?? null,
