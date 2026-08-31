@@ -263,6 +263,16 @@
       var data = event.data;
       if (!data || !data.action) return;
 
+      if (data.action === 'designer-analytics' && data.event) {
+        if (window.Shopify && Shopify.analytics && typeof Shopify.analytics.publish === 'function') {
+          Shopify.analytics.publish(data.event, Object.assign({}, data.payload || {}, {
+            page_url: window.location.href,
+            page_path: window.location.pathname + window.location.search
+          }));
+        }
+        return;
+      }
+
       if (data.action === 'redirect-to-login') {
         var returnTo = window.location.pathname + window.location.search;
         window.location.href = '/account/login?return_url=' + encodeURIComponent(returnTo);
@@ -322,7 +332,7 @@
       </p>
     {%- endif -%}
     <ul>
-      <li>Wood options: American Walnut, Oak, Ebony and Purple finishes</li>
+      <li>Wood options: Wooden Walnut, Oak, Ebony and Purple finishes</li>
       <li>Band finishes in gold and silver</li>
       <li>Free engraving — no setup or artwork fees</li>
       <li>Ideal for judges, gavel clubs, boards, associations and retirement gifts</li>

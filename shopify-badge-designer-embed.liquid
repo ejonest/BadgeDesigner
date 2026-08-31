@@ -86,6 +86,16 @@
       var data = event.data;
       if (!data || !data.action) return;
 
+      if (data.action === 'designer-analytics' && data.event) {
+        if (window.Shopify && Shopify.analytics && typeof Shopify.analytics.publish === 'function') {
+          Shopify.analytics.publish(data.event, Object.assign({}, data.payload || {}, {
+            page_url: window.location.href,
+            page_path: window.location.pathname + window.location.search
+          }));
+        }
+        return;
+      }
+
       if (data.action === 'redirect-to-login') {
         var returnTo = window.location.pathname + window.location.search;
         window.location.href = '/customer_authentication/login?return_to=' + encodeURIComponent(returnTo);

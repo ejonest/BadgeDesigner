@@ -113,6 +113,10 @@ import { svgMarkupToImageSrc } from "../utils/svgDataUrl";
 import { stableAutosaveDesignId } from "../utils/stableDesignLibraryIds";
 import { createApi, type DesignLibraryListItem } from "../utils/api";
 import {
+  createDesignerAnalytics,
+  type DesignerAnalyticsTool,
+} from "../utils/designerAnalytics";
+import {
   getDesignerApiPaths,
   getDesignerConfig,
   getDesignerLibraryApiPaths,
@@ -2077,6 +2081,14 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     () => createApi(gadgetApiUrl, gadgetApiKey, { designerId }),
     [gadgetApiUrl, gadgetApiKey, designerId],
   );
+  const analytics = useMemo(
+    () =>
+      createDesignerAnalytics({
+        tool: designerId as DesignerAnalyticsTool,
+        getEntry: () => "full-funnel",
+      }),
+    [designerId],
+  );
 
   // State: start with no badge; user must pick a template first
   const defaultTemplateId =
@@ -2485,6 +2497,49 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     (config.hasSizeStep ? selectedSignSizeTemplateId != null : true) &&
     (signBorderStepRequired ? signBorderConfigured : true);
 
+  useEffect(() => {
+    if (variant === "sign") {
+      if (selectedSignTemplateType != null) analytics.stepCompleted("template");
+      if (selectedSignSizeTemplateId != null) analytics.stepCompleted("size");
+      if (hasChosenBackgroundColor) analytics.stepCompleted("background");
+      if (signBorderStepRequired && signBorderConfigured) {
+        analytics.stepCompleted("border");
+      }
+      if (hasStep3TextEntered) analytics.stepCompleted("text");
+      if (badge.logo?.src) analytics.stepCompleted("image");
+      return;
+    }
+    if (variant === "plaque") {
+      if (selectedPlaqueLayoutId != null || multipleBadges.length > 0) {
+        analytics.stepCompleted("layout");
+      }
+      if (selectedPlaqueSize != null || multipleBadges.length > 0) {
+        analytics.stepCompleted("size");
+      }
+      if (plaqueAttachedSelected && Boolean(badge.plaqueFormatId?.trim())) {
+        analytics.stepCompleted("format");
+      }
+      if (hasChosenBackgroundColor) analytics.stepCompleted("metal");
+      if (badge.logo?.src) analytics.stepCompleted("image");
+      if (hasStep3TextEntered) analytics.stepCompleted("text");
+    }
+  }, [
+    analytics,
+    variant,
+    selectedSignTemplateType,
+    selectedSignSizeTemplateId,
+    hasChosenBackgroundColor,
+    signBorderStepRequired,
+    signBorderConfigured,
+    hasStep3TextEntered,
+    badge.logo?.src,
+    badge.plaqueFormatId,
+    selectedPlaqueLayoutId,
+    selectedPlaqueSize,
+    multipleBadges.length,
+    plaqueAttachedSelected,
+  ]);
+
   /** Returns message like "Please complete steps (1)" or "Please complete steps (1-4)" for step-guard alerts. When opening step N, pass forStep = N so only steps 1..N-1 are required. */
   const getIncompleteStepsMessage = (
     forStep: 2 | 3 | 4 | 5 | 6 | 7,
@@ -2852,6 +2907,11 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       cancelled = true;
     };
   }, [templateRefreshKey, variant]);
+
+  useEffect(() => {
+    if (templates.length === 0) return;
+    analytics.opened();
+  }, [templates.length, analytics]);
 
   // Build template picker thumbnails: plate + outline only (no trim/motifs). Users add frame, color, and
   // Designer motifs in the border step. Sign viewBoxes are large in px — thicker stroke for small grid cells.
@@ -6385,6 +6445,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       const designIdForSupabase = designId;
 
       // Phase 1: Generate PDF only and show proof modal; add-to-cart completes in onProofConfirm
+      analytics.addToCartClicked();
       const pdfBlob = await generatePDFAsBlob(
         badgesReadyForOrder[0],
         badgesReadyForOrder.length > 1
@@ -6407,8 +6468,12 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       setProofAcknowledged(false);
       setProofAddDuplicates(false);
       setShowProofModal(true);
+      analytics.previewGenerated();
     } catch (error) {
       console.error("Failed to add to cart:", error);
+      analytics.previewError(
+        error instanceof Error ? error.message : "proof_failed",
+      );
       alert("Failed to add badge to cart. Please try again.");
     } finally {
       setIsAddingToCart(false);
@@ -6568,6 +6633,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     if (!proofAcknowledged) return;
     const pending = proofPendingAddToCartRef.current;
     if (!pending) return;
+    analytics.addToCartClicked();
     const {
       pdfBlob,
       designIdForSupabase,
@@ -7094,6 +7160,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
       logPhase("cart handoff starting");
       const result = await api.addToCartMultiple(cartItems);
       logPhase(`cart handoff returned success=${result.success}`);
+      analytics.addToCartResult(
+        Boolean(result.success),
+        result.success ? undefined : result.message,
+      );
       if (result.success) {
         skipCacheSaveRef.current = true;
         sessionDesignIdRef.current = null;
@@ -7106,6 +7176,10 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
     } catch (error) {
       resumeDraftCacheAfterFailedCartHandoff();
       console.error("Failed to complete add to cart:", error);
+      analytics.addToCartResult(
+        false,
+        error instanceof Error ? error.message : "cart_failed",
+      );
       alert("Failed to add badge to cart. Please try again.");
     } finally {
       setIsAddingToCart(false);

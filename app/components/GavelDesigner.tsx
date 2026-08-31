@@ -86,6 +86,7 @@ import {
 } from "~/utils/gavelMetalTexture";
 import { generateGavelProofPdf } from "~/utils/gavelPdf";
 import { createApi } from "~/utils/api";
+import { createDesignerAnalytics } from "~/utils/designerAnalytics";
 import {
   GAVEL_PRODUCT_HANDLES,
   SUEDE_BAG_PRODUCT_HANDLE,
@@ -423,6 +424,18 @@ export default function GavelDesigner({
   const apiRef = useRef(
     createApi(gadgetApiUrl, gadgetApiKey, { designerId: "gavel" }),
   );
+  const analytics = useMemo(
+    () =>
+      createDesignerAnalytics({
+        tool: "gavel",
+        getEntry: () => "full-funnel",
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    analytics.opened();
+  }, [analytics]);
 
   const isStand = productType === "stand";
   const styleDef = getGavelStyle(gavelStyle);
@@ -1361,6 +1374,11 @@ export default function GavelDesigner({
   }, []);
 
   function goToStep(next: StepId) {
+    const fromIdx = sequence.indexOf(step);
+    const toIdx = sequence.indexOf(next);
+    if (toIdx > fromIdx && step !== "done") {
+      analytics.stepCompleted(step);
+    }
     setStep(next);
     setVisited((prev) => (prev.includes(next) ? prev : [...prev, next]));
     setError(null);
@@ -1565,8 +1583,12 @@ export default function GavelDesigner({
       setProofUrl(url);
       setPendingPdfBlob(pdfBlob);
       setProofOpen(true);
+      analytics.previewGenerated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not build proof.");
+      const message =
+        err instanceof Error ? err.message : "Could not build proof.";
+      setError(message);
+      analytics.previewError(message);
     } finally {
       setBusy(false);
     }
@@ -1576,6 +1598,7 @@ export default function GavelDesigner({
     if (!pendingPdfBlob) return;
     setBusy(true);
     setError(null);
+    analytics.addToCartClicked();
     try {
       const designId = designIdRef.current;
       const form = new FormData();
@@ -1729,12 +1752,16 @@ export default function GavelDesigner({
       if (!result.success) {
         throw new Error(result.message || "Add to cart failed");
       }
+      analytics.addToCartResult(true);
       removeGavelDesignerDraftCache(shop, productId);
       skipCacheSaveRef.current = true;
       setProofOpen(false);
       goToStep("done");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Add to cart failed.");
+      const message =
+        err instanceof Error ? err.message : "Add to cart failed.";
+      setError(message);
+      analytics.addToCartResult(false, message);
     } finally {
       setBusy(false);
     }

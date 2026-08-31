@@ -131,7 +131,7 @@ const newSections = {
       {
         icon: "layers",
         title: "Pick wood and finish",
-        text: "American walnut, hardwood or ebony, with a gold or silver band.",
+        text: "Wooden walnut, hardwood or ebony, with a gold or silver band.",
       },
       {
         icon: "pencil",

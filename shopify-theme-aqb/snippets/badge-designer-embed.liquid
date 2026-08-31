@@ -168,6 +168,16 @@
       var data = event.data;
       if (!data || !data.action) return;
 
+      if (data.action === 'designer-analytics' && data.event) {
+        if (window.Shopify && Shopify.analytics && typeof Shopify.analytics.publish === 'function') {
+          Shopify.analytics.publish(data.event, Object.assign({}, data.payload || {}, {
+            page_url: window.location.href,
+            page_path: window.location.pathname + window.location.search
+          }));
+        }
+        return;
+      }
+
       // Liquid cannot read query params, so the designer asks once it is mounted
       // and we hand back the design the customer clicked in the cart.
       if (data.action === 'designer-ready') {
