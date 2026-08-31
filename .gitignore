@@ -9,6 +9,9 @@ node_modules
 # Local temp files (e.g. Shopify email template copies)
 app/temp/
 
+# Default output of scripts/regenerate-gavel-svgs.mjs (customer artwork)
+tmp-gavel-svgs/
+
 .venv-bleed/
 
 # Playwright QA framework — keep source; ignore run artifacts

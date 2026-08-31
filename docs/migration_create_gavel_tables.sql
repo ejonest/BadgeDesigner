@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS public.gavel_order_items (
   thumbnail_url TEXT NULL,
   full_image_url TEXT NULL,
   print_svg_url TEXT NULL,
+  secondary_svg_url TEXT NULL,
   pdf_url TEXT NULL,
   uploaded_image_url TEXT NULL,
   finish TEXT NULL,
@@ -186,10 +187,13 @@ COMMENT ON COLUMN public.gavel_order_items.thumbnail_url IS
   'JPEG/PNG mockup for cart / order slip.';
 
 COMMENT ON COLUMN public.gavel_order_items.full_image_url IS
-  'Proof SVG (band unwrap and/or stand plate).';
+  'Proof SVG (band unwrap).';
 
 COMMENT ON COLUMN public.gavel_order_items.print_svg_url IS
   'Print-ready SVG for manufacturing (band unwrap).';
+
+COMMENT ON COLUMN public.gavel_order_items.secondary_svg_url IS
+  'Print-ready SVG for the second engraved surface: stand plate, or sound block top.';
 
 COMMENT ON COLUMN public.gavel_order_items.pdf_url IS
   'Proof / order-slip PDF.';
@@ -209,6 +213,8 @@ ALTER TABLE public.gavel_order_items
   ADD COLUMN IF NOT EXISTS design_meta JSONB NULL;
 ALTER TABLE public.gavel_order_items
   ADD COLUMN IF NOT EXISTS print_svg_url TEXT NULL;
+ALTER TABLE public.gavel_order_items
+  ADD COLUMN IF NOT EXISTS secondary_svg_url TEXT NULL;
 ALTER TABLE public.gavel_order_items
   ADD COLUMN IF NOT EXISTS full_image_url TEXT NULL;
 

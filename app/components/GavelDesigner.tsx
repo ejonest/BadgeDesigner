@@ -1454,19 +1454,43 @@ export default function GavelDesigner({
       bulkRows.length > 0
         ? bulkRows.map(linesForBulkRow)
         : [bandArtLines];
+    const svgBlob = (svg: string) =>
+      new Blob([svg], { type: "image/svg+xml" });
     rowsToSave.forEach((rowLines, index) => {
+      // Every gavel ships with an engraved band, stand or no stand, so the band
+      // is always the primary manufacturing file.
+      const bandSvg = gavelBandToSvgString(rowLines, textSize, bandDef.color);
+      form.append(`svg_${index}`, svgBlob(bandSvg), `gavel-${index}-design.svg`);
+      form.append(
+        `print_svg_${index}`,
+        svgBlob(bandSvg),
+        `gavel-${index}-print.svg`,
+      );
+
+      // A stand plate and an engraved sound block are second engraved surfaces
+      // on the same line, never alternatives to the band. `standLogo` and
+      // `soundBlockLogo` are already null unless the logo belongs to that
+      // surface, so the surface owns its own art.
       const rowSoundBlockText =
         soundBlockText.trim() || rowLines[0]?.text?.trim() || "";
-      const svg =
-        logoSurface === "stand" && isStand
-          ? gavelStandPlateToSvgString(
-              rowLines.slice(0, STAND_PLATE_MAX_LINES),
+      const secondary = isStand
+        ? {
+            kind: "plate",
+            svg: gavelStandPlateToSvgString(
+              // Bulk rows carry their plate copy in their own first two lines;
+              // a single design uses the plate fields the customer filled in.
+              bulkRows.length > 0
+                ? rowLines.slice(0, STAND_PLATE_MAX_LINES)
+                : plateArtLines,
               textSize,
               standDef.plateHex,
               { logo: standLogo },
-            )
-          : logoSurface === "sound-block" && soundBlockEngraved
-            ? soundBlockTopToSvgString(
+            ),
+          }
+        : soundBlockEngraved
+          ? {
+              kind: "sound-block",
+              svg: soundBlockTopToSvgString(
                 {
                   text: rowSoundBlockText,
                   fontFamily: rowLines[0]?.fontFamily,
@@ -1475,36 +1499,18 @@ export default function GavelDesigner({
                 },
                 getSoundBlockTopTextColor(gavelStyle),
                 { logo: soundBlockLogo },
-              )
-            : gavelBandToSvgString(rowLines, textSize, bandDef.color);
-      form.append(
-        `svg_${index}`,
-        new Blob([svg], { type: "image/svg+xml" }),
-        `gavel-${index}-design.svg`,
-      );
-      form.append(
-        `print_svg_${index}`,
-        new Blob([svg], { type: "image/svg+xml" }),
-        `gavel-${index}-print.svg`,
-      );
+              ),
+            }
+          : null;
+      if (secondary) {
+        form.append(
+          `secondary_svg_${index}`,
+          svgBlob(secondary.svg),
+          `gavel-${index}-${secondary.kind}.svg`,
+        );
+        form.append(`secondary_svg_kind_${index}`, secondary.kind);
+      }
     });
-    if (isStand && bulkRows.length === 0) {
-      form.append(
-        "svg_1",
-        new Blob(
-          [
-            gavelStandPlateToSvgString(
-              plateArtLines,
-              textSize,
-              standDef.plateHex,
-              { logo: standLogo },
-            ),
-          ],
-          { type: "image/svg+xml" },
-        ),
-        "gavel-1-plate.svg",
-      );
-    }
     const paths = getDesignerApiPaths("gavel");
     const res = await fetch(paths.saveDraft, { method: "POST", body: form });
     if (!res.ok) {

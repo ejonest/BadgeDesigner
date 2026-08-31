@@ -1439,6 +1439,12 @@ export interface BadgeOrderItem {
   full_image_url?: string;
   /** CorelDRAW / print SVG: text + icon + registration shape only (no background art). */
   print_svg_url?: string;
+  /**
+   * Print SVG for a second engraved surface on the same line, when the product
+   * has one: the stand plate on a gavel+stand, or the top of an engraved sound
+   * block. `print_svg_url` stays the gavel band, so the pair is band + this.
+   */
+  secondary_svg_url?: string;
   /** Sign designer: user-uploaded logo URL (sign_order_items only). */
   uploaded_image_url?: string;
   pdf_url?: string;
@@ -1545,6 +1551,8 @@ export function convertBadgeToOrderItem(
     full_image_url?: string;
     /** CorelDRAW / print SVG: text + icon + registration shape only (no background art). */
     print_svg_url?: string;
+    /** Second engraved surface on the same line (stand plate / sound block top). */
+    secondary_svg_url?: string;
     pdf_url?: string;
     shopify_customer_id?: string;
     /** Default 1; set from cart/order when known. */
@@ -1640,6 +1648,7 @@ export function convertBadgeToOrderItem(
     thumbnail_url: options?.thumbnail_url,
     full_image_url: options?.full_image_url,
     print_svg_url: options?.print_svg_url,
+    secondary_svg_url: options?.secondary_svg_url,
     uploaded_image_url: persistedSignUploadedImageUrl(badge.logo?.src),
     pdf_url: options?.pdf_url,
     shopify_customer_id: options?.shopify_customer_id,

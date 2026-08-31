@@ -156,10 +156,23 @@ export async function runSaveDraftDesigner(
           const printSvgFile = formData.get(
             `print_svg_${badgeIndex}`,
           ) as File | null;
+          // Second engraved surface on the same line (gavel stand plate, sound
+          // block top). The kind names the file so production can tell the two
+          // manufacturing SVGs apart from the URL alone.
+          const secondarySvgFile = formData.get(
+            `secondary_svg_${badgeIndex}`,
+          ) as File | null;
+          const rawSecondaryKind = String(
+            formData.get(`secondary_svg_kind_${badgeIndex}`) ?? "",
+          );
+          const secondaryKind = /^[a-z0-9-]{1,24}$/.test(rawSecondaryKind)
+            ? rawSecondaryKind
+            : "secondary";
 
           let thumbnailUrl = "";
           let fullImageUrl = "";
           let printSvgUrl = "";
+          let secondarySvgUrl = "";
 
           const uploadJobs: Promise<void>[] = [];
 
@@ -236,12 +249,34 @@ export async function runSaveDraftDesigner(
             );
           }
 
+          if (!skipStorageUpload && secondarySvgFile?.size) {
+            uploadJobs.push(
+              (async () => {
+                try {
+                  const secondarySvgFileName = `${designId}/${def.lineIdPrefix}-${badgeIndex}-${secondaryKind}.svg`;
+                  secondarySvgUrl = await uploadImageToDesignerBucket(
+                    def,
+                    secondarySvgFile,
+                    secondarySvgFileName,
+                    "image/svg+xml",
+                  );
+                } catch (err) {
+                  console.warn(
+                    `[save-draft-${designerId}] Secondary SVG (${secondaryKind}) upload failed line ${badgeIndex}:`,
+                    err,
+                  );
+                }
+              })(),
+            );
+          }
+
           await Promise.all(uploadJobs);
 
           const item = convertBadgeToOrderItem(badge, designId, badgeIndex, {
             thumbnail_url: thumbnailUrl,
             full_image_url: fullImageUrl,
             print_svg_url: printSvgUrl,
+            secondary_svg_url: secondarySvgUrl,
             shopify_customer_id: shopifyCustomerId ?? undefined,
             lineIdPrefix: def.lineIdPrefix,
             design_meta: pickDesignMeta(designData),
@@ -511,10 +546,20 @@ export async function runSendOrderDraftToSupabase(
       const thumbnailPngFile = formData.get(`thumbnail_png_${i}`) as File;
       const svgFile = formData.get(`svg_${i}`) as File;
       const printSvgFile = formData.get(`print_svg_${i}`) as File | null;
+      const secondarySvgFile = formData.get(
+        `secondary_svg_${i}`,
+      ) as File | null;
+      const rawSecondaryKind = String(
+        formData.get(`secondary_svg_kind_${i}`) ?? "",
+      );
+      const secondaryKind = /^[a-z0-9-]{1,24}$/.test(rawSecondaryKind)
+        ? rawSecondaryKind
+        : "secondary";
 
       let thumbnailUrl = prev?.thumbnail_url || "";
       let fullImageUrl = prev?.full_image_url || "";
       let printSvgUrl = prev?.print_svg_url || "";
+      let secondarySvgUrl = prev?.secondary_svg_url || "";
 
       if (thumbnailPngFile && thumbnailPngFile.size > 0) {
         try {
@@ -567,10 +612,28 @@ export async function runSendOrderDraftToSupabase(
         }
       }
 
+      if (secondarySvgFile && secondarySvgFile.size > 0) {
+        try {
+          const secondarySvgName = `${designId}/${def.lineIdPrefix}-${i}-${secondaryKind}.svg`;
+          secondarySvgUrl = await uploadImageToDesignerBucket(
+            def,
+            secondarySvgFile,
+            secondarySvgName,
+            "image/svg+xml",
+          );
+        } catch (e) {
+          console.error(
+            `Secondary SVG (${secondaryKind}) upload failed line ${i}:`,
+            e,
+          );
+        }
+      }
+
       const item = convertBadgeToOrderItem(badge, designId, i, {
         thumbnail_url: thumbnailUrl,
         full_image_url: fullImageUrl,
         print_svg_url: printSvgUrl,
+        secondary_svg_url: secondarySvgUrl,
         pdf_url: pdfUrl,
         shopify_customer_id: shopifyCustomerId ?? undefined,
         lineIdPrefix: def.lineIdPrefix,
