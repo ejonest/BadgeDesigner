@@ -1135,12 +1135,31 @@ export default function GavelDesigner({
     if (!roundBlockAvailable) setSoundBlockShape("square");
   }, [roundBlockAvailable]);
 
-  /** Ebony has no stand and no personalized sound block. */
+  /**
+   * Ebony has no stand, and any wood can sell out. Either way the preselected
+   * wood would be a card the customer cannot click, so move to one they can
+   * actually order. When nothing is in stock we stay put, leaving the disabled
+   * card and its notice on screen rather than silently picking a sold-out wood.
+   */
   useEffect(() => {
-    if (productType === "stand" && !isGavelStandOffered(gavelStyle)) {
-      setGavelStyle("walnut");
-    }
-  }, [gavelStyle, productType]);
+    const selectable = (id: GavelStyleId) =>
+      (productType !== "stand" || isGavelStandOffered(id)) &&
+      isGavelVariantInStock(storeProduct, {
+        productType,
+        styleId: id,
+        soundBlock: productType === "stand" ? "none" : soundBlock,
+        soundBlockShape: effectiveSoundBlockShape,
+      });
+    if (selectable(gavelStyle)) return;
+    const fallback = GAVEL_STYLES.find((s) => selectable(s.id));
+    if (fallback) setGavelStyle(fallback.id);
+  }, [
+    effectiveSoundBlockShape,
+    gavelStyle,
+    productType,
+    soundBlock,
+    storeProduct,
+  ]);
 
   useEffect(() => {
     if (!isGavelSoundBlockOffered(soundBlock, gavelStyle)) {
