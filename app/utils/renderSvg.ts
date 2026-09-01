@@ -4,6 +4,13 @@ import {
   deskSignInnerFillForRender,
   isDeskSignTemplateId,
 } from "~/utils/deskSignRender";
+import {
+  deskSignPrintInkFill,
+  deskSignPrintUsesWhiteInk,
+  deskSignRegistrationLayerMarkup,
+  deskSignWhiteInkLayerMarkup,
+  deskSignWhiteInkPrintDescMarkup,
+} from "~/utils/deskSignWhiteInk";
 import { layoutDeskSignTextLines } from "~/utils/deskSignTextSize";
 import { layoutAqbPresetTextLines } from "~/utils/aqbBadgeTextSize";
 import type {
@@ -2471,6 +2478,7 @@ export function renderBadgeToSvgString(
 
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
   const isPrint = isPrintPlateRender(opts);
+  const whiteInkPrint = isPrint && deskSignPrintUsesWhiteInk(badge, template);
   const PADDING_PX = isPrint ? 0 : (opts.previewPaddingPx ?? 24);
   // ViewBox must match content coordinates: innerElement/designBox are in template.widthPx × template.heightPx space.
   // Using widthPx/heightPx lets large signs fit fully; SVG then scales to container (preview) with width/height="100%".
@@ -2543,7 +2551,7 @@ export function renderBadgeToSvgString(
   const textElements = lineLayout
     .map((item) => {
       const line = item.line;
-      const color = line.color || "#000";
+      const color = deskSignPrintInkFill(line.color || "#000", whiteInkPrint);
       const textDecoration = line.underline ? "underline" : "none";
 
       return `<text x="${item.x}" y="${item.y}" font-size="${
@@ -2561,7 +2569,9 @@ export function renderBadgeToSvgString(
     .join("");
 
   // Text is already positioned within bounds, but keep clipPath as safety net
-  const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
+  const text = whiteInkPrint
+    ? deskSignWhiteInkLayerMarkup(textElements, `${clipId}-text`)
+    : `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
 
   const trimColors = resolveTrimColors(
     badge.backgroundColor,
@@ -2582,7 +2592,7 @@ export function renderBadgeToSvgString(
   const deskSignStandLayer = isPrint
     ? ""
     : buildDeskSignStandMarkup(template, badge);
-  const outline =
+  const outlineMarkup =
     isDeskSignTemplateId(template.id) && !isPrint
       ? ""
       : template.outlineElement
@@ -2600,6 +2610,9 @@ export function renderBadgeToSvgString(
           outlineWidth,
           outlineNonScaling,
         );
+  const outline = whiteInkPrint
+    ? deskSignRegistrationLayerMarkup(outlineMarkup)
+    : outlineMarkup;
 
   // Overlay layer (sign Designer trim/swirls): render only when present, with border color
   const borderColorForOverlay = paintOverlay
@@ -2637,6 +2650,9 @@ export function renderBadgeToSvgString(
      ${dimensionAttrs}
      viewBox="0 0 ${W} ${H}"
      preserveAspectRatio="xMidYMid meet">`;
+  const printDescMarkup = whiteInkPrint
+    ? deskSignWhiteInkPrintDescMarkup(badge)
+    : "";
 
   // Use the textClipPath already defined above (with CLIP_PADDING)
   const textClipPathRect = textClipPath;
@@ -2653,6 +2669,7 @@ export function renderBadgeToSvgString(
       : userLogoRaw;
 
   return `${svgOpen}
+  ${printDescMarkup}
   <defs>
     ${plateBrushGradientDefXml}
     ${
@@ -2809,6 +2826,7 @@ export async function renderBadgeToSvgStringWithFonts(
 
   // Add padding around badge for better visual spacing (0.25" = 24px at 96 DPI)
   const isPrint = isPrintPlateRender(opts);
+  const whiteInkPrint = isPrint && deskSignPrintUsesWhiteInk(badge, template);
   const PADDING_PX = isPrint ? 0 : (opts.previewPaddingPx ?? 24);
   // ViewBox must match content coordinates (widthPx × heightPx) so full design fits; preview scales via width/height="100%".
   const W = template.widthPx + PADDING_PX * 2;
@@ -2883,7 +2901,7 @@ export async function renderBadgeToSvgStringWithFonts(
   const textElements = lineLayout
     .map((item) => {
       const line = item.line;
-      const color = line.color || "#000";
+      const color = deskSignPrintInkFill(line.color || "#000", whiteInkPrint);
       const textDecoration = line.underline ? "underline" : "none";
 
       return `<text x="${item.x}" y="${item.y}" font-size="${
@@ -2901,7 +2919,9 @@ export async function renderBadgeToSvgStringWithFonts(
     .join("");
 
   // Text is already positioned within bounds, but keep clipPath as safety net
-  const text = `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
+  const text = whiteInkPrint
+    ? deskSignWhiteInkLayerMarkup(textElements, `${clipId}-text`)
+    : `<g clip-path="url(#${clipId}-text)">${textElements}</g>`;
 
   const trimColors = resolveTrimColors(
     badge.backgroundColor,
@@ -2922,7 +2942,7 @@ export async function renderBadgeToSvgStringWithFonts(
   const deskSignStandLayer = isPrint
     ? ""
     : buildDeskSignStandMarkup(template, badge);
-  const outline =
+  const outlineMarkup =
     isDeskSignTemplateId(template.id) && !isPrint
       ? ""
       : template.outlineElement
@@ -2940,6 +2960,9 @@ export async function renderBadgeToSvgStringWithFonts(
           outlineWidth,
           outlineNonScaling,
         );
+  const outline = whiteInkPrint
+    ? deskSignRegistrationLayerMarkup(outlineMarkup)
+    : outlineMarkup;
 
   // Overlay layer (sign Designer trim/swirls): render only when present, with border color
   const borderColorForOverlay = paintOverlay
@@ -2977,6 +3000,9 @@ export async function renderBadgeToSvgStringWithFonts(
      ${dimensionAttrs}
      viewBox="0 0 ${W} ${H}"
      preserveAspectRatio="xMidYMid meet">`;
+  const printDescMarkup = whiteInkPrint
+    ? deskSignWhiteInkPrintDescMarkup(badge)
+    : "";
 
   const userLogoRaw = renderUserLogoLayer(
     badge.logo,
@@ -2990,6 +3016,7 @@ export async function renderBadgeToSvgStringWithFonts(
       : userLogoRaw;
 
   return `${svgOpen}
+  ${printDescMarkup}
   <defs>
     <style type="text/css">
       ${fontDefs.join("\n")}
