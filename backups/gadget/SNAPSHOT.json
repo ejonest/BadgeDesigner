@@ -1,0 +1,12 @@
+{
+  "createdAt": "2026-09-01T16:30:00.000Z",
+  "purpose": "Backup Gadget.dev app source before retiring the service",
+  "localAppSource": {
+    "pathOnThisMachine": "/Users/ethanjones/all-quality-badge-designer",
+    "application": "all-quality-badge-designer",
+    "environment": "development",
+    "filesVersion": "111",
+    "copiedFromMtimeNote": "Checkout on disk was last modified 2026-03-02"
+  },
+  "liveRecordDump": "not included — GADGET_API_KEY was empty locally; run node scripts/backup-gadget-data.mjs"
+}

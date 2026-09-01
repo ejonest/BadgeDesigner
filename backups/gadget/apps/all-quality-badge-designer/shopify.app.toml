@@ -1,0 +1,16 @@
+# Learn more about working with Shopify TOML files with Gadget at https://docs.gadget.dev/guides/plugins/shopify/advanced-topics/shopify-app-toml
+
+client_id = "0bb61d64017f15c0125d39476350f95c"
+name = "all-quality-badge-designerV3"
+application_url = "https://all-quality-badge-designer.gadget.app/api/shopify/install-or-render"
+embedded = true
+
+[auth]
+redirect_urls = [ "https://all-quality-badge-designer.gadget.app/api/connections/auth/shopify/callback" ]
+
+[webhooks]
+api_version = "2026-01"
+
+[[webhooks.subscriptions]]
+compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+uri = "https://all-quality-badge-designer.gadget.app/api/webhooks/shopify"
