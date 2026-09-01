@@ -147,6 +147,46 @@ export const trackDesignerEventBodySchema = z
   })
   .strict();
 
+const storefrontEventNames = [
+  "page_viewed",
+  "product_viewed",
+  "collection_viewed",
+  "search_submitted",
+  "product_added_to_cart",
+  "product_removed_from_cart",
+  "cart_viewed",
+  "checkout_started",
+  "checkout_contact_info_submitted",
+  "checkout_address_info_submitted",
+  "checkout_shipping_info_submitted",
+  "payment_info_submitted",
+  "checkout_completed",
+] as const;
+
+/** POST /api/track-storefront-event – Shopify customer events (no PII) */
+export const trackStorefrontEventBodySchema = z
+  .object({
+    event_id: z.string().min(1).max(120),
+    client_id: z.string().min(1).max(120),
+    event_name: z.enum(storefrontEventNames),
+    occurred_at: z.string().datetime(),
+    page_path: z.string().max(1000).nullable().optional(),
+    referrer_host: z.string().max(255).nullable().optional(),
+    referrer_path: z.string().max(1000).nullable().optional(),
+    utm_source: z.string().max(255).nullable().optional(),
+    utm_medium: z.string().max(255).nullable().optional(),
+    utm_campaign: z.string().max(255).nullable().optional(),
+    product_id: z.string().max(120).nullable().optional(),
+    variant_id: z.string().max(120).nullable().optional(),
+    cart_id: z.string().max(255).nullable().optional(),
+    checkout_token: z.string().max(255).nullable().optional(),
+    order_id: z.string().max(120).nullable().optional(),
+    currency: z.string().length(3).nullable().optional(),
+    value: z.number().finite().min(0).max(100_000_000).nullable().optional(),
+    item_count: z.number().int().min(0).max(100_000).nullable().optional(),
+  })
+  .strict();
+
 /** POST /api/library-thumbnail – body (PNG data URL → Supabase badge-images public URL) */
 export const libraryThumbnailBodySchema = z
   .object({

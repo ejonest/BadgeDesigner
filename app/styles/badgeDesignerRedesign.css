@@ -217,6 +217,54 @@
   pointer-events: none;
 }
 
+/* Acrylic desk signs — design / product-photo preview switch */
+.aqb-ds-preview-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid rgba(2, 19, 43, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 3px rgba(2, 19, 43, 0.08);
+}
+
+.aqb-ds-preview-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #5c6570;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.aqb-ds-preview-tab:hover {
+  color: #02132b;
+}
+
+.aqb-ds-preview-tab.is-active {
+  background: #02132b;
+  color: #fff;
+}
+
+.aqb-ds-ink-notice {
+  max-width: 46ch;
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #4a5561;
+}
+
+.aqb-ds-ink-notice strong {
+  font-weight: 700;
+  color: #02132b;
+}
+
 /* Preview panel — header + toolbar-style action rows */
 .aqb-redesign-root .aqb-preview-panel-header {
   display: flex;

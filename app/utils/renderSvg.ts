@@ -5,6 +5,10 @@ import {
   isDeskSignTemplateId,
 } from "~/utils/deskSignRender";
 import {
+  buildDeskSignMockupSvg,
+  resolveDeskSignMockup,
+} from "~/utils/deskSignMockup";
+import {
   deskSignPrintInkFill,
   deskSignPrintUsesWhiteInk,
   deskSignRegistrationLayerMarkup,
@@ -166,6 +170,12 @@ type RenderOpts = {
    * (smaller storage uploads). Default true for canvas/PDF rasterization.
    */
   inlineRemoteImages?: boolean;
+  /**
+   * Customer-facing acrylic desk-sign renders: project the artwork onto a plate
+   * photo instead of painting a flat swatch. Never set for print or production
+   * SVG — the shop needs the vector plate.
+   */
+  deskSignPhotoMockup?: boolean;
 };
 
 export type { RenderOpts };
@@ -1815,6 +1825,21 @@ function prepareElementForOutline(
   );
 }
 
+/**
+ * The mockup reuses the standard ink markup, which clips against the die and
+ * the text box, so those clip paths have to travel with it into the photo SVG.
+ */
+function buildDeskSignMockupClipDefs(
+  clipId: string,
+  innerPathData: string,
+  textClipMarkup: string,
+): string {
+  const dieClip = innerPathData
+    ? `<clipPath id="${clipId}" clipPathUnits="userSpaceOnUse">${innerPathData}</clipPath>`
+    : "";
+  return `${dieClip}<clipPath id="${clipId}-text" clipPathUnits="userSpaceOnUse">${textClipMarkup}</clipPath>`;
+}
+
 function buildInnerFillAndClipData(
   template: LoadedTemplate,
   badge: Badge,
@@ -2668,6 +2693,25 @@ export function renderBadgeToSvgString(
       ? `<g clip-path="url(#${clipId})">${userLogoRaw}</g>`
       : userLogoRaw;
 
+  const deskSignMockup =
+    opts.deskSignPhotoMockup && !isPrint
+      ? resolveDeskSignMockup(badge, template)
+      : null;
+  if (deskSignMockup) {
+    return buildDeskSignMockupSvg({
+      mockup: deskSignMockup,
+      flatWidthPx: template.widthPx,
+      flatHeightPx: template.heightPx,
+      inkMarkup: `${userLogoLayer}${badgeIconLayer}${text}`,
+      scopeId: clipId,
+      extraDefsXml: buildDeskSignMockupClipDefs(
+        clipId,
+        innerPathData,
+        textClipPathRect,
+      ),
+    });
+  }
+
   return `${svgOpen}
   ${printDescMarkup}
   <defs>
@@ -3014,6 +3058,42 @@ export async function renderBadgeToSvgStringWithFonts(
     innerPathData && userLogoRaw.trim() !== ""
       ? `<g clip-path="url(#${clipId})">${userLogoRaw}</g>`
       : userLogoRaw;
+
+  const deskSignMockup =
+    opts.deskSignPhotoMockup && !isPrint
+      ? resolveDeskSignMockup(badge, template)
+      : null;
+  if (deskSignMockup) {
+    let photoHref = deskSignMockup.src;
+    if (opts.inlineRemoteImages !== false) {
+      try {
+        photoHref = await inlineBadgeBlankPhotoSrc(deskSignMockup.src);
+      } catch (err) {
+        console.warn(
+          "[renderSvg] Failed to inline desk-sign mockup photo:",
+          deskSignMockup.src,
+          err,
+        );
+      }
+    }
+    return buildDeskSignMockupSvg({
+      mockup: deskSignMockup,
+      flatWidthPx: template.widthPx,
+      flatHeightPx: template.heightPx,
+      inkMarkup: `${userLogoLayer}${badgeIconLayer}${text}`,
+      scopeId: clipId,
+      fontDefsXml:
+        fontDefs.length > 0
+          ? `<style type="text/css">${fontDefs.join("\n")}</style>`
+          : "",
+      extraDefsXml: buildDeskSignMockupClipDefs(
+        clipId,
+        innerPathData,
+        textClipPath,
+      ),
+      photoHref,
+    });
+  }
 
   return `${svgOpen}
   ${printDescMarkup}

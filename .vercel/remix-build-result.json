@@ -43,6 +43,7 @@
       "routes/api.link-order-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-desk-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-gavel-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.track-storefront-event": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-gavel-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-desk-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -420,6 +421,15 @@
         "file": "app/routes/api.send-gavel-to-supabase.tsx",
         "id": "routes/api.send-gavel-to-supabase",
         "path": "api/send-gavel-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.track-storefront-event": {
+        "file": "app/routes/api.track-storefront-event.tsx",
+        "id": "routes/api.track-storefront-event",
+        "path": "api/track-storefront-event",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -1337,6 +1347,12 @@
         "file": "routes/api.send-gavel-to-supabase.tsx",
         "id": "routes/api.send-gavel-to-supabase",
         "path": "api/send-gavel-to-supabase",
+        "parentId": "root"
+      },
+      "routes/api.track-storefront-event": {
+        "file": "routes/api.track-storefront-event.tsx",
+        "id": "routes/api.track-storefront-event",
+        "path": "api/track-storefront-event",
         "parentId": "root"
       },
       "routes/api.autosave-gavel-design": {
