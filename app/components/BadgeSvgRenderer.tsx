@@ -24,6 +24,8 @@ type Props = {
   height?: number | "100%";
   /** Dev/calibration: render with in-progress photo bounds instead of saved config. */
   photoPlateOverride?: ResolvedBlankBadgePhoto;
+  /** Acrylic desk signs: project the artwork onto a plate photo instead of the flat plate. */
+  deskSignPhotoMockup?: boolean;
 };
 
 /** Ms to wait after the last badge-only change before rebuilding SVG (coalesces rapid typing). */
@@ -44,6 +46,7 @@ export default function BadgeSvgRenderer({
   className,
   height,
   photoPlateOverride,
+  deskSignPhotoMockup = false,
 }: Props) {
   const [svg, setSvg] = React.useState<string>("");
   const [plaqueImgSrc, setPlaqueImgSrc] = React.useState<string | null>(null);
@@ -61,10 +64,12 @@ export default function BadgeSvgRenderer({
   const templateIdRef = React.useRef(templateId);
   const variantRef = React.useRef(variant);
   const photoPlateOverrideRef = React.useRef(photoPlateOverride);
+  const deskSignPhotoMockupRef = React.useRef(deskSignPhotoMockup);
   badgeRef.current = badge;
   templateIdRef.current = templateId;
   variantRef.current = variant;
   photoPlateOverrideRef.current = photoPlateOverride;
+  deskSignPhotoMockupRef.current = deskSignPhotoMockup;
 
   const firstPaintRef = React.useRef(true);
   const structuralRef = React.useRef({
@@ -117,7 +122,11 @@ export default function BadgeSvgRenderer({
             ...(v === "badge"
               ? { showOutline: false, aqbPresetTextLayout: true }
               : v === "desk-sign"
-                ? { aqbPresetTextLayout: true, previewPaddingPx: 0 }
+                ? {
+                    aqbPresetTextLayout: true,
+                    previewPaddingPx: 0,
+                    deskSignPhotoMockup: deskSignPhotoMockupRef.current,
+                  }
               : {}),
             ...(photoPlateOverrideRef.current
               ? { photoPlateOverride: photoPlateOverrideRef.current }
@@ -143,7 +152,14 @@ export default function BadgeSvgRenderer({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [badge, templateId, variant, actualSize, photoPlateOverride]);
+  }, [
+    badge,
+    templateId,
+    variant,
+    actualSize,
+    photoPlateOverride,
+    deskSignPhotoMockup,
+  ]);
 
   const signUiScale = isSignLikeVariant(variant)
     ? getSignTemplateUiContentScale(templateId)

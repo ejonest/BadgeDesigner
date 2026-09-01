@@ -7,9 +7,14 @@ import {
   FEATURED_BRUSHED_SILVER_HEX,
 } from "~/constants/colors";
 
-export const DESK_SIGN_ACRYLIC_PREVIEW_FILL = "#FFFFFF";
-/** Fixed preview text on acrylic (customers can’t pick a text color). */
-export const DESK_SIGN_ACRYLIC_TEXT_COLOR = "#1A1A1A";
+/**
+ * Vector-plate stand-in for acrylic. Acrylic photographs as a mid grey against a
+ * desk, and a literal white plate would hide the white ink, so the flat fallback
+ * plate uses grey wherever the photo mockup isn't in play.
+ */
+export const DESK_SIGN_ACRYLIC_PREVIEW_FILL = "#6E7479";
+/** All acrylic finishes are UV-printed in white ink; customers can’t pick a text color. */
+export const DESK_SIGN_ACRYLIC_TEXT_COLOR = "#FFFFFF";
 
 export type DeskSignAcrylicFinishId = "clear" | "frosted" | "black";
 
@@ -25,16 +30,16 @@ export const DESK_SIGN_ACRYLIC_FINISHES: readonly {
   {
     id: "clear",
     label: "Clear",
-    plateColor: "#FFFFFF",
-    textColor: "#1A1A1A",
+    plateColor: DESK_SIGN_ACRYLIC_PREVIEW_FILL,
+    textColor: DESK_SIGN_ACRYLIC_TEXT_COLOR,
     description: "Polished clear acrylic — personalized",
     imageSrc: "/images/desk-sign/ClearAcrylic.jpg?v=1",
   },
   {
     id: "frosted",
     label: "Frosted",
-    plateColor: "#E5E7EB",
-    textColor: "#1A1A1A",
+    plateColor: "#9AA0A6",
+    textColor: DESK_SIGN_ACRYLIC_TEXT_COLOR,
     description: "Soft frosted acrylic — personalized",
     imageSrc: "/images/desk-sign/FrostedAcrylic.jpg?v=1",
   },
@@ -42,7 +47,7 @@ export const DESK_SIGN_ACRYLIC_FINISHES: readonly {
     id: "black",
     label: "Black",
     plateColor: "#171717",
-    textColor: "#FFFFFF",
+    textColor: DESK_SIGN_ACRYLIC_TEXT_COLOR,
     description: "Gloss black acrylic — personalized",
     imageSrc: "/images/desk-sign/BlackAcrylic.jpg?v=1",
   },

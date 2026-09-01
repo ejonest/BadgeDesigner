@@ -418,6 +418,15 @@ import {
 } from "../utils/badgeMigration";
 import BadgeSvgRenderer from "./BadgeSvgRenderer";
 import {
+  AqbDeskSignPreviewTabs,
+  AqbDeskSignWhiteInkNotice,
+  type DeskSignPreviewTab,
+} from "./AqbDeskSignPreviewTabs";
+import {
+  DESK_SIGN_MOCKUP_ASPECT,
+  hasDeskSignPhotoMockup,
+} from "~/utils/deskSignMockup";
+import {
   downloadSVG,
   downloadPNG,
   downloadCDR,
@@ -2626,6 +2635,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const [deskSignProfessionId, setDeskSignProfessionId] = useState<
     string | null
   >(null);
+  const [deskSignPreviewTab, setDeskSignPreviewTab] =
+    useState<DeskSignPreviewTab>("design");
   const deskSignActiveTypeId = isDeskSignVariant(variant)
     ? getDeskSignTemplateTypesForMaterial(deskSignMaterial)[0]?.id ?? null
     : null;
@@ -7355,6 +7366,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       p: { badge: Badge; templateId: string },
       keyParts: string,
       height: number | "100%" = "100%",
+      photoMockup = false,
     ) => {
       if (
         variant === "badge" &&
@@ -7374,16 +7386,44 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       }
       return (
         <BadgeSvgRenderer
-          key={`svg-prev-${keyParts}`}
+          key={`svg-prev-${keyParts}${photoMockup ? "-photo" : ""}`}
           variant={variant}
           badge={p.badge}
           templateId={p.templateId}
           height={height}
+          deskSignPhotoMockup={photoMockup}
         />
       );
     },
     [variant],
   );
+
+  const deskSignMockupAvailable = hasDeskSignPhotoMockup(
+    badge,
+    universalTemplateId,
+  );
+  /**
+   * Acrylic prints white ink with no plate colour, so the design view keeps the
+   * grey contrast plate and the product view shows the real thing.
+   */
+  const showDeskSignProductPhoto =
+    deskSignMockupAvailable && deskSignPreviewTab === "product";
+  const deskSignPreviewTabsUi = deskSignMockupAvailable ? (
+    <AqbDeskSignPreviewTabs
+      activeTab={deskSignPreviewTab}
+      onChange={setDeskSignPreviewTab}
+    />
+  ) : null;
+  const deskSignInkNoticeUi = deskSignMockupAvailable ? (
+    <AqbDeskSignWhiteInkNotice tab={deskSignPreviewTab} />
+  ) : null;
+  /** Product photo is 3:2 — sizing it to the plate aspect would letterbox it. */
+  const deskSignProductPhotoStyle: React.CSSProperties = {
+    width: "100%",
+    maxWidth: "100%",
+    aspectRatio: DESK_SIGN_MOCKUP_ASPECT,
+    maxHeight: "min(46vh, 78vw)",
+  };
 
   /** When editing multiple products, switching items should land on “Enter your text” — customers usually only change copy on extras. */
   const openEnterTextSectionOnly = () => {
@@ -10861,6 +10901,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               <AqbPreviewActionsRow {...previewActionsRowProps} />
             ) : null}
 
+            {multipleBadges.length > 0 && deskSignPreviewTabsUi ? (
+              <div className="flex justify-end px-3 pt-2">
+                {deskSignPreviewTabsUi}
+              </div>
+            ) : null}
+
             <div
               className={`w-full flex items-center justify-center relative select-none overflow-hidden ${
                 variant === "plaque"
@@ -10954,7 +11000,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             )}
             <div
               className="flex flex-shrink-0 items-center justify-center"
-              style={previewBoxStyle}
+              style={
+                showDeskSignProductPhoto
+                  ? deskSignProductPhotoStyle
+                  : previewBoxStyle
+              }
             >
               {multipleBadges.length === 0 ? (
                 <div className="text-center text-gray-500 text-sm px-4">
@@ -10984,11 +11034,17 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         : "vno"
                     }-${selectedBadgeIndex}`,
                     "100%",
+                    showDeskSignProductPhoto,
                   );
                 })()
               )}
             </div>
             </div>
+            {multipleBadges.length > 0 && deskSignInkNoticeUi ? (
+              <div className="px-4 pb-3 pt-1 flex justify-center">
+                {deskSignInkNoticeUi}
+              </div>
+            ) : null}
             {aqbBadgeToolActions && !usesAqbShell ? (
               <div className="shrink-0 md:hidden">{aqbBadgeToolActions}</div>
             ) : null}
@@ -15515,9 +15571,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               />
               <AqbPreviewActionsRow {...previewActionsRowProps} />
             </div>
-            <div className="aqb-preview-area min-h-[220px] gap-3.5 bg-[#E8E4DC] px-3 py-7 md:px-5 flex flex-col items-center justify-center">
+            <div className="aqb-preview-area relative min-h-[220px] gap-3.5 bg-[#E8E4DC] px-3 py-7 md:px-5 flex flex-col items-center justify-center">
               {multipleBadges.length > 0 ? (
                 <span className="aqb-pa-label">Live preview</span>
+              ) : null}
+              {multipleBadges.length > 0 && deskSignPreviewTabsUi ? (
+                <div className="-mt-3 flex w-full justify-end">
+                  {deskSignPreviewTabsUi}
+                </div>
               ) : null}
               <div
                 className={`relative w-full ${
@@ -15586,6 +15647,23 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     {(() => {
                       const p = getBadgeForPreview(0, getSavedBadgeFor(0));
                       const tid = p.templateId;
+                      if (showDeskSignProductPhoto) {
+                        return (
+                          <div
+                            className="flex items-center justify-center overflow-hidden"
+                            style={deskSignProductPhotoStyle}
+                          >
+                            {renderBadgePreviewOrPhotoNotice(
+                              p,
+                              `desk-${tid}-${
+                                p.badge.backgroundColor ?? ""
+                              }-0`,
+                              "100%",
+                              true,
+                            )}
+                          </div>
+                        );
+                      }
                       const {
                         widthPx: dimW,
                         heightPx: dimH,
@@ -15688,33 +15766,51 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                 </button>
                               </div>
                             ) : null}
-                            <DesktopPreviewDimensionFrame
-                              widthPx={dimW}
-                              heightPx={dimH}
-                              photoBadgeFaceRect={photoBadgeFaceRect}
-                              photoPreviewCropRect={photoPreviewCropRect}
-                              tight={isDeskSignVariant(variant)}
-                            >
-                              <div
-                                className={`w-full flex items-center justify-center ${
-                                  variant === "plaque"
-                                    ? "rounded-lg bg-gray-100 ring-1 ring-gray-300/90"
-                                    : ""
-                                }`}
-                                style={{
-                                  overflow: "hidden",
-                                  ...desktopPreviewSlotStyle,
-                                }}
-                              >
-                                {renderBadgePreviewOrPhotoNotice(
-                                  p,
-                                  `desk-edit-${tid}-${
-                                    p.badge.backgroundColor ?? ""
-                                  }-${selectedBadgeIndex}`,
-                                  "100%",
-                                )}
+                            {showDeskSignProductPhoto ? (
+                              <div className="flex w-full justify-center">
+                                <div
+                                  className="flex items-center justify-center overflow-hidden"
+                                  style={deskSignProductPhotoStyle}
+                                >
+                                  {renderBadgePreviewOrPhotoNotice(
+                                    p,
+                                    `desk-edit-${tid}-${
+                                      p.badge.backgroundColor ?? ""
+                                    }-${selectedBadgeIndex}`,
+                                    "100%",
+                                    true,
+                                  )}
+                                </div>
                               </div>
-                            </DesktopPreviewDimensionFrame>
+                            ) : (
+                              <DesktopPreviewDimensionFrame
+                                widthPx={dimW}
+                                heightPx={dimH}
+                                photoBadgeFaceRect={photoBadgeFaceRect}
+                                photoPreviewCropRect={photoPreviewCropRect}
+                                tight={isDeskSignVariant(variant)}
+                              >
+                                <div
+                                  className={`w-full flex items-center justify-center ${
+                                    variant === "plaque"
+                                      ? "rounded-lg bg-gray-100 ring-1 ring-gray-300/90"
+                                      : ""
+                                  }`}
+                                  style={{
+                                    overflow: "hidden",
+                                    ...desktopPreviewSlotStyle,
+                                  }}
+                                >
+                                  {renderBadgePreviewOrPhotoNotice(
+                                    p,
+                                    `desk-edit-${tid}-${
+                                      p.badge.backgroundColor ?? ""
+                                    }-${selectedBadgeIndex}`,
+                                    "100%",
+                                  )}
+                                </div>
+                              </DesktopPreviewDimensionFrame>
+                            )}
                           </div>
                         );
                       })()}
@@ -15894,6 +15990,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   </div>
                 )}
               </div>
+              {multipleBadges.length > 0 ? deskSignInkNoticeUi : null}
             </div>
             {aqbBadgeToolActions}
             {multipleBadges.length > 0

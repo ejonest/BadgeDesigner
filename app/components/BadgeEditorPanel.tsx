@@ -685,7 +685,9 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 </>
               ) : isDeskSignPanel ? (
                 <p className="mt-1 text-xs text-[#6b7f92]">
-                  Text color is fixed — acrylic is personalized.
+                  {badge.deskSignMaterial === "acrylic"
+                    ? "Text color is fixed — prints in white ink on the acrylic."
+                    : "Text color is fixed — acrylic is personalized."}
                 </p>
               ) : null}
 
