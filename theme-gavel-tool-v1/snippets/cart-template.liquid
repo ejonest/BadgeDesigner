@@ -94,6 +94,7 @@
                 {{ item.vendor }}
               </div>
               {% endif %}
+              {% render 'gavel-cart-stock-notice', item: item %}
               </div>
           </div>
 
@@ -219,6 +220,17 @@
         </span> 
       </div>
       <div class="btn-actions">
+        {% render 'gavel-cart-stock-notice', summary: true %}
+        {%- liquid
+          assign gf_stock_blocked = false
+          for gf_line in cart.items
+            if gf_line.variant.inventory_management != blank
+              if gf_line.variant.inventory_quantity < gf_line.quantity
+                assign gf_stock_blocked = true
+              endif
+            endif
+          endfor
+        -%}
         {% if settings.enable_checkbox %}
           <div class="checkbox-group">
             <input class="conditions" type="checkbox" name="conditions">
@@ -231,9 +243,9 @@
               </a>
             {% endif %}
           </div>
-          <input class="btn btn-checkout show" type="submit"  name="checkout" value="{{ 'cart.general.button_checkout' | t }}">
+          <input class="btn btn-checkout show" type="submit"  name="checkout" value="{{ 'cart.general.button_checkout' | t }}"{% if gf_stock_blocked %} disabled{% endif %}>
         {% else %}
-          <input class="btn btn-checkout" type="submit"  name="checkout" value="{{ 'cart.general.button_checkout' | t }}">
+          <input class="btn btn-checkout" type="submit"  name="checkout" value="{{ 'cart.general.button_checkout' | t }}"{% if gf_stock_blocked %} disabled{% endif %}>
         {% endif %}
         <a class="btn btn-continue" {% if settings.redirect_button == 'go_back' %}href="javascript:void(0)" onclick="window.history.back();"{% elsif settings.redirect_button == 'link_to' %} href="{{ settings.link_to_redirect }}"{% else %}href="javascript:void(0)" id="reload_page"{% endif %}>
           {{ 'cart.ajax_cart.continue_shopping' | t }}

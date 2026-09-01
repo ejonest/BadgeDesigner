@@ -1,0 +1,95 @@
+{% comment %}
+  Gavels Fast — cart stock notice.
+
+  Designer products are unlisted, so a customer can only reach them through the
+  design tool. The tool blocks out-of-stock combinations at add-to-cart time,
+  but a line that was added while stock lasted can go stale sitting in the cart.
+  This re-checks each line when the cart renders.
+
+  Availability is judged on the tracked quantity rather than `variant.available`,
+  which stays true whenever "continue selling when out of stock" is on. That
+  matches the rule the designer applies: untracked inventory counts as in stock.
+
+  Nothing is persisted, so a line that was short earlier clears itself and
+  becomes purchasable again as soon as the wood is restocked.
+
+  Two modes — `summary` also carries the stylesheet, so render it once per page
+  even when every line is in stock:
+
+    {% render 'gavel-cart-stock-notice', item: item %}
+    {% render 'gavel-cart-stock-notice', summary: true %}
+{% endcomment %}
+
+{%- if item != blank -%}
+  {%- liquid
+    assign gf_tracked = false
+    if item.variant.inventory_management != blank
+      assign gf_tracked = true
+    endif
+    assign gf_on_hand = item.variant.inventory_quantity
+  -%}
+  {%- if gf_tracked -%}
+    {%- if gf_on_hand <= 0 -%}
+      <p class="gf-cart-stock gf-cart-stock--out" data-gf-stock="out">
+        <strong>Out of stock.</strong>
+        This wood sold out after you added it. Remove it to check out, or leave
+        it here — it becomes available again as soon as we restock.
+      </p>
+    {%- elsif gf_on_hand < item.quantity -%}
+      <p class="gf-cart-stock gf-cart-stock--low" data-gf-stock="low">
+        <strong>Only {{ gf_on_hand }} left.</strong>
+        Lower the quantity to {{ gf_on_hand }} to check out.
+      </p>
+    {%- endif -%}
+  {%- endif -%}
+{%- endif -%}
+
+{%- if summary -%}
+  {%- liquid
+    assign gf_blocked = 0
+    for gf_line in cart.items
+      if gf_line.variant.inventory_management != blank
+        if gf_line.variant.inventory_quantity < gf_line.quantity
+          assign gf_blocked = gf_blocked | plus: 1
+        endif
+      endif
+    endfor
+  -%}
+  {%- if gf_blocked > 0 -%}
+    <p class="gf-cart-stock gf-cart-stock--out" data-gf-stock="summary">
+      {%- if gf_blocked == 1 -%}
+        One item in your cart is no longer available in the quantity you chose.
+        Adjust or remove it to continue.
+      {%- else -%}
+        {{ gf_blocked }} items in your cart are no longer available in the
+        quantity you chose. Adjust or remove them to continue.
+      {%- endif -%}
+    </p>
+  {%- endif -%}
+
+  <style>
+    .gf-cart-stock {
+      margin: 6px 0 0;
+      padding: 8px 10px;
+      border-radius: 4px;
+      border-left: 3px solid currentColor;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .gf-cart-stock--out {
+      color: #8a1c1c;
+      background: #fdf0ef;
+    }
+
+    .gf-cart-stock--low {
+      color: #8a5a00;
+      background: #fdf7e8;
+    }
+
+    .btn-checkout[disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+{%- endif -%}

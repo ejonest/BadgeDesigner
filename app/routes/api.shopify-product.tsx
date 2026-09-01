@@ -21,21 +21,40 @@ function normalizeShopHost(raw: string | null): string | null {
 }
 
 /**
- * The storefront product feed omits inventory quantities and can report an
- * out-of-stock variant as available when "continue selling" is enabled.
- * When Admin API credentials are configured, replace that value with the
- * requested rule: tracked quantity must be positive; untracked is in stock.
+ * The storefront product feed omits inventory quantities and reports an
+ * out-of-stock variant as available whenever "continue selling when out of
+ * stock" is enabled, so it cannot answer the stock question on its own.
+ * With Admin API credentials we replace that value with the real rule:
+ * tracked quantity must be positive; untracked counts as in stock.
+ *
+ * The token is only ever sent to the shop it belongs to, so a request for any
+ * other shop falls back to the storefront value rather than leaking it.
  */
 async function applyAdminInventory(
   product: StorefrontProduct,
   shop: string,
 ): Promise<StorefrontProduct> {
-  const token = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN?.trim();
-  const configuredShop = normalizeShopHost(
-    process.env.SHOPIFY_STORE_URL ?? null,
+  const token = (
+    process.env.SHOPIFY_ADMIN_ACCESS_TOKEN ??
+    process.env.SHOPIFY_ACCESS_TOKEN ??
+    ""
+  ).trim();
+  // Separate from SHOPIFY_STORE_URL, which other routes use as the cart store.
+  const adminShop = normalizeShopHost(
+    process.env.SHOPIFY_ADMIN_SHOP ?? process.env.SHOPIFY_STORE_URL ?? null,
   );
   const variants = Array.isArray(product.variants) ? product.variants : [];
-  if (!token || configuredShop !== shop || variants.length === 0) {
+  if (variants.length === 0) return product;
+  if (!token) {
+    console.warn(
+      "[shopify-product] No Admin token set; falling back to storefront availability, which stays true for variants that continue selling when out of stock.",
+    );
+    return product;
+  }
+  if (adminShop !== shop) {
+    console.warn(
+      `[shopify-product] Admin token is scoped to ${adminShop ?? "no shop"}, not ${shop}; skipping the inventory lookup.`,
+    );
     return product;
   }
 
@@ -79,10 +98,16 @@ async function applyAdminInventory(
         }),
       },
     );
-  } catch {
+  } catch (e) {
+    console.warn("[shopify-product] Admin inventory request failed", e);
     return product;
   }
-  if (!response.ok) return product;
+  if (!response.ok) {
+    console.warn(
+      `[shopify-product] Admin inventory request returned ${response.status}. A 401/403 means the token is wrong or missing read_products / read_inventory.`,
+    );
+    return product;
+  }
 
   let body: {
     data?: {
@@ -96,10 +121,15 @@ async function applyAdminInventory(
   };
   try {
     body = (await response.json()) as typeof body;
-  } catch {
+  } catch (e) {
+    console.warn("[shopify-product] Admin inventory response was not JSON", e);
     return product;
   }
   if (body.errors?.length || !Array.isArray(body.data?.nodes)) {
+    console.warn(
+      "[shopify-product] Admin inventory query returned errors",
+      body.errors,
+    );
     return product;
   }
 
