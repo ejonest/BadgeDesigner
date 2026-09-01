@@ -90,6 +90,7 @@ import { createDesignerAnalytics } from "~/utils/designerAnalytics";
 import {
   GAVEL_PRODUCT_HANDLES,
   SUEDE_BAG_PRODUCT_HANDLE,
+  isGavelVariantInStock,
   resolveGavelVariant,
   resolveSuedeBagVariant,
 } from "~/utils/gavelShopifyCatalog";
@@ -333,7 +334,9 @@ async function fetchStoreProduct(
   const params = new URLSearchParams({ handle });
   if (shopHost) params.set("shop", shopHost);
   try {
-    const res = await fetch(`/api/shopify-product?${params.toString()}`);
+    const res = await fetch(`/api/shopify-product?${params.toString()}`, {
+      cache: "no-store",
+    });
     if (!res.ok) return null;
     const data = await res.json();
     return isShopifyProductJsPayload(data) ? data : null;
@@ -649,10 +652,33 @@ export default function GavelDesigner({
   );
 
   const roundBlockAvailable =
-    hasSoundBlock && isGavelRoundSoundBlockAvailable(soundBlock, gavelStyle);
+    hasSoundBlock &&
+    isGavelRoundSoundBlockAvailable(soundBlock, gavelStyle) &&
+    isGavelVariantInStock(storeProduct, {
+      productType: "gavel",
+      styleId: gavelStyle,
+      soundBlock,
+      soundBlockShape: "round",
+    });
+  const squareBlockAvailable =
+    hasSoundBlock &&
+    isGavelVariantInStock(storeProduct, {
+      productType: "gavel",
+      styleId: gavelStyle,
+      soundBlock,
+      soundBlockShape: "square",
+    });
   /** Never price or draw a round block the store cannot make. */
   const effectiveSoundBlockShape: GavelSoundBlockShapeId =
     soundBlockShape === "round" && roundBlockAvailable ? "round" : "square";
+  const currentVariantInStock = isGavelVariantInStock(storeProduct, {
+    productType,
+    styleId: gavelStyle,
+    soundBlock: isStand ? "none" : soundBlock,
+    soundBlockShape: effectiveSoundBlockShape,
+  });
+  const currentSelectionOutOfStock =
+    storeProduct !== null && !currentVariantInStock;
   const soundBlockArtText = soundBlockText.trim() || lines[0]?.text?.trim() || "";
   const soundBlockPreviewText = usingExampleCopy
     ? GAVEL_EXAMPLE_HEADLINE
@@ -1550,6 +1576,25 @@ export default function GavelDesigner({
     }
     setBusy(true);
     try {
+      const latestProduct = await fetchStoreProduct(
+        gavelProductHandleFor(productType),
+        shopHost,
+      );
+      if (latestProduct) {
+        setStoreProduct(latestProduct);
+        if (
+          !isGavelVariantInStock(latestProduct, {
+            productType,
+            styleId: gavelStyle,
+            soundBlock: isStand ? "none" : soundBlock,
+            soundBlockShape: effectiveSoundBlockShape,
+          })
+        ) {
+          throw new Error(
+            "That configuration is currently out of stock. Choose another available option.",
+          );
+        }
+      }
       await captureMockup();
       await saveDraft({
         thumbnailBlob: mockupRef.current.blob,
@@ -1599,7 +1644,29 @@ export default function GavelDesigner({
     setBusy(true);
     setError(null);
     analytics.addToCartClicked();
+    let checkoutVariantId = variantId;
     try {
+      const latestProduct = await fetchStoreProduct(
+        gavelProductHandleFor(productType),
+        shopHost,
+      );
+      if (latestProduct) {
+        setStoreProduct(latestProduct);
+        const selection = {
+          productType,
+          styleId: gavelStyle,
+          soundBlock: isStand ? ("none" as const) : soundBlock,
+          soundBlockShape: effectiveSoundBlockShape,
+        };
+        if (!isGavelVariantInStock(latestProduct, selection)) {
+          throw new Error(
+            "That configuration just went out of stock. Choose another available option.",
+          );
+        }
+        checkoutVariantId =
+          resolveGavelVariant(latestProduct, selection)?.variantId ??
+          checkoutVariantId;
+      }
       const designId = designIdRef.current;
       const form = new FormData();
       form.append("designId", designId);
@@ -1709,7 +1776,7 @@ export default function GavelDesigner({
         });
       };
 
-      const vid = variantId || "0";
+      const vid = checkoutVariantId || "0";
       const cartLines =
         bulkRows.length > 0
           ? bulkRows.map((row, index) => ({
@@ -1931,8 +1998,18 @@ export default function GavelDesigner({
                     <p className="gf-sub-title">Wood tone</p>
                     <div className="gf-style-grid">
                       {GAVEL_STYLES.map((s) => {
-                        const unavailable =
-                          isStand && !isGavelStandOffered(s.id);
+                        const offered =
+                          !isStand || isGavelStandOffered(s.id);
+                        const outOfStock =
+                          offered &&
+                          storeProduct !== null &&
+                          !isGavelVariantInStock(storeProduct, {
+                            productType,
+                            styleId: s.id,
+                            soundBlock: isStand ? "none" : soundBlock,
+                            soundBlockShape: effectiveSoundBlockShape,
+                          });
+                        const unavailable = !offered || outOfStock;
                         const price = woodPrices[s.id];
                         return (
                           <button
@@ -1964,7 +2041,9 @@ export default function GavelDesigner({
                                 }`}
                               >
                                 {unavailable
-                                  ? "Not available with stand"
+                                  ? outOfStock
+                                    ? "Out of stock"
+                                    : "Not available with stand"
                                   : price != null
                                     ? `${isStand ? "Gavel + stand" : "Gavel"}: ${formatGavelMoney(price)}`
                                     : storeProductLoading
@@ -2028,10 +2107,31 @@ export default function GavelDesigner({
                         {GAVEL_SOUND_BLOCK_OPTIONS.filter((o) =>
                           isGavelSoundBlockOffered(o.id, gavelStyle),
                         ).map((o) => {
-                          const blocked = !isGavelSoundBlockOffered(
-                            o.id,
-                            gavelStyle,
+                          const squareInStock = isGavelVariantInStock(
+                            storeProduct,
+                            {
+                              productType: "gavel",
+                              styleId: gavelStyle,
+                              soundBlock: o.id,
+                              soundBlockShape: "square",
+                            },
                           );
+                          const roundInStock =
+                            isGavelRoundSoundBlockAvailable(
+                              o.id,
+                              gavelStyle,
+                            ) &&
+                            isGavelVariantInStock(storeProduct, {
+                              productType: "gavel",
+                              styleId: gavelStyle,
+                              soundBlock: o.id,
+                              soundBlockShape: "round",
+                            });
+                          const outOfStock =
+                            storeProduct !== null &&
+                            !squareInStock &&
+                            !roundInStock;
+                          const blocked = outOfStock;
                           const priceAdd = soundBlockPriceAdds[o.id];
                           return (
                             <button
@@ -2042,6 +2142,9 @@ export default function GavelDesigner({
                               onClick={() => {
                                 if (blocked) return;
                                 setSoundBlock(o.id);
+                                if (!squareInStock && roundInStock) {
+                                  setSoundBlockShape("round");
+                                }
                               }}
                             >
                               <img
@@ -2059,7 +2162,7 @@ export default function GavelDesigner({
                                 }`}
                               >
                                 {blocked
-                                  ? "Not available in ebony"
+                                  ? "Out of stock"
                                   : priceAdd != null
                                     ? priceAdd === 0
                                       ? "Included"
@@ -2115,7 +2218,9 @@ export default function GavelDesigner({
                       <div className="gf-pill-row">
                         {GAVEL_SOUND_BLOCK_SHAPE_OPTIONS.map((s) => {
                           const unavailable =
-                            s.id === "round" && !roundBlockAvailable;
+                            s.id === "round"
+                              ? !roundBlockAvailable
+                              : !squareBlockAvailable;
                           return (
                             <button
                               key={s.id}
@@ -2129,6 +2234,15 @@ export default function GavelDesigner({
                               onClick={() => setSoundBlockShape(s.id)}
                             >
                               {s.label}
+                              {unavailable &&
+                              storeProduct !== null &&
+                              (s.id === "square" ||
+                                isGavelRoundSoundBlockAvailable(
+                                  soundBlock,
+                                  gavelStyle,
+                                ))
+                                ? " — Out of stock"
+                                : ""}
                             </button>
                           );
                         })}
@@ -2795,7 +2909,7 @@ export default function GavelDesigner({
                   <button
                     type="button"
                     className="gf-nav-primary"
-                    disabled={busy || !designReady}
+                    disabled={busy || !designReady || currentSelectionOutOfStock}
                     onClick={() => void onReviewProof()}
                   >
                     {busy ? "Preparing proof…" : "Review proof & add to cart →"}
@@ -2812,7 +2926,14 @@ export default function GavelDesigner({
                 ) : null}
               </div>
 
-              {error ? <div className="gf-error">{error}</div> : null}
+              {currentSelectionOutOfStock ? (
+                <div className="gf-error">
+                  That configuration is currently out of stock. Choose another
+                  available option.
+                </div>
+              ) : error ? (
+                <div className="gf-error">{error}</div>
+              ) : null}
 
               {step === "design" || step === "quantity" ? (
                 <p className="gf-disclaimer">
@@ -2932,7 +3053,7 @@ export default function GavelDesigner({
                 type="button"
                 className="gf-btn-primary"
                 onClick={() => void onConfirmAddToCart()}
-                disabled={busy}
+                disabled={busy || currentSelectionOutOfStock}
               >
                 {busy ? "Adding…" : "Add to cart"}
               </button>

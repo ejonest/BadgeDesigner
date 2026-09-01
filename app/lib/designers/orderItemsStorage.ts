@@ -75,7 +75,8 @@ function rowPayload(
     def.orderItemsTable === "plaque_order_items";
   const isDeskSignTable = def.orderItemsTable === "desk_sign_order_items";
   const isGavelTable = def.orderItemsTable === "gavel_order_items";
-  const usesDataJson = isDeskSignTable || isGavelTable;
+  const isPenTable = def.orderItemsTable === "pen_order_items";
+  const usesDataJson = isDeskSignTable || isGavelTable || isPenTable;
   const supportsUploadedImage = isMultiLineSignTable || usesDataJson;
   const designJsonColumn = usesDataJson ? "data_json" : "badge_json";
   const base: Record<string, unknown> = {
@@ -90,9 +91,10 @@ function rowPayload(
     ...(INCLUDE_PRINT_SVG_URL_IN_DB
       ? { print_svg_url: item.print_svg_url || null }
       : {}),
-    // Only gavels have a second engraved surface, and only gavel_order_items has
-    // the column; sending it elsewhere would cost a failed write plus a retry.
-    ...(isGavelTable ? { secondary_svg_url: item.secondary_svg_url || null } : {}),
+    // Gavels and pens have a second engraved surface and matching DB columns.
+    ...(isGavelTable || isPenTable
+      ? { secondary_svg_url: item.secondary_svg_url || null }
+      : {}),
     ...(INCLUDE_DESIGN_JSON_IN_DB
       ? {
           [designJsonColumn]: item.badge_json ?? null,
@@ -168,7 +170,7 @@ function rowPayload(
       base.line_6_color = item.line_6_color;
       base.line_6_alignment = item.line_6_alignment;
     }
-  } else if (isDeskSignTable || isGavelTable) {
+  } else if (isDeskSignTable || isGavelTable || isPenTable) {
     // Keep short manufacturing labels (not duplicated as line text).
     base.finish = item.finish ?? null;
     base.attachment_method = item.attachment_method ?? null;

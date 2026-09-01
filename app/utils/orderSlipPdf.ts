@@ -202,7 +202,9 @@ export async function generateOrderSlipPdf(
     const isGavel =
       Boolean(jsonMeta?.gavelStyle) ||
       String(item.badge_id ?? "").startsWith("gavel-");
-    page.drawText(`${isGavel ? "Gavel" : "Badge"} ${idx + 1}`, {
+    const isPen = String(item.badge_id ?? "").startsWith("pen-");
+    const itemLabel = isGavel ? "Gavel" : isPen ? "Pen set" : "Badge";
+    page.drawText(`${itemLabel} ${idx + 1}`, {
       x: MARGIN,
       y: sectionTopY - HEADER_HEIGHT,
       size: 12,
@@ -329,7 +331,7 @@ export async function generateOrderSlipPdf(
         ? item.finish.trim()
         : "";
     page.drawText(
-      isGavel && finishLabel
+      (isGavel || isPen) && finishLabel
         ? `Finish: ${finishLabel}`
         : `Background: ${bgColorInfo.name} (${bgColorInfo.hex})`,
       {

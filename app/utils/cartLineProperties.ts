@@ -16,6 +16,8 @@ export const CART_PROP = {
   gavelTextLine2: "Gavel Text Line 2",
   gavelTextLine3: "Gavel Text Line 3",
   gavelTextLine4: "Gavel Text Line 4",
+  penCaseBandText: "Case Band Text",
+  penCapText: "Pen Cap Text",
   gavelStyle: "_Gavel Style",
   bandFinish: "_Band Finish",
 
@@ -83,11 +85,20 @@ export function buildDesignerCartLineProperties(
 
   const thumb = (input.thumbnailUrl ?? "").trim();
   const isGavel = input.designerId === "gavel";
+  const isPen = input.designerId === "pen";
+  const firstLineProperty = isGavel
+    ? CART_PROP.gavelTextLine1
+    : isPen
+      ? CART_PROP.penCaseBandText
+      : CART_PROP.textLine1;
+  const secondLineProperty = isGavel
+    ? CART_PROP.gavelTextLine2
+    : isPen
+      ? CART_PROP.penCapText
+      : CART_PROP.textLine2;
   const properties: Record<string, string> = {
-    [isGavel ? CART_PROP.gavelTextLine1 : CART_PROP.textLine1]:
-      input.lines[0]?.text || "",
-    [isGavel ? CART_PROP.gavelTextLine2 : CART_PROP.textLine2]:
-      input.lines[1]?.text || "",
+    [firstLineProperty]: input.lines[0]?.text || "",
+    [secondLineProperty]: input.lines[1]?.text || "",
     [isGavel ? CART_PROP.gavelTextLine3 : CART_PROP.textLine3]:
       input.lines[2]?.text || "",
     [isGavel ? CART_PROP.gavelTextLine4 : CART_PROP.textLine4]:

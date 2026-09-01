@@ -733,6 +733,13 @@ export async function getLatestSavedGavelDesign(
   return getLatestSavedSignLikeDesign("gavel_designs", userId, shopId);
 }
 
+export async function getLatestSavedPenDesign(
+  userId: string,
+  shopId: string,
+) {
+  return getLatestSavedSignLikeDesign("pen_designs", userId, shopId);
+}
+
 async function deleteSavedSignLikeDesignsForUser(
   table: SignLikeDesignsTable,
   userId: string,
@@ -937,6 +944,10 @@ export async function upsertGavelAutosaveDesign(row: SignDesign) {
   return upsertSignLikeAutosaveDesign("gavel_designs", row);
 }
 
+export async function upsertPenAutosaveDesign(row: SignDesign) {
+  return upsertSignLikeAutosaveDesign("pen_designs", row);
+}
+
 /** Insert or update a milestone row, then prune old milestones. */
 export async function saveBadgeDesignMilestone(row: BadgeDesign, saveKind: DesignSaveKind) {
   if (saveKind === "autosave") {
@@ -1007,6 +1018,13 @@ export async function saveGavelDesignMilestone(
   saveKind: DesignSaveKind,
 ) {
   return saveSignLikeDesignMilestone("gavel_designs", row, saveKind);
+}
+
+export async function savePenDesignMilestone(
+  row: SignDesign,
+  saveKind: DesignSaveKind,
+) {
+  return saveSignLikeDesignMilestone("pen_designs", row, saveKind);
 }
 
 export type DesignGalleryListItem = {
@@ -1154,6 +1172,13 @@ export async function listGavelDesignGallery(
   return listSignLikeDesignGallery("gavel_designs", userId, shopId);
 }
 
+export async function listPenDesignGallery(
+  userId: string,
+  shopId: string,
+): Promise<{ autosave: DesignGalleryListItem | null; milestones: DesignGalleryListItem[] }> {
+  return listSignLikeDesignGallery("pen_designs", userId, shopId);
+}
+
 /** Remove one milestone row (manual/cart/ordered). Cannot delete the autosave draft row. */
 export async function deleteDesignLibraryMilestone(
   table: "badge_designs" | SignLikeDesignsTable,
@@ -1288,6 +1313,14 @@ export async function getGavelDesignForUserShop(
   return getSignLikeDesignForUserShop("gavel_designs", userId, shopId, designId);
 }
 
+export async function getPenDesignForUserShop(
+  userId: string,
+  shopId: string,
+  designId: string,
+) {
+  return getSignLikeDesignForUserShop("pen_designs", userId, shopId, designId);
+}
+
 /**
  * After order is paid: copy cart milestone row to a new ordered row (new design_id), then prune.
  */
@@ -1336,7 +1369,7 @@ export async function insertOrderedDesignSnapshotFromCart(params: {
     product_id: c.product_id ?? "",
     shop_id: c.shop_id,
     user_id: c.user_id,
-    ...(params.table === "gavel_designs"
+    ...(params.table === "gavel_designs" || params.table === "pen_designs"
       ? {}
       : {
           background_color:
@@ -1569,6 +1602,7 @@ export function convertBadgeToOrderItem(
   const prefix = options?.lineIdPrefix ?? "badge";
   const isDeskSign = Boolean(badge.deskSignMaterial) || prefix === "desk-sign";
   const isGavel = Boolean(badge.gavelStyle) || prefix === "gavel";
+  const isPen = Boolean(badge.penStyle) || prefix === "pen";
 
   // Use badge-0, badge-1, ... so link-order (which uses line index from cart) can match
   return {
@@ -1589,6 +1623,11 @@ export function convertBadgeToOrderItem(
             ),
             attachment_method: "none",
           }
+        : isPen
+          ? {
+              finish: "Blue gift set · case band + cap engraving",
+              attachment_method: "none",
+            }
       : {
           background_color: formatColor(badge.backgroundColor),
           backing_type: badge.backing ?? undefined,
