@@ -295,8 +295,22 @@
   })();
 </script>
 
+{% comment %} Custom pen gift set: assign the pen-designer product template. {% endcomment %}
+{% if product and template.suffix == 'pen-designer' %}
+
+{% assign pen_v0 = product.selected_or_first_available_variant | default: product.variants[0] %}
+<div class="aqb-designer-embed">
+  <iframe
+    id="pen-designer-iframe"
+    title="Design your custom pen set"
+    src="{{ badge_designer_origin }}/pen-designer?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&amp;storeUrl={{ shop.permanent_domain | url_param_escape }}&amp;product={{ product.id | url_param_escape }}&amp;variantId={{ pen_v0.id | url_param_escape }}&amp;price={{ pen_v0.price | divided_by: 100.0 | url_param_escape }}{% if customer %}&amp;customerId={{ customer.id | url_param_escape }}{% endif %}"
+    loading="lazy"
+    allow="clipboard-read; clipboard-write"
+  ></iframe>
+</div>
+
 {% comment %} Custom gavel product (Gavels Fast / shared app) {% endcomment %}
-{% if product and product.handle == 'custom-gavel' %}
+{% elsif product and product.handle == 'custom-gavel' %}
 
 {% assign gavel_v0 = product.selected_or_first_available_variant | default: product.variants[0] %}
 <div class="aqb-designer-embed">

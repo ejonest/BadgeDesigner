@@ -65,6 +65,21 @@ export type GavelVariantMatch = {
   title: string;
 };
 
+/**
+ * `/api/shopify-product` enriches Shopify's public product JSON with tracked
+ * Admin inventory when credentials are configured.
+ *
+ * Only an explicit `false` blocks a choice. Missing catalog data or an older
+ * payload without the field fails open; untracked inventory is explicitly
+ * returned as available by the server.
+ */
+export function isGavelVariantInStock(
+  product: ShopifyProductJs | null,
+  selection: GavelVariantSelection,
+): boolean {
+  return findGavelVariant(product, selection)?.available !== false;
+}
+
 function normOptionText(value: string | null | undefined): string {
   return (value ?? "")
     .trim()

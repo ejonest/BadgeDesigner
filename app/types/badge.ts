@@ -155,6 +155,14 @@ export interface Badge {
   gavelProductionMethod?: "engrave" | "uvprint";
   /** Gavel + stand: nameplate lines (independent of the band). */
   gavelStandPlateLines?: BadgeLine[];
+  /** Pen designer only: product photo/style identifier. */
+  penStyle?: "blue-gift-set";
+  /** Pen designer only: the case's metal band accepts either copy or a logo. */
+  penCaseBandMode?: "text" | "logo";
+  /** Pen designer only: source text for the case band manufacturing file. */
+  penCaseBandText?: string;
+  /** Pen designer only: source text engraved on the cap. */
+  penCapText?: string;
 }
 
 export interface BadgeEditorPanelProps {

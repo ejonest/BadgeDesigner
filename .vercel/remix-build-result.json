@@ -23,15 +23,21 @@
       "routes/api.saved-desk-sign-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.delete-sign-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-gavel-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.shopify-order-webhook-plaque": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.delete-pen-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.shopify-order-webhook-gavel": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.link-order-pen-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-plaque-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-desk-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-desk-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.dev.plaque-calibrate.save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-gavel-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.shopify-order-webhook-aqb": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.shopify-order-webhook-pen": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-sign-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-desk-sign-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-pen-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-plaque-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-plaque-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -47,7 +53,10 @@
       "routes/api.cart-design-replaced": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-desk-sign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-plaque-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.send-pen-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.track-designer-event": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/dev.desk-sign-image-crop": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.autosave-pen-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-gavel-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-plaque-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -60,18 +69,22 @@
       "routes/api.save-draft-badges": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-plaque": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-gavel-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-pen-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-gavel": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.saved-pen-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.upload-sign-logo": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/dev.plaque-calibrate": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/model-un-bulk-orders": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-sign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-pen-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.shopify-product": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.finalize-draft": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-desk-sign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-draft-pen": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.test-endpoints": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/desk-sign-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.badge-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -94,6 +107,8 @@
       "routes/api.save-sign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.test-save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/sign-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-pen": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/pen-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/working-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/export.tiff": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/iframe-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -230,6 +245,24 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.shopify-order-webhook-plaque": {
+        "file": "app/routes/api.shopify-order-webhook-plaque.tsx",
+        "id": "routes/api.shopify-order-webhook-plaque",
+        "path": "api/shopify-order-webhook-plaque",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.delete-pen-design-milestone": {
+        "file": "app/routes/api.delete-pen-design-milestone.tsx",
+        "id": "routes/api.delete-pen-design-milestone",
+        "path": "api/delete-pen-design-milestone",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.link-order-sign-to-supabase": {
         "file": "app/routes/api.link-order-sign-to-supabase.tsx",
         "id": "routes/api.link-order-sign-to-supabase",
@@ -243,6 +276,15 @@
         "file": "app/routes/api.shopify-order-webhook-gavel.tsx",
         "id": "routes/api.shopify-order-webhook-gavel",
         "path": "api/shopify-order-webhook-gavel",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.link-order-pen-to-supabase": {
+        "file": "app/routes/api.link-order-pen-to-supabase.tsx",
+        "id": "routes/api.link-order-pen-to-supabase",
+        "path": "api/link-order-pen-to-supabase",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -293,6 +335,24 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.shopify-order-webhook-aqb": {
+        "file": "app/routes/api.shopify-order-webhook-aqb.tsx",
+        "id": "routes/api.shopify-order-webhook-aqb",
+        "path": "api/shopify-order-webhook-aqb",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.shopify-order-webhook-pen": {
+        "file": "app/routes/api.shopify-order-webhook-pen.tsx",
+        "id": "routes/api.shopify-order-webhook-pen",
+        "path": "api/shopify-order-webhook-pen",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.saved-sign-design-detail": {
         "file": "app/routes/api.saved-sign-design-detail.tsx",
         "id": "routes/api.saved-sign-design-detail",
@@ -306,6 +366,15 @@
         "file": "app/routes/api.saved-desk-sign-designs.tsx",
         "id": "routes/api.saved-desk-sign-designs",
         "path": "api/saved-desk-sign-designs",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.saved-pen-design-detail": {
+        "file": "app/routes/api.saved-pen-design-detail.tsx",
+        "id": "routes/api.saved-pen-design-detail",
+        "path": "api/saved-pen-design-detail",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -446,10 +515,37 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.send-pen-to-supabase": {
+        "file": "app/routes/api.send-pen-to-supabase.tsx",
+        "id": "routes/api.send-pen-to-supabase",
+        "path": "api/send-pen-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.track-designer-event": {
+        "file": "app/routes/api.track-designer-event.tsx",
+        "id": "routes/api.track-designer-event",
+        "path": "api/track-designer-event",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/dev.desk-sign-image-crop": {
         "file": "app/routes/dev.desk-sign-image-crop.tsx",
         "id": "routes/dev.desk-sign-image-crop",
         "path": "dev/desk-sign-image-crop",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.autosave-pen-design": {
+        "file": "app/routes/api.autosave-pen-design.tsx",
+        "id": "routes/api.autosave-pen-design",
+        "path": "api/autosave-pen-design",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -563,6 +659,15 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.saved-pen-designs": {
+        "file": "app/routes/api.saved-pen-designs.tsx",
+        "id": "routes/api.saved-pen-designs",
+        "path": "api/saved-pen-designs",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.saved-sign-design": {
         "file": "app/routes/api.saved-sign-design.tsx",
         "id": "routes/api.saved-sign-design",
@@ -585,6 +690,15 @@
         "file": "app/routes/api.save-sign-design.tsx",
         "id": "routes/api.save-sign-design",
         "path": "api/save-sign-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.saved-pen-design": {
+        "file": "app/routes/api.saved-pen-design.tsx",
+        "id": "routes/api.saved-pen-design",
+        "path": "api/saved-pen-design",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -644,6 +758,15 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.save-pen-design": {
+        "file": "app/routes/api.save-pen-design.tsx",
+        "id": "routes/api.save-pen-design",
+        "path": "api/save-pen-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.shopify-product": {
         "file": "app/routes/api.shopify-product.tsx",
         "id": "routes/api.shopify-product",
@@ -666,6 +789,15 @@
         "file": "app/routes/api.save-desk-sign.tsx",
         "id": "routes/api.save-desk-sign",
         "path": "api/save-desk-sign",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.save-draft-pen": {
+        "file": "app/routes/api.save-draft-pen.tsx",
+        "id": "routes/api.save-draft-pen",
+        "path": "api/save-draft-pen",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -864,6 +996,24 @@
         "file": "app/routes/sign-designer.tsx",
         "id": "routes/sign-designer",
         "path": "sign-designer",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.save-pen": {
+        "file": "app/routes/api.save-pen.tsx",
+        "id": "routes/api.save-pen",
+        "path": "api/save-pen",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/pen-designer": {
+        "file": "app/routes/pen-designer.tsx",
+        "id": "routes/pen-designer",
+        "path": "pen-designer",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -1069,6 +1219,18 @@
         "path": "api/link-order-gavel-to-supabase",
         "parentId": "root"
       },
+      "routes/api.shopify-order-webhook-plaque": {
+        "file": "routes/api.shopify-order-webhook-plaque.tsx",
+        "id": "routes/api.shopify-order-webhook-plaque",
+        "path": "api/shopify-order-webhook-plaque",
+        "parentId": "root"
+      },
+      "routes/api.delete-pen-design-milestone": {
+        "file": "routes/api.delete-pen-design-milestone.tsx",
+        "id": "routes/api.delete-pen-design-milestone",
+        "path": "api/delete-pen-design-milestone",
+        "parentId": "root"
+      },
       "routes/api.link-order-sign-to-supabase": {
         "file": "routes/api.link-order-sign-to-supabase.tsx",
         "id": "routes/api.link-order-sign-to-supabase",
@@ -1079,6 +1241,12 @@
         "file": "routes/api.shopify-order-webhook-gavel.tsx",
         "id": "routes/api.shopify-order-webhook-gavel",
         "path": "api/shopify-order-webhook-gavel",
+        "parentId": "root"
+      },
+      "routes/api.link-order-pen-to-supabase": {
+        "file": "routes/api.link-order-pen-to-supabase.tsx",
+        "id": "routes/api.link-order-pen-to-supabase",
+        "path": "api/link-order-pen-to-supabase",
         "parentId": "root"
       },
       "routes/api.saved-plaque-design-detail": {
@@ -1111,6 +1279,18 @@
         "path": "api/saved-gavel-design-detail",
         "parentId": "root"
       },
+      "routes/api.shopify-order-webhook-aqb": {
+        "file": "routes/api.shopify-order-webhook-aqb.tsx",
+        "id": "routes/api.shopify-order-webhook-aqb",
+        "path": "api/shopify-order-webhook-aqb",
+        "parentId": "root"
+      },
+      "routes/api.shopify-order-webhook-pen": {
+        "file": "routes/api.shopify-order-webhook-pen.tsx",
+        "id": "routes/api.shopify-order-webhook-pen",
+        "path": "api/shopify-order-webhook-pen",
+        "parentId": "root"
+      },
       "routes/api.saved-sign-design-detail": {
         "file": "routes/api.saved-sign-design-detail.tsx",
         "id": "routes/api.saved-sign-design-detail",
@@ -1121,6 +1301,12 @@
         "file": "routes/api.saved-desk-sign-designs.tsx",
         "id": "routes/api.saved-desk-sign-designs",
         "path": "api/saved-desk-sign-designs",
+        "parentId": "root"
+      },
+      "routes/api.saved-pen-design-detail": {
+        "file": "routes/api.saved-pen-design-detail.tsx",
+        "id": "routes/api.saved-pen-design-detail",
+        "path": "api/saved-pen-design-detail",
         "parentId": "root"
       },
       "routes/api.send-plaque-to-supabase": {
@@ -1213,10 +1399,28 @@
         "path": "api/saved-plaque-designs",
         "parentId": "root"
       },
+      "routes/api.send-pen-to-supabase": {
+        "file": "routes/api.send-pen-to-supabase.tsx",
+        "id": "routes/api.send-pen-to-supabase",
+        "path": "api/send-pen-to-supabase",
+        "parentId": "root"
+      },
+      "routes/api.track-designer-event": {
+        "file": "routes/api.track-designer-event.tsx",
+        "id": "routes/api.track-designer-event",
+        "path": "api/track-designer-event",
+        "parentId": "root"
+      },
       "routes/dev.desk-sign-image-crop": {
         "file": "routes/dev.desk-sign-image-crop.tsx",
         "id": "routes/dev.desk-sign-image-crop",
         "path": "dev/desk-sign-image-crop",
+        "parentId": "root"
+      },
+      "routes/api.autosave-pen-design": {
+        "file": "routes/api.autosave-pen-design.tsx",
+        "id": "routes/api.autosave-pen-design",
+        "path": "api/autosave-pen-design",
         "parentId": "root"
       },
       "routes/api.saved-design-detail": {
@@ -1291,6 +1495,12 @@
         "path": "api/save-gavel-design",
         "parentId": "root"
       },
+      "routes/api.saved-pen-designs": {
+        "file": "routes/api.saved-pen-designs.tsx",
+        "id": "routes/api.saved-pen-designs",
+        "path": "api/saved-pen-designs",
+        "parentId": "root"
+      },
       "routes/api.saved-sign-design": {
         "file": "routes/api.saved-sign-design.tsx",
         "id": "routes/api.saved-sign-design",
@@ -1307,6 +1517,12 @@
         "file": "routes/api.save-sign-design.tsx",
         "id": "routes/api.save-sign-design",
         "path": "api/save-sign-design",
+        "parentId": "root"
+      },
+      "routes/api.saved-pen-design": {
+        "file": "routes/api.saved-pen-design.tsx",
+        "id": "routes/api.saved-pen-design",
+        "path": "api/saved-pen-design",
         "parentId": "root"
       },
       "routes/api.send-to-supabase": {
@@ -1345,6 +1561,12 @@
         "path": "api/save-draft-sign",
         "parentId": "root"
       },
+      "routes/api.save-pen-design": {
+        "file": "routes/api.save-pen-design.tsx",
+        "id": "routes/api.save-pen-design",
+        "path": "api/save-pen-design",
+        "parentId": "root"
+      },
       "routes/api.shopify-product": {
         "file": "routes/api.shopify-product.tsx",
         "id": "routes/api.shopify-product",
@@ -1361,6 +1583,12 @@
         "file": "routes/api.save-desk-sign.tsx",
         "id": "routes/api.save-desk-sign",
         "path": "api/save-desk-sign",
+        "parentId": "root"
+      },
+      "routes/api.save-draft-pen": {
+        "file": "routes/api.save-draft-pen.tsx",
+        "id": "routes/api.save-draft-pen",
+        "path": "api/save-draft-pen",
         "parentId": "root"
       },
       "routes/api.test-endpoints": {
@@ -1493,6 +1721,18 @@
         "file": "routes/sign-designer.tsx",
         "id": "routes/sign-designer",
         "path": "sign-designer",
+        "parentId": "root"
+      },
+      "routes/api.save-pen": {
+        "file": "routes/api.save-pen.tsx",
+        "id": "routes/api.save-pen",
+        "path": "api/save-pen",
+        "parentId": "root"
+      },
+      "routes/pen-designer": {
+        "file": "routes/pen-designer.tsx",
+        "id": "routes/pen-designer",
+        "path": "pen-designer",
         "parentId": "root"
       },
       "routes/working-test": {
