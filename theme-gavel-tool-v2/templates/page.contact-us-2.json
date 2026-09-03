@@ -13,24 +13,17 @@
     "header": {
       "type": "page-header",
       "settings": {
-        "background": "shopify://shop_images/person-holds-their-glasses-in-front-of-them.jpg",
-        "text_color": "",
-        "menu": "main-menu",
-        "menu_bar_background": "",
-        "menu_bar_border": "",
-        "menu_item_background": "",
-        "menu_item_text_color": "",
-        "menu_item_background_color_h": "",
-        "menu_item_text_color_h": ""
+        "background": "",
+        "text_color": ""
       }
     },
     "main": {
       "type": "contact-us-2-template",
       "settings": {
-        "contact_title": "Drop Us A Line",
-        "contact_text_desc": "",
-        "form_title": "Send us an email:",
-        "form_subtitle": "ASK US ANYTHING! WE'LL GET BACK TO YOU WITHIN 24-48 HOURS.",
+        "contact_title": "",
+        "contact_text_desc": "Contact Gavels Fast for custom gavels, bulk quotes and personalization questions.",
+        "form_title": "Send us an email",
+        "form_subtitle": "WE ANSWER EMAIL WITHIN ONE BUSINESS DAY.",
         "contact_your_name": "",
         "contact_phone_number": "",
         "contact_your_email": "",

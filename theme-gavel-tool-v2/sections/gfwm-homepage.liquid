@@ -33,7 +33,7 @@
             <img class="gfwm-hero__stock" src="{{ 'gfwm-gavel-scales.png' | asset_url }}" alt="{{ section.settings.hero_alt | escape }}" width="1920" height="1163" loading="eager" fetchpriority="high">
           {%- endif -%}
         </div>
-        <div class="gfwm-proof" aria-label="Example engraving proof">
+        <div class="gfwm-proof" aria-label="Example personalization proof">
           <span>{{ section.settings.proof_label | escape }}</span>
           <strong>{{ section.settings.proof_line | escape }}</strong>
           <small>{{ section.settings.proof_detail | escape }}</small>
@@ -58,7 +58,7 @@
       </div>
       <div class="gfwm-trust__item">
         <span class="gfwm-trust__icon">{% render 'gf-icon', icon: 'truck' %}</span>
-        <div><b>Ships in 2–3 days</b><span>For most personalized orders</span></div>
+        <div><b>Ships within 2 business days</b><span>For most personalized orders</span></div>
       </div>
     </div>
   </section>
@@ -136,7 +136,7 @@
     <div class="gfwm-feature__copy">
       <p class="gfwm-eyebrow">For the occasion that matters</p>
       <h2>Retirement, appointment and recognition gifts</h2>
-      <p>A gavel marks a career the way a certificate never will. Choose a fitted presentation set, add a name, date and crest, and approve every detail before engraving.</p>
+      <p>A gavel marks a career the way a certificate never will. Choose a fitted presentation set, add a name, date and crest, and approve every detail before anything is produced.</p>
       <a class="gfwm-button gfwm-button--dark" href="{{ sets_url }}">See presentation sets →</a>
     </div>
   </section>
@@ -154,11 +154,6 @@
         <span><i class="gfwm-icon">{% render 'gf-icon', icon: 'users' %}</i> Teams & chapters</span>
         <span><i class="gfwm-icon">{% render 'gf-icon', icon: 'award' %}</i> Bar associations</span>
         <span><i class="gfwm-icon">{% render 'gf-icon', icon: 'shield' %}</i> Institutional buyers</span>
-      </div>
-      <div class="gfwm-rating">
-        <strong>{{ section.settings.rating | escape }}</strong>
-        <span aria-label="{{ section.settings.rating | escape }} out of 5 stars">★★★★★</span>
-        <small>{{ section.settings.review_count | escape }}<br>on Amazon</small>
       </div>
     </div>
   </section>
@@ -180,23 +175,20 @@
     { "type": "collection", "id": "bestsellers", "label": "Bestsellers" },
     { "type": "header", "content": "Hero" },
     { "type": "text", "id": "hero_eyebrow", "label": "Eyebrow", "default": "Recognition done right" },
-    { "type": "text", "id": "hero_title", "label": "Heading", "default": "Custom engraved gavels —" },
+    { "type": "text", "id": "hero_title", "label": "Heading", "default": "Personalized gavels —" },
     { "type": "text", "id": "hero_accent", "label": "Heading accent", "default": "see your design before you buy." },
     { "type": "textarea", "id": "hero_text", "label": "Text", "default": "Chosen by law firms, bar associations, courts and student organizations. Build your gavel on screen, approve the proof, and we’ll personalize it at our own US facility." },
     { "type": "text", "id": "hero_primary", "label": "Primary button", "default": "Start designing" },
     { "type": "text", "id": "hero_secondary", "label": "Secondary button", "default": "Bulk & team orders" },
-    { "type": "text", "id": "hero_note", "label": "Note", "default": "Proof approved before engraving · No minimum order" },
+    { "type": "text", "id": "hero_note", "label": "Note", "default": "Proof approved before personalization · No minimum order" },
     { "type": "image_picker", "id": "hero_image", "label": "Hero image override" },
     { "type": "text", "id": "hero_alt", "label": "Hero image alt text", "default": "Personalized walnut gavel on a desk beside the scales of justice" },
     { "type": "text", "id": "proof_label", "label": "Proof label", "default": "Live proof preview" },
-    { "type": "text", "id": "proof_line", "label": "Proof engraving", "default": "MODEL U.N. 2026" },
+    { "type": "text", "id": "proof_line", "label": "Proof text", "default": "MODEL U.N. 2026" },
     { "type": "text", "id": "proof_detail", "label": "Proof detail", "default": "CHAIR · GOLD BAND" },
     { "type": "header", "content": "Feature image" },
     { "type": "image_picker", "id": "feature_image", "label": "Feature image override" },
-    { "type": "text", "id": "feature_alt", "label": "Feature image alt text", "default": "Engraved gavel presentation set in a library setting" },
-    { "type": "header", "content": "Review summary" },
-    { "type": "text", "id": "rating", "label": "Rating", "default": "4.7" },
-    { "type": "text", "id": "review_count", "label": "Review count", "default": "about 3,400 reviews" }
+    { "type": "text", "id": "feature_alt", "label": "Feature image alt text", "default": "Personalized gavel presentation set in a library setting" }
   ],
   "presets": [
     { "name": "GF Webmaster homepage", "category": "Gavels Fast" }

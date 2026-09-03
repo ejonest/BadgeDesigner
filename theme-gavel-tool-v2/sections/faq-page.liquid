@@ -1,3 +1,14 @@
+{% if page.handle == 'faqs' %}
+  <div class="container">
+    {% render 'breadcrumb' %}
+    <header class="page-header">
+      <h1>{% render 'multilang' with page.title %}</h1>
+    </header>
+    <div class="rte">
+      {% render 'gfwm-content-page', page_handle: page.handle %}
+    </div>
+  </div>
+{% else %}
 <div class="container">
   {% render 'breadcrumb' %}
   
@@ -297,6 +308,8 @@
   }
 </style>
 
+
+{% endif %}
 
 {% schema %}
   {

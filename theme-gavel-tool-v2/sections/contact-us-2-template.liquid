@@ -5,18 +5,15 @@
   <div class="container">
     {% render 'breadcrumb' %}
     
+    {%- assign contact_heading = section.settings.contact_title | split: '|' | first -%}
     <header class="page-heading">
-      <h2>
-        {{ section.settings.contact_title | split: '|' | first }}
-      </h2>
+      {% if contact_heading != blank %}
+        <h2>
+          {{ contact_heading }}
+        </h2>
+      {% endif %}
       {% render 'multilang-block' with section.settings.contact_text_desc, class:'des' %}
     </header> 
-    
-    {% if page.content != blank %}
-    <div class="rte">
-      {{ page.content }}
-    </div>
-    {% endif %}
     
     <div class="wrapper">
       <div class="row">
@@ -123,10 +120,21 @@
         {% endif %}
       </div>     
     </div>
+
+    <div class="rte">
+      {% if page.handle == 'contact-us' %}
+        {% render 'gfwm-content-page', page_handle: page.handle %}
+      {% elsif page.content != blank %}
+        {{ page.content }}
+      {% endif %}
+    </div>
   </div>    
 </div>
 
 <style>
+  .contact-us-page .rte{
+    margin-top: 55px;
+  }
   .page-heading {
     text-align: center;
     position: relative;

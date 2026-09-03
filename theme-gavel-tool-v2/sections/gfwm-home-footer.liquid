@@ -1,11 +1,15 @@
 {{ 'gfwm-homepage.css' | asset_url | stylesheet_tag }}
 
-{%- assign designer_url = section.settings.designer_product.url | default: '/products/custom-wooden-gavel' -%}
 {%- assign bulk_url = section.settings.bulk_page.url | default: '/pages/contact-us' -%}
 {%- assign gavels_url = section.settings.gavels_collection.url | default: '/collections/gavels' -%}
 {%- assign sets_url = section.settings.sets_collection.url | default: '/collections/gavel-sets' -%}
 {%- assign plaques_url = section.settings.plaques_collection.url | default: '/collections/plaques' -%}
 {%- assign desks_url = section.settings.desks_collection.url | default: '/collections/desk-stands' -%}
+{%- assign about_url = pages['about-us'].url | default: '/pages/about-us' -%}
+{%- assign contact_url = pages['contact-us'].url | default: '/pages/contact-us' -%}
+{%- assign faq_url = pages['faqs'].url | default: '/pages/faqs' -%}
+{%- assign returns_url = pages['returns-exchange'].url | default: '/pages/returns-exchange' -%}
+{%- assign shipping_url = pages['shipping-delivery'].url | default: '/pages/shipping-delivery' -%}
 
 <div class="gfwm">
   <footer class="gfwm-footer">
@@ -36,10 +40,11 @@
 
       <nav class="gfwm-footer__column" aria-label="Help">
         <h2>Help</h2>
-        <a href="{{ bulk_url }}">Contact</a>
-        <a href="#trust">Shipping</a>
-        <a href="{{ designer_url }}">Design your gavel</a>
-        <a href="{{ routes.search_url }}">Search</a>
+        <a href="{{ about_url }}">About us</a>
+        <a href="{{ contact_url }}">Contact</a>
+        <a href="{{ faq_url }}">FAQs</a>
+        <a href="{{ shipping_url }}">Shipping & delivery</a>
+        <a href="{{ returns_url }}">Returns & refunds</a>
       </nav>
     </div>
 

@@ -7,7 +7,12 @@
       </h2>      
     </header>
     <div class="rte">
-      {{ page.content }}
+      {% case page.handle %}
+        {% when 'about-us', 'faqs', 'returns-exchange', 'shipping-delivery' %}
+          {% render 'gfwm-content-page', page_handle: page.handle %}
+        {% else %}
+          {{ page.content }}
+      {% endcase %}
     </div>
   </div>
 </div>

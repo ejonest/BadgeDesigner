@@ -1504,8 +1504,8 @@
         "type": "gfwm-home-header",
         "settings": {
           "announcement_left": "Personalized in our US facility",
-          "announcement_center": "Proof approved before engraving",
-          "announcement_right": "Most orders ship in 2–3 days",
+          "announcement_center": "Proof approved before personalization",
+          "announcement_right": "Most orders ship within 2 business days",
           "search_placeholder": "Try “walnut gavel”",
           "designer_product": "custom-wooden-gavel",
           "bulk_page": "contact-us",
@@ -1535,19 +1535,17 @@
           "gifts_collection": "gift-items",
           "bestsellers": "best-sellers-2024",
           "hero_eyebrow": "Recognition done right",
-          "hero_title": "Custom engraved gavels —",
+          "hero_title": "Personalized gavels —",
           "hero_accent": "see your design before you buy.",
           "hero_text": "Chosen by law firms, bar associations, courts and student organizations. Build your gavel on screen, approve the proof, and we’ll personalize it at our own US facility.",
           "hero_primary": "Start designing",
           "hero_secondary": "Bulk & team orders",
-          "hero_note": "Proof approved before engraving · No minimum order",
+          "hero_note": "Proof approved before personalization · No minimum order",
           "hero_alt": "Personalized walnut gavel on a desk beside the scales of justice",
           "proof_label": "Live proof preview",
           "proof_line": "MODEL U.N. 2026",
           "proof_detail": "CHAIR · GOLD BAND",
-          "feature_alt": "Engraved gavel presentation set in a library setting",
-          "rating": "4.7",
-          "review_count": "about 3,400 reviews"
+          "feature_alt": "Personalized gavel presentation set in a library setting"
         }
       },
       "gfwm-home-footer": {

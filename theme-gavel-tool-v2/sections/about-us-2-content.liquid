@@ -1,3 +1,10 @@
+{% if page.handle == 'about-us' %}
+  <div class="container">
+    <div class="rte">
+      {% render 'gfwm-content-page', page_handle: page.handle %}
+    </div>
+  </div>
+{% else %}
 <div class="container">
   {% if section.settings.display_top_content %}
   <div class="top-content">
@@ -72,7 +79,7 @@
         {% if block.settings.image != blank %}
         <div class="image">
           <a href="{{block.settings.url}}">
-            <img src="{{block.settings.image | img_url:'800x800'}}" alt="{{block.settings.title}}">
+            {{ block.settings.image | image_url: width: 800, height: 800 | image_tag: loading: 'lazy', alt: block.settings.title }}
           </a>
         </div>
         {% else %}
@@ -374,6 +381,7 @@
     }
   })
 </script>
+{% endif %}
 
 {% schema %}
 {

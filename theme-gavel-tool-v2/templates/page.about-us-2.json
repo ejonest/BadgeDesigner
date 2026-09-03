@@ -13,15 +13,8 @@
     "header": {
       "type": "page-header",
       "settings": {
-        "background": "shopify://shop_images/person-holds-their-glasses-in-front-of-them.jpg",
-        "text_color": "",
-        "menu": "main-menu",
-        "menu_bar_background": "",
-        "menu_bar_border": "",
-        "menu_item_background": "",
-        "menu_item_text_color": "",
-        "menu_item_background_color_h": "",
-        "menu_item_text_color_h": ""
+        "background": "",
+        "text_color": ""
       }
     },
     "main": {
@@ -92,6 +85,7 @@
     },
     "1625988159fe7a6ee2": {
       "type": "home-custom-block-spotlight",
+      "disabled": true,
       "blocks": {
         "1625988159fe7a6ee2-0": {
           "type": "image",
