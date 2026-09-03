@@ -1,0 +1,32 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+/*
+ * ------------------------------------------------------------
+ * Gavels Fast — custom gavel designer product template.
+ *
+ * Assign this template ("gavel-designer") to:
+ *   custom-wooden-gavel
+ *   custom-wooden-gavel-stand
+ *
+ * The Ella header, announcement bar and footer come from
+ * layout/theme.liquid, so only the page body is replaced here.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "designer_embed": {
+      "type": "custom-liquid",
+      "settings": {
+        "custom_liquid": "{% render 'gavel-designer-embed' %}"
+      }
+    }
+  },
+  "order": ["designer_embed"]
+}

@@ -1,0 +1,69 @@
+{{ 'gfwm-homepage.css' | asset_url | stylesheet_tag }}
+
+{%- assign designer_url = section.settings.designer_product.url | default: '/products/custom-wooden-gavel' -%}
+{%- assign bulk_url = section.settings.bulk_page.url | default: '/pages/contact-us' -%}
+{%- assign gavels_url = section.settings.gavels_collection.url | default: '/collections/gavels' -%}
+{%- assign sets_url = section.settings.sets_collection.url | default: '/collections/gavel-sets' -%}
+{%- assign plaques_url = section.settings.plaques_collection.url | default: '/collections/plaques' -%}
+{%- assign desks_url = section.settings.desks_collection.url | default: '/collections/desk-stands' -%}
+
+<div class="gfwm">
+  <footer class="gfwm-footer">
+    <div class="gfwm-shell gfwm-footer__top">
+      <div class="gfwm-footer__intro">
+        <a class="gfwm-brand" href="{{ routes.root_url }}">
+          <span class="gfwm-brand__mark">{% render 'gf-icon', icon: 'gavel' %}</span>
+          <span><strong>Gavels</strong>Fast</span>
+        </a>
+        <p>{{ section.settings.description | escape }}</p>
+      </div>
+
+      <nav class="gfwm-footer__column" aria-label="Shop">
+        <h2>Shop</h2>
+        <a href="{{ gavels_url }}">Custom gavels</a>
+        <a href="{{ sets_url }}">Presentation sets</a>
+        <a href="{{ plaques_url }}">Awards & plaques</a>
+        <a href="{{ desks_url }}">Desk signs</a>
+      </nav>
+
+      <nav class="gfwm-footer__column" aria-label="For organizations">
+        <h2>For organizations</h2>
+        <a href="{{ bulk_url }}">Bulk & team orders</a>
+        <a href="{{ bulk_url }}">Model UN</a>
+        <a href="{{ bulk_url }}">Bar associations</a>
+        <a href="{{ bulk_url }}">Request a quote</a>
+      </nav>
+
+      <nav class="gfwm-footer__column" aria-label="Help">
+        <h2>Help</h2>
+        <a href="{{ bulk_url }}">Contact</a>
+        <a href="#trust">Shipping</a>
+        <a href="{{ designer_url }}">Design your gavel</a>
+        <a href="{{ routes.search_url }}">Search</a>
+      </nav>
+    </div>
+
+    <div class="gfwm-shell gfwm-footer__bottom">
+      <span>© {{ 'now' | date: '%Y' }} Gavels Fast · Signal Hill, California</span>
+      <span>
+        {%- if shop.terms_of_service.url != blank -%}<a href="{{ shop.terms_of_service.url }}">Terms</a>{%- endif -%}
+        {%- if shop.privacy_policy.url != blank -%} · <a href="{{ shop.privacy_policy.url }}">Privacy</a>{%- endif -%}
+      </span>
+    </div>
+  </footer>
+</div>
+
+{% schema %}
+{
+  "name": "GF Webmaster footer",
+  "settings": [
+    { "type": "textarea", "id": "description", "label": "Description", "default": "Personalized gavels and recognition gifts for courts, associations, teams and milestone moments." },
+    { "type": "product", "id": "designer_product", "label": "Designer product" },
+    { "type": "page", "id": "bulk_page", "label": "Bulk orders page" },
+    { "type": "collection", "id": "gavels_collection", "label": "Gavels collection" },
+    { "type": "collection", "id": "sets_collection", "label": "Presentation sets" },
+    { "type": "collection", "id": "plaques_collection", "label": "Awards and plaques" },
+    { "type": "collection", "id": "desks_collection", "label": "Desk signs" }
+  ]
+}
+{% endschema %}

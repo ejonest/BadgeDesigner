@@ -1,0 +1,83 @@
+{%- comment -%}
+  Gavels Fast — homepage trust bar. Icon + headline + detail, four across.
+{%- endcomment -%}
+
+{{ 'gf-homepage.css' | asset_url | stylesheet_tag }}
+
+<section class="gf-home gf-trust">
+  <div class="gf-container">
+    <ul class="gf-trust__list">
+      {%- for block in section.blocks -%}
+        <li class="gf-trust__item" {{ block.shopify_attributes }}>
+          <span class="gf-trust__icon">{%- render 'gf-icon', icon: block.settings.icon -%}</span>
+          <span>
+            <span class="gf-trust__title">{{ block.settings.title | escape }}</span>
+            {%- if block.settings.text != blank -%}
+              <span class="gf-trust__text">{{ block.settings.text | escape }}</span>
+            {%- endif -%}
+          </span>
+        </li>
+      {%- endfor -%}
+    </ul>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "GF Trust bar",
+  "class": "gf-home-trust-section",
+  "blocks": [
+    {
+      "type": "trust_item",
+      "name": "Trust item",
+      "limit": 4,
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "pencil", "label": "Pencil" },
+            { "value": "tag", "label": "Tag" },
+            { "value": "truck", "label": "Truck" },
+            { "value": "shield", "label": "Shield" },
+            { "value": "eye", "label": "Eye" },
+            { "value": "layers", "label": "Layers" },
+            { "value": "users", "label": "Users" },
+            { "value": "award", "label": "Award" },
+            { "value": "clock", "label": "Clock" },
+            { "value": "gavel", "label": "Gavel" },
+            { "value": "sparkle", "label": "Sparkle" },
+            { "value": "cart", "label": "Cart" }
+          ],
+          "default": "pencil"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "Easy to personalize"
+        },
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Text",
+          "default": "Add names, titles and logos with our design tool."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "GF Trust bar",
+      "category": "Gavels Fast",
+      "blocks": [
+        { "type": "trust_item" },
+        { "type": "trust_item" },
+        { "type": "trust_item" },
+        { "type": "trust_item" }
+      ]
+    }
+  ]
+}
+{% endschema %}

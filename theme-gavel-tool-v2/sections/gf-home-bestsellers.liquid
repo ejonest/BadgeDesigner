@@ -1,0 +1,162 @@
+{%- comment -%}
+  Gavels Fast — homepage bestsellers.
+
+  Pulls live products from a collection so titles, photos, prices and links stay
+  correct on their own. Nothing is hardcoded.
+{%- endcomment -%}
+
+{{ 'gf-homepage.css' | asset_url | stylesheet_tag }}
+
+{%- assign best_collection = section.settings.collection -%}
+
+<section class="gf-home gf-section gf-section--white gf-best">
+  <div class="gf-container">
+    <div class="gf-section-head">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="gf-eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      <h2 class="gf-h2">{{ section.settings.title | escape }}</h2>
+      {%- if section.settings.subtitle != blank -%}
+        <p class="gf-lede">{{ section.settings.subtitle | escape }}</p>
+      {%- endif -%}
+    </div>
+
+    {%- if best_collection != blank and best_collection.products.size > 0 -%}
+      <div class="gf-best__grid">
+        {%- for product in best_collection.products limit: section.settings.products_to_show -%}
+          <a class="gf-best__card" href="{{ product.url }}">
+            {%- if section.settings.show_rank -%}
+              <span class="gf-best__rank">#{{ forloop.index }} Bestseller</span>
+            {%- endif -%}
+
+            <div class="gf-best__media">
+              {%- if product.featured_image != blank -%}
+                <img
+                  class="gf-best__img"
+                  src="{{ product.featured_image | image_url: width: 700 }}"
+                  alt="{{ product.featured_image.alt | default: product.title | escape }}"
+                  loading="lazy"
+                  width="700"
+                  height="700"
+                >
+              {%- else -%}
+                <div class="gf-best__media-placeholder">No image</div>
+              {%- endif -%}
+            </div>
+
+            <div class="gf-best__body">
+              {%- if section.settings.show_vendor and product.vendor != blank -%}
+                <span class="gf-best__vendor">{{ product.vendor | escape }}</span>
+              {%- endif -%}
+
+              <h3 class="gf-best__title">{{ product.title | escape }}</h3>
+
+              <p class="gf-best__price">
+                {%- if product.price_varies -%}From {% endif -%}
+                {{ product.price_min | money }}
+                {%- if product.compare_at_price > product.price -%}
+                  <s>{{ product.compare_at_price | money }}</s>
+                {%- endif -%}
+              </p>
+
+              <span class="gf-best__link">{{ section.settings.card_link_label | escape }} &rarr;</span>
+            </div>
+          </a>
+        {%- endfor -%}
+      </div>
+
+      {%- if section.settings.view_all_label != blank -%}
+        <div class="gf-best__foot">
+          <a
+            href="{{ section.settings.view_all_link | default: best_collection.url }}"
+            class="gf-btn gf-btn--outline"
+          >
+            {{ section.settings.view_all_label | escape }}
+          </a>
+        </div>
+      {%- endif -%}
+    {%- else -%}
+      <p class="gf-lede" style="text-align:center">
+        Choose a collection for this section in the theme editor.
+      </p>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "GF Bestsellers",
+  "class": "gf-home-best-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Customer favorites"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Heading",
+      "default": "Our bestsellers"
+    },
+    {
+      "type": "textarea",
+      "id": "subtitle",
+      "label": "Subheading",
+      "default": "Our most popular gavels and sets — loved for quality and craftsmanship."
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Collection",
+      "info": "Best Sellers 2024 is a good fit."
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "label": "Products to show",
+      "min": 3,
+      "max": 9,
+      "step": 3,
+      "default": 3
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rank",
+      "label": "Show bestseller rank badge",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_vendor",
+      "label": "Show vendor",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "card_link_label",
+      "label": "Card link label",
+      "default": "View details"
+    },
+    {
+      "type": "text",
+      "id": "view_all_label",
+      "label": "View all button label",
+      "default": "Shop all gavels"
+    },
+    {
+      "type": "url",
+      "id": "view_all_link",
+      "label": "View all button link",
+      "info": "Defaults to the selected collection."
+    }
+  ],
+  "presets": [
+    {
+      "name": "GF Bestsellers",
+      "category": "Gavels Fast"
+    }
+  ]
+}
+{% endschema %}

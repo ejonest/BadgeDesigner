@@ -1,0 +1,134 @@
+{%- comment -%}
+  Gavels Fast — homepage "how it works" steps.
+{%- endcomment -%}
+
+{{ 'gf-homepage.css' | asset_url | stylesheet_tag }}
+
+<section class="gf-home gf-section gf-section--cream gf-steps">
+  <div class="gf-container">
+    <div class="gf-section-head">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="gf-eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      <h2 class="gf-h2">{{ section.settings.title | escape }}</h2>
+      {%- if section.settings.subtitle != blank -%}
+        <p class="gf-lede">{{ section.settings.subtitle | escape }}</p>
+      {%- endif -%}
+    </div>
+
+    <div class="gf-steps__track">
+      {%- for block in section.blocks -%}
+        <div class="gf-steps__item" {{ block.shopify_attributes }}>
+          <span class="gf-steps__num">{{ forloop.index }}</span>
+          <span class="gf-steps__icon">{%- render 'gf-icon', icon: block.settings.icon -%}</span>
+          <h3 class="gf-steps__title">{{ block.settings.title | escape }}</h3>
+          {%- if block.settings.text != blank -%}
+            <p class="gf-steps__text">{{ block.settings.text | escape }}</p>
+          {%- endif -%}
+        </div>
+      {%- endfor -%}
+    </div>
+
+    {%- if section.settings.cta_label != blank -%}
+      <div class="gf-steps__cta">
+        <a
+          href="{{ section.settings.cta_link | default: '#' }}"
+          class="gf-btn gf-btn--navy"
+        >
+          {{ section.settings.cta_label | escape }}
+        </a>
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "GF Steps",
+  "class": "gf-home-steps-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "How it works"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Heading",
+      "default": "Design your gavel in 4 simple steps"
+    },
+    {
+      "type": "textarea",
+      "id": "subtitle",
+      "label": "Subheading",
+      "default": "No artwork files, no proofs by email, no waiting. Customize it and preview the finished look on screen."
+    },
+    {
+      "type": "text",
+      "id": "cta_label",
+      "label": "Button label",
+      "default": "Start designing"
+    },
+    {
+      "type": "url",
+      "id": "cta_link",
+      "label": "Button link"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "step",
+      "name": "Step",
+      "limit": 4,
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "gavel", "label": "Gavel" },
+            { "value": "pencil", "label": "Pencil" },
+            { "value": "eye", "label": "Eye" },
+            { "value": "cart", "label": "Cart" },
+            { "value": "layers", "label": "Layers" },
+            { "value": "sparkle", "label": "Sparkle" },
+            { "value": "shield", "label": "Shield" },
+            { "value": "truck", "label": "Truck" },
+            { "value": "clock", "label": "Clock" },
+            { "value": "award", "label": "Award" },
+            { "value": "users", "label": "Users" },
+            { "value": "tag", "label": "Tag" }
+          ],
+          "default": "gavel"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "Pick your gavel"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Text",
+          "default": "Choose walnut, hardwood or ebony, with or without a sound block or stand."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "GF Steps",
+      "category": "Gavels Fast",
+      "blocks": [
+        { "type": "step" },
+        { "type": "step" },
+        { "type": "step" },
+        { "type": "step" }
+      ]
+    }
+  ]
+}
+{% endschema %}

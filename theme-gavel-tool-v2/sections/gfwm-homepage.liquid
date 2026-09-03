@@ -1,0 +1,205 @@
+{{ 'gfwm-homepage.css' | asset_url | stylesheet_tag }}
+
+{%- assign designer_url = section.settings.designer_product.url | default: '/products/custom-wooden-gavel' -%}
+{%- assign bulk_url = section.settings.bulk_page.url | default: '/pages/contact-us' -%}
+{%- assign gavels_url = section.settings.gavels_collection.url | default: '/collections/gavels' -%}
+{%- assign sets_url = section.settings.sets_collection.url | default: '/collections/gavel-sets' -%}
+{%- assign plaques_url = section.settings.plaques_collection.url | default: '/collections/plaques' -%}
+{%- assign desks_url = section.settings.desks_collection.url | default: '/collections/desk-stands' -%}
+{%- assign gifts_url = section.settings.gifts_collection.url | default: '/collections/gift-items' -%}
+
+<div class="gfwm">
+  <section class="gfwm-hero">
+    <div class="gfwm-shell gfwm-hero__grid">
+      <div>
+        <p class="gfwm-eyebrow gfwm-eyebrow--light">{{ section.settings.hero_eyebrow | escape }}</p>
+        <h1>
+          {{ section.settings.hero_title | escape }}
+          <em>{{ section.settings.hero_accent | escape }}</em>
+        </h1>
+        <p class="gfwm-hero__lede">{{ section.settings.hero_text | escape }}</p>
+        <div class="gfwm-buttons">
+          <a class="gfwm-button gfwm-button--gold" href="{{ designer_url }}">{{ section.settings.hero_primary | escape }} →</a>
+          <a class="gfwm-button gfwm-button--light" href="{{ bulk_url }}">{{ section.settings.hero_secondary | escape }} →</a>
+        </div>
+        <p class="gfwm-hero__note">✓ {{ section.settings.hero_note | escape }}</p>
+      </div>
+
+      <div class="gfwm-hero__art">
+        <div class="gfwm-hero__photo">
+          {%- if section.settings.hero_image != blank -%}
+            {{ section.settings.hero_image | image_url: width: 1600 | image_tag: loading: 'eager', fetchpriority: 'high', alt: section.settings.hero_alt }}
+          {%- else -%}
+            <img class="gfwm-hero__stock" src="{{ 'gfwm-gavel-scales.png' | asset_url }}" alt="{{ section.settings.hero_alt | escape }}" width="1920" height="1163" loading="eager" fetchpriority="high">
+          {%- endif -%}
+        </div>
+        <div class="gfwm-proof" aria-label="Example engraving proof">
+          <span>{{ section.settings.proof_label | escape }}</span>
+          <strong>{{ section.settings.proof_line | escape }}</strong>
+          <small>{{ section.settings.proof_detail | escape }}</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="gfwm-trust" id="trust" aria-label="Ordering benefits">
+    <div class="gfwm-shell gfwm-trust__grid">
+      <div class="gfwm-trust__item">
+        <span class="gfwm-trust__icon">{% render 'gf-icon', icon: 'eye' %}</span>
+        <div><b>See it before you buy</b><span>Live preview and proof</span></div>
+      </div>
+      <div class="gfwm-trust__item">
+        <span class="gfwm-trust__icon">{% render 'gf-icon', icon: 'tag' %}</span>
+        <div><b>No minimum order</b><span>One gavel or three hundred</span></div>
+      </div>
+      <div class="gfwm-trust__item">
+        <span class="gfwm-trust__icon">{% render 'gf-icon', icon: 'shield' %}</span>
+        <div><b>Personalized in the US</b><span>At our California facility</span></div>
+      </div>
+      <div class="gfwm-trust__item">
+        <span class="gfwm-trust__icon">{% render 'gf-icon', icon: 'truck' %}</span>
+        <div><b>Ships in 2–3 days</b><span>For most personalized orders</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="gfwm-section" id="categories">
+    <div class="gfwm-shell">
+      <div class="gfwm-heading">
+        <p class="gfwm-eyebrow">Shop by category</p>
+        <h2>Everything for the occasion</h2>
+        <p>Gavels, presentation sets, plaques and desk signs — personalized with care.</p>
+      </div>
+      <div class="gfwm-categories">
+        <a class="gfwm-category" href="{{ gavels_url }}">
+          <span class="gfwm-category__icon">{% render 'gf-icon', icon: 'gavel' %}</span>
+          <div><h3>Custom gavels</h3><p>Design a one-of-one gavel</p><span>Shop now →</span></div>
+        </a>
+        <a class="gfwm-category" href="{{ sets_url }}">
+          <span class="gfwm-category__icon">{% render 'gf-icon', icon: 'award' %}</span>
+          <div><h3>Gift & presentation sets</h3><p>Cased and ready to present</p><span>Shop now →</span></div>
+        </a>
+        <a class="gfwm-category" href="{{ bulk_url }}">
+          <span class="gfwm-category__icon">{% render 'gf-icon', icon: 'users' %}</span>
+          <div><h3>Bulk & team orders</h3><p>One design, every recipient</p><span>Shop now →</span></div>
+        </a>
+        <a class="gfwm-category" href="{{ plaques_url }}">
+          <span class="gfwm-category__icon">{% render 'gf-icon', icon: 'award' %}</span>
+          <div><h3>Awards & plaques</h3><p>Recognition made permanent</p><span>Shop now →</span></div>
+        </a>
+        <a class="gfwm-category" href="{{ desks_url }}">
+          <span class="gfwm-category__icon">{% render 'gf-icon', icon: 'layers' %}</span>
+          <div><h3>Office & desk signs</h3><p>Personalized for the room</p><span>Shop now →</span></div>
+        </a>
+        <a class="gfwm-category" href="{{ gifts_url }}">
+          <span class="gfwm-category__icon">{% render 'gf-icon', icon: 'sparkle' %}</span>
+          <div><h3>Gifts</h3><p>For careers worth marking</p><span>Shop now →</span></div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="gfwm-section gfwm-section--parchment">
+    <div class="gfwm-shell">
+      <div class="gfwm-heading">
+        <p class="gfwm-eyebrow">Our bestsellers</p>
+        <h2>Chosen again and again</h2>
+      </div>
+      <div class="gfwm-products">
+        {%- for product in section.settings.bestsellers.products limit: 3 -%}
+          <a class="gfwm-product" href="{{ product.url }}">
+            <div class="gfwm-product__media">
+              {%- if forloop.first -%}<span class="gfwm-product__badge">Bestseller</span>{%- endif -%}
+              {%- if product.featured_image != blank -%}
+                {{ product.featured_image | image_url: width: 720 | image_tag: loading: 'lazy', alt: product.title }}
+              {%- endif -%}
+            </div>
+            <div class="gfwm-product__copy">
+              <h3>{{ product.title | escape }}</h3>
+              <p class="gfwm-product__price">{%- if product.price_varies -%}From {% endif -%}{{ product.price_min | money }}</p>
+              <span class="gfwm-product__link">Personalize it →</span>
+            </div>
+          </a>
+        {%- endfor -%}
+      </div>
+    </div>
+  </section>
+
+  <section class="gfwm-feature">
+    <div class="gfwm-feature__photo">
+      {%- if section.settings.feature_image != blank -%}
+        {{ section.settings.feature_image | image_url: width: 1600 | image_tag: loading: 'lazy', alt: section.settings.feature_alt }}
+      {%- else -%}
+        <img src="{{ 'gfwm-gavel-library.png' | asset_url }}" alt="{{ section.settings.feature_alt | escape }}" width="1500" height="1500" loading="lazy">
+      {%- endif -%}
+    </div>
+    <div class="gfwm-feature__copy">
+      <p class="gfwm-eyebrow">For the occasion that matters</p>
+      <h2>Retirement, appointment and recognition gifts</h2>
+      <p>A gavel marks a career the way a certificate never will. Choose a fitted presentation set, add a name, date and crest, and approve every detail before engraving.</p>
+      <a class="gfwm-button gfwm-button--dark" href="{{ sets_url }}">See presentation sets →</a>
+    </div>
+  </section>
+
+  <section class="gfwm-bulk">
+    <div class="gfwm-shell gfwm-bulk__grid">
+      <div class="gfwm-bulk__copy">
+        <p class="gfwm-eyebrow gfwm-eyebrow--light">For chapters, teams and associations</p>
+        <h2>Ordering for a whole conference?</h2>
+        <p>Upload a list of names or roles and apply one shared design to every gavel. Volume pricing starts at 5 units.</p>
+        <a class="gfwm-button gfwm-button--gold" href="{{ bulk_url }}">Get bulk pricing →</a>
+      </div>
+      <div class="gfwm-audiences">
+        <span><i class="gfwm-icon">{% render 'gf-icon', icon: 'users' %}</i> Model UN</span>
+        <span><i class="gfwm-icon">{% render 'gf-icon', icon: 'users' %}</i> Teams & chapters</span>
+        <span><i class="gfwm-icon">{% render 'gf-icon', icon: 'award' %}</i> Bar associations</span>
+        <span><i class="gfwm-icon">{% render 'gf-icon', icon: 'shield' %}</i> Institutional buyers</span>
+      </div>
+      <div class="gfwm-rating">
+        <strong>{{ section.settings.rating | escape }}</strong>
+        <span aria-label="{{ section.settings.rating | escape }} out of 5 stars">★★★★★</span>
+        <small>{{ section.settings.review_count | escape }}<br>on Amazon</small>
+      </div>
+    </div>
+  </section>
+</div>
+
+{% schema %}
+{
+  "name": "GF Webmaster homepage",
+  "class": "gfwm-homepage-section",
+  "settings": [
+    { "type": "header", "content": "Destinations" },
+    { "type": "product", "id": "designer_product", "label": "Designer product" },
+    { "type": "page", "id": "bulk_page", "label": "Bulk orders page" },
+    { "type": "collection", "id": "gavels_collection", "label": "Gavels collection" },
+    { "type": "collection", "id": "sets_collection", "label": "Gift and presentation sets" },
+    { "type": "collection", "id": "plaques_collection", "label": "Awards and plaques" },
+    { "type": "collection", "id": "desks_collection", "label": "Office and desk signs" },
+    { "type": "collection", "id": "gifts_collection", "label": "Gifts" },
+    { "type": "collection", "id": "bestsellers", "label": "Bestsellers" },
+    { "type": "header", "content": "Hero" },
+    { "type": "text", "id": "hero_eyebrow", "label": "Eyebrow", "default": "Recognition done right" },
+    { "type": "text", "id": "hero_title", "label": "Heading", "default": "Custom engraved gavels —" },
+    { "type": "text", "id": "hero_accent", "label": "Heading accent", "default": "see your design before you buy." },
+    { "type": "textarea", "id": "hero_text", "label": "Text", "default": "Chosen by law firms, bar associations, courts and student organizations. Build your gavel on screen, approve the proof, and we’ll personalize it at our own US facility." },
+    { "type": "text", "id": "hero_primary", "label": "Primary button", "default": "Start designing" },
+    { "type": "text", "id": "hero_secondary", "label": "Secondary button", "default": "Bulk & team orders" },
+    { "type": "text", "id": "hero_note", "label": "Note", "default": "Proof approved before engraving · No minimum order" },
+    { "type": "image_picker", "id": "hero_image", "label": "Hero image override" },
+    { "type": "text", "id": "hero_alt", "label": "Hero image alt text", "default": "Personalized walnut gavel on a desk beside the scales of justice" },
+    { "type": "text", "id": "proof_label", "label": "Proof label", "default": "Live proof preview" },
+    { "type": "text", "id": "proof_line", "label": "Proof engraving", "default": "MODEL U.N. 2026" },
+    { "type": "text", "id": "proof_detail", "label": "Proof detail", "default": "CHAIR · GOLD BAND" },
+    { "type": "header", "content": "Feature image" },
+    { "type": "image_picker", "id": "feature_image", "label": "Feature image override" },
+    { "type": "text", "id": "feature_alt", "label": "Feature image alt text", "default": "Engraved gavel presentation set in a library setting" },
+    { "type": "header", "content": "Review summary" },
+    { "type": "text", "id": "rating", "label": "Rating", "default": "4.7" },
+    { "type": "text", "id": "review_count", "label": "Review count", "default": "about 3,400 reviews" }
+  ],
+  "presets": [
+    { "name": "GF Webmaster homepage", "category": "Gavels Fast" }
+  ]
+}
+{% endschema %}

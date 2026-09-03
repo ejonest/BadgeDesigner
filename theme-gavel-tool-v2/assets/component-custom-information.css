@@ -1,0 +1,132 @@
+.custom-information{
+	margin: 25px 0px -5px;
+}
+
+.custom-information .item{
+	display: flex;
+	justify-content: flex-start;
+	align-items: flex-start;
+	margin-bottom: 12px;
+}
+
+.custom-information .icon{
+	margin-right: 10px;
+}
+
+.custom-information .icon svg{
+	position: relative;
+    width: 24px;
+    height: 24px;
+    stroke: var(--icon);
+}
+
+[data-custom-information] {
+    cursor: pointer;
+}
+
+.custom-information .wrapper-content{
+    padding: 3px 0 0;
+}
+
+.custom-information .wrapper-content .title{
+	color: var(--page_title_color);
+    font-weight: 600;
+    margin: 0px;
+	font-size: var(--font_size);
+    display: flex;
+    align-items: center;
+}
+
+.custom-information .wrapper-content .title .icon-help{
+	position: relative;
+    top: 1px;
+    margin-left: 10px;
+}
+
+.custom-information .wrapper-content .title .icon-help svg{
+	width: 16px;
+	height: 16px;
+}
+
+.custom-information .wrapper-content .desc{
+    color: var(--breadcrumb_color);
+    padding: 3px 0px 0px;
+}
+
+.custom-information .wrapper-content .desc p{
+	margin: 0px;
+	padding-bottom: 4px;
+}
+
+.halo-global-custom-informatin-popup .modal-header .icon-help{
+    display: none;
+}
+
+.halo-global-custom-informatin-popup .modal-header .halo-popup-title{
+    font-size: var(--font_size_plus2);
+    letter-spacing: .05em;
+    text-align: center;
+    line-height: var(--font_size_plus12);
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--page_title_color);
+}
+
+.halo-global-custom-informatin-popup .modal-header {
+	-ms-flex-pack: center;
+	-webkit-justify-content: center;
+	justify-content: center;
+	text-transform: uppercase;
+	padding: 12px 12px 9px;
+}
+.halo-global-custom-informatin-popup .modal-dialog {
+	max-width: 85%;
+	margin: 0 auto;
+}
+.halo-global-custom-informatin-popup .modal-body {
+	max-height: 85vh;
+	overflow-y: auto;
+}
+    
+body.custom-info-show{
+    overflow: hidden;
+    height: 100%;
+}
+
+body.custom-info-show .wrapper-overlay{
+    display: block;
+    z-index: 100
+}
+
+body.custom-info-show .halo-global-custom-informatin-popup{
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    display: block;
+}
+
+body.custom-info-show .halo-global-custom-informatin-popup .modal-dialog{
+	-webkit-transform: translate(0,0);
+    transform: translate(0,0);
+}
+
+@media (min-width: 768px) {
+	.halo-popup-content {
+		padding: 30px;
+	}
+	.halo-global-custom-informatin-popup .modal-dialog {
+		max-width: 600px
+	}
+}
+
+@media (min-width: 1025px){
+    body.custom-info-show{
+        padding-right: 17px;
+    }
+}
+
+@media (max-width: 380px) {
+	.halo-global-custom-informatin-popup .modal-body {
+		max-height: 80vh
+	}
+}
