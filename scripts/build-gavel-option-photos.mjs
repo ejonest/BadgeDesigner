@@ -38,6 +38,10 @@ const JOBS = [
     out: "product-walnut-block-angle.jpg",
   },
   {
+    src: `${GAVELS}/Walnut-Gavel-and-Round-Sound-Block-Gold.jpg`,
+    out: "product-walnut-round-block.jpg",
+  },
+  {
     src: `${GAVELS}/Walnut-Gavel-and-Gavel-Stand-Custom-Gold.png`,
     out: "product-walnut-stand.jpg",
   },

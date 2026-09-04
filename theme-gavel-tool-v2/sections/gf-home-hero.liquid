@@ -1,0 +1,269 @@
+{%- comment -%}
+  Gavels Fast — homepage hero.
+
+  Left column: positioning copy + CTAs + value props.
+  Right column: a real screenshot of the live gavel designer, linking straight
+  into the tool. The screenshot ships as a theme asset captured by
+  scripts/gf-shot-designer.mjs; re-run that script when the designer's UI
+  changes. A merchant can override it from the theme editor without touching
+  the asset.
+{%- endcomment -%}
+
+{{ 'gf-homepage.css' | asset_url | stylesheet_tag }}
+
+{%- assign designer_product = section.settings.designer_product -%}
+
+{%- if section.settings.primary_link != blank -%}
+  {%- assign primary_url = section.settings.primary_link -%}
+{%- elsif designer_product != blank -%}
+  {%- assign primary_url = designer_product.url -%}
+{%- else -%}
+  {%- assign primary_url = routes.all_products_collection_url -%}
+{%- endif -%}
+
+{%- assign shot_override = section.settings.preview_image -%}
+{%- if shot_override != blank -%}
+  {%- assign shot_src = shot_override | image_url: width: 1600 -%}
+  {%- assign shot_width = 1600 -%}
+  {%- assign shot_height = 1600 | divided_by: shot_override.aspect_ratio | round -%}
+{%- else -%}
+  {%- assign shot_src = 'gf-designer-preview.webp' | asset_url -%}
+  {%- assign shot_width = 1600 -%}
+  {%- assign shot_height = 1156 -%}
+{%- endif -%}
+
+<section class="gf-home gf-hero">
+  <div class="gf-container">
+    <div class="gf-hero__grid">
+      <div class="gf-hero__copy">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="gf-hero__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+
+        <h2 class="gf-hero__title">
+          {{ section.settings.title | escape }}
+          {%- if section.settings.title_accent != blank -%}
+            <em>{{ section.settings.title_accent | escape }}</em>
+          {%- endif -%}
+        </h2>
+
+        {%- if section.settings.subtitle != blank -%}
+          <p class="gf-hero__sub">{{ section.settings.subtitle | escape }}</p>
+        {%- endif -%}
+
+        <div class="gf-hero__actions">
+          <a href="{{ primary_url }}" class="gf-btn gf-btn--gold">
+            {{ section.settings.primary_label | escape }}
+          </a>
+          {%- if section.settings.secondary_label != blank -%}
+            <a
+              href="{{ section.settings.secondary_link | default: '#' }}"
+              class="gf-btn gf-btn--ghost"
+            >
+              {{ section.settings.secondary_label | escape }}
+            </a>
+          {%- endif -%}
+        </div>
+
+        {%- if section.blocks.size > 0 -%}
+          <ul class="gf-hero__perks">
+            {%- for block in section.blocks -%}
+              {%- if block.type == 'perk' -%}
+                <li class="gf-hero__perk" {{ block.shopify_attributes }}>
+                  <span class="gf-hero__perk-icon">
+                    {%- render 'gf-icon', icon: block.settings.icon -%}
+                  </span>
+                  <span class="gf-hero__perk-title">{{ block.settings.title | escape }}</span>
+                  {%- if block.settings.text != blank -%}
+                    <span class="gf-hero__perk-text">{{ block.settings.text | escape }}</span>
+                  {%- endif -%}
+                </li>
+              {%- endif -%}
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+      </div>
+
+      <div class="gf-hero__panel">
+        <a
+          class="gf-hero__shot-link"
+          href="{{ primary_url }}"
+          aria-label="{{ section.settings.primary_label | escape }}"
+        >
+          <picture>
+            {%- if shot_override == blank -%}
+              {%- comment -%}
+                The full two-column tool is unreadable at phone widths, so small
+                screens get a crop of the live preview and the proof band.
+              {%- endcomment -%}
+              <source
+                media="(max-width: 749px)"
+                srcset="{{ 'gf-designer-preview-mobile.webp' | asset_url }}"
+                width="772"
+                height="894"
+              >
+            {%- endif -%}
+            <img
+              class="gf-hero__shot"
+              src="{{ shot_src }}"
+              alt="{{ section.settings.shot_alt | escape }}"
+              width="{{ shot_width }}"
+              height="{{ shot_height }}"
+              loading="eager"
+              fetchpriority="high"
+            >
+          </picture>
+        </a>
+
+        {%- if section.settings.shot_caption != blank -%}
+          <p class="gf-hero__shot-caption">{{ section.settings.shot_caption | escape }}</p>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "GF Hero",
+  "class": "gf-home-hero-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Copy"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Recognition done right since 2004"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Heading",
+      "default": "Personalize your gavel, plaque or gift —"
+    },
+    {
+      "type": "text",
+      "id": "title_accent",
+      "label": "Heading accent line (italic gold)",
+      "default": "see it before you buy."
+    },
+    {
+      "type": "textarea",
+      "id": "subtitle",
+      "label": "Subheading",
+      "default": "Trusted by law firms, bar associations and institutions for over 20 years. Customize it live, approve the preview on screen, and we create it in our own shop."
+    },
+    {
+      "type": "header",
+      "content": "Buttons"
+    },
+    {
+      "type": "text",
+      "id": "primary_label",
+      "label": "Primary button label",
+      "default": "Start designing"
+    },
+    {
+      "type": "url",
+      "id": "primary_link",
+      "label": "Primary button link",
+      "info": "Leave blank to link to the designer product selected below."
+    },
+    {
+      "type": "text",
+      "id": "secondary_label",
+      "label": "Secondary button label",
+      "default": "Bulk & custom orders"
+    },
+    {
+      "type": "url",
+      "id": "secondary_link",
+      "label": "Secondary button link"
+    },
+    {
+      "type": "header",
+      "content": "Designer screenshot"
+    },
+    {
+      "type": "product",
+      "id": "designer_product",
+      "label": "Designer product",
+      "info": "Sets where the image and primary button link to. Use Custom Wooden Gavel."
+    },
+    {
+      "type": "image_picker",
+      "id": "preview_image",
+      "label": "Screenshot override",
+      "info": "Optional. Defaults to the bundled screenshot of the live designer."
+    },
+    {
+      "type": "text",
+      "id": "shot_alt",
+      "label": "Screenshot alt text",
+      "default": "The Gavels Fast designer showing a live 3D preview of a walnut gavel with personalized text on its gold band"
+    },
+    {
+      "type": "text",
+      "id": "shot_caption",
+      "label": "Caption under screenshot",
+      "info": "Optional."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "perk",
+      "name": "Value prop",
+      "limit": 4,
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "eye", "label": "Eye" },
+            { "value": "pencil", "label": "Pencil" },
+            { "value": "truck", "label": "Truck" },
+            { "value": "shield", "label": "Shield" },
+            { "value": "tag", "label": "Tag" },
+            { "value": "layers", "label": "Layers" },
+            { "value": "users", "label": "Users" },
+            { "value": "award", "label": "Award" },
+            { "value": "clock", "label": "Clock" },
+            { "value": "gavel", "label": "Gavel" },
+            { "value": "sparkle", "label": "Sparkle" },
+            { "value": "cart", "label": "Cart" }
+          ],
+          "default": "eye"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "Live preview"
+        },
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Text",
+          "default": "See it before you buy"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "GF Hero",
+      "category": "Gavels Fast",
+      "blocks": [
+        { "type": "perk" },
+        { "type": "perk" },
+        { "type": "perk" },
+        { "type": "perk" }
+      ]
+    }
+  ]
+}
+{% endschema %}

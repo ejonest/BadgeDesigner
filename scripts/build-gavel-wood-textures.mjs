@@ -56,9 +56,9 @@ const WOODS = [
   },
   {
     id: "rubberwood",
-    dark: [0.08, 0.02, 0.013],
-    mid: [0.245, 0.105, 0.078],
-    light: [0.47, 0.25, 0.195],
+    dark: [0.045, 0.012, 0.008],
+    mid: [0.18, 0.055, 0.038],
+    light: [0.36, 0.145, 0.1],
     shape: 0.65,
     roughnessGain: 1,
     roughnessLift: 0,

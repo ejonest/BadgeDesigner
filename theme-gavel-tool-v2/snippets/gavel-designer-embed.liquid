@@ -1,0 +1,342 @@
+{% comment %}
+  Gavels Fast — custom gavel designer iframe embed (Ella theme).
+
+  Rendered from templates/product.gavel-designer.json via the theme's
+  "custom-liquid" section, so the Ella header, announcement bar and footer
+  stay exactly as they are on every other page.
+
+  Assign the "gavel-designer" template to:
+    custom-wooden-gavel        → designer opens on the Gavel product type
+    custom-wooden-gavel-stand  → designer opens on the Gavel + stand type
+
+  This snippet only ever reads from `product`; it does not modify any other
+  template, section or asset in the theme.
+{% endcomment %}
+
+{%- assign gavel_designer_origin = 'https://all-quality-design-tool.vercel.app' -%}
+
+{%- assign gavel_product_type = 'gavel' -%}
+{%- if product.handle contains 'stand' -%}
+  {%- assign gavel_product_type = 'stand' -%}
+{%- endif -%}
+
+<style>
+  /*
+    Ella wraps custom-liquid sections in .container (max 1200px), which makes
+    the tool noticeably narrower than it is standalone. --gf-bleed-width is the
+    viewport width excluding the scrollbar, measured in JS, so the designer can
+    span the full window without ever creating a horizontal scrollbar.
+  */
+  .gf-designer-embed {
+    width: var(--gf-bleed-width, 100%);
+    max-width: var(--gf-bleed-width, 100%);
+    margin: 0 0 40px calc(50% - (var(--gf-bleed-width, 100%) / 2));
+    background: #f7f4ef;
+  }
+
+  .gf-designer-embed iframe {
+    display: block;
+    width: 100%;
+    border: 0;
+    height: calc(100vh - var(--gf-header-height, 190px));
+    height: calc(100dvh - var(--gf-header-height, 190px));
+    min-height: 520px;
+  }
+
+  /*
+    On desktop the wizard needs ~900px before step 1 starts scrolling inside
+    its own controls column, which is more than most windows leave under
+    Ella's 190px header. Take the larger of the two so the step controls and
+    the Continue button are always reachable.
+  */
+  @media screen and (min-width: 990px) {
+    .gf-designer-embed iframe {
+      height: max(calc(100dvh - var(--gf-header-height, 190px)), 900px);
+    }
+  }
+
+  .gf-designer-info {
+    margin: 0 0 48px;
+    color: #232323;
+  }
+
+  .gf-designer-info h2 {
+    margin: 32px 0 10px;
+    font-size: 22px;
+    line-height: 1.3;
+  }
+
+  .gf-designer-info h2:first-child {
+    margin-top: 0;
+  }
+
+  .gf-designer-info p {
+    margin: 0 0 14px;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .gf-designer-info ul {
+    margin: 0 0 14px;
+    padding-left: 20px;
+  }
+
+  .gf-designer-info li {
+    margin: 0 0 6px;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .gf-designer-info__steps {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0 0 8px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .gf-designer-info__steps li {
+    margin: 0;
+  }
+
+  .gf-designer-info__steps strong {
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .gf-designer-info__tagline {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e6e1d8;
+    font-style: italic;
+  }
+
+  @media (max-width: 749px) {
+    .gf-designer-info__steps {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  (function() {
+    var DESIGNER_ORIGIN = {{ gavel_designer_origin | json }};
+
+    function isAllowedDesignerOrigin(origin) {
+      if (origin === DESIGNER_ORIGIN) return true;
+      if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+      if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return true;
+      return false;
+    }
+
+    /*
+     * The iframe fills what is left of the viewport under whatever Ella
+     * renders above <main>, so the store header stays visible while the
+     * designer is in use. Both values live on <html> so the embed can read
+     * them; declaring them on the embed itself would shadow these writes.
+     */
+    function syncBleedWidth() {
+      document.documentElement.style.setProperty(
+        '--gf-bleed-width',
+        document.documentElement.clientWidth + 'px'
+      );
+    }
+
+    function syncHeaderHeight() {
+      var main = document.querySelector('main.main-content') || document.querySelector('main');
+      if (!main) return;
+      var offset = Math.round(main.getBoundingClientRect().top + (window.scrollY || window.pageYOffset || 0));
+      if (offset < 0 || offset > 600) return;
+      document.documentElement.style.setProperty('--gf-header-height', offset + 'px');
+    }
+
+    function syncLayout() {
+      syncBleedWidth();
+      syncHeaderHeight();
+    }
+
+    /* Set the width before first paint so the embed does not jump wider. */
+    syncBleedWidth();
+
+    function watchLayout() {
+      syncLayout();
+      window.addEventListener('resize', syncLayout);
+      window.addEventListener('load', syncLayout);
+      setTimeout(syncLayout, 600);
+      setTimeout(syncLayout, 2000);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', watchLayout);
+    } else {
+      watchLayout();
+    }
+
+    function replyToDesigner(event, requestId, success, error) {
+      if (!requestId || !event || !event.source) return;
+      try {
+        event.source.postMessage({
+          action: 'add-to-cart-result',
+          requestId: requestId,
+          success: success,
+          error: error || null
+        }, event.origin);
+      } catch (e) {
+        console.error('Gavel designer: could not ack iframe', e);
+      }
+    }
+
+    /* Re-adding an edited design replaces the line it came from. */
+    function gfRemoveReplacedCartLines(cartRoot, replaceDesignId) {
+      if (!replaceDesignId) return Promise.resolve();
+      var base = cartRoot.replace(/\/$/, '');
+      return fetch(base + '/cart.js', { headers: { 'Accept': 'application/json' } })
+        .then(function(res) { return res.json(); })
+        .then(function(cart) {
+          var stale = (cart.items || []).filter(function(item) {
+            var props = item.properties || {};
+            var id = props['_Design ID'] || props['Design ID'];
+            return id === replaceDesignId;
+          });
+          return stale.reduce(function(chain, item) {
+            return chain.then(function() {
+              return fetch(base + '/cart/change.js', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: item.key, quantity: 0 })
+              });
+            });
+          }, Promise.resolve());
+        })
+        .catch(function(err) {
+          console.error('Gavel designer: could not remove replaced cart lines', err);
+        });
+    }
+
+    function gfDesignerCartAdd(items, event, requestId, replaceDesignId) {
+      if (!items || !items.length) {
+        replyToDesigner(event, requestId, false, 'No cart items to add');
+        return;
+      }
+      var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) ? window.Shopify.routes.root : '/';
+      var cartAddUrl = cartRoot.replace(/\/$/, '') + '/cart/add.js';
+      var payload = {
+        items: items.map(function(item) {
+          return {
+            id: parseInt(String(item.variantId), 10),
+            quantity: item.quantity || 1,
+            properties: item.properties || {}
+          };
+        })
+      };
+      fetch(cartAddUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function(res) {
+          return res.json().then(function(body) {
+            if (!res.ok) {
+              throw new Error((body && (body.description || body.message)) || ('HTTP ' + res.status));
+            }
+            return body;
+          });
+        })
+        .then(function() {
+          return gfRemoveReplacedCartLines(cartRoot, replaceDesignId);
+        })
+        .then(function() {
+          replyToDesigner(event, requestId, true);
+          window.location.href = cartRoot.replace(/\/$/, '') + '/cart';
+        })
+        .catch(function(err) {
+          console.error('Gavel designer: cart/add.js failed', err);
+          var message = err && err.message ? err.message : String(err);
+          replyToDesigner(event, requestId, false, message);
+          alert('Could not add your design to the cart. Please try again.\n\n' + message);
+        });
+    }
+
+    window.addEventListener('message', function(event) {
+      if (!isAllowedDesignerOrigin(event.origin)) return;
+      var data = event.data;
+      if (!data || !data.action) return;
+
+      if (data.action === 'redirect-to-login') {
+        var returnTo = window.location.pathname + window.location.search;
+        window.location.href = '/account/login?return_url=' + encodeURIComponent(returnTo);
+        return;
+      }
+
+      if (data.action === 'add-to-cart' && data.payload) {
+        gfDesignerCartAdd([data.payload], event, data.requestId, data.payload.replaceDesignId);
+        return;
+      }
+
+      if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
+        gfDesignerCartAdd(data.payload.items, event, data.requestId, data.payload.replaceDesignId);
+      }
+    });
+  })();
+</script>
+
+{%- if product -%}
+  {%- assign gavel_variant = product.selected_or_first_available_variant | default: product.variants.first -%}
+  {%- assign gavel_unit_price = product.price | divided_by: 100.0 -%}
+
+  <div class="gf-designer-embed">
+    <iframe
+      id="gavel-designer-iframe"
+      title="Design your custom gavel"
+      src="{{ gavel_designer_origin }}/gavel-designer?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&amp;storeUrl={{ shop.permanent_domain | url_param_escape }}&amp;product={{ product.id }}&amp;productType={{ gavel_product_type }}&amp;productHandle={{ product.handle | url_param_escape }}{% if gavel_variant %}&amp;variantId={{ gavel_variant.id }}{% endif %}&amp;price={{ gavel_unit_price }}{% if customer %}&amp;customerId={{ customer.id }}{% endif %}"
+      allow="clipboard-read; clipboard-write; fullscreen"
+    ></iframe>
+  </div>
+
+  <div class="gf-designer-info">
+    <h2>How it works</h2>
+    <ul class="gf-designer-info__steps">
+      <li>
+        <strong>1. Design it live</strong>
+        Pick your wood and band finish{% if gavel_product_type == 'stand' %}, choose a plate finish{% else %}, add a sound block{% endif %}, then type your engraving text and watch it appear on the gavel in real time.
+      </li>
+      <li>
+        <strong>2. Review your proof</strong>
+        Before you add anything to the cart you get a full proof of exactly what will be engraved. No artwork fees, no waiting on a salesperson.
+      </li>
+      <li>
+        <strong>3. Add to cart and check out</strong>
+        Your design is saved to your order automatically, so what you see on screen is what we produce.
+      </li>
+    </ul>
+
+    <h2>About this {% if gavel_product_type == 'stand' %}gavel and stand{% else %}gavel{% endif %}</h2>
+    {%- if gavel_product_type == 'stand' -%}
+      <p>
+        A solid hardwood gavel paired with a matching wood stand. The gavel carries a personalized metal band, and the stand carries a personalized front plate — both engraved to your text. The stand is made from the same wood as the gavel so the set matches.
+      </p>
+    {%- else -%}
+      <p>
+        A solid hardwood gavel with a personalized metal band engraved with your text. Add a matching sound block if you want the full set.
+      </p>
+    {%- endif -%}
+    <ul>
+      <li>Wood options: American Walnut, Oak, Ebony and Purple finishes</li>
+      <li>Band finishes in gold and silver</li>
+      <li>Free engraving — no setup or artwork fees</li>
+      <li>Ideal for judges, gavel clubs, boards, associations and retirement gifts</li>
+    </ul>
+
+    <h2>Production &amp; shipping</h2>
+    <p>
+      Orders ship out within 48 hours, often faster, and shipping is free on every order. Questions about a bulk order or a custom logo? Call us at (310) 534-1138 or email <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a>.
+    </p>
+
+    <p class="gf-designer-info__tagline">
+      No artwork fees. No minimums. No back-and-forth. What you see in the tool is exactly what you get.
+    </p>
+  </div>
+{%- else -%}
+  <p>The gavel designer is only available on a product page.</p>
+{%- endif -%}

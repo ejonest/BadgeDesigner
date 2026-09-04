@@ -32,6 +32,13 @@ const WOOD_OPTION_VALUES: Record<GavelStyleId, string> = {
   ebony: "Ebony",
 };
 
+/** Extra Wood option labels we still match after a storefront rename. */
+const WOOD_OPTION_ALIASES: Record<GavelStyleId, readonly string[]> = {
+  rubberwood: ["Hardwood"],
+  walnut: ["American Walnut", "Genuine Walnut", "Wooden Walnut"],
+  ebony: ["Ebony"],
+};
+
 const SOUND_BLOCK_OPTION_VALUES: Record<GavelSoundBlockId, string> = {
   none: "Gavel only",
   plain: "+ Sound block, plain",
@@ -158,7 +165,11 @@ export function findGavelVariant(
   );
   if (!hasWood) return null;
 
-  const wantWood = normOptionText(gavelWoodOptionValue(selection.styleId));
+  const wantWoods = new Set(
+    (WOOD_OPTION_ALIASES[selection.styleId] ?? [
+      gavelWoodOptionValue(selection.styleId),
+    ]).map(normOptionText),
+  );
   // The stand product has no sound-block option; only constrain what exists.
   const hasSoundBlock = optionNames.some(
     (name) =>
@@ -175,7 +186,7 @@ export function findGavelVariant(
     const wood = normOptionText(
       variantOptionByName(product, variant, GAVEL_WOOD_OPTION_NAME),
     );
-    if (wood !== wantWood) continue;
+    if (!wantWoods.has(wood)) continue;
     if (hasSoundBlock) {
       const block = normOptionText(
         variantOptionByName(product, variant, GAVEL_SOUND_BLOCK_OPTION_NAME),

@@ -10,9 +10,11 @@ import {
   PEN_DEFAULT_PRICE,
   PEN_FONTS,
   PEN_LIMITS,
+  PEN_PREVIEW_PHOTOS,
   type PenBandMode,
   type PenFontId,
 } from "~/constants/pen";
+import { PenPreviewArt } from "~/components/PenPreviewArt";
 import {
   penCapToSvgString,
   penCaseBandToSvgString,
@@ -158,6 +160,12 @@ export default function PenDesigner({
       italic,
     }),
     [bold, capText, fontFamily, italic],
+  );
+  const fontStack = useMemo(
+    () =>
+      PEN_FONTS.find((font) => font.id === fontFamily)?.sample ??
+      "Montserrat, Arial, sans-serif",
+    [fontFamily],
   );
 
   useEffect(() => {
@@ -780,49 +788,45 @@ export default function PenDesigner({
           </div>
           <div className={`pen-product-preview is-${previewSurface}`}>
             {previewSurface === "band" ? (
-              <>
+              <div className="pen-photo">
                 <img
-                  src="/images/pen/case-band.jpg"
-                  alt="Black presentation case with a silver customizable band"
+                  className="pen-photo-base"
+                  src={PEN_PREVIEW_PHOTOS.caseBand.src}
+                  alt={PEN_PREVIEW_PHOTOS.caseBand.alt}
+                  width={PEN_PREVIEW_PHOTOS.caseBand.width}
+                  height={PEN_PREVIEW_PHOTOS.caseBand.height}
                 />
-                <div className="pen-band-overlay">
-                  {bandMode === "logo" && logoDataUrl ? (
-                    <img src={logoDataUrl} alt="Uploaded logo preview" />
-                  ) : (
-                    <span
-                      style={{
-                        fontFamily,
-                        fontWeight: bold ? 700 : 500,
-                        fontStyle: italic ? "italic" : "normal",
-                      }}
-                    >
-                      {bandText || "Your design"}
-                    </span>
-                  )}
-                </div>
-              </>
+                <PenPreviewArt
+                  photo={PEN_PREVIEW_PHOTOS.caseBand}
+                  text={bandText || "Your design"}
+                  fontStack={fontStack}
+                  bold={bold}
+                  italic={italic}
+                  logoDataUrl={bandMode === "logo" ? logoDataUrl : null}
+                />
+              </div>
             ) : (
-              <>
+              <div className="pen-photo">
                 <img
-                  src="/images/pen/pen-cap.jpg"
-                  alt="Blue pen cap with a customizable engraving area"
+                  className="pen-photo-base"
+                  src={PEN_PREVIEW_PHOTOS.cap.src}
+                  alt={PEN_PREVIEW_PHOTOS.cap.alt}
+                  width={PEN_PREVIEW_PHOTOS.cap.width}
+                  height={PEN_PREVIEW_PHOTOS.cap.height}
                 />
-                <div
-                  className="pen-cap-overlay"
-                  style={{
-                    fontFamily,
-                    fontWeight: bold ? 700 : 500,
-                    fontStyle: italic ? "italic" : "normal",
-                  }}
-                >
-                  {capText || "Your message"}
-                </div>
-              </>
+                <PenPreviewArt
+                  photo={PEN_PREVIEW_PHOTOS.cap}
+                  text={capText || "Your message"}
+                  fontStack={fontStack}
+                  bold={bold}
+                  italic={italic}
+                />
+              </div>
             )}
           </div>
           <p className="pen-preview-note">
-            Preview placement is approximate. Production artwork uses separate,
-            configurable case-band and cap files.
+            The preview shows your artwork on the engraving area. Production
+            files are generated separately for the case band and the pen cap.
           </p>
         </section>
       </main>

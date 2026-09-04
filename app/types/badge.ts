@@ -147,6 +147,8 @@ export interface Badge {
   gavelSoundBlockShape?: "square" | "round";
   /** Gavel designer only: sound block personalization on the wood top. */
   gavelSoundBlockText?: string;
+  /** Gavel designer only: structured sound-block lines (font/bold/italic/underline). */
+  gavelSoundBlockLines?: BadgeLine[];
   /** Gavel designer only: suede bag add-on. */
   gavelSuedeBag?: boolean;
   /** Gavel + stand: plate finish. `"white"` is retired; drafts map to gold. */

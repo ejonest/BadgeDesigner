@@ -6,6 +6,7 @@ import {
   type PenFontId,
   type PenSurfaceSpec,
 } from "~/constants/pen";
+import { layoutEngraving, lineOffsets } from "~/utils/penEngraving";
 
 export interface PenSurfaceArtwork {
   mode?: PenBandMode;
@@ -41,19 +42,31 @@ function surfaceSvg(
   const { viewBoxWidth: width, viewBoxHeight: height, safeInset } = spec;
   const logo = safeImageDataUrl(artwork.logoDataUrl);
   const usesLogo = artwork.mode === "logo" && logo;
-  const text = escapeXml(artwork.text.trim());
   const safeWidth = width - safeInset * 2;
   const safeHeight = height - safeInset * 2;
-  const baseFontSize = height * (title === "Case band" ? 0.3 : 0.36);
-  const fittedFontSize =
-    safeWidth / Math.max(1, artwork.text.trim().length * 0.62);
-  const fontSize = Math.round(Math.min(baseFontSize, fittedFontSize));
+  const isBand = title === "Case band";
+  const layout = layoutEngraving(
+    artwork.text,
+    { width: safeWidth, height: safeHeight },
+    {
+      maxFontSize: safeHeight * (isBand ? 0.22 : 0.72),
+      maxLines: isBand ? 3 : 1,
+    },
+  );
+  const fontSize = Math.round(layout.fontSize);
   const artworkColor = options?.includeSurface
     ? PEN_ENGRAVING_COLOR
     : "#000000";
+  const textAttrs = `text-anchor="middle" dominant-baseline="middle" font-family="${escapeXml(artwork.fontFamily)}" font-size="${fontSize}" font-weight="${artwork.bold ? 700 : 500}" font-style="${artwork.italic ? "italic" : "normal"}" fill="${artworkColor}"`;
   const content = usesLogo
     ? `<image href="${escapeXml(logo)}" x="${safeInset}" y="${safeInset}" width="${safeWidth}" height="${safeHeight}" preserveAspectRatio="xMidYMid meet"/>`
-    : `<text x="${width / 2}" y="${height / 2}" dominant-baseline="middle" text-anchor="middle" font-family="${escapeXml(artwork.fontFamily)}" font-size="${fontSize}" font-weight="${artwork.bold ? 700 : 500}" font-style="${artwork.italic ? "italic" : "normal"}" fill="${artworkColor}">${text || " "}</text>`;
+    : lineOffsets(layout)
+        .map(
+          (offset, index) =>
+            `<text x="${width / 2}" y="${Math.round(height / 2 + offset)}" ${textAttrs}>${escapeXml(layout.lines[index])}</text>`,
+        )
+        .join("") ||
+      `<text x="${width / 2}" y="${height / 2}" ${textAttrs}> </text>`;
   const surface = options?.includeSurface
     ? [
         `<rect width="${width}" height="${height}" rx="${Math.round(height * 0.08)}" fill="${PEN_METAL_COLOR}"/>`,
@@ -104,14 +117,19 @@ export function penProofBoardToSvgString(input: {
   const capUrl = svgDataUrl(
     penCapToSvgString(input.cap, { includeSurface: true }),
   );
+  const band = PEN_SURFACES.caseBand;
+  const cap = PEN_SURFACES.cap;
+  const label = (x: number, y: number, value: string) =>
+    `<text x="${x}" y="${y}" font-family="Arial, sans-serif" font-size="20" fill="#68717a">${value}</text>`;
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">`,
     `<rect width="1200" height="720" fill="#f4f0e8"/>`,
     `<text x="70" y="86" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#0a2740">Custom pen proof</text>`,
-    `<text x="70" y="138" font-family="Arial, sans-serif" font-size="20" fill="#68717a">Case band</text>`,
-    `<image href="${bandUrl}" x="70" y="166" width="1060" height="364" preserveAspectRatio="xMidYMid meet"/>`,
-    `<text x="70" y="584" font-family="Arial, sans-serif" font-size="20" fill="#68717a">Pen cap</text>`,
-    `<image href="${capUrl}" x="70" y="608" width="760" height="88" preserveAspectRatio="xMinYMid meet"/>`,
+    label(70, 150, `Case band · ${band.widthIn}in x ${band.heightIn}in`),
+    `<image href="${bandUrl}" x="70" y="178" width="430" height="430" preserveAspectRatio="xMinYMin meet"/>`,
+    label(560, 150, `Pen cap · ${cap.widthIn}in x ${cap.heightIn}in`),
+    `<image href="${capUrl}" x="560" y="178" width="570" height="131" preserveAspectRatio="xMinYMin meet"/>`,
+    label(560, 370, "Engraving areas are estimates pending vendor sign-off."),
     `</svg>`,
   ].join("");
 }

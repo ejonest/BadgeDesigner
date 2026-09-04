@@ -1,0 +1,394 @@
+{% assign grid_results = true %}
+
+{% case section.settings.search_results_per_row %}
+{% when '1' %}
+    {%- assign grid_item_width = 'col-12' -%}
+  {%- assign rows = 'products-list' -%}
+
+  {% when '2' %}
+    {%- assign grid_item_width = 'col-6' -%}
+  {%- assign rows = 'products-grid' -%}
+
+  {% when '3' %}
+    {%- assign grid_item_width = 'col-6 col-md-4' -%}
+  {%- assign rows = 'products-grid' -%}
+
+  {% when '4' %}
+    {%- assign grid_item_width = 'col-6 col-md-4 col-lg-3 col4' -%}
+  {%- assign rows = 'products-grid' -%}
+
+  {% when '5' %}
+    {%- assign grid_item_width = 'col-6 col-md-4 col-lg-3 col5' -%}
+  {%- assign rows = 'products-grid' -%}
+{% endcase %}
+
+<div class="search-page collection-template" data-search-page>
+  <div class="container">
+    {% if search.performed %}
+
+    {% comment %}
+    Avoid accessing search.results before the opening paginate tag.
+    If you do, the pagination of results will be broken.
+    {% endcomment %}
+
+    {% paginate search.results by 15 %}
+
+    {% comment %}
+    We don't have any results to show. Feel free to show off featured products
+    or suggested searches here.
+    {% endcomment %}
+
+    {% if search.results_count == 0 %}
+    <header class="page-header">
+      <h2>
+        {% render 'multilang' with settings.search_1 %}
+        <strong> &nbsp;"{{ search.terms }}"&nbsp; </strong>
+        {% render 'multilang' with settings.search_2 %}
+      </h2>
+    </header>
+
+    {% else %}
+
+    <header class="page-header">
+      <h2>
+        {% render 'multilang' with settings.search_3 %}
+        <strong> &nbsp;"{{ search.terms }}"&nbsp; </strong>
+        {% render 'multilang' with settings.search_4 %}
+      </h2>
+    </header>
+
+    <div class="row">
+      {% render 'sidebar-search-filter' %}
+      <div class="col-12 col-xl-9 col-main">
+        <div id="CollectionProductGrid">
+        {% if grid_results == false %}
+        <div class="product-collection products-list product-search row">
+          {% for product in search.results %}
+          <div class="grid-item col-12{% if settings.product_image_border%} grid-item-border{% endif %}">
+            {% render 'search-result' with product as product %}
+          </div>
+          {% endfor %}
+        </div>
+
+        {% else %}
+          <div data-section-id="{{ section.id }}" data-section-type="collection-template" id="main-collection-product-grid" data-id="{{ section.id }}">
+            <div class="{{ rows }} product-search row product-collection">
+              {% for product in search.results %}
+              <div class="grid-item {{ grid_item_width }} {% if settings.product_image_border%} grid-item-border{% endif %} column-{{settings.popular_products_limit}}">
+                {% if settings.style_product_grid == 'style_product_grid_2' %}
+                  {% render 'product-grid-item-style-2' with product as product, serial: forloop.index %}
+                {% elsif settings.style_product_grid == 'style_product_grid_3' %}
+                  {% render 'product-grid-item-style-3' with product as product, serial: forloop.index %}
+                {% elsif settings.style_product_grid == 'style_product_grid_4' %}
+                  {% render 'product-grid-item-style-4' with product as product, serial: forloop.index %}
+                {% elsif settings.style_product_grid == 'style_product_grid_6' %}
+                  {% render 'product-grid-item-style-6' with product as product, serial: forloop.index %}  
+                {% elsif settings.style_product_grid == 'style_product_grid_7' %}
+                  {% render 'product-grid-item-style-7' with product as product, serial: forloop.index %}  
+                {% else %}
+                  {% render 'product-grid-item' with product as product, serial: forloop.index %}
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            {% if paginate.pages > 1 %}
+            <div class="padding">
+              {% render 'pagination-page' paginate: paginate %}
+            </div>
+            {% endif %}
+          </div>
+        {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    
+    {% endpaginate %}
+
+    {% else %}
+
+    {% comment %}
+    If search.performed is false, someone either accessed the page without
+    the q parameter, or it was blank.
+    Be sure to show a search form here, along with anything else you want to showcase.
+    {% endcomment %}
+
+    <header class="page-header">
+      <h2 style="text-align:center" {% if settings.enable_multilang %}data-translate="general.search.title"{%endif%}>{{ 'general.search.title' | t }}</h2>
+      <div class="header-search__form">
+          <form action="/search" method="get" class="search-bar" role="search">
+              <input type="hidden" name="type" value="product">
+
+              <input type="search" name="q"
+                  {% if settings.enable_multilang %} data-translate="general.search.placeholder" translate-item="placeholder"{% endif %}
+                  placeholder="{{ 'general.search.placeholder' | t }}"
+                  class="input-group-field" aria-label="Search Site" autocomplete="off">
+
+              <button type="submit" class="btn icon-search">
+                  {% render 'icon-search' %}
+              </button>
+          </form>
+      </div>
+    </header>
+    {% endif %}
+  </div>
+</div>
+{% schema %}
+  {
+    "name": "Main Search",
+    "max_blocks": 1,
+    "settings": [
+      {
+        "type": "header",
+        "content": "Collection Content"
+      },
+      {
+        "type": "select",
+        "id": "search_results_per_row",
+        "label": "Products per row (grid only)",
+        "default": "3",
+        "options": [
+          {
+            "value": "1",
+            "label": "List"
+          },
+          {
+            "value": "2",
+            "label": "2"
+          },
+          {
+            "value": "3",
+            "label": "3"
+          },
+          {
+            "value": "4",
+            "label": "4"
+          },
+          {
+            "value": "5",
+            "label": "5"
+          }
+        ]
+      }
+    ],
+    "blocks": [
+    {
+        "type": "sidebar",
+        "name": "Sidebar",
+        "settings": [
+            {
+              "type": "checkbox",
+              "id": "display_sidebar",
+              "label": "Enable Sidebar",
+              "default": true
+          },
+          {
+              "type": "select",
+              "id": "sidebar_style",
+              "label": "Sidebar Style",
+              "options": [
+                  {
+                      "value": "style_1",
+                      "label": "Style 1"
+                  },
+                  {
+                      "value": "style_2",
+                      "label": "Style 2"
+                  }          
+              ],
+              "default": "style_1",
+              "info": "Default: Style 1"
+          },
+          {
+              "type": "select",
+              "id": "show_sidebar",
+              "label": "Show Sidebar on:",
+              "options": [
+                  {
+                      "value": "left",
+                      "label": "Left"
+                  },
+                  {
+                      "value": "right",
+                      "label": "Right"
+                  }          
+              ],
+              "default": "left",
+              "info": "Default: Left"
+          },
+          {
+              "type": "header",
+              "content": "Style settings for filter options"
+          },
+          {
+              "type": "text",
+              "id": "style_option_color",
+              "label": "Use Swatches for Color",
+              "default": "Color",
+              "info": "Enter option name to activate Swatches style for Color option"
+          },
+          {
+              "type": "text",
+              "id": "style_option_size",
+              "label": "Use Swatches for Size",
+              "default": "Size",
+              "info": "Enter option name to activate Swatches style for Size option"
+          },
+          {
+              "type": "header",
+              "content": "Collapse filter at"
+          },
+          {
+              "type": "number",
+              "id": "number_collapse",
+              "label": "Number",
+              "default": 5
+          },
+          {
+              "type": "header",
+              "content": "Categories"
+          },
+          {
+              "type": "checkbox",
+              "id": "enable_categories",
+              "label": "Enable",
+              "default": true
+          },
+          {
+              "type": "text",
+              "id": "title_categories",
+              "label": "Title"
+          },
+          {
+              "type": "radio",
+              "id": "style_categories",
+              "label": "Show all \/ Only a few categories",
+              "options": [
+                  {
+                      "value": "style_show_all",
+                      "label": "Show all"
+                  },
+                  {
+                      "value": "style_main_menu",
+                      "label": "Get Categories From Main Menu"
+                  },
+                  {
+                      "value": "style_little",
+                      "label": "Only a few categories"
+                  }                    
+              ]
+          },
+          {
+              "type": "link_list",
+              "id": "link_list",
+              "label": "Choose a menu",
+              "default": "main-menu"
+          },
+          {
+              "type": "header",
+              "content": "Filter"
+            },
+            {
+              "type": "checkbox",
+              "id": "enable_filter",
+              "label": "Enable?",
+              "default": false
+            },
+            
+          {
+              "type": "header",
+              "content": "Product Slider"
+          },
+          {
+              "type": "checkbox",
+              "id": "enable_product",
+              "label": "Enable",
+              "default": true
+          },
+          {
+              "type": "text",
+              "id": "title_product",
+              "label": "Title"
+          },
+          {
+              "id": "collection",
+              "type": "collection",
+              "label": "Collection"
+          },
+          {
+              "type": "text",
+              "id": "limit",
+              "label": "Number of products to show",
+              "default": "1"
+          },       
+          {
+              "type": "header",
+              "content": "Block Image 1"
+          },
+          {
+              "type": "checkbox",
+              "id": "enable_img_1",
+              "label": "Enable",
+              "default": true
+          },
+          {
+              "type": "image_picker",
+              "id": "image_img_1",
+              "label": "Image"
+          },
+          {
+              "type": "url",
+              "id": "link_img_1",
+              "label": "Link Image",
+              "info": "Optional"
+          },
+
+          {
+              "type": "header",
+              "content": "Block Image 2"
+          },
+          {
+              "type": "checkbox",
+              "id": "enable_img_2",
+              "label": "Enable",
+              "default": true
+          },
+          {
+              "type": "image_picker",
+              "id": "image_img_2",
+              "label": "Image"
+          },
+          {
+              "type": "url",
+              "id": "link_img_2",
+              "label": "Link Image",
+              "info": "Optional"
+          },
+          {
+              "type": "header",
+              "content": "Custom Block"
+          },
+          {
+              "type": "checkbox",
+              "id": "enable_custom_block",
+              "label": "Enable",
+              "default": true
+          },
+          {
+              "type": "text",
+              "id": "title_custom_block",
+              "label": "Heading",
+              "default": "Custom Block"
+          },
+          {
+              "type": "richtext",
+              "id": "quote_custom_block",
+              "label": "Text",
+              "default": "<p>Add customer reviews and testimonials to showcase your store’s happy customers.</p>"
+          }
+        ]
+    }
+]
+  }
+{% endschema %}

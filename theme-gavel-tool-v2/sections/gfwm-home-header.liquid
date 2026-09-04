@@ -1,0 +1,118 @@
+{{ 'gfwm-homepage.css' | asset_url | stylesheet_tag }}
+
+{%- assign designer_url = section.settings.designer_product.url | default: '/products/custom-wooden-gavel' -%}
+{%- assign gavels_url = section.settings.gavels_collection.url | default: '/collections/gavels' -%}
+{%- assign sets_url = section.settings.sets_collection.url | default: '/collections/gavel-sets' -%}
+{%- assign bulk_url = section.settings.bulk_page.url | default: '/pages/contact-us' -%}
+{%- assign plaques_url = section.settings.plaques_collection.url | default: '/collections/plaques' -%}
+{%- assign desks_url = section.settings.desks_collection.url | default: '/collections/desk-stands' -%}
+{%- assign gifts_url = section.settings.gifts_collection.url | default: '/collections/gift-items' -%}
+
+<div class="gfwm">
+  <header class="gfwm-header">
+    <div class="gfwm-header__main">
+      <div class="gfwm-header__lead">
+        <details class="gfwm-mobile-menu">
+          <summary class="gfwm-icon-button" aria-label="Open menu">
+            <span class="gfwm-icon">{% render 'gf-icon', icon: 'menu' %}</span>
+          </summary>
+          <nav class="gfwm-mobile-menu__panel" aria-label="Mobile navigation">
+            <a href="{{ designer_url }}">{{ section.settings.designer_label | escape }}</a>
+            <a href="{{ gavels_url }}">{{ section.settings.gavels_label | escape }}</a>
+            <a href="{{ sets_url }}">{{ section.settings.sets_label | escape }}</a>
+            <a href="{{ bulk_url }}">{{ section.settings.bulk_label | escape }}</a>
+            <a href="{{ plaques_url }}">{{ section.settings.plaques_label | escape }}</a>
+            <a href="{{ desks_url }}">{{ section.settings.desks_label | escape }}</a>
+            <a href="{{ gifts_url }}">{{ section.settings.gifts_label | escape }}</a>
+          </nav>
+        </details>
+      </div>
+
+      <a class="gfwm-brand" href="{{ routes.root_url }}" aria-label="{{ shop.name | escape }} home">
+        <span class="gfwm-brand__mark">{% render 'gf-icon', icon: 'gavel' %}</span>
+        <span><strong>Gavels</strong>Fast</span>
+      </a>
+
+      <div class="gfwm-header__actions">
+        <form class="gfwm-header__search" action="{{ routes.search_url }}" method="get" role="search">
+          <label class="gfwm-sr" for="gfwm-search-inline">Search Gavels Fast</label>
+          <span class="gfwm-icon">{% render 'gf-icon', icon: 'search' %}</span>
+          <input id="gfwm-search-inline" name="q" type="search" placeholder="{{ section.settings.search_placeholder | escape }}">
+          <button type="submit">Search</button>
+        </form>
+
+        <details class="gfwm-search">
+          <summary class="gfwm-icon-button" aria-label="Search">
+            <span class="gfwm-icon">{% render 'gf-icon', icon: 'search' %}</span>
+          </summary>
+          <form class="gfwm-search__panel" action="{{ routes.search_url }}" method="get" role="search">
+            <label class="gfwm-sr" for="gfwm-search">Search Gavels Fast</label>
+            <input id="gfwm-search" name="q" type="search" placeholder="{{ section.settings.search_placeholder | escape }}">
+            <button type="submit">Search</button>
+          </form>
+        </details>
+        <a class="gfwm-icon-button" href="{{ routes.cart_url }}" aria-label="Shopping cart">
+          <span class="gfwm-icon">{% render 'gf-icon', icon: 'cart' %}</span>
+          <span class="gfwm-cart-count" data-cart-count>{{ cart.item_count }}</span>
+        </a>
+      </div>
+    </div>
+
+    <nav class="gfwm-nav" aria-label="Main navigation">
+      <div class="gfwm-nav__scroll">
+        <a href="{{ designer_url }}">{{ section.settings.designer_label | escape }}</a>
+        <a href="{{ gavels_url }}">{{ section.settings.gavels_label | escape }}</a>
+        <a href="{{ sets_url }}">{{ section.settings.sets_label | escape }}</a>
+        <a href="{{ bulk_url }}">{{ section.settings.bulk_label | escape }}</a>
+        <a href="{{ plaques_url }}">{{ section.settings.plaques_label | escape }}</a>
+        <a href="{{ desks_url }}">{{ section.settings.desks_label | escape }}</a>
+        <a href="{{ gifts_url }}">{{ section.settings.gifts_label | escape }}</a>
+      </div>
+    </nav>
+
+    <div class="gfwm-announcement" aria-label="Store information">
+      <div class="gfwm-announcement__track">
+        <span class="gfwm-announcement__item">
+          <i class="gfwm-icon">{% render 'gf-icon', icon: 'shield' %}</i>
+          {{ section.settings.announcement_left | escape }}
+        </span>
+        <span class="gfwm-announcement__item">
+          <i class="gfwm-icon">{% render 'gf-icon', icon: 'eye' %}</i>
+          {{ section.settings.announcement_center | escape }}
+        </span>
+        <span class="gfwm-announcement__item">
+          <i class="gfwm-icon">{% render 'gf-icon', icon: 'truck' %}</i>
+          {{ section.settings.announcement_right | escape }}
+        </span>
+      </div>
+    </div>
+  </header>
+</div>
+
+{% schema %}
+{
+  "name": "GF Webmaster header",
+  "settings": [
+    { "type": "text", "id": "announcement_left", "label": "Announcement left", "default": "Personalized in our US facility" },
+    { "type": "text", "id": "announcement_center", "label": "Announcement center", "default": "Proof approved before personalization" },
+    { "type": "text", "id": "announcement_right", "label": "Announcement right", "default": "Most orders ship within 2 business days" },
+    { "type": "text", "id": "search_placeholder", "label": "Search placeholder", "default": "Try “walnut gavel”" },
+    { "type": "header", "content": "Navigation destinations" },
+    { "type": "product", "id": "designer_product", "label": "Designer product" },
+    { "type": "collection", "id": "gavels_collection", "label": "Gavels collection" },
+    { "type": "collection", "id": "sets_collection", "label": "Gift and presentation sets" },
+    { "type": "page", "id": "bulk_page", "label": "Bulk orders page" },
+    { "type": "collection", "id": "plaques_collection", "label": "Awards and plaques" },
+    { "type": "collection", "id": "desks_collection", "label": "Office and desk signs" },
+    { "type": "collection", "id": "gifts_collection", "label": "Gifts" },
+    { "type": "header", "content": "Navigation labels" },
+    { "type": "text", "id": "designer_label", "label": "Designer label", "default": "Design your gavel" },
+    { "type": "text", "id": "gavels_label", "label": "Gavels label", "default": "Gavels" },
+    { "type": "text", "id": "sets_label", "label": "Sets label", "default": "Gift & presentation sets" },
+    { "type": "text", "id": "bulk_label", "label": "Bulk label", "default": "Bulk & team orders" },
+    { "type": "text", "id": "plaques_label", "label": "Plaques label", "default": "Awards & plaques" },
+    { "type": "text", "id": "desks_label", "label": "Desk signs label", "default": "Office & desk signs" },
+    { "type": "text", "id": "gifts_label", "label": "Gifts label", "default": "Gifts" }
+  ]
+}
+{% endschema %}

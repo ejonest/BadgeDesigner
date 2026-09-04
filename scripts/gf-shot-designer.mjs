@@ -41,7 +41,7 @@ await page.waitForTimeout(4000);
 
 await page.getByRole("button", { name: /Continue to gavel/i }).click();
 await page.waitForTimeout(1500);
-await page.getByRole("button", { name: /Wooden Walnut/i }).click();
+await page.getByRole("button", { name: /Genuine Walnut/i }).click();
 await page.waitForTimeout(400);
 await page.getByRole("button", { name: /^Gold$/i }).click();
 await page.waitForTimeout(600);

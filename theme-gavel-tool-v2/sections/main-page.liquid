@@ -1,0 +1,18 @@
+<div class="page-tpl">
+  <div class="container">
+    {% render 'breadcrumb' %}
+    <header class="page-header">
+      <h2>
+        {% render 'multilang' with page.title %}
+      </h2>      
+    </header>
+    <div class="rte">
+      {% case page.handle %}
+        {% when 'about-us', 'faqs', 'returns-exchange', 'shipping-delivery' %}
+          {% render 'gfwm-content-page', page_handle: page.handle %}
+        {% else %}
+          {{ page.content }}
+      {% endcase %}
+    </div>
+  </div>
+</div>

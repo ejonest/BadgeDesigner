@@ -1,0 +1,130 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "wrapper": "div.faqs-page",
+  "sections": {
+    "main": {
+      "type": "faq-page",
+      "blocks": {
+        "1ecf4d3c-1dfd-45d7-88d2-ec0a35229b03": {
+          "type": "text",
+          "settings": {
+            "question_faqs_1": "Are the gavels customizable?",
+            "answer_faqs_1": "Yes, you can customize the gavels and plaques.",
+            "question_faqs_2": "Do you ship from the USA?",
+            "answer_faqs_2": "Yes we are a US based company and ship directly from our shop in Long Beach",
+            "question_faqs_3": "Do you ship internationally?",
+            "answer_faqs_3": "We can ship to Canada but outside of North America we do not typically ship internationally. That being said, if you are looking to place a bulk order we can discuss your needs and see if there is something we can do, please email us directly for more information.",
+            "question_faqs_4": "Are your gavels genuine wood?",
+            "answer_faqs_4": "Yes our gavels are made out of genuine wood, including Walnut, Genuine American Walnut, Oak, Ebony, Rosewood and Zelkova Wood.",
+            "question_faqs_5": "Do you have volume pricing for bulk orders?",
+            "answer_faqs_5": "Yes we offer volume pricing and tiered pricing, we would be delighted to discuss your needs and the pricing breaks we can offer. We work with High Schools, Law Schools, Universities and Model UN teams regularly to create bespoke gavel awards for mock trials, Model United Nation competitions, debating clubs, conferences and other events. Please email us directly at info@gavelsfast.com with ‘Tiered Pricing’ as the subject line and let us know what you are looking for in terms of type and number of gavels and sound blocks. We are able to custom engrave your logo and names onto gavels and sound blocks as well. Please include logo attachments and names and titles you would like custom engraved and we will get a quote back to you within 1-2 business days."
+          }
+        },
+        "text_F3zqPU": {
+          "type": "text",
+          "settings": {
+            "question_faqs_1": "Can I customize my order?",
+            "answer_faqs_1": "Yes we can custom engrave your gavels and sound blocks, you can use our customization tool on the website to create these orders or reach out to us directly at info@gavelsfast.com with details about what you are looking for and we will be delighted to help. For orders where you are wanting a logo added to your customization the logo artwork can be emailed to the same address as above. We will provide a quote and draft proofs for approval once we receive the relevant information.",
+            "question_faqs_2": "What is the return policy?",
+            "answer_faqs_2": "If an item arrives damaged or has an engraving error on it that is our fault we can return and refund. If an non-customized item arrives and is no longer wanted we can offer a return and refund or replacement. For custom engraved items we are unable to provide returns or refunds (unless the issue in question is our fault)",
+            "question_faqs_3": "",
+            "answer_faqs_3": "",
+            "question_faqs_4": "",
+            "answer_faqs_4": "",
+            "question_faqs_5": "",
+            "answer_faqs_5": ""
+          }
+        }
+      },
+      "block_order": [
+        "1ecf4d3c-1dfd-45d7-88d2-ec0a35229b03",
+        "text_F3zqPU"
+      ],
+      "settings": {
+        "des_faqs": "Below FAQ are some common concerns of our clients before purchasing the theme, if you have other questions, please just send it to <a href=\"mailto:info@gavelsfast.com\" target=\"_blank\">info@gavelsfast.com</a>",
+        "contact_text": "Unable to find satisfactory answers ?",
+        "contact_link_text": "Contact Support",
+        "contact_link": "",
+        "icon_faqs": "Question",
+        "bg_icon_qs": "#ef6454",
+        "color_icon_qs": "#ffffff",
+        "bg_question": "#fafafa",
+        "color_question": "#323232",
+        "font_size_qs": "16",
+        "bg_question_acitve": "#232323",
+        "color_question_acitve": "#ffffff",
+        "icon_answer": "Answer",
+        "bg_icon_answer": "#69c69c",
+        "color_icon_answer": "#ffffff",
+        "color_question_answer": "#3c3c3c",
+        "font_size_answer": "16",
+        "color_question_link": "#0688e2",
+        "icon_show": "Show",
+        "icon_hide": "Hide"
+      }
+    },
+    "1627964096e7d243b7": {
+      "type": "home-featured-products",
+      "disabled": true,
+      "settings": {
+        "bg_color": "",
+        "layout_style": "layout_style_1",
+        "display_banner": false,
+        "banner_is": "left",
+        "banner_heading": "#CAMPAIGNS",
+        "font_size_banner_heading": "40px",
+        "color_banner_heading": "#ffffff",
+        "banner_sub_heading": "Spring Summer’08",
+        "font_size_banner_sub_heading": "13px",
+        "color_banner_sub_heading": "#ffffff",
+        "banner_des": "Phasellus lorem malesuada ligula pulvinar de cosmopolis",
+        "font_size_banner_des": "12px",
+        "color_banner_des": "#ffffff",
+        "banner_button": "Shop Now",
+        "link": "",
+        "banner_button_2": "Shop Now",
+        "link_2": "",
+        "bg_banner_button": "#ffffff",
+        "border_banner_button": "#ffffff",
+        "color_banner_button": "#232323",
+        "bg_color_box_style_2": "#ffffff",
+        "border_color_box_style_2": "#bcbcbc",
+        "featured_products_title": "Trending Now",
+        "color_text_title": "",
+        "font_size_title": "",
+        "font_size_title_mb": "",
+        "text_alignment": "left",
+        "featured_products_des": "",
+        "featured_products_text_link": "",
+        "featured_products_link": "",
+        "color_text_link": "#ba7a2d",
+        "title_style": "style_1",
+        "show_slider_featured_collection": "collection-1",
+        "slider_featured_limit_all": 10,
+        "collection_results_per_row1": "5",
+        "featured_products_title_2": "Trending Now",
+        "featured_products_text_link_2": "",
+        "featured_products_link_2": "",
+        "show_slider_featured_collection_2": "",
+        "display_list_collection": false,
+        "text_list": "View all categories",
+        "url_list": "",
+        "margin_bottom_mb": 40,
+        "margin_bottom_tab": 40,
+        "margin_bottom": 0
+      }
+    }
+  },
+  "order": [
+    "main",
+    "1627964096e7d243b7"
+  ]
+}

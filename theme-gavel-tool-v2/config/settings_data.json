@@ -1,0 +1,1621 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "current": {
+    "layout_body": "default",
+    "bg_body_boxed": "#f8f8f8",
+    "header_layout": "03",
+    "list_collections_layout": "collections_01_grid",
+    "category_layout": "default",
+    "product_layout": "default",
+    "blog_layout": "default",
+    "footer_layout": "05",
+    "password_layout": "default",
+    "header_style_mobile": "header_mobile_1",
+    "favicon": "shopify://shop_images/favicon.png",
+    "body_font_size": "12",
+    "enable_opengraph": true,
+    "image_share": "",
+    "enable_backtotop": true,
+    "display_breadcrumb": false,
+    "breadcrumb_text_transform": "capitalize",
+    "page_title_font_size": "20",
+    "page_title_text_align": "left",
+    "style_product_grid": "style_product_grid_1",
+    "product_name_text_align": "left",
+    "product_name_text_transform": "none",
+    "product_title_line_text": "full",
+    "type_label_sale": "label_sale",
+    "enable_hover_image": true,
+    "enable_hover_product_image": true,
+    "use_color_swatch": true,
+    "option_color_swatch": "Color",
+    "color_swatch_style": "normal",
+    "enable_checkbox": false,
+    "checkbox_text": "I agree with the terms and conditions",
+    "register_text_desc": "Sign up for a free account at Ella Boutique.",
+    "login_text_desc": "Register with us for a faster checkout, <br> to track the status of your order and more.",
+    "image_swap": true,
+    "product_image_border": true,
+    "product_image_border_color": "#e6e6e6",
+    "product_image_resize": true,
+    "product_image_crop": false,
+    "product_image_height": "130",
+    "show_vendor": false,
+    "display_product_reviews": true,
+    "display_item_size": true,
+    "display_item_swatch": true,
+    "display_button": false,
+    "display_size_chart": false,
+    "display_size_chart_at": "Size",
+    "size_guide_text": "Size Guide",
+    "custom_size_chart_header": "Size Chart",
+    "size_chart": "none",
+    "custom_size_chart": "",
+    "img_trust": "",
+    "enable_wishlist": false,
+    "display_sticky": true,
+    "display_sticky_mb": true,
+    "display_countdown": true,
+    "enable_quick_view": false,
+    "qv_display_product_reviews": true,
+    "qv_show_sold_in": false,
+    "qv_item_prd": "3,5,6,7,8,10,12,15",
+    "qv_item_prds": "sold in last",
+    "qv_hours_prs": "10,15,16,17,18,20,25,35",
+    "qv_item_hours": "hours",
+    "display_quickview_vendor": false,
+    "quickview_text_vendor": "Brand:",
+    "display_quickview_product_sku": true,
+    "text_quickview_product_sku": "Product Code:",
+    "display_quickview_availability": true,
+    "quickview_text_availability": "Availability",
+    "display_quickview_product_type": false,
+    "quickview_text_product_type": "Product Type",
+    "quickview_text_countdown": "Limited-Time Offers, End in:",
+    "display_quickview_short_desc": true,
+    "display_quickview_subtotal": true,
+    "dpl_customers_view_qv": false,
+    "title_view_qv": "customers are viewing this product",
+    "number_view_qv": "283, 100, 59, 11, 14, 185, 193, 165, 50, 38, 99, 112, 46, 10, 125, 200, 250, 18",
+    "display_product_detail_share": false,
+    "ajax_popup_cart": "upsell",
+    "cart_popup_related_title": "YOU MAY ALSO LIKE",
+    "show_shipping_calculator": true,
+    "shipping_calculator_heading": "Get shipping estimates | Holen Versand Schätzungen",
+    "shipping_calculator_default_country": "United States",
+    "redirect_button": "link_to",
+    "link_to_redirect": "/collection/all",
+    "font_2": "google_fonts",
+    "fonts_name_2": "Poppins",
+    "header_font_new": "work_sans_n6",
+    "font": "google_fonts",
+    "fonts_name": "Poppins",
+    "base_font_new": "work_sans_n6",
+    "enable_multilang_shopify": false,
+    "lange_1": "ENG",
+    "lange_2": "GER",
+    "lange_3": "",
+    "lange_4": "",
+    "lange_5": "",
+    "lange_6": "",
+    "enable_shopify_payments_currencies": false,
+    "enable_multiple_currencies": false,
+    "enable_auto_currency": false,
+    "currency_1_unit": "USD",
+    "currency_2_unit": "EUR",
+    "currency_3_unit": "GBP",
+    "currency_4_unit": "CHF",
+    "currency_5_unit": "",
+    "currency_6_unit": "",
+    "currency_7_unit": "",
+    "currency_8_unit": "",
+    "currency_9_unit": "",
+    "currency_10_unit": "",
+    "enable_search": true,
+    "search_1": "Your search for | Ihre Suche nach",
+    "search_2": "did not yield any results. | hat keine Ergebnisse hervorgebracht.",
+    "search_3": "Your search for | Ihre Suche nach",
+    "search_4": "revealed the following: | hat folgende Ergebnisse hervorgebracht:",
+    "enable_search_trending": true,
+    "trending_search_title": "",
+    "trending_search_item_1": "",
+    "trending_search_item_2": "",
+    "trending_search_item_3": "",
+    "trending_search_item_4": "",
+    "trending_search_item_5": "",
+    "trending_search_item_6": "",
+    "enable_search_popular_products": false,
+    "popular_products_search_title": "Popular Products",
+    "popular_products_collection": "",
+    "popular_products_limit": 3,
+    "display_popup_newsletter": true,
+    "when_to_show": "first_time",
+    "popup_newsletter_expire": "1",
+    "popup_newsletter_delay": "45",
+    "newsletter": "shopify://shop_images/gavels_popup.jpg",
+    "popup_newsletter_title": "Join Our Mailing List",
+    "popup_newsletter_des": "Sign Up for exclusive updates,  <br>new arrivals & insider-only discounts",
+    "popup_newsletter_text_note": "No, thanks",
+    "newssletter_success_text": "You have successfully subscribed!",
+    "display_popup_social": true,
+    "enable_ask_an_expert": false,
+    "ask_an_expert": "<i class=\"fa fa-question-circle\"></i><span class=\"text\">Have Questions?</span><a href=\"javascript:void(0)\" title=\"Ask An Expert\">Ask An Expert</a>",
+    "ask_an_expert_header": "Have Questions?",
+    "ask_an_expert_title": "Ask the Fashion Expert anything on Ella Boutique",
+    "ask_an_expert_des": "We will follow up with you via email within 24-36 hours",
+    "ask_an_expert_questions": "Please answer the following questionnaire",
+    "enable_ask_do_you_need": true,
+    "ask_do_you_need": "Do You Need:",
+    "ask_do_you_need_1": "Pricing",
+    "ask_do_you_need_2": "Answers",
+    "ask_do_you_need_3": "Both",
+    "ask_form_mess": "What can i help you with today ?",
+    "enable_how_would_you_like_me_to_contact_you": true,
+    "how_would_you_like_me_to_contact_you": "How would you like me to contact you?",
+    "contact_with_you_1": "Phone",
+    "contact_with_you_2": "Email",
+    "contact_with_you_3": "Both",
+    "enable_recently_viewed_products": false,
+    "enable_recently_viewed_products_mb": false,
+    "layout_recently": "default",
+    "icon_logo_empty": "",
+    "logo_empty_svg": "",
+    "empty_text": "Sorry, there are no products.",
+    "recently_viewed_products_title": "",
+    "recently_viewed_products_cart": true,
+    "number_of_recently_viewed_products": 0,
+    "recently_viewed_products_expires_date": 0,
+    "enable_promotion": true,
+    "background_pro": "#edebf7",
+    "color_pro": "#3c3c3c",
+    "promotion_text_1": "",
+    "promotion_text_2": "",
+    "promotion_text_3": "",
+    "btt_text": "Top",
+    "social_facebook_link": "https://www.facebook.com/gavelsfast1",
+    "social_twitter_link": "",
+    "social_vimeo_link": "",
+    "social_instagram_link": "https://www.instagram.com/gavelsfast/?hl=en",
+    "social_google_plus_link": "",
+    "social_pinterest_link": "",
+    "social_tumblr_link": "",
+    "social_snapchat_link": "",
+    "social_youtube_link": "",
+    "body_bg": "#ffffff",
+    "body_color": "#3c3c3c",
+    "link_color": "#a79344",
+    "link_color_hover": "#232323",
+    "breadcrumb_color": "#999999",
+    "page_title_color": "#232323",
+    "btn_1_bg_color": "#a79344",
+    "btn_1_border_color": "#a79344",
+    "btn_1_text_color": "#ffffff",
+    "btn_2_bg_color": "#fff",
+    "btn_2_border_color": "#867c35",
+    "btn_2_text_color": "#867c35",
+    "btn_3_bg_color": "#232f3e",
+    "btn_3_border_color": "#232f3e",
+    "btn_3_text_color": "#ffffff",
+    "bg_menu_mb": "#fff",
+    "color_menu_mb": "#232323",
+    "border_color_menu_mb": "#ebebeb",
+    "color_menu_mb_lv1": "#232323",
+    "color_menu_mb_lv1_hover": "#a79344",
+    "bg_color_menu_mb_lv1_hover": "#f8f8f8",
+    "color_menu_mb_lv2": "#232323",
+    "color_menu_mb_lv2_hover": "#232323",
+    "color_menu_mb_lv3": "#3c3c3c",
+    "color_menu_mb_lv3_hover": "#a79344",
+    "color_title_product": "#232323",
+    "color_title_product_hover": "#232323",
+    "color_vendor": "#232323",
+    "color_price": "#232323",
+    "color_price_sale": "#e95144",
+    "color_compare_price": "#969696",
+    "color_quick_view": "#ffffff",
+    "bg_quick_view": "#000000",
+    "color_wishlist": "#232323",
+    "bg_wishlist": "#ffe5e5",
+    "sale_text": "#fff",
+    "bg_sale": "#e95144",
+    "custom_label_text": "#fff",
+    "custom_label_bg": "#323232",
+    "bundle_label_text": "#fff",
+    "bundle_label_bg": "#232323",
+    "new_label_text": "#323232",
+    "new_label_bg": "#fff",
+    "new_label_border": "#f6f6f6",
+    "sold_out_text": "#fff",
+    "bg_sold_out": "#c1c1c1",
+    "bg_sticky": "#fff",
+    "color_sticky": "#3c3c3c",
+    "color_variants": "#646464",
+    "checkout_header_image": "",
+    "checkout_logo_image": "shopify://shop_images/logo.png",
+    "checkout_logo_position": "center",
+    "checkout_logo_size": "medium",
+    "checkout_body_background_image": "",
+    "checkout_body_background_color": "#f8f8f8",
+    "checkout_input_background_color_mode": "white",
+    "checkout_sidebar_background_image": "",
+    "checkout_sidebar_background_color": "#fafafa",
+    "checkout_heading_font": "Helvetica Neue",
+    "checkout_body_font": "Helvetica Neue",
+    "checkout_accent_color": "#232f3e",
+    "checkout_button_color": "#a79344",
+    "checkout_error_color": "#ff6d6d",
+    "enable_sidebar_multiple_choice": true,
+    "collection_infinite_scrolling": true,
+    "infinity_scroll_feature": true,
+    "secure_text": "Secure Shopping Guarantee.",
+    "enable_multilang": false,
+    "mailing_list_form_action": "//myshopify.us9.list-manage.com/subscribe/post?u=f03cabb421b3912425cda25cc&amp;id=2b084b0139",
+    "checkout_use_header_image": true,
+    "checkout_logo": "checkout_logo.png",
+    "checkout_use_body_background_image": false,
+    "checkout_use_sidebar_background_image": false,
+    "checkout_banner_background_color": "#ffffff",
+    "checkout_headline": "",
+    "checkout_call_to_action_color": "#000000",
+    "customer_layout": "theme",
+    "search_placeholder": "Suche | search",
+    "sections": {
+      "footer-5": {
+        "type": "footer-5",
+        "blocks": {
+          "1550802143506": {
+            "type": "footer_link",
+            "settings": {
+              "footer_title": "Shop",
+              "footer_linklist": "shop-1"
+            }
+          },
+          "1550802158689": {
+            "type": "footer_link",
+            "settings": {
+              "footer_title": "Other Links",
+              "footer_linklist": "shop-2"
+            }
+          },
+          "1550802180789": {
+            "type": "footer_link",
+            "settings": {
+              "footer_title": "Information",
+              "footer_linklist": "information"
+            }
+          },
+          "1550802190426": {
+            "type": "info_store",
+            "settings": {
+              "info_icon_1": "<i class=\"fa fa-map-marker\"></i>",
+              "info_text_1": "Signal Hill, CA 90755",
+              "info_icon_2": "<i class=\"fa fa-phone-square\"></i>",
+              "info_text_2": "Local: (310) 534-1138",
+              "info_icon_3": "<i class=\"fa fa-envelope-o\"></i>",
+              "info_text_3": "<a href=\"mailto:info@gavelsfast.com\" target=\"_blank\">info@gavelsfast.com</a>",
+              "footer_social_enable": true,
+              "footer_typography_label": true
+            }
+          }
+        },
+        "block_order": [
+          "1550802143506",
+          "1550802158689",
+          "1550802180789",
+          "1550802190426"
+        ],
+        "settings": {
+          "footer_border_top": false,
+          "bg_footer_img": "none",
+          "bg_footer_color": "#f8f8f8",
+          "bg_footer_position_x": "left",
+          "bg_footer_position_y": "top",
+          "bg_footer_repeat": "repeat",
+          "bg_footer_attachment": "scroll",
+          "footer_title_color": "#232f3e",
+          "footer_link_color": "#3c3c3c",
+          "footer_link_hover_color": "#3c3c3c",
+          "bg_footer_line_color": "#ebebeb",
+          "footer_newsletter_enable": true,
+          "footer_newsletter_title": "Newsletter Sign Up",
+          "des_newslette": "Receive our latest updates about our products and promotions.",
+          "bg_newsletter_color": "#ffffff",
+          "newsletter_color": "#9d9d9d",
+          "newsletter_border_color": "#d2d2d2",
+          "bg_newsletter_button_color": "#a79344",
+          "newsletter_button_color": "#ffffff",
+          "bg_footer_bottom_color": "#232f3e",
+          "footer_bottom_color": "#969696",
+          "footer_address_code": "© 2024 GavelsFast.com. All Rights Reserved.",
+          "show_payment_icons": true,
+          "payment_display_visa": true,
+          "payment_display_visa_electron": false,
+          "payment_display_american_express": true,
+          "payment_display_master": true,
+          "payment_display_maestro": false,
+          "payment_display_solo": false,
+          "payment_display_paypal": true,
+          "payment_display_amazon_payments": false,
+          "payment_display_apple_pay": false,
+          "payment_display_bitcoin": false,
+          "payment_display_cirrus": false,
+          "payment_display_dankort": false,
+          "payment_display_diners_club": false,
+          "payment_display_discover": true,
+          "payment_display_dogecoin": false,
+          "payment_display_dwolla": false,
+          "payment_display_forbrugsforeningen": false,
+          "payment_display_interac": false,
+          "payment_display_jcb": false,
+          "payment_display_litecoin": false,
+          "payment_display_stripe": false,
+          "payment_display_sage": false,
+          "payment_display_wallet": false,
+          "payment_display_western": false,
+          "icon_visa": "shopify://shop_images/mobile-receipt-visa.png",
+          "icon_master": "shopify://shop_images/mobile-receipt-mastercard.png",
+          "icon_american_express": "shopify://shop_images/mobile-receipt-amex.png",
+          "icon_paypal": "shopify://shop_images/PayPal_x32_png.jpg",
+          "icon_discover": "shopify://shop_images/Discover_x32_png.jpg"
+        }
+      },
+      "recently-viewed-products": {
+        "type": "recently-viewed-products",
+        "settings": {
+          "display_recently_viewed_products": true,
+          "recently_viewed_products_title": "Recently Viewed Products",
+          "number_of_recently_viewed_products": "10"
+        }
+      },
+      "contact-template": {
+        "type": "contact-template",
+        "settings": {
+          "display_google_map": true,
+          "google_map_code": "<iframe src=\"https://maps.google.com/maps?f=q&source=s_q&hl=vi&geocode=&q=4+Nguy%E1%BB%85n+%C4%90%C3%ACnh+chi%E1%BB%83u,+%C4%90a+Kao,+Qu%E1%BA%ADn+1&aq=&sll=37.0625,-95.677068&sspn=41.903538,86.572266&ie=UTF8&hq=&hnear=4+Nguy%E1%BB%85n+%C4%90%C3%ACnh+Chi%E1%BB%83u,+%C4%90a+Kao,+Qu%E1%BA%ADn+1,+H%E1%BB%93+Ch%C3%AD+Minh,+Vi%E1%BB%87t+Nam&t=m&ll=10.797518,106.700377&spn=0.014754,0.071197&z=15&iwloc=A&output=embed\" frameborder=\"0\" marginwidth=\"0\" marginheight=\"0\" scrolling=\"no\" width=\"100%\" height=\"350\"></iframe>",
+          "contact_title": "DROP US A LINE | Schreiben Sie uns",
+          "contact_text_desc": "Have a question or comment? Use the form below to send us a message or contact us by mail at:",
+          "contact_your_name": "",
+          "contact_phone_number": "",
+          "contact_your_email": "",
+          "display_location": true,
+          "location_code": "<h4>Store Information</h4>\n<p>We'd love to hear from you - please use the form to send us your message or ideas. Or simply pop in for a cup of fresh tea and a cookie:</p>\n<p class=\"addr\">8808 Ave Dermentum, Onsectetur Adipiscing<br>Tortor Sagittis, CA 880986,<br>United States\n</p>\n\n<p class=\"addr\">Email: <a href=\"mailto:support@halothemes.com\">support@halothemes.com</a><br>Toll-free: <strong>1-888-699-8900</strong></p><div class=\"open-hours\">\n<strong>Opening Hours:</strong>\n<br>Monday to Saturday: 9am - 10pm\n<br>Sundays: 10am - 6pm\n<p></p>\n</div>"
+        }
+      },
+      "lookbook": {
+        "type": "lookbook",
+        "blocks": {
+          "1489975455753": {
+            "type": "image",
+            "settings": {
+              "dpl_slide_img": true,
+              "image_slide": "",
+              "alignment": "left",
+              "heading": "",
+              "font_size_heading": "40px",
+              "color_heading": "#232323",
+              "slide-des": "",
+              "font_size_des": "12px",
+              "color_des": "#232323",
+              "button_slide": "",
+              "link": "",
+              "bg_button": "#232323",
+              "border_button": "#232323",
+              "color_button": "#fff",
+              "lb_product_1": "",
+              "top_position_1": "41",
+              "left_position_1": "55",
+              "dots_color_1": "#fff",
+              "dots_bg_color_1": "#323232",
+              "dots_shadow_color_1": "#323232",
+              "lb_product_2": "",
+              "top_position_2": "10",
+              "left_position_2": "10",
+              "dots_color_2": "#fff",
+              "dots_bg_color_2": "#323232",
+              "dots_shadow_color_2": "#fff",
+              "lb_product_3": "",
+              "top_position_3": "10",
+              "left_position_3": "10",
+              "dots_color_3": "#fff",
+              "dots_bg_color_3": "#323232",
+              "dots_shadow_color_3": "#fff"
+            }
+          },
+          "1489975477125": {
+            "type": "image",
+            "settings": {
+              "dpl_slide_img": true,
+              "image_slide": "",
+              "alignment": "left",
+              "heading": "",
+              "font_size_heading": "40px",
+              "color_heading": "#232323",
+              "slide-des": "",
+              "font_size_des": "12px",
+              "color_des": "#232323",
+              "button_slide": "",
+              "link": "",
+              "bg_button": "#232323",
+              "border_button": "#232323",
+              "color_button": "#fff",
+              "lb_product_1": "",
+              "top_position_1": "34",
+              "left_position_1": "19",
+              "dots_color_1": "#fff",
+              "dots_bg_color_1": "#323232",
+              "dots_shadow_color_1": "#323232",
+              "lb_product_2": "",
+              "top_position_2": "81",
+              "left_position_2": "48",
+              "dots_color_2": "#fff",
+              "dots_bg_color_2": "#323232",
+              "dots_shadow_color_2": "#323232",
+              "lb_product_3": "",
+              "top_position_3": "10",
+              "left_position_3": "10",
+              "dots_color_3": "#fff",
+              "dots_bg_color_3": "#323232",
+              "dots_shadow_color_3": "#fff"
+            }
+          },
+          "1532404848065": {
+            "type": "image",
+            "settings": {
+              "dpl_slide_img": true,
+              "image_slide": "",
+              "alignment": "left",
+              "heading": "",
+              "font_size_heading": "40px",
+              "color_heading": "#232323",
+              "slide-des": "",
+              "font_size_des": "12px",
+              "color_des": "#232323",
+              "button_slide": "",
+              "link": "",
+              "bg_button": "#232323",
+              "border_button": "#232323",
+              "color_button": "#fff",
+              "lb_product_1": "",
+              "top_position_1": "28",
+              "left_position_1": "33.5",
+              "dots_color_1": "#fff",
+              "dots_bg_color_1": "#323232",
+              "dots_shadow_color_1": "#323232",
+              "lb_product_2": "",
+              "top_position_2": "84",
+              "left_position_2": "40",
+              "dots_color_2": "#fff",
+              "dots_bg_color_2": "#323232",
+              "dots_shadow_color_2": "#323232",
+              "lb_product_3": "",
+              "top_position_3": "10",
+              "left_position_3": "10",
+              "dots_color_3": "#fff",
+              "dots_bg_color_3": "#323232",
+              "dots_shadow_color_3": "#fff"
+            }
+          }
+        },
+        "block_order": [
+          "1489975455753",
+          "1489975477125",
+          "1532404848065"
+        ],
+        "settings": {
+          "display_product_detail_share": true,
+          "share_text": "Share",
+          "button": "Shop LookBook",
+          "link": "shopify://collections/all",
+          "autoplay": false,
+          "speed": "5000",
+          "transition": "true",
+          "arrow_color": "#727272",
+          "arrow_border_color": "#d3d3d3",
+          "arrow_bg_color": "#ffffff",
+          "position_slick_arrow": "-35px"
+        }
+      },
+      "faq-page": {
+        "type": "faq-page",
+        "blocks": {
+          "1507878888245": {
+            "type": "text",
+            "settings": {}
+          },
+          "1507879626512": {
+            "type": "text",
+            "settings": {}
+          },
+          "1586416186431": {
+            "type": "text",
+            "settings": {}
+          }
+        },
+        "block_order": [
+          "1507878888245",
+          "1507879626512",
+          "1586416186431"
+        ],
+        "settings": {
+          "des_faqs": "",
+          "contact_text": "Unable to find satisfactory answers ?",
+          "contact_link_text": "Contact Us",
+          "contact_link": "mailto:info@gavelsfast.com",
+          "icon_faqs": "Question",
+          "bg_icon_qs": "#232f3e",
+          "color_icon_qs": "#ffffff",
+          "bg_question": "#fafafa",
+          "color_question": "#323232",
+          "font_size_qs": "12",
+          "bg_question_acitve": "#232323",
+          "color_question_acitve": "#ffffff",
+          "icon_answer": "Answer",
+          "bg_icon_answer": "#a79344",
+          "color_icon_answer": "#ffffff",
+          "color_question_answer": "#3c3c3c",
+          "font_size_answer": "12",
+          "color_question_link": "#0688e2",
+          "icon_show": "Show",
+          "icon_hide": "Hide"
+        }
+      },
+      "brands-page": {
+        "type": "brands-page",
+        "blocks": {
+          "1546921086313": {
+            "type": "image",
+            "settings": {
+              "image": "",
+              "title": "Loremous",
+              "link": ""
+            }
+          },
+          "1546921152681": {
+            "type": "image",
+            "settings": {
+              "image": "",
+              "title": "Isablella",
+              "link": ""
+            }
+          },
+          "1546921217742": {
+            "type": "image",
+            "settings": {
+              "image": "",
+              "title": "Benjamin Button",
+              "link": ""
+            }
+          },
+          "1546921256644": {
+            "type": "image",
+            "settings": {
+              "image": "",
+              "title": "Fermends",
+              "link": ""
+            }
+          },
+          "1546921290795": {
+            "type": "image",
+            "settings": {
+              "image": "",
+              "title": "conseqaur",
+              "link": ""
+            }
+          },
+          "1546921315910": {
+            "type": "image",
+            "settings": {
+              "image": "",
+              "title": "Benjamin Button",
+              "link": ""
+            }
+          }
+        },
+        "block_order": [
+          "1546921086313",
+          "1546921152681",
+          "1546921217742",
+          "1546921256644",
+          "1546921290795",
+          "1546921315910"
+        ],
+        "settings": {
+          "display_brand": true
+        }
+      },
+      "shop-instagram": {
+        "type": "shop-instagram",
+        "settings": {
+          "title": "Shop Instagram",
+          "des": "Nullam aliquet vestibulum augue non varius cras de congue elitos. Duis tristique delos ante an daliquam. Praesent urna tellus laoreet an tellus ullamcorper fermentum facilisis.",
+          "embed_code": "<script src=\"https://snapppt.com/widgets/widget_loader/33732d63-5077-4f49-a869-7d4ddc227b6f/grid.js\" defer class=\"snapppt-widget\"></script>"
+        }
+      },
+      "someone-purchased": {
+        "type": "someone-purchased",
+        "blocks": {
+          "1548643650260": {
+            "type": "image",
+            "settings": {
+              "product": "",
+              "from_ago": "from Blackburn, UK",
+              "time_ago": "20 minutes ago,"
+            }
+          },
+          "1548643708120": {
+            "type": "image",
+            "settings": {
+              "product": "",
+              "from_ago": "from Washington, US",
+              "time_ago": "30 minutes ago,"
+            }
+          },
+          "1548643726643": {
+            "type": "image",
+            "settings": {
+              "product": "",
+              "from_ago": "in Blumenau, Brazil",
+              "time_ago": "10 minutes ago,"
+            }
+          },
+          "1548643747526": {
+            "type": "image",
+            "settings": {
+              "product": "",
+              "from_ago": "from Bauru, Brazil",
+              "time_ago": "35 minutes ago,"
+            }
+          }
+        },
+        "block_order": [
+          "1548643650260",
+          "1548643708120",
+          "1548643726643",
+          "1548643747526"
+        ],
+        "settings": {
+          "display_someone-purchased": false,
+          "display_someone-purchased_mb": false,
+          "show_someone-purchased": "right",
+          "someone_speed": "7000",
+          "text": "Someone recently bought a",
+          "time_location_text": "[time] minutes ago, from [location]"
+        }
+      },
+      "GDPR-modal": {
+        "type": "GDPR-modal",
+        "settings": {
+          "display_gdpr": false,
+          "show_gdp": "left",
+          "bg_color": "#141414",
+          "text_color": "#ffffff",
+          "privacy_policy_color": "#818181",
+          "content": "The cookie settings on this website are set to 'allow all cookies' to give you the very best experience. Please click Accept Cookies to continue to use the site.",
+          "privacy_policy_text": "privacy policy",
+          "privacy_policy_link": "https://policies.google.com/",
+          "accept_cookies_text": "accept"
+        }
+      },
+      "header-supermarket": {
+        "type": "header-supermarket",
+        "settings": {
+          "display_header_top": false,
+          "header_top_image": "",
+          "top_message_text": "Mid-Season Sale up to 70% Off. End Ins:",
+          "countdown": "2020/01/7 0:0:00",
+          "bg_header_top": "#e95144",
+          "text_header_top_color": "#fff",
+          "brand_type": "image",
+          "brand_text": "",
+          "logo_max_width": 50,
+          "logo_text_color": "#000",
+          "logo_pc": "shopify://shop_images/logo.png",
+          "max_height_logo_pc": "50px",
+          "logo": "shopify://shop_images/logo.png",
+          "max_height_logo_mb": "30px",
+          "bg_header_middel": "#f8f8f8",
+          "header_middel_text_color": "#5a5a5a",
+          "header_middel_icon_color": "#c3c3c3",
+          "info_icon_1": "<i class=\"fa fa-phone-square\"></i>",
+          "info_text_1": "+1.800.000.6690",
+          "info_icon_2": "<i class=\"fa fa-envelope-o\"></i>",
+          "info_text_2": "<a href=\"mailto:support@halothemes.com\" target=\"_blank\">support@halothemes.com</a>",
+          "display_free_shipping": true,
+          "free_shipping_text": "FREE DELIVERY WORLDWIDE",
+          "free_shipping_color": "#d64123",
+          "header-link_1_text": "FAQs",
+          "header-link_1": "",
+          "header-link_2_text": "Contact Us",
+          "header-link_2": "",
+          "bg_header_bottom_color": "#fff",
+          "header_bottom_link_color": "#323232",
+          "header_bottom_icon_color": "#232323",
+          "bg_search_color": "#fff",
+          "search_color": "#323232",
+          "search_border_color": "#dcdcdc",
+          "bg_cart_color": "#e95144",
+          "cart_color": "#fff"
+        }
+      },
+      "navigation-supermarket": {
+        "type": "navigation-supermarket",
+        "blocks": {
+          "1551348746129": {
+            "type": "style_1",
+            "settings": {
+              "megamenu_items_1": "Bibendumetos",
+              "title_featured_product": "Featured Products",
+              "featured_product": "",
+              "banner_first_style_1": "",
+              "link_banner_first_style_1": ""
+            }
+          },
+          "1551348924698": {
+            "type": "style_5",
+            "settings": {
+              "megamenu_items_5": "Pellentes Habitanto",
+              "banner_first_style_5": "",
+              "link_banner_first_style_5": "shopify://collections",
+              "banner_second_style_5": "",
+              "link_banner_second_style_5": "shopify://collections/metropolis"
+            }
+          },
+          "1551439152375": {
+            "type": "style_3",
+            "settings": {
+              "megamenu_items_3": "Senectus"
+            }
+          },
+          "1551439497520": {
+            "type": "style_4",
+            "settings": {
+              "megamenu_items_4": "Consequatod",
+              "banner_first_style_4": "",
+              "link_banner_first_style_4": ""
+            }
+          }
+        },
+        "block_order": [
+          "1551348746129",
+          "1551348924698",
+          "1551439152375",
+          "1551439497520"
+        ],
+        "settings": {
+          "display_fixtop_menu": true,
+          "logo_fix": "",
+          "horizontal_linklist": "",
+          "fb_like_code_text": "Like us",
+          "social_facebook_link": "https://facebook.com/shopify",
+          "alignment": "left",
+          "display_vertical_menu": false,
+          "vertical_linklist": "",
+          "categories_title": "Categories",
+          "view_all": "View All",
+          "link_view_all": "shopify://collections/new-in",
+          "show_menu_at_mb": true,
+          "bg_title": "#f8f8f8",
+          "color_title": "#232323",
+          "color_view_all": "#848484",
+          "bg_menu": "#fff",
+          "bg_dropdown_menu": "#fff",
+          "color_menu_lv1": "#232323",
+          "hover_color_mnu_lv1": "#232323",
+          "font_size_mnu_lv1": "12px",
+          "color_menu_lv2": "#232323",
+          "hover_color_mnu_lv2": "#232323",
+          "font_size_mnu_lv2": "12px",
+          "color_menu_lv3": "#3c3c3c",
+          "hover_color_mnu_lv3": "#0688e2",
+          "font_size_mnu_lv3": "12px",
+          "enable_sale": true,
+          "lb_sale": "Sale",
+          "sale_item": "Collections",
+          "bg_lb_sale": "#ef6454",
+          "color_lb_sale": "#fff",
+          "enable_new": true,
+          "lb_new": "New",
+          "new_item": "Demo",
+          "bg_lb_new": "#06bfe2",
+          "color_lb_new": "#fff",
+          "enable_hot": true,
+          "lb_hot": "Hot",
+          "hot_item": "Shop Instagram,\nEXPRESS ORDER",
+          "bg_lb_hot": "#ffbb49",
+          "color_lb_hot": "#fff",
+          "display_megamenu": true
+        }
+      },
+      "header-04": {
+        "type": "header-04",
+        "settings": {
+          "brand_type": "text",
+          "brand_text": "",
+          "logo_max_width": 50,
+          "logo_text_color": "#000",
+          "logo_pc": "",
+          "max_height_logo_pc": "30px",
+          "logo": "",
+          "max_height_logo_mb": "26px",
+          "bg_search_color": "#fff",
+          "search_color": "#232323",
+          "search_color_border": "#3c3c3c",
+          "bg_cart_color": "#1e1e1e",
+          "cart_color": "#fff",
+          "horizontal_linklist": "main-menu",
+          "display_fixtop_menu": true,
+          "alignment": "left",
+          "bg_menu": "#fff",
+          "bg_dropdown_menu": "#f8f8f8",
+          "color_menu_lv1": "#232323",
+          "hover_color_mnu_lv1": "#232323",
+          "font_size_mnu_lv1": "13px",
+          "color_menu_lv2": "#232323",
+          "hover_color_mnu_lv2": "#232323",
+          "font_size_mnu_lv2": "12px",
+          "color_menu_lv3": "#3c3c3c",
+          "hover_color_mnu_lv3": "#0688e2",
+          "font_size_mnu_lv3": "12px",
+          "enable_sale": true,
+          "lb_sale": "Sale",
+          "sale_item": "",
+          "bg_lb_sale": "#ef6454",
+          "color_lb_sale": "#fff",
+          "enable_new": true,
+          "lb_new": "New",
+          "new_item": "",
+          "bg_lb_new": "#06bfe2",
+          "color_lb_new": "#fff",
+          "enable_hot": true,
+          "lb_hot": "Hot",
+          "hot_item": "",
+          "bg_lb_hot": "#ffbb49",
+          "color_lb_hot": "#fff",
+          "display_header_policies": true,
+          "policies_border_color": "#a7a7a7",
+          "policies_bg_color": "#232323",
+          "policies_color": "#fff",
+          "icon_1": "",
+          "text_1": "Free Shipping on all orders *",
+          "link_1": "",
+          "icon_2": "",
+          "text_2": "Free Shipping on all orders *",
+          "link_2": "",
+          "icon_3": "",
+          "text_3": "Free Shipping on all orders *",
+          "link_3": "",
+          "display_megamenu": true
+        }
+      },
+      "header-02": {
+        "type": "header-02",
+        "settings": {
+          "display_header_top": true,
+          "top_message_text": "Mid-Season Sale Up to 70% OFF.",
+          "bg_header_top": "#ffe8e8",
+          "text_header_top_color": "#b05d5d",
+          "brand_type": "text",
+          "brand_text": "",
+          "logo_max_width": 50,
+          "logo_text_color": "#000",
+          "logo_pc": "",
+          "max_height_logo_pc": "37px",
+          "logo": "",
+          "max_height_logo_mb": "26px",
+          "bg_header_bottom_color": "#fff",
+          "header_bottom_link_color": "#646464",
+          "bg_search_color": "#fff",
+          "search_color": "#646464",
+          "search_border_color": "#cbcbcb",
+          "bg_cart_color": "#fff",
+          "cart_color": "#646464"
+        }
+      },
+      "navigation": {
+        "type": "navigation",
+        "settings": {
+          "display_fixtop_menu": true,
+          "horizontal_linklist": "main-menu",
+          "alignment": "center",
+          "bg_menu": "#232f3e",
+          "bg_dropdown_menu": "#ffffff",
+          "color_menu_lv1": "#ffffff",
+          "hover_color_mnu_lv1": "#ffffff",
+          "font_size_mnu_lv1": "13px",
+          "text_transform_mnu_lv1": "uppercase",
+          "font_weight_mnu_lv1": "700",
+          "letter_spacing_mnu_lv1": ".05em",
+          "color_menu_lv2": "#232323",
+          "hover_color_mnu_lv2": "#232323",
+          "font_size_mnu_lv2": "12px",
+          "text_transform_mnu_lv2": "uppercase",
+          "font_weight_mnu_lv2": "600",
+          "letter_spacing_mnu_lv2": "0",
+          "color_menu_lv3": "#3c3c3c",
+          "hover_color_mnu_lv3": "#0688e2",
+          "font_size_mnu_lv3": "12px",
+          "text_transform_mnu_lv3": "none",
+          "font_weight_mnu_lv3": "400",
+          "letter_spacing_mnu_lv3": "0",
+          "enable_sale": true,
+          "lb_sale": "Sale",
+          "sale_item": "",
+          "bg_lb_sale": "#ef6454",
+          "color_lb_sale": "#ffffff",
+          "enable_new": true,
+          "lb_new": "New",
+          "new_item": "",
+          "bg_lb_new": "#06bfe2",
+          "color_lb_new": "#ffffff",
+          "enable_hot": true,
+          "lb_hot": "Hot",
+          "hot_item": "",
+          "bg_lb_hot": "#ffbb49",
+          "color_lb_hot": "#ffffff",
+          "display_megamenu": true,
+          "bg_style_new": "#eaeaea",
+          "bg_color_arrow": "#8c8c8c",
+          "color_arrow": "#ffffff"
+        }
+      },
+      "header": {
+        "type": "header",
+        "settings": {
+          "display_header_top": true,
+          "top_message_text": "Mid-Season Sale Up to 70% OFF.",
+          "bg_header_top": "#ffe8e8",
+          "text_header_top_color": "#b05d5d",
+          "brand_type": "text",
+          "brand_text": "",
+          "logo_max_width": 50,
+          "logo_text_color": "#000",
+          "logo_pc": "",
+          "max_height_logo_pc": "44px",
+          "logo": "",
+          "max_height_logo_mb": "26px",
+          "bg_search_color": "#fafafa",
+          "search_color": "#323232",
+          "search_border_color": "#e7e7e7",
+          "bg_header_bottom_color": "#fff",
+          "header_bottom_link_color": "#232323",
+          "header_bottom_text_color": "#323232",
+          "display_customer_service": true,
+          "customer_service_text": "Customer Service 1.900.000.6690",
+          "display_free_shipping": true,
+          "free_shipping_text": "Free shipping on All Orders. No Minimum Purchase",
+          "bg_cart_color": "#ffe5e5",
+          "cart_color": "#323232",
+          "dropdowncart_type": "hover"
+        }
+      },
+      "header-03": {
+        "type": "header-03",
+        "settings": {
+          "display_header_top": false,
+          "top_message_text": "Top Promotion Bar Description",
+          "font_weight_bold": false,
+          "bg_header_top": "#cf2525",
+          "text_header_top_color": "#ffffff",
+          "display_parallax": false,
+          "menu_parallax_color": "#c63333",
+          "bg_header_bottom_color_1": "#f8f8f8",
+          "bg_header_bottom_color": "#ffffff",
+          "header_bottom_icon_color": "#232f3e",
+          "header_bottom_text_color": "#646464",
+          "display_header_social": true,
+          "display_customer_service": false,
+          "customer_service_text": "<strong>FREE SHIPPING ON ALL ORDERS ( US ONLY )</strong>",
+          "display_free_shipping": false,
+          "free_shipping_text": "",
+          "brand_type": "image",
+          "brand_text": "",
+          "logo_max_width": 50,
+          "logo_text_color": "#000000",
+          "logo_pc": "shopify://shop_images/logo.png",
+          "max_height_logo_pc": "160px",
+          "logo": "shopify://shop_images/logo.png",
+          "max_height_logo_mb": "95px",
+          "bg_search_color": "#ffffff",
+          "search_color": "#848484",
+          "search_border_color": "#969696",
+          "bg_cart_color": "#e95144",
+          "cart_color": "#ffffff"
+        }
+      },
+      "product-recommendations": {
+        "type": "product-recommendations",
+        "settings": {
+          "display_related_products": true,
+          "related_products_title": "Related Products",
+          "number_of_related_products": "8"
+        }
+      },
+      "page-header": {
+        "type": "page-header",
+        "settings": {
+          "background": "shopify://shop_images/hero_gavels.jpg",
+          "text_color": "#ffffff",
+          "menu": "",
+          "menu_bar_background": "",
+          "menu_bar_border": "",
+          "menu_item_background": "",
+          "menu_item_text_color": "",
+          "menu_item_background_color_h": "",
+          "menu_item_text_color_h": ""
+        }
+      },
+      "contact-us-2-template": {
+        "type": "contact-us-2-template",
+        "settings": {
+          "contact_title": "Questions, comments, or suggestions?",
+          "contact_text_desc": "",
+          "form_title": "Send us an email:",
+          "form_subtitle": "ASK US ANYTHING! WE'LL GET BACK TO YOU AS SOON AS WE CAN!",
+          "contact_your_name": "",
+          "contact_phone_number": "",
+          "contact_your_email": "",
+          "display_location": true,
+          "background_color": "#fafafa",
+          "top_title": "Chat with us:",
+          "top_content": "We can be reached toll free or at our local phone number listed below. We look forward to hearing from you!\n<br>\nAddress: 636 S La Brea Ave, #1, Inglewood, CA 90301<br>\nHours: 9AM – 5PM PST<br>\nLocal: (310) 534-1138<br>",
+          "email_button": "Email us",
+          "email": "info@gavelsfast.com",
+          "email_button_bgc": "rgba(0,0,0,0)",
+          "email_button_txtc": "#232323",
+          "email_button_bdc": "#232323",
+          "email_button_bgc_h": "#232323",
+          "email_button_txtc_h": "#ffffff",
+          "email_button_bdc_h": "#232323",
+          "bot_title": "Chat with us:",
+          "bot_content": ""
+        }
+      },
+      "password-section": {
+        "type": "password-section",
+        "settings": {
+          "brand_type": "text",
+          "brand_text": "",
+          "brand_text_color": "#000",
+          "logo_pc": "",
+          "max_height_logo_pc": "44px",
+          "logo_mb": "",
+          "max_height_logo_mb": "25px",
+          "access_lable": "Early Access Login",
+          "access_lable_color": "#fff",
+          "banner": "shopify://shop_images/Gavel_page.jpg",
+          "overlay_color": "#422011",
+          "overlay_opacity": "0.15",
+          "heading": "Our new store will be  opening soon",
+          "heading_size": "30",
+          "subtitle": "",
+          "subtitle_size": "13",
+          "backbround_color": "#fff",
+          "text_color": "#000",
+          "display_newsletter": true,
+          "success_message": "Thanks for contacting us. We'll get back to you as soon as possible",
+          "display_product_detail_share": true,
+          "footer_address_code": ""
+        }
+      },
+      "home-custom-block-baner-collection-list": {
+        "type": "home-custom-block-baner-collection-list",
+        "settings": {
+          "layout": "default",
+          "margin_bottom_mb": 25,
+          "margin_bottom_tab": 30,
+          "margin_bottom": 30
+        }
+      },
+      "home-custom-product-collection-list": {
+        "type": "home-custom-product-collection-list",
+        "settings": {
+          "slider_collection_limit": 4,
+          "bg_collection_button": "#fff",
+          "border_collection_button": "#dadada",
+          "color_collection_button": "#27221b",
+          "min_width_collection_button": "252px",
+          "margin_bottom_mb": 40,
+          "margin_bottom_tab": 40,
+          "margin_bottom": 0
+        }
+      },
+      "home-store-info": {
+        "type": "home-store-info",
+        "blocks": {
+          "1599731242588": {
+            "type": "Text",
+            "settings": {
+              "icon": "<i class=\"fa fa-shield\" aria-hidden=\"true\" style=\"color:#A79344;\"></i>",
+              "title": "FREE SHIPPING",
+              "text": "We offer Free Shipping on all orders. Orders ship out within 48 hours, often faster"
+            }
+          },
+          "1599731246633": {
+            "type": "Text",
+            "settings": {
+              "icon": "<i class=\"fa fa-credit-card\" aria-hidden=\"true\" style=\"color:#A79344;\"></i>",
+              "title": "SECURE SHOPPING",
+              "text": "We accept all major credit cards and offer numerous other payment methods"
+            }
+          },
+          "1599731249175": {
+            "type": "Text",
+            "settings": {
+              "icon": "<i class=\"fa fa-shield\" aria-hidden=\"true\" style=\"color:#A79344;\"></i>",
+              "title": "REGISTER FOR AN ACCOUNT",
+              "text": "Receive bulk order discounts and special deals when you register for an account"
+            }
+          }
+        },
+        "block_order": [
+          "1599731242588",
+          "1599731246633",
+          "1599731249175"
+        ],
+        "settings": {
+          "layout": "default",
+          "border_block": "#ffffff",
+          "border_item": "#e3e3e3",
+          "margin_bottom_mb": 3,
+          "margin_bottom_tab": 0,
+          "margin_bottom": 0
+        }
+      },
+      "halo-toolbar-mobile": {
+        "type": "halo-toolbar-mobile",
+        "settings": {
+          "display_section": false,
+          "color_icon": "#232323",
+          "bg_color": "#ffffff",
+          "border_color": "#ffffff"
+        }
+      },
+      "gf_hero": {
+        "type": "gf-home-hero",
+        "blocks": {
+          "perk_1": {
+            "type": "perk",
+            "settings": {
+              "icon": "eye",
+              "title": "Live preview",
+              "text": "See it before you buy"
+            }
+          },
+          "perk_2": {
+            "type": "perk",
+            "settings": {
+              "icon": "pencil",
+              "title": "Easy to personalize",
+              "text": "Add text, logos and more"
+            }
+          },
+          "perk_3": {
+            "type": "perk",
+            "settings": {
+              "icon": "tag",
+              "title": "No minimum order",
+              "text": "Perfect for any size"
+            }
+          },
+          "perk_4": {
+            "type": "perk",
+            "settings": {
+              "icon": "truck",
+              "title": "Fast production",
+              "text": "Ships in 2–3 business days"
+            }
+          }
+        },
+        "block_order": [
+          "perk_1",
+          "perk_2",
+          "perk_3",
+          "perk_4"
+        ],
+        "settings": {
+          "eyebrow": "Recognition done right",
+          "title": "Personalize your gavel, plaque or gift —",
+          "title_accent": "see it before you buy.",
+          "subtitle": "Trusted by law firms, bar associations and institutions for over 20 years. Customize it live, approve the preview on screen, and we create it in our own shop.",
+          "primary_label": "Start designing",
+          "primary_link": "/products/custom-wooden-gavel",
+          "secondary_label": "Bulk & custom orders",
+          "secondary_link": "/pages/contact-us",
+          "designer_product": "custom-wooden-gavel",
+          "shot_alt": "The Gavels Fast designer showing a live 3D preview of a walnut gavel with personalized text on its gold band"
+        }
+      },
+      "gf_trust": {
+        "type": "gf-home-trust-bar",
+        "blocks": {
+          "trust_item_1": {
+            "type": "trust_item",
+            "settings": {
+              "icon": "pencil",
+              "title": "Easy to personalize",
+              "text": "Add names, titles and logos with our design tool."
+            }
+          },
+          "trust_item_2": {
+            "type": "trust_item",
+            "settings": {
+              "icon": "tag",
+              "title": "No minimum order",
+              "text": "Order a single piece or a set for the whole slate."
+            }
+          },
+          "trust_item_3": {
+            "type": "trust_item",
+            "settings": {
+              "icon": "truck",
+              "title": "Fast, reliable shipping",
+              "text": "Most personalized orders ship in 2–3 business days."
+            }
+          },
+          "trust_item_4": {
+            "type": "trust_item",
+            "settings": {
+              "icon": "shield",
+              "title": "Quality guaranteed",
+              "text": "Solid hardwood and brass, customized in our own shop."
+            }
+          }
+        },
+        "block_order": [
+          "trust_item_1",
+          "trust_item_2",
+          "trust_item_3",
+          "trust_item_4"
+        ],
+        "settings": {}
+      },
+      "gf_bestsellers": {
+        "type": "gf-home-bestsellers",
+        "settings": {
+          "eyebrow": "Customer favorites",
+          "title": "Our bestsellers",
+          "subtitle": "Our most popular gavels and sets — loved for quality and craftsmanship.",
+          "collection": "best-sellers-2024",
+          "products_to_show": 3,
+          "show_rank": true,
+          "show_vendor": false,
+          "card_link_label": "View details",
+          "view_all_label": "Shop all gavels",
+          "view_all_link": "/collections/gavels"
+        }
+      },
+      "gf_steps": {
+        "type": "gf-home-steps",
+        "blocks": {
+          "step_1": {
+            "type": "step",
+            "settings": {
+              "icon": "gavel",
+              "title": "Choose your piece",
+              "text": "A gavel on its own, with a sound block, or paired with a stand."
+            }
+          },
+          "step_2": {
+            "type": "step",
+            "settings": {
+              "icon": "layers",
+              "title": "Pick wood and finish",
+              "text": "American walnut, hardwood or ebony, with a gold or silver band."
+            }
+          },
+          "step_3": {
+            "type": "step",
+            "settings": {
+              "icon": "pencil",
+              "title": "Add your customization",
+              "text": "Type the names and titles, choose a font, and set each line."
+            }
+          },
+          "step_4": {
+            "type": "step",
+            "settings": {
+              "icon": "eye",
+              "title": "Preview and order",
+              "text": "Turn it, zoom in, approve the proof on screen, then add to cart."
+            }
+          }
+        },
+        "block_order": [
+          "step_1",
+          "step_2",
+          "step_3",
+          "step_4"
+        ],
+        "settings": {
+          "eyebrow": "How it works",
+          "title": "Design your gavel in 4 simple steps",
+          "subtitle": "No artwork files, no proofs by email, no waiting. Customize it and preview the finished look on screen.",
+          "cta_label": "Start designing",
+          "cta_link": "/products/custom-wooden-gavel"
+        }
+      },
+      "gf_categories": {
+        "type": "gf-home-categories",
+        "blocks": {
+          "category_1": {
+            "type": "category",
+            "settings": {
+              "collection": "gavels",
+              "title": "Gavels",
+              "text": "Classic walnut, rosewood and ebony gavels for courts and chambers.",
+              "image_product": "10-1-2-american-walnut-gavel",
+              "cta_label": "Shop gavels"
+            }
+          },
+          "category_2": {
+            "type": "category",
+            "settings": {
+              "collection": "gavel-sets",
+              "title": "Gavel Sets & Presentation Sets",
+              "text": "Boxed sets ready to present to an officer or an honoree.",
+              "cta_label": "Shop sets"
+            }
+          },
+          "category_3": {
+            "type": "category",
+            "settings": {
+              "collection": "sound-blocks",
+              "title": "Sound Blocks & Bands",
+              "text": "Square and round blocks, plus customizable solid brass bands.",
+              "cta_label": "Shop sound blocks"
+            }
+          },
+          "category_4": {
+            "type": "category",
+            "settings": {
+              "collection": "plaques",
+              "title": "Plaques",
+              "text": "Recognition, retirement and appreciation plaques.",
+              "image_product": "custom-logo-black-frame-wooden-award-plaque-easel-mount-option-upload-your-logo-recognition-of-achievement-and-service-personalizable-plaques",
+              "cta_label": "Shop plaques"
+            }
+          },
+          "category_5": {
+            "type": "category",
+            "settings": {
+              "collection": "desk-stands",
+              "title": "Desk Signs & Nameplates",
+              "text": "Acrylic and rosewood desk signs with custom nameplates.",
+              "cta_label": "Shop desk signs"
+            }
+          },
+          "category_6": {
+            "type": "category",
+            "settings": {
+              "collection": "gift-items",
+              "title": "Mugs & Gift Items",
+              "text": "Finishing touches for the whole slate of officers.",
+              "cta_label": "Shop gifts"
+            }
+          }
+        },
+        "block_order": [
+          "category_1",
+          "category_2",
+          "category_3",
+          "category_4",
+          "category_5",
+          "category_6"
+        ],
+        "settings": {
+          "eyebrow": "Shop by category",
+          "title": "Everything for the occasion",
+          "subtitle": "Gavels, presentation sets, plaques and desk signs — all customized in our own shop."
+        }
+      },
+      "gf_bulk": {
+        "type": "gf-home-bulk-social",
+        "blocks": {
+          "faq_1": {
+            "type": "faq",
+            "settings": {
+              "question": "How long does customization take?",
+              "answer": "<p>Most personalized gavels and plaques ship in 2–3 business days. Rush options are available if you have a ceremony date to hit.</p>"
+            }
+          },
+          "faq_2": {
+            "type": "faq",
+            "settings": {
+              "question": "Can I preview my customized item before I order?",
+              "answer": "<p>Yes. The design tool shows your text on the actual piece, so you can approve the finished look before ordering.</p>"
+            }
+          },
+          "faq_3": {
+            "type": "faq",
+            "settings": {
+              "question": "Is there a minimum order?",
+              "answer": "<p>No. Order a single gavel, or a matching set for an entire chapter.</p>"
+            }
+          },
+          "faq_4": {
+            "type": "faq",
+            "settings": {
+              "question": "Do you charge artwork or setup fees?",
+              "answer": "<p>No. Customization setup is included, and there are no artwork fees for text or standard logos.</p>"
+            }
+          },
+          "faq_5": {
+            "type": "faq",
+            "settings": {
+              "question": "Can I add a logo or a seal?",
+              "answer": "<p>Yes. Add it in the design tool, or send it over and we will place it for you and share a proof.</p>"
+            }
+          },
+          "faq_6": {
+            "type": "faq",
+            "settings": {
+              "question": "Do you offer volume pricing?",
+              "answer": "<p>Yes. Pricing drops at 10 pieces or more. Request a quote and we will reply within one business day.</p>"
+            }
+          }
+        },
+        "block_order": [
+          "faq_1",
+          "faq_2",
+          "faq_3",
+          "faq_4",
+          "faq_5",
+          "faq_6"
+        ],
+        "settings": {
+          "show_bulk_card": false,
+          "bulk_eyebrow": "Bulk & custom orders",
+          "bulk_title": "Outfitting a whole chapter, court or class?",
+          "bulk_text": "Tell us how many you need and how you want each item customized. We quote within one business day and handle the artwork for you.",
+          "bulk_points": "Volume pricing on 10 or more | Free customization setup — no artwork fees | Matching sets for officers and honorees | Purchase orders and net terms welcome",
+          "bulk_cta_label": "Request a bulk quote",
+          "bulk_cta_link": "/pages/contact-us",
+          "show_quote": false,
+          "quote": "The design tool showed me exactly what our customized gavel would look like, so there were no surprises. Our outgoing president was thrilled.",
+          "quote_name": "Karen D.",
+          "quote_role": "Bar association secretary",
+          "faq_title": "Common questions"
+        }
+      },
+      "gf_close": {
+        "type": "gf-home-closing-cta",
+        "settings": {
+          "a_eyebrow": "Ready when you are",
+          "a_title": "Design your gavel in minutes.",
+          "a_text": "Pick your wood, add your text, and see the finished piece on screen before you spend a dollar.",
+          "a_cta_label": "Start designing",
+          "a_cta_link": "/products/custom-wooden-gavel",
+          "b_eyebrow": "Need a hand?",
+          "b_title": "Talk to a customization specialist.",
+          "b_text": "Unusual wording, a logo, or a deadline to hit? Send us the details and we will tell you exactly what is possible.",
+          "b_cta_label": "Contact us",
+          "b_cta_link": "/pages/contact-us"
+        }
+      },
+      "gfwm-home-header": {
+        "type": "gfwm-home-header",
+        "settings": {
+          "announcement_left": "Personalized in our US facility",
+          "announcement_center": "Proof approved before personalization",
+          "announcement_right": "Most orders ship within 2 business days",
+          "search_placeholder": "Try “walnut gavel”",
+          "designer_product": "custom-wooden-gavel",
+          "bulk_page": "contact-us",
+          "gavels_collection": "gavels",
+          "sets_collection": "gavel-sets",
+          "plaques_collection": "plaques",
+          "desks_collection": "desk-stands",
+          "gifts_collection": "gift-items",
+          "designer_label": "Design your gavel",
+          "gavels_label": "Gavels",
+          "sets_label": "Gift & presentation sets",
+          "bulk_label": "Bulk & team orders",
+          "plaques_label": "Awards & plaques",
+          "desks_label": "Office & desk signs",
+          "gifts_label": "Gifts"
+        }
+      },
+      "gfwm_home": {
+        "type": "gfwm-homepage",
+        "settings": {
+          "designer_product": "custom-wooden-gavel",
+          "bulk_page": "contact-us",
+          "gavels_collection": "gavels",
+          "sets_collection": "gavel-sets",
+          "plaques_collection": "plaques",
+          "desks_collection": "desk-stands",
+          "gifts_collection": "gift-items",
+          "bestsellers": "best-sellers-2024",
+          "hero_eyebrow": "Recognition done right",
+          "hero_title": "Personalized gavels —",
+          "hero_accent": "see your design before you buy.",
+          "hero_text": "Chosen by law firms, bar associations, courts and student organizations. Build your gavel on screen, approve the proof, and we’ll personalize it at our own US facility.",
+          "hero_primary": "Start designing",
+          "hero_secondary": "Bulk & team orders",
+          "hero_note": "Proof approved before personalization · No minimum order",
+          "hero_alt": "Personalized walnut gavel on a desk beside the scales of justice",
+          "proof_label": "Live proof preview",
+          "proof_line": "MODEL U.N. 2026",
+          "proof_detail": "CHAIR · GOLD BAND",
+          "feature_alt": "Personalized gavel presentation set in a library setting"
+        }
+      },
+      "gfwm-home-footer": {
+        "type": "gfwm-home-footer",
+        "settings": {
+          "description": "Personalized gavels and recognition gifts for courts, associations, teams and milestone moments.",
+          "designer_product": "custom-wooden-gavel",
+          "bulk_page": "contact-us",
+          "gavels_collection": "gavels",
+          "sets_collection": "gavel-sets",
+          "plaques_collection": "plaques",
+          "desks_collection": "desk-stands"
+        }
+      }
+    },
+    "content_for_index": [
+      "gfwm_home"
+    ],
+    "blocks": {
+      "6052823664294247695": {
+        "type": "shopify://apps/qikify-form-builder/blocks/app-embed/753fa0d7-50d4-480a-b094-cff26e632c36",
+        "disabled": false,
+        "settings": {}
+      }
+    }
+  },
+  "presets": {
+    "Default": {
+      "search_placeholder": "search",
+      "mailing_list_form_action": "//halothemes.us3.list-manage.com/subscribe/post?u=0bf85dc81d846feb53a235178&amp;id=89ea28643a",
+      "body_font_size": "12",
+      "body_color": "#3c3c3c",
+      "display_breadcrumb": true,
+      "breadcrumb_color": "#999999",
+      "breadcrumb_text_transform": "capitalize",
+      "page_title_color": "#232323",
+      "page_title_text_align": "left",
+      "display_popup_newsletter": true,
+      "popup_newsletter_title": "Join Our Mailing List",
+      "display_popup_social": true,
+      "enable_wishlist": true,
+      "product_image_border": false,
+      "product_image_border_color": "#e6e6e6",
+      "use_color_swatch": true,
+      "display_size_chart": true,
+      "display_product_reviews": true,
+      "enable_quick_view": true,
+      "display_quickview_availability": true,
+      "display_quickview_product_type": true,
+      "display_quickview_vendor": true,
+      "display_quickview_subtotal": true,
+      "show_shipping_calculator": true,
+      "shipping_calculator_heading": "Get shipping estimates",
+      "shipping_calculator_default_country": "United States",
+      "shipping_calculator_submit_button_label": "Calculate Shipping",
+      "shipping_calculator_submit_button_label_disabled": "Calculating...",
+      "enable_multiple_currencies": true,
+      "currency_1_unit": "USD",
+      "currency_2_unit": "EUR",
+      "currency_3_unit": "GBP",
+      "currency_4_unit": "CHF",
+      "checkout_use_header_image": true,
+      "checkout_banner_background_color": "#ffffff",
+      "checkout_logo": "checkout_logo.png",
+      "checkout_headline": "",
+      "checkout_accent_color": "#2d2d2d",
+      "checkout_button_color": "#000000",
+      "checkout_call_to_action_color": "#000000",
+      "customer_layout": "theme",
+      "link_color": "#0688e2"
+    }
+  }
+}

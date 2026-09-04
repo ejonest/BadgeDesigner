@@ -138,7 +138,9 @@ export async function generateGavelProofPdf(
     );
   }
   if (input.soundBlock === "engraved" && (input.soundBlockText ?? "").trim()) {
-    specLines.push(`Sound block: ${(input.soundBlockText ?? "").trim()}`);
+    specLines.push(
+      `Sound block: ${(input.soundBlockText ?? "").trim().replace(/\n+/g, " / ")}`,
+    );
   }
   const plateFilled = (input.plateLines ?? []).filter((l) =>
     (l.text ?? "").trim(),

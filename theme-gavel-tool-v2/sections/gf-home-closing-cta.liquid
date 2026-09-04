@@ -1,0 +1,124 @@
+{%- comment -%}
+  Gavels Fast — homepage closing CTA pair.
+{%- endcomment -%}
+
+{{ 'gf-homepage.css' | asset_url | stylesheet_tag }}
+
+<section class="gf-home gf-section gf-section--cream gf-close">
+  <div class="gf-container">
+    <div class="gf-close__grid">
+      <div class="gf-close__card gf-close__card--gold">
+        <p class="gf-close__eyebrow">{{ section.settings.a_eyebrow | escape }}</p>
+        <h2 class="gf-close__title">{{ section.settings.a_title | escape }}</h2>
+        {%- if section.settings.a_text != blank -%}
+          <p class="gf-close__text">{{ section.settings.a_text | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.a_cta_label != blank -%}
+          <a
+            href="{{ section.settings.a_cta_link | default: '#' }}"
+            class="gf-btn gf-btn--navy"
+          >
+            {{ section.settings.a_cta_label | escape }}
+          </a>
+        {%- endif -%}
+      </div>
+
+      <div class="gf-close__card gf-close__card--navy">
+        <p class="gf-close__eyebrow">{{ section.settings.b_eyebrow | escape }}</p>
+        <h2 class="gf-close__title">{{ section.settings.b_title | escape }}</h2>
+        {%- if section.settings.b_text != blank -%}
+          <p class="gf-close__text">{{ section.settings.b_text | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.b_cta_label != blank -%}
+          <a
+            href="{{ section.settings.b_cta_link | default: '#' }}"
+            class="gf-btn gf-btn--gold"
+          >
+            {{ section.settings.b_cta_label | escape }}
+          </a>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "GF Closing CTA",
+  "class": "gf-home-close-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Left card (gold)"
+    },
+    {
+      "type": "text",
+      "id": "a_eyebrow",
+      "label": "Eyebrow",
+      "default": "Ready when you are"
+    },
+    {
+      "type": "text",
+      "id": "a_title",
+      "label": "Heading",
+      "default": "Design your gavel in minutes."
+    },
+    {
+      "type": "textarea",
+      "id": "a_text",
+      "label": "Text",
+      "default": "Pick your wood, add your text, and see the finished piece on screen before you spend a dollar."
+    },
+    {
+      "type": "text",
+      "id": "a_cta_label",
+      "label": "Button label",
+      "default": "Start designing"
+    },
+    {
+      "type": "url",
+      "id": "a_cta_link",
+      "label": "Button link"
+    },
+    {
+      "type": "header",
+      "content": "Right card (navy)"
+    },
+    {
+      "type": "text",
+      "id": "b_eyebrow",
+      "label": "Eyebrow",
+      "default": "Need a hand?"
+    },
+    {
+      "type": "text",
+      "id": "b_title",
+      "label": "Heading",
+      "default": "Talk to a customization specialist."
+    },
+    {
+      "type": "textarea",
+      "id": "b_text",
+      "label": "Text",
+      "default": "Unusual wording, a logo, or a deadline to hit? Send us the details and we will tell you exactly what is possible."
+    },
+    {
+      "type": "text",
+      "id": "b_cta_label",
+      "label": "Button label",
+      "default": "Contact us"
+    },
+    {
+      "type": "url",
+      "id": "b_cta_link",
+      "label": "Button link"
+    }
+  ],
+  "presets": [
+    {
+      "name": "GF Closing CTA",
+      "category": "Gavels Fast"
+    }
+  ]
+}
+{% endschema %}

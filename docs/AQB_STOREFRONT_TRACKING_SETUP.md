@@ -43,6 +43,34 @@ In the **All Quality Badges** Shopify admin:
 Do not paste this into `theme.liquid`, checkout Additional scripts, or the
 existing GA4 designer-events pixel.
 
+### Why this is a second pixel
+
+The designer pixel loads `gtag` and forwards `aqb:*` events to GA4. This one
+only writes to Supabase. Keeping them apart means the Supabase log can be
+disconnected without touching GA4 or Google Ads reporting, an error in one
+pixel cannot stop the other from firing, and the designer pixel keeps the
+"`aqb:*` only" rule from the original brief so GA4 never double-counts
+purchases or add-to-cart.
+
+Both pixels see the same Shopify visitor ID in `event.clientId`, so splitting
+them costs nothing when joining data later.
+
+### Custom pixel editor constraints
+
+The editor rejects code that the validator cannot statically analyse. Two
+things it will not accept:
+
+- `analytics.subscribe("page_viewed", send)` — a shared or named callback
+  reference, or subscriptions created in a loop. Each subscription needs its
+  own inline callback function.
+- `new URL(...)` and `new URLSearchParams(...)` — not guaranteed sandbox
+  globals. The pixel parses the path, referrer, and UTM values with string and
+  regex helpers instead.
+
+Only `fetch`, `JSON`, and core ECMAScript objects are used. There are no
+references to `window`, `document`, `navigator`, or the DOM; page and referrer
+values come from the `event.context.document` snapshot Shopify passes in.
+
 ## 4. Test without placing an order
 
 Open a private browser window after granting analytics consent, then:

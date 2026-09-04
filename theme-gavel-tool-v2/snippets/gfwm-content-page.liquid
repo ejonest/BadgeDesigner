@@ -1,0 +1,189 @@
+{% doc %}
+Renders approved informational page copy for the Custom Gavel Tool V2 theme.
+
+@param {string} page_handle - The Shopify page handle to render.
+{% enddoc %}
+
+{{ 'gfwm-content-pages.css' | asset_url | stylesheet_tag }}
+
+<div class="gfwm-content">
+  {% case page_handle %}
+    {% when 'about-us' %}
+      <p class="gfwm-content__eyebrow">Recognition, done properly</p>
+      <p class="gfwm-content__lead">A gavel is not an ordinary gift. It gets handed over at a retirement dinner, a swearing-in, a final committee meeting — moments where the object has to carry some weight. That is the part we care about getting right.</p>
+      <p>Gavels Fast supplies ceremonial gavels, sound blocks, stands and award plaques to courts, law firms, bar associations, Model UN chapters, debate teams, school districts and boards across the United States.</p>
+
+      <section>
+        <h2>What we do here</h2>
+        <p>Our gavels are made from solid hardwood in four options: walnut, hardwood, ebony, and American walnut. The personalization is the part we do ourselves. Every personalized band, sound block and award plate is produced to order at our own facility in Signal Hill, California — which is why an order can be with you in days rather than sitting in a queue overseas.</p>
+      </section>
+
+      <section>
+        <h2>See it before you buy</h2>
+        <p>Most personalization goes wrong in the same place: nobody sees the wording until it arrives. Our design tool shows your gavel as you type, then produces a flat proof of the exact band before you order. What you approve is exactly what we produce.</p>
+      </section>
+
+      <section>
+        <h2>One gavel or three hundred</h2>
+        <p>There is no minimum. A single retirement gift and a 200-unit Model UN conference run through the same process. For bulk orders, upload a spreadsheet of names or roles and one shared design is applied to every piece.</p>
+      </section>
+
+      <aside class="gfwm-content__contact">
+        <p>Questions, or an unusual request?</p>
+        <a href="tel:+13105341138">(310) 534-1138</a>
+        <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a>
+      </aside>
+
+    {% when 'contact-us' %}
+      <div class="gfwm-content__contact-grid">
+        <div>
+          <h2>Phone</h2>
+          <a href="tel:+13105341138">(310) 534-1138</a>
+        </div>
+        <div>
+          <h2>Email</h2>
+          <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a>
+        </div>
+        <div>
+          <h2>Address</h2>
+          <address>Gavels Fast<br>2782 Gundry Ave<br>Signal Hill, CA 90755<br>United States</address>
+        </div>
+      </div>
+      <p class="gfwm-content__lead">We answer email within one business day. For bulk or tiered pricing, put “Tiered Pricing” in the subject line and include the type and quantity of gavels and sound blocks you need — we will come back with a quote in 1–2 business days.</p>
+
+      <section>
+        <h2>What to include</h2>
+        <ul>
+          <li><strong>Bulk enquiries:</strong> quantity, product type, whether you need sound blocks, and the date you need them by.</li>
+          <li><strong>Logos and crests:</strong> send the artwork with your enquiry as a JPG, PNG or SVG. A transparent background works best. There is no extra charge for adding a logo.</li>
+          <li><strong>Existing orders:</strong> include your order number.</li>
+        </ul>
+      </section>
+
+    {% when 'faqs' %}
+      <p class="gfwm-content__lead">Below are the questions we are asked most often.</p>
+
+      <div class="gfwm-content__faqs">
+        <details open>
+          <summary>Can I customize my gavel?</summary>
+          <p>Yes. You can add custom wording to the metal band on the gavel, to the top of a sound block, and to the front plate on a gavel stand. Use the design tool on this site to build it and see a proof, or email us directly with what you need.</p>
+        </details>
+        <details>
+          <summary>Can I add a logo or crest?</summary>
+          <p>Yes, at no extra charge. Logos can be printed on sound block tops and stand plates. Send the artwork to <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a> — JPG, PNG or SVG, ideally with a transparent background. We will send a draft proof for approval before anything is produced.</p>
+          <p>Logos cannot be applied to the gavel band itself, which takes text only.</p>
+        </details>
+        <details>
+          <summary>Are your gavels genuine wood?</summary>
+          <p>Yes. Our gavels are solid hardwood, available in walnut, hardwood, ebony and American walnut.</p>
+        </details>
+        <details>
+          <summary>Where are you based?</summary>
+          <p>We are a US company based in Signal Hill, California, and we ship from our own facility there.</p>
+        </details>
+        <details>
+          <summary>Where is the personalization done?</summary>
+          <p>At our own facility in Signal Hill. We personalize your wording to order in the US, which is why orders ship in days rather than waiting on an overseas queue.</p>
+        </details>
+        <details>
+          <summary>Do you ship internationally?</summary>
+          <p>We ship free within the continental United States and offer paid shipping to Canada. We do not currently ship anywhere else.</p>
+        </details>
+        <details>
+          <summary>How quickly will my order ship?</summary>
+          <p>Most orders are dispatched within 2 business days, and we can often ship the same day. If you have a date to hit, tell us and we will confirm whether we can make it before you order.</p>
+        </details>
+        <details>
+          <summary>Do you offer bulk or volume pricing?</summary>
+          <p>Yes. We work regularly with high schools, law schools, universities, Model UN and mock trial teams, debating clubs and conferences.</p>
+          <p>Email <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a> with “Tiered Pricing” in the subject line, telling us the type and quantity of gavels and sound blocks you need. We will come back within 1–2 business days. We can customize individual names and titles across a whole order, and logos can be included.</p>
+        </details>
+        <details>
+          <summary>Can every gavel in a bulk order have a different name?</summary>
+          <p>Yes. Upload a spreadsheet with one row per name or role and one shared design is applied to every piece, with the individual wording varying per gavel.</p>
+        </details>
+        <details>
+          <summary>What is your returns policy?</summary>
+          <p>If an item arrives damaged, or the personalization is wrong through our error, we will replace or refund it — contact us within 30 days.</p>
+          <p>Non-customized items can be returned within 30 days if unused and in their original packaging.</p>
+          <p>Customized items cannot be returned or refunded unless the fault is ours. This is why we show you a proof before anything is produced. Please check it carefully.</p>
+        </details>
+      </div>
+
+      <aside class="gfwm-content__contact">
+        <p>Not seeing your question?</p>
+        <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a>
+        <a href="tel:+13105341138">(310) 534-1138</a>
+      </aside>
+
+    {% when 'returns-exchange' %}
+      <p class="gfwm-content__lead">Our returns policy for personalized and non-customized items.</p>
+
+      <section>
+        <h2>Personalized and customized items</h2>
+        <p>Personalized items cannot be returned or refunded. Once your wording has been added, the item cannot be resold, so we are unable to accept it back.</p>
+        <p>This is why every order goes through a proof. You see a flat image of your exact band, sound block or plate before anything is produced. Please check spelling, dates and titles carefully before approving — that proof is what we produce.</p>
+      </section>
+
+      <section>
+        <h2>If something is wrong with your order</h2>
+        <p>If your item arrives damaged, or the personalization does not match the proof you approved, that is our error and we will put it right. Contact us within 30 days of delivery at <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a> with your order number and a photograph. We will replace the item or refund you in full.</p>
+      </section>
+
+      <section>
+        <h2>Non-customized items</h2>
+        <p>Items with no personalization can be returned within 30 days of delivery, provided they are unused, in their original packaging, and you have proof of purchase.</p>
+        <p>Email <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a> to start a return. We will send return instructions. Items sent back without requesting a return first cannot be accepted.</p>
+        <p>Return shipping on non-faulty returns is the customer’s responsibility.</p>
+      </section>
+
+      <section>
+        <h2>Damaged or incorrect deliveries</h2>
+        <p>Please inspect your order when it arrives. If anything is defective, damaged or incorrect, contact us straight away so we can evaluate it and make it right.</p>
+      </section>
+
+      <section>
+        <h2>Refunds</h2>
+        <p>Once we have received and inspected a return, we will let you know whether the refund is approved. Approved refunds go back to your original payment method within 10 business days. Bank and card processing can add time beyond that.</p>
+        <p>If more than 15 business days have passed since we approved your refund, contact <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a>.</p>
+      </section>
+
+      <aside class="gfwm-content__contact">
+        <p>Questions</p>
+        <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a>
+        <a href="tel:+13105341138">(310) 534-1138</a>
+      </aside>
+
+    {% when 'shipping-delivery' %}
+      <section>
+        <h2>Free shipping within the continental US</h2>
+        <p>All orders shipped within the continental United States ship free. No minimum.</p>
+      </section>
+
+      <section>
+        <h2>How quickly we dispatch</h2>
+        <p>Most orders are dispatched within 2 business days, and we can often ship the same day. This includes personalized items — personalization happens at our own facility in Signal Hill, California, so custom orders are not slower than stock ones.</p>
+        <p>If you need something faster, email <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a> or call <a href="tel:+13105341138">(310) 534-1138</a> before ordering and we will tell you honestly whether we can hit your date.</p>
+      </section>
+
+      <section>
+        <h2>Canada</h2>
+        <p>We offer paid shipping to Canada. Rates are calculated at checkout. Delivery times vary with customs, and any duties or taxes are the customer’s responsibility.</p>
+      </section>
+
+      <section>
+        <h2>Other international destinations</h2>
+        <p>We do not currently ship outside the United States and Canada.</p>
+      </section>
+
+      <section>
+        <h2>Delivery addresses</h2>
+        <p>Once an order has been dispatched we cannot change the delivery address. Please check it carefully before completing checkout.</p>
+      </section>
+
+      <section>
+        <h2>Bulk orders</h2>
+        <p>Large orders ship the same way and are usually dispatched together. For a conference or event with a fixed date, tell us the date when you enquire and we will confirm the schedule in writing.</p>
+      </section>
+  {% endcase %}
+</div>
