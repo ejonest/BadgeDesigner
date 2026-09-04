@@ -1,0 +1,12 @@
+api_version = "2026-04"
+
+[[extensions]]
+name = "Production design"
+handle = "production-order-block"
+uid = "d19081f2-0c52-635c-8370-c580a65aeb39b0984b60"
+type = "ui_extension"
+description = "Shows production details and proofs for customized order items."
+
+  [[extensions.targeting]]
+  module = "./src/BlockExtension.tsx"
+  target = "admin.order-details.block.render"

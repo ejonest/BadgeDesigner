@@ -592,13 +592,19 @@ export async function updateDraftDesignerOrderItemsWithOrderInfo(
     shopifyOrderId: string;
     shopifyOrderNumber?: string | null;
     shopifyCustomerId?: string | null;
+    shopId?: string | null;
   },
 ) {
   if (!supabaseAdmin) {
     throw new Error("Supabase is not configured.");
   }
-  const { lineItems, shopifyOrderId, shopifyOrderNumber, shopifyCustomerId } =
-    params;
+  const {
+    lineItems,
+    shopifyOrderId,
+    shopifyOrderNumber,
+    shopifyCustomerId,
+    shopId,
+  } = params;
   if (!lineItems.length) return { data: [], error: null };
 
   const basePayload: Record<string, unknown> = {
@@ -611,6 +617,9 @@ export async function updateDraftDesignerOrderItemsWithOrderInfo(
   }
   if (shopifyCustomerId != null && shopifyCustomerId !== "") {
     basePayload.shopify_customer_id = shopifyCustomerId;
+  }
+  if (shopId != null && shopId !== "") {
+    basePayload.shop_id = shopId;
   }
 
   const results: unknown[] = [];

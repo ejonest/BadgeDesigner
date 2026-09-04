@@ -1407,6 +1407,8 @@ export interface BadgeOrderItem {
   id?: string;
   shopify_order_id?: string; // TEXT - Shopify order ID
   shopify_order_number?: string; // TEXT - human-readable order number (e.g. #1001)
+  /** Shopify store domain that owns the order. */
+  shop_id?: string;
   design_id: string; // TEXT - links to main order design_id
   badge_id?: string; // TEXT - unique ID for this specific badge
   background_color?: string; // Format: "ColorName #hexcode" or "#hexcode" (badges)

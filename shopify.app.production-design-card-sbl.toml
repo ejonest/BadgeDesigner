@@ -1,0 +1,20 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "79a000d03b9a87721634cd232a8a8a8d"
+name = "Production Design Card – SBL"
+application_url = "https://all-quality-design-tool.vercel.app"
+embedded = true
+
+[access_scopes]
+scopes = "read_orders"
+
+[auth]
+redirect_urls = [
+  "https://all-quality-design-tool.vercel.app/api/auth",
+]
+
+[webhooks]
+api_version = "2026-10"
+
+[build]
+automatically_update_urls_on_dev = false

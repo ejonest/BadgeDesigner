@@ -835,10 +835,15 @@ export async function runLinkPaidOrderToSupabase(
       "Invalid request body",
     );
     if (!parsed.ok) return parsed.response;
-    const { shopifyOrderId, shopifyOrderNumber, shopifyCustomerId, lineItems } =
-      parsed.data;
+    const {
+      shopifyOrderId,
+      shopifyOrderNumber,
+      shopifyCustomerId,
+      shopId,
+      lineItems,
+    } = parsed.data;
 
-    const orderIdTrimmed = shopifyOrderId.trim();
+    const orderIdTrimmed = String(shopifyOrderId).trim();
     const orderNumberTrimmed =
       shopifyOrderNumber != null && shopifyOrderNumber !== ""
         ? String(shopifyOrderNumber).trim()
@@ -846,6 +851,10 @@ export async function runLinkPaidOrderToSupabase(
     const customerIdTrimmed =
       shopifyCustomerId != null && shopifyCustomerId !== ""
         ? String(shopifyCustomerId).trim()
+        : undefined;
+    const shopIdTrimmed =
+      shopId != null && shopId !== ""
+        ? String(shopId).trim().toLowerCase()
         : undefined;
 
     const updateLineItems: Array<{
@@ -904,6 +913,7 @@ export async function runLinkPaidOrderToSupabase(
         shopifyOrderId: orderIdTrimmed,
         shopifyOrderNumber: orderNumberTrimmed,
         shopifyCustomerId: customerIdTrimmed,
+        shopId: shopIdTrimmed,
       },
     );
     const updatedCount = Array.isArray(updated) ? updated.length : 0;
