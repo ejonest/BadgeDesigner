@@ -333,8 +333,10 @@
 
 .gfwm-nav__scroll {
   display: flex;
-  justify-content: space-between;
-  gap: clamp(20px, 2.4vw, 56px);
+  justify-content: center;
+  /* safe keeps the first link reachable if the row ever overflows and scrolls */
+  justify-content: safe center;
+  gap: clamp(20px, 2.2vw, 40px);
   max-width: var(--bar-max);
   margin-inline: auto;
   overflow-x: auto;
@@ -349,7 +351,7 @@
 .gfwm-nav a {
   flex: 0 0 auto;
   color: var(--navy);
-  font-size: clamp(12px, 0.85vw, 14px);
+  font-size: clamp(13px, 1vw, 16px);
   font-weight: 700;
   letter-spacing: 0.025em;
 }
@@ -1025,19 +1027,33 @@ body.template-index .footbar-fixed {
 }
 
 @media (max-width: 640px) {
+  /* Stack the three claims so they all fit the screen instead of scrolling */
   .gfwm-announcement__track {
-    justify-content: flex-start;
-    gap: 14px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding-block: 7px;
   }
 
-  .gfwm-announcement__track::-webkit-scrollbar {
-    display: none;
+  .gfwm-announcement__item {
+    max-width: 100%;
+    gap: 6px;
+    font-size: 10px;
+    line-height: 1.25;
+    letter-spacing: 0.06em;
+    /* wrap rather than overflow on very narrow screens */
+    white-space: normal;
+    text-align: center;
   }
 
+  .gfwm-announcement__item .gfwm-icon {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* the dot only reads as a separator on a single row */
   .gfwm-announcement__item + .gfwm-announcement__item::before {
-    margin-right: 14px;
+    display: none;
   }
 
   .gfwm-header__main {

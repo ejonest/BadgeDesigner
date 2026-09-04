@@ -3395,12 +3395,13 @@
 
         closeEmailModalWindow: function (newsletterWrapper,expire) {
             newsletterWrapper.fadeOut(1000);
-            var inputChecked = newsletterWrapper.find('input[name="dismiss"]').prop('checked');
-            if (inputChecked || !newsletterWrapper.find('input[name="dismiss"]').length)
-                $.cookie('emailSubcribeModal', 'closed', {
-                    expires: expire,
-                    path: '/'
-                });
+            // Any close suppresses the popup for the configured number of days.
+            // Ticking "No, thanks" suppresses it for a year.
+            var dismiss = newsletterWrapper.find('input[name="dismiss"]');
+            $.cookie('emailSubcribeModal', 'closed', {
+                expires: dismiss.length && dismiss.prop('checked') ? 365 : expire,
+                path: '/'
+            });
         },
 
         initNewsLetterPopup: function () {

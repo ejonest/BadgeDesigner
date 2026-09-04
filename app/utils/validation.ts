@@ -100,6 +100,7 @@ export const linkOrderBodySchema = z
     ),
     shopifyOrderNumber: linkOrderStringId,
     shopifyCustomerId: linkOrderStringId,
+    shopId: linkOrderStringId,
     lineItems: z.array(
       z.object({
         designId: linkOrderStringId,

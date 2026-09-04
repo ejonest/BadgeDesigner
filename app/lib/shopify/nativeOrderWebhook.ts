@@ -27,6 +27,7 @@ export type ShopifyOrderMeta = {
   shopifyOrderId: string;
   shopifyOrderNumber?: string;
   shopifyCustomerId?: string;
+  shopId?: string;
 };
 
 export function resolveShopifyWebhookSecret(
@@ -193,6 +194,7 @@ export async function runNativeShopifyLinkOrder(
         shopifyOrderId: meta.shopifyOrderId,
         shopifyOrderNumber: meta.shopifyOrderNumber,
         shopifyCustomerId: meta.shopifyCustomerId,
+        shopId: meta.shopId,
         lineItems,
       }),
     }),
@@ -237,6 +239,11 @@ export async function handleNativeShopifyOrderPaid(args: {
     console.warn(`${logPrefix} order payload has no id`);
     return json({ success: false, reason: "no_order_id" }, { status: 200 });
   }
+  const shopDomain = request.headers
+    .get("X-Shopify-Shop-Domain")
+    ?.trim()
+    .toLowerCase();
+  if (shopDomain) meta.shopId = shopDomain;
 
   const grouped = collectDesignerLinesFromShopifyOrder(
     order,
