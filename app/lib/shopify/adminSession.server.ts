@@ -19,6 +19,31 @@ export type VerifiedAdminSession = {
   staffUserId?: string;
 };
 
+/**
+ * Client IDs and shops are known from the three production-card app configs.
+ * Only the Client secret belongs in env — that is the value Shopify uses to
+ * HMAC-sign Admin extension ID tokens.
+ */
+const KNOWN_APPS: {
+  shop?: string;
+  clientId: string;
+  secretEnv: string;
+}[] = [
+  {
+    shop: "gavelsfast.myshopify.com",
+    clientId: "6490c879339bec4fcf421185e16f92a3",
+    secretEnv: "SHOPIFY_ADMIN_GF_CLIENT_SECRET",
+  },
+  {
+    clientId: "fdbcb6c13f4baca70b9864a6f453b14a",
+    secretEnv: "SHOPIFY_ADMIN_AQB_CLIENT_SECRET",
+  },
+  {
+    clientId: "79a000d03b9a87721634cd232a8a8a8d",
+    secretEnv: "SHOPIFY_ADMIN_SBL_CLIENT_SECRET",
+  },
+];
+
 function decodeJsonPart(part: string): Record<string, unknown> {
   return JSON.parse(Buffer.from(part, "base64url").toString("utf8")) as Record<
     string,
@@ -66,36 +91,113 @@ function parseAppsJson(raw: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
-function configuredApps(): {
-  byShop: Record<string, AdminAppConfig>;
-  byClientId: Record<string, AdminAppConfig>;
+function asNonEmptyString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function looksLikeClientSecret(value: string): boolean {
+  return value.startsWith("shpss_") || /^[0-9a-f]{32}$/i.test(value);
+}
+
+function looksLikeClientId(value: string): boolean {
+  return /^[0-9a-f]{32}$/i.test(value) && !value.startsWith("shpss_");
+}
+
+/**
+ * Recover from the field-swap we have already seen: shpss_… put in clientId
+ * and the 32-char client ID (or a placeholder) put in clientSecret.
+ */
+function coerceAppConfig(raw: Partial<AdminAppConfig> & Record<string, unknown>): {
+  clientId?: string;
+  clientSecret?: string;
+} {
+  let clientId = asNonEmptyString(raw.clientId) ?? asNonEmptyString(raw.client_id);
+  let clientSecret =
+    asNonEmptyString(raw.clientSecret) ?? asNonEmptyString(raw.client_secret);
+
+  if (
+    clientId &&
+    clientSecret &&
+    looksLikeClientSecret(clientId) &&
+    looksLikeClientId(clientSecret)
+  ) {
+    return { clientId: clientSecret, clientSecret: clientId };
+  }
+  if (clientId && looksLikeClientSecret(clientId) && !looksLikeClientSecret(clientSecret ?? "")) {
+    return { clientId: undefined, clientSecret: clientId };
+  }
+  return { clientId, clientSecret };
+}
+
+function collectKnownEnvApps(): AdminAppConfig[] {
+  const apps: AdminAppConfig[] = [];
+  for (const known of KNOWN_APPS) {
+    const clientSecret = process.env[known.secretEnv]?.trim();
+    if (!clientSecret) continue;
+    apps.push({ clientId: known.clientId, clientSecret });
+  }
+  return apps;
+}
+
+function collectJsonApps(): {
+  apps: AdminAppConfig[];
   rawKeys: string[];
 } {
   const raw = process.env.SHOPIFY_ADMIN_APPS_JSON;
-  if (!raw) {
-    throw new Error("SHOPIFY_ADMIN_APPS_JSON is not configured.");
-  }
+  if (!raw) return { apps: [], rawKeys: [] };
 
   const parsed = parseAppsJson(raw);
-  const byShop: Record<string, AdminAppConfig> = {};
-  const byClientId: Record<string, AdminAppConfig> = {};
-  const rawKeys = Object.keys(parsed);
-
+  const apps: AdminAppConfig[] = [];
   for (const [rawShop, value] of Object.entries(parsed)) {
     const config =
       value != null && typeof value === "object" && !Array.isArray(value)
-        ? (value as Partial<AdminAppConfig>)
+        ? coerceAppConfig(value as Partial<AdminAppConfig> & Record<string, unknown>)
         : {};
     const shop = normalizeShopDomain(rawShop);
-    const clientId = config.clientId?.trim();
-    const clientSecret = config.clientSecret?.trim();
-    if (!shop || !clientId || !clientSecret) continue;
-    const app = { clientId, clientSecret };
-    byShop[shop] = app;
-    byClientId[clientId] = app;
+    const known = KNOWN_APPS.find(
+      (app) => app.shop === shop || app.clientId === config.clientId,
+    );
+    const clientId = config.clientId ?? known?.clientId;
+    const clientSecret = config.clientSecret;
+    if (!clientId || !clientSecret) continue;
+    apps.push({ clientId, clientSecret });
+  }
+  return { apps, rawKeys: Object.keys(parsed) };
+}
+
+function configuredApps(): {
+  byShop: Record<string, AdminAppConfig>;
+  byClientId: Record<string, AdminAppConfig>;
+  secrets: string[];
+  rawKeys: string[];
+  secretEnvsPresent: string[];
+} {
+  const json = collectJsonApps();
+  const merged = [...collectKnownEnvApps(), ...json.apps];
+  const byShop: Record<string, AdminAppConfig> = {};
+  const byClientId: Record<string, AdminAppConfig> = {};
+  const secrets: string[] = [];
+  const seenSecrets = new Set<string>();
+
+  for (const app of merged) {
+    byClientId[app.clientId] = app;
+    const knownShop = KNOWN_APPS.find((known) => known.clientId === app.clientId)?.shop;
+    if (knownShop) byShop[knownShop] = app;
+    if (!seenSecrets.has(app.clientSecret)) {
+      seenSecrets.add(app.clientSecret);
+      secrets.push(app.clientSecret);
+    }
   }
 
-  return { byShop, byClientId, rawKeys };
+  return {
+    byShop,
+    byClientId,
+    secrets,
+    rawKeys: json.rawKeys,
+    secretEnvsPresent: KNOWN_APPS.filter((app) => Boolean(process.env[app.secretEnv]?.trim())).map(
+      (app) => app.secretEnv,
+    ),
+  };
 }
 
 function deny(code: string, detail?: Record<string, unknown>): never {
@@ -114,10 +216,12 @@ function audienceValues(audience: unknown): string[] {
   return [];
 }
 
-function secretLooksUnusable(secret: string, clientId: string): string | null {
+function secretKind(secret: string, clientId: string): string {
+  if (secret.startsWith("shpat_")) return "admin-access-token";
+  if (secret.startsWith("shpca_")) return "custom-app-token";
   if (clientId.startsWith("shpss_")) return "client-id-and-secret-swapped";
   if (secret === clientId) return "secret-equals-client-id";
-  if (secret.length < 16) return "secret-too-short";
+  if (secret === `shpss_${clientId}`) return "secret-is-client-id-with-prefix";
   if (
     /^(gf_secret|aqb_secret|sbl_secret|paste_[a-z0-9_]+|your-?secret|\.\.\.|xxx+)$/i.test(
       secret,
@@ -125,17 +229,60 @@ function secretLooksUnusable(secret: string, clientId: string): string | null {
   ) {
     return "placeholder-secret";
   }
-  return null;
+  if (secret.startsWith("shpss_") && secret.length === 38) return "shpss-client-secret";
+  if (/^[0-9a-f]{32}$/i.test(secret)) return "legacy-hex-secret";
+  return "unrecognized-secret";
+}
+
+/**
+ * Shopify's official verifier (jose + getHMACKey) treats the secret as raw
+ * char codes. Also try the unprefixed hex form used by older secrets.
+ */
+function hmacKeysForSecret(secret: string): Buffer[] {
+  const keys: Buffer[] = [];
+  const seen = new Set<string>();
+  const add = (key: Buffer) => {
+    const stamp = key.toString("hex");
+    if (seen.has(stamp)) return;
+    seen.add(stamp);
+    keys.push(key);
+  };
+
+  const raw = Buffer.alloc(secret.length);
+  for (let i = 0; i < secret.length; i++) raw[i] = secret.charCodeAt(i);
+  add(raw);
+  add(Buffer.from(secret, "utf8"));
+
+  if (secret.startsWith("shpss_")) {
+    const rest = secret.slice(6);
+    add(Buffer.from(rest, "utf8"));
+    if (/^[0-9a-f]+$/i.test(rest) && rest.length % 2 === 0) {
+      add(Buffer.from(rest, "hex"));
+    }
+  } else if (/^[0-9a-f]+$/i.test(secret) && secret.length % 2 === 0) {
+    add(Buffer.from(secret, "hex"));
+  }
+
+  return keys;
+}
+
+function decodeSignature(part: string): Buffer {
+  const url = Buffer.from(part, "base64url");
+  if (url.length === 32) return url;
+  const std = Buffer.from(part, "base64");
+  return std.length === 32 ? std : url;
 }
 
 function hmacValid(secret: string, signingInput: string, signature: Buffer) {
-  const expected = createHmac("sha256", secret)
-    .update(signingInput, "utf8")
-    .digest();
-  return (
-    expected.length === signature.length &&
-    timingSafeEqual(expected, signature)
-  );
+  return hmacKeysForSecret(secret).some((key) => {
+    const expected = createHmac("sha256", key)
+      .update(signingInput, "utf8")
+      .digest();
+    return (
+      expected.length === signature.length &&
+      timingSafeEqual(expected, signature)
+    );
+  });
 }
 
 export function verifyAdminSessionToken(
@@ -165,6 +312,8 @@ export function verifyAdminSessionToken(
   const audiences = audienceValues(claims.aud);
   console.info("[production-admin] session token claims", {
     alg: header.alg,
+    typ: header.typ,
+    kid: header.kid,
     dest: claims.dest,
     iss: claims.iss,
     aud: claims.aud,
@@ -180,33 +329,13 @@ export function verifyAdminSessionToken(
     throw new Response("Server configuration error", { status: 500 });
   }
 
-  if (Object.keys(apps.byClientId).length === 0) {
-    console.error("[production-admin] no usable apps in SHOPIFY_ADMIN_APPS_JSON", {
+  if (apps.secrets.length === 0) {
+    console.error("[production-admin] no client secrets configured", {
       rawKeys: apps.rawKeys,
+      secretEnvsPresent: apps.secretEnvsPresent,
+      hint: "Set SHOPIFY_ADMIN_GF_CLIENT_SECRET to the Client secret from Production Design Card – GF (starts with shpss_).",
     });
     throw new Response("Server configuration error", { status: 500 });
-  }
-
-  const candidates: AdminAppConfig[] = [];
-  const seen = new Set<string>();
-  for (const audience of audiences) {
-    const app = apps.byClientId[audience];
-    if (app && !seen.has(app.clientId)) {
-      candidates.push(app);
-      seen.add(app.clientId);
-    }
-  }
-  if (shop && apps.byShop[shop] && !seen.has(apps.byShop[shop].clientId)) {
-    candidates.push(apps.byShop[shop]);
-    seen.add(apps.byShop[shop].clientId);
-  }
-  // Last resort: try every configured secret. Prevents a dest/handle mismatch
-  // from rejecting a token that is otherwise valid for one of our apps.
-  for (const app of Object.values(apps.byClientId)) {
-    if (!seen.has(app.clientId)) {
-      candidates.push(app);
-      seen.add(app.clientId);
-    }
   }
 
   if (header.alg != null && header.alg !== "HS256") {
@@ -220,35 +349,45 @@ export function verifyAdminSessionToken(
 
   let provided: Buffer;
   try {
-    provided = Buffer.from(parts[2], "base64url");
+    provided = decodeSignature(parts[2]);
   } catch {
     deny("undecodable-signature");
   }
 
   const signingInput = `${parts[0]}.${parts[1]}`;
-  const app = candidates.find((candidate) =>
-    hmacValid(candidate.clientSecret, signingInput, provided),
+  const matchedSecret = apps.secrets.find((secret) =>
+    hmacValid(secret, signingInput, provided),
   );
-  if (!app) {
+  if (!matchedSecret) {
     const intended =
       (audiences[0] ? apps.byClientId[audiences[0]] : undefined) ??
-      (shop ? apps.byShop[shop] : undefined);
-    const secretIssue = intended
-      ? secretLooksUnusable(intended.clientSecret, intended.clientId)
-      : null;
-    deny(secretIssue ?? "bad-signature", {
+      (shop ? apps.byShop[shop] : undefined) ??
+      Object.values(apps.byClientId)[0];
+    const kind = intended
+      ? secretKind(intended.clientSecret, intended.clientId)
+      : "missing-secret";
+    deny(kind === "shpss-client-secret" || kind === "legacy-hex-secret" ? "bad-signature" : kind, {
       shop,
       dest: claims.dest,
       iss: claims.iss,
       tokenAudience: claims.aud,
       intendedSecretLength: intended?.clientSecret.length ?? 0,
+      intendedSecretPrefix: intended?.clientSecret.slice(0, 6) ?? "",
+      intendedSecretKind: kind,
       configuredClientIds: Object.keys(apps.byClientId),
       configuredShops: Object.keys(apps.byShop),
+      secretEnvsPresent: apps.secretEnvsPresent,
       rawKeys: apps.rawKeys,
+      hint: "Paste the current Client secret from Dev Dashboard → Production Design Card – GF into SHOPIFY_ADMIN_GF_CLIENT_SECRET. It must start with shpss_ and is not the Client ID.",
     });
   }
 
-  if (audiences.length > 0 && !audiences.includes(app.clientId)) {
+  const app =
+    (audiences[0] ? apps.byClientId[audiences[0]] : undefined) ??
+    (shop ? apps.byShop[shop] : undefined) ??
+    Object.values(apps.byClientId).find((value) => value.clientSecret === matchedSecret);
+
+  if (audiences.length > 0 && app && !audiences.includes(app.clientId)) {
     deny("client-id-mismatch", {
       shop,
       tokenAudience: claims.aud,
@@ -258,7 +397,10 @@ export function verifyAdminSessionToken(
 
   const resolvedShop =
     shop ??
-    Object.entries(apps.byShop).find(([, value]) => value.clientId === app.clientId)?.[0];
+    (app
+      ? Object.entries(apps.byShop).find(([, value]) => value.clientId === app.clientId)?.[0]
+      : undefined) ??
+    KNOWN_APPS.find((known) => known.clientId === audiences[0])?.shop;
   if (!resolvedShop) {
     deny("no-shop-in-token", { dest: claims.dest, iss: claims.iss });
   }

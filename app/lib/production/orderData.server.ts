@@ -163,10 +163,9 @@ export async function getProductionOrder(
       const def = getDesignerConfig(designerId);
       const { data, error } = await db
         .from(def.orderItemsTable)
-        .select(selectColumns(designerId))
+        .select(`${selectColumns(designerId)},is_qa_test`)
         .eq("shopify_order_id", numericId)
-        .eq("shop_id", shop)
-        .or("is_qa_test.is.null,is_qa_test.eq.false")
+        .or(`shop_id.eq."${shop}",shop_id.is.null`)
         .order("created_at", { ascending: true });
 
       if (error) {
@@ -184,25 +183,27 @@ export async function getProductionOrder(
       const jsonColumn = DATA_JSON_DESIGNERS.has(designerId)
         ? "data_json"
         : "badge_json";
-      return ((data ?? []) as unknown as RawRow[]).map((row) => ({
-        designerId,
-        productLabel: def.label,
-        designId: String(row.design_id ?? ""),
-        quantity:
-          typeof row.quantity === "number" && row.quantity > 0
-            ? row.quantity
-            : 1,
-        lines: extractLines(row, jsonColumn),
-        ...(safeHttpUrl(row.thumbnail_url)
-          ? { thumbnailUrl: safeHttpUrl(row.thumbnail_url) }
-          : {}),
-        ...(safeHttpUrl(row.full_image_url)
-          ? { proofUrl: safeHttpUrl(row.full_image_url) }
-          : {}),
-        ...(safeHttpUrl(row.uploaded_image_url)
-          ? { uploadedImageUrl: safeHttpUrl(row.uploaded_image_url) }
-          : {}),
-      }));
+      return ((data ?? []) as unknown as RawRow[])
+        .filter((row) => row.is_qa_test !== true)
+        .map((row) => ({
+          designerId,
+          productLabel: def.label,
+          designId: String(row.design_id ?? ""),
+          quantity:
+            typeof row.quantity === "number" && row.quantity > 0
+              ? row.quantity
+              : 1,
+          lines: extractLines(row, jsonColumn),
+          ...(safeHttpUrl(row.thumbnail_url)
+            ? { thumbnailUrl: safeHttpUrl(row.thumbnail_url) }
+            : {}),
+          ...(safeHttpUrl(row.full_image_url)
+            ? { proofUrl: safeHttpUrl(row.full_image_url) }
+            : {}),
+          ...(safeHttpUrl(row.uploaded_image_url)
+            ? { uploadedImageUrl: safeHttpUrl(row.uploaded_image_url) }
+            : {}),
+        }));
     }),
   );
 
