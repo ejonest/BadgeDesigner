@@ -142,18 +142,33 @@ async function main() {
       });
     } else if (design.gavelSoundBlock === "engraved") {
       const first = bandLines(design)[0] ?? {};
+      const savedLines = Array.isArray(design.gavelSoundBlockLines)
+        ? design.gavelSoundBlockLines
+        : String(design.gavelSoundBlockText || "")
+            .split("\n")
+            .filter((text) => text.trim())
+            .map((text, index) =>
+              index === 0
+                ? { ...first, text }
+                : { text },
+            );
+      const lines =
+        savedLines.length > 0
+          ? savedLines
+          : [
+              {
+                text: (first.text || "").trim(),
+                fontFamily: first.fontFamily,
+                bold: first.bold,
+                italic: first.italic,
+                underline: first.underline,
+              },
+            ];
       files.push({
         name: "gavel-sound-block.svg",
         what: "sound block top",
         svg: texture.soundBlockTopToSvgString(
-          {
-            text:
-              (design.gavelSoundBlockText || "").trim() ||
-              (first.text || "").trim(),
-            fontFamily: first.fontFamily,
-            bold: first.bold,
-            italic: first.italic,
-          },
+          lines,
           styles.getSoundBlockTopTextColor(design.gavelStyle),
         ),
       });

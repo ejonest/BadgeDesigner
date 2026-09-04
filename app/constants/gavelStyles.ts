@@ -2,7 +2,7 @@
  * Gavels Fast catalog — matched to the product photos in
  * "app/temp/Gavels Fast - Core Products/Gavels & Sound Blocks".
  *
- * Same lathe-turned head on every SKU, in the three woods we offer: wooden
+ * Same lathe-turned head on every SKU, in the three woods we offer: genuine
  * walnut, hardwood (cherry-finished rubberwood), and ebony. Band metal (gold
  * or silver) is chosen separately. Handle length is always the standard size.
  *
@@ -407,6 +407,10 @@ export const SOUND_BLOCK_TOP_TEXTURE_PX = 1024;
 
 export const GAVEL_MAX_LINES = 4;
 
+/** Personalized sound-block top: four independent lines, 80 characters in total. */
+export const SOUND_BLOCK_MAX_LINES = 4;
+export const SOUND_BLOCK_MAX_CHARS = 80;
+
 export const GAVEL_DEFAULT_FONT = "Georgia";
 
 export const GAVEL_DEFAULT_TEXT_COLOR = "#1a1a1a";
@@ -466,7 +470,7 @@ export type GavelStyleDef = {
 export const GAVEL_STYLES: readonly GavelStyleDef[] = [
   {
     id: "walnut",
-    label: "Wooden Walnut",
+    label: "Genuine Walnut",
     description: "Rich warm walnut.",
     bodyColor: "#6a4736",
     roughness: 1.8,
@@ -480,10 +484,10 @@ export const GAVEL_STYLES: readonly GavelStyleDef[] = [
     id: "rubberwood",
     label: "Hardwood",
     description: "Hardwood with a cherry finish",
-    bodyColor: "#805346",
+    bodyColor: "#6b3328",
     roughness: 1.7,
     metalness: 0,
-    grainTint: "#4a2b22",
+    grainTint: "#3a1c16",
     useWoodGrain: true,
     textureSet: "rubberwood",
     thumbSrc: "/images/gavel/thumb-rubberwood.png",
@@ -756,6 +760,31 @@ export function clampGavelLineText(
   return text.slice(0, max);
 }
 
+/** Hard-stop a sound-block line so the four lines together stay within 80 characters. */
+export function clampSoundBlockLineText(
+  text: string,
+  otherLinesLength: number,
+): string {
+  const remaining = Math.max(0, SOUND_BLOCK_MAX_CHARS - otherLinesLength);
+  if (text.length <= remaining) return text;
+  return text.slice(0, remaining);
+}
+
+export function soundBlockCharCount(
+  lines: readonly { text?: string | null }[],
+): number {
+  return lines.reduce((sum, line) => sum + (line.text ?? "").length, 0);
+}
+
+export function joinSoundBlockText(
+  lines: readonly { text?: string | null }[],
+): string {
+  return lines
+    .map((line) => (line.text ?? "").trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function formatGavelOrderFinish(
   styleId: string | null | undefined,
   bandFinishId: string | null | undefined = undefined,
@@ -901,6 +930,18 @@ export const GAVEL_SAMPLE_PRICING = {
   highQty: 21,
 } as const;
 
+/**
+ * Catalog-missing fallbacks for woods whose store prices are known. Prefer
+ * live Shopify variant prices; keep these aligned with Admin:
+ * Walnut $25.95, Ebony $29.99 on custom-wooden-gavel and custom-wooden-gavel-stand.
+ */
+export const GAVEL_SAMPLE_WOOD_UNIT_PRICE: Partial<
+  Record<GavelStyleId, number>
+> = {
+  walnut: 25.95,
+  ebony: 29.99,
+};
+
 export type GavelPriceQuote = {
   unitPrice: number;
   total: number;
@@ -928,6 +969,7 @@ export function quoteGavelPrice(input: {
   storeUnitPrice?: number | null;
   /** Live price of the suede bag product, when the catalog resolved it. */
   suedeBagUnitPrice?: number | null;
+  styleId?: GavelStyleId | string | null;
 }): GavelPriceQuote {
   const qty = Math.max(1, Math.round(input.quantity));
   const bagFromStore =
@@ -951,6 +993,19 @@ export function quoteGavelPrice(input: {
         input.suedeBag && !bagFromStore
           ? "Store pricing — suede bag estimated."
           : "Store pricing.",
+      suedeBagUnitPrice: bagAdd,
+    };
+  }
+
+  const wood = getGavelStyle(input.styleId).id;
+  const woodUnit = GAVEL_SAMPLE_WOOD_UNIT_PRICE[wood];
+  if (typeof woodUnit === "number") {
+    const unitPrice = woodUnit + bagAdd;
+    return {
+      unitPrice,
+      total: unitPrice * qty,
+      isSample: true,
+      tierNote: "Sample pricing for demo — not final.",
       suedeBagUnitPrice: bagAdd,
     };
   }

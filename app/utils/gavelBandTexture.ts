@@ -31,6 +31,7 @@ export type GavelBandLineInput = {
   color?: string;
   bold?: boolean;
   italic?: boolean;
+  underline?: boolean;
 };
 
 function fontCss(
@@ -963,45 +964,67 @@ function wrapCanvasText(
   return lines.length ? lines : [text.trim()];
 }
 
-function fitSoundBlockTopText(
+function filledSoundBlockLines(
+  lines: readonly GavelBandLineInput[],
+): GavelBandLineInput[] {
+  return lines
+    .map((line) => ({ ...line, text: (line.text ?? "").trim() }))
+    .filter((line) => line.text)
+    .slice(0, 4);
+}
+
+function fitSoundBlockTopLines(
   ctx: CanvasRenderingContext2D,
-  line: GavelBandLineInput,
+  lines: readonly GavelBandLineInput[],
   maxWidth: number,
   maxHeight: number,
-): { lines: string[]; fontPx: number; gap: number } {
-  const text = (line.text ?? "").trim();
-  let fontPx = Math.min(110, maxHeight * 0.28);
-  const minPx = 22;
+): { rows: GavelBandLineInput[]; fontPx: number; gap: number } {
+  const rows = filledSoundBlockLines(lines);
+  if (rows.length === 0) return { rows, fontPx: 0, gap: 0 };
+  let fontPx = Math.min(110, maxHeight * (rows.length === 1 ? 0.28 : 0.2));
+  const minPx = 18;
   while (fontPx >= minPx) {
-    ctx.font = fontCss(line, fontPx);
-    const wrapped = wrapCanvasText(ctx, text, maxWidth);
     const gap = fontPx * 0.22;
-    const blockH =
-      wrapped.length * fontPx + Math.max(0, wrapped.length - 1) * gap;
-    const widest = Math.max(
-      ...wrapped.map((row) => ctx.measureText(row).width),
-      0,
-    );
-    if (blockH <= maxHeight && widest <= maxWidth) {
-      return { lines: wrapped, fontPx, gap };
+    const blockH = rows.length * fontPx + Math.max(0, rows.length - 1) * gap;
+    if (blockH <= maxHeight) {
+      const tooWide = rows.some((row) => {
+        ctx.font = fontCss(row, fontPx);
+        return ctx.measureText(row.text ?? "").width > maxWidth;
+      });
+      if (!tooWide) return { rows, fontPx, gap };
     }
     fontPx -= 2;
   }
-  ctx.font = fontCss(line, minPx);
-  return {
-    lines: wrapCanvasText(ctx, text, maxWidth),
-    fontPx: minPx,
-    gap: minPx * 0.22,
-  };
+  return { rows, fontPx: minPx, gap: minPx * 0.22 };
+}
+
+function drawSoundBlockUnderline(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  centerX: number,
+  baselineY: number,
+  fontPx: number,
+  color: string,
+) {
+  const width = ctx.measureText(text).width;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(1, fontPx * 0.07);
+  ctx.beginPath();
+  const y = baselineY + fontPx * 0.12;
+  ctx.moveTo(centerX - width / 2, y);
+  ctx.lineTo(centerX + width / 2, y);
+  ctx.stroke();
+  ctx.restore();
 }
 
 /**
  * Square personalization for the sound-block top: transparent background so
- * the wood grain shows through in 3D, with centered wrapping text.
+ * the wood grain shows through in 3D. Each input line is one canvas row.
  */
 export function paintSoundBlockTopCanvas(
   canvas: HTMLCanvasElement,
-  line: GavelBandLineInput,
+  lines: readonly GavelBandLineInput[],
   textColor: string = GAVEL_DEFAULT_TEXT_COLOR,
   options?: { logo?: GavelPlateLogo | null },
 ): HTMLCanvasElement {
@@ -1012,19 +1035,19 @@ export function paintSoundBlockTopCanvas(
   if (!ctx) return canvas;
 
   ctx.clearRect(0, 0, size, size);
-  const text = (line.text ?? "").trim();
   const logo = options?.logo;
-  if (!text && !logo?.image) return canvas;
+  const sourceRows = filledSoundBlockLines(lines);
+  if (sourceRows.length === 0 && !logo?.image) return canvas;
 
   const inset = size * 0.14;
   const maxWidth = size - inset * 2;
   const hasLogo = Boolean(logo?.image);
   const maxHeight = hasLogo ? size * 0.34 : size - inset * 2;
-  const colored = { ...line, color: textColor };
-  const { lines, fontPx, gap } = text
-    ? fitSoundBlockTopText(ctx, colored, maxWidth, maxHeight)
-    : { lines: [], fontPx: 0, gap: 0 };
-  const blockH = lines.length * fontPx + Math.max(0, lines.length - 1) * gap;
+  const coloredRows = sourceRows.map((line) => ({ ...line, color: textColor }));
+  const { rows, fontPx, gap } = coloredRows.length
+    ? fitSoundBlockTopLines(ctx, coloredRows, maxWidth, maxHeight)
+    : { rows: [] as GavelBandLineInput[], fontPx: 0, gap: 0 };
+  const blockH = rows.length * fontPx + Math.max(0, rows.length - 1) * gap;
   let y = hasLogo
     ? size * 0.62 + fontPx * 0.78
     : (size - blockH) / 2 + fontPx * 0.78;
@@ -1037,7 +1060,7 @@ export function paintSoundBlockTopCanvas(
     const maxLogoH = size * 0.34 * clampGavelLogoScale(logo.scale ?? 1);
     const logoW = Math.min(size * 0.52, maxLogoH * aspect);
     const logoH = logoW / aspect;
-    const logoY = text ? size * 0.17 : (size - logoH) / 2;
+    const logoY = rows.length > 0 ? size * 0.17 : (size - logoH) / 2;
     ctx.save();
     ctx.drawImage(ink?.canvas ?? logo.image, (size - logoW) / 2, logoY, logoW, logoH);
     if (!ink) {
@@ -1052,38 +1075,48 @@ export function paintSoundBlockTopCanvas(
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = textColor;
-  ctx.font = fontCss(colored, fontPx);
-  for (const row of lines) {
-    ctx.fillText(row, size / 2, y);
+  for (const row of rows) {
+    ctx.font = fontCss(row, fontPx);
+    ctx.fillText(row.text ?? "", size / 2, y);
+    if (row.underline) {
+      drawSoundBlockUnderline(
+        ctx,
+        row.text ?? "",
+        size / 2,
+        y,
+        fontPx,
+        textColor,
+      );
+    }
     y += fontPx + gap;
   }
   return canvas;
 }
 
 export function soundBlockTopToDataUrl(
-  line: GavelBandLineInput,
+  lines: readonly GavelBandLineInput[],
   textColor: string = GAVEL_DEFAULT_TEXT_COLOR,
   options?: { logo?: GavelPlateLogo | null },
 ): string {
   if (typeof document === "undefined") return "";
   const canvas = document.createElement("canvas");
-  paintSoundBlockTopCanvas(canvas, line, textColor, options);
+  paintSoundBlockTopCanvas(canvas, lines, textColor, options);
   return canvas.toDataURL("image/png");
 }
 
 export function soundBlockTopToSvgString(
-  line: GavelBandLineInput,
+  lines: readonly GavelBandLineInput[],
   textColor: string = GAVEL_DEFAULT_TEXT_COLOR,
   options?: { logo?: GavelPlateLogo | null },
 ): string {
   const size = SOUND_BLOCK_TOP_TEXTURE_PX;
-  const text = (line.text ?? "").trim();
+  const sourceRows = filledSoundBlockLines(lines);
   const logo = options?.logo;
   // The converted art carries the black-ink reduction in its own pixels, so
   // the SVG only needs the alpha-mask filter when the conversion is skipped.
   const ink = logo?.image ? blackInkLogoDataUrl(logo.image) : null;
   const logoHref = ink?.href ?? logo?.href ?? null;
-  if (!text && !logoHref) {
+  if (sourceRows.length === 0 && !logoHref) {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"></svg>`;
   }
@@ -1095,17 +1128,20 @@ export function soundBlockTopToSvgString(
   const maxWidth = size - inset * 2;
   const hasLogo = Boolean(logoHref);
   const maxHeight = hasLogo ? size * 0.34 : size - inset * 2;
-  const colored = { ...line, color: textColor };
-  let lines = text ? [text] : [];
+  const coloredRows: GavelBandLineInput[] = sourceRows.map((line) => ({
+    ...line,
+    color: textColor,
+  }));
+  let rows: GavelBandLineInput[] = coloredRows;
   let fontPx = 64;
   let gap = fontPx * 0.22;
-  if (ctx && text) {
-    const fitted = fitSoundBlockTopText(ctx, colored, maxWidth, maxHeight);
-    lines = fitted.lines;
+  if (ctx && coloredRows.length) {
+    const fitted = fitSoundBlockTopLines(ctx, coloredRows, maxWidth, maxHeight);
+    rows = fitted.rows;
     fontPx = fitted.fontPx;
     gap = fitted.gap;
   }
-  const blockH = lines.length * fontPx + Math.max(0, lines.length - 1) * gap;
+  const blockH = rows.length * fontPx + Math.max(0, rows.length - 1) * gap;
   let y = hasLogo
     ? size * 0.62 + fontPx * 0.78
     : (size - blockH) / 2 + fontPx * 0.78;
@@ -1116,16 +1152,17 @@ export function soundBlockTopToSvgString(
     size * 0.34 * clampGavelLogoScale(logo?.scale ?? 1);
   const logoW = Math.min(size * 0.52, maxLogoH * logoAspect);
   const logoH = logoW / logoAspect;
-  const logoY = text ? size * 0.17 : (size - logoH) / 2;
+  const logoY = rows.length > 0 ? size * 0.17 : (size - logoH) / 2;
   const logoEl = logoHref
     ? `<image x="${((size - logoW) / 2).toFixed(2)}" y="${logoY.toFixed(2)}" width="${logoW.toFixed(2)}" height="${logoH.toFixed(2)}" preserveAspectRatio="xMidYMid meet" href="${escapeXml(logoHref)}"${ink ? "" : ' filter="url(#black-ink-logo)"'}/>`
     : "";
-  const family = line.fontFamily?.trim() || GAVEL_DEFAULT_FONT;
-  const weight = line.bold ? 700 : 600;
-  const fontStyle = line.italic ? "italic" : "normal";
-  const textEls = lines
+  const textEls = rows
     .map((row) => {
-      const el = `<text x="${size / 2}" y="${y}" text-anchor="middle" font-family="${escapeXml(family)}, Georgia, serif" font-size="${fontPx}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(textColor)}">${escapeXml(row)}</text>`;
+      const family = row.fontFamily?.trim() || GAVEL_DEFAULT_FONT;
+      const weight = row.bold ? 700 : 600;
+      const fontStyle = row.italic ? "italic" : "normal";
+      const deco = row.underline ? ' text-decoration="underline"' : "";
+      const el = `<text x="${size / 2}" y="${y}" text-anchor="middle" font-family="${escapeXml(family)}, Georgia, serif" font-size="${fontPx}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(textColor)}"${deco}>${escapeXml(row.text ?? "")}</text>`;
       y += fontPx + gap;
       return el;
     })

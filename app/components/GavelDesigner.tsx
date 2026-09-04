@@ -36,8 +36,11 @@ import {
   GAVEL_STYLES,
   GAVEL_TEXT_SIZE_PRESETS,
   GAVEL_UV_TEXT_COLORS,
+  SOUND_BLOCK_MAX_CHARS,
+  SOUND_BLOCK_MAX_LINES,
   STAND_PLATE_MAX_LINES,
   clampGavelLineText,
+  clampSoundBlockLineText,
   formatGavelMoney,
   formatGavelOptionSummary,
   formatGavelOrderFinish,
@@ -53,7 +56,9 @@ import {
   isGavelRoundSoundBlockAvailable,
   isGavelSoundBlockOffered,
   isGavelStandOffered,
+  joinSoundBlockText,
   quoteGavelPrice,
+  soundBlockCharCount,
   type GavelBandFinishId,
   type GavelProductionMethodId,
   type GavelProductType,
@@ -120,7 +125,7 @@ const STEP_IDS: StepId[] = ["product", "style", "design", "quantity", "done"];
 
 /** localStorage draft so refresh keeps wizard progress (same idea as badge designer). */
 const GAVEL_DESIGNER_CACHE_PREFIX = "gavel-designer-draft";
-const GAVEL_CACHE_VERSION = 2;
+const GAVEL_CACHE_VERSION = 3;
 /** Skip caching huge logos so we do not blow the 5MB localStorage quota. */
 const GAVEL_CACHE_MAX_LOGO_CHARS = 1_500_000;
 
@@ -211,7 +216,7 @@ type GavelDesignerCachePayload = {
   productType?: GavelProductType;
   soundBlock?: GavelSoundBlockId;
   soundBlockShape?: GavelSoundBlockShapeId;
-  soundBlockText?: string;
+  soundBlockLines?: BadgeLine[];
   suedeBag?: boolean;
   productionMethod?: GavelProductionMethodId;
   logoScale?: number;
@@ -294,6 +299,42 @@ function defaultPlateLines(): BadgeLine[] {
   return Array.from({ length: STAND_PLATE_MAX_LINES }, () => newLine());
 }
 
+function defaultSoundBlockLines(): BadgeLine[] {
+  return Array.from({ length: SOUND_BLOCK_MAX_LINES }, () => newLine());
+}
+
+function soundBlockLineIsCustom(line: BadgeLine): boolean {
+  return Boolean(
+    (line.text ?? "").trim() ||
+      line.bold ||
+      line.italic ||
+      line.underline ||
+      (line.fontFamily && line.fontFamily !== GAVEL_DEFAULT_FONT),
+  );
+}
+
+/** Band line 1 until the customer types or formats the sound-block top. */
+function resolvedSoundBlockLines(
+  soundBlockLines: BadgeLine[],
+  bandLines: BadgeLine[],
+): BadgeLine[] {
+  if (soundBlockLines.some(soundBlockLineIsCustom)) return soundBlockLines;
+  const source = bandLines[0];
+  if (!source) return soundBlockLines;
+  return soundBlockLines.map((line, index) =>
+    index === 0
+      ? {
+          ...line,
+          text: (source.text ?? "").trim(),
+          fontFamily: source.fontFamily || GAVEL_DEFAULT_FONT,
+          bold: Boolean(source.bold),
+          italic: Boolean(source.italic),
+          underline: Boolean(source.underline),
+        }
+      : line,
+  );
+}
+
 /**
  * Restoring the cached draft has to happen before the browser paints, or the
  * user sees step 1 flash first. On the server there is no layout phase.
@@ -359,7 +400,9 @@ export default function GavelDesigner({
   const [soundBlock, setSoundBlock] = useState<GavelSoundBlockId>("none");
   const [soundBlockShape, setSoundBlockShape] =
     useState<GavelSoundBlockShapeId>("square");
-  const [soundBlockText, setSoundBlockText] = useState("");
+  const [soundBlockLines, setSoundBlockLines] = useState<BadgeLine[]>(
+    defaultSoundBlockLines,
+  );
   const [suedeBag, setSuedeBag] = useState(false);
   const [productionMethod, setProductionMethod] =
     useState<GavelProductionMethodId>("engrave");
@@ -486,7 +529,7 @@ export default function GavelDesigner({
   const usingExampleCopy =
     !lines.some((line) => (line.text ?? "").trim()) &&
     !plateLines.some((line) => (line.text ?? "").trim()) &&
-    !soundBlockText.trim();
+    !soundBlockLines.some((line) => (line.text ?? "").trim());
 
   /** Band/plate art always renders with the color the flow allows. */
   const bandArtLines = useMemo(
@@ -679,35 +722,37 @@ export default function GavelDesigner({
   });
   const currentSelectionOutOfStock =
     storeProduct !== null && !currentVariantInStock;
-  const soundBlockArtText = soundBlockText.trim() || lines[0]?.text?.trim() || "";
-  const soundBlockPreviewText = usingExampleCopy
-    ? GAVEL_EXAMPLE_HEADLINE
-    : soundBlockArtText;
+  const soundBlockArtLines = useMemo(
+    () => resolvedSoundBlockLines(soundBlockLines, lines),
+    [lines, soundBlockLines],
+  );
+  const soundBlockArtText = joinSoundBlockText(soundBlockArtLines);
+  const soundBlockPreviewLines = useMemo(
+    () =>
+      usingExampleCopy
+        ? [newLine({ text: GAVEL_EXAMPLE_HEADLINE })]
+        : soundBlockArtLines,
+    [soundBlockArtLines, usingExampleCopy],
+  );
   const soundBlockTextureUrl = useMemo(() => {
     if (
       !isClient ||
       !soundBlockEngraved ||
-      (!soundBlockPreviewText && !soundBlockLogo)
+      (!joinSoundBlockText(soundBlockPreviewLines) && !soundBlockLogo)
     ) {
       return "";
     }
     return soundBlockTopToDataUrl(
-      {
-        text: soundBlockPreviewText,
-        fontFamily: lines[0]?.fontFamily || GAVEL_DEFAULT_FONT,
-        bold: lines[0]?.bold,
-        italic: lines[0]?.italic,
-      },
+      soundBlockPreviewLines,
       getSoundBlockTopTextColor(gavelStyle),
       { logo: soundBlockLogo },
     );
   }, [
     gavelStyle,
     isClient,
-    lines,
     soundBlockEngraved,
     soundBlockLogo,
-    soundBlockPreviewText,
+    soundBlockPreviewLines,
   ]);
 
   const shopHost =
@@ -809,6 +854,7 @@ export default function GavelDesigner({
     quantity: orderQuantity,
     storeUnitPrice,
     suedeBagUnitPrice: bagVariant?.price ?? null,
+    styleId: gavelStyle,
   });
   const optionSummary = formatGavelOptionSummary({
     productType,
@@ -866,9 +912,13 @@ export default function GavelDesigner({
           ) {
             setSoundBlockShape(payload.soundBlockShape);
           }
-          if (typeof payload.soundBlockText === "string") {
-            setSoundBlockText(payload.soundBlockText);
-          }
+          setSoundBlockLines(
+            sanitizeCachedLines(
+              payload.soundBlockLines,
+              SOUND_BLOCK_MAX_LINES,
+              defaultSoundBlockLines,
+            ),
+          );
           if (typeof payload.suedeBag === "boolean") {
             setSuedeBag(payload.suedeBag);
           }
@@ -1028,7 +1078,7 @@ export default function GavelDesigner({
         productType,
         soundBlock,
         soundBlockShape,
-        soundBlockText,
+        soundBlockLines,
         suedeBag,
         productionMethod,
         logoScale,
@@ -1076,8 +1126,8 @@ export default function GavelDesigner({
     qty,
     shop,
     soundBlock,
+    soundBlockLines,
     soundBlockShape,
-    soundBlockText,
     step,
     suedeBag,
     textSize,
@@ -1288,6 +1338,7 @@ export default function GavelDesigner({
       gavelSoundBlock: isStand ? "none" : soundBlock,
       gavelSoundBlockShape: isStand ? "square" : effectiveSoundBlockShape,
       gavelSoundBlockText: soundBlockEngraved ? soundBlockArtText : "",
+      gavelSoundBlockLines: soundBlockEngraved ? soundBlockArtLines : undefined,
       gavelSuedeBag: suedeBag,
       gavelStandFinish: isStand ? standFinish : undefined,
       gavelProductionMethod: isStand ? productionMethod : undefined,
@@ -1304,6 +1355,7 @@ export default function GavelDesigner({
     productType,
     productionMethod,
     soundBlock,
+    soundBlockArtLines,
     soundBlockArtText,
     soundBlockEngraved,
     standFinish,
@@ -1410,6 +1462,22 @@ export default function GavelDesigner({
     );
   };
 
+  const updateSoundBlockLine = (index: number, changes: Partial<BadgeLine>) => {
+    setSoundBlockLines((prev) =>
+      prev.map((line, i) => {
+        if (i !== index) return line;
+        const next = { ...line, ...changes };
+        if (changes.text != null) {
+          const others = soundBlockCharCount(
+            prev.filter((_, lineIndex) => lineIndex !== index),
+          );
+          next.text = clampSoundBlockLineText(changes.text, others);
+        }
+        return next;
+      }),
+    );
+  };
+
   const captureMockup = useCallback(async () => {
     const handle = previewRef.current;
     if (!handle) return;
@@ -1478,6 +1546,7 @@ export default function GavelDesigner({
       gavelSoundBlock: soundBlock,
       gavelSoundBlockShape: effectiveSoundBlockShape,
       gavelSoundBlockText: soundBlockEngraved ? soundBlockArtText : "",
+      gavelSoundBlockLines: soundBlockEngraved ? soundBlockArtLines : undefined,
       gavelSuedeBag: suedeBag,
       gavelStandFinish: isStand ? standFinish : null,
       gavelProductionMethod: isStand ? productionMethod : null,
@@ -1534,8 +1603,10 @@ export default function GavelDesigner({
       // on the same line, never alternatives to the band. `standLogo` and
       // `soundBlockLogo` are already null unless the logo belongs to that
       // surface, so the surface owns its own art.
-      const rowSoundBlockText =
-        soundBlockText.trim() || rowLines[0]?.text?.trim() || "";
+      const rowSoundBlockLines =
+        bulkRows.length > 0
+          ? resolvedSoundBlockLines(soundBlockLines, rowLines)
+          : soundBlockArtLines;
       const secondary = isStand
         ? {
             kind: "plate",
@@ -1554,12 +1625,7 @@ export default function GavelDesigner({
           ? {
               kind: "sound-block",
               svg: soundBlockTopToSvgString(
-                {
-                  text: rowSoundBlockText,
-                  fontFamily: rowLines[0]?.fontFamily,
-                  bold: rowLines[0]?.bold,
-                  italic: rowLines[0]?.italic,
-                },
+                rowSoundBlockLines,
                 getSoundBlockTopTextColor(gavelStyle),
                 { logo: soundBlockLogo },
               ),
@@ -1723,8 +1789,11 @@ export default function GavelDesigner({
         lineIndex: number,
         rowQuantity: number,
       ) => {
-        const rowSoundBlockText =
-          soundBlockText.trim() || rowLines[0]?.text?.trim() || "";
+        const rowSoundBlockLines =
+          bulkRows.length > 0
+            ? resolvedSoundBlockLines(soundBlockLines, rowLines)
+            : soundBlockArtLines;
+        const rowSoundBlockText = joinSoundBlockText(rowSoundBlockLines);
         return buildDesignerCartLineProperties({
           designerId: "gavel",
           designId,
@@ -2784,16 +2853,117 @@ export default function GavelDesigner({
                       <p className="gf-note">
                         {bulkMode
                           ? "Each sound block uses Line 1 from its CSV row."
-                          : "Leave blank to repeat line 1 of the band."}
+                          : "Leave blank to repeat line 1 of the band. Formatting is independent of the band."}
                       </p>
                       {!bulkMode ? (
-                        <input
-                          className="gf-input"
-                          value={soundBlockText}
-                          maxLength={maxChars}
-                          placeholder="Same as band, or enter new text"
-                          onChange={(e) => setSoundBlockText(e.target.value)}
-                        />
+                        <>
+                          <div className="gf-line-tools" style={{ marginBottom: 12 }}>
+                            <span
+                              className={`gf-char-count ${
+                                soundBlockCharCount(soundBlockLines) >=
+                                SOUND_BLOCK_MAX_CHARS
+                                  ? "is-warn"
+                                  : ""
+                              }`}
+                            >
+                              {SOUND_BLOCK_MAX_LINES} lines ·{" "}
+                              {soundBlockCharCount(soundBlockLines)}/
+                              {SOUND_BLOCK_MAX_CHARS} chars
+                            </span>
+                          </div>
+                          {soundBlockLines.map((line, index) => {
+                            const others = soundBlockCharCount(
+                              soundBlockLines.filter(
+                                (_, lineIndex) => lineIndex !== index,
+                              ),
+                            );
+                            const remaining = Math.max(
+                              0,
+                              SOUND_BLOCK_MAX_CHARS - others,
+                            );
+                            return (
+                              <div key={line.id} className="gf-line-block">
+                                <div className="gf-line-label">
+                                  Line {index + 1}
+                                  {index === 0 ? " (defaults to band line 1)" : " (optional)"}
+                                </div>
+                                <input
+                                  className="gf-input"
+                                  value={line.text ?? ""}
+                                  maxLength={remaining}
+                                  placeholder={
+                                    index === 0
+                                      ? (lines[0]?.text ?? "").trim() ||
+                                        "Same as band line 1"
+                                      : "Optional line"
+                                  }
+                                  onChange={(e) =>
+                                    updateSoundBlockLine(index, {
+                                      text: e.target.value,
+                                    })
+                                  }
+                                  style={{
+                                    fontFamily:
+                                      line.fontFamily || GAVEL_DEFAULT_FONT,
+                                  }}
+                                />
+                                <div className="gf-line-tools">
+                                  <FontFamilySelect
+                                    value={line.fontFamily || GAVEL_DEFAULT_FONT}
+                                    options={[...GAVEL_FONT_OPTIONS]}
+                                    onChange={(fontFamily) =>
+                                      updateSoundBlockLine(index, { fontFamily })
+                                    }
+                                    ariaLabel={`Sound block font for line ${index + 1}`}
+                                    variant="legacy"
+                                  />
+                                  <button
+                                    type="button"
+                                    className={`gf-chip ${line.bold ? "is-on" : ""}`}
+                                    onClick={() =>
+                                      updateSoundBlockLine(index, {
+                                        bold: !line.bold,
+                                      })
+                                    }
+                                  >
+                                    Bold
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={`gf-chip ${line.italic ? "is-on" : ""}`}
+                                    onClick={() =>
+                                      updateSoundBlockLine(index, {
+                                        italic: !line.italic,
+                                      })
+                                    }
+                                  >
+                                    Italic
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={`gf-chip ${line.underline ? "is-on" : ""}`}
+                                    onClick={() =>
+                                      updateSoundBlockLine(index, {
+                                        underline: !line.underline,
+                                      })
+                                    }
+                                  >
+                                    Underline
+                                  </button>
+                                  <span
+                                    className={`gf-char-count ${
+                                      (line.text ?? "").length >= remaining
+                                        ? "is-warn"
+                                        : ""
+                                    }`}
+                                  >
+                                    {(line.text ?? "").length}/{remaining}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </>
                       ) : null}
                     </div>
                   ) : null}
@@ -2859,9 +3029,9 @@ export default function GavelDesigner({
                       <p>{formatGavelMoney(quote.total)}</p>
                     </div>
                   </div>
-                  <p className={`gf-note ${quote.isSample ? "is-warn" : ""}`}>
-                    {quote.tierNote} Final price is confirmed at checkout.
-                  </p>
+                  {quote.isSample ? (
+                    <p className="gf-note is-warn">{quote.tierNote}</p>
+                  ) : null}
                   <div className="gf-summary-list">
                     <div>
                       <span>Product</span>
@@ -3024,7 +3194,7 @@ export default function GavelDesigner({
                 {soundBlockEngraved && step === "design" ? (
                   <GavelUnwrappedBandStrip
                     dataUrl={soundBlockTextureUrl}
-                    empty={!soundBlockPreviewText}
+                    empty={!joinSoundBlockText(soundBlockPreviewLines)}
                     square
                     label={
                       usingExampleCopy
