@@ -114,6 +114,20 @@ function audienceValues(audience: unknown): string[] {
   return [];
 }
 
+function secretLooksUnusable(secret: string, clientId: string): string | null {
+  if (clientId.startsWith("shpss_")) return "client-id-and-secret-swapped";
+  if (secret === clientId) return "secret-equals-client-id";
+  if (secret.length < 16) return "secret-too-short";
+  if (
+    /^(gf_secret|aqb_secret|sbl_secret|paste_[a-z0-9_]+|your-?secret|\.\.\.|xxx+)$/i.test(
+      secret,
+    )
+  ) {
+    return "placeholder-secret";
+  }
+  return null;
+}
+
 function hmacValid(secret: string, signingInput: string, signature: Buffer) {
   const expected = createHmac("sha256", secret)
     .update(signingInput, "utf8")
@@ -216,11 +230,18 @@ export function verifyAdminSessionToken(
     hmacValid(candidate.clientSecret, signingInput, provided),
   );
   if (!app) {
-    deny("bad-signature", {
+    const intended =
+      (audiences[0] ? apps.byClientId[audiences[0]] : undefined) ??
+      (shop ? apps.byShop[shop] : undefined);
+    const secretIssue = intended
+      ? secretLooksUnusable(intended.clientSecret, intended.clientId)
+      : null;
+    deny(secretIssue ?? "bad-signature", {
       shop,
       dest: claims.dest,
       iss: claims.iss,
       tokenAudience: claims.aud,
+      intendedSecretLength: intended?.clientSecret.length ?? 0,
       configuredClientIds: Object.keys(apps.byClientId),
       configuredShops: Object.keys(apps.byShop),
       rawKeys: apps.rawKeys,
