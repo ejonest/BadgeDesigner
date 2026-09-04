@@ -6,26 +6,20 @@ import {
 import { getProductionOrder } from "~/lib/production/orderData.server";
 import { verifyAdminSessionToken } from "~/lib/shopify/adminSession.server";
 
-const SHOPIFY_ORIGIN = /(^|\.)shopifycdn\.com$|(^|\.)shopify\.com$/;
-
 /**
- * Admin UI extensions run in a sandbox whose origin varies (and can be opaque),
- * so echo Shopify origins and fall back to `*`. Safe because every request is
- * authorized by a signed session token rather than cookies.
+ * Admin extension fetch always sends Authorization. Browsers reject
+ * `Access-Control-Allow-Origin: *` on those responses, which is why the card
+ * spun forever after a 401: JS never saw the body. Echo the request origin
+ * (Shopify sandboxes vary) and allow credentials. Auth is the JWT, not CORS.
  */
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin");
-  let allowOrigin = "*";
-  if (origin) {
-    try {
-      if (SHOPIFY_ORIGIN.test(new URL(origin).hostname)) allowOrigin = origin;
-    } catch {
-      // Opaque origins arrive as the literal string "null".
-    }
-  }
+  const allowOrigin =
+    origin && origin !== "null" ? origin : "https://extensions.shopifycdn.com";
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Headers":
       request.headers.get("Access-Control-Request-Headers") ??
       "Authorization, Content-Type",
