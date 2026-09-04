@@ -51,6 +51,18 @@ function configuredApps(): Record<string, AdminAppConfig> {
   return apps;
 }
 
+/**
+ * Rejections are logged with a short code and no secrets so misconfiguration
+ * can be diagnosed from the platform logs.
+ */
+function deny(code: string, detail?: Record<string, unknown>): never {
+  console.warn(
+    `[production-admin] session token rejected: ${code}`,
+    detail ?? {},
+  );
+  throw new Response(`Unauthorized (${code})`, { status: 401 });
+}
+
 function shopFromDestination(destination: unknown): string | null {
   if (typeof destination !== "string") return null;
   try {
@@ -78,13 +90,13 @@ function audienceMatches(audience: unknown, clientId: string): boolean {
 export function verifyAdminSessionToken(request: Request): VerifiedAdminSession {
   const authorization = request.headers.get("Authorization");
   if (!authorization?.startsWith("Bearer ")) {
-    throw new Response("Unauthorized", { status: 401 });
+    deny("missing-bearer-token");
   }
 
   const token = authorization.slice(7).trim();
   const parts = token.split(".");
   if (parts.length !== 3) {
-    throw new Response("Unauthorized", { status: 401 });
+    deny("malformed-token");
   }
 
   let header: Record<string, unknown>;
@@ -93,11 +105,11 @@ export function verifyAdminSessionToken(request: Request): VerifiedAdminSession 
     header = decodeJsonPart(parts[0]);
     claims = decodeJsonPart(parts[1]) as SessionTokenClaims;
   } catch {
-    throw new Response("Unauthorized", { status: 401 });
+    deny("undecodable-token");
   }
 
   if (header.alg !== "HS256") {
-    throw new Response("Unauthorized", { status: 401 });
+    deny("unexpected-algorithm", { alg: header.alg });
   }
 
   const shop = shopFromDestination(claims.dest);
@@ -109,14 +121,24 @@ export function verifyAdminSessionToken(request: Request): VerifiedAdminSession 
     console.error("[production-admin] invalid app configuration", error);
     throw new Response("Server configuration error", { status: 500 });
   }
-  const app = shop ? apps[shop] : undefined;
-  if (
-    !shop ||
-    issuerHost !== shop ||
-    !app ||
-    !audienceMatches(claims.aud, app.clientId)
-  ) {
-    throw new Response("Unauthorized", { status: 401 });
+
+  if (!shop) {
+    deny("no-shop-in-token", { dest: claims.dest });
+  }
+  if (issuerHost !== shop) {
+    deny("issuer-shop-mismatch", { shop, issuerHost });
+  }
+
+  const app = apps[shop];
+  if (!app) {
+    deny("shop-not-configured", { shop, configuredShops: Object.keys(apps) });
+  }
+  if (!audienceMatches(claims.aud, app.clientId)) {
+    deny("client-id-mismatch", {
+      shop,
+      tokenAudience: claims.aud,
+      configuredClientId: app.clientId,
+    });
   }
 
   const expected = createHmac("sha256", app.clientSecret)
@@ -126,22 +148,21 @@ export function verifyAdminSessionToken(request: Request): VerifiedAdminSession 
   try {
     provided = Buffer.from(parts[2], "base64url");
   } catch {
-    throw new Response("Unauthorized", { status: 401 });
+    deny("undecodable-signature");
   }
   if (
     provided.length !== expected.length ||
     !timingSafeEqual(provided, expected)
   ) {
-    throw new Response("Unauthorized", { status: 401 });
+    deny("bad-signature", { shop });
   }
 
   const now = Math.floor(Date.now() / 1000);
-  if (
-    typeof claims.exp !== "number" ||
-    claims.exp < now - 5 ||
-    (typeof claims.nbf === "number" && claims.nbf > now + 5)
-  ) {
-    throw new Response("Unauthorized", { status: 401 });
+  if (typeof claims.exp !== "number" || claims.exp < now - 5) {
+    deny("expired-token", { shop, exp: claims.exp, now });
+  }
+  if (typeof claims.nbf === "number" && claims.nbf > now + 5) {
+    deny("token-not-yet-valid", { shop, nbf: claims.nbf, now });
   }
 
   return {
