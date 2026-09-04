@@ -55,18 +55,29 @@ function Extension() {
     }
 
     const controller = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 15000);
+
     fetch(`/api/production/order?orderId=${encodeURIComponent(orderId)}`, {
       signal: controller.signal,
     })
       .then(async (response) => {
         const body = (await response.json().catch(() => ({}))) as OrderResponse;
         if (!response.ok) {
-          throw new Error(body.error || "Could not load production details.");
+          throw new Error(
+            body.error || `Request failed (${response.status}).`,
+          );
         }
         setItems(body.items ?? []);
       })
       .catch((caught: unknown) => {
         if (caught instanceof DOMException && caught.name === "AbortError") {
+          if (timedOut) {
+            setError("The request timed out before production details loaded.");
+          }
           return;
         }
         setError(
@@ -74,9 +85,13 @@ function Extension() {
             ? caught.message
             : "Could not load production details.",
         );
-      });
+      })
+      .finally(() => clearTimeout(timer));
 
-    return () => controller.abort();
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [orderId]);
 
   return (
