@@ -61,9 +61,21 @@ function Extension() {
       controller.abort();
     }, 15000);
 
-    fetch(`/api/production/order?orderId=${encodeURIComponent(orderId)}`, {
-      signal: controller.signal,
-    })
+    const load = async () => {
+      const token = await shopify.auth.idToken();
+      if (!token) {
+        throw new Error("Shopify did not issue an ID token for this session.");
+      }
+      return fetch(
+        `/api/production/order?orderId=${encodeURIComponent(orderId)}`,
+        {
+          signal: controller.signal,
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+    };
+
+    load()
       .then(async (response) => {
         const body = (await response.json().catch(() => ({}))) as OrderResponse;
         if (!response.ok) {
