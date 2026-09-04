@@ -813,8 +813,8 @@ export function getGavelProductionMethod(
  *
  * The gavel, block and personalized-block entries share the cut-out set built
  * by scripts/build-gavel-choice-images.py, so this tab and the step-2 choice
- * cards show the same photo of the same wood. Stands still come from the older
- * one-off shots — there is no stand in that set.
+ * cards show the same photo of the same wood. Stands and the round block still
+ * come from the older one-off shots — neither is in that set.
  *
  * These point at the `-large` renders rather than the cards' small PNGs: the
  * tab magnifies on hover and opens a lightbox, which needs the resolution.
@@ -823,7 +823,7 @@ const GAVEL_PRODUCT_PHOTOS: Readonly<Record<string, string>> = {
   "walnut|gavel": "/images/gavel/options/walnut-gavel-large.jpg",
   "walnut|block": "/images/gavel/options/walnut-block-large.jpg",
   "walnut|engraved": "/images/gavel/options/walnut-personalized-block-large.jpg",
-  "walnut|round": "/images/gavel/product-walnut-round-block.svg",
+  "walnut|round": "/images/gavel/product-walnut-round-block.jpg",
   "walnut|stand": "/images/gavel/product-walnut-stand.jpg",
   "walnut|stand|silver": "/images/gavel/product-walnut-stand-silver.jpg",
   "rubberwood|gavel": "/images/gavel/options/rubberwood-gavel-large.jpg",
