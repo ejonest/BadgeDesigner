@@ -19,10 +19,13 @@
 Add these to your Vercel environment variables:
 
 ```env
-SUPABASE_URL=https://gxzfggczycqqbbfpwaowm.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4emZnY3p5Y3FxYmJmcHdhb3dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MTI1MTQsImV4cCI6MjA2ODM4ODUxNH0.lzISAMZfJYtREsPe7vXKuHyhvFkuyKfyG9vUS3jaynw
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4emZnY3p5Y3FxYmJmcHdhb3dtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjgxMjUxNCwiZXhwIjoyMDY4Mzg4NTE0fQ.tkk56DHg0iJL0anUg7cBAEZOvCXYtXu_ZKraVGNuhC4
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
+
+Never commit real Supabase keys. The service-role key bypasses RLS and must
+only be stored in server-side environment variables such as Vercel.
 
 ## Step 4: Test the Migration
 

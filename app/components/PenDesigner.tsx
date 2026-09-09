@@ -41,8 +41,6 @@ interface PenDesignerProps {
   productId?: string | null;
   shop?: string | null;
   customerId?: string | null;
-  gadgetApiUrl?: string;
-  gadgetApiKey?: string;
   variantId?: string | null;
   unitPrice?: number | null;
 }
@@ -125,8 +123,6 @@ export default function PenDesigner({
   productId,
   shop,
   customerId,
-  gadgetApiUrl,
-  gadgetApiKey,
   variantId: suppliedVariantId,
   unitPrice: suppliedUnitPrice,
 }: PenDesignerProps) {
@@ -154,8 +150,8 @@ export default function PenDesigner({
   const designIdRef = useRef(
     `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
   );
-  const apiRef = useRef(
-    createApi(gadgetApiUrl, gadgetApiKey, { designerId: "pen" }),
+  const commerceApiRef = useRef(
+    createApi(undefined, undefined, { designerId: "pen" }),
   );
 
   const currentIndex = STEPS.findIndex((candidate) => candidate.id === step);
@@ -490,20 +486,6 @@ export default function PenDesigner({
         throw new Error(finalized.error || "Could not finalize the pen proof.");
       }
 
-      let gadgetDesignId: string | undefined;
-      try {
-        const saved = await apiRef.current.saveBadgeDesign(
-          buildDesignPayload(),
-          {
-            shopId: shop || queryValue("shop") || "test-shop",
-            customerId: customerId || queryValue("customerId") || undefined,
-          },
-        );
-        gadgetDesignId = saved.id;
-      } catch (caught) {
-        console.warn("[PenDesigner] Gadget save skipped:", caught);
-      }
-
       const definition = getDesignerConfig("pen");
       const properties = buildDesignerCartLineProperties({
         designerId: "pen",
@@ -515,7 +497,6 @@ export default function PenDesigner({
         backgroundColor: "#315c7d",
         linePrice: unitPrice.toFixed(2),
         thumbnailUrl: finalized.thumbnailUrls?.[0] ?? "",
-        gadgetDesignId,
         pdfUrl: finalized.pdfUrl ?? "",
         orderQuantity: quantity,
         extraHidden: {
@@ -526,7 +507,7 @@ export default function PenDesigner({
           "_Pen Cap Mode": PEN_ARTWORK_MODE_LABELS[capMode],
         },
       });
-      const result = await apiRef.current.addToCartMultiple([
+      const result = await commerceApiRef.current.addToCartMultiple([
         { variantId, quantity, properties },
       ]);
       if (!result.success) {

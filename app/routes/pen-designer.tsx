@@ -2,7 +2,6 @@ import type { LoaderFunction, MetaFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import PenDesigner from "~/components/PenDesigner";
-import { getDesignerConfig, resolveGadgetUrl } from "~/config/designers";
 
 export const meta: MetaFunction = () => [
   { title: "Custom Pen Designer — All Quality Badges" },
@@ -14,7 +13,6 @@ export const meta: MetaFunction = () => [
 
 export const loader: LoaderFunction = async ({ request }) => {
   const url = new URL(request.url);
-  const definition = getDesignerConfig("pen");
   const rawPrice = Number(url.searchParams.get("price"));
   const headers = new Headers({
     "X-Frame-Options": "ALLOWALL",
@@ -33,8 +31,6 @@ export const loader: LoaderFunction = async ({ request }) => {
         url.searchParams.get("variant_id") ??
         url.searchParams.get("variant"),
       unitPrice: Number.isFinite(rawPrice) && rawPrice > 0 ? rawPrice : null,
-      gadgetApiUrl: resolveGadgetUrl(definition),
-      gadgetApiKey: undefined,
     },
     { headers },
   );
@@ -49,8 +45,6 @@ export default function PenDesignerRoute() {
       customerId={data.customerId}
       variantId={data.variantId}
       unitPrice={data.unitPrice}
-      gadgetApiUrl={data.gadgetApiUrl}
-      gadgetApiKey={data.gadgetApiKey}
     />
   );
 }
