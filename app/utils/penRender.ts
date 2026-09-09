@@ -2,19 +2,37 @@ import {
   PEN_ENGRAVING_COLOR,
   PEN_METAL_COLOR,
   PEN_SURFACES,
-  type PenBandMode,
+  type PenArtworkMode,
   type PenFontId,
   type PenSurfaceSpec,
 } from "~/constants/pen";
-import { layoutEngraving, lineOffsets } from "~/utils/penEngraving";
+import {
+  fitMeasuredWidth,
+  layoutEngraving,
+  lineOffsets,
+  penLockup,
+  type EngravingLayout,
+} from "~/utils/penEngraving";
+import { inkTintMatrix } from "~/utils/logoBlackInk";
+
+/**
+ * An uploaded logo reduced to printable single-colour art. The alpha channel
+ * carries the coverage and the pixels themselves are black, so every surface
+ * can tint the same art to whatever colour it engraves in.
+ */
+export interface PenLogoInk {
+  href: string;
+  /** Width ÷ height of the trimmed art. */
+  aspect: number;
+}
 
 export interface PenSurfaceArtwork {
-  mode?: PenBandMode;
+  mode?: PenArtworkMode;
   text: string;
   fontFamily: PenFontId;
   bold?: boolean;
   italic?: boolean;
-  logoDataUrl?: string | null;
+  logo?: PenLogoInk | null;
 }
 
 function escapeXml(value: string): string {
@@ -33,6 +51,37 @@ function safeImageDataUrl(value: string | null | undefined): string | null {
     : null;
 }
 
+function fontCss(artwork: PenSurfaceArtwork, fontSize: number): string {
+  const style = artwork.italic ? "italic" : "normal";
+  const weight = artwork.bold ? 700 : 500;
+  return `${style} ${weight} ${fontSize}px "${artwork.fontFamily}", Arial, sans-serif`;
+}
+
+/**
+ * Keeps the engraving inside the safe area by measuring the real font, which
+ * the estimate in `layoutEngraving` cannot do. Falls back to the estimate on
+ * the server, where there is no canvas to measure with.
+ */
+function fitToSurface(
+  layout: EngravingLayout,
+  artwork: PenSurfaceArtwork,
+  letterSpacingEm: number,
+  maxWidth: number,
+): EngravingLayout {
+  if (typeof document === "undefined") return layout;
+  const context = document.createElement("canvas").getContext("2d");
+  if (!context) return layout;
+  return fitMeasuredWidth(
+    layout,
+    maxWidth,
+    (line, fontSize) => {
+      context.font = fontCss(artwork, fontSize);
+      return context.measureText(line).width;
+    },
+    letterSpacingEm,
+  );
+}
+
 function surfaceSvg(
   title: string,
   spec: PenSurfaceSpec,
@@ -40,33 +89,59 @@ function surfaceSvg(
   options?: { includeSurface?: boolean },
 ): string {
   const { viewBoxWidth: width, viewBoxHeight: height, safeInset } = spec;
-  const logo = safeImageDataUrl(artwork.logoDataUrl);
-  const usesLogo = artwork.mode === "logo" && logo;
+  const logo = safeImageDataUrl(artwork.logo?.href);
   const safeWidth = width - safeInset * 2;
   const safeHeight = height - safeInset * 2;
   const isBand = title === "Case band";
-  const layout = layoutEngraving(
-    artwork.text,
+  const letterSpacingEm = isBand ? 0 : 0.18;
+  const hasText = Boolean(artwork.text.trim());
+  const lockup = penLockup(
     { width: safeWidth, height: safeHeight },
     {
-      maxFontSize: safeHeight * (isBand ? 0.22 : 0.72),
-      maxLines: isBand ? 3 : 1,
+      logoAspect: logo ? artwork.logo?.aspect : null,
+      hasText,
+      placement: isBand ? "stacked" : "beside",
     },
+  );
+  const layout = fitToSurface(
+    layoutEngraving(
+      artwork.text,
+      { width: lockup.text.width, height: lockup.text.height },
+      {
+        maxFontSize: safeHeight * (isBand ? 0.22 : 0.72),
+        maxLines: isBand ? 3 : 1,
+        letterSpacingEm,
+      },
+    ),
+    artwork,
+    letterSpacingEm,
+    lockup.text.width * 0.98,
   );
   const fontSize = Math.round(layout.fontSize);
   const artworkColor = options?.includeSurface
     ? PEN_ENGRAVING_COLOR
     : "#000000";
-  const textAttrs = `text-anchor="middle" dominant-baseline="middle" font-family="${escapeXml(artwork.fontFamily)}" font-size="${fontSize}" font-weight="${artwork.bold ? 700 : 500}" font-style="${artwork.italic ? "italic" : "normal"}" fill="${artworkColor}"`;
-  const content = usesLogo
-    ? `<image href="${escapeXml(logo)}" x="${safeInset}" y="${safeInset}" width="${safeWidth}" height="${safeHeight}" preserveAspectRatio="xMidYMid meet"/>`
-    : lineOffsets(layout)
+  const textX = Math.round(safeInset + lockup.text.x + lockup.text.width / 2);
+  const textY = safeInset + lockup.text.y + lockup.text.height / 2;
+  const textAttrs = `text-anchor="middle" dominant-baseline="middle" font-family="${escapeXml(artwork.fontFamily)}" font-size="${fontSize}" font-weight="${artwork.bold ? 700 : 500}" font-style="${artwork.italic ? "italic" : "normal"}" letter-spacing="${letterSpacingEm}em" fill="${artworkColor}"`;
+  // The art is black already, so it only needs repainting on a proof sheet
+  // where the engraving reads light against the metal.
+  const tint = options?.includeSurface ? ` filter="url(#ink)"` : "";
+  const logoTag =
+    logo && lockup.logo
+      ? `<image href="${escapeXml(logo)}" x="${Math.round(safeInset + lockup.logo.x)}" y="${Math.round(safeInset + lockup.logo.y)}" width="${Math.round(lockup.logo.width)}" height="${Math.round(lockup.logo.height)}" preserveAspectRatio="xMidYMid meet"${tint}/>`
+      : "";
+  const textTags = hasText
+    ? lineOffsets(layout)
         .map(
           (offset, index) =>
-            `<text x="${width / 2}" y="${Math.round(height / 2 + offset)}" ${textAttrs}>${escapeXml(layout.lines[index])}</text>`,
+            `<text x="${textX}" y="${Math.round(textY + offset)}" ${textAttrs}>${escapeXml(layout.lines[index])}</text>`,
         )
-        .join("") ||
-      `<text x="${width / 2}" y="${height / 2}" ${textAttrs}> </text>`;
+        .join("")
+    : "";
+  const content =
+    `${logoTag}${textTags}` ||
+    `<text x="${width / 2}" y="${height / 2}" ${textAttrs}> </text>`;
   const surface = options?.includeSurface
     ? [
         `<rect width="${width}" height="${height}" rx="${Math.round(height * 0.08)}" fill="${PEN_METAL_COLOR}"/>`,
@@ -79,8 +154,13 @@ function surfaceSvg(
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${spec.widthIn}in" height="${spec.heightIn}in" viewBox="0 0 ${width} ${height}">`,
     `<title>${title} engraving artwork</title>`,
     `<desc>Estimated ${spec.widthIn} by ${spec.heightIn} inch production area; confirm vendor measurements before manufacture.</desc>`,
+    `<defs><clipPath id="safe-area"><rect x="${safeInset}" y="${safeInset}" width="${safeWidth}" height="${safeHeight}"/></clipPath>${
+      tint
+        ? `<filter id="ink" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${inkTintMatrix(artworkColor)}"/></filter>`
+        : ""
+    }</defs>`,
     surface,
-    `<g id="artwork">${content}</g>`,
+    `<g id="artwork" clip-path="url(#safe-area)">${content}</g>`,
     `</svg>`,
   ].join("");
 }
@@ -96,11 +176,7 @@ export function penCapToSvgString(
   artwork: PenSurfaceArtwork,
   options?: { includeSurface?: boolean },
 ): string {
-  return surfaceSvg("Pen cap", PEN_SURFACES.cap, {
-    ...artwork,
-    mode: "text",
-    logoDataUrl: null,
-  }, options);
+  return surfaceSvg("Pen cap", PEN_SURFACES.cap, artwork, options);
 }
 
 function svgDataUrl(svg: string): string {

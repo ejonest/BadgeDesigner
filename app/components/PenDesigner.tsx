@@ -7,11 +7,13 @@ import {
 } from "react";
 import type { Badge, BadgeLine } from "~/types/badge";
 import {
+  PEN_ARTWORK_MODE_LABELS,
   PEN_DEFAULT_PRICE,
+  PEN_DEFAULT_FONT,
   PEN_FONTS,
   PEN_LIMITS,
   PEN_PREVIEW_PHOTOS,
-  type PenBandMode,
+  penArtworkMode,
   type PenFontId,
 } from "~/constants/pen";
 import { PenPreviewArt } from "~/components/PenPreviewArt";
@@ -19,8 +21,10 @@ import {
   penCapToSvgString,
   penCaseBandToSvgString,
   penProofBoardToPng,
+  type PenLogoInk,
   type PenSurfaceArtwork,
 } from "~/utils/penRender";
+import { blackInkLogoFromSrc } from "~/utils/logoBlackInk";
 import { generatePenProofPdf } from "~/utils/penPdf";
 import { createApi } from "~/utils/api";
 import {
@@ -45,7 +49,6 @@ interface PenDesignerProps {
 
 interface CachedPenDesign {
   step: PenStep;
-  bandMode: PenBandMode;
   bandText: string;
   capText: string;
   fontFamily: PenFontId;
@@ -56,8 +59,8 @@ interface CachedPenDesign {
 
 const STEPS: readonly { id: PenStep; label: string }[] = [
   { id: "product", label: "Pen" },
-  { id: "band", label: "Case band" },
   { id: "cap", label: "Pen cap" },
+  { id: "band", label: "Case band" },
   { id: "quantity", label: "Quantity" },
   { id: "review", label: "Review" },
 ];
@@ -90,6 +93,26 @@ function makeLine(
   };
 }
 
+function readDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () =>
+      typeof reader.result === "string"
+        ? resolve(reader.result)
+        : reject(new Error("Could not read that logo."));
+    reader.onerror = () => reject(new Error("Could not read that logo."));
+    reader.readAsDataURL(file);
+  });
+}
+
+/** How a surface reads on the proof and the order: the message, the mark, or both. */
+function describeArtwork(text: string, file: File | null): string {
+  const message = text.trim();
+  const logo = file?.name ?? "";
+  if (message && logo) return `${message} + ${logo}`;
+  return message || logo || "—";
+}
+
 function clampQuantity(value: number): number {
   if (!Number.isFinite(value)) return PEN_LIMITS.quantityMin;
   return Math.min(
@@ -110,16 +133,18 @@ export default function PenDesigner({
   const [step, setStep] = useState<PenStep>("product");
   const [furthestStep, setFurthestStep] = useState(0);
   const [previewSurface, setPreviewSurface] =
-    useState<PreviewSurface>("band");
-  const [bandMode, setBandMode] = useState<PenBandMode>("text");
+    useState<PreviewSurface>("cap");
   const [bandText, setBandText] = useState("");
   const [capText, setCapText] = useState("");
-  const [fontFamily, setFontFamily] = useState<PenFontId>("Montserrat");
+  const [fontFamily, setFontFamily] = useState<PenFontId>(PEN_DEFAULT_FONT);
   const [bold, setBold] = useState(false);
   const [italic, setItalic] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const [capLogoFile, setCapLogoFile] = useState<File | null>(null);
+  const [bandLogoFile, setBandLogoFile] = useState<File | null>(null);
+  /** Uploads reduced to printable single-colour art, ready to tint per surface. */
+  const [capLogoInk, setCapLogoInk] = useState<PenLogoInk | null>(null);
+  const [bandLogoInk, setBandLogoInk] = useState<PenLogoInk | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,6 +165,9 @@ export default function PenDesigner({
   }, [suppliedUnitPrice]);
   const variantId = suppliedVariantId?.trim() ?? "";
 
+  const bandMode = penArtworkMode(bandText, Boolean(bandLogoInk));
+  const capMode = penArtworkMode(capText, Boolean(capLogoInk));
+
   const bandArtwork: PenSurfaceArtwork = useMemo(
     () => ({
       mode: bandMode,
@@ -147,24 +175,25 @@ export default function PenDesigner({
       fontFamily,
       bold,
       italic,
-      logoDataUrl,
+      logo: bandLogoInk,
     }),
-    [bandMode, bandText, bold, fontFamily, italic, logoDataUrl],
+    [bandLogoInk, bandMode, bandText, bold, fontFamily, italic],
   );
   const capArtwork: PenSurfaceArtwork = useMemo(
     () => ({
-      mode: "text",
+      mode: capMode,
       text: capText,
       fontFamily,
       bold,
       italic,
+      logo: capLogoInk,
     }),
-    [bold, capText, fontFamily, italic],
+    [bold, capLogoInk, capMode, capText, fontFamily, italic],
   );
   const fontStack = useMemo(
     () =>
       PEN_FONTS.find((font) => font.id === fontFamily)?.sample ??
-      "Montserrat, Arial, sans-serif",
+      `"${PEN_DEFAULT_FONT}", Arial, sans-serif`,
     [fontFamily],
   );
 
@@ -173,9 +202,6 @@ export default function PenDesigner({
       const raw = window.localStorage.getItem(CACHE_KEY);
       if (raw) {
         const cached = JSON.parse(raw) as Partial<CachedPenDesign>;
-        if (cached.bandMode === "text" || cached.bandMode === "logo") {
-          setBandMode(cached.bandMode);
-        }
         if (typeof cached.bandText === "string") setBandText(cached.bandText);
         if (typeof cached.capText === "string") setCapText(cached.capText);
         if (PEN_FONTS.some((font) => font.id === cached.fontFamily)) {
@@ -190,8 +216,12 @@ export default function PenDesigner({
           (candidate) => candidate.id === cached.step,
         );
         if (restoredIndex >= 0) {
-          setStep(STEPS[restoredIndex].id);
+          const restored = STEPS[restoredIndex].id;
+          setStep(restored);
           setFurthestStep(restoredIndex);
+          if (restored === "band" || restored === "cap") {
+            setPreviewSurface(restored);
+          }
         }
       }
     } catch {
@@ -206,7 +236,6 @@ export default function PenDesigner({
     const timeout = window.setTimeout(() => {
       const cached: CachedPenDesign = {
         step,
-        bandMode,
         bandText,
         capText,
         fontFamily,
@@ -218,7 +247,6 @@ export default function PenDesigner({
     }, 350);
     return () => window.clearTimeout(timeout);
   }, [
-    bandMode,
     bandText,
     bold,
     capText,
@@ -245,13 +273,11 @@ export default function PenDesigner({
       lines,
       backgroundColor: "#315c7d",
       backing: "magnetic",
-      logo:
-        bandMode === "logo" && logoDataUrl
-          ? { src: logoDataUrl }
-          : undefined,
+      logo: bandLogoInk ? { src: bandLogoInk.href } : undefined,
       penStyle: "blue-gift-set",
       penCaseBandMode: bandMode,
-      penCaseBandText: bandMode === "text" ? bandText : "",
+      penCaseBandText: bandText,
+      penCapMode: capMode,
       penCapText: capText,
     };
   }
@@ -265,9 +291,11 @@ export default function PenDesigner({
       allBadges: [badge],
       multipleBadges: [],
       penCaseBandMode: bandMode,
-      penCaseBandText: bandMode === "text" ? bandText : "",
+      penCaseBandText: bandText,
+      penCaseBandLogoFileName: bandLogoFile?.name ?? null,
+      penCapMode: capMode,
       penCapText: capText,
-      penLogoFileName: bandMode === "logo" ? logoFile?.name ?? null : null,
+      penCapLogoFileName: capLogoFile?.name ?? null,
       totalPrice: unitPrice * quantity,
       quantity,
       timestamp: new Date().toISOString(),
@@ -277,16 +305,11 @@ export default function PenDesigner({
   }
 
   function validateStep(candidate: PenStep): string | null {
-    if (candidate === "band") {
-      if (bandMode === "text" && !bandText.trim()) {
-        return "Enter a message for the case band.";
-      }
-      if (bandMode === "logo" && !logoFile) {
-        return "Upload a logo for the case band.";
-      }
+    if (candidate === "band" && !bandText.trim() && !bandLogoInk) {
+      return "Add a message or a logo for the case band.";
     }
-    if (candidate === "cap" && !capText.trim()) {
-      return "Enter the text to engrave on the pen cap.";
+    if (candidate === "cap" && !capText.trim() && !capLogoInk) {
+      return "Add a message or a logo for the pen cap.";
     }
     return null;
   }
@@ -295,7 +318,9 @@ export default function PenDesigner({
     const nextIndex = STEPS.findIndex((candidate) => candidate.id === next);
     setStep(next);
     setFurthestStep((value) => Math.max(value, nextIndex));
-    setPreviewSurface(next === "cap" ? "cap" : "band");
+    if (next === "cap" || next === "band") {
+      setPreviewSurface(next);
+    }
     setError(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -310,8 +335,13 @@ export default function PenDesigner({
     goTo(next.id);
   }
 
-  function onLogoChange(event: ChangeEvent<HTMLInputElement>) {
+  async function onLogoChange(
+    event: ChangeEvent<HTMLInputElement>,
+    surface: PreviewSurface,
+  ) {
     const file = event.target.files?.[0] ?? null;
+    // Let the same file be picked again after a removal.
+    event.target.value = "";
     setError(null);
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -322,12 +352,34 @@ export default function PenDesigner({
       setError("Logo files must be smaller than 8 MB.");
       return;
     }
-    setLogoFile(file);
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") setLogoDataUrl(reader.result);
-    };
-    reader.readAsDataURL(file);
+    const setFile = surface === "cap" ? setCapLogoFile : setBandLogoFile;
+    const setInk = surface === "cap" ? setCapLogoInk : setBandLogoInk;
+    setFile(file);
+    // Reduce the upload to printable single-colour art once, so the preview,
+    // the proof, and the production file all engrave the same shapes.
+    const ink = await readDataUrl(file)
+      .then(blackInkLogoFromSrc)
+      .catch(() => null);
+    if (!ink) {
+      setFile(null);
+      setInk(null);
+      setError(
+        "That logo could not be converted to engravable art. Try a PNG or JPG.",
+      );
+      return;
+    }
+    setInk(ink);
+  }
+
+  function removeLogo(surface: PreviewSurface) {
+    if (surface === "cap") {
+      setCapLogoFile(null);
+      setCapLogoInk(null);
+    } else {
+      setBandLogoFile(null);
+      setBandLogoInk(null);
+    }
+    setError(null);
   }
 
   async function saveDraft(thumbnailBlob: Blob) {
@@ -339,8 +391,12 @@ export default function PenDesigner({
       form.append("shopifyCustomerId", effectiveCustomer);
     }
     form.append("thumbnail_png_0", thumbnailBlob, "pen-thumbnail.png");
-    if (logoFile && bandMode === "logo") {
-      form.append("logo_0", logoFile, logoFile.name);
+    // The draft API keeps a single shared logo slot. Both surfaces carry their
+    // converted art inside the production SVGs below, so this is the original
+    // upload kept for reference.
+    const originalLogo = capLogoFile ?? bandLogoFile;
+    if (originalLogo) {
+      form.append("logo_0", originalLogo, originalLogo.name);
     }
     const bandSvg = penCaseBandToSvgString(bandArtwork);
     const capSvg = penCapToSvgString(capArtwork);
@@ -372,11 +428,11 @@ export default function PenDesigner({
   }
 
   async function buildProof() {
-    const bandError = validateStep("band");
     const capError = validateStep("cap");
-    if (bandError || capError) {
-      setError(bandError || capError);
-      goTo(bandError ? "band" : "cap");
+    const bandError = validateStep("band");
+    if (capError || bandError) {
+      setError(capError || bandError);
+      goTo(capError ? "cap" : "band");
       return;
     }
     setBusy(true);
@@ -390,9 +446,8 @@ export default function PenDesigner({
       const pdf = await generatePenProofPdf({
         designId: designIdRef.current,
         thumbnailDataUrl: thumbnail.dataUrl,
-        bandSummary:
-          bandMode === "text" ? bandText.trim() : logoFile?.name ?? "Uploaded logo",
-        capText: capText.trim(),
+        bandSummary: describeArtwork(bandText, bandLogoFile),
+        capSummary: describeArtwork(capText, capLogoFile),
         quantity,
         unitPrice,
       });
@@ -465,10 +520,10 @@ export default function PenDesigner({
         orderQuantity: quantity,
         extraHidden: {
           "_Pen Style": "Blue gift set",
-          "_Case Band Artwork":
-            bandMode === "text" ? bandText.trim() : logoFile?.name ?? "Logo",
-          "_Pen Cap Text": capText.trim(),
-          "_Case Band Mode": bandMode === "text" ? "Text" : "Logo",
+          "_Case Band Artwork": describeArtwork(bandText, bandLogoFile),
+          "_Pen Cap Artwork": describeArtwork(capText, capLogoFile),
+          "_Case Band Mode": PEN_ARTWORK_MODE_LABELS[bandMode],
+          "_Pen Cap Mode": PEN_ARTWORK_MODE_LABELS[capMode],
         },
       });
       const result = await apiRef.current.addToCartMultiple([
@@ -492,16 +547,17 @@ export default function PenDesigner({
     if (!window.confirm("Reset the case band, pen cap, and quantity?")) return;
     setStep("product");
     setFurthestStep(0);
-    setPreviewSurface("band");
-    setBandMode("text");
+    setPreviewSurface("cap");
     setBandText("");
     setCapText("");
-    setFontFamily("Montserrat");
+    setFontFamily(PEN_DEFAULT_FONT);
     setBold(false);
     setItalic(false);
     setQuantity(1);
-    setLogoFile(null);
-    setLogoDataUrl(null);
+    setCapLogoFile(null);
+    setCapLogoInk(null);
+    setBandLogoFile(null);
+    setBandLogoInk(null);
     setError(null);
     window.localStorage.removeItem(CACHE_KEY);
   }
@@ -520,7 +576,7 @@ export default function PenDesigner({
         <div>
           <p className="pen-eyebrow">Personalization tool</p>
           <h1>Design your custom pen set</h1>
-          <p>Personalize the presentation case band and engrave the pen cap.</p>
+          <p>Engrave the pen cap and personalize the presentation case band.</p>
         </div>
         <button type="button" className="pen-reset" onClick={resetDesign}>
           Reset design
@@ -558,82 +614,27 @@ export default function PenDesigner({
               <p className="pen-step-label">Step 1</p>
               <h2>Premium blue pen gift set</h2>
               <p className="pen-lead">
-                Includes the presentation case, customizable metal case band,
-                and engraved pen.
+                Includes the engraved pen, presentation case, and customizable
+                metal case band.
               </p>
               <button type="button" className="pen-product-card is-selected">
                 <img src="/images/pen/gift-set.jpg" alt="" />
                 <span>
                   <strong>Blue rollerball gift set</strong>
-                  <small>Case band + pen cap personalization</small>
+                  <small>Pen cap + case band personalization</small>
                 </span>
                 <b>${unitPrice.toFixed(2)}</b>
               </button>
             </div>
           )}
 
-          {step === "band" && (
-            <div className="pen-panel">
-              <p className="pen-step-label">Step 2</p>
-              <h2>Customize the case band</h2>
-              <p className="pen-lead">Choose a message or upload your logo.</p>
-              <div className="pen-segmented">
-                <button
-                  type="button"
-                  className={bandMode === "text" ? "is-selected" : ""}
-                  onClick={() => setBandMode("text")}
-                >
-                  Custom message
-                </button>
-                <button
-                  type="button"
-                  className={bandMode === "logo" ? "is-selected" : ""}
-                  onClick={() => setBandMode("logo")}
-                >
-                  Upload logo
-                </button>
-              </div>
-              {bandMode === "text" ? (
-                <label className="pen-field">
-                  <span>Case band message</span>
-                  <input
-                    value={bandText}
-                    maxLength={PEN_LIMITS.caseBandText}
-                    onChange={(event) => setBandText(event.target.value)}
-                    placeholder="Your company or special message"
-                  />
-                  <small>
-                    {bandText.length}/{PEN_LIMITS.caseBandText} characters
-                  </small>
-                </label>
-              ) : (
-                <label className="pen-upload">
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                    onChange={onLogoChange}
-                  />
-                  <span>{logoFile ? logoFile.name : "Choose logo file"}</span>
-                  <small>PNG, JPG, WEBP, or SVG · maximum 8 MB</small>
-                </label>
-              )}
-              <TextStyleControls
-                fontFamily={fontFamily}
-                setFontFamily={setFontFamily}
-                bold={bold}
-                setBold={setBold}
-                italic={italic}
-                setItalic={setItalic}
-              />
-            </div>
-          )}
-
           {step === "cap" && (
             <div className="pen-panel">
-              <p className="pen-step-label">Step 3</p>
+              <p className="pen-step-label">Step 2</p>
               <h2>Engrave the pen cap</h2>
               <p className="pen-lead">
-                Add a name, title, or short message to the upper barrel.
+                Engrave a short message on the upper barrel, and add your logo
+                to sit beside it.
               </p>
               <label className="pen-field">
                 <span>Pen cap text</span>
@@ -654,6 +655,48 @@ export default function PenDesigner({
                 setBold={setBold}
                 italic={italic}
                 setItalic={setItalic}
+              />
+              <LogoUploadField
+                surface="cap"
+                file={capLogoFile}
+                onChange={onLogoChange}
+                onRemove={removeLogo}
+              />
+            </div>
+          )}
+
+          {step === "band" && (
+            <div className="pen-panel">
+              <p className="pen-step-label">Step 3</p>
+              <h2>Customize the case band</h2>
+              <p className="pen-lead">
+                Add a message, your logo, or both to the metal band.
+              </p>
+              <label className="pen-field">
+                <span>Case band message</span>
+                <input
+                  value={bandText}
+                  maxLength={PEN_LIMITS.caseBandText}
+                  onChange={(event) => setBandText(event.target.value)}
+                  placeholder="Your company or special message"
+                />
+                <small>
+                  {bandText.length}/{PEN_LIMITS.caseBandText} characters
+                </small>
+              </label>
+              <TextStyleControls
+                fontFamily={fontFamily}
+                setFontFamily={setFontFamily}
+                bold={bold}
+                setBold={setBold}
+                italic={italic}
+                setItalic={setItalic}
+              />
+              <LogoUploadField
+                surface="band"
+                file={bandLogoFile}
+                onChange={onLogoChange}
+                onRemove={removeLogo}
               />
             </div>
           )}
@@ -704,16 +747,12 @@ export default function PenDesigner({
               <h2>Review your pen set</h2>
               <dl className="pen-review-list">
                 <div>
-                  <dt>Case band</dt>
-                  <dd>
-                    {bandMode === "text"
-                      ? bandText
-                      : logoFile?.name ?? "Uploaded logo"}
-                  </dd>
+                  <dt>Pen cap</dt>
+                  <dd>{describeArtwork(capText, capLogoFile)}</dd>
                 </div>
                 <div>
-                  <dt>Pen cap</dt>
-                  <dd>{capText}</dd>
+                  <dt>Case band</dt>
+                  <dd>{describeArtwork(bandText, bandLogoFile)}</dd>
                 </div>
                 <div>
                   <dt>Quantity</dt>
@@ -772,17 +811,17 @@ export default function PenDesigner({
             <div className="pen-preview-tabs">
               <button
                 type="button"
-                className={previewSurface === "band" ? "is-selected" : ""}
-                onClick={() => setPreviewSurface("band")}
-              >
-                Case band
-              </button>
-              <button
-                type="button"
                 className={previewSurface === "cap" ? "is-selected" : ""}
                 onClick={() => setPreviewSurface("cap")}
               >
                 Pen cap
+              </button>
+              <button
+                type="button"
+                className={previewSurface === "band" ? "is-selected" : ""}
+                onClick={() => setPreviewSurface("band")}
+              >
+                Case band
               </button>
             </div>
           </div>
@@ -798,11 +837,11 @@ export default function PenDesigner({
                 />
                 <PenPreviewArt
                   photo={PEN_PREVIEW_PHOTOS.caseBand}
-                  text={bandText || "Your design"}
+                  text={bandText || (bandLogoInk ? "" : "Your design")}
                   fontStack={fontStack}
                   bold={bold}
                   italic={italic}
-                  logoDataUrl={bandMode === "logo" ? logoDataUrl : null}
+                  logo={bandLogoInk}
                 />
               </div>
             ) : (
@@ -816,10 +855,11 @@ export default function PenDesigner({
                 />
                 <PenPreviewArt
                   photo={PEN_PREVIEW_PHOTOS.cap}
-                  text={capText || "Your message"}
+                  text={capText || (capLogoInk ? "" : "Your message")}
                   fontStack={fontStack}
                   bold={bold}
                   italic={italic}
+                  logo={capLogoInk}
                 />
               </div>
             )}
@@ -878,6 +918,48 @@ export default function PenDesigner({
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function LogoUploadField({
+  surface,
+  file,
+  onChange,
+  onRemove,
+}: {
+  surface: PreviewSurface;
+  file: File | null;
+  onChange: (
+    event: ChangeEvent<HTMLInputElement>,
+    surface: PreviewSurface,
+  ) => void;
+  onRemove: (surface: PreviewSurface) => void;
+}) {
+  const label = surface === "cap" ? "pen cap" : "case band";
+  return (
+    <div className="pen-upload-field">
+      <label className="pen-upload">
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          onChange={(event) => onChange(event, surface)}
+        />
+        <span>{file ? file.name : `Add a ${label} logo (optional)`}</span>
+        <small>
+          Engraved as single-colour art to the left of your text · transparent
+          PNG or SVG recommended · maximum 8 MB
+        </small>
+      </label>
+      {file && (
+        <button
+          type="button"
+          className="pen-secondary"
+          onClick={() => onRemove(surface)}
+        >
+          Remove logo
+        </button>
       )}
     </div>
   );

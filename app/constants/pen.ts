@@ -1,10 +1,35 @@
-export type PenBandMode = "text" | "logo";
+import {
+  DEFAULT_FONT,
+  FONT_FAMILIES,
+  type FontFamily,
+} from "~/constants/fonts";
 
-export type PenFontId =
-  | "Montserrat"
-  | "Georgia"
-  | "Playfair Display"
-  | "Roboto Slab";
+/**
+ * What a surface carries. An uploaded mark sits beside the message rather than
+ * replacing it, so a surface can hold both.
+ */
+export type PenArtworkMode = "text" | "logo" | "text-logo";
+
+export function penArtworkMode(text: string, hasLogo: boolean): PenArtworkMode {
+  if (!hasLogo) return "text";
+  return text.trim() ? "text-logo" : "logo";
+}
+
+export const PEN_ARTWORK_MODE_LABELS: Record<PenArtworkMode, string> = {
+  text: "Text",
+  logo: "Logo",
+  "text-logo": "Logo + text",
+};
+
+/**
+ * Where an uploaded mark sits relative to the message. The case band is close
+ * to square, so its lockup stacks the way the vendor's own does; the cap is a
+ * shallow strip with only room to set the mark beside the text.
+ */
+export type PenLogoPlacement = "beside" | "stacked";
+
+export type PenFontId = FontFamily;
+export const PEN_DEFAULT_FONT: PenFontId = DEFAULT_FONT;
 
 export interface PenSurfaceSpec {
   widthIn: number;
@@ -41,20 +66,19 @@ export const PEN_FONTS: readonly {
   id: PenFontId;
   label: string;
   sample: string;
-}[] = [
-  { id: "Montserrat", label: "Modern", sample: "Montserrat, Arial, sans-serif" },
-  { id: "Georgia", label: "Classic", sample: "Georgia, serif" },
-  {
-    id: "Playfair Display",
-    label: "Elegant",
-    sample: "'Playfair Display', Georgia, serif",
-  },
-  {
-    id: "Roboto Slab",
-    label: "Slab",
-    sample: "'Roboto Slab', Georgia, serif",
-  },
-];
+}[] = FONT_FAMILIES.map((font) => {
+  const fallback =
+    font.category === "Serif"
+      ? "Georgia, serif"
+      : font.category === "Monospace"
+        ? "monospace"
+        : "Arial, sans-serif";
+  return {
+    id: font.value,
+    label: font.label,
+    sample: `"${font.value}", ${fallback}`,
+  };
+});
 
 export type PenPoint = readonly [number, number];
 
@@ -76,6 +100,12 @@ export interface PenPreviewPhoto {
   maxTextScale: number;
   maxLines: number;
   color: string;
+  /** Where an uploaded mark sits relative to the text. Defaults to beside it. */
+  logoPlacement?: PenLogoPlacement;
+  /** Cylinder wraps lettering around the barrel the way a real cap engraving sits. */
+  warp?: "planar" | "cylinder";
+  /** Highlight ridge on a cylinder, as a 0–1 share of the plane's V axis. */
+  highlightV?: number;
 }
 
 /**
@@ -98,6 +128,7 @@ export const PEN_PREVIEW_PHOTOS = {
     maxTextScale: 0.17,
     maxLines: 3,
     color: "#5c6166",
+    logoPlacement: "stacked",
   },
   cap: {
     src: "/images/pen/pen-cap.jpg",
@@ -111,9 +142,15 @@ export const PEN_PREVIEW_PHOTOS = {
       [126, 121],
     ],
     inset: 0.08,
-    maxTextScale: 0.6,
+    // Sized so the lettering's cap height is ~0.22 of the barrel's apparent
+    // diameter, matching the vendor's engraved cap.
+    maxTextScale: 0.55,
     maxLines: 1,
-    color: "#e9eef2",
+    color: "#d0d8df",
+    warp: "cylinder",
+    // The barrel's lit ridge, measured off the photo at y=96 over a plane
+    // spanning y=75..121.
+    highlightV: 0.46,
   },
 } satisfies Record<string, PenPreviewPhoto>;
 

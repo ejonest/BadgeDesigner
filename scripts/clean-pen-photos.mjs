@@ -28,10 +28,7 @@ const DEBUG_DIR = path.join(ROOT, ".tmp-pen");
 const DEBUG = process.argv.includes("--debug");
 
 const NONE = -1;
-const CASE_BODY = 0;
 const PLATE = 1;
-const BACKDROP = 2;
-const BAND_FRONT = 3;
 const PEN_CAP = 4;
 
 const luma = (r, g, b) => 0.299 * r + 0.587 * g + 0.114 * b;
@@ -243,8 +240,6 @@ async function writeDebug(name, image, mask, labels) {
       rgb[o + 2] = 0;
     } else if (labels[i] === PLATE || labels[i] === PEN_CAP) {
       rgb[o + 1] = Math.min(255, rgb[o + 1] + 70);
-    } else if (labels[i] === BAND_FRONT) {
-      rgb[o + 2] = Math.min(255, rgb[o + 2] + 90);
     }
   }
   await sharp(rgb, { raw: { width: W, height: H, channels } })
@@ -271,81 +266,48 @@ const CASE_BAND_TOP = [
   [445, 268],
   [353, 307],
 ];
-/** Band front face: the same fold edge dropped down the lid. */
-const CASE_BAND_FRONT = [
-  [353, 307],
-  [445, 268],
-  [441, 296],
-  [349, 333],
-];
 /**
- * Lower-right silhouette of the case, least-squares fitted to the luminance
- * crossing over the columns that the arrow and marketing copy leave alone.
+ * Built from the plain studio shot of the closed case. An earlier pass used
+ * `611im5egb6L`, whose marketing callouts and pointer arrow overlap the case
+ * silhouette; masking those left a grey smear hanging off the lower-right
+ * edge and dulled the right end of the band's fold. This shot carries only
+ * the vendor's own plate logo, so the lid, fold, silhouette, and backdrop all
+ * survive untouched and the single edit is the plate face itself.
  */
-const caseEdgeY = (x) => 525.3 - 0.4557 * x;
-
 async function cleanCasePhoto() {
-  const image = await loadImage(path.join(SRC_DIR, "611im5egb6L._AC_SX679_.jpg"));
-  const { data, W, H, channels } = image;
-  const labels = new Int8Array(W * H);
+  const image = await loadImage(path.join(SRC_DIR, "51Ep_MCrA9L._AC_SX679_.jpg"));
+  const { W, H } = image;
+  const labels = new Int8Array(W * H).fill(NONE);
   const mask = new Uint8Array(W * H);
 
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const i = y * W + x;
-      if (insideQuad(CASE_BAND_TOP, x, y, -2)) labels[i] = PLATE;
-      else if (insideQuad(CASE_BAND_FRONT, x, y, -2)) labels[i] = BAND_FRONT;
-      else if (y > caseEdgeY(x) + 2) labels[i] = BACKDROP;
-      else labels[i] = CASE_BODY;
-    }
-  }
+  const { data, channels } = image;
 
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const i = y * W + x;
+      if (!insideQuad(CASE_BAND_TOP, x, y, -2)) continue;
+      labels[i] = PLATE;
+
+      // Rebuild the plate interior wholesale rather than thresholding the ink:
+      // the crown is near-black but the wordmark fades into the brushed
+      // silver, so no cutoff catches every stroke without biting the plate.
+      if (insideQuad(CASE_BAND_TOP, x, y, -6)) {
+        mask[i] = 1;
+        continue;
+      }
+
+      // The wordmark runs corner to corner and the tips of its first and last
+      // letters land inside that margin. Out here the plate is uniform bright
+      // silver, so ink is the only thing this dark, and leaving the outer 2px
+      // untouched keeps the plate border and corners crisp.
       const o = i * channels;
-      const r = data[o];
-      const b = data[o + 2];
-
-      // Rebuild the whole plate interior: the vendor crown is gold and the
-      // wordmark is a soft grey, so no threshold catches every stroke.
-      if (labels[i] === PLATE && insideQuad(CASE_BAND_TOP, x, y, -8)) {
-        mask[i] = 1;
-      }
-
-      // Marketing copy: clear the whole backdrop block it sits in so no
-      // anti-aliased halo survives.
-      if (labels[i] === BACKDROP && x > 336 && y > 326 && y < 505) {
-        mask[i] = 1;
-      }
-
-      // Pointer arrow: the only warm-toned thing in the frame.
-      if (x > 396 && x < 486 && y > 254 && y < 362 && r - b > 14 && r > 60) {
-        mask[i] = 1;
-      }
+      if (luma(data[o], data[o + 1], data[o + 2]) < 210) mask[i] = 1;
     }
   }
 
-  const grown = dilateWithinLabels(mask, labels, W, H, 4);
-  // Keep the grown arrow mask off the plate's border ring.
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const i = y * W + x;
-      if (!grown[i]) continue;
-      if (labels[i] === PLATE && !insideQuad(CASE_BAND_TOP, x, y, -6)) {
-        grown[i] = 0;
-      }
-    }
-  }
-
+  const grown = dilateWithinLabels(mask, labels, W, H, 2);
   await writeDebug("case", image, grown, labels);
   fillSurfaceFit(image, grown, labels, PLATE);
-  fillSurfaceFit(image, grown, labels, BACKDROP, (x, y, i) => {
-    const o = i * channels;
-    // Ignore the drop shadow and any residual dark ink when fitting.
-    return y < 505 && luma(data[o], data[o + 1], data[o + 2]) > 188;
-  });
-  fillRelax(image, grown, labels, [CASE_BODY, BAND_FRONT], 2600);
 
   await save(image, "case-band.jpg");
 }

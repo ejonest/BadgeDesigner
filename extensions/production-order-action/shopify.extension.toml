@@ -1,0 +1,12 @@
+api_version = "2026-04"
+
+[[extensions]]
+name = "t:name"
+handle = "production-order-action"
+uid = "5c35112d-bce1-352d-992e-46ca3943f0d712dd3060"
+type = "ui_extension"
+description = "Full production details, proofs, and print-ready SVGs for an order."
+
+  [[extensions.targeting]]
+  module = "./src/ActionExtension.tsx"
+  target = "admin.order-details.action.render"

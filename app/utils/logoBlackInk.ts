@@ -258,3 +258,49 @@ export function blackInkLogoDataUrl(
   if (!ink) return null;
   return { href: ink.canvas.toDataURL("image/png"), aspect: ink.aspect };
 }
+
+/**
+ * Black-ink art from an encoded image. Uploads arrive as data URLs, which have
+ * to be decoded before the conversion can read their pixels.
+ */
+export async function blackInkLogoFromSrc(
+  src: string | null | undefined,
+): Promise<{ href: string; aspect: number } | null> {
+  if (!src || typeof document === "undefined") return null;
+  const image = new Image();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("The logo could not be decoded."));
+      image.src = src;
+    });
+  } catch {
+    return null;
+  }
+  return blackInkLogoDataUrl(image);
+}
+
+/**
+ * `feColorMatrix` values that repaint black-ink art in `color` while keeping
+ * its coverage, for surfaces engraved in something other than black. The art's
+ * alpha channel carries the coverage, so only the RGB constants change.
+ */
+export function inkTintMatrix(color: string): string {
+  const hex = color.replace("#", "");
+  const full =
+    hex.length === 3
+      ? hex
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : hex;
+  const packed = Number.parseInt(full, 16);
+  const channel = (shift: number) =>
+    Number.isFinite(packed) ? (((packed >> shift) & 255) / 255).toFixed(4) : "0";
+  return [
+    `0 0 0 0 ${channel(16)}`,
+    `0 0 0 0 ${channel(8)}`,
+    `0 0 0 0 ${channel(0)}`,
+    "0 0 0 1 0",
+  ].join(" ");
+}

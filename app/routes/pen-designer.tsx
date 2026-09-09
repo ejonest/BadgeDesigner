@@ -8,7 +8,7 @@ export const meta: MetaFunction = () => [
   { title: "Custom Pen Designer — All Quality Badges" },
   {
     name: "description",
-    content: "Personalize a presentation case band and engrave a pen cap.",
+    content: "Engrave a pen cap and personalize a presentation case band.",
   },
 ];
 
