@@ -153,6 +153,9 @@ export default function PenDesigner({
   const commerceApiRef = useRef(
     createApi(undefined, undefined, { designerId: "pen" }),
   );
+  const rootRef = useRef<HTMLDivElement>(null);
+  const stepperRef = useRef<HTMLElement>(null);
+  const controlsRef = useRef<HTMLElement>(null);
 
   const currentIndex = STEPS.findIndex((candidate) => candidate.id === step);
   const unitPrice = useMemo(() => {
@@ -260,6 +263,73 @@ export default function PenDesigner({
     [proofUrl],
   );
 
+  /*
+   * Below 900px the designer is a fixed, full-height app shell so the preview
+   * and the Back/Continue row stay on screen while the fields scroll. iOS
+   * anchors fixed elements to the layout viewport, so the on-screen keyboard
+   * would otherwise push the preview above the visible area; mirroring the
+   * visual viewport keeps the shell inside the region that is actually shown.
+   */
+  useEffect(() => {
+    if (!hydrated) return;
+    const root = rootRef.current;
+    if (!root) return;
+
+    const mq = window.matchMedia("(max-width: 900px)");
+    const html = document.documentElement;
+    const { body } = document;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
+
+    const syncViewport = () => {
+      const viewport = window.visualViewport;
+      root.style.setProperty(
+        "--pen-vv-height",
+        `${Math.round(viewport?.height ?? window.innerHeight)}px`,
+      );
+      root.style.setProperty(
+        "--pen-vv-top",
+        `${Math.round(viewport?.offsetTop ?? 0)}px`,
+      );
+      html.style.overflow = mq.matches ? "hidden" : previousHtmlOverflow;
+      body.style.overflow = mq.matches ? "hidden" : previousBodyOverflow;
+    };
+
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", syncViewport);
+    viewport?.addEventListener("scroll", syncViewport);
+    window.addEventListener("resize", syncViewport);
+    mq.addEventListener("change", syncViewport);
+    syncViewport();
+
+    return () => {
+      viewport?.removeEventListener("resize", syncViewport);
+      viewport?.removeEventListener("scroll", syncViewport);
+      window.removeEventListener("resize", syncViewport);
+      mq.removeEventListener("change", syncViewport);
+      html.style.overflow = previousHtmlOverflow;
+      body.style.overflow = previousBodyOverflow;
+      root.style.removeProperty("--pen-vv-height");
+      root.style.removeProperty("--pen-vv-top");
+    };
+  }, [hydrated]);
+
+  /* The stepper scrolls sideways on narrow screens, so bring the open step's
+     label into view rather than leaving the user to find it. */
+  useEffect(() => {
+    const stepper = stepperRef.current;
+    if (!stepper || stepper.scrollWidth <= stepper.clientWidth) return;
+    const active = stepper.querySelector<HTMLElement>("button.is-active");
+    if (!active) return;
+    stepper.scrollTo({
+      left: Math.max(
+        0,
+        active.offsetLeft - (stepper.clientWidth - active.offsetWidth) / 2,
+      ),
+      behavior: "smooth",
+    });
+  }, [step]);
+
   function buildBadge(): Badge {
     const lines = [
       makeLine("pen-band", bandText, fontFamily, bold, italic),
@@ -319,6 +389,8 @@ export default function PenDesigner({
     }
     setError(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
+    // On mobile the page itself does not scroll; the field panel does.
+    controlsRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function continueForward() {
@@ -552,7 +624,7 @@ export default function PenDesigner({
   }
 
   return (
-    <div className="pen-designer-root">
+    <div className="pen-designer-root" ref={rootRef}>
       <header className="pen-header">
         <div>
           <p className="pen-eyebrow">Personalization tool</p>
@@ -564,7 +636,7 @@ export default function PenDesigner({
         </button>
       </header>
 
-      <nav className="pen-stepper" aria-label="Pen design steps">
+      <nav className="pen-stepper" aria-label="Pen design steps" ref={stepperRef}>
         {STEPS.map((item, index) => {
           const state =
             item.id === step
@@ -589,7 +661,7 @@ export default function PenDesigner({
       </nav>
 
       <main className="pen-workspace">
-        <section className="pen-controls">
+        <section className="pen-controls" ref={controlsRef}>
           {step === "product" && (
             <div className="pen-panel">
               <p className="pen-step-label">Step 1</p>
@@ -744,14 +816,6 @@ export default function PenDesigner({
                   <dd>${(unitPrice * quantity).toFixed(2)}</dd>
                 </div>
               </dl>
-              <button
-                type="button"
-                className="pen-proof-button"
-                onClick={buildProof}
-                disabled={busy}
-              >
-                {busy ? "Building proof…" : "Open proof & add to cart"}
-              </button>
             </div>
           )}
 
@@ -770,7 +834,18 @@ export default function PenDesigner({
             >
               Back
             </button>
-            {step !== "review" && (
+            {/* The review step's action lives here too, so the primary button
+                is always in the same place instead of below the summary. */}
+            {step === "review" ? (
+              <button
+                type="button"
+                className="pen-proof-button"
+                disabled={busy}
+                onClick={buildProof}
+              >
+                {busy ? "Building proof…" : "Open proof & add to cart"}
+              </button>
+            ) : (
               <button
                 type="button"
                 className="pen-primary"
