@@ -5,7 +5,7 @@ export async function generatePenProofPdf(input: {
   designId: string;
   thumbnailDataUrl: string;
   bandSummary: string;
-  capText: string;
+  capSummary: string;
   quantity: number;
   unitPrice: number;
 }): Promise<Blob> {
@@ -34,7 +34,7 @@ export async function generatePenProofPdf(input: {
   pdf.setFont("helvetica", "normal");
   pdf.setTextColor("#323b43");
   pdf.text(input.bandSummary || "Uploaded logo", 142, 438);
-  pdf.text(input.capText, 142, 482);
+  pdf.text(input.capSummary || "Uploaded logo", 142, 482);
   pdf.text(
     `${input.quantity} × $${input.unitPrice.toFixed(2)} = $${(
       input.quantity * input.unitPrice

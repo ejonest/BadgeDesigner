@@ -1,6 +1,6 @@
 /**
  * Native Shopify `orders/paid` webhook for the All Quality Badges store.
- * Handles badge and desk-sign cart lines on the same order.
+ * Handles badge, desk-sign, and pen cart lines on the same order.
  *
  * Register in Shopify admin → Settings → Notifications → Webhooks:
  *   Event:  Order payment
@@ -27,7 +27,7 @@ export async function action({ request }: ActionFunctionArgs) {
     request,
     logPrefix: "[aqb-webhook]",
     hmacEnvNames: ["SHOPIFY_WEBHOOK_SECRET_AQB"],
-    allowed: ["badge", "desk-sign"],
+    allowed: ["badge", "desk-sign", "pen"],
     defaultKind: "badge",
   });
 }

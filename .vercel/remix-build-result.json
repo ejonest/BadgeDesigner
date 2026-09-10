@@ -72,6 +72,7 @@
       "routes/api.save-gavel-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-pen-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.production.order": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-gavel": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-pen-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -682,6 +683,15 @@
         "file": "app/routes/api.saved-sign-design.tsx",
         "id": "routes/api.saved-sign-design",
         "path": "api/saved-sign-design",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.production.order": {
+        "file": "app/routes/api.production.order.tsx",
+        "id": "routes/api.production.order",
+        "path": "api/production/order",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -1521,6 +1531,12 @@
         "file": "routes/api.saved-sign-design.tsx",
         "id": "routes/api.saved-sign-design",
         "path": "api/saved-sign-design",
+        "parentId": "root"
+      },
+      "routes/api.production.order": {
+        "file": "routes/api.production.order.tsx",
+        "id": "routes/api.production.order",
+        "path": "api/production/order",
         "parentId": "root"
       },
       "routes/api.save-draft-gavel": {

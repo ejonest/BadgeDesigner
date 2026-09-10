@@ -263,7 +263,9 @@
     {%- assign aqb_designer_product = false -%}
     {%- if template.name == 'product' and product != blank -%}
       {%- assign aqb_bd_handle = product.handle | default: '' | strip | downcase -%}
-      {%- if aqb_bd_handle == 'custom-1x3-badge' -%}
+      {%- if template.suffix == 'pen-designer' -%}
+        {%- assign aqb_designer_product = true -%}
+      {%- elsif aqb_bd_handle == 'custom-1x3-badge' -%}
         {%- assign aqb_designer_product = true -%}
       {%- elsif aqb_bd_handle == 'custom-desk-sign' -%}
         {%- assign aqb_designer_product = true -%}
