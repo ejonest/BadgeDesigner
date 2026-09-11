@@ -625,7 +625,9 @@
   .pen-controls {
     min-height: 0;
     padding-bottom: 0;
+    overflow-x: hidden;
     overflow-y: auto;
+    touch-action: pan-y pinch-zoom;
   }
 
   .pen-preview {
@@ -873,14 +875,22 @@
     );
   }
 
+  /*
+   * Nothing in this panel scrolls sideways, but asking for overflow-y alone
+   * takes the other axis out of `visible` too, and iOS will then rubber-band
+   * the panel left and right under a diagonal swipe. Pin the axis shut and
+   * tell the browser this is a vertical scroller so the drift cannot start.
+   */
   .pen-controls {
     min-height: 0;
     flex: 1 1 auto;
     order: 2;
     padding: 16px 16px 0;
+    overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+    touch-action: pan-y pinch-zoom;
   }
 
   .pen-panel h2 {
