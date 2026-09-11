@@ -591,6 +591,8 @@
  */
 @media (min-width: 901px) {
   .pen-designer-root {
+    --pen-photo-max-h: clamp(190px, 40dvh, 430px);
+
     display: flex;
     height: 100dvh;
     max-height: 100dvh;
@@ -645,18 +647,25 @@
 
   /*
    * The artwork overlay stretches to .pen-photo, so that box must stay exactly
-   * the size of the photo. Driving the box from the height and its own aspect
-   * ratio keeps them identical while letting it shrink into a short pane.
+   * the size of the photo. Only ever constrain its width and let the height
+   * follow the image: setting a height as well would let max-width clamp the
+   * width on its own and squash the photo. Converting the height budget into
+   * a width through the photo's ratio bounds the box without distorting it.
    */
   .pen-photo {
-    width: auto;
-    height: 100%;
-    aspect-ratio: var(--pen-photo-aspect, 1);
+    max-width: min(
+      100%,
+      520px,
+      calc(var(--pen-photo-max-h) * var(--pen-photo-ratio, 1))
+    );
   }
 
-  .pen-photo-base {
-    width: 100%;
-    height: 100%;
+  .pen-product-preview.is-cap .pen-photo {
+    max-width: min(
+      100%,
+      560px,
+      calc(var(--pen-photo-max-h) * var(--pen-photo-ratio, 1))
+    );
   }
 
   /* Keeps Continue on screen while the fields above it scroll. */
@@ -858,11 +867,10 @@
   }
 
   .pen-photo {
-    max-width: min(100%, var(--pen-photo-max-h));
-  }
-
-  .pen-product-preview.is-cap .pen-photo {
-    max-width: min(100%, calc(var(--pen-photo-max-h) * 2.38));
+    max-width: min(
+      100%,
+      calc(var(--pen-photo-max-h) * var(--pen-photo-ratio, 1))
+    );
   }
 
   .pen-controls {
