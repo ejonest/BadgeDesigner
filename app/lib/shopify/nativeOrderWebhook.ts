@@ -136,7 +136,20 @@ export function collectDesignerLinesFromShopifyOrder(
       normalizeDesignerKind(readCartProperty(props, "Designer")) ??
       defaultKind ??
       null;
-    if (kind == null || !allowedSet.has(kind)) continue;
+    if (kind == null || !allowedSet.has(kind)) {
+      /*
+       * The line carries a design id, so it is a designer line that this
+       * endpoint simply does not claim. That is nearly always a misrouted
+       * webhook rather than an ordinary order, and dropping it silently is
+       * what leaves the Supabase row sitting at `in_cart` with no order id
+       * and nothing in the logs to explain why.
+       */
+      console.warn(
+        `[shopify-webhook] ignoring ${kind ?? "unrecognized"} design line ` +
+          `${designId ?? gadgetDesignId}: this endpoint handles ${allowed.join(", ")}`,
+      );
+      continue;
+    }
 
     const quantity = (item as { quantity?: number }).quantity;
     const badgeCountRaw = readCartProperty(props, "Badge count");
