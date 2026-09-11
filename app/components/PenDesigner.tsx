@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type CSSProperties,
 } from "react";
 import type { Badge, BadgeLine } from "~/types/badge";
 import {
@@ -109,6 +110,17 @@ function describeArtwork(text: string, file: File | null): string {
   const logo = file?.name ?? "";
   if (message && logo) return `${message} + ${logo}`;
   return message || logo || "—";
+}
+
+/*
+ * The artwork overlay is stretched to the photo's box, so the box has to keep
+ * the photo's exact ratio. Publishing it as a custom property lets the desktop
+ * shell derive the box from the height it has left without the two drifting.
+ */
+function photoAspectStyle(photo: { width: number; height: number }) {
+  return {
+    "--pen-photo-aspect": `${photo.width} / ${photo.height}`,
+  } as CSSProperties;
 }
 
 function clampQuantity(value: number): number {
@@ -883,7 +895,10 @@ export default function PenDesigner({
           </div>
           <div className={`pen-product-preview is-${previewSurface}`}>
             {previewSurface === "band" ? (
-              <div className="pen-photo">
+              <div
+                className="pen-photo"
+                style={photoAspectStyle(PEN_PREVIEW_PHOTOS.caseBand)}
+              >
                 <img
                   className="pen-photo-base"
                   src={PEN_PREVIEW_PHOTOS.caseBand.src}
@@ -901,7 +916,10 @@ export default function PenDesigner({
                 />
               </div>
             ) : (
-              <div className="pen-photo">
+              <div
+                className="pen-photo"
+                style={photoAspectStyle(PEN_PREVIEW_PHOTOS.cap)}
+              >
                 <img
                   className="pen-photo-base"
                   src={PEN_PREVIEW_PHOTOS.cap.src}

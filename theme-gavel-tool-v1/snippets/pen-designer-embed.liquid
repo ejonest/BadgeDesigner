@@ -1,0 +1,253 @@
+{% comment %}
+  Gavels Fast — custom Daxmoor pen designer iframe embed (Ella theme).
+
+  This snippet is rendered only by product.pen-designer.json. It reads the
+  current product and selected variant but does not modify any shared theme
+  template, section, asset, navigation, or content.
+{% endcomment %}
+
+{%- assign pen_designer_origin = 'https://all-quality-design-tool.vercel.app' -%}
+
+<style>
+  /*
+    Ella places custom-liquid sections inside a fixed-width container. Bleed
+    only this designer to the viewport edges without changing the shared
+    container or any other page.
+  */
+  .pen-designer-embed {
+    width: var(--pen-bleed-width, 100%);
+    max-width: var(--pen-bleed-width, 100%);
+    margin: 0 0 40px calc(50% - (var(--pen-bleed-width, 100%) / 2));
+    background: #f1eee7;
+  }
+
+  /*
+    The store stacks an announcement ticker above the main header, so the
+    designer gets exactly what those leave over. Do not floor this to a taller
+    fixed height: that pushes the tool past the fold and the shopper cannot see
+    the preview and the Continue button at the same time.
+  */
+  .pen-designer-embed iframe {
+    display: block;
+    width: 100%;
+    height: calc(100vh - var(--pen-store-header-height, 190px));
+    height: calc(100dvh - var(--pen-store-header-height, 190px));
+    min-height: 460px;
+    border: 0;
+  }
+</style>
+
+<script>
+  (function() {
+    var DESIGNER_ORIGIN = {{ pen_designer_origin | json }};
+
+    function isAllowedDesignerOrigin(origin) {
+      if (origin === DESIGNER_ORIGIN) return true;
+      if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+      if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return true;
+      return false;
+    }
+
+    function syncDesignerLayout() {
+      var root = document.documentElement;
+      var main =
+        document.querySelector('main.main-content') ||
+        document.querySelector('main');
+      root.style.setProperty(
+        '--pen-bleed-width',
+        root.clientWidth + 'px'
+      );
+      if (!main) return;
+      var top = Math.round(
+        main.getBoundingClientRect().top +
+        (window.scrollY || window.pageYOffset || 0)
+      );
+      if (top >= 0 && top <= 600) {
+        root.style.setProperty('--pen-store-header-height', top + 'px');
+      }
+    }
+
+    function beginLayoutSync() {
+      syncDesignerLayout();
+      window.addEventListener('resize', syncDesignerLayout);
+      window.addEventListener('load', syncDesignerLayout);
+      setTimeout(syncDesignerLayout, 600);
+      setTimeout(syncDesignerLayout, 2000);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', beginLayoutSync);
+    } else {
+      beginLayoutSync();
+    }
+
+    function replyToDesigner(event, requestId, success, error) {
+      if (!requestId || !event || !event.source) return;
+      try {
+        event.source.postMessage({
+          action: 'add-to-cart-result',
+          requestId: requestId,
+          success: success,
+          error: error || null
+        }, event.origin);
+      } catch (err) {
+        console.error('Pen designer: could not acknowledge cart request', err);
+      }
+    }
+
+    function removeReplacedCartLines(cartRoot, replaceDesignId) {
+      if (!replaceDesignId) return Promise.resolve();
+      var base = cartRoot.replace(/\/$/, '');
+      return fetch(base + '/cart.js', {
+        headers: { 'Accept': 'application/json' }
+      })
+        .then(function(response) { return response.json(); })
+        .then(function(cart) {
+          var stale = (cart.items || []).filter(function(item) {
+            var properties = item.properties || {};
+            return (
+              properties['_Design ID'] ||
+              properties['Design ID']
+            ) === replaceDesignId;
+          });
+          return stale.reduce(function(chain, item) {
+            return chain.then(function() {
+              return fetch(base + '/cart/change.js', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: item.key, quantity: 0 })
+              });
+            });
+          }, Promise.resolve());
+        })
+        .catch(function(err) {
+          console.error('Pen designer: could not remove replaced cart lines', err);
+        });
+    }
+
+    function addDesignerItems(items, event, requestId, replaceDesignId) {
+      if (!items || !items.length) {
+        replyToDesigner(event, requestId, false, 'No cart items to add');
+        return;
+      }
+
+      var cartRoot =
+        window.Shopify &&
+        window.Shopify.routes &&
+        window.Shopify.routes.root
+          ? window.Shopify.routes.root
+          : '/';
+      var base = cartRoot.replace(/\/$/, '');
+      var payload = {
+        items: items.map(function(item) {
+          return {
+            id: parseInt(String(item.variantId), 10),
+            quantity: item.quantity || 1,
+            properties: item.properties || {}
+          };
+        })
+      };
+
+      fetch(base + '/cart/add.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function(response) {
+          return response.json().then(function(body) {
+            if (!response.ok) {
+              throw new Error(
+                (body && (body.description || body.message)) ||
+                ('HTTP ' + response.status)
+              );
+            }
+            return body;
+          });
+        })
+        .then(function() {
+          return removeReplacedCartLines(cartRoot, replaceDesignId);
+        })
+        .then(function() {
+          replyToDesigner(event, requestId, true);
+          window.location.href = base + '/cart';
+        })
+        .catch(function(err) {
+          var message = err && err.message ? err.message : String(err);
+          console.error('Pen designer: cart/add.js failed', err);
+          replyToDesigner(event, requestId, false, message);
+          alert(
+            'Could not add your design to the cart. Please try again.\n\n' +
+            message
+          );
+        });
+    }
+
+    window.addEventListener('message', function(event) {
+      if (!isAllowedDesignerOrigin(event.origin)) return;
+      var data = event.data;
+      if (!data || !data.action) return;
+
+      if (data.action === 'designer-analytics' && data.event) {
+        if (
+          window.Shopify &&
+          Shopify.analytics &&
+          typeof Shopify.analytics.publish === 'function'
+        ) {
+          Shopify.analytics.publish(
+            data.event,
+            Object.assign({}, data.payload || {}, {
+              page_url: window.location.href,
+              page_path: window.location.pathname + window.location.search
+            })
+          );
+        }
+        return;
+      }
+
+      if (data.action === 'redirect-to-login') {
+        var returnTo = window.location.pathname + window.location.search;
+        window.location.href =
+          '/account/login?return_url=' + encodeURIComponent(returnTo);
+        return;
+      }
+
+      if (data.action === 'add-to-cart' && data.payload) {
+        addDesignerItems(
+          [data.payload],
+          event,
+          data.requestId,
+          data.payload.replaceDesignId
+        );
+        return;
+      }
+
+      if (
+        data.action === 'add-to-cart-multiple' &&
+        data.payload &&
+        Array.isArray(data.payload.items)
+      ) {
+        addDesignerItems(
+          data.payload.items,
+          event,
+          data.requestId,
+          data.payload.replaceDesignId
+        );
+      }
+    });
+  })();
+</script>
+
+{%- if product -%}
+  {%- assign pen_variant = product.selected_or_first_available_variant | default: product.variants.first -%}
+
+  <div class="pen-designer-embed">
+    <iframe
+      id="pen-designer-iframe"
+      title="Design your custom Daxmoor pen"
+      src="{{ pen_designer_origin }}/pen-designer?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&amp;storeUrl={{ shop.permanent_domain | url_param_escape }}&amp;product={{ product.id | url_param_escape }}{% if pen_variant %}&amp;variantId={{ pen_variant.id | url_param_escape }}&amp;price={{ pen_variant.price | divided_by: 100.0 | url_param_escape }}{% endif %}{% if customer %}&amp;customerId={{ customer.id | url_param_escape }}{% endif %}"
+      allow="clipboard-read; clipboard-write; fullscreen"
+    ></iframe>
+  </div>
+{%- else -%}
+  <p>The pen designer is only available on a product page.</p>
+{%- endif -%}
