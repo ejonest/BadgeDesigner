@@ -1384,6 +1384,21 @@
     overflow: auto;
   }
 
+  /*
+   * The nav lives inside the scrolling controls column, so on a short embed
+   * (the storefront iframe only gets what the two headers leave over) it
+   * scrolled out of sight. Pin it so Back/Continue stays reachable.
+   */
+  .gf-design-grid .gf-controls-col .gf-step-nav {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-top: 18px;
+    padding: 12px 0;
+    border-top: 1px solid var(--gf-border);
+    background: #fff;
+  }
+
   .gf-preview-pane {
     min-height: 0;
     overflow: hidden;

@@ -34,25 +34,20 @@
     background: #f7f4ef;
   }
 
+  /*
+    The store stacks an announcement ticker above the main header, so the
+    designer gets exactly what those leave over. Do not floor this to a taller
+    fixed height: that pushes the tool past the fold and the shopper cannot see
+    the preview and the Continue button at the same time. The wizard bounds
+    itself to its own viewport and scrolls the step controls internally.
+  */
   .gf-designer-embed iframe {
     display: block;
     width: 100%;
     border: 0;
     height: calc(100vh - var(--gf-header-height, 190px));
     height: calc(100dvh - var(--gf-header-height, 190px));
-    min-height: 520px;
-  }
-
-  /*
-    On desktop the wizard needs ~900px before step 1 starts scrolling inside
-    its own controls column, which is more than most windows leave under
-    Ella's 190px header. Take the larger of the two so the step controls and
-    the Continue button are always reachable.
-  */
-  @media screen and (min-width: 990px) {
-    .gf-designer-embed iframe {
-      height: max(calc(100dvh - var(--gf-header-height, 190px)), 900px);
-    }
+    min-height: 460px;
   }
 
   .gf-designer-info {

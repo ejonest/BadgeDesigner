@@ -1,0 +1,28 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+/*
+ * ------------------------------------------------------------
+ * Gavels Fast — custom Daxmoor pen designer product template.
+ *
+ * The Ella header, announcement bar, and footer continue to come
+ * from layout/theme.liquid. Only this product's page body is replaced.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "designer_embed": {
+      "type": "custom-liquid",
+      "settings": {
+        "custom_liquid": "{% render 'pen-designer-embed' %}"
+      }
+    }
+  },
+  "order": ["designer_embed"]
+}
