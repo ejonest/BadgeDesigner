@@ -149,10 +149,8 @@ export default function PenDesigner({
   const [bold, setBold] = useState(false);
   const [italic, setItalic] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [capLogoFile, setCapLogoFile] = useState<File | null>(null);
   const [bandLogoFile, setBandLogoFile] = useState<File | null>(null);
   /** Uploads reduced to printable single-colour art, ready to tint per surface. */
-  const [capLogoInk, setCapLogoInk] = useState<PenLogoInk | null>(null);
   const [bandLogoInk, setBandLogoInk] = useState<PenLogoInk | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -178,7 +176,7 @@ export default function PenDesigner({
   const variantId = suppliedVariantId?.trim() ?? "";
 
   const bandMode = penArtworkMode(bandText, Boolean(bandLogoInk));
-  const capMode = penArtworkMode(capText, Boolean(capLogoInk));
+  const capMode = penArtworkMode(capText, false);
 
   const bandArtwork: PenSurfaceArtwork = useMemo(
     () => ({
@@ -198,9 +196,9 @@ export default function PenDesigner({
       fontFamily,
       bold,
       italic,
-      logo: capLogoInk,
+      logo: null,
     }),
-    [bold, capLogoInk, capMode, capText, fontFamily, italic],
+    [bold, capMode, capText, fontFamily, italic],
   );
   const fontStack = useMemo(
     () =>
@@ -374,7 +372,7 @@ export default function PenDesigner({
       penCaseBandLogoFileName: bandLogoFile?.name ?? null,
       penCapMode: capMode,
       penCapText: capText,
-      penCapLogoFileName: capLogoFile?.name ?? null,
+      penCapLogoFileName: null,
       totalPrice: unitPrice * quantity,
       quantity,
       timestamp: new Date().toISOString(),
@@ -387,8 +385,8 @@ export default function PenDesigner({
     if (candidate === "band" && !bandText.trim() && !bandLogoInk) {
       return "Add a message or a logo for the case band.";
     }
-    if (candidate === "cap" && !capText.trim() && !capLogoInk) {
-      return "Add a message or a logo for the pen cap.";
+    if (candidate === "cap" && !capText.trim()) {
+      return "Add a message for the pen cap.";
     }
     return null;
   }
@@ -418,7 +416,6 @@ export default function PenDesigner({
 
   async function onLogoChange(
     event: ChangeEvent<HTMLInputElement>,
-    surface: PreviewSurface,
   ) {
     const file = event.target.files?.[0] ?? null;
     // Let the same file be picked again after a removal.
@@ -433,33 +430,26 @@ export default function PenDesigner({
       setError("Logo files must be smaller than 8 MB.");
       return;
     }
-    const setFile = surface === "cap" ? setCapLogoFile : setBandLogoFile;
-    const setInk = surface === "cap" ? setCapLogoInk : setBandLogoInk;
-    setFile(file);
+    setBandLogoFile(file);
     // Reduce the upload to printable single-colour art once, so the preview,
     // the proof, and the production file all engrave the same shapes.
     const ink = await readDataUrl(file)
       .then(blackInkLogoFromSrc)
       .catch(() => null);
     if (!ink) {
-      setFile(null);
-      setInk(null);
+      setBandLogoFile(null);
+      setBandLogoInk(null);
       setError(
         "That logo could not be converted to engravable art. Try a PNG or JPG.",
       );
       return;
     }
-    setInk(ink);
+    setBandLogoInk(ink);
   }
 
-  function removeLogo(surface: PreviewSurface) {
-    if (surface === "cap") {
-      setCapLogoFile(null);
-      setCapLogoInk(null);
-    } else {
-      setBandLogoFile(null);
-      setBandLogoInk(null);
-    }
+  function removeLogo() {
+    setBandLogoFile(null);
+    setBandLogoInk(null);
     setError(null);
   }
 
@@ -472,12 +462,8 @@ export default function PenDesigner({
       form.append("shopifyCustomerId", effectiveCustomer);
     }
     form.append("thumbnail_png_0", thumbnailBlob, "pen-thumbnail.png");
-    // The draft API keeps a single shared logo slot. Both surfaces carry their
-    // converted art inside the production SVGs below, so this is the original
-    // upload kept for reference.
-    const originalLogo = capLogoFile ?? bandLogoFile;
-    if (originalLogo) {
-      form.append("logo_0", originalLogo, originalLogo.name);
+    if (bandLogoFile) {
+      form.append("logo_0", bandLogoFile, bandLogoFile.name);
     }
     const bandSvg = penCaseBandToSvgString(bandArtwork);
     const capSvg = penCapToSvgString(capArtwork);
@@ -528,7 +514,7 @@ export default function PenDesigner({
         designId: designIdRef.current,
         thumbnailDataUrl: thumbnail.dataUrl,
         bandSummary: describeArtwork(bandText, bandLogoFile),
-        capSummary: describeArtwork(capText, capLogoFile),
+        capSummary: describeArtwork(capText, null),
         quantity,
         unitPrice,
       });
@@ -587,7 +573,7 @@ export default function PenDesigner({
         extraHidden: {
           "_Pen Style": "Blue gift set",
           "_Case Band Artwork": describeArtwork(bandText, bandLogoFile),
-          "_Pen Cap Artwork": describeArtwork(capText, capLogoFile),
+          "_Pen Cap Artwork": describeArtwork(capText, null),
           "_Case Band Mode": PEN_ARTWORK_MODE_LABELS[bandMode],
           "_Pen Cap Mode": PEN_ARTWORK_MODE_LABELS[capMode],
         },
@@ -620,8 +606,6 @@ export default function PenDesigner({
     setBold(false);
     setItalic(false);
     setQuantity(1);
-    setCapLogoFile(null);
-    setCapLogoInk(null);
     setBandLogoFile(null);
     setBandLogoInk(null);
     setError(null);
@@ -699,8 +683,7 @@ export default function PenDesigner({
               <p className="pen-step-label">Step 2</p>
               <h2>Engrave the pen cap</h2>
               <p className="pen-lead">
-                Engrave a short message on the upper barrel, and add your logo
-                to sit beside it.
+                Engrave a short message on the upper barrel.
               </p>
               <label className="pen-field">
                 <span>Pen cap text</span>
@@ -721,12 +704,6 @@ export default function PenDesigner({
                 setBold={setBold}
                 italic={italic}
                 setItalic={setItalic}
-              />
-              <LogoUploadField
-                surface="cap"
-                file={capLogoFile}
-                onChange={onLogoChange}
-                onRemove={removeLogo}
               />
             </div>
           )}
@@ -759,7 +736,6 @@ export default function PenDesigner({
                 setItalic={setItalic}
               />
               <LogoUploadField
-                surface="band"
                 file={bandLogoFile}
                 onChange={onLogoChange}
                 onRemove={removeLogo}
@@ -814,7 +790,7 @@ export default function PenDesigner({
               <dl className="pen-review-list">
                 <div>
                   <dt>Pen cap</dt>
-                  <dd>{describeArtwork(capText, capLogoFile)}</dd>
+                  <dd>{describeArtwork(capText, null)}</dd>
                 </div>
                 <div>
                   <dt>Case band</dt>
@@ -930,11 +906,11 @@ export default function PenDesigner({
                 />
                 <PenPreviewArt
                   photo={PEN_PREVIEW_PHOTOS.cap}
-                  text={capText || (capLogoInk ? "" : "Your message")}
+                  text={capText || "Your message"}
                   fontStack={fontStack}
                   bold={bold}
                   italic={italic}
-                  logo={capLogoInk}
+                  logo={null}
                 />
               </div>
             )}
@@ -999,29 +975,23 @@ export default function PenDesigner({
 }
 
 function LogoUploadField({
-  surface,
   file,
   onChange,
   onRemove,
 }: {
-  surface: PreviewSurface;
   file: File | null;
-  onChange: (
-    event: ChangeEvent<HTMLInputElement>,
-    surface: PreviewSurface,
-  ) => void;
-  onRemove: (surface: PreviewSurface) => void;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onRemove: () => void;
 }) {
-  const label = surface === "cap" ? "pen cap" : "case band";
   return (
     <div className="pen-upload-field">
       <label className="pen-upload">
         <input
           type="file"
           accept="image/png,image/jpeg,image/webp,image/svg+xml"
-          onChange={(event) => onChange(event, surface)}
+          onChange={onChange}
         />
-        <span>{file ? file.name : `Add a ${label} logo (optional)`}</span>
+        <span>{file ? file.name : "Add a case band logo (optional)"}</span>
         <small>
           Engraved as single-colour art to the left of your text · transparent
           PNG or SVG recommended · maximum 8 MB
@@ -1031,7 +1001,7 @@ function LogoUploadField({
         <button
           type="button"
           className="pen-secondary"
-          onClick={() => onRemove(surface)}
+          onClick={onRemove}
         >
           Remove logo
         </button>
