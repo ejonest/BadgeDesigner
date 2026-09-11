@@ -114,12 +114,13 @@ function describeArtwork(text: string, file: File | null): string {
 
 /*
  * The artwork overlay is stretched to the photo's box, so the box has to keep
- * the photo's exact ratio. Publishing it as a custom property lets the desktop
- * shell derive the box from the height it has left without the two drifting.
+ * the photo's exact ratio. Publishing the ratio lets each breakpoint turn the
+ * height it can spare into a max width, bounding the photo without the two
+ * ever drifting apart.
  */
-function photoAspectStyle(photo: { width: number; height: number }) {
+function photoRatioStyle(photo: { width: number; height: number }) {
   return {
-    "--pen-photo-aspect": `${photo.width} / ${photo.height}`,
+    "--pen-photo-ratio": `${photo.width / photo.height}`,
   } as CSSProperties;
 }
 
@@ -897,7 +898,7 @@ export default function PenDesigner({
             {previewSurface === "band" ? (
               <div
                 className="pen-photo"
-                style={photoAspectStyle(PEN_PREVIEW_PHOTOS.caseBand)}
+                style={photoRatioStyle(PEN_PREVIEW_PHOTOS.caseBand)}
               >
                 <img
                   className="pen-photo-base"
@@ -918,7 +919,7 @@ export default function PenDesigner({
             ) : (
               <div
                 className="pen-photo"
-                style={photoAspectStyle(PEN_PREVIEW_PHOTOS.cap)}
+                style={photoRatioStyle(PEN_PREVIEW_PHOTOS.cap)}
               >
                 <img
                   className="pen-photo-base"
