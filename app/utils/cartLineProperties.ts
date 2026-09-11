@@ -3,7 +3,8 @@
  *
  * Properties whose names start with `_` are stored on the line item but hidden
  * from customer-facing checkout / order summary. Keep only human-useful copy
- * (badge text lines) without the underscore prefix.
+ * (ordered text and an uploaded-logo acknowledgement) without the underscore
+ * prefix.
  */
 
 export const CART_PROP = {
@@ -18,6 +19,7 @@ export const CART_PROP = {
   gavelTextLine4: "Gavel Text Line 4",
   penCaseBandText: "Case Band Text",
   penCapText: "Pen Cap Text",
+  uploadedLogo: "Uploaded Logo",
   gavelStyle: "_Gavel Style",
   bandFinish: "_Band Finish",
 
@@ -64,6 +66,8 @@ export type DesignerCartLinePropertyInput = {
   pdfUrl?: string | null;
   orderQuantity?: number;
   badgeCount?: number;
+  /** Customer-facing filename or acknowledgement for an uploaded logo. */
+  uploadedLogo?: string | null;
   /** Extra hidden props (desk-sign material, etc.) — keys should already be underscore-prefixed. */
   extraHidden?: Record<string, string>;
   includeBackingType?: boolean;
@@ -131,6 +135,10 @@ export function buildDesignerCartLineProperties(
   }
   if (input.badgeCount != null) {
     properties[CART_PROP.badgeCount] = String(input.badgeCount);
+  }
+  const uploadedLogo = (input.uploadedLogo ?? "").trim();
+  if (uploadedLogo) {
+    properties[CART_PROP.uploadedLogo] = uploadedLogo;
   }
 
   return properties;

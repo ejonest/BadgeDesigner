@@ -1807,6 +1807,8 @@ export default function GavelDesigner({
           gadgetDesignId,
           pdfUrl,
           orderQuantity: rowQuantity,
+          uploadedLogo:
+            logoFile && logoAllowed ? logoFile.name : undefined,
           extraHidden: {
             "_Product Type": isStand ? "Gavel + stand" : "Gavel",
             "_Gavel Style": styleDef.label,

@@ -6336,6 +6336,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           ...prev,
           logo: {
             src: data.publicUrl!,
+            fileName: file.name,
             placement: normalizeSignLogoPlacementForTemplate(
               tid,
               prev.logo?.placement,
@@ -9787,6 +9788,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               thumbnailUrl: thumbnailUrls[i],
               pdfUrl: pdfUrlForCart,
               badgeCount: n,
+              uploadedLogo: b.logo?.src?.trim()
+                ? b.logo.fileName || "Included"
+                : undefined,
               includeBackingType: !isSignDesigner && !isDeskSignDesigner,
               extraHidden: deskSignCartProperties(b),
             });
@@ -9821,6 +9825,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 !isSignDesigner && !isDeskSignDesigner
                   ? perLineQtysResolved[i] ?? 1
                   : undefined,
+              uploadedLogo: b.logo?.src?.trim()
+                ? b.logo.fileName || "Included"
+                : undefined,
               includeBackingType: !isSignDesigner && !isDeskSignDesigner,
               extraHidden: deskSignCartProperties(b),
             });
