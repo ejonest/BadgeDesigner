@@ -570,6 +570,7 @@ export default function PenDesigner({
         thumbnailUrl: finalized.thumbnailUrls?.[0] ?? "",
         pdfUrl: finalized.pdfUrl ?? "",
         orderQuantity: quantity,
+        uploadedLogo: bandLogoFile?.name,
         extraHidden: {
           "_Pen Style": "Blue gift set",
           "_Case Band Artwork": describeArtwork(bandText, bandLogoFile),

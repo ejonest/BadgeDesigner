@@ -6,7 +6,8 @@
   The plaque designer (BadgeDesigner variant "plaque") stores the preview URL in line item
   properties["Custom Thumbnail"] (same key as badges and signs). Optional alias: Custom Plaque Thumbnail.
 {% endcomment %}
-{%- assign custom_thumb = item.properties._custom_thumbnail
+{%- assign custom_thumb = item.properties['_Custom Thumbnail']
+  | default: item.properties._custom_thumbnail
   | default: item.properties['Custom Plaque Thumbnail']
   | default: item.properties['Custom Thumbnail']
 -%}

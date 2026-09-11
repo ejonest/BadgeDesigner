@@ -37,6 +37,9 @@
     {%- if item.properties['Badge Text Line 4'] != blank -%}
       <p style="margin: 2px 0;">{{ item.properties['Badge Text Line 4'] }}</p>
     {%- endif -%}
+    {%- if item.properties['Uploaded Logo'] != blank -%}
+      <p style="margin: 2px 0;"><strong>Uploaded logo:</strong> {{ item.properties['Uploaded Logo'] }}</p>
+    {%- endif -%}
     {%- if aqb_is_desk_sign -%}
       {%- if aqb_material != blank -%}
         <p style="margin: 2px 0;"><strong>Material:</strong> {{ aqb_material }}</p>

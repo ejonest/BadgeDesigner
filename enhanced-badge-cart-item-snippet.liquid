@@ -6,7 +6,8 @@
   This enhanced version includes better styling and color swatches
 {% endcomment %}
 
-{% if item.properties['Custom Badge Design'] == 'Yes' %}
+{% assign is_custom_design = item.properties['_Custom Badge Design'] | default: item.properties['Custom Badge Design'] %}
+{% if is_custom_design == 'Yes' %}
   <div class="badge-design-details" style="margin-top: 8px; padding: 12px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #007cba; font-size: 0.9em;">
     <p style="margin: 0 0 8px 0; font-weight: 600; color: #333; font-size: 1em;">
       <strong>Custom Badge Design:</strong>
@@ -38,29 +39,15 @@
       </p>
     {% endif %}
     
-    {% comment %} Display design options with color swatches {% endcomment %}
-    {% if item.properties['Background Color'] != blank %}
+    {% assign backing = item.properties['_Backing Type'] | default: item.properties['Backing Type'] %}
+    {% if backing != blank %}
       <p style="margin: 3px 0;">
-        <strong>Background:</strong> 
-        <span style="display: inline-block; width: 16px; height: 12px; background: {{ item.properties['Background Color'] }}; border: 1px solid #ccc; margin-left: 4px; vertical-align: middle;"></span>
-        {{ item.properties['Background Color'] }}
+        <strong>Backing:</strong> {{ backing | capitalize }}
       </p>
     {% endif %}
-    {% if item.properties['Backing Type'] != blank %}
+    {% if item.properties['Uploaded Logo'] != blank %}
       <p style="margin: 3px 0;">
-        <strong>Backing:</strong> {{ item.properties['Backing Type'] | capitalize }}
-      </p>
-    {% endif %}
-    {% if item.properties['Font Family'] != blank %}
-      <p style="margin: 3px 0;">
-        <strong>Font:</strong> {{ item.properties['Font Family'] }}
-      </p>
-    {% endif %}
-    
-    {% comment %} Display design ID if available {% endcomment %}
-    {% if item.properties['Design ID'] != blank %}
-      <p style="margin: 6px 0 0 0; font-size: 0.8em; color: #666;">
-        <strong>Design ID:</strong> {{ item.properties['Design ID'] }}
+        <strong>Uploaded logo:</strong> {{ item.properties['Uploaded Logo'] }}
       </p>
     {% endif %}
   </div>

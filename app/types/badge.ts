@@ -44,6 +44,8 @@ export type SignLogoLayoutSnapshot = {
 
 export interface BadgeImage {
   src: string;
+  /** Original customer filename, retained for the checkout summary. */
+  fileName?: string;
   // background image props:
   widthPx?: number;
   heightPx?: number;

@@ -4398,6 +4398,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           ...prev,
           logo: {
             src: data.publicUrl!,
+            fileName: file.name,
             placement: normalizeSignLogoPlacementForTemplate(
               tid,
               prev.logo?.placement,
@@ -7041,6 +7042,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               thumbnailUrl: thumbnailUrls[i],
               pdfUrl: pdfUrlForCart,
               badgeCount: n,
+              uploadedLogo: b.logo?.src?.trim()
+                ? b.logo.fileName || "Included"
+                : undefined,
               includeBackingType: !isSignDesigner,
             });
             return {
@@ -7068,6 +7072,9 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               linePrice: itemTotalPrice,
               thumbnailUrl: thumbnailUrls[i],
               pdfUrl: pdfUrlForCart,
+              uploadedLogo: b.logo?.src?.trim()
+                ? b.logo.fileName || "Included"
+                : undefined,
               includeBackingType: !isSignDesigner,
             });
             return {
