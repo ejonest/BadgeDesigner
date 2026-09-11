@@ -1,5 +1,7 @@
 /**
  * Native Shopify `orders/paid` webhook for the Gavels Fast store.
+ * Handles gavel and pen cart lines on the same order, because the store
+ * registers a single `orders/paid` webhook for both designers.
  *
  * Register in Shopify admin → Settings → Notifications → Webhooks:
  *   Event:  Order payment
@@ -29,6 +31,6 @@ export async function action({ request }: ActionFunctionArgs) {
     request,
     logPrefix: "[gavel-webhook]",
     hmacEnvNames: ["SHOPIFY_WEBHOOK_SECRET_GAVEL"],
-    allowed: ["gavel"],
+    allowed: ["gavel", "pen"],
   });
 }
