@@ -556,7 +556,12 @@ export const GavelSpinPreview = forwardRef<
       </Canvas>
       {hintVisible && !hideCanvas ? (
         <div className="gf-spin-hint" aria-hidden>
-          Drag to spin
+          <span className="gf-spin-hint-desktop">
+            Drag to spin · scroll to zoom
+          </span>
+          <span className="gf-spin-hint-mobile">
+            Drag to spin · pinch to zoom
+          </span>
         </div>
       ) : null}
     </div>

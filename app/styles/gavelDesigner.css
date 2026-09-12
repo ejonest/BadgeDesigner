@@ -1804,6 +1804,20 @@
   pointer-events: none;
 }
 
+.gf-spin-hint-desktop {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .gf-spin-hint-desktop {
+    display: inline;
+  }
+
+  .gf-spin-hint-mobile {
+    display: none;
+  }
+}
+
 .gf-spin-fallback {
   height: min(42vh, 360px);
   min-height: 220px;

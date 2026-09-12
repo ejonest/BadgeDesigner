@@ -779,10 +779,9 @@ export function soundBlockCharCount(
 export function joinSoundBlockText(
   lines: readonly { text?: string | null }[],
 ): string {
-  return lines
-    .map((line) => (line.text ?? "").trim())
-    .filter(Boolean)
-    .join("\n");
+  const rows = lines.map((line) => (line.text ?? "").trim());
+  while (rows.length > 0 && !rows[rows.length - 1]) rows.pop();
+  return rows.join("\n");
 }
 
 export function formatGavelOrderFinish(
