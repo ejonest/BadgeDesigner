@@ -2855,7 +2855,7 @@ export default function GavelDesigner({
                       <p className="gf-note">
                         {bulkMode
                           ? "Each sound block uses Line 1 from its CSV row."
-                          : "Leave blank to repeat line 1 of the band. Formatting is independent of the band."}
+                          : "Leave all fields blank to repeat line 1 of the band. Blank optional lines stay blank so you can create spacing. Formatting is independent of the band."}
                       </p>
                       {!bulkMode ? (
                         <>

@@ -964,13 +964,17 @@ function wrapCanvasText(
   return lines.length ? lines : [text.trim()];
 }
 
-function filledSoundBlockLines(
+function soundBlockRowsWithGaps(
   lines: readonly GavelBandLineInput[],
 ): GavelBandLineInput[] {
-  return lines
-    .map((line) => ({ ...line, text: (line.text ?? "").trim() }))
-    .filter((line) => line.text)
-    .slice(0, 4);
+  const rows = lines
+    .slice(0, 4)
+    .map((line) => ({ ...line, text: (line.text ?? "").trim() }));
+  let lastFilledIndex = rows.length - 1;
+  while (lastFilledIndex >= 0 && !rows[lastFilledIndex].text) {
+    lastFilledIndex -= 1;
+  }
+  return rows.slice(0, lastFilledIndex + 1);
 }
 
 function fitSoundBlockTopLines(
@@ -979,7 +983,7 @@ function fitSoundBlockTopLines(
   maxWidth: number,
   maxHeight: number,
 ): { rows: GavelBandLineInput[]; fontPx: number; gap: number } {
-  const rows = filledSoundBlockLines(lines);
+  const rows = soundBlockRowsWithGaps(lines);
   if (rows.length === 0) return { rows, fontPx: 0, gap: 0 };
   let fontPx = Math.min(110, maxHeight * (rows.length === 1 ? 0.28 : 0.2));
   const minPx = 18;
@@ -1036,7 +1040,7 @@ export function paintSoundBlockTopCanvas(
 
   ctx.clearRect(0, 0, size, size);
   const logo = options?.logo;
-  const sourceRows = filledSoundBlockLines(lines);
+  const sourceRows = soundBlockRowsWithGaps(lines);
   if (sourceRows.length === 0 && !logo?.image) return canvas;
 
   const inset = size * 0.14;
@@ -1110,7 +1114,7 @@ export function soundBlockTopToSvgString(
   options?: { logo?: GavelPlateLogo | null },
 ): string {
   const size = SOUND_BLOCK_TOP_TEXTURE_PX;
-  const sourceRows = filledSoundBlockLines(lines);
+  const sourceRows = soundBlockRowsWithGaps(lines);
   const logo = options?.logo;
   // The converted art carries the black-ink reduction in its own pixels, so
   // the SVG only needs the alpha-mask filter when the conversion is skipped.
