@@ -1,0 +1,27 @@
+---
+description: Never leave an agent-started dev server running
+alwaysApply: true
+---
+
+# Dev servers
+
+The user runs their own dev server (usually on port 5173). A second running host
+breaks their testing, so never leave one behind.
+
+- Prefer the user's running server over starting your own.
+- If you must start one, use a non-default port and shut it down before you
+  finish the turn — including when the task fails or is abandoned.
+- `kill <pid>` on the `npm run dev` wrapper does **not** free the port; the
+  child `node`/vite process survives. Verify and kill the real listener:
+
+```bash
+# start
+npm run dev -- --host 127.0.0.1 --port 5180
+
+# shut down when done: find the listener, not the npm wrapper
+lsof -nP -iTCP:5180 -sTCP:LISTEN   # -> node <pid>
+kill -9 <pid>
+lsof -nP -iTCP -sTCP:LISTEN | grep :51   # confirm only the user's 5173 remains
+```
+
+- Never kill a server you did not start (notably port 5173).
