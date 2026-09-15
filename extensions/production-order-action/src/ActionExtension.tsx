@@ -1,11 +1,6 @@
 import "@shopify/ui-extensions/preact";
 import { render } from "preact";
-import {
-  ArtworkButtons,
-  itemGroups,
-  LineTable,
-  useProductionOrder,
-} from "./productionShared";
+import { ProductionItemDetails, useProductionOrder } from "./productionShared";
 
 function Extension() {
   const orderId = shopify.data.selected?.[0]?.id;
@@ -29,74 +24,14 @@ function Extension() {
         </s-banner>
       ) : (
         <s-stack gap="large">
-          {items.map((item, itemIndex) => {
-            const groups = itemGroups(item);
-            return (
-              <s-section
-                key={`${item.designerId}-${item.designId}-${itemIndex}`}
-                heading={`${item.productLabel} × ${item.quantity}`}
-              >
-                <s-stack gap="base">
-                  {item.specs && item.specs.length > 0 ? (
-                    <s-stack gap="small">
-                      {item.specs.map((spec) => (
-                        <s-text key={`${item.designId}-${spec.label}`}>
-                          {spec.label}: {spec.value}
-                        </s-text>
-                      ))}
-                    </s-stack>
-                  ) : null}
-
-                  {groups.length === 0 ? (
-                    <s-text>No text lines were saved for this design.</s-text>
-                  ) : (
-                    groups.map((group) => (
-                      <LineTable
-                        key={`${item.designId}-${group.heading}`}
-                        heading={group.heading}
-                        lines={group.lines}
-                      />
-                    ))
-                  )}
-
-                  {item.printSvgUrl ? (
-                    <s-stack gap="small">
-                      <s-text type="strong">Print-ready SVG</s-text>
-                      <s-image
-                        src={item.printSvgUrl}
-                        alt={`${item.productLabel} print-ready SVG`}
-                        objectFit="contain"
-                        inlineSize="fill"
-                      />
-                    </s-stack>
-                  ) : null}
-
-                  {item.secondarySvgUrl ? (
-                    <s-stack gap="small">
-                      <s-text type="strong">Secondary print SVG</s-text>
-                      <s-image
-                        src={item.secondarySvgUrl}
-                        alt={`${item.productLabel} secondary print SVG`}
-                        objectFit="contain"
-                        inlineSize="fill"
-                      />
-                    </s-stack>
-                  ) : null}
-
-                  {item.thumbnailUrl ? (
-                    <s-image
-                      src={item.thumbnailUrl}
-                      alt={`${item.productLabel} proof thumbnail`}
-                      objectFit="contain"
-                      inlineSize="fill"
-                    />
-                  ) : null}
-
-                  <ArtworkButtons item={item} />
-                </s-stack>
-              </s-section>
-            );
-          })}
+          {items.map((item, itemIndex) => (
+            <s-section
+              key={`${item.designerId}-${item.designId}-${itemIndex}`}
+              heading={`${item.productLabel} × ${item.quantity}`}
+            >
+              <ProductionItemDetails item={item} showPrintSvgs />
+            </s-section>
+          ))}
         </s-stack>
       )}
 
