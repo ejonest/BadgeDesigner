@@ -48,7 +48,7 @@
         {%- liquid
           assign cta_href = section.settings.cta_link
           if cta_href == blank
-            assign cta_href = cat_base | append: '?type=profession'
+            assign cta_href = all_products['custom-desk-sign'].url | default: '/products/custom-desk-sign'
           endif
         -%}
         {%- if section.settings.cta_label != blank -%}

@@ -1,9 +1,5 @@
 {%- liquid
-  assign card_link = section.settings.cta_link | default: section.settings.catalogue_base | default: '/pages/desk-signs-catalogue'
-  if card_link contains '?'
-    assign card_link = card_link | split: '?' | first
-  endif
-  assign card_link = card_link | append: '?material=acrylic&type=profession'
+  assign card_link = section.settings.cta_link | default: all_products['custom-desk-sign'].url | default: '/products/custom-desk-sign'
   assign card_cta = section.settings.card_cta | default: 'Personalize'
 -%}
 

@@ -18,13 +18,13 @@
         "primary_label": "Shop All Signs",
         "primary_link": "/pages/desk-signs-catalogue",
         "secondary_label": "Personalized Signs →",
-        "secondary_link": "/pages/desk-signs-catalogue?type=profession"
+        "secondary_link": "shopify://products/custom-desk-sign"
       }
     },
     "nav": {
       "type": "aqb-desk-signs-nav",
       "blocks": {
-        "anchor_custom": { "type": "anchor", "settings": { "section_id": "custom", "title": "Custom & Personalized", "subtitle": "Acrylic & rosewood", "link": "/pages/desk-signs-catalogue?type=profession" } },
+        "anchor_custom": { "type": "anchor", "settings": { "section_id": "custom", "title": "Custom & Personalized", "subtitle": "Acrylic & rosewood", "link": "#section-custom" } },
         "anchor_business": { "type": "anchor", "settings": { "section_id": "business", "title": "Business & Professional", "subtitle": "Functional signage", "link": "/pages/desk-signs-catalogue?type=profession" } },
         "anchor_novelty": { "type": "anchor", "settings": { "section_id": "novelty", "title": "Novelty & Humorous", "subtitle": "345 funny designs", "link": "/pages/desk-signs-catalogue?type=novelty" } }
       },
@@ -60,7 +60,7 @@
             "meta": "Acrylic · Medical Cross vector · 2×10\"",
             "price": "$24.99",
             "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/db215041-2a6a-5d18-85df-d4710b032b44_1df6a4fd-fb47-4601-84b7-bc673241c4ab.jpg?v=1781185001",
-            "link": "/pages/desk-signs-catalogue?material=acrylic&type=profession"
+            "link": "shopify://products/custom-desk-sign"
           }
         },
         "acrylic_2": {
@@ -70,7 +70,7 @@
             "meta": "Acrylic · Profession vector · 2×10\"",
             "price": "$24.99",
             "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/6ceb5aa3-8db4-5a32-9113-ee20fd789cd3.jpg?v=1781178030",
-            "link": "/pages/desk-signs-catalogue?material=acrylic&type=profession"
+            "link": "shopify://products/custom-desk-sign"
           }
         },
         "acrylic_3": {
@@ -80,7 +80,7 @@
             "meta": "Acrylic · Scales of justice vector · 2×10\"",
             "price": "$24.99",
             "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/cdebe738-1413-51e2-af78-d2f65c95c191.jpg?v=1781178019",
-            "link": "/pages/desk-signs-catalogue?material=acrylic&type=profession"
+            "link": "shopify://products/custom-desk-sign"
           }
         },
         "acrylic_4": {
@@ -90,7 +90,7 @@
             "meta": "Acrylic · Profession vector · 2×10\"",
             "price": "$24.99",
             "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/e70b969e-25d8-58d5-9c57-0dedbacac9c1.jpg?v=1781178039",
-            "link": "/pages/desk-signs-catalogue?material=acrylic&type=profession"
+            "link": "shopify://products/custom-desk-sign"
           }
         },
         "acrylic_5": {
@@ -100,7 +100,7 @@
             "meta": "Acrylic · Profession vector · 2×10\"",
             "price": "$24.99",
             "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/9628df1b-f141-5ac5-91cd-029e78178352.jpg?v=1781177980",
-            "link": "/pages/desk-signs-catalogue?material=acrylic&type=profession"
+            "link": "shopify://products/custom-desk-sign"
           }
         },
         "acrylic_6": {
@@ -110,7 +110,7 @@
             "meta": "Acrylic · Profession vector · 2×10\"",
             "price": "$24.99",
             "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/553039e7-b65d-5e9e-82f8-d4cfda4f9608.jpg?v=1781177971",
-            "link": "/pages/desk-signs-catalogue?material=acrylic&type=profession"
+            "link": "shopify://products/custom-desk-sign"
           }
         },
         "acrylic_7": {
@@ -120,7 +120,7 @@
             "meta": "Acrylic · Gavel vector · 2×10\"",
             "price": "$24.99",
             "image_url": "https://cdn.shopify.com/s/files/1/0511/0739/7783/files/f8fb3e72-3c2f-55f9-a4a1-532520ebde33.jpg?v=1781178010",
-            "link": "/pages/desk-signs-catalogue?material=acrylic&type=profession"
+            "link": "shopify://products/custom-desk-sign"
           }
         }
       },
@@ -150,7 +150,7 @@
         "heading": "Personalized with your name.<br><em>Built for your profession.</em>",
         "description": "Acrylic and rosewood desk signs personalized with a buyer's name and title. Vector art by profession — Doctor, Legal Secretary, Financial Planner, and 70+ more.",
         "cta_label": "Personalize Your Sign →",
-        "cta_link": "/pages/desk-signs-catalogue?type=profession",
+        "cta_link": "shopify://products/custom-desk-sign",
         "acrylic_grid_label": "Acrylic — Personalized by profession (44 designs)",
         "view_all_show": true,
         "view_all_heading": "36 more professions",

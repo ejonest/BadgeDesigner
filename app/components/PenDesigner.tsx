@@ -351,7 +351,7 @@ export default function PenDesigner({
       backgroundColor: "#315c7d",
       backing: "magnetic",
       logo: bandLogoInk ? { src: bandLogoInk.href } : undefined,
-      penStyle: "blue-gift-set",
+      penStyle: "black-gift-set",
       penCaseBandMode: bandMode,
       penCaseBandText: bandText,
       penCapMode: capMode,
@@ -572,7 +572,7 @@ export default function PenDesigner({
         orderQuantity: quantity,
         uploadedLogo: bandLogoFile?.name,
         extraHidden: {
-          "_Pen Style": "Blue gift set",
+          "_Pen Style": "Black gift set",
           "_Case Band Artwork": describeArtwork(bandText, bandLogoFile),
           "_Pen Cap Artwork": describeArtwork(capText, null),
           "_Case Band Mode": PEN_ARTWORK_MODE_LABELS[bandMode],
@@ -663,7 +663,7 @@ export default function PenDesigner({
           {step === "product" && (
             <div className="pen-panel">
               <p className="pen-step-label">Step 1</p>
-              <h2>Premium blue pen gift set</h2>
+              <h2>Premium black pen gift set</h2>
               <p className="pen-lead">
                 Includes the engraved pen, presentation case, and customizable
                 metal case band.
@@ -671,7 +671,7 @@ export default function PenDesigner({
               <button type="button" className="pen-product-card is-selected">
                 <img src="/images/pen/gift-set.jpg" alt="" />
                 <span>
-                  <strong>Blue rollerball gift set</strong>
+                  <strong>Black rollerball gift set</strong>
                   <small>Pen cap + case band personalization</small>
                 </span>
                 <b>${unitPrice.toFixed(2)}</b>

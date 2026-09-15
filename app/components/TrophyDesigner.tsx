@@ -12,6 +12,13 @@ import "../styles/trophyDesigner.css";
 
 type StepId = "trophy" | "plate" | "design" | "quantity" | "done";
 type PreviewMode = "plate" | "trophy";
+type LineSize = "small" | "medium" | "large";
+type TrophyLineStyle = {
+  size: LineSize;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+};
 
 const STEPS: StepId[] = ["trophy", "plate", "design", "quantity", "done"];
 const STEP_LABELS: Record<StepId, string> = {
@@ -52,6 +59,39 @@ const FONT_OPTIONS = [
   "Times New Roman",
 ];
 const CACHE_KEY = "trophy-designer-draft-v1";
+const DEFAULT_LINE_STYLE: TrophyLineStyle = {
+  size: "medium",
+  bold: false,
+  italic: false,
+  underline: false,
+};
+const LINE_SIZE_SCALE: Record<LineSize, number> = {
+  small: 0.78,
+  medium: 1,
+  large: 1.28,
+};
+
+function defaultLineStyles(): TrophyLineStyle[] {
+  return Array.from({ length: 3 }, () => ({ ...DEFAULT_LINE_STYLE }));
+}
+
+function restoreLineStyles(draft: TrophyDraft): TrophyLineStyle[] {
+  return Array.from({ length: 3 }, (_, index) => {
+    const saved = draft.lineStyles?.[index];
+    const size: LineSize =
+      saved?.size === "small" ||
+      saved?.size === "medium" ||
+      saved?.size === "large"
+        ? saved.size
+        : "medium";
+    return {
+      size,
+      bold: saved ? Boolean(saved.bold) : Boolean(draft.bold),
+      italic: Boolean(saved?.italic),
+      underline: Boolean(saved?.underline),
+    };
+  });
+}
 
 type TrophyDraft = {
   step?: StepId;
@@ -60,6 +100,8 @@ type TrophyDraft = {
   plateId?: string;
   lines?: string[];
   fontFamily?: string;
+  lineStyles?: TrophyLineStyle[];
+  /** Legacy v1 drafts used one bold setting for every line. */
   bold?: boolean;
   quantity?: number;
   previewMode?: PreviewMode;
@@ -79,45 +121,58 @@ const MAX_FONT_CQH = 24;
  * `widestLineEm` is the longest line's width at a 1em font size.
  */
 function fitFontSize(
-  lineCount: number,
-  widestLineEm: number,
+  lineWidthsEm: number[],
+  lineStyles: TrophyLineStyle[],
   area: TrophyTextArea,
 ): number {
-  const byHeight = area.height / (lineCount * LINE_HEIGHT);
+  const scaledLineHeight = lineStyles.reduce(
+    (total, style) => total + LINE_SIZE_SCALE[style.size],
+    0,
+  );
+  const byHeight = area.height / (scaledLineHeight * LINE_HEIGHT);
   // area.width is a share of the plate width, so convert it to height units.
-  const byWidth = (area.width * TROPHY_PLATE_RATIO) / Math.max(widestLineEm, 0.01);
+  const widestScaledLine = Math.max(
+    ...lineStyles.map(
+      (style, index) =>
+        (lineWidthsEm[index] ?? 0.01) * LINE_SIZE_SCALE[style.size],
+    ),
+    0.01,
+  );
+  // Leave a small safety margin for browser/font rasterization differences.
+  const byWidth =
+    (area.width * TROPHY_PLATE_RATIO * 0.96) / widestScaledLine;
   return Math.min(byHeight, byWidth, MAX_FONT_CQH);
 }
 
 let measureCanvas: HTMLCanvasElement | null = null;
 
 /** Real width of the longest line, in ems of the chosen face. */
-function measureWidestEm(
+function measureLineWidthsEm(
   lines: string[],
   fontFamily: string,
-  bold: boolean,
-): number {
+  lineStyles: TrophyLineStyle[],
+): number[] {
   measureCanvas ??= document.createElement("canvas");
   const ctx = measureCanvas.getContext("2d");
-  if (!ctx) return 0;
+  if (!ctx) return lines.map(() => 0);
   const probe = 100;
-  ctx.font = `${bold ? 700 : 400} ${probe}px "${fontFamily}"`;
-  return Math.max(
-    ...lines.map((line) => ctx.measureText(line).width / probe),
-    0.01,
-  );
+  return lines.map((line, index) => {
+    const style = lineStyles[index];
+    ctx.font = `${style.italic ? "italic " : ""}${style.bold ? 700 : 400} ${probe}px "${fontFamily}"`;
+    return Math.max(ctx.measureText(line).width / probe, 0.01);
+  });
 }
 
 function PlateArtwork({
   option,
   lines,
   fontFamily,
-  bold,
+  lineStyles,
 }: {
   option: TrophyPlateOption;
   lines: string[];
   fontFamily: string;
-  bold: boolean;
+  lineStyles: TrophyLineStyle[];
 }) {
   const hasCustomText = lines.some((line) => line.trim());
   // Keep all three positions once any wording is entered. A non-breaking space
@@ -128,16 +183,32 @@ function PlateArtwork({
 
   // Character-count estimate on the server; the real metrics take over on the
   // client, so wide wording can never run past the engraving area.
-  const estimatedEm =
-    Math.max(...shownLines.map((line) => line.length), 1) *
-    (bold ? BOLD_CHAR_EM : AVG_CHAR_EM);
-  const [widestEm, setWidestEm] = useState(estimatedEm);
+  const shownStyles = useMemo(
+    () =>
+      hasCustomText
+        ? lineStyles
+        : [{ ...DEFAULT_LINE_STYLE }],
+    [hasCustomText, lineStyles],
+  );
+  const estimatedWidths = shownLines.map(
+    (line, index) =>
+      Math.max(line.length, 1) *
+      (shownStyles[index].bold ? BOLD_CHAR_EM : AVG_CHAR_EM) *
+      (shownStyles[index].italic ? 1.04 : 1),
+  );
+  const [lineWidthsEm, setLineWidthsEm] = useState(estimatedWidths);
 
   useEffect(() => {
     let cancelled = false;
     const measure = () => {
       if (!cancelled) {
-        setWidestEm(measureWidestEm(linesKey.split("\n"), fontFamily, bold));
+        setLineWidthsEm(
+          measureLineWidthsEm(
+            linesKey.split("\n"),
+            fontFamily,
+            shownStyles,
+          ),
+        );
       }
     };
     measure();
@@ -146,9 +217,9 @@ function PlateArtwork({
     return () => {
       cancelled = true;
     };
-  }, [linesKey, fontFamily, bold]);
+  }, [linesKey, fontFamily, shownStyles]);
 
-  const fontSize = fitFontSize(shownLines.length, widestEm, area);
+  const fontSize = fitFontSize(lineWidthsEm, shownStyles, area);
 
   return (
     <div className="tr-plate-artwork">
@@ -162,13 +233,26 @@ function PlateArtwork({
           height: `${area.height}%`,
           color: option.textColor,
           fontFamily,
-          fontWeight: bold ? 700 : 400,
           fontSize: `${fontSize.toFixed(2)}cqh`,
         }}
       >
-        {shownLines.map((line, index) => (
-          <span key={`${index}-${line}`}>{line || "\u00a0"}</span>
-        ))}
+        {shownLines.map((line, index) => {
+          const style = shownStyles[index];
+          return (
+            <span
+              key={`${index}-${line}`}
+              style={{
+                fontSize: `${LINE_SIZE_SCALE[style.size]}em`,
+                lineHeight: LINE_HEIGHT,
+                fontWeight: style.bold ? 700 : 400,
+                fontStyle: style.italic ? "italic" : "normal",
+                textDecoration: style.underline ? "underline" : "none",
+              }}
+            >
+              {line || "\u00a0"}
+            </span>
+          );
+        })}
       </div>
     </div>
   );
@@ -179,14 +263,14 @@ function TrophyPreview({
   option,
   lines,
   fontFamily,
-  bold,
+  lineStyles,
   mode,
 }: {
   trophyType: TrophyTypeId;
   option: TrophyPlateOption;
   lines: string[];
   fontFamily: string;
-  bold: boolean;
+  lineStyles: TrophyLineStyle[];
   mode: PreviewMode;
 }) {
   const trophy = getTrophyType(trophyType);
@@ -198,7 +282,7 @@ function TrophyPreview({
           option={option}
           lines={lines}
           fontFamily={fontFamily}
-          bold={bold}
+          lineStyles={lineStyles}
         />
       </div>
     );
@@ -221,7 +305,7 @@ function TrophyPreview({
             option={option}
             lines={lines}
             fontFamily={fontFamily}
-            bold={bold}
+            lineStyles={lineStyles}
           />
         </div>
       </div>
@@ -236,7 +320,9 @@ export default function TrophyDesigner() {
   const [plateId, setPlateId] = useState("baseball-theme");
   const [lines, setLines] = useState(["", "", ""]);
   const [fontFamily, setFontFamily] = useState("Arial");
-  const [bold, setBold] = useState(false);
+  const [lineStyles, setLineStyles] = useState<TrophyLineStyle[]>(
+    defaultLineStyles,
+  );
   const [quantity, setQuantity] = useState(1);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("plate");
   const [restored, setRestored] = useState(false);
@@ -299,7 +385,7 @@ export default function TrophyDesigner() {
         if (FONT_OPTIONS.includes(draft.fontFamily ?? "")) {
           setFontFamily(draft.fontFamily!);
         }
-        setBold(Boolean(draft.bold));
+        setLineStyles(restoreLineStyles(draft));
         if (typeof draft.quantity === "number") {
           setQuantity(Math.min(500, Math.max(1, Math.round(draft.quantity))));
         }
@@ -323,14 +409,14 @@ export default function TrophyDesigner() {
       plateId: option.id,
       lines,
       fontFamily,
-      bold,
+      lineStyles,
       quantity,
       previewMode,
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(draft));
   }, [
-    bold,
     fontFamily,
+    lineStyles,
     lines,
     option.id,
     previewMode,
@@ -355,6 +441,17 @@ export default function TrophyDesigner() {
     const nextTrophy = getTrophyType(nextType);
     setTrophyType(nextType);
     setPlateId(nextTrophy.options[0].id);
+  }
+
+  function updateLineStyle(
+    index: number,
+    update: Partial<TrophyLineStyle>,
+  ) {
+    setLineStyles((current) =>
+      current.map((style, lineIndex) =>
+        lineIndex === index ? { ...style, ...update } : style,
+      ),
+    );
   }
 
   function goToStep(next: StepId) {
@@ -382,7 +479,7 @@ export default function TrophyDesigner() {
     setPlateId("baseball-theme");
     setLines(["", "", ""]);
     setFontFamily("Arial");
-    setBold(false);
+    setLineStyles(defaultLineStyles());
     setQuantity(1);
     setPreviewMode("plate");
   }
@@ -517,19 +614,74 @@ export default function TrophyDesigner() {
                         ))}
                       </select>
                     </label>
-                    <button
-                      type="button"
-                      className={`gf-chip ${bold ? "is-on" : ""}`}
-                      onClick={() => setBold((current) => !current)}
-                    >
-                      Bold
-                    </button>
                   </div>
                   {lines.map((line, index) => (
                     <div className="gf-line-block" key={index}>
                       <div className="gf-line-label">
                         Line {index + 1}
                         {index === 0 ? " (required)" : " (optional)"}
+                      </div>
+                      <div className="tr-line-style-controls">
+                        <div
+                          className="tr-line-size-group"
+                          role="group"
+                          aria-label={`Line ${index + 1} size`}
+                        >
+                          {(
+                            [
+                              ["small", "Small"],
+                              ["medium", "Med"],
+                              ["large", "Large"],
+                            ] as const
+                          ).map(([size, label]) => (
+                            <button
+                              type="button"
+                              key={size}
+                              className={
+                                lineStyles[index].size === size ? "is-on" : ""
+                              }
+                              aria-pressed={lineStyles[index].size === size}
+                              onClick={() => updateLineStyle(index, { size })}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                        <div
+                          className="tr-line-format-group"
+                          role="group"
+                          aria-label={`Line ${index + 1} formatting`}
+                        >
+                          {(
+                            [
+                              ["bold", "Bold"],
+                              ["italic", "Italic"],
+                              ["underline", "Underline"],
+                            ] as const
+                          ).map(([format, label]) => (
+                            <button
+                              type="button"
+                              key={format}
+                              className={
+                                lineStyles[index][format] ? "is-on" : ""
+                              }
+                              aria-label={label}
+                              aria-pressed={lineStyles[index][format]}
+                              title={label}
+                              onClick={() =>
+                                updateLineStyle(index, {
+                                  [format]: !lineStyles[index][format],
+                                })
+                              }
+                            >
+                              {format === "bold"
+                                ? "B"
+                                : format === "italic"
+                                  ? "I"
+                                  : "U"}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                       <input
                         className="gf-input"
@@ -690,7 +842,7 @@ export default function TrophyDesigner() {
                     option={option}
                     lines={lines}
                     fontFamily={fontFamily}
-                    bold={bold}
+                    lineStyles={lineStyles}
                     mode={previewMode}
                   />
                 </div>
