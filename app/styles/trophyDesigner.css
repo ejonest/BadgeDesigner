@@ -1,8 +1,8 @@
 .tr-designer {
   --gf-design-cols: minmax(330px, 0.88fr) minmax(440px, 1.12fr);
   /* Space the caption occupies below the preview frame: the pane's 10px gap,
-     the caption's 10px top margin, and its 18px line. */
-  --tr-preview-caption-space: 38px;
+     the caption's 10px top margin, and its 22px line. */
+  --tr-preview-caption-space: 42px;
 }
 
 .tr-trophy-grid {
@@ -100,6 +100,57 @@
   position: relative;
 }
 
+.tr-line-style-controls,
+.tr-line-size-group,
+.tr-line-format-group {
+  display: flex;
+  align-items: center;
+}
+
+.tr-line-style-controls {
+  justify-content: space-between;
+  gap: 10px;
+  margin: 7px 0 8px;
+}
+
+.tr-line-size-group,
+.tr-line-format-group {
+  overflow: hidden;
+  border: 1px solid var(--gf-border);
+  border-radius: 7px;
+}
+
+.tr-line-style-controls button {
+  min-width: 38px;
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 0;
+  border-right: 1px solid var(--gf-border);
+  background: #fff;
+  color: var(--gf-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tr-line-style-controls button:last-child {
+  border-right: 0;
+}
+
+.tr-line-style-controls button.is-on {
+  background: var(--gf-navy);
+  color: #fff;
+}
+
+.tr-line-format-group button:nth-child(2) {
+  font-style: italic;
+}
+
+.tr-line-format-group button:nth-child(3) {
+  text-decoration: underline;
+}
+
 .tr-designer .gf-line-block > .gf-char-count {
   display: block;
   margin-top: 5px;
@@ -174,6 +225,11 @@
   text-shadow: 0 1px 1px rgba(255, 255, 255, 0.12);
 }
 
+.tr-custom-text > span {
+  max-width: 100%;
+  white-space: pre;
+}
+
 /* Height-driven so the square stays whole in the short mobile preview; the
    plate overlay is positioned in percentages of this box. */
 .tr-trophy-artwork {
@@ -206,10 +262,10 @@
 
 .tr-preview-caption {
   margin: 10px 0 0;
-  color: var(--gf-muted);
-  font-size: 11px;
+  color: #111111;
+  font-size: 14px;
   /* Pinned so --tr-preview-caption-space below stays accurate. */
-  line-height: 18px;
+  line-height: 22px;
   text-align: center;
 }
 
@@ -354,7 +410,9 @@
   }
 
   .tr-preview-stage.is-plate .tr-plate-artwork {
-    width: min(68%, 420px);
+    width: auto;
+    max-width: min(68%, 420px);
+    height: 100%;
   }
 
   .tr-trophy-artwork {

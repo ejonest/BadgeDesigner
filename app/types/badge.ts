@@ -159,8 +159,9 @@ export interface Badge {
   gavelProductionMethod?: "engrave" | "uvprint";
   /** Gavel + stand: nameplate lines (independent of the band). */
   gavelStandPlateLines?: BadgeLine[];
-  /** Pen designer only: product photo/style identifier. */
-  penStyle?: "blue-gift-set";
+  /** Pen designer only: product photo/style identifier. `"blue-gift-set"` is
+      the retired colourway, kept so saved drafts still read back. */
+  penStyle?: "black-gift-set" | "blue-gift-set";
   /** Pen designer only: the case's metal band accepts either copy or a logo. */
   penCaseBandMode?: "text" | "logo" | "text-logo";
   /** Pen designer only: source text for the case band manufacturing file. */

@@ -109,20 +109,21 @@ export interface PenPreviewPhoto {
 }
 
 /**
- * Measured off the retouched product photos in `public/images/pen`. Re-measure
- * these if the photos are ever replaced.
+ * Measured off the retouched product photos in `public/images/pen`, which
+ * `scripts/clean-pen-photos.mjs` crops to the product. Re-measure these if the
+ * photos are ever replaced or their crop changes.
  */
 export const PEN_PREVIEW_PHOTOS = {
   caseBand: {
     src: "/images/pen/case-band.jpg",
     alt: "Black presentation case with a silver engraving band on the lid",
-    width: 679,
-    height: 679,
+    width: 550,
+    height: 380,
     quad: [
-      [288, 233],
-      [377, 196],
-      [445, 268],
-      [353, 307],
+      [218, 146],
+      [307, 109],
+      [375, 181],
+      [283, 220],
     ],
     inset: 0.12,
     maxTextScale: 0.17,
@@ -132,7 +133,7 @@ export const PEN_PREVIEW_PHOTOS = {
   },
   cap: {
     src: "/images/pen/pen-cap.jpg",
-    alt: "Blue pen cap with a clear engraving area on the barrel",
+    alt: "Black pen cap with a clear engraving area on the barrel",
     width: 400,
     height: 168,
     quad: [

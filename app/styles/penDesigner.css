@@ -480,6 +480,10 @@
 }
 
 .pen-product-preview {
+  /* Both photos are cropped to the product, so each one's width cap is just
+     how large that product should read in the panel. */
+  --pen-photo-max-w: 660px;
+
   position: relative;
   display: grid;
   min-height: 500px;
@@ -489,6 +493,10 @@
   background: linear-gradient(145deg, #f8f9f9, #e6e9eb);
 }
 
+.pen-product-preview.is-cap {
+  --pen-photo-max-w: 560px;
+}
+
 /*
  * The artwork overlay is positioned against the photo, never against the
  * preview panel, so it stays locked to the engraving area at any panel size.
@@ -496,11 +504,7 @@
 .pen-photo {
   position: relative;
   width: 100%;
-  max-width: 520px;
-}
-
-.pen-product-preview.is-cap .pen-photo {
-  max-width: 560px;
+  max-width: min(100%, var(--pen-photo-max-w));
 }
 
 .pen-photo-base {
@@ -591,7 +595,7 @@
  */
 @media (min-width: 901px) {
   .pen-designer-root {
-    --pen-photo-max-h: clamp(190px, 40dvh, 430px);
+    --pen-photo-max-h: clamp(190px, 46dvh, 470px);
 
     display: flex;
     height: 100dvh;
@@ -657,15 +661,7 @@
   .pen-photo {
     max-width: min(
       100%,
-      520px,
-      calc(var(--pen-photo-max-h) * var(--pen-photo-ratio, 1))
-    );
-  }
-
-  .pen-product-preview.is-cap .pen-photo {
-    max-width: min(
-      100%,
-      560px,
+      var(--pen-photo-max-w),
       calc(var(--pen-photo-max-h) * var(--pen-photo-ratio, 1))
     );
   }

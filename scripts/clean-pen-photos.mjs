@@ -1,16 +1,14 @@
 /**
  * Rebuilds the pen designer preview photos from the vendor product shots.
  *
- * The vendor images carry marketing callouts ("ADD YOUR LOGO OR CUSTOM
- * MESSAGE"), a pointer arrow, the vendor's own case-band logo, and a sample
- * "NORTHRIDGE" pen engraving. None of that may show up behind a customer's
- * artwork, so the affected pixels are masked and refilled.
- *
- * Every pixel gets a surface label (silver plate, band front, case body,
- * studio background, pen cap). Fills never read across a label boundary, which
- * is what keeps the case silhouette and the plate border crisp. Large smooth
- * surfaces are refilled from a least-squares quadratic fit of their own clean
- * pixels; small holes are refilled by Laplace relaxation.
+ * Two things are wrong with the shots as delivered. The case photo carries the
+ * vendor's own logo on the engraving plate, which may not show up behind a
+ * customer's artwork, so those pixels are masked and refilled: every pixel
+ * gets a surface label, fills never read across a label boundary (which is
+ * what keeps the plate border crisp), and the plate is rebuilt from a
+ * least-squares quadratic fit of its own clean pixels. Every shot is also
+ * framed square with the product across the middle, so each one is cropped to
+ * the product rather than letting empty studio backdrop eat the preview panel.
  *
  * Usage:
  *   node scripts/clean-pen-photos.mjs           # write public/images/pen/*
@@ -29,7 +27,6 @@ const DEBUG = process.argv.includes("--debug");
 
 const NONE = -1;
 const PLATE = 1;
-const PEN_CAP = 4;
 
 const luma = (r, g, b) => 0.299 * r + 0.587 * g + 0.114 * b;
 
@@ -162,63 +159,6 @@ function fillSurfaceFit(image, mask, labels, label, sampleOk) {
   }
 }
 
-/**
- * Laplace relaxation with label barriers: masked pixels converge to the
- * harmonic interpolation of the clean pixels sharing their label.
- */
-function fillRelax(image, mask, labels, allowed, sweeps) {
-  const { data, W, H, channels } = image;
-  const targets = [];
-  for (let i = 0; i < W * H; i++) {
-    if (mask[i] && allowed.includes(labels[i])) targets.push(i);
-  }
-  if (!targets.length) return;
-
-  for (let c = 0; c < 3; c++) {
-    const seed = new Map();
-    for (let i = 0; i < W * H; i++) {
-      if (mask[i] || !allowed.includes(labels[i])) continue;
-      const entry = seed.get(labels[i]) ?? [0, 0];
-      entry[0] += data[i * channels + c];
-      entry[1] += 1;
-      seed.set(labels[i], entry);
-    }
-    for (const i of targets) {
-      const entry = seed.get(labels[i]);
-      data[i * channels + c] = entry ? entry[0] / entry[1] : 128;
-    }
-
-    for (let s = 0; s < sweeps; s++) {
-      const forward = s % 2 === 0;
-      for (let k = 0; k < targets.length; k++) {
-        const i = targets[forward ? k : targets.length - 1 - k];
-        const x = i % W;
-        const y = (i - x) / W;
-        const label = labels[i];
-        let sum = 0;
-        let n = 0;
-        if (x > 0 && labels[i - 1] === label) {
-          sum += data[(i - 1) * channels + c];
-          n++;
-        }
-        if (x < W - 1 && labels[i + 1] === label) {
-          sum += data[(i + 1) * channels + c];
-          n++;
-        }
-        if (y > 0 && labels[i - W] === label) {
-          sum += data[(i - W) * channels + c];
-          n++;
-        }
-        if (y < H - 1 && labels[i + W] === label) {
-          sum += data[(i + W) * channels + c];
-          n++;
-        }
-        if (n) data[i * channels + c] = sum / n;
-      }
-    }
-  }
-}
-
 async function loadImage(file) {
   const { data, info } = await sharp(file)
     .removeAlpha()
@@ -238,7 +178,7 @@ async function writeDebug(name, image, mask, labels) {
       rgb[o] = 255;
       rgb[o + 1] = 0;
       rgb[o + 2] = 0;
-    } else if (labels[i] === PLATE || labels[i] === PEN_CAP) {
+    } else if (labels[i] === PLATE) {
       rgb[o + 1] = Math.min(255, rgb[o + 1] + 70);
     }
   }
@@ -247,12 +187,18 @@ async function writeDebug(name, image, mask, labels) {
     .toFile(path.join(DEBUG_DIR, `${name}-mask.png`));
 }
 
-async function save(image, file) {
+async function save(image, file, crop) {
   const { data, W, H, channels } = image;
-  await sharp(data, { raw: { width: W, height: H, channels } })
+  const pipeline = sharp(data, { raw: { width: W, height: H, channels } });
+  if (crop) pipeline.extract(crop);
+  await pipeline
     .jpeg({ quality: 94, chromaSubsampling: "4:4:4" })
     .toFile(path.join(OUT_DIR, file));
-  console.log(`${file} ${W}x${H}`);
+  console.log(
+    crop
+      ? `${file} ${crop.width}x${crop.height} (cropped from ${W}x${H})`
+      : `${file} ${W}x${H}`,
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -266,6 +212,16 @@ const CASE_BAND_TOP = [
   [445, 268],
   [353, 307],
 ];
+/**
+ * The case sits in a square studio frame with the lid across the middle and a
+ * detached drop shadow far below it, so more than half the source photo is
+ * empty backdrop. Cropping to the case (plus a small margin) lets the preview
+ * panel spend its width on the product instead, which is what decides how
+ * large the engraving band reads. Masking runs on the full frame first, since
+ * the plate quad and the surface fit are measured against those coordinates.
+ */
+const CASE_CROP = { left: 70, top: 87, width: 550, height: 380 };
+
 /**
  * Built from the plain studio shot of the closed case. An earlier pass used
  * `611im5egb6L`, whose marketing callouts and pointer arrow overlap the case
@@ -309,43 +265,33 @@ async function cleanCasePhoto() {
   await writeDebug("case", image, grown, labels);
   fillSurfaceFit(image, grown, labels, PLATE);
 
-  await save(image, "case-band.jpg");
+  await save(image, "case-band.jpg", CASE_CROP);
 }
 
 /* ------------------------------------------------------------------ */
-/* Open gift set: sample engraving on the pen cap                     */
+/* Open gift set: the step 1 product card                             */
 /* ------------------------------------------------------------------ */
 
-const GIFT_CAP = [
-  [222, 377],
-  [334, 343],
-  [340, 371],
-  [226, 401],
-];
+/**
+ * Cropped to the open case, leaving out the studio backdrop and the floating
+ * drop shadow below it. The card renders this at 94x76 under `object-fit:
+ * cover`, so the crop's ratio is kept close to the card's.
+ *
+ * The pen in this shot carries a sample "ANDERSON" engraving. It survives the
+ * crop: at card size it is an unreadable smudge, and the mark reads as the
+ * shop's own name rather than a competitor's. Removing it is not the tidy
+ * mask-and-refill the case plate gets, because the lettering sits inside the
+ * cap's specular highlight rather than on flat matte.
+ */
+const GIFT_CROP = { left: 91, top: 72, width: 840, height: 712 };
 
-async function cleanGiftSetPhoto() {
-  const image = await loadImage(path.join(SRC_DIR, "61ZqCMEGO3L._AC_SX679_.jpg"));
-  const { data, W, H, channels } = image;
-  const labels = new Int8Array(W * H).fill(NONE);
-  const mask = new Uint8Array(W * H);
-
-  for (let y = 330; y < 410; y++) {
-    for (let x = 210; x < 350; x++) {
-      const i = y * W + x;
-      if (!insideQuad(GIFT_CAP, x, y, -1)) continue;
-      labels[i] = PEN_CAP;
-      if (!insideQuad(GIFT_CAP, x, y, -5)) continue;
-      const o = i * channels;
-      if (luma(data[o], data[o + 1], data[o + 2]) > 133) mask[i] = 1;
-    }
-  }
-
-  const grown = dilateWithinLabels(mask, labels, W, H, 3);
-
-  await writeDebug("giftset", image, grown, labels);
-  fillRelax(image, grown, labels, [PEN_CAP], 1400);
-
-  await save(image, "gift-set.jpg");
+async function cropGiftSetPhoto() {
+  await sharp(path.join(SRC_DIR, "Custom-Logo-Pen-Images-in-Box-suspended-black.jpg"))
+    .extract(GIFT_CROP)
+    .resize({ width: 680 })
+    .jpeg({ quality: 94, chromaSubsampling: "4:4:4" })
+    .toFile(path.join(OUT_DIR, "gift-set.jpg"));
+  console.log("gift-set.jpg 680x576 (cropped to the case)");
 }
 
 /**
@@ -356,7 +302,7 @@ async function cleanGiftSetPhoto() {
 const CAP_CROP = { left: 0, top: 128, width: 400, height: 168 };
 
 async function cropCapPhoto() {
-  await sharp(path.join(SRC_DIR, "3b6d194ce6d242bf246e46e953acb6e6._SS400_.jpg"))
+  await sharp(path.join(SRC_DIR, "58955f9cd78fd9895cfdd80130ecf46f._SS400_.jpg"))
     .extract(CAP_CROP)
     .jpeg({ quality: 94, chromaSubsampling: "4:4:4" })
     .toFile(path.join(OUT_DIR, "pen-cap.jpg"));
@@ -367,5 +313,5 @@ async function cropCapPhoto() {
 
 await mkdir(OUT_DIR, { recursive: true });
 await cleanCasePhoto();
-await cleanGiftSetPhoto();
+await cropGiftSetPhoto();
 await cropCapPhoto();

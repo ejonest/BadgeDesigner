@@ -12,6 +12,7 @@
     }
 
     var collectionLink = '/pages/desk-signs-catalogue?material=acrylic&type=profession';
+    var designerLink = '/products/custom-desk-sign';
     var cardCta = 'Personalize';
     var professions = [
       {
@@ -60,7 +61,7 @@
 
     professions.forEach(function (profession) {
       var card = document.createElement('a');
-      card.href = collectionLink;
+      card.href = designerLink;
       card.className = 'aqb-ds-prod-card';
       card.setAttribute('data-finish', 'acrylic');
       card.innerHTML =

@@ -1,0 +1,19 @@
+/*
+ * ------------------------------------------------------------
+ * Gavels Fast — custom trophy designer product template.
+ *
+ * Assign only to the unlisted "Custom Trophy" product while the
+ * trophy workflow is being reviewed.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "designer_embed": {
+      "type": "custom-liquid",
+      "settings": {
+        "custom_liquid": "{% render 'trophy-designer-embed' %}"
+      }
+    }
+  },
+  "order": ["designer_embed"]
+}
