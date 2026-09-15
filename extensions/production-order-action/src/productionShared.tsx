@@ -32,6 +32,8 @@ export type ProductionItem = {
   thumbnailUrl?: string;
   proofUrl?: string;
   uploadedImageUrl?: string;
+  iconUrl?: string;
+  iconLabel?: string;
   printSvgUrl?: string;
   secondarySvgUrl?: string;
 };
@@ -59,6 +61,16 @@ export function itemGroups(item: ProductionItem): ProductionLineGroup[] {
   if (item.lineGroups && item.lineGroups.length > 0) return item.lineGroups;
   if (item.lines.length > 0) return [{ heading: "Text lines", lines: item.lines }];
   return [];
+}
+
+export function collapsedSummary(items: ProductionItem[]): string {
+  const labels = items.map((item) => `${item.productLabel} × ${item.quantity}`);
+  const texts = items.flatMap((item) =>
+    itemGroups(item).flatMap((group) => group.lines.map((line) => line.text)),
+  );
+  const head = labels.slice(0, 3).join(" · ");
+  if (texts.length === 0) return head;
+  return `${head}: ${texts.slice(0, 3).join(" · ")}`;
 }
 
 export function useProductionOrder(orderId: string | undefined) {
@@ -181,6 +193,98 @@ export function ArtworkButtons({ item }: { item: ProductionItem }) {
           Download uploaded image
         </s-button>
       ) : null}
+    </s-stack>
+  );
+}
+
+function PreviewImage({
+  src,
+  alt,
+  label,
+}: {
+  src: string;
+  alt: string;
+  label: string;
+}) {
+  return (
+    <s-stack gap="small">
+      <s-text type="strong">{label}</s-text>
+      <s-image src={src} alt={alt} objectFit="contain" inlineSize="fill" />
+    </s-stack>
+  );
+}
+
+export function ProductionItemDetails({
+  item,
+  showPrintSvgs,
+}: {
+  item: ProductionItem;
+  showPrintSvgs: boolean;
+}) {
+  const groups = itemGroups(item);
+  return (
+    <s-stack gap="base">
+      {item.specs && item.specs.length > 0
+        ? item.specs.map((spec) => (
+            <s-text key={`${item.designId}-${spec.label}`}>
+              {spec.label}: {spec.value}
+            </s-text>
+          ))
+        : null}
+
+      {groups.length === 0 ? (
+        <s-text>No text lines were saved for this design.</s-text>
+      ) : (
+        groups.map((group) => (
+          <LineTable
+            key={`${item.designId}-${group.heading}`}
+            heading={group.heading}
+            lines={group.lines}
+          />
+        ))
+      )}
+
+      {item.thumbnailUrl ? (
+        <PreviewImage
+          src={item.thumbnailUrl}
+          alt={`${item.productLabel} preview`}
+          label="Preview"
+        />
+      ) : null}
+
+      {item.iconUrl ? (
+        <PreviewImage
+          src={item.iconUrl}
+          alt={item.iconLabel ?? `${item.productLabel} icon`}
+          label={item.iconLabel ? `Icon · ${item.iconLabel}` : "Icon"}
+        />
+      ) : null}
+
+      {item.uploadedImageUrl ? (
+        <PreviewImage
+          src={item.uploadedImageUrl}
+          alt={`${item.productLabel} uploaded image`}
+          label="Uploaded image"
+        />
+      ) : null}
+
+      {showPrintSvgs && item.printSvgUrl ? (
+        <PreviewImage
+          src={item.printSvgUrl}
+          alt={`${item.productLabel} print-ready SVG`}
+          label="Print-ready SVG"
+        />
+      ) : null}
+
+      {showPrintSvgs && item.secondarySvgUrl ? (
+        <PreviewImage
+          src={item.secondarySvgUrl}
+          alt={`${item.productLabel} secondary print SVG`}
+          label="Secondary print SVG"
+        />
+      ) : null}
+
+      <ArtworkButtons item={item} />
     </s-stack>
   );
 }
