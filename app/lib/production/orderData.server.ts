@@ -455,12 +455,21 @@ function extractGavelSpecs(design: RawRow): ProductionSpec[] {
     design.gavelSoundBlock === "plain" || design.gavelSoundBlock === "engraved"
       ? design.gavelSoundBlock
       : "none";
+  const bagSelection =
+    design.gavelBagSelection === "gavel" ||
+    design.gavelBagSelection === "secondary" ||
+    design.gavelBagSelection === "both"
+      ? design.gavelBagSelection
+      : design.gavelSuedeBag === true
+        ? "gavel"
+        : "none";
   specs.push({
     label: "Options",
     value: formatGavelOptionSummary({
       productType,
       soundBlock,
       suedeBag: design.gavelSuedeBag === true,
+      bagSelection,
       soundBlockShape:
         design.gavelSoundBlockShape === "round" ? "round" : "square",
       standFinish: design.gavelStandFinish === "silver" ? "silver" : "gold",

@@ -153,6 +153,8 @@ export interface Badge {
   gavelSoundBlockLines?: BadgeLine[];
   /** Gavel designer only: suede bag add-on. */
   gavelSuedeBag?: boolean;
+  /** Gavel designer only: which suede bag set is included. */
+  gavelBagSelection?: "none" | "gavel" | "secondary" | "both";
   /** Gavel + stand: plate finish. `"white"` is retired; drafts map to gold. */
   gavelStandFinish?: "gold" | "silver" | "white";
   /** Gavel + stand: engraved vs. UV printed plate. */

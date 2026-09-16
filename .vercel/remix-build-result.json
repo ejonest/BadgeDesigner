@@ -103,6 +103,7 @@
       "routes/api.save-plaque": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/deployment-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/plaque-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/trophy-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-gavel": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/gavel-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -967,6 +968,15 @@
           "runtime": "nodejs"
         }
       },
+      "routes/trophy-designer": {
+        "file": "app/routes/trophy-designer.tsx",
+        "id": "routes/trophy-designer",
+        "path": "trophy-designer",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/api.save-badge": {
         "file": "app/routes/api.save-badge.tsx",
         "id": "routes/api.save-badge",
@@ -1717,6 +1727,12 @@
         "file": "routes/plaque-designer.tsx",
         "id": "routes/plaque-designer",
         "path": "plaque-designer",
+        "parentId": "root"
+      },
+      "routes/trophy-designer": {
+        "file": "routes/trophy-designer.tsx",
+        "id": "routes/trophy-designer",
+        "path": "trophy-designer",
         "parentId": "root"
       },
       "routes/api.save-badge": {

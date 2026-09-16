@@ -7,6 +7,7 @@ import {
   getGavelStandFinish,
   type GavelStyleId,
   type GavelBandFinishId,
+  type GavelBagSelectionId,
   type GavelProductionMethodId,
   type GavelProductType,
   type GavelSoundBlockId,
@@ -33,6 +34,7 @@ type GenerateGavelProofPdfInput = {
   soundBlockText?: string;
   soundBlockDataUrl?: string | null;
   suedeBag?: boolean;
+  bagSelection?: GavelBagSelectionId;
   standFinish?: GavelStandFinishId;
   productionMethod?: GavelProductionMethodId;
   plateLines?: BadgeLine[];
@@ -123,6 +125,7 @@ export async function generateGavelProofPdf(
       soundBlock: input.soundBlock ?? "none",
       soundBlockShape: input.soundBlockShape ?? "square",
       suedeBag: Boolean(input.suedeBag),
+      bagSelection: input.bagSelection,
       standFinish: input.standFinish,
       productionMethod: input.productionMethod,
     })}`,

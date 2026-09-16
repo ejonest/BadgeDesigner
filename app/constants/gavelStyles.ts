@@ -37,6 +37,14 @@ export const GAVEL_PRODUCTION_METHOD_IDS = ["engrave", "uvprint"] as const;
 export type GavelProductionMethodId =
   (typeof GAVEL_PRODUCTION_METHOD_IDS)[number];
 
+export const GAVEL_BAG_SELECTION_IDS = [
+  "none",
+  "gavel",
+  "secondary",
+  "both",
+] as const;
+export type GavelBagSelectionId = (typeof GAVEL_BAG_SELECTION_IDS)[number];
+
 /**
  * Head and band dimensions come from the manufacturer's dimensioned drawing:
  * 3" head length × 2" diameter, 10.25" overall.
@@ -924,6 +932,7 @@ export const GAVEL_SAMPLE_PRICING = {
   stand: { base: 22.99, mid: 19.99, high: 17.49 },
   soundBlockAdd: 2,
   suedeBagAdd: 3.99,
+  suedeBagBothAdd: 5.99,
   /** Quantity at which the mid / high tier starts. */
   midQty: 10,
   highQty: 21,
@@ -964,6 +973,7 @@ export function quoteGavelPrice(input: {
   productType: GavelProductType;
   soundBlock: GavelSoundBlockId;
   suedeBag: boolean;
+  bagSelection?: GavelBagSelectionId;
   quantity: number;
   storeUnitPrice?: number | null;
   /** Live price of the suede bag product, when the catalog resolved it. */
@@ -977,9 +987,15 @@ export function quoteGavelPrice(input: {
     input.suedeBagUnitPrice > 0
       ? input.suedeBagUnitPrice
       : null;
-  const bagAdd = input.suedeBag
-    ? bagFromStore ?? GAVEL_SAMPLE_PRICING.suedeBagAdd
-    : 0;
+  const bagSelection =
+    input.bagSelection ?? (input.suedeBag ? "gavel" : "none");
+  const bagAdd =
+    bagSelection === "none"
+      ? 0
+      : bagFromStore ??
+        (bagSelection === "both"
+          ? GAVEL_SAMPLE_PRICING.suedeBagBothAdd
+          : GAVEL_SAMPLE_PRICING.suedeBagAdd);
 
   const store = input.storeUnitPrice;
   if (typeof store === "number" && Number.isFinite(store) && store > 0) {
@@ -1039,20 +1055,32 @@ export function formatGavelOptionSummary(input: {
   productType: GavelProductType;
   soundBlock: GavelSoundBlockId;
   suedeBag: boolean;
+  bagSelection?: GavelBagSelectionId;
   standFinish?: GavelStandFinishId;
   productionMethod?: GavelProductionMethodId;
   soundBlockShape?: GavelSoundBlockShapeId;
 }): string {
+  const bagSelection =
+    input.bagSelection ?? (input.suedeBag ? "gavel" : "none");
+  const bag =
+    bagSelection === "gavel"
+      ? "Gavel bag"
+      : bagSelection === "secondary"
+        ? input.productType === "stand"
+          ? "Stand bag"
+          : "Sound block bag"
+        : bagSelection === "both"
+          ? "Both bags"
+          : "No bag";
   if (input.productType === "stand") {
     const finish = getGavelStandFinish(input.standFinish);
     const method = getGavelProductionMethod(input.productionMethod);
-    const bag = input.suedeBag ? "Suede bag" : "No bag";
     return `Gavel + stand · ${finish.label} plate · ${method.label} · ${bag}`;
   }
   const parts = [getGavelSoundBlock(input.soundBlock).label];
   if (input.soundBlock !== "none") {
     parts.push(`${getGavelSoundBlockShape(input.soundBlockShape).label} block`);
   }
-  parts.push(input.suedeBag ? "Suede bag" : "No bag");
+  parts.push(bag);
   return parts.join(" · ");
 }
