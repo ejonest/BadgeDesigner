@@ -1,0 +1,642 @@
+{% liquid
+  assign pen_product = all_products[section.settings.pen_product_handle]
+  assign sign_product = all_products[section.settings.sign_product_handle]
+  assign pen_mockup = section.settings.pen_mockup
+  assign sign_mockup = section.settings.sign_mockup
+
+  if pen_mockup == blank and pen_product != blank
+    assign pen_mockup = pen_product.featured_image
+  endif
+
+  comment
+    The custom desk sign product carries no photo of its own, so fall back to a
+    real desk sign from the catalogue rather than an illustration.
+  endcomment
+  if sign_mockup == blank
+    assign sign_mockup_product = all_products[section.settings.sign_mockup_product_handle]
+    if sign_mockup_product != blank
+      assign sign_mockup = sign_mockup_product.featured_image
+    endif
+  endif
+  if sign_mockup == blank and sign_product != blank
+    assign sign_mockup = sign_product.featured_image
+  endif
+
+  comment
+    Link to the product page, not the designer app directly: the on-store embed
+    is what bridges the designer's add-to-cart back into the Shopify cart.
+  endcomment
+  assign pen_url = section.settings.pen_link
+  if pen_url == blank and pen_product != blank
+    assign pen_url = pen_product.url
+  endif
+  if pen_url == blank
+    assign pen_url = '/products/custom-daxmoor-pen'
+  endif
+
+  assign sign_url = section.settings.sign_link
+  if sign_url == blank and sign_product != blank
+    assign sign_url = sign_product.url
+  endif
+  if sign_url == blank
+    assign sign_url = '/products/custom-desk-sign'
+  endif
+
+  assign shop_collection = section.settings.shop_collection
+%}
+
+<section class="gf-pstools" aria-labelledby="gf-pstools-title-{{ section.id }}">
+  <div class="gf-pstools__intro">
+    <div class="container">
+      <p class="gf-pstools__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      <h1 id="gf-pstools-title-{{ section.id }}">{{ section.settings.heading | escape }}</h1>
+      <div class="gf-pstools__lead">{{ section.settings.intro }}</div>
+      <div class="gf-pstools__benefits" aria-label="Designer benefits">
+        <span>Live previews</span>
+        <span>No artwork fees</span>
+        <span>Fast personalization</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="container gf-pstools__cards">
+    <article class="gf-pstool-card">
+      <div class="gf-pstool-card__visual">
+        <div class="gf-pstool-card__browser">
+          <div class="gf-pstool-card__browser-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          {% if section.settings.pen_designer_image != blank %}
+            {{ section.settings.pen_designer_image | image_url: width: 1400 | image_tag: widths: '480, 720, 960, 1200, 1400', sizes: '(min-width: 990px) 45vw, 100vw', loading: 'eager', alt: section.settings.pen_image_alt }}
+          {% else %}
+            <img src="{{ 'gf-pen-designer-shot.jpg' | asset_url }}" alt="{{ section.settings.pen_image_alt | escape }}" width="1600" height="1080" loading="eager">
+          {% endif %}
+        </div>
+        {% if pen_mockup != blank %}
+          <div class="gf-pstool-card__mockup">
+            {{ pen_mockup | image_url: width: 440 | image_tag: widths: '220, 320, 440', sizes: '180px', loading: 'lazy', alt: 'Personalized pen gift set' }}
+          </div>
+        {% endif %}
+      </div>
+      <div class="gf-pstool-card__content">
+        <p class="gf-pstool-card__number">01</p>
+        <h2>{{ section.settings.pen_heading | escape }}</h2>
+        <div class="gf-pstool-card__copy">{{ section.settings.pen_text }}</div>
+        <ul>
+          <li>Engrave a name or message on the pen cap</li>
+          <li>Personalize the metal band on the presentation case</li>
+          <li>See both engravings before you order</li>
+        </ul>
+        <a class="gf-pstools__button" href="{{ pen_url }}">{{ section.settings.pen_button | escape }}</a>
+      </div>
+    </article>
+
+    <article class="gf-pstool-card gf-pstool-card--reverse">
+      <div class="gf-pstool-card__visual">
+        <div class="gf-pstool-card__browser">
+          <div class="gf-pstool-card__browser-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          {% if section.settings.sign_designer_image != blank %}
+            {{ section.settings.sign_designer_image | image_url: width: 1400 | image_tag: widths: '480, 720, 960, 1200, 1400', sizes: '(min-width: 990px) 45vw, 100vw', loading: 'lazy', alt: section.settings.sign_image_alt }}
+          {% else %}
+            <img src="{{ 'gf-desk-sign-designer-shot.jpg' | asset_url }}" alt="{{ section.settings.sign_image_alt | escape }}" width="1600" height="1069" loading="lazy">
+          {% endif %}
+        </div>
+        {% if sign_mockup != blank %}
+          <div class="gf-pstool-card__mockup">
+            {{ sign_mockup | image_url: width: 440 | image_tag: widths: '220, 320, 440', sizes: '180px', loading: 'lazy', alt: 'Personalized desk sign example' }}
+          </div>
+        {% endif %}
+      </div>
+      <div class="gf-pstool-card__content">
+        <p class="gf-pstool-card__number">02</p>
+        <h2>{{ section.settings.sign_heading | escape }}</h2>
+        <div class="gf-pstool-card__copy">{{ section.settings.sign_text }}</div>
+        <ul>
+          <li>Choose acrylic, rosewood, or a classic plate</li>
+          <li>Pick the size, plate finish, and type style</li>
+          <li>Design one sign or a whole office in one go</li>
+        </ul>
+        <a class="gf-pstools__button" href="{{ sign_url }}">{{ section.settings.sign_button | escape }}</a>
+      </div>
+    </article>
+
+    {% if shop_collection != blank and shop_collection.products.size > 0 %}
+      <div class="gf-pstools__shop-heading">
+        <p>{{ section.settings.shop_eyebrow | escape }}</p>
+        <h2>{{ section.settings.shop_heading | escape }}</h2>
+        <div>{{ section.settings.shop_text }}</div>
+      </div>
+
+      <ul class="gf-pstools__grid" role="list">
+        {% for product in shop_collection.products limit: section.settings.shop_product_limit %}
+          <li class="gf-pstools__grid-item">
+            <a href="{{ product.url }}">
+              <span class="gf-pstools__grid-image">
+                {% if product.featured_image != blank %}
+                  {{ product.featured_image | image_url: width: 600 | image_tag: widths: '200, 300, 450, 600', sizes: '(min-width: 990px) 22vw, 45vw', loading: 'lazy', alt: product.title }}
+                {% endif %}
+              </span>
+              <span class="gf-pstools__grid-title">{{ product.title }}</span>
+              <span class="gf-pstools__grid-price">{{ product.price | money }}</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+
+      <div class="gf-pstools__shop-more">
+        <a class="gf-pstools__button gf-pstools__button--ghost" href="{{ shop_collection.url }}">
+          {{ section.settings.shop_button | escape }}
+        </a>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+{% stylesheet %}
+  /* Palette mirrors gf-awards-tools-hero so this page reads as part of the same site. */
+  .gf-pstools {
+    --gf-ps-ink: #0a1628;
+    --gf-ps-navy: #0a1628;
+    --gf-ps-navy-2: #12203a;
+    --gf-ps-navy-3: #1b2c4a;
+    --gf-ps-gold: #c4a35a;
+    color: var(--gf-ps-ink);
+    background: #f7f4ef;
+  }
+  .gf-pstools__intro {
+    padding: clamp(64px, 9vw, 118px) 0 clamp(112px, 14vw, 170px);
+    color: #fff;
+    text-align: center;
+    background:
+      radial-gradient(120% 120% at 12% 0%, var(--gf-ps-navy-3) 0%, rgba(27, 44, 74, 0) 55%),
+      linear-gradient(160deg, var(--gf-ps-navy) 0%, #060f1d 100%);
+  }
+  .gf-pstools__eyebrow,
+  .gf-pstools__shop-heading p {
+    margin: 0 0 14px;
+    color: var(--gf-ps-gold);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+  }
+  .gf-pstools__intro h1 {
+    max-width: 850px;
+    margin: 0 auto 20px;
+    color: #fff;
+    font-size: clamp(38px, 6vw, 76px);
+    line-height: 1.03;
+    letter-spacing: -.035em;
+  }
+  .gf-pstools__lead {
+    max-width: 710px;
+    margin: 0 auto;
+    color: rgba(255, 255, 255, .82);
+    font-size: clamp(16px, 2vw, 20px);
+    line-height: 1.7;
+  }
+  .gf-pstools__lead p,
+  .gf-pstool-card__copy p,
+  .gf-pstools__shop-heading div p {
+    margin: 0;
+  }
+  .gf-pstools__benefits {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px 28px;
+    margin-top: 30px;
+    color: rgba(255, 255, 255, .88);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .gf-pstools__benefits span::before {
+    content: "✓";
+    margin-right: 8px;
+    color: #e8bc4f;
+  }
+  .gf-pstools__cards {
+    display: grid;
+    gap: 34px;
+    margin-top: clamp(-105px, -9vw, -72px);
+    padding-bottom: 58px;
+  }
+  .gf-pstool-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(340px, .92fr);
+    min-height: 490px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 24px 70px rgba(10, 22, 40, .14);
+  }
+  .gf-pstool-card--reverse .gf-pstool-card__visual {
+    order: 2;
+  }
+  .gf-pstool-card__visual {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 430px;
+    padding: clamp(28px, 5vw, 58px);
+    background: #e7eaf0;
+  }
+  .gf-pstool-card--reverse .gf-pstool-card__visual {
+    background: #dfe4ec;
+  }
+  .gf-pstool-card__browser {
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid rgba(10, 22, 40, .12);
+    border-radius: 10px;
+    background: #f7f4ef;
+    box-shadow: 0 20px 45px rgba(10, 22, 40, .18);
+  }
+  .gf-pstool-card__browser-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 29px;
+    padding: 0 12px;
+    background: #fff;
+    border-bottom: 1px solid #dfe3ea;
+  }
+  .gf-pstool-card__browser-bar i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #c2c8d2;
+  }
+  .gf-pstool-card__browser img {
+    display: block;
+    width: 100%;
+    height: 340px;
+    object-fit: contain;
+  }
+  .gf-pstool-card__mockup {
+    position: absolute;
+    right: clamp(8px, 2vw, 24px);
+    bottom: clamp(8px, 2vw, 24px);
+    width: clamp(112px, 16vw, 178px);
+    padding: 10px;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 15px 35px rgba(10, 22, 40, .2);
+  }
+  .gf-pstool-card__mockup img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: contain;
+  }
+  .gf-pstool-card__content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(38px, 6vw, 72px);
+  }
+  .gf-pstool-card__number {
+    margin: 0 0 18px;
+    color: var(--gf-ps-gold);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .16em;
+  }
+  .gf-pstool-card__content h2 {
+    margin: 0 0 17px;
+    color: var(--gf-ps-ink);
+    font-size: clamp(28px, 3.4vw, 46px);
+    line-height: 1.08;
+    letter-spacing: -.025em;
+  }
+  .gf-pstool-card__copy {
+    color: #5c6570;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .gf-pstool-card__content ul {
+    display: grid;
+    gap: 9px;
+    margin: 24px 0 28px;
+    padding: 0;
+    list-style: none;
+    color: #2c3a4d;
+  }
+  .gf-pstool-card__content li::before {
+    content: "—";
+    margin-right: 9px;
+    color: var(--gf-ps-gold);
+    font-weight: 800;
+  }
+  .gf-pstools__button {
+    align-self: flex-start;
+    min-width: 168px;
+    padding: 15px 24px;
+    color: #fff;
+    text-align: center;
+    text-decoration: none;
+    background: var(--gf-ps-navy);
+    border: 2px solid var(--gf-ps-navy);
+    transition: transform .2s ease, background .2s ease;
+  }
+  .gf-pstools__button:hover,
+  .gf-pstools__button:focus-visible {
+    color: #fff;
+    background: var(--gf-ps-navy-2);
+    transform: translateY(-2px);
+  }
+  .gf-pstools__button--ghost {
+    color: var(--gf-ps-navy);
+    background: transparent;
+  }
+  .gf-pstools__button--ghost:hover,
+  .gf-pstools__button--ghost:focus-visible {
+    color: #fff;
+    background: var(--gf-ps-navy);
+  }
+  .gf-pstools__shop-heading {
+    max-width: 720px;
+    margin: 26px auto 0;
+    text-align: center;
+  }
+  .gf-pstools__shop-heading h2 {
+    margin: 0 0 12px;
+    color: var(--gf-ps-ink);
+    font-size: clamp(28px, 4vw, 44px);
+  }
+  .gf-pstools__shop-heading div {
+    color: #5c6570;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .gf-pstools__grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 26px;
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .gf-pstools__grid-item a {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 16px;
+    color: var(--gf-ps-ink);
+    text-decoration: none;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(10, 22, 40, .08);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .gf-pstools__grid-item a:hover,
+  .gf-pstools__grid-item a:focus-visible {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 40px rgba(10, 22, 40, .16);
+  }
+  .gf-pstools__grid-image {
+    display: block;
+    margin-bottom: 14px;
+    background: #f2f0ec;
+  }
+  .gf-pstools__grid-image img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: contain;
+  }
+  .gf-pstools__grid-title {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+  .gf-pstools__grid-price {
+    margin-top: auto;
+    color: #5c6570;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .gf-pstools__shop-more {
+    margin-top: 6px;
+    text-align: center;
+  }
+  .gf-pstools__shop-more .gf-pstools__button {
+    display: inline-block;
+  }
+  @media (max-width: 989px) {
+    .gf-pstool-card {
+      grid-template-columns: 1fr;
+    }
+    .gf-pstool-card--reverse .gf-pstool-card__visual {
+      order: 0;
+    }
+    .gf-pstool-card__visual {
+      min-height: 360px;
+    }
+    .gf-pstools__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 549px) {
+    .gf-pstools__intro {
+      padding-top: 54px;
+    }
+    .gf-pstools__cards {
+      margin-top: -80px;
+    }
+    .gf-pstool-card__visual {
+      min-height: 280px;
+      padding: 20px;
+    }
+    .gf-pstool-card__browser img {
+      height: 240px;
+    }
+    .gf-pstool-card__content {
+      padding: 32px 24px 38px;
+    }
+    .gf-pstools__button {
+      width: 100%;
+    }
+    .gf-pstools__grid {
+      gap: 16px;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Pens & signs designer hero",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Everyday pieces, personally yours"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Personalized pens and desk signs"
+    },
+    {
+      "type": "richtext",
+      "id": "intro",
+      "label": "Introduction",
+      "default": "<p>Engrave a presentation pen or design a desk sign online, check every letter in a live preview, and order a piece that looks like it was made for one person — because it was.</p>"
+    },
+    {
+      "type": "header",
+      "content": "Pen designer"
+    },
+    {
+      "type": "text",
+      "id": "pen_product_handle",
+      "label": "Custom pen product handle",
+      "default": "custom-daxmoor-pen"
+    },
+    {
+      "type": "text",
+      "id": "pen_heading",
+      "label": "Heading",
+      "default": "Engrave a presentation pen"
+    },
+    {
+      "type": "richtext",
+      "id": "pen_text",
+      "label": "Description",
+      "default": "<p>A black rollerball pen in a lined presentation case. Engrave the cap with a name and personalize the metal band on the case, then watch both update as you type.</p>"
+    },
+    {
+      "type": "image_picker",
+      "id": "pen_designer_image",
+      "label": "Designer screenshot"
+    },
+    {
+      "type": "image_picker",
+      "id": "pen_mockup",
+      "label": "Product mockup"
+    },
+    {
+      "type": "text",
+      "id": "pen_image_alt",
+      "label": "Designer image alt text",
+      "default": "Custom pen designer preview"
+    },
+    {
+      "type": "url",
+      "id": "pen_link",
+      "label": "Design button link"
+    },
+    {
+      "type": "text",
+      "id": "pen_button",
+      "label": "Button label",
+      "default": "Design a pen"
+    },
+    {
+      "type": "header",
+      "content": "Desk sign designer"
+    },
+    {
+      "type": "text",
+      "id": "sign_product_handle",
+      "label": "Custom desk sign product handle",
+      "default": "custom-desk-sign"
+    },
+    {
+      "type": "text",
+      "id": "sign_mockup_product_handle",
+      "label": "Mockup product handle",
+      "info": "Used for the small product photo when the custom desk sign product has no image of its own.",
+      "default": "piano-finished-rosewood-desk-name-plate"
+    },
+    {
+      "type": "text",
+      "id": "sign_heading",
+      "label": "Heading",
+      "default": "Design a desk sign or name plate"
+    },
+    {
+      "type": "richtext",
+      "id": "sign_text",
+      "label": "Description",
+      "default": "<p>Choose acrylic, piano-finished rosewood, or a classic plate, then set the size, finish, and wording. Pricing and shipping update live as you build the order.</p>"
+    },
+    {
+      "type": "image_picker",
+      "id": "sign_designer_image",
+      "label": "Designer screenshot"
+    },
+    {
+      "type": "image_picker",
+      "id": "sign_mockup",
+      "label": "Product mockup"
+    },
+    {
+      "type": "text",
+      "id": "sign_image_alt",
+      "label": "Designer image alt text",
+      "default": "Custom desk sign designer preview"
+    },
+    {
+      "type": "url",
+      "id": "sign_link",
+      "label": "Design button link"
+    },
+    {
+      "type": "text",
+      "id": "sign_button",
+      "label": "Button label",
+      "default": "Design a desk sign"
+    },
+    {
+      "type": "header",
+      "content": "Product grid"
+    },
+    {
+      "type": "collection",
+      "id": "shop_collection",
+      "label": "Collection"
+    },
+    {
+      "type": "range",
+      "id": "shop_product_limit",
+      "label": "Products shown",
+      "min": 4,
+      "max": 12,
+      "step": 4,
+      "default": 8
+    },
+    {
+      "type": "text",
+      "id": "shop_eyebrow",
+      "label": "Eyebrow",
+      "default": "More ways to personalize"
+    },
+    {
+      "type": "text",
+      "id": "shop_heading",
+      "label": "Heading",
+      "default": "Shop ready-made desk signs"
+    },
+    {
+      "type": "richtext",
+      "id": "shop_text",
+      "label": "Text",
+      "default": "<p>Prefer to start from a finished style? Browse our desk signs, name plates, and office nameplates below.</p>"
+    },
+    {
+      "type": "text",
+      "id": "shop_button",
+      "label": "Button label",
+      "default": "Shop all desk signs"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Pens & signs designer hero"
+    }
+  ]
+}
+{% endschema %}

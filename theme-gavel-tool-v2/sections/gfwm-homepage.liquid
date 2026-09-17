@@ -10,6 +10,14 @@
 
 <div class="gfwm">
   <section class="gfwm-hero">
+    <div class="gfwm-hero__bg">
+      {%- if section.settings.hero_image != blank -%}
+        {{ section.settings.hero_image | image_url: width: 2400 | image_tag: loading: 'eager', fetchpriority: 'high', alt: section.settings.hero_alt }}
+      {%- else -%}
+        <img class="gfwm-hero__stock" src="{{ 'gfwm-gavel-scales.png' | asset_url }}" alt="{{ section.settings.hero_alt | escape }}" width="1920" height="1163" loading="eager" fetchpriority="high">
+      {%- endif -%}
+    </div>
+
     <div class="gfwm-shell gfwm-hero__grid">
       <div>
         <p class="gfwm-eyebrow gfwm-eyebrow--light">{{ section.settings.hero_eyebrow | escape }}</p>
@@ -25,20 +33,12 @@
         <p class="gfwm-hero__note">✓ {{ section.settings.hero_note | escape }}</p>
       </div>
 
-      <div class="gfwm-hero__art">
-        <div class="gfwm-hero__photo">
-          {%- if section.settings.hero_image != blank -%}
-            {{ section.settings.hero_image | image_url: width: 1600 | image_tag: loading: 'eager', fetchpriority: 'high', alt: section.settings.hero_alt }}
-          {%- else -%}
-            <img class="gfwm-hero__stock" src="{{ 'gfwm-gavel-scales.png' | asset_url }}" alt="{{ section.settings.hero_alt | escape }}" width="1920" height="1163" loading="eager" fetchpriority="high">
-          {%- endif -%}
-        </div>
-        <div class="gfwm-proof" aria-label="Example personalization proof">
-          <span>{{ section.settings.proof_label | escape }}</span>
-          <strong>{{ section.settings.proof_line | escape }}</strong>
-          <small>{{ section.settings.proof_detail | escape }}</small>
-        </div>
-      </div>
+      <a class="gfwm-hero__tool" href="{{ designer_url }}">
+        <span class="gfwm-hero__tool-frame">
+          <img src="{{ 'gf-designer-panel.webp' | asset_url }}" alt="{{ section.settings.tool_alt | escape }}" width="900" height="1117" loading="eager" fetchpriority="high">
+        </span>
+        <span class="gfwm-hero__tool-cta">{{ section.settings.tool_caption | escape }} →</span>
+      </a>
     </div>
   </section>
 
@@ -183,9 +183,8 @@
     { "type": "text", "id": "hero_note", "label": "Note", "default": "Proof approved before personalization · No minimum order" },
     { "type": "image_picker", "id": "hero_image", "label": "Hero image override" },
     { "type": "text", "id": "hero_alt", "label": "Hero image alt text", "default": "Personalized walnut gavel on a desk beside the scales of justice" },
-    { "type": "text", "id": "proof_label", "label": "Proof label", "default": "Live proof preview" },
-    { "type": "text", "id": "proof_line", "label": "Proof text", "default": "MODEL U.N. 2026" },
-    { "type": "text", "id": "proof_detail", "label": "Proof detail", "default": "CHAIR · GOLD BAND" },
+    { "type": "text", "id": "tool_caption", "label": "Designer preview caption", "default": "Open the gavel designer" },
+    { "type": "text", "id": "tool_alt", "label": "Designer preview alt text", "default": "The Gavels Fast designer showing a live preview of a walnut gavel with a gold band engraved Model U.N. 2026, Chair" },
     { "type": "header", "content": "Feature image" },
     { "type": "image_picker", "id": "feature_image", "label": "Feature image override" },
     { "type": "text", "id": "feature_alt", "label": "Feature image alt text", "default": "Personalized gavel presentation set in a library setting" }

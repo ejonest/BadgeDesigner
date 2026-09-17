@@ -1,0 +1,34 @@
+{
+  "sections": {
+    "designer_hero": {
+      "type": "gf-pens-signs-tools-hero",
+      "settings": {
+        "eyebrow": "Everyday pieces, personally yours",
+        "heading": "Personalized pens and desk signs",
+        "intro": "<p>Engrave a presentation pen or design a desk sign online, check every letter in a live preview, and order a piece that looks like it was made for one person — because it was.</p>",
+        "pen_product_handle": "custom-daxmoor-pen",
+        "pen_heading": "Engrave a presentation pen",
+        "pen_text": "<p>A black rollerball pen in a lined presentation case. Engrave the cap with a name and personalize the metal band on the case, then watch both update as you type.</p>",
+        "pen_image_alt": "Custom pen designer preview",
+        "pen_link": "/products/custom-daxmoor-pen",
+        "pen_button": "Design a pen",
+        "sign_product_handle": "custom-desk-sign",
+        "sign_mockup_product_handle": "piano-finished-rosewood-desk-name-plate",
+        "sign_heading": "Design a desk sign or name plate",
+        "sign_text": "<p>Choose acrylic, piano-finished rosewood, or a classic plate, then set the size, finish, and wording. Pricing and shipping update live as you build the order.</p>",
+        "sign_image_alt": "Custom desk sign designer preview",
+        "sign_link": "/products/custom-desk-sign",
+        "sign_button": "Design a desk sign",
+        "shop_collection": "desk-stands",
+        "shop_product_limit": 8,
+        "shop_eyebrow": "More ways to personalize",
+        "shop_heading": "Shop ready-made desk signs",
+        "shop_text": "<p>Prefer to start from a finished style? Browse our desk signs, name plates, and office nameplates below.</p>",
+        "shop_button": "Shop all desk signs"
+      }
+    }
+  },
+  "order": [
+    "designer_hero"
+  ]
+}

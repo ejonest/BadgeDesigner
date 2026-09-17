@@ -12,7 +12,7 @@
     "designer_embed": {
       "type": "custom-liquid",
       "settings": {
-        "custom_liquid": "{% render 'trophy-designer-embed' %}"
+        "custom_liquid": "{% render 'desk-sign-designer-embed' %}"
       }
     }
   },
