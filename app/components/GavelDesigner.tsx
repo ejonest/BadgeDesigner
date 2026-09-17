@@ -59,6 +59,7 @@ import {
   joinSoundBlockText,
   quoteGavelPrice,
   soundBlockCharCount,
+  type GavelBagSelectionId,
   type GavelBandFinishId,
   type GavelProductionMethodId,
   type GavelProductType,
@@ -110,16 +111,27 @@ import {
 import { buildDesignerCartLineProperties } from "~/utils/cartLineProperties";
 import { clampBadgeLineQty } from "~/utils/badgeLineQuantities";
 import {
-  GAVEL_BULK_CSV_TEMPLATE,
   GAVEL_BULK_PASTE_EXAMPLE_ROWS,
+  gavelBulkCsvTemplate,
   parseGavelBulkCsv,
   type GavelBulkRow,
+  type GavelBulkSecondaryMode,
 } from "~/utils/gavelBulkCsv";
 import "../styles/gavelDesigner.css";
 
 /** One decision per screen — the gavel flow adds a wood/handle step. */
 type StepId = "product" | "style" | "design" | "quantity" | "done";
 type GavelLogoSurface = "stand" | "sound-block";
+type GavelBulkSortKey =
+  | "line1"
+  | "line2"
+  | "line3"
+  | "line4"
+  | "secondary1"
+  | "secondary2"
+  | "secondary3"
+  | "secondary4"
+  | "quantity";
 
 const STEP_IDS: StepId[] = ["product", "style", "design", "quantity", "done"];
 
@@ -189,6 +201,41 @@ function sanitizeCachedLines(
   return next;
 }
 
+function sanitizeCachedBulkRows(raw: unknown): GavelBulkRow[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item, index): GavelBulkRow[] => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as Record<string, unknown>;
+    if (!Array.isArray(row.texts)) return [];
+    const texts = [0, 1, 2, 3].map((lineIndex) =>
+      typeof row.texts[lineIndex] === "string" ? row.texts[lineIndex] : "",
+    ) as GavelBulkRow["texts"];
+    const rawSecondary = Array.isArray(row.secondaryTexts)
+      ? row.secondaryTexts
+      : row.texts;
+    const secondaryTexts = [0, 1, 2, 3].map((lineIndex) =>
+      typeof rawSecondary[lineIndex] === "string"
+        ? rawSecondary[lineIndex]
+        : "",
+    ) as GavelBulkRow["secondaryTexts"];
+    if (![...texts, ...secondaryTexts].some((text) => text.trim())) return [];
+    return [
+      {
+        id:
+          typeof row.id === "string" && row.id
+            ? row.id
+            : `bulk-gavel-cached-${index}`,
+        texts,
+        secondaryTexts,
+        quantity:
+          typeof row.quantity === "number"
+            ? clampBadgeLineQty(row.quantity)
+            : 1,
+      },
+    ];
+  });
+}
+
 function dataUrlToFile(
   dataUrl: string,
   name: string,
@@ -229,6 +276,13 @@ type GavelDesignerCachePayload = {
   textSize?: GavelTextSizePreset;
   lines?: BadgeLine[];
   qty?: number;
+  bulkMode?: boolean;
+  bulkRows?: GavelBulkRow[];
+  bulkCsvText?: string;
+  bulkCsvWarning?: string;
+  bulkSecondaryMode?: GavelBulkSecondaryMode;
+  selectedBulkRow?: number;
+  bagSelection?: GavelBagSelectionId;
   designId?: string;
   logo?: { name: string; type: string; dataUrl: string } | null;
 };
@@ -403,7 +457,9 @@ export default function GavelDesigner({
   const [soundBlockLines, setSoundBlockLines] = useState<BadgeLine[]>(
     defaultSoundBlockLines,
   );
-  const [suedeBag, setSuedeBag] = useState(false);
+  const [bagSelection, setBagSelection] =
+    useState<GavelBagSelectionId>("none");
+  const suedeBag = bagSelection !== "none";
   const [productionMethod, setProductionMethod] =
     useState<GavelProductionMethodId>("engrave");
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -424,6 +480,11 @@ export default function GavelDesigner({
   const [selectedBulkRow, setSelectedBulkRow] = useState(0);
   const [bulkCsvText, setBulkCsvText] = useState("");
   const [bulkCsvWarning, setBulkCsvWarning] = useState("");
+  const [bulkSecondaryMode, setBulkSecondaryMode] =
+    useState<GavelBulkSecondaryMode>("shared");
+  const [bulkSearch, setBulkSearch] = useState("");
+  const [bulkSortKey, setBulkSortKey] = useState<GavelBulkSortKey>("line1");
+  const [bulkSortAscending, setBulkSortAscending] = useState(true);
   const bulkCsvInputRef = useRef<HTMLInputElement>(null);
   const bulkModeLocked = readQueryParam("audience") === "model-un";
 
@@ -442,6 +503,7 @@ export default function GavelDesigner({
   const [storeProductLoading, setStoreProductLoading] = useState(true);
   /** Suede bag add-on product; billed as its own cart line. */
   const [bagProduct, setBagProduct] = useState<ShopifyProductJs | null>(null);
+  const [bagProductLoading, setBagProductLoading] = useState(true);
   /** Canvas textures only exist in the browser; keep first paint SSR-identical. */
   const [isClient, setIsClient] = useState(false);
   /**
@@ -501,8 +563,11 @@ export default function GavelDesigner({
   const logoAllowed = isStand || soundBlockEngraved;
 
   const sequence: StepId[] = useMemo(
-    () => ["product", "style", "design", "quantity", "done"],
-    [],
+    () =>
+      bulkMode
+        ? ["product", "style", "design", "done"]
+        : ["product", "style", "design", "quantity", "done"],
+    [bulkMode],
   );
   const stepIndex = Math.max(0, sequence.indexOf(step));
   const showPreview = step === "style" || step === "design";
@@ -777,18 +842,28 @@ export default function GavelDesigner({
 
   useEffect(() => {
     let cancelled = false;
+    setBagProductLoading(true);
     fetchStoreProduct(SUEDE_BAG_PRODUCT_HANDLE, shopHost).then((product) => {
-      if (!cancelled) setBagProduct(product);
+      if (!cancelled) {
+        setBagProduct(product);
+        setBagProductLoading(false);
+      }
     });
     return () => {
       cancelled = true;
     };
   }, [shopHost]);
 
-  const bagVariant = useMemo(
-    () => resolveSuedeBagVariant(bagProduct),
+  const bagVariants = useMemo(
+    () => ({
+      gavel: resolveSuedeBagVariant(bagProduct, "gavel"),
+      secondary: resolveSuedeBagVariant(bagProduct, "secondary"),
+      both: resolveSuedeBagVariant(bagProduct, "both"),
+    }),
     [bagProduct],
   );
+  const bagVariant =
+    bagSelection === "none" ? null : bagVariants[bagSelection];
 
   /** Prices shown alongside the choices come from the same live variants used at checkout. */
   const woodPrices = useMemo(() => {
@@ -833,11 +908,54 @@ export default function GavelDesigner({
   const designReady = bulkMode ? bulkRows.length > 0 : hasText;
   const bulkQuantity = bulkRows.reduce((sum, row) => sum + row.quantity, 0);
   const orderQuantity = bulkRows.length > 0 ? bulkQuantity : qty;
+  const bulkSecondarySurface = isStand
+    ? ("stand" as const)
+    : soundBlockEngraved
+      ? ("sound-block" as const)
+      : null;
+  const effectiveBulkSecondaryMode = bulkSecondarySurface
+    ? bulkSecondaryMode
+    : "shared";
+  const visibleBulkRows = useMemo(() => {
+    const query = bulkSearch.trim().toLocaleLowerCase();
+    const entries = bulkRows
+      .map((row, index) => ({ row, index }))
+      .filter(({ row }) =>
+        query
+          ? [...row.texts, ...row.secondaryTexts].some((text) =>
+              text.toLocaleLowerCase().includes(query),
+            )
+          : true,
+      );
+    entries.sort((a, b) => {
+      const valueFor = (row: GavelBulkRow) => {
+        if (bulkSortKey === "quantity") return row.quantity;
+        const lineIndex = Number(bulkSortKey.slice(-1)) - 1;
+        return bulkSortKey.startsWith("secondary")
+          ? row.secondaryTexts[lineIndex] ?? ""
+          : row.texts[lineIndex] ?? "";
+      };
+      const aValue = valueFor(a.row);
+      const bValue = valueFor(b.row);
+      const comparison =
+        typeof aValue === "number" && typeof bValue === "number"
+          ? aValue - bValue
+          : String(aValue).localeCompare(String(bValue), undefined, {
+              numeric: true,
+              sensitivity: "base",
+            });
+      return bulkSortAscending ? comparison : -comparison;
+    });
+    return entries;
+  }, [bulkRows, bulkSearch, bulkSortAscending, bulkSortKey]);
   /** Live read-out for the paste box, so mistakes surface before applying. */
   const bulkPastePreview = useMemo(() => {
     if (!bulkCsvText.trim()) return null;
     try {
-      const { rows, warning } = parseGavelBulkCsv(bulkCsvText);
+      const { rows, warning } = parseGavelBulkCsv(bulkCsvText, {
+        secondaryMode: effectiveBulkSecondaryMode,
+        secondarySurface: bulkSecondarySurface ?? undefined,
+      });
       return { rows, warning, error: "" };
     } catch (err) {
       return {
@@ -846,11 +964,12 @@ export default function GavelDesigner({
         error: err instanceof Error ? err.message : "Could not read that CSV.",
       };
     }
-  }, [bulkCsvText]);
+  }, [bulkCsvText, effectiveBulkSecondaryMode, bulkSecondarySurface]);
   const quote = quoteGavelPrice({
     productType,
     soundBlock: isStand ? "none" : soundBlock,
     suedeBag,
+    bagSelection,
     quantity: orderQuantity,
     storeUnitPrice,
     suedeBagUnitPrice: bagVariant?.price ?? null,
@@ -860,6 +979,7 @@ export default function GavelDesigner({
     productType,
     soundBlock: isStand ? "none" : soundBlock,
     suedeBag,
+    bagSelection,
     standFinish,
     productionMethod,
     soundBlockShape: effectiveSoundBlockShape,
@@ -878,6 +998,7 @@ export default function GavelDesigner({
   /** Restore wizard progress from localStorage (once), then let the product URL win. */
   useBeforePaintEffect(() => {
     if (cacheHydratedRef.current) return;
+    let restoredBulkRowsAvailable = false;
     try {
       const raw = localStorage.getItem(
         getGavelDesignerDraftCacheKey(shop, productId),
@@ -885,9 +1006,18 @@ export default function GavelDesigner({
       if (raw) {
         const payload = JSON.parse(raw) as GavelDesignerCachePayload;
         if (payload.version === GAVEL_CACHE_VERSION) {
+          const restoredBulkRows = sanitizeCachedBulkRows(payload.bulkRows);
+          const restoredBulkMode =
+            Boolean(payload.bulkMode) && restoredBulkRows.length > 0;
+          restoredBulkRowsAvailable = restoredBulkMode;
           const restoredStep = isStepId(payload.step) ? payload.step : "product";
           const activeStep =
-            restoredStep === "done" ? "quantity" : restoredStep;
+            restoredStep === "done" ||
+            (restoredBulkMode && restoredStep === "quantity")
+              ? restoredBulkMode
+                ? "design"
+                : "quantity"
+              : restoredStep;
           setStep(activeStep);
           const impliedVisited = STEP_IDS.slice(
             0,
@@ -919,8 +1049,15 @@ export default function GavelDesigner({
               defaultSoundBlockLines,
             ),
           );
-          if (typeof payload.suedeBag === "boolean") {
-            setSuedeBag(payload.suedeBag);
+          if (
+            payload.bagSelection === "none" ||
+            payload.bagSelection === "gavel" ||
+            payload.bagSelection === "secondary" ||
+            payload.bagSelection === "both"
+          ) {
+            setBagSelection(payload.bagSelection);
+          } else if (typeof payload.suedeBag === "boolean") {
+            setBagSelection(payload.suedeBag ? "gavel" : "none");
           }
           if (includesId(GAVEL_PRODUCTION_METHOD_IDS, payload.productionMethod)) {
             setProductionMethod(payload.productionMethod);
@@ -967,6 +1104,55 @@ export default function GavelDesigner({
           if (typeof payload.qty === "number") {
             setQty(clampBadgeLineQty(payload.qty));
           }
+          setBulkMode(restoredBulkMode);
+          setBulkRows(restoredBulkRows);
+          if (typeof payload.bulkCsvText === "string") {
+            setBulkCsvText(payload.bulkCsvText);
+          }
+          if (typeof payload.bulkCsvWarning === "string") {
+            setBulkCsvWarning(payload.bulkCsvWarning);
+          }
+          if (
+            payload.bulkSecondaryMode === "shared" ||
+            payload.bulkSecondaryMode === "separate"
+          ) {
+            setBulkSecondaryMode(payload.bulkSecondaryMode);
+          }
+          const restoredBulkIndex =
+            typeof payload.selectedBulkRow === "number"
+              ? Math.max(
+                  0,
+                  Math.min(
+                    restoredBulkRows.length - 1,
+                    Math.floor(payload.selectedBulkRow),
+                  ),
+                )
+              : 0;
+          setSelectedBulkRow(restoredBulkIndex);
+          const restoredSelectedRow = restoredBulkRows[restoredBulkIndex];
+          if (restoredBulkMode && restoredSelectedRow) {
+            setLines((current) =>
+              current.map((line, index) => ({
+                ...line,
+                text: restoredSelectedRow.texts[index] ?? "",
+              })),
+            );
+            if (payload.productType === "stand") {
+              setPlateLines((current) =>
+                current.map((line, index) => ({
+                  ...line,
+                  text: restoredSelectedRow.secondaryTexts[index] ?? "",
+                })),
+              );
+            } else if (payload.soundBlock === "engraved") {
+              setSoundBlockLines((current) =>
+                current.map((line, index) => ({
+                  ...line,
+                  text: restoredSelectedRow.secondaryTexts[index] ?? "",
+                })),
+              );
+            }
+          }
           if (typeof payload.designId === "string" && payload.designId) {
             designIdRef.current = payload.designId;
           }
@@ -1009,9 +1195,11 @@ export default function GavelDesigner({
       setSoundBlock(requestedSoundBlock);
     }
     const requestedBulkMode = readQueryParam("bulk") === "1";
-    setBulkMode(requestedBulkMode);
     if (requestedBulkMode) {
-      setLines((current) => current.map((line) => ({ ...line, text: "" })));
+      setBulkMode(true);
+      if (!restoredBulkRowsAvailable) {
+        setLines((current) => current.map((line) => ({ ...line, text: "" })));
+      }
     }
     const requestedLogoSurface = readQueryParam("logoSurface");
     if (
@@ -1080,6 +1268,7 @@ export default function GavelDesigner({
         soundBlockShape,
         soundBlockLines,
         suedeBag,
+        bagSelection,
         productionMethod,
         logoScale,
         logoGapScale,
@@ -1091,6 +1280,12 @@ export default function GavelDesigner({
         textSize,
         lines,
         qty,
+        bulkMode,
+        bulkRows,
+        bulkCsvText,
+        bulkCsvWarning,
+        bulkSecondaryMode,
+        selectedBulkRow,
         designId: designIdRef.current,
         logo:
           logoFile &&
@@ -1112,6 +1307,12 @@ export default function GavelDesigner({
     return () => window.clearTimeout(timeoutId);
   }, [
     bandFinish,
+    bagSelection,
+    bulkCsvText,
+    bulkCsvWarning,
+    bulkMode,
+    bulkRows,
+    bulkSecondaryMode,
     gavelStyle,
     lines,
     logoDataUrl,
@@ -1124,6 +1325,7 @@ export default function GavelDesigner({
     productType,
     productionMethod,
     qty,
+    selectedBulkRow,
     shop,
     soundBlock,
     soundBlockLines,
@@ -1216,6 +1418,16 @@ export default function GavelDesigner({
       setSoundBlock("plain");
     }
   }, [gavelStyle, soundBlock]);
+
+  useEffect(() => {
+    if (
+      !isStand &&
+      !hasSoundBlock &&
+      (bagSelection === "secondary" || bagSelection === "both")
+    ) {
+      setBagSelection("gavel");
+    }
+  }, [bagSelection, hasSoundBlock, isStand]);
 
   useEffect(() => {
     if (isStand && logoSurface !== "stand") {
@@ -1325,7 +1537,22 @@ export default function GavelDesigner({
     [bandArtLines],
   );
 
-  const badgeForSave = useCallback((overrideLines?: BadgeLine[]): Badge => {
+  const secondaryLinesForBulkRow = useCallback(
+    (row: GavelBulkRow): BadgeLine[] => {
+      const base = isStand ? plateArtLines : soundBlockArtLines;
+      return base.map((line, index) => ({
+        ...line,
+        id: `${row.id}-secondary-line-${index}`,
+        text: row.secondaryTexts[index] ?? "",
+      }));
+    },
+    [isStand, plateArtLines, soundBlockArtLines],
+  );
+
+  const badgeForSave = useCallback((
+    overrideLines?: BadgeLine[],
+    overrideSecondaryLines?: BadgeLine[],
+  ): Badge => {
     return {
       lines: overrideLines ?? bandArtLines,
       backgroundColor: bandDef.color,
@@ -1337,17 +1564,25 @@ export default function GavelDesigner({
       gavelProductType: productType,
       gavelSoundBlock: isStand ? "none" : soundBlock,
       gavelSoundBlockShape: isStand ? "square" : effectiveSoundBlockShape,
-      gavelSoundBlockText: soundBlockEngraved ? soundBlockArtText : "",
-      gavelSoundBlockLines: soundBlockEngraved ? soundBlockArtLines : undefined,
+      gavelSoundBlockText: soundBlockEngraved
+        ? joinSoundBlockText(overrideSecondaryLines ?? soundBlockArtLines)
+        : "",
+      gavelSoundBlockLines: soundBlockEngraved
+        ? overrideSecondaryLines ?? soundBlockArtLines
+        : undefined,
       gavelSuedeBag: suedeBag,
+      gavelBagSelection: bagSelection,
       gavelStandFinish: isStand ? standFinish : undefined,
       gavelProductionMethod: isStand ? productionMethod : undefined,
-      gavelStandPlateLines: isStand ? plateArtLines : undefined,
+      gavelStandPlateLines: isStand
+        ? overrideSecondaryLines ?? plateArtLines
+        : undefined,
     };
   }, [
     bandArtLines,
     bandDef.color,
     bandFinish,
+    bagSelection,
     effectiveSoundBlockShape,
     gavelStyle,
     isStand,
@@ -1356,7 +1591,6 @@ export default function GavelDesigner({
     productionMethod,
     soundBlock,
     soundBlockArtLines,
-    soundBlockArtText,
     soundBlockEngraved,
     standFinish,
     suedeBag,
@@ -1403,13 +1637,31 @@ export default function GavelDesigner({
         text: row.texts[lineIndex] ?? "",
       })),
     );
+    if (isStand) {
+      setPlateLines((prev) =>
+        prev.map((line, lineIndex) => ({
+          ...line,
+          text: row.secondaryTexts[lineIndex] ?? "",
+        })),
+      );
+    } else if (soundBlockEngraved) {
+      setSoundBlockLines((prev) =>
+        prev.map((line, lineIndex) => ({
+          ...line,
+          text: row.secondaryTexts[lineIndex] ?? "",
+        })),
+      );
+    }
     setLineError(false);
   };
 
   const applyBulkCsv = (csv: string) => {
     setError(null);
     try {
-      const { rows, warning } = parseGavelBulkCsv(csv);
+      const { rows, warning } = parseGavelBulkCsv(csv, {
+        secondaryMode: effectiveBulkSecondaryMode,
+        secondarySurface: bulkSecondarySurface ?? undefined,
+      });
       setBulkMode(true);
       setBulkRows(rows);
       setBulkCsvWarning(warning);
@@ -1421,6 +1673,21 @@ export default function GavelDesigner({
           text: rows[0].texts[index] ?? "",
         })),
       );
+      if (isStand) {
+        setPlateLines((prev) =>
+          prev.map((line, index) => ({
+            ...line,
+            text: rows[0].secondaryTexts[index] ?? "",
+          })),
+        );
+      } else if (soundBlockEngraved) {
+        setSoundBlockLines((prev) =>
+          prev.map((line, index) => ({
+            ...line,
+            text: rows[0].secondaryTexts[index] ?? "",
+          })),
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not import the CSV.");
     }
@@ -1440,13 +1707,46 @@ export default function GavelDesigner({
 
   const downloadBulkCsvTemplate = () => {
     const url = URL.createObjectURL(
-      new Blob([GAVEL_BULK_CSV_TEMPLATE], { type: "text/csv;charset=utf-8" }),
+      new Blob(
+        [
+          gavelBulkCsvTemplate(
+            effectiveBulkSecondaryMode,
+            bulkSecondarySurface,
+          ),
+        ],
+        { type: "text/csv;charset=utf-8" },
+      ),
     );
     const link = document.createElement("a");
     link.href = url;
-    link.download = "model-un-gavel-names.csv";
+    link.download = "gavel-bulk-personalization.csv";
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const enterBulkMode = () => {
+    setBulkMode(true);
+    setError(null);
+    setLineError(false);
+  };
+
+  const exitBulkMode = () => {
+    if (bulkModeLocked) return;
+    setBulkMode(false);
+    setBulkRows([]);
+    setSelectedBulkRow(0);
+    setBulkSearch("");
+    setBulkCsvWarning("");
+    setError(null);
+  };
+
+  const toggleBulkSort = (key: GavelBulkSortKey) => {
+    if (bulkSortKey === key) {
+      setBulkSortAscending((current) => !current);
+    } else {
+      setBulkSortKey(key);
+      setBulkSortAscending(true);
+    }
   };
 
   const updatePlateLine = (index: number, changes: Partial<BadgeLine>) => {
@@ -1516,6 +1816,10 @@ export default function GavelDesigner({
       }
       setLineError(false);
       await captureMockup();
+      if (bulkMode) {
+        await onReviewProof();
+        return;
+      }
     }
     goToStep(next);
   }
@@ -1523,7 +1827,12 @@ export default function GavelDesigner({
   function buildDesignPayload() {
     const allBadges =
       bulkRows.length > 0
-        ? bulkRows.map((row) => badgeForSave(linesForBulkRow(row)))
+        ? bulkRows.map((row) =>
+            badgeForSave(
+              linesForBulkRow(row),
+              secondaryLinesForBulkRow(row),
+            ),
+          )
         : [badgeForSave()];
     const badge = allBadges[0];
     return {
@@ -1536,6 +1845,8 @@ export default function GavelDesigner({
           ? bulkRows.map((row) => ({
               quantity: row.quantity,
               lines: row.texts,
+              secondaryLines: row.secondaryTexts,
+              secondaryMode: effectiveBulkSecondaryMode,
             }))
           : [],
       gavelStyle,
@@ -1545,12 +1856,27 @@ export default function GavelDesigner({
       gavelProductType: productType,
       gavelSoundBlock: soundBlock,
       gavelSoundBlockShape: effectiveSoundBlockShape,
-      gavelSoundBlockText: soundBlockEngraved ? soundBlockArtText : "",
-      gavelSoundBlockLines: soundBlockEngraved ? soundBlockArtLines : undefined,
+      gavelSoundBlockText: soundBlockEngraved
+        ? joinSoundBlockText(
+            bulkRows[selectedBulkRow]
+              ? secondaryLinesForBulkRow(bulkRows[selectedBulkRow])
+              : soundBlockArtLines,
+          )
+        : "",
+      gavelSoundBlockLines: soundBlockEngraved
+        ? bulkRows[selectedBulkRow]
+          ? secondaryLinesForBulkRow(bulkRows[selectedBulkRow])
+          : soundBlockArtLines
+        : undefined,
       gavelSuedeBag: suedeBag,
+      gavelBagSelection: bagSelection,
       gavelStandFinish: isStand ? standFinish : null,
       gavelProductionMethod: isStand ? productionMethod : null,
-      gavelStandPlateLines: isStand ? plateArtLines : null,
+      gavelStandPlateLines: isStand
+        ? bulkRows[selectedBulkRow]
+          ? secondaryLinesForBulkRow(bulkRows[selectedBulkRow])
+          : plateArtLines
+        : null,
       gavelBandColor: bandDef.color,
       gavelPlateColor: isStand ? standDef.plateHex : null,
       gavelLogoFileName: logoAllowed ? (logoFile?.name ?? null) : null,
@@ -1603,19 +1929,16 @@ export default function GavelDesigner({
       // on the same line, never alternatives to the band. `standLogo` and
       // `soundBlockLogo` are already null unless the logo belongs to that
       // surface, so the surface owns its own art.
-      const rowSoundBlockLines =
-        bulkRows.length > 0
-          ? resolvedSoundBlockLines(soundBlockLines, rowLines)
-          : soundBlockArtLines;
+      const bulkRow = bulkRows[index];
+      const rowSecondaryLines = bulkRow
+        ? secondaryLinesForBulkRow(bulkRow)
+        : null;
+      const rowSoundBlockLines = rowSecondaryLines ?? soundBlockArtLines;
       const secondary = isStand
         ? {
             kind: "plate",
             svg: gavelStandPlateToSvgString(
-              // Bulk rows carry their plate copy in their own first two lines;
-              // a single design uses the plate fields the customer filled in.
-              bulkRows.length > 0
-                ? rowLines.slice(0, STAND_PLATE_MAX_LINES)
-                : plateArtLines,
+              rowSecondaryLines ?? plateArtLines,
               textSize,
               standDef.plateHex,
               { logo: standLogo },
@@ -1659,6 +1982,14 @@ export default function GavelDesigner({
       goToStep("design");
       return;
     }
+    if (bagSelection !== "none" && !bagVariant) {
+      setError(
+        bagProductLoading
+          ? "Bag pricing is still loading. Try again in a moment."
+          : "That bag option is not available yet. Update the suede bag product variants in Shopify or choose another option.",
+      );
+      return;
+    }
     setBusy(true);
     try {
       const latestProduct = await fetchStoreProduct(
@@ -1698,6 +2029,7 @@ export default function GavelDesigner({
         soundBlockText: soundBlockEngraved ? soundBlockArtText : "",
         soundBlockDataUrl: soundBlockTextureUrl || null,
         suedeBag,
+        bagSelection,
         standFinish: isStand ? standFinish : undefined,
         productionMethod: isStand ? productionMethod : undefined,
         plateLines: isStand ? plateArtLines : undefined,
@@ -1789,10 +2121,11 @@ export default function GavelDesigner({
         lineIndex: number,
         rowQuantity: number,
       ) => {
-        const rowSoundBlockLines =
-          bulkRows.length > 0
-            ? resolvedSoundBlockLines(soundBlockLines, rowLines)
-            : soundBlockArtLines;
+        const bulkRow = bulkRows[lineIndex];
+        const rowSecondaryLines = bulkRow
+          ? secondaryLinesForBulkRow(bulkRow)
+          : null;
+        const rowSoundBlockLines = rowSecondaryLines ?? soundBlockArtLines;
         const rowSoundBlockText = joinSoundBlockText(rowSoundBlockLines);
         return buildDesignerCartLineProperties({
           designerId: "gavel",
@@ -1813,7 +2146,16 @@ export default function GavelDesigner({
             "_Product Type": isStand ? "Gavel + stand" : "Gavel",
             "_Gavel Style": styleDef.label,
             "_Band Finish": bandDef.label,
-            "_Suede Bag": suedeBag ? "Yes" : "No",
+            "_Suede Bag":
+              bagSelection === "gavel"
+                ? "Gavel bag"
+                : bagSelection === "secondary"
+                  ? isStand
+                    ? "Stand bag"
+                    : "Sound block bag"
+                  : bagSelection === "both"
+                    ? "Both bags"
+                    : "No",
             ...(logoFile && logoAllowed
               ? {
                   "_Logo File": logoFile.name,
@@ -1830,10 +2172,7 @@ export default function GavelDesigner({
                   "_Production Method":
                     getGavelProductionMethod(productionMethod).label,
                   ...Object.fromEntries(
-                    (bulkRows.length > 0
-                      ? rowLines.slice(0, STAND_PLATE_MAX_LINES)
-                      : plateArtLines
-                    )
+                    (rowSecondaryLines ?? plateArtLines)
                       .map((line, i) =>
                         (line.text ?? "").trim()
                           ? [
@@ -1892,7 +2231,7 @@ export default function GavelDesigner({
        * `_Designer`, which is how the order webhook tells design lines apart
        * from add-ons; tagging it would queue a duplicate proof for production.
        */
-      if (suedeBag && bagVariant) {
+      if (bagSelection !== "none" && bagVariant) {
         const bagRows = bulkRows.length > 0 ? bulkRows : [{ quantity: qty }];
         bagRows.forEach((row) => {
           cartLines.push({
@@ -1900,7 +2239,17 @@ export default function GavelDesigner({
             quantity: clampBadgeLineQty(row.quantity),
             properties: {
               "_Design ID": designId,
-              For: `${styleDef.label} ${isStand ? "gavel + stand" : "gavel"}`,
+              For:
+                bagSelection === "gavel"
+                  ? `${styleDef.label} gavel`
+                  : bagSelection === "secondary"
+                    ? isStand
+                      ? `${styleDef.label} stand`
+                      : `${styleDef.label} sound block`
+                    : `${styleDef.label} gavel and ${
+                        isStand ? "stand" : "sound block"
+                      }`,
+              "_Bag Selection": bagSelection,
             },
           });
         });
@@ -1953,7 +2302,9 @@ export default function GavelDesigner({
   const continueLabel: Partial<Record<StepId, string>> = {
     product: "Continue to options →",
     style: "Continue to design →",
-    design: "Continue to quantity →",
+    design: bulkMode
+      ? "Review proof & add to cart →"
+      : "Continue to quantity →",
   };
 
   if (!hydrated) {
@@ -2154,37 +2505,6 @@ export default function GavelDesigner({
                     </p>
                   </div>
 
-                  <div className="gf-bulk-callout">
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={bulkMode}
-                      disabled={bulkModeLocked}
-                      className={`gf-bulk-switch ${bulkMode ? "is-on" : ""}`}
-                      onClick={() => {
-                        setBulkMode((current) => {
-                          if (current) {
-                            setBulkRows([]);
-                            setSelectedBulkRow(0);
-                          }
-                          return !current;
-                        });
-                      }}
-                    >
-                      <span />
-                    </button>
-                    <div>
-                      <strong>
-                        {bulkModeLocked
-                          ? "Personalized bulk order"
-                          : "I need personalized gavels in bulk"}
-                      </strong>
-                      <p>
-                        Upload a CSV of names or roles in the design step. One
-                        shared style and logo will be applied to every row.
-                      </p>
-                    </div>
-                  </div>
                 </>
               ) : null}
 
@@ -2351,6 +2671,31 @@ export default function GavelDesigner({
 
               {step === "design" ? (
                 <>
+                  <div className={`gf-bulk-entry-choice ${bulkMode ? "is-active" : ""}`}>
+                    <div>
+                      <strong>
+                        {bulkMode ? "CSV bulk entry" : "Ordering in bulk?"}
+                      </strong>
+                      <p>
+                        {bulkMode
+                          ? "Text fields are replaced by one searchable row per personalized item."
+                          : "Add many personalized items at once with a CSV file or pasted rows."}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className={bulkMode ? "gf-nav-secondary" : "gf-nav-primary"}
+                      onClick={bulkMode ? exitBulkMode : enterBulkMode}
+                      disabled={bulkModeLocked && bulkMode}
+                    >
+                      {bulkMode
+                        ? bulkModeLocked
+                          ? "CSV entry required"
+                          : "Use individual entry"
+                        : "Try CSV entry"}
+                    </button>
+                  </div>
+
                   {isStand ? (
                     <p className="gf-sub-title">Gavel band</p>
                   ) : null}
@@ -2361,9 +2706,8 @@ export default function GavelDesigner({
                         <div>
                           <p className="gf-sub-title">Bulk personalization</p>
                           <p className="gf-note">
-                            One row per gavel, commas between each line of text,
-                            up to {GAVEL_MAX_LINES} lines each. A shared
-                            uploaded school logo is used on every gavel.
+                            One row per item. Style, formatting, and any uploaded
+                            logo are shared across the order.
                           </p>
                         </div>
                         <div className="gf-bulk-actions">
@@ -2394,6 +2738,51 @@ export default function GavelDesigner({
                         </div>
                       </div>
 
+                      {bulkSecondarySurface ? (
+                        <div className="gf-bulk-surface-mode">
+                          <div>
+                            <strong>Text across both surfaces</strong>
+                            <span>
+                              Choose whether the gavel band and{" "}
+                              {isStand ? "stand plate" : "sound block"} use the
+                              same or separate CSV columns.
+                            </span>
+                          </div>
+                          <div className="gf-pill-row">
+                            <button
+                              type="button"
+                              className={`gf-pill ${
+                                bulkSecondaryMode === "shared"
+                                  ? "is-selected"
+                                  : ""
+                              }`}
+                              onClick={() => {
+                                setBulkSecondaryMode("shared");
+                                setBulkRows([]);
+                                setSelectedBulkRow(0);
+                              }}
+                            >
+                              Same text on both
+                            </button>
+                            <button
+                              type="button"
+                              className={`gf-pill ${
+                                bulkSecondaryMode === "separate"
+                                  ? "is-selected"
+                                  : ""
+                              }`}
+                              onClick={() => {
+                                setBulkSecondaryMode("separate");
+                                setBulkRows([]);
+                                setSelectedBulkRow(0);
+                              }}
+                            >
+                              Different text for each
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+
                       <div className="gf-bulk-paste">
                         <label
                           className="gf-bulk-paste-label"
@@ -2402,9 +2791,11 @@ export default function GavelDesigner({
                           Or paste your rows
                         </label>
                         <p className="gf-bulk-paste-example">
-                          {GAVEL_BULK_PASTE_EXAMPLE_ROWS.map((row) => (
-                            <span key={row}>{row}</span>
-                          ))}
+                          {bulkSecondaryMode === "shared"
+                            ? GAVEL_BULK_PASTE_EXAMPLE_ROWS.map((row) => (
+                                <span key={row}>{row}</span>
+                              ))
+                            : "Use the downloadable template to enter separate band and secondary-surface columns."}
                         </p>
                         <textarea
                           id="gf-bulk-paste"
@@ -2463,26 +2854,149 @@ export default function GavelDesigner({
                               {bulkCsvWarning}
                             </p>
                           ) : null}
-                          <div className="gf-bulk-row-list" aria-label="CSV rows">
-                            {bulkRows.map((row, index) => (
+                          <div className="gf-bulk-grid-tools">
+                            <label>
+                              <span className="gf-visually-hidden">
+                                Search CSV text
+                              </span>
+                              <input
+                                type="search"
+                                className="gf-input"
+                                placeholder="Search any text…"
+                                value={bulkSearch}
+                                onChange={(event) =>
+                                  setBulkSearch(event.target.value)
+                                }
+                              />
+                            </label>
+                            <span className="gf-note">
+                              {visibleBulkRows.length} of {bulkRows.length} rows
+                            </span>
+                          </div>
+                          <div
+                            className={`gf-bulk-grid ${
+                              effectiveBulkSecondaryMode === "separate" &&
+                              bulkSecondarySurface
+                                ? `has-secondary is-${bulkSecondarySurface}`
+                                : ""
+                            }`}
+                            role="table"
+                            aria-label="CSV rows"
+                          >
+                            <div className="gf-bulk-grid-header" role="row">
+                              <span role="columnheader">#</span>
+                              {(["line1", "line2", "line3", "line4"] as const).map(
+                                (key, index) => (
+                                  <button
+                                    key={key}
+                                    type="button"
+                                    role="columnheader"
+                                    onClick={() => toggleBulkSort(key)}
+                                  >
+                                    Band {index + 1}
+                                    {bulkSortKey === key
+                                      ? bulkSortAscending
+                                        ? " ↑"
+                                        : " ↓"
+                                      : ""}
+                                  </button>
+                                ),
+                              )}
+                              {effectiveBulkSecondaryMode === "separate" &&
+                              bulkSecondarySurface
+                                ? Array.from(
+                                    {
+                                      length: isStand
+                                        ? STAND_PLATE_MAX_LINES
+                                        : SOUND_BLOCK_MAX_LINES,
+                                    },
+                                    (_, index) => {
+                                      const key =
+                                        `secondary${index + 1}` as GavelBulkSortKey;
+                                      return (
+                                        <button
+                                          key={key}
+                                          type="button"
+                                          role="columnheader"
+                                          onClick={() => toggleBulkSort(key)}
+                                        >
+                                          {isStand ? "Plate" : "Block"}{" "}
+                                          {index + 1}
+                                          {bulkSortKey === key
+                                            ? bulkSortAscending
+                                              ? " ↑"
+                                              : " ↓"
+                                            : ""}
+                                        </button>
+                                      );
+                                    },
+                                  )
+                                : null}
+                              <button
+                                type="button"
+                                role="columnheader"
+                                onClick={() => toggleBulkSort("quantity")}
+                              >
+                                Qty
+                                {bulkSortKey === "quantity"
+                                  ? bulkSortAscending
+                                    ? " ↑"
+                                    : " ↓"
+                                  : ""}
+                              </button>
+                            </div>
+                            {visibleBulkRows.map(({ row, index }) => (
                               <button
                                 key={row.id}
                                 type="button"
-                                className={
+                                role="row"
+                                className={`gf-bulk-grid-row ${
                                   selectedBulkRow === index ? "is-selected" : ""
-                                }
+                                }`}
                                 onClick={() => selectBulkRow(index)}
                               >
-                                <span>{index + 1}</span>
-                                <strong>{row.texts[0]}</strong>
-                                <small>× {row.quantity}</small>
+                                <span role="cell">{index + 1}</span>
+                                {row.texts.map((text, textIndex) => (
+                                  <span key={textIndex} role="cell" title={text}>
+                                    {text || "—"}
+                                  </span>
+                                ))}
+                                {effectiveBulkSecondaryMode === "separate" &&
+                                bulkSecondarySurface
+                                  ? row.secondaryTexts
+                                      .slice(
+                                        0,
+                                        isStand
+                                          ? STAND_PLATE_MAX_LINES
+                                          : SOUND_BLOCK_MAX_LINES,
+                                      )
+                                      .map((text, textIndex) => (
+                                        <span
+                                          key={`secondary-${textIndex}`}
+                                          role="cell"
+                                          title={text}
+                                        >
+                                          {text || "—"}
+                                        </span>
+                                      ))
+                                  : null}
+                                <strong role="cell">{row.quantity}</strong>
                               </button>
                             ))}
+                            {visibleBulkRows.length === 0 ? (
+                              <p className="gf-bulk-grid-empty">
+                                No rows match “{bulkSearch}”.
+                              </p>
+                            ) : null}
                           </div>
                           <p className="gf-note">
-                            Select a row to preview it. Replace the CSV to
-                            change wording; style and logo changes apply to the
-                            full order.
+                            Select any row to preview its band and{" "}
+                            {isStand
+                              ? "stand plate"
+                              : soundBlockEngraved
+                                ? "sound block"
+                                : "gavel"}
+                            . Click a column heading to sort.
                           </p>
                         </>
                       ) : null}
@@ -2508,7 +3022,7 @@ export default function GavelDesigner({
                     </span>
                   </div>
 
-                  {usingExampleCopy ? (
+                  {usingExampleCopy && !bulkMode ? (
                     <p className="gf-note" style={{ marginBottom: 12 }}>
                       The preview shows example wording. Enter your own text
                       below and it replaces it.
@@ -2579,7 +3093,7 @@ export default function GavelDesigner({
                     </div>
                   )) : bulkRows.length > 0 ? (
                     <div className="gf-bulk-text-preview">
-                      <p className="gf-sub-title">Selected CSV row</p>
+                      <p className="gf-sub-title">Selected row · gavel band</p>
                       {lines
                         .filter((line) => (line.text ?? "").trim())
                         .map((line, index) => (
@@ -2588,6 +3102,22 @@ export default function GavelDesigner({
                             <strong>{line.text}</strong>
                           </div>
                         ))}
+                      {bulkSecondarySurface ? (
+                        <>
+                          <p className="gf-sub-title">
+                            {isStand ? "Stand plate" : "Sound block"}
+                          </p>
+                          {bulkRows[selectedBulkRow]?.secondaryTexts
+                            .map((text, index) => ({ text, index }))
+                            .filter(({ text }) => text.trim())
+                            .map(({ text, index }) => (
+                              <div key={`secondary-${index}`}>
+                                <span>Line {index + 1}</span>
+                                <strong>{text}</strong>
+                              </div>
+                            ))}
+                        </>
+                      ) : null}
                       <p className="gf-note">
                         Text comes only from the CSV. Replace the CSV to change
                         names or wording.
@@ -2619,7 +3149,9 @@ export default function GavelDesigner({
                         ) : null}
                         <p className="gf-note">
                           {bulkMode
-                            ? "Stand plate text comes from the first two CSV columns — column one prints large, column two smaller beneath it."
+                            ? bulkSecondaryMode === "shared"
+                              ? "Each stand plate repeats the first two band columns from its CSV row."
+                              : "Each stand plate uses its own two stand-plate columns from the CSV."
                             : "Independent of the band — leave blank to repeat the band text on the plate. Line 1 prints large, line 2 smaller beneath it."}
                         </p>
                         {!bulkMode ? plateLines.map((line, index) => (
@@ -2854,7 +3386,9 @@ export default function GavelDesigner({
                       <p className="gf-sub-title">Sound block top</p>
                       <p className="gf-note">
                         {bulkMode
-                          ? "Each sound block uses Line 1 from its CSV row."
+                          ? bulkSecondaryMode === "shared"
+                            ? "Each sound block repeats the band text from its CSV row."
+                            : "Each sound block uses its own sound-block columns from the CSV."
                           : "Leave all fields blank to repeat line 1 of the band. Blank optional lines stay blank so you can create spacing. Formatting is independent of the band."}
                       </p>
                       {!bulkMode ? (
@@ -2971,25 +3505,75 @@ export default function GavelDesigner({
                   ) : null}
 
                   <div className="gf-sub-section" style={{ marginTop: 12 }}>
-                    <p className="gf-sub-title">Add a suede bag?</p>
-                      <div className="gf-pill-row">
-                        <button
-                          type="button"
-                          className={`gf-pill ${!suedeBag ? "is-selected" : ""}`}
-                          onClick={() => setSuedeBag(false)}
-                        >
-                          No thanks
-                        </button>
-                        <button
-                          type="button"
-                          className={`gf-pill ${suedeBag ? "is-selected" : ""}`}
-                          onClick={() => setSuedeBag(true)}
-                        >
-                          Add suede bag — +
-                          {formatGavelMoney(GAVEL_SAMPLE_PRICING.suedeBagAdd)}
-                        </button>
-                      </div>
+                    <p className="gf-sub-title">Add suede storage bags?</p>
+                    <div className="gf-pill-row">
+                      <button
+                        type="button"
+                        className={`gf-pill ${
+                          bagSelection === "none" ? "is-selected" : ""
+                        }`}
+                        onClick={() => setBagSelection("none")}
+                      >
+                        No thanks
+                      </button>
+                      <button
+                        type="button"
+                        className={`gf-pill ${
+                          bagSelection === "gavel" ? "is-selected" : ""
+                        }`}
+                        disabled={
+                          bagProduct !== null && !bagVariants.gavel
+                        }
+                        onClick={() => setBagSelection("gavel")}
+                      >
+                        Gavel bag — +
+                        {formatGavelMoney(
+                          bagVariants.gavel?.price ??
+                            GAVEL_SAMPLE_PRICING.suedeBagAdd,
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className={`gf-pill ${
+                          bagSelection === "secondary" ? "is-selected" : ""
+                        }`}
+                        disabled={
+                          (!isStand && !hasSoundBlock) ||
+                          (bagProduct !== null && !bagVariants.secondary)
+                        }
+                        onClick={() => setBagSelection("secondary")}
+                      >
+                        {isStand ? "Stand" : "Sound block"} bag — +
+                        {formatGavelMoney(
+                          bagVariants.secondary?.price ??
+                            GAVEL_SAMPLE_PRICING.suedeBagAdd,
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className={`gf-pill ${
+                          bagSelection === "both" ? "is-selected" : ""
+                        }`}
+                        disabled={
+                          (!isStand && !hasSoundBlock) ||
+                          (bagProduct !== null && !bagVariants.both)
+                        }
+                        onClick={() => setBagSelection("both")}
+                      >
+                        Both bags — +
+                        {formatGavelMoney(
+                          bagVariants.both?.price ??
+                            GAVEL_SAMPLE_PRICING.suedeBagBothAdd,
+                        )}
+                      </button>
                     </div>
+                    {!isStand && !hasSoundBlock ? (
+                      <p className="gf-note">
+                        Add a sound block in Options to choose its bag or the
+                        two-bag set.
+                      </p>
+                    ) : null}
+                  </div>
                   </>
               ) : null}
 
@@ -3091,9 +3675,16 @@ export default function GavelDesigner({
                   <button
                     type="button"
                     className="gf-nav-primary"
+                    disabled={
+                      step === "design" &&
+                      bulkMode &&
+                      (busy || !designReady || currentSelectionOutOfStock)
+                    }
                     onClick={() => void onContinue()}
                   >
-                    {continueLabel[step]}
+                    {step === "design" && bulkMode && busy
+                      ? "Preparing proof…"
+                      : continueLabel[step]}
                   </button>
                 ) : null}
                 {step === "quantity" ? (

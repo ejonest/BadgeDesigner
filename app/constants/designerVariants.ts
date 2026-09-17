@@ -560,9 +560,9 @@ export const DESK_SIGN_MATERIALS: readonly {
   },
   {
     id: "plastic",
-    label: "Traditional",
+    label: "Classic",
     description:
-      "Personalized plastic plate with your choice of aluminum desk stand or wall mount",
+      "Classic personalized plate with your choice of aluminum desk stand or wall mount",
     exampleImageSrc: "/images/desk-sign/plasticEx.jpg?v=5",
   },
 ] as const;

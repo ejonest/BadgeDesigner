@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">Custom plaque designer preview</title>
+  <desc id="desc">A plaque personalization interface with editing controls and a live award plaque preview.</desc>
+  <rect width="1200" height="760" fill="#f5f2eb"/>
+  <rect x="42" y="42" width="1116" height="676" rx="22" fill="#ffffff"/>
+  <rect x="42" y="42" width="1116" height="92" rx="22" fill="#102033"/>
+  <rect x="42" y="108" width="1116" height="26" fill="#102033"/>
+  <text x="92" y="100" fill="#ffffff" font-family="Arial, sans-serif" font-size="32" font-weight="700">CUSTOM PLAQUE</text>
+  <g transform="translate(90 172)">
+    <text x="0" y="28" fill="#52606a" font-family="Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="2">PERSONALIZE</text>
+    <text x="0" y="77" fill="#17251f" font-family="Georgia, serif" font-size="36" font-weight="700">Add your award details</text>
+    <rect x="0" y="112" width="420" height="66" rx="7" fill="#fafafa" stroke="#ccd1cf" stroke-width="2"/>
+    <text x="20" y="153" fill="#273831" font-family="Arial, sans-serif" font-size="20">EXCELLENCE IN LEADERSHIP</text>
+    <rect x="0" y="198" width="420" height="66" rx="7" fill="#fafafa" stroke="#ccd1cf" stroke-width="2"/>
+    <text x="20" y="239" fill="#273831" font-family="Arial, sans-serif" font-size="20">PRESENTED TO ALEX MORGAN</text>
+    <rect x="0" y="284" width="202" height="58" rx="6" fill="#214c3a"/>
+    <text x="101" y="320" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="18" font-weight="700">ADD LOGO</text>
+    <rect x="218" y="284" width="202" height="58" rx="6" fill="#ffffff" stroke="#214c3a" stroke-width="2"/>
+    <text x="319" y="320" text-anchor="middle" fill="#214c3a" font-family="Arial, sans-serif" font-size="18" font-weight="700">TYPE STYLE</text>
+  </g>
+  <g transform="translate(602 174)">
+    <rect width="470" height="466" rx="14" fill="#e8e2d7"/>
+    <text x="235" y="38" text-anchor="middle" fill="#5f6d66" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2">LIVE PREVIEW</text>
+    <rect x="72" y="76" width="326" height="326" rx="4" fill="#4d2d1d"/>
+    <rect x="91" y="95" width="288" height="288" rx="2" fill="#c9aa67"/>
+    <rect x="108" y="112" width="254" height="254" fill="#f4e8c8" stroke="#917638" stroke-width="3"/>
+    <circle cx="235" cy="174" r="34" fill="#214c3a"/>
+    <path d="M218 174h34M235 157v34" stroke="#e6c277" stroke-width="5"/>
+    <text x="235" y="242" text-anchor="middle" fill="#29332f" font-family="Georgia, serif" font-size="18" font-weight="700">EXCELLENCE IN</text>
+    <text x="235" y="269" text-anchor="middle" fill="#29332f" font-family="Georgia, serif" font-size="18" font-weight="700">LEADERSHIP</text>
+    <line x1="151" y1="290" x2="319" y2="290" stroke="#917638" stroke-width="2"/>
+    <text x="235" y="321" text-anchor="middle" fill="#29332f" font-family="Arial, sans-serif" font-size="14">ALEX MORGAN</text>
+    <text x="235" y="346" text-anchor="middle" fill="#59635e" font-family="Arial, sans-serif" font-size="12">WITH APPRECIATION - 2026</text>
+  </g>
+</svg>

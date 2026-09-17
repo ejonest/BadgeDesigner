@@ -237,7 +237,6 @@ import {
   getDefaultDeskSignSizeNorm,
 } from "../utils/deskSignTextSize";
 import {
-  deskSignMaterialPrice,
   findDeskSignVariantByMaterial,
   type ShopifyProductJs,
 } from "~/utils/deskSignShopifyCatalog";
@@ -5585,12 +5584,27 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     if (multipleBadges.length === 0) return "0.00";
     if (isDeskSignVariant(variant)) {
       if (!signShopifyProduct) return "—";
-      const unit = deskSignMaterialPrice(
-        signShopifyProduct,
-        deskSignMaterial,
-        selectedDeskSignSize,
-      );
-      return (unit * multipleBadges.length).toFixed(2);
+      let sum = 0;
+      for (const b of multipleBadges) {
+        const material = b.deskSignMaterial ?? deskSignMaterial;
+        const size =
+          b.deskSignSize ??
+          inferDeskSignSizeFromTemplateId(b.templateId) ??
+          selectedDeskSignSize;
+        if (!material || !size) return "—";
+        const artworkType = b.logo?.src?.trim()
+          ? "color-image"
+          : "text-only";
+        const hit = findDeskSignVariantByMaterial(
+          signShopifyProduct,
+          material,
+          size,
+          artworkType,
+        );
+        if (!hit) return "—";
+        sum += parseShopifyMoney(hit.price);
+      }
+      return sum.toFixed(2);
     }
     if (!isSignLikeVariant(variant)) {
       const sum = multipleBadges.reduce(
@@ -9677,8 +9691,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         const material = b.deskSignMaterial ?? deskSignMaterialRef.current;
         const size =
           b.deskSignSize ?? inferDeskSignSizeFromTemplateId(b.templateId);
-        const hit = signCatalog
-          ? findDeskSignVariantByMaterial(signCatalog, material, size)
+        const hit = signCatalog && material && size
+          ? findDeskSignVariantByMaterial(
+              signCatalog,
+              material,
+              size,
+              b.logo?.src?.trim() ? "color-image" : "text-only",
+            )
           : null;
         if (hit) {
           return {
@@ -9736,7 +9755,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               ? "Acrylic"
               : b.deskSignMaterial === "rosewood"
                 ? "Rosewood"
-                : "Traditional",
+                : "Classic",
           ...(b.deskSignSize
             ? {
                 [CART_PROP.size]:

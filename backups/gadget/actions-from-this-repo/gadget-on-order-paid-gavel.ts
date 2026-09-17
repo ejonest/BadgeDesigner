@@ -1,11 +1,14 @@
 /**
  * Gadget action: on_order_paid (Gavels Fast / or shared AQB badge-designer-order-handler)
  *
- * Gavel cart lines → POST VERCEL_LINK_ORDER_GAVEL_URL
- *   (default …/api/link-order-gavel-to-supabase)
+ * Designer cart lines (_Designer) → matching Vercel link-order URLs:
+ *   gavel  → VERCEL_LINK_ORDER_GAVEL_URL
+ *   trophy → VERCEL_LINK_ORDER_TROPHY_URL
+ *   plaque → VERCEL_LINK_ORDER_PLAQUE_URL
+ *   pen    → VERCEL_LINK_ORDER_PEN_URL
  *
  * Cart properties (underscore-prefixed):
- *   _Designer=gavel, _Design ID, _Gadget Design ID, _Gavel Index
+ *   _Designer, _Design ID, _Gadget Design ID, _Gavel Index / _Trophy Index / _Plaque Index
  *   Gavel Text Line 1–4, _Gavel Style, _Band Finish
  *   _Product Type (Gavel | Gavel + stand), _Plate Finish, Stand Plate Line 1–2
  *
@@ -26,8 +29,27 @@ const GAVEL_LINK_ORDER_URL =
   process.env.VERCEL_LINK_ORDER_GAVEL_URL ||
   "https://all-quality-design-tool.vercel.app/api/link-order-gavel-to-supabase";
 
+const TROPHY_LINK_ORDER_URL =
+  process.env.VERCEL_LINK_ORDER_TROPHY_URL ||
+  "https://all-quality-design-tool.vercel.app/api/link-order-trophy-to-supabase";
+
+const PLAQUE_LINK_ORDER_URL =
+  process.env.VERCEL_LINK_ORDER_PLAQUE_URL ||
+  process.env.VERCEL_LINK_ORDER_URL_PLAQUE ||
+  "https://all-quality-design-tool.vercel.app/api/link-order-plaque-to-supabase";
+
+const PEN_LINK_ORDER_URL =
+  process.env.VERCEL_LINK_ORDER_PEN_URL ||
+  "https://all-quality-design-tool.vercel.app/api/link-order-pen-to-supabase";
+
 const GAVEL_SECRET =
   process.env.LINK_ORDER_SECRET_GAVEL || process.env.LINK_ORDER_SECRET;
+const TROPHY_SECRET =
+  process.env.LINK_ORDER_SECRET_TROPHY || process.env.LINK_ORDER_SECRET;
+const PLAQUE_SECRET =
+  process.env.LINK_ORDER_SECRET_PLAQUE || process.env.LINK_ORDER_SECRET;
+const PEN_SECRET =
+  process.env.LINK_ORDER_SECRET_PEN || process.env.LINK_ORDER_SECRET;
 
 function getPropertiesMap(lineItem: {
   properties?: unknown;
@@ -71,10 +93,19 @@ function readIntProp(
   return Number.isNaN(n) ? undefined : n;
 }
 
-function isGavelLine(props: Record<string, unknown>): boolean {
+function designerKind(props: Record<string, unknown>): string | null {
   const d = readProp(props, "Designer");
-  if (d == null) return false;
-  return d.toLowerCase() === "gavel";
+  if (d == null) return null;
+  const t = d.toLowerCase().replace(/_/g, "-");
+  if (t === "gavel" || t === "trophy" || t === "plaque" || t === "pen") return t;
+  return null;
+}
+
+function indexPropFor(kind: string): string {
+  if (kind === "trophy") return "Trophy Index";
+  if (kind === "plaque") return "Plaque Index";
+  if (kind === "pen") return "Pen Index";
+  return "Gavel Index";
 }
 
 type PayloadLineItem = {
@@ -176,20 +207,27 @@ export async function run({ api, params, trigger, record, logger }: any) {
   }
 
   const lineItems = order.line_items ?? order.lineItems ?? [];
-  const gavelPayload: PayloadLineItem[] = [];
+  const grouped: Record<string, PayloadLineItem[]> = {
+    gavel: [],
+    trophy: [],
+    plaque: [],
+    pen: [],
+  };
 
   for (const item of lineItems) {
     const props = getPropertiesMap(
       item as { properties?: unknown; customAttributes?: unknown },
     );
-    if (!isGavelLine(props)) continue;
+    const kind = designerKind(props);
+    if (!kind || !grouped[kind]) continue;
 
     const designId = readProp(props, "Design ID");
     const gadgetDesignId = readProp(props, "Gadget Design ID");
     if (!designId && !gadgetDesignId) continue;
 
     const indexRaw =
-      readIntProp(props, "Gavel Index") ?? readIntProp(props, "Badge Index");
+      readIntProp(props, indexPropFor(kind)) ??
+      readIntProp(props, "Badge Index");
     const itemQ = (item as { quantity?: number }).quantity;
     const quantity: number = itemQ != null && itemQ >= 1 ? itemQ : 1;
 
@@ -201,37 +239,75 @@ export async function run({ api, params, trigger, record, logger }: any) {
       badgeCount: undefined,
     };
 
-    const model = api?.gavelDesign ?? api?.GavelDesign;
-    const designData = await fetchDesignData(
-      model,
-      designId,
-      gadgetDesignId,
+    if (kind === "gavel") {
+      const model = api?.gavelDesign ?? api?.GavelDesign;
+      const designData = await fetchDesignData(
+        model,
+        designId,
+        gadgetDesignId,
+        logger,
+      );
+      if (designData !== undefined) entry.designData = designData;
+    }
+    grouped[kind].push(entry);
+  }
+
+  const routes: Array<{
+    kind: string;
+    url: string;
+    secret: string | undefined;
+    payload: PayloadLineItem[];
+  }> = [
+    {
+      kind: "gavel",
+      url: GAVEL_LINK_ORDER_URL,
+      secret: GAVEL_SECRET,
+      payload: grouped.gavel,
+    },
+    {
+      kind: "trophy",
+      url: TROPHY_LINK_ORDER_URL,
+      secret: TROPHY_SECRET,
+      payload: grouped.trophy,
+    },
+    {
+      kind: "plaque",
+      url: PLAQUE_LINK_ORDER_URL,
+      secret: PLAQUE_SECRET,
+      payload: grouped.plaque,
+    },
+    {
+      kind: "pen",
+      url: PEN_LINK_ORDER_URL,
+      secret: PEN_SECRET,
+      payload: grouped.pen,
+    },
+  ];
+
+  const pending = routes.filter((route) => route.payload.length > 0);
+  if (pending.length === 0) {
+    logger.info("on_order_paid: no designer line items, skipping");
+    return { success: true, skipped: true, reason: "no_designer_items" };
+  }
+
+  const results: Record<string, unknown> = {};
+  for (const route of pending) {
+    results[route.kind] = await postLink(
+      route.url,
+      route.secret,
+      {
+        shopifyOrderId: String(shopifyOrderId),
+        shopifyOrderNumber:
+          shopifyOrderNumber != null ? String(shopifyOrderNumber) : undefined,
+        shopifyCustomerId:
+          shopifyCustomerId != null ? String(shopifyCustomerId) : undefined,
+        lineItems: route.payload,
+      },
       logger,
     );
-    if (designData !== undefined) entry.designData = designData;
-    gavelPayload.push(entry);
   }
 
-  if (gavelPayload.length === 0) {
-    logger.info("on_order_paid: no gavel line items, skipping");
-    return { success: true, skipped: true, reason: "no_gavel_items" };
-  }
-
-  const result = await postLink(
-    GAVEL_LINK_ORDER_URL,
-    GAVEL_SECRET,
-    {
-      shopifyOrderId: String(shopifyOrderId),
-      shopifyOrderNumber:
-        shopifyOrderNumber != null ? String(shopifyOrderNumber) : undefined,
-      shopifyCustomerId:
-        shopifyCustomerId != null ? String(shopifyCustomerId) : undefined,
-      lineItems: gavelPayload,
-    },
-    logger,
-  );
-
-  return { success: result.ok, result };
+  return { success: pending.every((route) => (results[route.kind] as { ok?: boolean })?.ok !== false), results };
 }
 
 /**

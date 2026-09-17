@@ -1,0 +1,19 @@
+/*
+ * ------------------------------------------------------------
+ * Gavels Fast — custom desk sign designer product template.
+ *
+ * Assign this template ("desk-sign-designer") only to the Gavels Fast
+ * custom desk sign product. Existing product pages are unaffected.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "designer_embed": {
+      "type": "custom-liquid",
+      "settings": {
+        "custom_liquid": "{% render 'desk-sign-designer-embed' %}"
+      }
+    }
+  },
+  "order": ["designer_embed"]
+}

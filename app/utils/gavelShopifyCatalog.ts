@@ -12,6 +12,7 @@
 
 import type {
   GavelProductType,
+  GavelBagSelectionId,
   GavelSoundBlockId,
   GavelSoundBlockShapeId,
   GavelStyleId,
@@ -58,6 +59,15 @@ export const GAVEL_PRODUCT_HANDLES: Record<GavelProductType, string> = {
 };
 
 export const SUEDE_BAG_PRODUCT_HANDLE = "suede-gavel-bag";
+export const GAVEL_BAG_OPTION_NAME = "Bag type";
+export const GAVEL_BAG_OPTION_VALUES: Record<
+  Exclude<GavelBagSelectionId, "none">,
+  string
+> = {
+  gavel: "Gavel bag",
+  secondary: "Stand / sound block bag",
+  both: "Both bags",
+};
 
 export type GavelVariantSelection = {
   productType: GavelProductType;
@@ -211,15 +221,36 @@ export function resolveGavelVariant(
   };
 }
 
-/** First (only) variant of the suede bag add-on product. */
 export function resolveSuedeBagVariant(
   product: ShopifyProductJs | null,
+  selection: GavelBagSelectionId = "gavel",
 ): GavelVariantMatch | null {
-  const variant = product?.variants?.[0];
-  if (!variant) return null;
+  if (selection === "none" || !product?.variants?.length) return null;
+  const wanted = normOptionText(GAVEL_BAG_OPTION_VALUES[selection]);
+  const aliases =
+    selection === "secondary"
+      ? new Set([wanted, "stand bag", "sound block bag", "secondary bag"])
+      : new Set([wanted]);
+  const variant = product.variants.find((candidate) => {
+    const values = [
+      candidate.title,
+      candidate.option1,
+      candidate.option2,
+      candidate.option3,
+    ].map(normOptionText);
+    return values.some((value) => aliases.has(value));
+  });
+  // Preserve the original one-variant product as the gavel-bag choice while
+  // the catalog is migrated to the three named variants.
+  const resolved =
+    variant ??
+    (selection === "gavel" && product.variants.length === 1
+      ? product.variants[0]
+      : null);
+  if (!resolved || resolved.available === false) return null;
   return {
-    variantId: String(variant.id),
-    price: parseShopifyMoney(variant.price),
-    title: variant.title ?? "",
+    variantId: String(resolved.id),
+    price: parseShopifyMoney(resolved.price),
+    title: resolved.title ?? "",
   };
 }

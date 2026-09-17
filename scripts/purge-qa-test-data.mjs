@@ -24,6 +24,8 @@ const DESIGNERS = [
   { table: "plaque_order_items", buckets: ["plaque-images", "plaque-pdfs"] },
   { table: "desk_sign_order_items", buckets: ["desk-sign-images", "desk-sign-pdfs"] },
   { table: "gavel_order_items", buckets: ["gavel-images", "gavel-pdfs"] },
+  { table: "pen_order_items", buckets: ["pen-images", "pen-pdfs"] },
+  { table: "trophy_order_items", buckets: ["trophy-images", "trophy-pdfs"] },
 ];
 
 const dryRun = process.argv.includes("--dry-run");

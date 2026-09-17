@@ -1,4 +1,6 @@
-{% if template.suffix == 'right-sidebar' %}
+{% if template.suffix == 'plaques' %}
+	{% render 'collection-no-sidebar' %}
+{% elsif template.suffix == 'right-sidebar' %}
 	{% render 'collection-right-sidebar' %}
 {% elsif template.suffix == 'fullwidth' %}
 	{% render 'collection-fullwidth' %}

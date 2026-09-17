@@ -1,0 +1,13 @@
+{
+  "sections": {
+    "designer_embed": {
+      "type": "custom-liquid",
+      "settings": {
+        "custom_liquid": "{% render 'trophy-designer-embed' %}"
+      }
+    }
+  },
+  "order": [
+    "designer_embed"
+  ]
+}

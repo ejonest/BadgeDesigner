@@ -1605,6 +1605,7 @@ export function convertBadgeToOrderItem(
   const isDeskSign = Boolean(badge.deskSignMaterial) || prefix === "desk-sign";
   const isGavel = Boolean(badge.gavelStyle) || prefix === "gavel";
   const isPen = Boolean(badge.penStyle) || prefix === "pen";
+  const isTrophy = Boolean(badge.trophyProductId) || prefix === "trophy";
 
   // Use badge-0, badge-1, ... so link-order (which uses line index from cart) can match
   return {
@@ -1628,6 +1629,13 @@ export function convertBadgeToOrderItem(
         : isPen
           ? {
               finish: "Blue gift set · case band + cap engraving",
+              attachment_method: "none",
+            }
+        : isTrophy
+          ? {
+              finish: [badge.trophyProductLabel, badge.trophyPlateLabel]
+                .filter(Boolean)
+                .join(" · ") || "Trophy",
               attachment_method: "none",
             }
       : {

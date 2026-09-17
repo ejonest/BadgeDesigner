@@ -336,6 +336,20 @@
     allow="clipboard-read; clipboard-write"
   ></iframe>
 </div>
+<script>
+  (function() {
+    var frame = document.getElementById('desk-sign-designer-iframe');
+    if (!frame) return;
+    var liveProduct = {{ product | json }};
+    frame.addEventListener('load', function() {
+      if (!frame.contentWindow) return;
+      frame.contentWindow.postMessage({
+        type: 'SIGN_DESIGNER_SHOPIFY_PRODUCT',
+        payload: liveProduct
+      }, {{ badge_designer_origin | json }});
+    });
+  })();
+</script>
 
 {% comment %} Custom sign product (Shape × Size variants, live price from Shopify) {% endcomment %}
 {% elsif product and product.handle == 'custom-sign' %}

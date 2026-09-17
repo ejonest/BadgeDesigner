@@ -1,0 +1,13 @@
+{
+  "sections": {
+    "designer_embed": {
+      "type": "custom-liquid",
+      "settings": {
+        "custom_liquid": "{% render 'plaque-designer-embed' %}"
+      }
+    }
+  },
+  "order": [
+    "designer_embed"
+  ]
+}

@@ -14,14 +14,14 @@
 .tr-trophy-grid .gf-toggle-card {
   display: grid;
   grid-template-columns: 112px minmax(0, 1fr);
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   align-items: center;
   min-height: 132px;
   text-align: left;
 }
 
 .tr-trophy-grid .gf-toggle-photo {
-  grid-row: 1 / 3;
+  grid-row: 1 / 4;
   width: 102px;
   height: 102px;
   object-fit: cover;
@@ -34,6 +34,15 @@
 
 .tr-trophy-grid .gf-toggle-sub {
   align-self: start;
+}
+
+.tr-category {
+  align-self: start;
+  color: var(--gf-gold);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .tr-option-grid {
@@ -151,6 +160,27 @@
   text-decoration: underline;
 }
 
+.tr-apply-line-format {
+  display: block;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 7px 10px;
+  border: 1px solid rgba(196, 163, 90, 0.55);
+  border-radius: 8px;
+  background: #fffaf0;
+  color: var(--gf-navy);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+}
+
+.tr-apply-line-format:hover {
+  border-color: var(--gf-gold-2);
+  background: #fff7e3;
+}
+
 .tr-designer .gf-line-block > .gf-char-count {
   display: block;
   margin-top: 5px;
@@ -161,6 +191,46 @@
   margin: -5px 0 10px;
   color: #9b2c22;
   font-size: 12px;
+}
+
+.tr-logo-upload {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--gf-border);
+  border-radius: 10px;
+  background: var(--gf-cream);
+}
+
+.tr-logo-picker {
+  display: block;
+  margin: 8px 0;
+}
+
+.tr-logo-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.tr-logo-picker span {
+  display: block;
+  padding: 10px 12px;
+  overflow: hidden;
+  border: 1px dashed var(--gf-gold-2);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--gf-text);
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tr-logo-upload .gf-nav-secondary {
+  margin-bottom: 8px;
 }
 
 /* Anchors the view toggle so it overlays the preview, as on the gavel tool. */
@@ -194,10 +264,9 @@
 }
 
 /* Sized as a container so the engraving can be measured in `cqh` against the
-   plate itself rather than the viewport. */
+   plate itself rather than the viewport. The ratio is set per plate inline. */
 .tr-plate-artwork {
   position: relative;
-  aspect-ratio: 1.485;
   overflow: hidden;
   container-type: size;
 }
@@ -213,8 +282,18 @@
   user-select: none;
 }
 
+/* Plates pulled from the newer product photography were cropped to the plate
+   edges on the way in, so they need no offsets. */
+.tr-plate-artwork.is-exact > img {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .tr-custom-text {
   position: absolute;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -250,6 +329,15 @@
 .tr-trophy-plate {
   position: absolute;
   overflow: hidden;
+}
+
+/* The 2" insert is round, so the uploaded art is clipped to the disc it
+   actually prints on. */
+.tr-trophy-insert {
+  position: absolute;
+  border-radius: 50%;
+  object-fit: contain;
+  background: #ffffff;
 }
 
 /* Matches the plate's footprint in the photo, so it takes that box's shape
@@ -342,6 +430,29 @@
   border-left: 0;
   font-weight: 700;
   appearance: textfield;
+}
+
+.tr-price-summary {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin: 12px 0;
+  color: var(--gf-muted);
+  font-size: 14px;
+}
+
+.tr-price-summary strong {
+  color: var(--gf-text);
+}
+
+.tr-bulk-grid .gf-bulk-grid-header,
+.tr-bulk-grid .gf-bulk-grid-row {
+  grid-template-columns: 38px repeat(3, minmax(105px, 1fr)) 48px;
+  min-width: 465px;
+}
+
+.tr-bulk-quantity {
+  margin-top: 10px;
 }
 
 .tr-review {
