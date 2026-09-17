@@ -1,18 +1,36 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { getDesignerApiPaths, getDesignerConfig } from "~/config/designers";
 import {
+  TROPHY_MAX_PRICED_QUANTITY,
   TROPHY_PLATE_RATIO,
-  TROPHY_TYPES,
-  getTrophyType,
+  TROPHY_PRODUCTS,
+  getTrophyPrice,
+  getTrophyProduct,
   type TrophyPlateOption,
+  type TrophyProduct,
   type TrophyTextArea,
-  type TrophyTypeId,
 } from "~/constants/trophyOptions";
+import type { Badge, BadgeLine } from "~/types/badge";
+import { createApi } from "~/utils/api";
+import { buildDesignerCartLineProperties } from "~/utils/cartLineProperties";
+import { generateTrophyProofPdf } from "~/utils/trophyPdf";
+import {
+  trophyPlateToSvgString,
+  trophyPreviewToPng,
+} from "~/utils/trophyRender";
+import {
+  TROPHY_BULK_CSV_TEMPLATE,
+  TROPHY_BULK_PASTE_EXAMPLES,
+  parseTrophyBulkCsv,
+  type TrophyBulkRow,
+} from "~/utils/trophyBulkCsv";
 import "../styles/gavelDesigner.css";
 import "../styles/trophyDesigner.css";
 
 type StepId = "trophy" | "plate" | "design" | "quantity" | "done";
 type PreviewMode = "plate" | "trophy";
 type LineSize = "small" | "medium" | "large";
+type TrophyBulkSortKey = "line1" | "line2" | "line3" | "quantity";
 type TrophyLineStyle = {
   size: LineSize;
   bold: boolean;
@@ -22,7 +40,7 @@ type TrophyLineStyle = {
 
 const STEPS: StepId[] = ["trophy", "plate", "design", "quantity", "done"];
 const STEP_LABELS: Record<StepId, string> = {
-  trophy: "Trophy",
+  trophy: "Award",
   plate: "Plate",
   design: "Design",
   quantity: "Quantity",
@@ -30,8 +48,8 @@ const STEP_LABELS: Record<StepId, string> = {
 };
 const PANEL_COPY: Record<StepId, { title: string; sub: string }> = {
   trophy: {
-    title: "Choose your trophy",
-    sub: "Select the trophy shape you want to personalize.",
+    title: "Choose your award",
+    sub: "Select the trophy you want to personalize.",
   },
   plate: {
     title: "Choose a plate",
@@ -47,7 +65,7 @@ const PANEL_COPY: Record<StepId, { title: string; sub: string }> = {
   },
   done: {
     title: "Review your trophy",
-    sub: "Check the trophy, plate, wording, and quantity before continuing.",
+    sub: "Check the trophy, plate, wording, and quantity, then add it to your cart.",
   },
 };
 
@@ -75,9 +93,16 @@ function defaultLineStyles(): TrophyLineStyle[] {
   return Array.from({ length: 3 }, () => ({ ...DEFAULT_LINE_STYLE }));
 }
 
-function restoreLineStyles(draft: TrophyDraft): TrophyLineStyle[] {
+function cloneLineStyles(styles: TrophyLineStyle[]): TrophyLineStyle[] {
+  return styles.map((style) => ({ ...style }));
+}
+
+function restoreLineStyles(
+  savedStyles?: TrophyLineStyle[],
+  fallbackBold = false,
+): TrophyLineStyle[] {
   return Array.from({ length: 3 }, (_, index) => {
-    const saved = draft.lineStyles?.[index];
+    const saved = savedStyles?.[index];
     const size: LineSize =
       saved?.size === "small" ||
       saved?.size === "medium" ||
@@ -86,7 +111,7 @@ function restoreLineStyles(draft: TrophyDraft): TrophyLineStyle[] {
         : "medium";
     return {
       size,
-      bold: saved ? Boolean(saved.bold) : Boolean(draft.bold),
+      bold: saved ? Boolean(saved.bold) : fallbackBold,
       italic: Boolean(saved?.italic),
       underline: Boolean(saved?.underline),
     };
@@ -96,7 +121,9 @@ function restoreLineStyles(draft: TrophyDraft): TrophyLineStyle[] {
 type TrophyDraft = {
   step?: StepId;
   visited?: StepId[];
-  trophyType?: TrophyTypeId;
+  /** Legacy v1 drafts keyed off the four original trophy bodies. */
+  trophyType?: string;
+  productId?: string;
   plateId?: string;
   lines?: string[];
   fontFamily?: string;
@@ -105,7 +132,35 @@ type TrophyDraft = {
   bold?: boolean;
   quantity?: number;
   previewMode?: PreviewMode;
+  bulkMode?: boolean;
+  bulkRows?: TrophyBulkRow[];
+  bulkCsvText?: string;
+  bulkCsvWarning?: string;
 };
+
+function readQueryParam(name: string): string {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get(name)?.trim() || "";
+}
+
+function trophyTextsToLines(
+  texts: string[],
+  fontFamily: string,
+  lineStyles: TrophyLineStyle[],
+): BadgeLine[] {
+  return texts.map((text, index) => ({
+    id: `trophy-line-${index}`,
+    text,
+    xNorm: 0.5,
+    yNorm: 0.2 + index * 0.25,
+    sizeNorm: 0.2,
+    align: "center" as const,
+    fontFamily,
+    bold: lineStyles[index]?.bold,
+    italic: lineStyles[index]?.italic,
+    underline: lineStyles[index]?.underline,
+  }));
+}
 
 const LINE_HEIGHT = 1.18;
 /** Rough advance width of the offered faces, used before we can measure. */
@@ -124,6 +179,7 @@ function fitFontSize(
   lineWidthsEm: number[],
   lineStyles: TrophyLineStyle[],
   area: TrophyTextArea,
+  plateRatio: number,
 ): number {
   const scaledLineHeight = lineStyles.reduce(
     (total, style) => total + LINE_SIZE_SCALE[style.size],
@@ -139,8 +195,7 @@ function fitFontSize(
     0.01,
   );
   // Leave a small safety margin for browser/font rasterization differences.
-  const byWidth =
-    (area.width * TROPHY_PLATE_RATIO * 0.96) / widestScaledLine;
+  const byWidth = (area.width * plateRatio * 0.96) / widestScaledLine;
   return Math.min(byHeight, byWidth, MAX_FONT_CQH);
 }
 
@@ -179,6 +234,7 @@ function PlateArtwork({
   // gives an intentionally blank line the same height as a populated line.
   const shownLines = hasCustomText ? lines : ["YOUR TEXT HERE"];
   const area = option.textArea;
+  const plateRatio = option.ratio ?? TROPHY_PLATE_RATIO;
   const linesKey = shownLines.join("\n");
 
   // Character-count estimate on the server; the real metrics take over on the
@@ -219,10 +275,13 @@ function PlateArtwork({
     };
   }, [linesKey, fontFamily, shownStyles]);
 
-  const fontSize = fitFontSize(lineWidthsEm, shownStyles, area);
+  const fontSize = fitFontSize(lineWidthsEm, shownStyles, area, plateRatio);
 
   return (
-    <div className="tr-plate-artwork">
+    <div
+      className={`tr-plate-artwork ${option.exact ? "is-exact" : ""}`}
+      style={{ aspectRatio: `${plateRatio}` }}
+    >
       <img src={option.plateSrc} alt="" draggable={false} />
       <div
         className="tr-custom-text"
@@ -259,22 +318,22 @@ function PlateArtwork({
 }
 
 function TrophyPreview({
-  trophyType,
+  product,
   option,
   lines,
   fontFamily,
   lineStyles,
+  logoSrc,
   mode,
 }: {
-  trophyType: TrophyTypeId;
+  product: TrophyProduct;
   option: TrophyPlateOption;
   lines: string[];
   fontFamily: string;
   lineStyles: TrophyLineStyle[];
+  logoSrc?: string | null;
   mode: PreviewMode;
 }) {
-  const trophy = getTrophyType(trophyType);
-
   if (mode === "plate") {
     return (
       <div className="tr-preview-stage is-plate">
@@ -292,13 +351,26 @@ function TrophyPreview({
     <div className="tr-preview-stage is-trophy">
       <div className="tr-trophy-artwork">
         <img className="tr-trophy-photo" src={option.trophySrc} alt="" />
+        {product.logoInsert && logoSrc ? (
+          <img
+            className="tr-trophy-insert"
+            src={logoSrc}
+            alt="Uploaded logo"
+            style={{
+              left: `${product.logoInsert.left}%`,
+              top: `${product.logoInsert.top}%`,
+              width: `${product.logoInsert.width}%`,
+              height: `${product.logoInsert.height}%`,
+            }}
+          />
+        ) : null}
         <div
           className="tr-trophy-plate"
           style={{
-            left: `${trophy.plateBounds.left}%`,
-            top: `${trophy.plateBounds.top}%`,
-            width: `${trophy.plateBounds.width}%`,
-            height: `${trophy.plateBounds.height}%`,
+            left: `${product.plateBounds.left}%`,
+            top: `${product.plateBounds.top}%`,
+            width: `${product.plateBounds.width}%`,
+            height: `${product.plateBounds.height}%`,
           }}
         >
           <PlateArtwork
@@ -316,29 +388,130 @@ function TrophyPreview({
 export default function TrophyDesigner() {
   const [step, setStep] = useState<StepId>("trophy");
   const [visited, setVisited] = useState<StepId[]>(["trophy"]);
-  const [trophyType, setTrophyType] = useState<TrophyTypeId>("baseball");
-  const [plateId, setPlateId] = useState("baseball-theme");
+  const [productId, setProductId] = useState(TROPHY_PRODUCTS[0].id);
+  const [plateId, setPlateId] = useState(TROPHY_PRODUCTS[0].options[0].id);
   const [lines, setLines] = useState(["", "", ""]);
   const [fontFamily, setFontFamily] = useState("Arial");
   const [lineStyles, setLineStyles] = useState<TrophyLineStyle[]>(
     defaultLineStyles,
   );
   const [quantity, setQuantity] = useState(1);
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const [logoName, setLogoName] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [cartError, setCartError] = useState("");
+  const [cartAdded, setCartAdded] = useState(false);
+  const designIdRef = useRef(
+    `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+  );
+  const apiRef = useRef(createApi(undefined, undefined, { designerId: "trophy" }));
   const [previewMode, setPreviewMode] = useState<PreviewMode>("plate");
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkRows, setBulkRows] = useState<TrophyBulkRow[]>([]);
+  const [bulkCsvText, setBulkCsvText] = useState("");
+  const [bulkCsvWarning, setBulkCsvWarning] = useState("");
+  const [bulkError, setBulkError] = useState("");
+  const [selectedBulkRow, setSelectedBulkRow] = useState(0);
+  const [bulkSearch, setBulkSearch] = useState("");
+  const [bulkSortKey, setBulkSortKey] =
+    useState<TrophyBulkSortKey>("line1");
+  const [bulkSortAscending, setBulkSortAscending] = useState(true);
+  const bulkCsvInputRef = useRef<HTMLInputElement>(null);
   const [restored, setRestored] = useState(false);
 
-  const trophy = getTrophyType(trophyType);
+  const product = getTrophyProduct(productId);
   const option =
-    trophy.options.find((candidate) => candidate.id === plateId) ??
-    trophy.options[0];
-  const stepIndex = STEPS.indexOf(step);
+    product.options.find((candidate) => candidate.id === plateId) ??
+    product.options[0];
+  // The insert trophies all ship one plain plate, so their Plate step would
+  // be a single choice; drop it rather than show a step with nothing to pick.
+  const steps = useMemo(
+    () => STEPS.filter((id) => id !== "plate" || product.options.length > 1),
+    [product.options.length],
+  );
+  const stepIndex = Math.max(steps.indexOf(step), 0);
   const showPreview = step !== "trophy";
+  const bulkQuantity = bulkRows.reduce((sum, row) => sum + row.quantity, 0);
+  const orderQuantity = bulkMode && bulkRows.length > 0 ? bulkQuantity : quantity;
+  const previewLines =
+    bulkMode && bulkRows[selectedBulkRow]
+      ? bulkRows[selectedBulkRow].lines
+      : lines;
+  const previewLineStyles =
+    bulkMode && bulkRows[selectedBulkRow]?.lineStyles
+      ? bulkRows[selectedBulkRow].lineStyles
+      : lineStyles;
+  const price = getTrophyPrice(orderQuantity);
+  const designReady = bulkMode
+    ? bulkRows.length > 0
+    : product.logoInsert
+      ? Boolean(logoDataUrl) || Boolean(lines[0].trim())
+      : Boolean(lines[0].trim());
+  const bulkPastePreview = useMemo(() => {
+    if (!bulkCsvText.trim()) return null;
+    try {
+      return { ...parseTrophyBulkCsv(bulkCsvText), error: "" };
+    } catch (error) {
+      return {
+        rows: [] as TrophyBulkRow[],
+        warning: "",
+        error:
+          error instanceof Error ? error.message : "Could not read that CSV.",
+      };
+    }
+  }, [bulkCsvText]);
+  const visibleBulkRows = useMemo(() => {
+    const query = bulkSearch.trim().toLocaleLowerCase();
+    return bulkRows
+      .map((row, index) => ({ row, index }))
+      .filter(({ row }) =>
+        query
+          ? row.lines.some((line) =>
+              line.toLocaleLowerCase().includes(query),
+            )
+          : true,
+      )
+      .sort((a, b) => {
+        const aValue =
+          bulkSortKey === "quantity"
+            ? a.row.quantity
+            : a.row.lines[Number(bulkSortKey.slice(-1)) - 1];
+        const bValue =
+          bulkSortKey === "quantity"
+            ? b.row.quantity
+            : b.row.lines[Number(bulkSortKey.slice(-1)) - 1];
+        const comparison =
+          typeof aValue === "number" && typeof bValue === "number"
+            ? aValue - bValue
+            : String(aValue).localeCompare(String(bValue));
+        return bulkSortAscending ? comparison : -comparison;
+      });
+  }, [bulkRows, bulkSearch, bulkSortAscending, bulkSortKey]);
+
+  // Switching to a product without a Plate step can strand the wizard there.
+  useEffect(() => {
+    if (!steps.includes(step)) setStep("design");
+  }, [step, steps]);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(CACHE_KEY);
       if (raw) {
         const draft = JSON.parse(raw) as TrophyDraft;
+        // v1 drafts stored only the trophy body, whose ids match the four
+        // original products, so they carry straight over.
+        const restoredProduct = TROPHY_PRODUCTS.find(
+          (item) => item.id === (draft.productId ?? draft.trophyType),
+        );
+        if (restoredProduct) {
+          setProductId(restoredProduct.id);
+          setPlateId(
+            restoredProduct.options.some((item) => item.id === draft.plateId)
+              ? draft.plateId!
+              : restoredProduct.options[0].id,
+          );
+        }
         // Older v1 drafts did not record wizard progress. If they contain
         // wording, resume at Design instead of discarding that working context.
         const restoredStep =
@@ -363,16 +536,6 @@ export default function TrophyDesigner() {
             ),
           );
         }
-        if (TROPHY_TYPES.some((item) => item.id === draft.trophyType)) {
-          const restoredType = draft.trophyType as TrophyTypeId;
-          const restoredTrophy = getTrophyType(restoredType);
-          setTrophyType(restoredType);
-          setPlateId(
-            restoredTrophy.options.some((item) => item.id === draft.plateId)
-              ? draft.plateId!
-              : restoredTrophy.options[0].id,
-          );
-        }
         if (Array.isArray(draft.lines)) {
           setLines(
             Array.from({ length: 3 }, (_, index) =>
@@ -385,12 +548,66 @@ export default function TrophyDesigner() {
         if (FONT_OPTIONS.includes(draft.fontFamily ?? "")) {
           setFontFamily(draft.fontFamily!);
         }
-        setLineStyles(restoreLineStyles(draft));
+        setLineStyles(restoreLineStyles(draft.lineStyles, Boolean(draft.bold)));
         if (typeof draft.quantity === "number") {
-          setQuantity(Math.min(500, Math.max(1, Math.round(draft.quantity))));
+          setQuantity(
+            Math.min(
+              TROPHY_MAX_PRICED_QUANTITY,
+              Math.max(1, Math.round(draft.quantity)),
+            ),
+          );
         }
         if (draft.previewMode === "plate" || draft.previewMode === "trophy") {
           setPreviewMode(draft.previewMode);
+        }
+        if (Array.isArray(draft.bulkRows)) {
+          const restoredRows = draft.bulkRows.flatMap(
+            (row, index): TrophyBulkRow[] => {
+              if (!row || !Array.isArray(row.lines) || !row.lines[0]?.trim()) {
+                return [];
+              }
+              return [
+                {
+                  id:
+                    typeof row.id === "string"
+                      ? row.id
+                      : `bulk-trophy-cached-${index}`,
+                  lines: [0, 1, 2].map((lineIndex) =>
+                    String(row.lines[lineIndex] ?? "").slice(0, 40),
+                  ) as TrophyBulkRow["lines"],
+                  quantity: Math.max(
+                    1,
+                    Math.min(
+                      TROPHY_MAX_PRICED_QUANTITY,
+                      Math.round(Number(row.quantity) || 1),
+                    ),
+                  ),
+                  lineStyles: restoreLineStyles(row.lineStyles),
+                },
+              ];
+            },
+          );
+          const restoredTotal = restoredRows.reduce(
+            (sum, row) => sum + row.quantity,
+            0,
+          );
+          if (
+            draft.bulkMode &&
+            restoredRows.length > 0 &&
+            restoredTotal <= TROPHY_MAX_PRICED_QUANTITY
+          ) {
+            setBulkMode(true);
+            setBulkRows(restoredRows);
+            setLineStyles(
+              cloneLineStyles(restoredRows[0].lineStyles ?? defaultLineStyles()),
+            );
+          }
+        }
+        if (typeof draft.bulkCsvText === "string") {
+          setBulkCsvText(draft.bulkCsvText);
+        }
+        if (typeof draft.bulkCsvWarning === "string") {
+          setBulkCsvWarning(draft.bulkCsvWarning);
         }
       }
     } catch {
@@ -405,53 +622,191 @@ export default function TrophyDesigner() {
     const draft: TrophyDraft = {
       step,
       visited,
-      trophyType,
+      productId,
       plateId: option.id,
       lines,
       fontFamily,
       lineStyles,
       quantity,
       previewMode,
+      bulkMode,
+      bulkRows,
+      bulkCsvText,
+      bulkCsvWarning,
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(draft));
   }, [
     fontFamily,
+    bulkCsvText,
+    bulkCsvWarning,
+    bulkMode,
+    bulkRows,
     lineStyles,
     lines,
     option.id,
     previewMode,
+    productId,
     quantity,
     restored,
     step,
-    trophyType,
     visited,
   ]);
 
   const summary = useMemo(
     () => [
-      ["Trophy", trophy.label],
+      ["Award", product.shortLabel],
       ["Plate", option.label],
-      ["Text", lines.filter((line) => line.trim()).join(" / ")],
-      ["Quantity", String(quantity)],
+      ...(product.logoInsert
+        ? ([["Logo", logoName || "No logo uploaded"]] as [string, string][])
+        : []),
+      [
+        "Text",
+        bulkMode
+          ? `${bulkRows.length} personalized design${bulkRows.length === 1 ? "" : "s"}`
+          : lines.filter((line) => line.trim()).join(" / "),
+      ],
+      ["Quantity", String(orderQuantity)],
+      ["Price", `$${price.total.toFixed(2)}`],
     ],
-    [lines, option.label, quantity, trophy.label],
+    [
+      lines,
+      logoName,
+      bulkMode,
+      bulkRows.length,
+      option.label,
+      orderQuantity,
+      price.total,
+      product.logoInsert,
+      product.shortLabel,
+    ],
   );
 
-  function chooseTrophy(nextType: TrophyTypeId) {
-    const nextTrophy = getTrophyType(nextType);
-    setTrophyType(nextType);
-    setPlateId(nextTrophy.options[0].id);
+  function chooseProduct(nextProduct: TrophyProduct) {
+    setProductId(nextProduct.id);
+    setPlateId(nextProduct.options[0].id);
+    setLines([...nextProduct.defaultLines]);
+    setLogoDataUrl(null);
+    setLogoName("");
+    setLogoFile(null);
+    // The logo only reads on the trophy itself, never on the bare plate.
+    if (nextProduct.logoInsert) setPreviewMode("trophy");
+  }
+
+  function chooseLogo(file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setLogoDataUrl(reader.result);
+        setLogoName(file.name);
+        setLogoFile(file);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function applyBulkCsv(csv: string) {
+    setBulkError("");
+    try {
+      const result = parseTrophyBulkCsv(csv);
+      const seeded = result.rows.map((row) => ({
+        ...row,
+        lineStyles: cloneLineStyles(lineStyles),
+      }));
+      setBulkMode(true);
+      setBulkRows(seeded);
+      setBulkCsvWarning(result.warning);
+      setSelectedBulkRow(0);
+      setQuantity(
+        result.rows.reduce((sum, row) => sum + row.quantity, 0),
+      );
+    } catch (error) {
+      setBulkError(
+        error instanceof Error ? error.message : "Could not import the CSV.",
+      );
+    }
+  }
+
+  async function importBulkCsv(file: File) {
+    try {
+      const text = await file.text();
+      setBulkCsvText(text);
+      applyBulkCsv(text);
+    } catch {
+      setBulkError("Could not read that file.");
+    } finally {
+      if (bulkCsvInputRef.current) bulkCsvInputRef.current.value = "";
+    }
+  }
+
+  function downloadBulkCsvTemplate() {
+    const url = URL.createObjectURL(
+      new Blob([TROPHY_BULK_CSV_TEMPLATE], {
+        type: "text/csv;charset=utf-8",
+      }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "trophy-bulk-personalization.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exitBulkMode() {
+    setBulkMode(false);
+    setBulkRows([]);
+    setBulkCsvText("");
+    setBulkCsvWarning("");
+    setBulkError("");
+    setBulkSearch("");
+    setSelectedBulkRow(0);
+  }
+
+  function toggleBulkSort(key: TrophyBulkSortKey) {
+    if (bulkSortKey === key) {
+      setBulkSortAscending((current) => !current);
+    } else {
+      setBulkSortKey(key);
+      setBulkSortAscending(true);
+    }
+  }
+
+  function selectBulkRow(index: number) {
+    setSelectedBulkRow(index);
+    const styles = bulkRows[index]?.lineStyles;
+    if (styles) setLineStyles(cloneLineStyles(styles));
+  }
+
+  function applyLineFormatToAll(lineIndex: number) {
+    const source = lineStyles[lineIndex];
+    if (!source || bulkRows.length === 0) return;
+    setBulkRows((current) =>
+      current.map((row) => {
+        const styles = restoreLineStyles(row.lineStyles);
+        styles[lineIndex] = { ...source };
+        return { ...row, lineStyles: styles };
+      }),
+    );
   }
 
   function updateLineStyle(
     index: number,
     update: Partial<TrophyLineStyle>,
   ) {
-    setLineStyles((current) =>
-      current.map((style, lineIndex) =>
-        lineIndex === index ? { ...style, ...update } : style,
-      ),
+    const next = lineStyles.map((style, lineIndex) =>
+      lineIndex === index ? { ...style, ...update } : style,
     );
+    setLineStyles(next);
+    if (bulkMode && bulkRows.length > 0) {
+      setBulkRows((rows) =>
+        rows.map((row, rowIndex) =>
+          rowIndex === selectedBulkRow
+            ? { ...row, lineStyles: cloneLineStyles(next) }
+            : row,
+        ),
+      );
+    }
   }
 
   function goToStep(next: StepId) {
@@ -462,12 +817,12 @@ export default function TrophyDesigner() {
   }
 
   function goNext() {
-    const next = STEPS[stepIndex + 1];
+    const next = steps[stepIndex + 1];
     if (next) goToStep(next);
   }
 
   function goBack() {
-    const previous = STEPS[stepIndex - 1];
+    const previous = steps[stepIndex - 1];
     if (previous) goToStep(previous);
   }
 
@@ -475,13 +830,188 @@ export default function TrophyDesigner() {
     localStorage.removeItem(CACHE_KEY);
     setStep("trophy");
     setVisited(["trophy"]);
-    setTrophyType("baseball");
-    setPlateId("baseball-theme");
+    setProductId(TROPHY_PRODUCTS[0].id);
+    setPlateId(TROPHY_PRODUCTS[0].options[0].id);
     setLines(["", "", ""]);
     setFontFamily("Arial");
     setLineStyles(defaultLineStyles());
     setQuantity(1);
+    setLogoDataUrl(null);
+    setLogoName("");
+    setLogoFile(null);
+    setCartError("");
+    setCartAdded(false);
     setPreviewMode("plate");
+    setBulkMode(false);
+    setBulkRows([]);
+    setBulkCsvText("");
+    setBulkCsvWarning("");
+    setBulkError("");
+    setBulkSearch("");
+    setSelectedBulkRow(0);
+  }
+
+  async function addToCart() {
+    const variantId = readQueryParam("variantId");
+    if (!variantId) {
+      setCartError(
+        "Open this designer from the custom trophy product page so it can add to cart.",
+      );
+      return;
+    }
+    if (!designReady) {
+      setCartError("Add wording (or a logo) before adding to cart.");
+      return;
+    }
+    setBusy(true);
+    setCartError("");
+    try {
+      const designId = designIdRef.current;
+      const isQaTest = readQueryParam("qaTest") === "1";
+      const shop = readQueryParam("shop") || readQueryParam("storeUrl");
+      const customerId = readQueryParam("customerId");
+      const rowSpecs =
+        bulkMode && bulkRows.length > 0
+          ? bulkRows.map((row) => ({
+              lines: row.lines,
+              styles: row.lineStyles ?? lineStyles,
+              quantity: row.quantity,
+            }))
+          : [{ lines, styles: lineStyles, quantity }];
+
+      const allBadges: Badge[] = rowSpecs.map((row) => ({
+        lines: trophyTextsToLines(row.lines, fontFamily, row.styles),
+        backgroundColor: option.textColor,
+        backing: "pin",
+        trophyProductId: product.id,
+        trophyProductLabel: product.label,
+        trophyPlateId: option.id,
+        trophyPlateLabel: option.label,
+        ...(logoDataUrl
+          ? { logo: { src: logoDataUrl, fileName: logoName } }
+          : {}),
+      }));
+      const designData = {
+        designId,
+        productId: readQueryParam("product") || product.id,
+        shopId: shop,
+        allBadges,
+        isQaTest: isQaTest || undefined,
+      };
+
+      const form = new FormData();
+      form.append("designId", designId);
+      form.append("designData", JSON.stringify(designData));
+      if (customerId) form.append("shopifyCustomerId", customerId);
+      if (isQaTest) form.append("isQaTest", "1");
+      if (logoFile) form.append("logo_0", logoFile, logoFile.name);
+
+      const svgBlob = (svg: string) =>
+        new Blob([svg], { type: "image/svg+xml" });
+      let proofPdf: Blob | null = null;
+      for (let index = 0; index < rowSpecs.length; index += 1) {
+        const row = rowSpecs[index];
+        const svg = trophyPlateToSvgString({
+          option,
+          lines: row.lines,
+          fontFamily,
+          lineStyles: row.styles,
+        });
+        form.append(`svg_${index}`, svgBlob(svg), `trophy-${index}-design.svg`);
+        form.append(
+          `print_svg_${index}`,
+          svgBlob(svg),
+          `trophy-${index}-print.svg`,
+        );
+        const thumb = await trophyPreviewToPng({
+          product,
+          option,
+          lines: row.lines,
+          fontFamily,
+          lineStyles: row.styles,
+          logoSrc: logoDataUrl,
+        });
+        form.append(
+          `thumbnail_png_${index}`,
+          thumb.blob,
+          `trophy-${index}-thumbnail.jpg`,
+        );
+        if (index === 0) {
+          proofPdf = await generateTrophyProofPdf({
+            designId,
+            thumbnailDataUrl: thumb.dataUrl,
+            awardLabel: product.label,
+            plateLabel: option.label,
+            lines: row.lines,
+            quantity: orderQuantity,
+            unitPrice: price.perUnit,
+          });
+        }
+      }
+
+      const draftRes = await fetch(getDesignerApiPaths("trophy").saveDraft, {
+        method: "POST",
+        body: form,
+      });
+      if (!draftRes.ok) {
+        const body = await draftRes.text().catch(() => "");
+        throw new Error(`Could not save the trophy draft. ${body}`.trim());
+      }
+      if (!proofPdf || proofPdf.size === 0) {
+        throw new Error("Could not build the trophy proof PDF.");
+      }
+
+      const finalize = new FormData();
+      finalize.append("designId", designId);
+      finalize.append("designer", "trophy");
+      finalize.append("pdf", proofPdf, "trophy-design_proof.pdf");
+      const finalizeRes = await fetch("/api/finalize-draft", {
+        method: "POST",
+        body: finalize,
+      });
+      const finalized = await finalizeRes.json().catch(() => ({}));
+      if (!finalizeRes.ok || finalized.success === false) {
+        throw new Error(
+          finalized.error || "Could not finalize the trophy proof.",
+        );
+      }
+
+      const definition = getDesignerConfig("trophy");
+      const cartLines = rowSpecs.map((row, index) => ({
+        variantId,
+        quantity: row.quantity,
+        properties: buildDesignerCartLineProperties({
+          designerId: "trophy",
+          designId,
+          lineIndex: index,
+          indexPropertyPrimary: definition.cartIndexPropertyPrimary,
+          indexPropertyFallbacks: definition.cartIndexPropertyFallbacks,
+          lines: trophyTextsToLines(row.lines, fontFamily, row.styles),
+          backgroundColor: option.textColor,
+          linePrice: price.perUnit.toFixed(2),
+          thumbnailUrl: finalized.thumbnailUrls?.[index] ?? "",
+          pdfUrl: finalized.pdfUrl ?? "",
+          orderQuantity: row.quantity,
+          uploadedLogo: logoName || null,
+          extraHidden: {
+            "_Trophy Award": product.label,
+            "_Plate Finish": option.label,
+          },
+        }),
+      }));
+      const result = await apiRef.current.addToCartMultiple(cartLines);
+      if (!result.success) {
+        throw new Error(result.message || "Could not add the trophy to cart.");
+      }
+      localStorage.removeItem(CACHE_KEY);
+      setCartAdded(true);
+    } catch (caught) {
+      setCartError(
+        caught instanceof Error ? caught.message : "Could not add to cart.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   function confirmReset() {
@@ -507,7 +1037,7 @@ export default function TrophyDesigner() {
 
       <div className="gf-hero">
         <div className="gf-stepper">
-          {STEPS.map((id, index) => {
+          {steps.map((id, index) => {
             const state =
               step === id ? "active" : index < stepIndex ? "done" : "todo";
             const reachable = visited.includes(id);
@@ -558,22 +1088,23 @@ export default function TrophyDesigner() {
 
               {step === "trophy" ? (
                 <div className="tr-trophy-grid">
-                  {TROPHY_TYPES.map((item) => (
+                  {TROPHY_PRODUCTS.map((item) => (
                     <button
                       type="button"
                       key={item.id}
                       className={`gf-toggle-card ${
-                        trophyType === item.id ? "is-selected" : ""
+                        product.id === item.id ? "is-selected" : ""
                       }`}
-                      onClick={() => chooseTrophy(item.id)}
+                      onClick={() => chooseProduct(item)}
                     >
                       <img
                         className="gf-toggle-photo"
-                        src={item.options[0].trophySrc}
+                        src={item.thumbnailSrc}
                         alt=""
                       />
-                      <span className="gf-toggle-label">{item.label}</span>
+                      <span className="gf-toggle-label">{item.shortLabel}</span>
                       <span className="gf-toggle-sub">{item.description}</span>
+                      <span className="tr-category">{item.category}</span>
                     </button>
                   ))}
                 </div>
@@ -581,7 +1112,7 @@ export default function TrophyDesigner() {
 
               {step === "plate" ? (
                 <div className="tr-option-grid">
-                  {trophy.options.map((plate) => (
+                  {product.options.map((plate) => (
                     <button
                       type="button"
                       key={plate.id}
@@ -599,6 +1130,275 @@ export default function TrophyDesigner() {
 
               {step === "design" ? (
                 <>
+                  <div
+                    className={`gf-bulk-entry-choice ${bulkMode ? "is-active" : ""}`}
+                  >
+                    <div>
+                      <strong>
+                        {bulkMode ? "CSV bulk entry" : "Ordering in bulk?"}
+                      </strong>
+                      <p>
+                        {bulkMode
+                          ? "View every personalized trophy below and select any row for a live preview."
+                          : "Add many personalized trophies with a CSV file or pasted rows."}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className={
+                        bulkMode ? "gf-nav-secondary" : "gf-nav-primary"
+                      }
+                      onClick={
+                        bulkMode ? exitBulkMode : () => setBulkMode(true)
+                      }
+                    >
+                      {bulkMode ? "Use individual entry" : "Try CSV entry"}
+                    </button>
+                  </div>
+
+                  {bulkMode ? (
+                    <div className="gf-bulk-import">
+                      <div className="gf-bulk-import-head">
+                        <div>
+                          <p className="gf-sub-title">
+                            Bulk trophy personalization
+                          </p>
+                          <p className="gf-note">
+                            One row per design. Award, plate, formatting, and
+                            uploaded logo are shared across the order.
+                          </p>
+                        </div>
+                        <div className="gf-bulk-actions">
+                          <button
+                            type="button"
+                            className="gf-nav-secondary"
+                            onClick={downloadBulkCsvTemplate}
+                          >
+                            Download template
+                          </button>
+                          <button
+                            type="button"
+                            className="gf-nav-primary"
+                            onClick={() => bulkCsvInputRef.current?.click()}
+                          >
+                            {bulkRows.length > 0
+                              ? "Replace CSV"
+                              : "Upload CSV"}
+                          </button>
+                          <input
+                            ref={bulkCsvInputRef}
+                            type="file"
+                            accept=".csv,text/csv"
+                            className="gf-visually-hidden"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              if (file) void importBulkCsv(file);
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="gf-bulk-paste">
+                        <label
+                          className="gf-bulk-paste-label"
+                          htmlFor="tr-bulk-paste"
+                        >
+                          Or paste your rows
+                        </label>
+                        <p className="gf-bulk-paste-example">
+                          {TROPHY_BULK_PASTE_EXAMPLES.map((row) => (
+                            <span key={row}>{row}</span>
+                          ))}
+                        </p>
+                        <textarea
+                          id="tr-bulk-paste"
+                          className="gf-bulk-paste-input"
+                          rows={4}
+                          spellCheck={false}
+                          placeholder={TROPHY_BULK_PASTE_EXAMPLES.join("\n")}
+                          value={bulkCsvText}
+                          onChange={(event) => {
+                            setBulkCsvText(event.target.value);
+                            setBulkError("");
+                          }}
+                        />
+                        {bulkPastePreview?.error || bulkError ? (
+                          <p className="gf-bulk-paste-error">
+                            {bulkError || bulkPastePreview?.error}
+                          </p>
+                        ) : null}
+                        {bulkPastePreview?.warning ? (
+                          <p className="gf-bulk-paste-warning">
+                            {bulkPastePreview.warning}
+                          </p>
+                        ) : null}
+                        <div className="gf-bulk-paste-foot">
+                          <span className="gf-note">
+                            {bulkPastePreview && !bulkPastePreview.error
+                              ? `${bulkPastePreview.rows.length} design${
+                                  bulkPastePreview.rows.length === 1 ? "" : "s"
+                                } ready`
+                              : `Up to ${TROPHY_MAX_PRICED_QUANTITY} total trophies.`}
+                          </span>
+                          <button
+                            type="button"
+                            className="gf-nav-primary"
+                            disabled={
+                              !bulkPastePreview ||
+                              Boolean(bulkPastePreview.error) ||
+                              bulkPastePreview.rows.length === 0
+                            }
+                            onClick={() => applyBulkCsv(bulkCsvText)}
+                          >
+                            Use these rows
+                          </button>
+                        </div>
+                      </div>
+
+                      {bulkRows.length > 0 ? (
+                        <>
+                          <div className="gf-bulk-status">
+                            <strong>
+                              {bulkRows.length} personalized design
+                              {bulkRows.length === 1 ? "" : "s"}
+                            </strong>
+                            <span>{bulkQuantity} total trophies</span>
+                          </div>
+                          {bulkCsvWarning ? (
+                            <p className="gf-bulk-paste-warning">
+                              {bulkCsvWarning}
+                            </p>
+                          ) : null}
+                          <div className="gf-bulk-grid-tools">
+                            <label>
+                              <span className="gf-visually-hidden">
+                                Search CSV text
+                              </span>
+                              <input
+                                type="search"
+                                className="gf-input"
+                                placeholder="Search any text…"
+                                value={bulkSearch}
+                                onChange={(event) =>
+                                  setBulkSearch(event.target.value)
+                                }
+                              />
+                            </label>
+                            <span className="gf-note">
+                              Viewing {visibleBulkRows.length} of{" "}
+                              {bulkRows.length}
+                            </span>
+                          </div>
+                          <div
+                            className="gf-bulk-grid tr-bulk-grid"
+                            role="table"
+                            aria-label="All personalized trophy designs"
+                          >
+                            <div className="gf-bulk-grid-header" role="row">
+                              <span role="columnheader">#</span>
+                              {(
+                                ["line1", "line2", "line3"] as const
+                              ).map((key, index) => (
+                                <button
+                                  key={key}
+                                  type="button"
+                                  role="columnheader"
+                                  onClick={() => toggleBulkSort(key)}
+                                >
+                                  Line {index + 1}
+                                  {bulkSortKey === key
+                                    ? bulkSortAscending
+                                      ? " ↑"
+                                      : " ↓"
+                                    : ""}
+                                </button>
+                              ))}
+                              <button
+                                type="button"
+                                role="columnheader"
+                                onClick={() => toggleBulkSort("quantity")}
+                              >
+                                Qty
+                                {bulkSortKey === "quantity"
+                                  ? bulkSortAscending
+                                    ? " ↑"
+                                    : " ↓"
+                                  : ""}
+                              </button>
+                            </div>
+                            {visibleBulkRows.map(({ row, index }) => (
+                              <button
+                                key={row.id}
+                                type="button"
+                                role="row"
+                                className={`gf-bulk-grid-row ${
+                                  selectedBulkRow === index
+                                    ? "is-selected"
+                                    : ""
+                                }`}
+                                onClick={() => selectBulkRow(index)}
+                              >
+                                <span role="cell">{index + 1}</span>
+                                {row.lines.map((line, lineIndex) => (
+                                  <span
+                                    key={lineIndex}
+                                    role="cell"
+                                    title={line}
+                                  >
+                                    {line || "—"}
+                                  </span>
+                                ))}
+                                <strong role="cell">{row.quantity}</strong>
+                              </button>
+                            ))}
+                            {visibleBulkRows.length === 0 ? (
+                              <p className="gf-bulk-grid-empty">
+                                No rows match “{bulkSearch}”.
+                              </p>
+                            ) : null}
+                          </div>
+                          <p className="gf-note">
+                            Select a row to preview it. Click a heading to sort.
+                          </p>
+                        </>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {product.logoInsert ? (
+                    <div className="tr-logo-upload">
+                      <div className="gf-line-label">
+                        Logo for the round insert
+                      </div>
+                      <label className="tr-logo-picker">
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                          onChange={(event) =>
+                            chooseLogo(event.target.files?.[0])
+                          }
+                        />
+                        <span>{logoName || "Choose logo file"}</span>
+                      </label>
+                      {logoDataUrl ? (
+                        <button
+                          type="button"
+                          className="gf-nav-secondary"
+                          onClick={() => {
+                            setLogoDataUrl(null);
+                            setLogoName("");
+                            setLogoFile(null);
+                          }}
+                        >
+                          Remove logo
+                        </button>
+                      ) : null}
+                      <p className="gf-note">
+                        PNG, JPG, WebP, or SVG. The insert is round, so a square
+                        high-resolution image works best.
+                      </p>
+                    </div>
+                  ) : null}
                   <div className="tr-format-row">
                     <label>
                       Font
@@ -618,8 +1418,13 @@ export default function TrophyDesigner() {
                   {lines.map((line, index) => (
                     <div className="gf-line-block" key={index}>
                       <div className="gf-line-label">
+                        {bulkMode ? "Formatting for " : ""}
                         Line {index + 1}
-                        {index === 0 ? " (required)" : " (optional)"}
+                        {!bulkMode
+                          ? index === 0
+                            ? " (required)"
+                            : " (optional)"
+                          : ""}
                       </div>
                       <div className="tr-line-style-controls">
                         <div
@@ -683,30 +1488,58 @@ export default function TrophyDesigner() {
                           ))}
                         </div>
                       </div>
-                      <input
-                        className="gf-input"
-                        value={line}
-                        maxLength={40}
-                        placeholder={
-                          index === 0
-                            ? "CHAMPIONS"
-                            : index === 1
-                              ? "2026"
-                              : "Optional line"
-                        }
-                        onChange={(event) =>
-                          setLines((current) =>
-                            current.map((value, lineIndex) =>
-                              lineIndex === index ? event.target.value : value,
-                            ),
-                          )
-                        }
-                      />
-                      <span className="gf-char-count">{line.length}/40</span>
+                      {bulkMode && bulkRows.length > 1 ? (
+                        <button
+                          type="button"
+                          className="tr-apply-line-format"
+                          onClick={() => applyLineFormatToAll(index)}
+                        >
+                          Apply line {index + 1} format to all trophies
+                        </button>
+                      ) : null}
+                      {bulkMode ? (
+                        <div className="gf-bulk-text-preview">
+                          <div>
+                            <span>Selected row</span>
+                            <strong>{previewLines[index] || "—"}</strong>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <input
+                            className="gf-input"
+                            value={line}
+                            maxLength={40}
+                            placeholder={
+                              index === 0
+                                ? "CHAMPIONS"
+                                : index === 1
+                                  ? "2026"
+                                  : "Optional line"
+                            }
+                            onChange={(event) =>
+                              setLines((current) =>
+                                current.map((value, lineIndex) =>
+                                  lineIndex === index
+                                    ? event.target.value
+                                    : value,
+                                ),
+                              )
+                            }
+                          />
+                          <span className="gf-char-count">
+                            {line.length}/40
+                          </span>
+                        </>
+                      )}
                     </div>
                   ))}
-                  {!lines[0].trim() ? (
-                    <p className="tr-help">Enter line 1 to continue.</p>
+                  {!bulkMode && !designReady ? (
+                    <p className="tr-help">
+                      {product.logoInsert
+                        ? "Upload a logo or enter line 1 to continue."
+                        : "Enter line 1 to continue."}
+                    </p>
                   ) : null}
                 </>
               ) : null}
@@ -714,41 +1547,69 @@ export default function TrophyDesigner() {
               {step === "quantity" ? (
                 <div className="tr-quantity-card">
                   <p className="gf-sub-title">Trophy quantity</p>
-                  <div className="tr-quantity-control">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setQuantity((current) => Math.max(1, current - 1))
-                      }
-                    >
-                      −
-                    </button>
-                    <input
-                      type="number"
-                      min={1}
-                      max={500}
-                      value={quantity}
-                      onChange={(event) =>
-                        setQuantity(
-                          Math.min(
-                            500,
-                            Math.max(1, Number(event.target.value) || 1),
-                          ),
-                        )
-                      }
-                    />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setQuantity((current) => Math.min(500, current + 1))
-                      }
-                    >
-                      +
-                    </button>
+                  {bulkMode ? (
+                    <>
+                      <div className="gf-bulk-status tr-bulk-quantity">
+                        <strong>{bulkQuantity} total trophies</strong>
+                        <span>{bulkRows.length} personalized designs</span>
+                      </div>
+                      <p className="gf-note">
+                        Quantities come from the CSV. Return to Design to
+                        replace or edit the file.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="tr-quantity-control">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setQuantity((current) => Math.max(1, current - 1))
+                          }
+                        >
+                          −
+                        </button>
+                        <input
+                          type="number"
+                          min={1}
+                          max={TROPHY_MAX_PRICED_QUANTITY}
+                          value={quantity}
+                          onChange={(event) =>
+                            setQuantity(
+                              Math.min(
+                                TROPHY_MAX_PRICED_QUANTITY,
+                                Math.max(1, Number(event.target.value) || 1),
+                              ),
+                            )
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setQuantity((current) =>
+                              Math.min(
+                                TROPHY_MAX_PRICED_QUANTITY,
+                                current + 1,
+                              ),
+                            )
+                          }
+                        >
+                          +
+                        </button>
+                      </div>
+                      <p className="gf-note">
+                        Every trophy in this quantity uses the same plate
+                        design and wording.
+                      </p>
+                    </>
+                  )}
+                  <div className="tr-price-summary">
+                    <span>${price.perUnit.toFixed(2)} each</span>
+                    <strong>${price.total.toFixed(2)} total</strong>
                   </div>
                   <p className="gf-note">
-                    Every trophy in this quantity uses the same plate design
-                    and wording.
+                    Need more than {TROPHY_MAX_PRICED_QUANTITY}? Contact us for
+                    volume pricing.
                   </p>
                 </div>
               ) : null}
@@ -762,9 +1623,15 @@ export default function TrophyDesigner() {
                     </div>
                   ))}
                   <p className="tr-review-note">
-                    Your trophy design is ready. Product and cart integration
-                    can use this selection when the trophy catalog is connected.
+                    {cartAdded
+                      ? "Added to your cart. Your wording and plate art are saved with this order."
+                      : "Review the award, plate, and wording, then add this design to your cart."}
                   </p>
+                  {cartError ? (
+                    <p className="gf-note" role="alert">
+                      {cartError}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -791,18 +1658,27 @@ export default function TrophyDesigner() {
                   <button
                     type="button"
                     className="gf-nav-primary"
-                    disabled={step === "design" && !lines[0].trim()}
+                    disabled={step === "design" && !designReady}
                     onClick={goNext}
                   >
                     Continue
                   </button>
-                ) : (
+                ) : cartAdded ? (
                   <button
                     type="button"
                     className="gf-nav-primary"
                     onClick={reset}
                   >
                     Start another
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="gf-nav-primary"
+                    disabled={busy || !designReady}
+                    onClick={() => void addToCart()}
+                  >
+                    {busy ? "Adding…" : "Add to cart"}
                   </button>
                 )}
               </div>
@@ -838,11 +1714,12 @@ export default function TrophyDesigner() {
                     </button>
                   </div>
                   <TrophyPreview
-                    trophyType={trophyType}
+                    product={product}
                     option={option}
-                    lines={lines}
+                    lines={previewLines}
                     fontFamily={fontFamily}
-                    lineStyles={lineStyles}
+                    lineStyles={previewLineStyles}
+                    logoSrc={logoDataUrl}
                     mode={previewMode}
                   />
                 </div>

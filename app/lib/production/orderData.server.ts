@@ -64,6 +64,7 @@ const DATA_JSON_DESIGNERS = new Set<DesignerId>([
   "desk-sign",
   "gavel",
   "pen",
+  "trophy",
 ]);
 
 const NESTED_DESIGN_KEYS = [
@@ -141,6 +142,7 @@ function looksLikeDesign(record: RawRow | null): boolean {
     typeof record.templateId === "string" ||
     typeof record.gavelStyle === "string" ||
     typeof record.penStyle === "string" ||
+    typeof record.trophyProductId === "string" ||
     typeof record.deskSignMaterial === "string" ||
     typeof record.backing === "string"
   );
@@ -549,6 +551,15 @@ function extractSpecs(
     pushStringSpec(specs, "Style", design.penStyle);
     pushStringSpec(specs, "Case band", design.penCaseBandMode);
     pushStringSpec(specs, "Cap", design.penCapMode);
+  }
+
+  if (designerId === "trophy") {
+    pushStringSpec(specs, "Award", design.trophyProductLabel);
+    pushStringSpec(specs, "Plate", design.trophyPlateLabel);
+    const first = asRecord(coerceArray(design.lines)[0]);
+    if (first && typeof first.fontFamily === "string") {
+      pushStringSpec(specs, "Font", first.fontFamily);
+    }
   }
 
   const meta = asRecord(row.design_meta);

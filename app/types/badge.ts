@@ -172,6 +172,11 @@ export interface Badge {
   penCapMode?: "text" | "logo" | "text-logo";
   /** Pen designer only: source text engraved on the cap when in text mode. */
   penCapText?: string;
+  /** Trophy designer: catalog listing id. */
+  trophyProductId?: string;
+  trophyProductLabel?: string;
+  trophyPlateId?: string;
+  trophyPlateLabel?: string;
 }
 
 export interface BadgeEditorPanelProps {

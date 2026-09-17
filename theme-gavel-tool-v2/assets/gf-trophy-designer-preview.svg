@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">Custom trophy designer preview</title>
+  <desc id="desc">A trophy personalization interface with award choices and a live engraved trophy preview.</desc>
+  <rect width="1200" height="760" fill="#f5f2eb"/>
+  <rect x="42" y="42" width="1116" height="676" rx="22" fill="#ffffff"/>
+  <rect x="42" y="42" width="1116" height="92" rx="22" fill="#0b1628"/>
+  <rect x="42" y="108" width="1116" height="26" fill="#0b1628"/>
+  <g transform="translate(92 76)">
+    <circle cx="20" cy="20" r="20" fill="#d7a92d"/>
+    <text x="20" y="27" text-anchor="middle" fill="#0b1628" font-family="Arial, sans-serif" font-size="20" font-weight="700">OK</text>
+    <line x1="48" y1="20" x2="172" y2="20" stroke="#d7a92d" stroke-width="3"/>
+    <circle cx="200" cy="20" r="20" fill="#d7a92d"/>
+    <text x="200" y="27" text-anchor="middle" fill="#0b1628" font-family="Arial, sans-serif" font-size="18" font-weight="700">2</text>
+    <line x1="228" y1="20" x2="352" y2="20" stroke="#516074" stroke-width="3"/>
+    <circle cx="380" cy="20" r="20" fill="#ffffff" stroke="#516074" stroke-width="3"/>
+    <text x="380" y="27" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="18">3</text>
+  </g>
+  <g transform="translate(90 172)">
+    <text x="0" y="28" fill="#687485" font-family="Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="2">DESIGN</text>
+    <text x="0" y="77" fill="#101a29" font-family="Georgia, serif" font-size="36" font-weight="700">Add your custom text</text>
+    <rect x="0" y="112" width="420" height="66" rx="7" fill="#fafafa" stroke="#cdd1d7" stroke-width="2"/>
+    <text x="20" y="153" fill="#1f2a3b" font-family="Arial, sans-serif" font-size="20">CHAMPIONS</text>
+    <rect x="0" y="198" width="420" height="66" rx="7" fill="#fafafa" stroke="#cdd1d7" stroke-width="2"/>
+    <text x="20" y="239" fill="#1f2a3b" font-family="Arial, sans-serif" font-size="20">VARSITY SOCCER - 2026</text>
+    <rect x="0" y="284" width="132" height="56" rx="6" fill="#0b1628"/>
+    <text x="66" y="319" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="17" font-weight="700">BOLD</text>
+    <rect x="146" y="284" width="132" height="56" rx="6" fill="#ffffff" stroke="#0b1628" stroke-width="2"/>
+    <text x="212" y="319" text-anchor="middle" fill="#0b1628" font-family="Arial, sans-serif" font-size="17" font-weight="700">ITALIC</text>
+    <rect x="292" y="284" width="128" height="56" rx="6" fill="#ffffff" stroke="#0b1628" stroke-width="2"/>
+    <text x="356" y="319" text-anchor="middle" fill="#0b1628" font-family="Arial, sans-serif" font-size="17" font-weight="700">SIZE</text>
+  </g>
+  <g transform="translate(602 174)">
+    <rect width="470" height="466" rx="14" fill="#e7e9ed"/>
+    <text x="235" y="38" text-anchor="middle" fill="#606b79" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2">TROPHY VIEW</text>
+    <path d="M184 93h102c0 74-18 115-51 136-33-21-51-62-51-136z" fill="#e1b33a"/>
+    <path d="M184 110h-48c0 62 21 92 67 92M286 110h48c0 62-21 92-67 92" fill="none" stroke="#c7921c" stroke-width="18"/>
+    <path d="M235 225v65M190 302h90l18 30H172z" fill="#d4a123" stroke="#b88012" stroke-width="8"/>
+    <rect x="139" y="338" width="192" height="80" rx="5" fill="#20242b"/>
+    <rect x="160" y="354" width="150" height="48" rx="3" fill="#d8b65d"/>
+    <text x="235" y="377" text-anchor="middle" fill="#171b21" font-family="Arial, sans-serif" font-size="13" font-weight="700">CHAMPIONS</text>
+    <text x="235" y="393" text-anchor="middle" fill="#171b21" font-family="Arial, sans-serif" font-size="10">VARSITY SOCCER - 2026</text>
+  </g>
+</svg>

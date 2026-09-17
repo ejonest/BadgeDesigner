@@ -1,0 +1,524 @@
+{% liquid
+  assign plaque_product = all_products[section.settings.plaque_product_handle]
+  assign trophy_product = all_products[section.settings.trophy_product_handle]
+  assign plaque_mockup = section.settings.plaque_mockup
+  assign trophy_mockup = section.settings.trophy_mockup
+
+  if plaque_mockup == blank and plaque_product != blank
+    assign plaque_mockup = plaque_product.featured_image
+  endif
+  if plaque_mockup == blank
+    assign plaque_mockup = collection.products.first.featured_image
+  endif
+  if trophy_mockup == blank and trophy_product != blank
+    assign trophy_mockup = trophy_product.featured_image
+  endif
+
+  comment
+    Link to the product page, not the designer app directly: the on-store embed
+    is what bridges the designer's add-to-cart back into the Shopify cart.
+  endcomment
+  assign plaque_url = section.settings.plaque_link
+  if plaque_url == blank and plaque_product != blank
+    assign plaque_url = plaque_product.url
+  endif
+  if plaque_url == blank
+    assign plaque_url = '/products/custom-plaque-design-1'
+  endif
+
+  assign trophy_url = section.settings.trophy_link
+  if trophy_url == blank and trophy_product != blank
+    assign trophy_url = trophy_product.url
+  endif
+  if trophy_url == blank
+    assign trophy_url = '/products/custom-trophy'
+  endif
+%}
+
+<section class="gf-awards-tools" aria-labelledby="gf-awards-tools-title-{{ section.id }}">
+  <div class="gf-awards-tools__intro">
+    <div class="container">
+      <p class="gf-awards-tools__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      <h1 id="gf-awards-tools-title-{{ section.id }}">{{ section.settings.heading | escape }}</h1>
+      <div class="gf-awards-tools__lead">{{ section.settings.intro }}</div>
+      <div class="gf-awards-tools__benefits" aria-label="Designer benefits">
+        <span>Live previews</span>
+        <span>No artwork fees</span>
+        <span>Fast personalization</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="container gf-awards-tools__cards">
+    <article class="gf-awards-tool-card">
+      <div class="gf-awards-tool-card__visual">
+        <div class="gf-awards-tool-card__browser">
+          <div class="gf-awards-tool-card__browser-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          {% if section.settings.plaque_designer_image != blank %}
+            {{ section.settings.plaque_designer_image | image_url: width: 1400 | image_tag: widths: '480, 720, 960, 1200, 1400', sizes: '(min-width: 990px) 45vw, 100vw', loading: 'eager', alt: section.settings.plaque_image_alt }}
+          {% else %}
+            <img src="{{ 'gf-plaque-designer-shot.jpg' | asset_url }}" alt="{{ section.settings.plaque_image_alt | escape }}" width="1600" height="835" loading="eager">
+          {% endif %}
+        </div>
+        {% if plaque_mockup != blank %}
+          <div class="gf-awards-tool-card__mockup">
+            {{ plaque_mockup | image_url: width: 440 | image_tag: widths: '220, 320, 440', sizes: '180px', loading: 'lazy', alt: 'Custom plaque example' }}
+          </div>
+        {% endif %}
+      </div>
+      <div class="gf-awards-tool-card__content">
+        <p class="gf-awards-tool-card__number">01</p>
+        <h2>{{ section.settings.plaque_heading | escape }}</h2>
+        <div class="gf-awards-tool-card__copy">{{ section.settings.plaque_text }}</div>
+        <ul>
+          <li>Choose a plaque style and finish</li>
+          <li>Add names, dates, logos, and messages</li>
+          <li>Review the layout before ordering</li>
+        </ul>
+        <a class="gf-awards-tools__button" href="{{ plaque_url }}">{{ section.settings.plaque_button | escape }}</a>
+      </div>
+    </article>
+
+    <article class="gf-awards-tool-card gf-awards-tool-card--reverse">
+      <div class="gf-awards-tool-card__visual">
+        <div class="gf-awards-tool-card__browser">
+          <div class="gf-awards-tool-card__browser-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          {% if section.settings.trophy_designer_image != blank %}
+            {{ section.settings.trophy_designer_image | image_url: width: 1400 | image_tag: widths: '480, 720, 960, 1200, 1400', sizes: '(min-width: 990px) 45vw, 100vw', loading: 'lazy', alt: section.settings.trophy_image_alt }}
+          {% else %}
+            <img src="{{ 'gf-trophy-designer-shot.jpg' | asset_url }}" alt="{{ section.settings.trophy_image_alt | escape }}" width="1600" height="1038" loading="lazy">
+          {% endif %}
+        </div>
+        <div class="gf-awards-tool-card__mockup">
+          {% if trophy_mockup != blank %}
+            {{ trophy_mockup | image_url: width: 440 | image_tag: widths: '220, 320, 440', sizes: '180px', loading: 'lazy', alt: 'Custom trophy example' }}
+          {% else %}
+            <img src="{{ 'gf-trophy-mockup.jpg' | asset_url }}" alt="Custom trophy example" width="1000" height="1000" loading="lazy">
+          {% endif %}
+        </div>
+      </div>
+      <div class="gf-awards-tool-card__content">
+        <p class="gf-awards-tool-card__number">02</p>
+        <h2>{{ section.settings.trophy_heading | escape }}</h2>
+        <div class="gf-awards-tool-card__copy">{{ section.settings.trophy_text }}</div>
+        <ul>
+          <li>Pick the award and plate finish</li>
+          <li>Personalize one trophy or import a team list</li>
+          <li>Switch between plate and trophy previews</li>
+        </ul>
+        <a class="gf-awards-tools__button" href="{{ trophy_url }}">{{ section.settings.trophy_button | escape }}</a>
+      </div>
+    </article>
+
+    <div class="gf-awards-tools__shop-heading">
+      <p>{{ section.settings.shop_eyebrow | escape }}</p>
+      <h2>{{ section.settings.shop_heading | escape }}</h2>
+      <div>{{ section.settings.shop_text }}</div>
+    </div>
+  </div>
+</section>
+
+{% stylesheet %}
+  body:has(.gf-awards-tools) .collection-header {
+    display: none;
+  }
+  /* Palette mirrors gf-homepage.css so this page reads as part of the same site. */
+  .gf-awards-tools {
+    --gf-awards-ink: #0a1628;
+    --gf-awards-navy: #0a1628;
+    --gf-awards-navy-2: #12203a;
+    --gf-awards-navy-3: #1b2c4a;
+    --gf-awards-gold: #c4a35a;
+    color: var(--gf-awards-ink);
+    background: #f7f4ef;
+  }
+  .gf-awards-tools__intro {
+    padding: clamp(64px, 9vw, 118px) 0 clamp(112px, 14vw, 170px);
+    color: #fff;
+    text-align: center;
+    background:
+      radial-gradient(120% 120% at 12% 0%, var(--gf-awards-navy-3) 0%, rgba(27, 44, 74, 0) 55%),
+      linear-gradient(160deg, var(--gf-awards-navy) 0%, #060f1d 100%);
+  }
+  .gf-awards-tools__eyebrow,
+  .gf-awards-tools__shop-heading p {
+    margin: 0 0 14px;
+    color: var(--gf-awards-gold);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+  }
+  .gf-awards-tools__intro h1 {
+    max-width: 850px;
+    margin: 0 auto 20px;
+    color: #fff;
+    font-size: clamp(38px, 6vw, 76px);
+    line-height: 1.03;
+    letter-spacing: -.035em;
+  }
+  .gf-awards-tools__lead {
+    max-width: 710px;
+    margin: 0 auto;
+    color: rgba(255, 255, 255, .82);
+    font-size: clamp(16px, 2vw, 20px);
+    line-height: 1.7;
+  }
+  .gf-awards-tools__lead p,
+  .gf-awards-tool-card__copy p,
+  .gf-awards-tools__shop-heading div p {
+    margin: 0;
+  }
+  .gf-awards-tools__benefits {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px 28px;
+    margin-top: 30px;
+    color: rgba(255, 255, 255, .88);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .gf-awards-tools__benefits span::before {
+    content: "✓";
+    margin-right: 8px;
+    color: #e8bc4f;
+  }
+  .gf-awards-tools__cards {
+    display: grid;
+    gap: 34px;
+    margin-top: clamp(-105px, -9vw, -72px);
+    padding-bottom: 58px;
+  }
+  .gf-awards-tool-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(340px, .92fr);
+    min-height: 490px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 24px 70px rgba(10, 22, 40, .14);
+  }
+  .gf-awards-tool-card--reverse .gf-awards-tool-card__visual {
+    order: 2;
+  }
+  .gf-awards-tool-card__visual {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 430px;
+    padding: clamp(28px, 5vw, 58px);
+    background: #e7eaf0;
+  }
+  .gf-awards-tool-card--reverse .gf-awards-tool-card__visual {
+    background: #dfe4ec;
+  }
+  .gf-awards-tool-card__browser {
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid rgba(10, 22, 40, .12);
+    border-radius: 10px;
+    background: #f7f4ef;
+    box-shadow: 0 20px 45px rgba(10, 22, 40, .18);
+  }
+  .gf-awards-tool-card__browser-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 29px;
+    padding: 0 12px;
+    background: #fff;
+    border-bottom: 1px solid #dfe3ea;
+  }
+  .gf-awards-tool-card__browser-bar i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #c2c8d2;
+  }
+  .gf-awards-tool-card__browser img {
+    display: block;
+    width: 100%;
+    height: 340px;
+    object-fit: contain;
+  }
+  .gf-awards-tool-card__placeholder {
+    display: grid;
+    place-items: center;
+    height: 340px;
+    color: #5c6570;
+    font-weight: 700;
+  }
+  .gf-awards-tool-card__mockup {
+    position: absolute;
+    right: clamp(8px, 2vw, 24px);
+    bottom: clamp(8px, 2vw, 24px);
+    width: clamp(112px, 16vw, 178px);
+    padding: 10px;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 15px 35px rgba(10, 22, 40, .2);
+  }
+  .gf-awards-tool-card__mockup img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: contain;
+  }
+  .gf-awards-tool-card__content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(38px, 6vw, 72px);
+  }
+  .gf-awards-tool-card__number {
+    margin: 0 0 18px;
+    color: var(--gf-awards-gold);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .16em;
+  }
+  .gf-awards-tool-card__content h2 {
+    margin: 0 0 17px;
+    color: var(--gf-awards-ink);
+    font-size: clamp(28px, 3.4vw, 46px);
+    line-height: 1.08;
+    letter-spacing: -.025em;
+  }
+  .gf-awards-tool-card__copy {
+    color: #5c6570;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .gf-awards-tool-card__content ul {
+    display: grid;
+    gap: 9px;
+    margin: 24px 0 28px;
+    padding: 0;
+    list-style: none;
+    color: #2c3a4d;
+  }
+  .gf-awards-tool-card__content li::before {
+    content: "—";
+    margin-right: 9px;
+    color: var(--gf-awards-gold);
+    font-weight: 800;
+  }
+  .gf-awards-tools__button {
+    align-self: flex-start;
+    min-width: 168px;
+    padding: 15px 24px;
+    color: #fff;
+    text-align: center;
+    text-decoration: none;
+    background: var(--gf-awards-navy);
+    border: 2px solid var(--gf-awards-navy);
+    transition: transform .2s ease, background .2s ease;
+  }
+  .gf-awards-tools__button:hover,
+  .gf-awards-tools__button:focus-visible {
+    color: #fff;
+    background: var(--gf-awards-navy-2);
+    transform: translateY(-2px);
+  }
+  .gf-awards-tools__shop-heading {
+    max-width: 720px;
+    margin: 26px auto 0;
+    text-align: center;
+  }
+  .gf-awards-tools__shop-heading h2 {
+    margin: 0 0 12px;
+    color: var(--gf-awards-ink);
+    font-size: clamp(28px, 4vw, 44px);
+  }
+  .gf-awards-tools__shop-heading div {
+    color: #5c6570;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  @media (max-width: 989px) {
+    .gf-awards-tool-card {
+      grid-template-columns: 1fr;
+    }
+    .gf-awards-tool-card--reverse .gf-awards-tool-card__visual {
+      order: 0;
+    }
+    .gf-awards-tool-card__visual {
+      min-height: 360px;
+    }
+  }
+  @media (max-width: 549px) {
+    .gf-awards-tools__intro {
+      padding-top: 54px;
+    }
+    .gf-awards-tools__cards {
+      margin-top: -80px;
+    }
+    .gf-awards-tool-card__visual {
+      min-height: 280px;
+      padding: 20px;
+    }
+    .gf-awards-tool-card__browser img,
+    .gf-awards-tool-card__placeholder {
+      height: 240px;
+    }
+    .gf-awards-tool-card__content {
+      padding: 32px 24px 38px;
+    }
+    .gf-awards-tools__button {
+      width: 100%;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Awards designer hero",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Made for the moment"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Awards as individual as the people receiving them"
+    },
+    {
+      "type": "richtext",
+      "id": "intro",
+      "label": "Introduction",
+      "default": "<p>Build a personalized plaque or trophy online, see your wording before you order, and create recognition that feels genuinely personal.</p>"
+    },
+    {
+      "type": "header",
+      "content": "Plaque designer"
+    },
+    {
+      "type": "text",
+      "id": "plaque_product_handle",
+      "label": "Custom plaque product handle",
+      "default": "custom-plaque-design-1"
+    },
+    {
+      "type": "text",
+      "id": "plaque_heading",
+      "label": "Heading",
+      "default": "Design a custom plaque"
+    },
+    {
+      "type": "richtext",
+      "id": "plaque_text",
+      "label": "Description",
+      "default": "<p>Create an award plaque with your own wording, logo, colors, and layout. The live tool lets you make the design yours before it reaches our shop.</p>"
+    },
+    {
+      "type": "image_picker",
+      "id": "plaque_designer_image",
+      "label": "Designer screenshot"
+    },
+    {
+      "type": "image_picker",
+      "id": "plaque_mockup",
+      "label": "Product mockup"
+    },
+    {
+      "type": "text",
+      "id": "plaque_image_alt",
+      "label": "Designer image alt text",
+      "default": "Custom plaque designer preview"
+    },
+    {
+      "type": "url",
+      "id": "plaque_link",
+      "label": "Design button link"
+    },
+    {
+      "type": "text",
+      "id": "plaque_button",
+      "label": "Button label",
+      "default": "Design a plaque"
+    },
+    {
+      "type": "header",
+      "content": "Trophy designer"
+    },
+    {
+      "type": "text",
+      "id": "trophy_product_handle",
+      "label": "Custom trophy product handle",
+      "default": "custom-trophy"
+    },
+    {
+      "type": "text",
+      "id": "trophy_heading",
+      "label": "Heading",
+      "default": "Build a personalized trophy"
+    },
+    {
+      "type": "richtext",
+      "id": "trophy_text",
+      "label": "Description",
+      "default": "<p>Choose the trophy, plate finish, type style, and wording. Design one award or prepare an entire team list in the same guided tool.</p>"
+    },
+    {
+      "type": "image_picker",
+      "id": "trophy_designer_image",
+      "label": "Designer screenshot"
+    },
+    {
+      "type": "image_picker",
+      "id": "trophy_mockup",
+      "label": "Product mockup"
+    },
+    {
+      "type": "text",
+      "id": "trophy_image_alt",
+      "label": "Designer image alt text",
+      "default": "Custom trophy designer preview"
+    },
+    {
+      "type": "url",
+      "id": "trophy_link",
+      "label": "Design button link"
+    },
+    {
+      "type": "text",
+      "id": "trophy_button",
+      "label": "Button label",
+      "default": "Design a trophy"
+    },
+    {
+      "type": "header",
+      "content": "Product grid introduction"
+    },
+    {
+      "type": "text",
+      "id": "shop_eyebrow",
+      "label": "Eyebrow",
+      "default": "More ways to recognize"
+    },
+    {
+      "type": "text",
+      "id": "shop_heading",
+      "label": "Heading",
+      "default": "Shop awards & plaques"
+    },
+    {
+      "type": "richtext",
+      "id": "shop_text",
+      "label": "Text",
+      "default": "<p>Prefer a ready-made format? Browse the rest of our personalized recognition products below.</p>"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Awards designer hero"
+    }
+  ]
+}
+{% endschema %}

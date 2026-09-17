@@ -13,7 +13,8 @@ BEGIN
     'nameplate_order_items',
     'desk_sign_order_items',
     'gavel_order_items',
-    'pen_order_items'
+    'pen_order_items',
+    'trophy_order_items'
   ]
   LOOP
     IF to_regclass('public.' || table_name) IS NOT NULL THEN

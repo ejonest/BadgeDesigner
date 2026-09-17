@@ -14,7 +14,8 @@ const INCLUDE_PRINT_SVG_URL_IN_DB = true;
 
 /**
  * Persist designer state on order-item rows so a cart line can be reopened for
- * editing. Badges/signs/plaques use `badge_json`; desk signs and gavels use `data_json`.
+ * editing. Badges/signs/plaques use `badge_json`; desk signs, gavels, pens, and
+ * trophies use `data_json`.
  */
 const INCLUDE_DESIGN_JSON_IN_DB = true;
 
@@ -76,7 +77,9 @@ function rowPayload(
   const isDeskSignTable = def.orderItemsTable === "desk_sign_order_items";
   const isGavelTable = def.orderItemsTable === "gavel_order_items";
   const isPenTable = def.orderItemsTable === "pen_order_items";
-  const usesDataJson = isDeskSignTable || isGavelTable || isPenTable;
+  const isTrophyTable = def.orderItemsTable === "trophy_order_items";
+  const usesDataJson =
+    isDeskSignTable || isGavelTable || isPenTable || isTrophyTable;
   const supportsUploadedImage = isMultiLineSignTable || usesDataJson;
   const designJsonColumn = usesDataJson ? "data_json" : "badge_json";
   const base: Record<string, unknown> = {
@@ -170,7 +173,7 @@ function rowPayload(
       base.line_6_color = item.line_6_color;
       base.line_6_alignment = item.line_6_alignment;
     }
-  } else if (isDeskSignTable || isGavelTable || isPenTable) {
+  } else if (isDeskSignTable || isGavelTable || isPenTable || isTrophyTable) {
     // Keep short manufacturing labels (not duplicated as line text).
     base.finish = item.finish ?? null;
     base.attachment_method = item.attachment_method ?? null;

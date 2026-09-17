@@ -1,0 +1,56 @@
+{
+  "sections": {
+    "designer_hero": {
+      "type": "gf-awards-tools-hero",
+      "settings": {
+        "eyebrow": "Made for the moment",
+        "heading": "Awards as individual as the people receiving them",
+        "intro": "<p>Build a personalized plaque or trophy online, see your wording before you order, and create recognition that feels genuinely personal.</p>",
+        "plaque_heading": "Design a custom plaque",
+        "plaque_text": "<p>Create an award plaque with your own wording, logo, colors, and layout. The live tool lets you make the design yours before it reaches our shop.</p>",
+        "plaque_image_alt": "Custom plaque designer preview",
+        "plaque_product_handle": "custom-plaque-design-1",
+        "plaque_link": "/products/custom-plaque-design-1",
+        "plaque_button": "Design a plaque",
+        "trophy_product_handle": "custom-trophy",
+        "trophy_heading": "Build a personalized trophy",
+        "trophy_text": "<p>Choose the trophy, plate finish, type style, and wording. Design one award or prepare an entire team list in the same guided tool.</p>",
+        "trophy_image_alt": "Custom trophy designer preview",
+        "trophy_link": "/products/custom-trophy",
+        "trophy_button": "Design a trophy",
+        "shop_eyebrow": "More ways to recognize",
+        "shop_heading": "Shop awards & plaques",
+        "shop_text": "<p>Prefer a ready-made format? Browse the rest of our personalized recognition products below.</p>"
+      }
+    },
+    "main": {
+      "type": "main-collection",
+      "settings": {
+        "limited_view": true,
+        "view_as_enable": true,
+        "sort_enable": true,
+        "collection_results_per_row": "4",
+        "collection_results_per_page": "24",
+        "color_button_more": "#ffffff",
+        "bg_color_button_more": "#214c3a",
+        "border_color_button_more": "#214c3a",
+        "show_countdown": false,
+        "show_pro_des": false,
+        "show_banner": false
+      }
+    },
+    "recently_viewed": {
+      "type": "recently-viewed-products",
+      "settings": {
+        "display_recently_viewed_products": true,
+        "recently_viewed_products_title": "Recently Viewed Products",
+        "number_of_recently_viewed_products": "8"
+      }
+    }
+  },
+  "order": [
+    "designer_hero",
+    "main",
+    "recently_viewed"
+  ]
+}

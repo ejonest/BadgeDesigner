@@ -17,6 +17,10 @@ export const CART_PROP = {
   gavelTextLine2: "Gavel Text Line 2",
   gavelTextLine3: "Gavel Text Line 3",
   gavelTextLine4: "Gavel Text Line 4",
+  trophyTextLine1: "Trophy Text Line 1",
+  trophyTextLine2: "Trophy Text Line 2",
+  trophyTextLine3: "Trophy Text Line 3",
+  trophyTextLine4: "Trophy Text Line 4",
   penCaseBandText: "Case Band Text",
   penCapText: "Pen Cap Text",
   uploadedLogo: "Uploaded Logo",
@@ -90,23 +94,34 @@ export function buildDesignerCartLineProperties(
   const thumb = (input.thumbnailUrl ?? "").trim();
   const isGavel = input.designerId === "gavel";
   const isPen = input.designerId === "pen";
+  const isTrophy = input.designerId === "trophy";
   const firstLineProperty = isGavel
     ? CART_PROP.gavelTextLine1
     : isPen
       ? CART_PROP.penCaseBandText
-      : CART_PROP.textLine1;
+      : isTrophy
+        ? CART_PROP.trophyTextLine1
+        : CART_PROP.textLine1;
   const secondLineProperty = isGavel
     ? CART_PROP.gavelTextLine2
     : isPen
       ? CART_PROP.penCapText
-      : CART_PROP.textLine2;
+      : isTrophy
+        ? CART_PROP.trophyTextLine2
+        : CART_PROP.textLine2;
   const properties: Record<string, string> = {
     [firstLineProperty]: input.lines[0]?.text || "",
     [secondLineProperty]: input.lines[1]?.text || "",
-    [isGavel ? CART_PROP.gavelTextLine3 : CART_PROP.textLine3]:
-      input.lines[2]?.text || "",
-    [isGavel ? CART_PROP.gavelTextLine4 : CART_PROP.textLine4]:
-      input.lines[3]?.text || "",
+    [isGavel
+      ? CART_PROP.gavelTextLine3
+      : isTrophy
+        ? CART_PROP.trophyTextLine3
+        : CART_PROP.textLine3]: input.lines[2]?.text || "",
+    [isGavel
+      ? CART_PROP.gavelTextLine4
+      : isTrophy
+        ? CART_PROP.trophyTextLine4
+        : CART_PROP.textLine4]: input.lines[3]?.text || "",
     [CART_PROP.customDesign]: "Yes",
     [CART_PROP.designer]: input.designerId,
     [CART_PROP.backgroundColor]: input.backgroundColor || "",

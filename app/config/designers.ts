@@ -12,6 +12,7 @@ export const DESIGNER_IDS = [
   "desk-sign",
   "gavel",
   "pen",
+  "trophy",
 ] as const;
 export type DesignerId = (typeof DESIGNER_IDS)[number];
 
@@ -21,7 +22,8 @@ export type LineIdColumn =
   | "plaque_id"
   | "desk_sign_id"
   | "gavel_id"
-  | "pen_id";
+  | "pen_id"
+  | "trophy_id";
 
 /** Supabase design-library tables (milestones + autosave). */
 export type DesignLibraryTable =
@@ -30,7 +32,8 @@ export type DesignLibraryTable =
   | "plaque_designs"
   | "desk_sign_designs"
   | "gavel_designs"
-  | "pen_designs";
+  | "pen_designs"
+  | "trophy_designs";
 
 /** Sign and plaque share extended order-item rows and library shape. */
 export type SignLikeDesignsTable =
@@ -38,7 +41,8 @@ export type SignLikeDesignsTable =
   | "plaque_designs"
   | "desk_sign_designs"
   | "gavel_designs"
-  | "pen_designs";
+  | "pen_designs"
+  | "trophy_designs";
 
 export interface DesignerGadgetGraphQL {
   /** Env var for API base URL */
@@ -295,6 +299,32 @@ export const DESIGNERS: Record<DesignerId, DesignerDefinition> = {
     orderSlipPdfRelativePath: (designId) =>
       `${designId}/pen-design.pdf`,
   },
+  trophy: {
+    id: "trophy",
+    label: "Trophy",
+    orderItemsTable: "trophy_order_items",
+    imageBucket: "trophy-images",
+    pdfBucket: "trophy-pdfs",
+    lineIdPrefix: "trophy",
+    lineIdColumn: "trophy_id",
+    upsertOnConflict: "design_id,trophy_id",
+    cartIndexPropertyPrimary: "_Trophy Index",
+    cartIndexPropertyFallbacks: ["_Badge Index"],
+    gadget: {
+      apiUrlEnv: "GADGET_TROPHY_API_URL",
+      apiKeyEnv: "GADGET_TROPHY_API_KEY",
+      defaultApiUrl: BADGE_DEFAULT_URL,
+      createField: "createTrophyDesign",
+      inputVariable: "trophyDesign",
+      inputType: "CreateTrophyDesignInput",
+      resultSelection: "trophyDesign",
+    },
+    linkOrderSecretEnv: "LINK_ORDER_SECRET_TROPHY",
+    pdfProofRelativePath: (designId) =>
+      `${designId}/trophy-design_proof.pdf`,
+    orderSlipPdfRelativePath: (designId) =>
+      `${designId}/trophy-design.pdf`,
+  },
 };
 
 export function isDesignerId(value: string): value is DesignerId {
@@ -317,6 +347,7 @@ export function getDesignLibraryTable(
   if (id === "desk-sign") return "desk_sign_designs";
   if (id === "gavel") return "gavel_designs";
   if (id === "pen") return "pen_designs";
+  if (id === "trophy") return "trophy_designs";
   return null;
 }
 
@@ -328,6 +359,7 @@ export function getSignLikeLibraryTable(
   if (id === "desk-sign") return "desk_sign_designs";
   if (id === "gavel") return "gavel_designs";
   if (id === "pen") return "pen_designs";
+  if (id === "trophy") return "trophy_designs";
   return null;
 }
 
@@ -404,6 +436,17 @@ export function getDesignerLibraryApiPaths(id: DesignerId): {
       savedDesigns: "/api/saved-pen-designs",
       savedDesignDetail: "/api/saved-pen-design-detail",
       deleteMilestone: "/api/delete-pen-design-milestone",
+      uploadLogo: "",
+    };
+  }
+  if (id === "trophy") {
+    return {
+      saveDesign: "/api/save-trophy-design",
+      autosaveDesign: "/api/autosave-trophy-design",
+      savedDesign: "/api/saved-trophy-design",
+      savedDesigns: "/api/saved-trophy-designs",
+      savedDesignDetail: "/api/saved-trophy-design-detail",
+      deleteMilestone: "/api/delete-trophy-design-milestone",
       uploadLogo: "",
     };
   }

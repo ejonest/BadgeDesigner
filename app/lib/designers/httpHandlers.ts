@@ -374,7 +374,8 @@ export async function runSaveToGadget(
           ? shopData.customer_id.trim()
           : undefined;
 
-  const jsonFirstGadget = designerId === "gavel" || designerId === "pen";
+  const jsonFirstGadget =
+    designerId === "gavel" || designerId === "pen" || designerId === "trophy";
   const gadgetPayload = jsonFirstGadget
     ? {
         shopId: shopData?.shopId || "75389960447",

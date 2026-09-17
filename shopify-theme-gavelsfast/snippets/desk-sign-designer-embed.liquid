@@ -1,0 +1,230 @@
+{% comment %}
+  Gavels Fast — custom desk sign designer iframe embed.
+
+  This snippet is only rendered by product.desk-sign-designer.json. It reads
+  the current product and shop so prices and variant IDs always come from the
+  Gavels Fast product, independently of All Quality Badges pricing.
+{% endcomment %}
+
+{%- assign desk_sign_designer_origin = 'https://all-quality-design-tool.vercel.app' -%}
+{%- assign desk_sign_variant = product.selected_or_first_available_variant | default: product.variants.first -%}
+
+<style>
+  .gf-desk-sign-designer-embed {
+    width: var(--gf-desk-sign-width, 100%);
+    max-width: var(--gf-desk-sign-width, 100%);
+    margin: 0 0 40px calc(50% - (var(--gf-desk-sign-width, 100%) / 2));
+    background: #f0ede6;
+  }
+
+  .gf-desk-sign-designer-embed iframe {
+    display: block;
+    width: 100%;
+    height: max(calc(100dvh - var(--gf-desk-sign-header-height, 190px)), 900px);
+    min-height: 620px;
+    border: 0;
+  }
+
+  @media (max-width: 989px) {
+    .gf-desk-sign-designer-embed iframe {
+      height: calc(100dvh - var(--gf-desk-sign-header-height, 150px));
+      min-height: 620px;
+    }
+  }
+</style>
+
+<div class="gf-desk-sign-designer-embed">
+  <iframe
+    id="gf-desk-sign-designer-iframe"
+    title="Design your custom desk sign"
+    src="{{ desk_sign_designer_origin }}/desk-sign-designer?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&amp;storeUrl={{ shop.permanent_domain | url_param_escape }}&amp;product={{ product.id | url_param_escape }}&amp;deskSignProductHandle={{ product.handle | url_param_escape }}{% if desk_sign_variant %}&amp;variantIdSign={{ desk_sign_variant.id | url_param_escape }}{% endif %}{% if customer %}&amp;customerId={{ customer.id | url_param_escape }}{% endif %}"
+    loading="lazy"
+    allow="clipboard-read; clipboard-write; fullscreen"
+  ></iframe>
+</div>
+
+<script>
+  (function() {
+    var DESIGNER_ORIGIN = {{ desk_sign_designer_origin | json }};
+    var LIVE_PRODUCT = {{ product | json }};
+    var frame = document.getElementById('gf-desk-sign-designer-iframe');
+    if (!frame) return;
+
+    function isAllowedDesignerOrigin(origin) {
+      if (origin === DESIGNER_ORIGIN) return true;
+      if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+      return /^https:\/\/.*\.vercel\.app$/.test(origin);
+    }
+
+    function syncLayout() {
+      document.documentElement.style.setProperty(
+        '--gf-desk-sign-width',
+        document.documentElement.clientWidth + 'px'
+      );
+      var main = document.querySelector('main.main-content') || document.querySelector('main');
+      if (!main) return;
+      var offset = Math.round(
+        main.getBoundingClientRect().top +
+        (window.scrollY || window.pageYOffset || 0)
+      );
+      if (offset >= 0 && offset <= 600) {
+        document.documentElement.style.setProperty(
+          '--gf-desk-sign-header-height',
+          offset + 'px'
+        );
+      }
+    }
+
+    function replyToDesigner(event, requestId, success, error) {
+      if (!requestId || !event.source) return;
+      event.source.postMessage({
+        action: 'add-to-cart-result',
+        requestId: requestId,
+        success: success,
+        error: error || null
+      }, event.origin);
+    }
+
+    function removeReplacedCartLines(cartRoot, replaceDesignId) {
+      if (!replaceDesignId) return Promise.resolve();
+      var base = cartRoot.replace(/\/$/, '');
+      return fetch(base + '/cart.js', { headers: { 'Accept': 'application/json' } })
+        .then(function(response) { return response.json(); })
+        .then(function(cart) {
+          var stale = (cart.items || []).filter(function(item) {
+            var properties = item.properties || {};
+            return (properties['_Design ID'] || properties['Design ID']) === replaceDesignId;
+          });
+          return stale.reduce(function(chain, item) {
+            return chain.then(function() {
+              return fetch(base + '/cart/change.js', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: item.key, quantity: 0 })
+              });
+            });
+          }, Promise.resolve());
+        })
+        .catch(function(error) {
+          console.error('Desk sign designer: could not remove replaced cart lines', error);
+        });
+    }
+
+    function addToCart(items, event, requestId, replaceDesignId) {
+      if (!items || !items.length) {
+        replyToDesigner(event, requestId, false, 'No cart items to add');
+        return;
+      }
+      var cartRoot =
+        window.Shopify && window.Shopify.routes && window.Shopify.routes.root
+          ? window.Shopify.routes.root
+          : '/';
+      var base = cartRoot.replace(/\/$/, '');
+      var payload = {
+        items: items.map(function(item) {
+          return {
+            id: parseInt(String(item.variantId), 10),
+            quantity: item.quantity || 1,
+            properties: item.properties || {}
+          };
+        })
+      };
+
+      fetch(base + '/cart/add.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function(response) {
+          return response.json().then(function(body) {
+            if (!response.ok) {
+              throw new Error(
+                (body && (body.description || body.message)) ||
+                ('HTTP ' + response.status)
+              );
+            }
+            return body;
+          });
+        })
+        .then(function() {
+          return removeReplacedCartLines(cartRoot, replaceDesignId);
+        })
+        .then(function() {
+          replyToDesigner(event, requestId, true);
+          window.location.href = base + '/cart';
+        })
+        .catch(function(error) {
+          var message = error && error.message ? error.message : String(error);
+          console.error('Desk sign designer: cart/add.js failed', error);
+          replyToDesigner(event, requestId, false, message);
+          alert('Could not add your desk sign to the cart. Please try again.\n\n' + message);
+        });
+    }
+
+    frame.addEventListener('load', function() {
+      if (!frame.contentWindow) return;
+      frame.contentWindow.postMessage({
+        type: 'SIGN_DESIGNER_SHOPIFY_PRODUCT',
+        payload: LIVE_PRODUCT
+      }, DESIGNER_ORIGIN);
+    });
+
+    window.addEventListener('message', function(event) {
+      if (!isAllowedDesignerOrigin(event.origin)) return;
+      var data = event.data;
+      if (!data || !data.action) return;
+
+      if (data.action === 'designer-analytics' && data.event) {
+        if (
+          window.Shopify &&
+          Shopify.analytics &&
+          typeof Shopify.analytics.publish === 'function'
+        ) {
+          Shopify.analytics.publish(
+            data.event,
+            Object.assign({}, data.payload || {}, {
+              page_url: window.location.href,
+              page_path: window.location.pathname + window.location.search
+            })
+          );
+        }
+        return;
+      }
+
+      if (data.action === 'redirect-to-login') {
+        var returnTo = window.location.pathname + window.location.search;
+        window.location.href =
+          '/account/login?return_url=' + encodeURIComponent(returnTo);
+        return;
+      }
+
+      if (data.action === 'add-to-cart' && data.payload) {
+        addToCart(
+          [data.payload],
+          event,
+          data.requestId,
+          data.payload.replaceDesignId
+        );
+        return;
+      }
+
+      if (
+        data.action === 'add-to-cart-multiple' &&
+        data.payload &&
+        Array.isArray(data.payload.items)
+      ) {
+        addToCart(
+          data.payload.items,
+          event,
+          data.requestId,
+          data.payload.replaceDesignId
+        );
+      }
+    });
+
+    syncLayout();
+    window.addEventListener('resize', syncLayout);
+    window.addEventListener('load', syncLayout);
+    setTimeout(syncLayout, 600);
+  })();
+</script>
