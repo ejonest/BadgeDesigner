@@ -78,7 +78,8 @@
 
               <div class="properties">
                 {%- for p in item.properties -%}
-                {%- unless p.last == blank -%}
+                {%- assign property_first_char = p.first | slice: 0 -%}
+                {%- if p.last != blank and property_first_char != '_' -%}
                 <label>{{ p.first }}:&nbsp;</label>
                 {%- if p.last contains '/uploads/' -%}
                 <a href="{{ p.last }}">{{ p.last | split: '/' | last }}</a>
@@ -86,7 +87,7 @@
                 {{ p.last }}
                 {%- endif -%}
                 <br>
-                {%- endunless -%}
+                {%- endif -%}
                 {%- endfor -%}
               </div>
               {% if settings.show_vendor %}

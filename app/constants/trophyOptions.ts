@@ -111,25 +111,11 @@ const INSERT_PLATE_DESIGNS = [
     wideTextArea: { top: 10.3, left: 7.1, width: 85.6, height: 79.4 },
   },
   {
-    id: "brushed-gold",
-    label: "Polished Gold",
-    textColor: "#111111",
-    textArea: { top: 10.1, left: 7.3, width: 85.3, height: 79.7 },
-    wideTextArea: { top: 10.2, left: 6.7, width: 86.5, height: 79.6 },
-  },
-  {
     id: "brushed-silver",
     label: "Brushed Silver",
     textColor: "#111111",
     textArea: { top: 10.1, left: 7.3, width: 85.4, height: 79.7 },
     wideTextArea: { top: 10.1, left: 6.7, width: 86.6, height: 79.9 },
-  },
-  {
-    id: "rose-gold",
-    label: "Rose Gold",
-    textColor: "#111111",
-    textArea: { top: 10.1, left: 7.4, width: 85.2, height: 79.7 },
-    wideTextArea: { top: 10.2, left: 6.8, width: 86.5, height: 79.6 },
   },
   {
     id: "marble",
@@ -184,9 +170,7 @@ const WIDE_PLATE_RATIO = 1.833;
  * materials, so unlike the themed and colored plates they suit any figure.
  */
 const SHARED_FINISHES = [
-  "brushed-gold",
   "brushed-silver",
-  "rose-gold",
   "marble",
   "classic-black",
 ] as const;
@@ -257,10 +241,8 @@ export const TROPHY_TYPES: TrophyType[] = [
         textColor: "#ffffff",
         textArea: PLAIN_PLATE_TEXT_AREA,
       },
-      // Its own Brushed Gold is the same design as the shared Polished Gold.
       ...sharedFinishes(
         `${ROOT}/Baseball Trophy/Male-Baseball-Figure-Trophy-Plate-Main-(brushed-gold).jpg`,
-        ["brushed-gold"],
       ),
     ],
   },
@@ -302,10 +284,10 @@ export const TROPHY_TYPES: TrophyType[] = [
         textColor: "#ffffff",
         textArea: PLAIN_PLATE_TEXT_AREA,
       },
-      // Victory Black and Brushed Gold already cover two of the finishes.
+      // Victory Black already covers Classic Black.
       ...sharedFinishes(
         `${ROOT}/Soccer Trophy/Soccer-Action-Figure-Trophy-Plate-Main-(brushed-gold).jpg`,
-        ["brushed-gold", "classic-black"],
+        ["classic-black"],
       ),
     ],
   },
@@ -318,7 +300,6 @@ export const TROPHY_TYPES: TrophyType[] = [
       ["brushed-gold", "Brushed Gold", "#111111"],
       ["cobalt-blue", "Cobalt Blue", "#ffffff"],
       ["emerald-green", "Emerald Green", "#ffffff"],
-      ["rose-gold", "Rose Gold", "#111111"],
       ["blush-pink", "Blush Pink", "#111111"],
     ].map(([id, label, textColor]) => ({
       id,
@@ -328,10 +309,8 @@ export const TROPHY_TYPES: TrophyType[] = [
       textColor,
       textArea: PLAIN_PLATE_TEXT_AREA,
     })).concat(
-      // Its own Brushed Gold and Rose Gold already cover two of the finishes.
       sharedFinishes(
         `${ROOT}/Star Trophy/Star-Trophy-Plate-Main-(brushed-gold) (1).jpg`,
-        ["brushed-gold", "rose-gold"],
       ),
     ),
   },
@@ -353,7 +332,7 @@ export const TROPHY_TYPES: TrophyType[] = [
       textColor: "#f6d44b",
       textArea: PLAIN_PLATE_TEXT_AREA,
     })).concat(
-      // This trophy only ships colored plates, so it takes all five finishes.
+      // This trophy only ships colored plates, so it takes the shared finishes.
       sharedFinishes(
         `${ROOT}/Victory Figurine Trophy/Female-Victory-Figure-Trophy-Plate-Main-(cobalt-blue) (1).jpg`,
       ),

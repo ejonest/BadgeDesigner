@@ -132,7 +132,8 @@
               {% if item.properties.size > 0 %}
               <div>
                 {% for p in item.properties %}
-                {% unless p.last == blank %}
+                {% assign property_first_char = p.first | slice: 0 %}
+                {% if p.last != blank and property_first_char != '_' %}
                 {{ p.first }}:
                 {% if p.last contains '/uploads/' %}
                 <a href="{{ p.last }}">{{ p.last | split: '/' | last }}</a>
@@ -140,7 +141,7 @@
                 {{ p.last }}
                 {% endif %}
                 <br>
-                {% endunless %}
+                {% endif %}
                 {% endfor %}
               </div>
               {% endif %}

@@ -1,0 +1,310 @@
+{% doc %}
+  Renders the Gavels Fast desk sign designer for the current custom desk sign product.
+
+  The designer resolves each line's variant and price from the live product JSON,
+  keeping Gavels Fast pricing independent from the All Quality Badges product.
+{% enddoc %}
+
+{% assign desk_sign_designer_origin = 'https://all-quality-design-tool.vercel.app' %}
+
+<style>
+  .dsf-designer-embed {
+    width: var(--dsf-bleed-width, 100%);
+    max-width: var(--dsf-bleed-width, 100%);
+    margin: 0 0 40px calc(50% - (var(--dsf-bleed-width, 100%) / 2));
+    background: #f0ede6;
+  }
+
+  .dsf-designer-embed iframe {
+    display: block;
+    width: 100%;
+    height: calc(100vh - var(--dsf-header-height, 190px));
+    height: calc(100dvh - var(--dsf-header-height, 190px));
+    min-height: 620px;
+    border: 0;
+  }
+
+  @media screen and (min-width: 990px) {
+    .dsf-designer-embed iframe {
+      height: max(calc(100dvh - var(--dsf-header-height, 190px)), 900px);
+    }
+  }
+
+  .dsf-designer-info {
+    margin: 0 0 48px;
+    color: #232323;
+  }
+
+  .dsf-designer-info h2 {
+    margin: 32px 0 10px;
+    font-size: 22px;
+    line-height: 1.3;
+  }
+
+  .dsf-designer-info h2:first-child {
+    margin-top: 0;
+  }
+
+  .dsf-designer-info p {
+    margin: 0 0 14px;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .dsf-designer-info__steps {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0 0 8px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .dsf-designer-info__steps li {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .dsf-designer-info__steps strong {
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .dsf-designer-info__note {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e6e1d8;
+    font-style: italic;
+  }
+
+  @media (max-width: 749px) {
+    .dsf-designer-info__steps {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+{% if product %}
+  {% assign desk_sign_variant = product.selected_or_first_available_variant | default: product.variants.first %}
+
+  <div class="dsf-designer-embed">
+    <iframe
+      id="desk-sign-designer-iframe"
+      title="Design your custom desk sign"
+      src="{{ desk_sign_designer_origin }}/desk-sign-designer?embedded=1&amp;shop={{ shop.permanent_domain | url_param_escape }}&amp;storeUrl={{ shop.permanent_domain | url_param_escape }}&amp;product={{ product.id | url_param_escape }}&amp;deskSignProductHandle={{ product.handle | url_param_escape }}{% if desk_sign_variant %}&amp;variantIdSign={{ desk_sign_variant.id | url_param_escape }}&amp;variantIdDeskSign={{ desk_sign_variant.id | url_param_escape }}{% endif %}{% if customer %}&amp;customerId={{ customer.id | url_param_escape }}{% endif %}"
+      allow="clipboard-read; clipboard-write; fullscreen"
+    ></iframe>
+  </div>
+
+  <div class="dsf-designer-info">
+    <h2>How it works</h2>
+    <ul class="dsf-designer-info__steps">
+      <li>
+        <strong>1. Choose your desk sign</strong>
+        Pick the size and material that suit your office, counter, or reception area.
+      </li>
+      <li>
+        <strong>2. Add your wording</strong>
+        Enter your name and title, then add a color logo or image if you need one.
+      </li>
+      <li>
+        <strong>3. Approve your proof</strong>
+        Review the finished proof before anything is added to your cart.
+      </li>
+    </ul>
+
+    <p class="dsf-designer-info__note">
+      Ordering for a group or need a custom layout? Call (310) 534-1138 or email
+      <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a>.
+    </p>
+  </div>
+
+  <script>
+    (function() {
+      var DESIGNER_ORIGIN = {{ desk_sign_designer_origin | json }};
+      var LIVE_PRODUCT = {{ product | json }};
+      var frame = document.getElementById('desk-sign-designer-iframe');
+      if (!frame) return;
+
+      function isAllowedDesignerOrigin(origin) {
+        if (origin === DESIGNER_ORIGIN) return true;
+        if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+        return /^https:\/\/.*\.vercel\.app$/.test(origin);
+      }
+
+      function syncLayout() {
+        document.documentElement.style.setProperty(
+          '--dsf-bleed-width',
+          document.documentElement.clientWidth + 'px'
+        );
+        var main = document.querySelector('main.main-content') || document.querySelector('main');
+        if (!main) return;
+        var offset = Math.round(
+          main.getBoundingClientRect().top +
+          (window.scrollY || window.pageYOffset || 0)
+        );
+        if (offset >= 0 && offset <= 600) {
+          document.documentElement.style.setProperty(
+            '--dsf-header-height',
+            offset + 'px'
+          );
+        }
+      }
+
+      function replyToDesigner(event, requestId, success, error) {
+        if (!requestId || !event.source) return;
+        event.source.postMessage({
+          action: 'add-to-cart-result',
+          requestId: requestId,
+          success: success,
+          error: error || null
+        }, event.origin);
+      }
+
+      function removeReplacedCartLines(cartRoot, replaceDesignId) {
+        if (!replaceDesignId) return Promise.resolve();
+        var base = cartRoot.replace(/\/$/, '');
+        return fetch(base + '/cart.js', { headers: { 'Accept': 'application/json' } })
+          .then(function(response) { return response.json(); })
+          .then(function(cart) {
+            var stale = (cart.items || []).filter(function(item) {
+              var properties = item.properties || {};
+              return (properties['_Design ID'] || properties['Design ID']) === replaceDesignId;
+            });
+            return stale.reduce(function(chain, item) {
+              return chain.then(function() {
+                return fetch(base + '/cart/change.js', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ id: item.key, quantity: 0 })
+                });
+              });
+            }, Promise.resolve());
+          })
+          .catch(function(error) {
+            console.error('Desk sign designer: could not remove replaced cart lines', error);
+          });
+      }
+
+      function addToCart(items, event, requestId, replaceDesignId) {
+        if (!items || !items.length) {
+          replyToDesigner(event, requestId, false, 'No cart items to add');
+          return;
+        }
+        var cartRoot =
+          window.Shopify && window.Shopify.routes && window.Shopify.routes.root
+            ? window.Shopify.routes.root
+            : '/';
+        var base = cartRoot.replace(/\/$/, '');
+        var payload = {
+          items: items.map(function(item) {
+            return {
+              id: parseInt(String(item.variantId), 10),
+              quantity: item.quantity || 1,
+              properties: item.properties || {}
+            };
+          })
+        };
+
+        fetch(base + '/cart/add.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+          .then(function(response) {
+            return response.json().then(function(body) {
+              if (!response.ok) {
+                throw new Error(
+                  (body && (body.description || body.message)) ||
+                  ('HTTP ' + response.status)
+                );
+              }
+              return body;
+            });
+          })
+          .then(function() {
+            return removeReplacedCartLines(cartRoot, replaceDesignId);
+          })
+          .then(function() {
+            replyToDesigner(event, requestId, true);
+            window.location.href = base + '/cart';
+          })
+          .catch(function(error) {
+            var message = error && error.message ? error.message : String(error);
+            console.error('Desk sign designer: cart/add.js failed', error);
+            replyToDesigner(event, requestId, false, message);
+            alert('Could not add your desk sign to the cart. Please try again.\n\n' + message);
+          });
+      }
+
+      frame.addEventListener('load', function() {
+        if (!frame.contentWindow) return;
+        frame.contentWindow.postMessage({
+          type: 'SIGN_DESIGNER_SHOPIFY_PRODUCT',
+          payload: LIVE_PRODUCT
+        }, DESIGNER_ORIGIN);
+      });
+
+      window.addEventListener('message', function(event) {
+        if (!isAllowedDesignerOrigin(event.origin)) return;
+        var data = event.data;
+        if (!data || !data.action) return;
+
+        if (data.action === 'designer-analytics' && data.event) {
+          if (
+            window.Shopify &&
+            Shopify.analytics &&
+            typeof Shopify.analytics.publish === 'function'
+          ) {
+            Shopify.analytics.publish(
+              data.event,
+              Object.assign({}, data.payload || {}, {
+                page_url: window.location.href,
+                page_path: window.location.pathname + window.location.search
+              })
+            );
+          }
+          return;
+        }
+
+        if (data.action === 'redirect-to-login') {
+          var returnTo = window.location.pathname + window.location.search;
+          window.location.href =
+            '/account/login?return_url=' + encodeURIComponent(returnTo);
+          return;
+        }
+
+        if (data.action === 'add-to-cart' && data.payload) {
+          addToCart(
+            [data.payload],
+            event,
+            data.requestId,
+            data.payload.replaceDesignId
+          );
+          return;
+        }
+
+        if (
+          data.action === 'add-to-cart-multiple' &&
+          data.payload &&
+          Array.isArray(data.payload.items)
+        ) {
+          addToCart(
+            data.payload.items,
+            event,
+            data.requestId,
+            data.payload.replaceDesignId
+          );
+        }
+      });
+
+      syncLayout();
+      window.addEventListener('resize', syncLayout);
+      window.addEventListener('load', syncLayout);
+      setTimeout(syncLayout, 600);
+    })();
+  </script>
+{% else %}
+  <p>The desk sign designer is only available on a product page.</p>
+{% endif %}
