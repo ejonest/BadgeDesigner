@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ProofPdfViewer } from "~/components/ProofPdfViewer";
 import { getDesignerApiPaths, getDesignerConfig } from "~/config/designers";
 import {
   TROPHY_MAX_PRICED_QUANTITY,
@@ -37,6 +38,23 @@ type TrophyLineStyle = {
   italic: boolean;
   underline: boolean;
 };
+type TrophyRowSpec = {
+  lines: string[];
+  styles: TrophyLineStyle[];
+  quantity: number;
+};
+/** The proofed design, so the cart line matches the PDF the customer approved. */
+type PendingTrophyOrder = {
+  designId: string;
+  pdf: Blob;
+  rowSpecs: TrophyRowSpec[];
+  awardLabel: string;
+  plateLabel: string;
+  plateTextColor: string;
+  fontFamily: string;
+  unitPrice: number;
+  logoName: string;
+};
 
 const STEPS: StepId[] = ["trophy", "plate", "design", "quantity", "done"];
 const STEP_LABELS: Record<StepId, string> = {
@@ -65,7 +83,7 @@ const PANEL_COPY: Record<StepId, { title: string; sub: string }> = {
   },
   done: {
     title: "Review your trophy",
-    sub: "Check the trophy, plate, wording, and quantity, then add it to your cart.",
+    sub: "Check the trophy, plate, wording, and quantity, then approve your proof.",
   },
 };
 
@@ -137,6 +155,10 @@ type TrophyDraft = {
   bulkCsvText?: string;
   bulkCsvWarning?: string;
 };
+
+function newDesignId(): string {
+  return `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+}
 
 function readQueryParam(name: string): string {
   if (typeof window === "undefined") return "";
@@ -402,9 +424,10 @@ export default function TrophyDesigner() {
   const [busy, setBusy] = useState(false);
   const [cartError, setCartError] = useState("");
   const [cartAdded, setCartAdded] = useState(false);
-  const designIdRef = useRef(
-    `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-  );
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [proofOpen, setProofOpen] = useState(false);
+  const pendingOrderRef = useRef<PendingTrophyOrder | null>(null);
+  const designIdRef = useRef(newDesignId());
   const apiRef = useRef(createApi(undefined, undefined, { designerId: "trophy" }));
   const [previewMode, setPreviewMode] = useState<PreviewMode>("plate");
   const [bulkMode, setBulkMode] = useState(false);
@@ -652,6 +675,13 @@ export default function TrophyDesigner() {
     visited,
   ]);
 
+  useEffect(
+    () => () => {
+      if (proofUrl) URL.revokeObjectURL(proofUrl);
+    },
+    [proofUrl],
+  );
+
   const summary = useMemo(
     () => [
       ["Award", product.shortLabel],
@@ -828,6 +858,9 @@ export default function TrophyDesigner() {
 
   function reset() {
     localStorage.removeItem(CACHE_KEY);
+    // A fresh id keeps a second design from overwriting the draft rows behind
+    // a trophy that is already in the cart.
+    designIdRef.current = newDesignId();
     setStep("trophy");
     setVisited(["trophy"]);
     setProductId(TROPHY_PRODUCTS[0].id);
@@ -841,6 +874,9 @@ export default function TrophyDesigner() {
     setLogoFile(null);
     setCartError("");
     setCartAdded(false);
+    setProofOpen(false);
+    setProofUrl(null);
+    pendingOrderRef.current = null;
     setPreviewMode("plate");
     setBulkMode(false);
     setBulkRows([]);
@@ -851,16 +887,10 @@ export default function TrophyDesigner() {
     setSelectedBulkRow(0);
   }
 
-  async function addToCart() {
-    const variantId = readQueryParam("variantId");
-    if (!variantId) {
-      setCartError(
-        "Open this designer from the custom trophy product page so it can add to cart.",
-      );
-      return;
-    }
+  /** Builds the proof PDF and saves the draft; the cart line comes later. */
+  async function reviewProof() {
     if (!designReady) {
-      setCartError("Add wording (or a logo) before adding to cart.");
+      setCartError("Add wording (or a logo) before reviewing your proof.");
       return;
     }
     setBusy(true);
@@ -870,7 +900,7 @@ export default function TrophyDesigner() {
       const isQaTest = readQueryParam("qaTest") === "1";
       const shop = readQueryParam("shop") || readQueryParam("storeUrl");
       const customerId = readQueryParam("customerId");
-      const rowSpecs =
+      const rowSpecs: TrophyRowSpec[] =
         bulkMode && bulkRows.length > 0
           ? bulkRows.map((row) => ({
               lines: row.lines,
@@ -961,10 +991,47 @@ export default function TrophyDesigner() {
         throw new Error("Could not build the trophy proof PDF.");
       }
 
+      pendingOrderRef.current = {
+        designId,
+        pdf: proofPdf,
+        rowSpecs,
+        awardLabel: product.label,
+        plateLabel: option.label,
+        plateTextColor: option.textColor,
+        fontFamily,
+        unitPrice: price.perUnit,
+        logoName,
+      };
+      setProofUrl(URL.createObjectURL(proofPdf));
+      setProofOpen(true);
+    } catch (caught) {
+      setCartError(
+        caught instanceof Error
+          ? caught.message
+          : "Could not build your proof.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmAddToCart() {
+    const pending = pendingOrderRef.current;
+    if (!pending) return;
+    const variantId = readQueryParam("variantId");
+    if (!variantId) {
+      setCartError(
+        "Open this designer from the custom trophy product page so it can add to cart.",
+      );
+      return;
+    }
+    setBusy(true);
+    setCartError("");
+    try {
       const finalize = new FormData();
-      finalize.append("designId", designId);
+      finalize.append("designId", pending.designId);
       finalize.append("designer", "trophy");
-      finalize.append("pdf", proofPdf, "trophy-design_proof.pdf");
+      finalize.append("pdf", pending.pdf, "trophy-design_proof.pdf");
       const finalizeRes = await fetch("/api/finalize-draft", {
         method: "POST",
         body: finalize,
@@ -977,25 +1044,25 @@ export default function TrophyDesigner() {
       }
 
       const definition = getDesignerConfig("trophy");
-      const cartLines = rowSpecs.map((row, index) => ({
+      const cartLines = pending.rowSpecs.map((row, index) => ({
         variantId,
         quantity: row.quantity,
         properties: buildDesignerCartLineProperties({
           designerId: "trophy",
-          designId,
+          designId: pending.designId,
           lineIndex: index,
           indexPropertyPrimary: definition.cartIndexPropertyPrimary,
           indexPropertyFallbacks: definition.cartIndexPropertyFallbacks,
-          lines: trophyTextsToLines(row.lines, fontFamily, row.styles),
-          backgroundColor: option.textColor,
-          linePrice: price.perUnit.toFixed(2),
+          lines: trophyTextsToLines(row.lines, pending.fontFamily, row.styles),
+          backgroundColor: pending.plateTextColor,
+          linePrice: pending.unitPrice.toFixed(2),
           thumbnailUrl: finalized.thumbnailUrls?.[index] ?? "",
           pdfUrl: finalized.pdfUrl ?? "",
           orderQuantity: row.quantity,
-          uploadedLogo: logoName || null,
+          uploadedLogo: pending.logoName || null,
           extraHidden: {
-            "_Trophy Award": product.label,
-            "_Plate Finish": option.label,
+            "_Trophy Award": pending.awardLabel,
+            "_Plate Finish": pending.plateLabel,
           },
         }),
       }));
@@ -1004,6 +1071,7 @@ export default function TrophyDesigner() {
         throw new Error(result.message || "Could not add the trophy to cart.");
       }
       localStorage.removeItem(CACHE_KEY);
+      setProofOpen(false);
       setCartAdded(true);
     } catch (caught) {
       setCartError(
@@ -1625,7 +1693,7 @@ export default function TrophyDesigner() {
                   <p className="tr-review-note">
                     {cartAdded
                       ? "Added to your cart. Your wording and plate art are saved with this order."
-                      : "Review the award, plate, and wording, then add this design to your cart."}
+                      : "Review the award, plate, and wording, then open your production proof to approve it."}
                   </p>
                   {cartError ? (
                     <p className="gf-note" role="alert">
@@ -1676,9 +1744,11 @@ export default function TrophyDesigner() {
                     type="button"
                     className="gf-nav-primary"
                     disabled={busy || !designReady}
-                    onClick={() => void addToCart()}
+                    onClick={() => void reviewProof()}
                   >
-                    {busy ? "Adding…" : "Add to cart"}
+                    {busy
+                      ? "Preparing proof…"
+                      : "Review proof & add to cart →"}
                   </button>
                 )}
               </div>
@@ -1732,6 +1802,44 @@ export default function TrophyDesigner() {
           </div>
         </div>
       </div>
+
+      {proofOpen && proofUrl ? (
+        <div className="gf-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="gf-modal">
+            <h2 className="gf-modal-title">Design proof</h2>
+            <p className="gf-muted" style={{ marginBottom: 12 }}>
+              Confirm the wording and plate, then add this{" "}
+              {bulkMode && bulkRows.length > 0
+                ? `${bulkRows.length}-design bulk order`
+                : "trophy"}{" "}
+              to your cart.{" "}
+              {bulkMode && bulkRows.length > 1
+                ? "The proof shows the first CSV row; every row is added with the same award, plate, and font."
+                : ""}
+            </p>
+            <ProofPdfViewer url={proofUrl} title="Trophy plate proof" />
+            {cartError ? <div className="gf-error">{cartError}</div> : null}
+            <div className="gf-modal-actions">
+              <button
+                type="button"
+                className="gf-btn-secondary"
+                onClick={() => setProofOpen(false)}
+                disabled={busy}
+              >
+                Edit design
+              </button>
+              <button
+                type="button"
+                className="gf-btn-primary"
+                onClick={() => void confirmAddToCart()}
+                disabled={busy}
+              >
+                {busy ? "Adding…" : "Add to cart"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

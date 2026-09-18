@@ -146,13 +146,6 @@ const INSERT_PLATE_DESIGNS = [
     wideTextArea: { top: 18.7, left: 4, width: 91.9, height: 63 },
   },
   {
-    id: "laurel",
-    label: "Laurel Wreath",
-    textColor: "#111111",
-    textArea: { top: 4.5, left: 25.1, width: 49.7, height: 80.8 },
-    wideTextArea: { top: 5, left: 23.8, width: 52.4, height: 89.9 },
-  },
-  {
     id: "academic",
     label: "Academic",
     textColor: "#111111",
