@@ -14,7 +14,7 @@
       "settings": {
         "cart_notes": true,
         "secure_text": "Secure Shopping Guarantee.",
-        "cart_countdown_enable": true,
+        "cart_countdown_enable": false,
         "time_countdown": 30,
         "coupon_code_enable": true,
         "coupon_title": "Coupon Code:",

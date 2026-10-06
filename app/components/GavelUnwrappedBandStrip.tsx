@@ -11,7 +11,7 @@ type Props = {
 export function GavelUnwrappedBandStrip({
   dataUrl,
   empty,
-  label = "Unwrapped band (custom proof)",
+  label = "Unwrapped band (custom preview)",
   emptyText = "Enter text to see it laid out on the band",
   square = false,
   shaped = false,

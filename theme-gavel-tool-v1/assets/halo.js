@@ -4901,6 +4901,7 @@
         },
 
         FreeShippingMessage: function (cart) {
+            return;
             var freeshipEligible = 0;
 
             var freeshipText = window.free_shipping_text.free_shipping_message_1;

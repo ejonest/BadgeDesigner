@@ -251,6 +251,7 @@ import {
 } from "~/utils/signTemplateShopifyOptions";
 import {
   buildDesignerCartLineProperties,
+  buildProductionLineProperties,
   CART_PROP,
 } from "~/utils/cartLineProperties";
 
@@ -9750,6 +9751,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           b.deskSignAcrylicFinish,
         );
         return {
+          ...buildProductionLineProperties("Desk Sign", b.lines),
           [CART_PROP.material]:
             b.deskSignMaterial === "acrylic"
               ? "Acrylic"

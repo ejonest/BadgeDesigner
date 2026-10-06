@@ -1,8 +1,12 @@
 import Papa from "papaparse";
 import {
+  GAVEL_MAX_CHARS_PER_LINE,
   GAVEL_MAX_LINES,
+  GAVEL_TEXT_SIZE_PRESETS,
+  SOUND_BLOCK_MAX_CHARS,
   SOUND_BLOCK_MAX_LINES,
   STAND_PLATE_MAX_LINES,
+  type GavelTextSizePreset,
 } from "~/constants/gavelStyles";
 
 export type GavelBulkSecondaryMode = "shared" | "separate";
@@ -15,31 +19,231 @@ export type GavelBulkRow = {
   /** Text printed/engraved on the stand plate or sound-block top. */
   secondaryTexts: [string, string, string, string];
   quantity: number;
+  /** Overrides the order-wide text size for this row only. */
+  textSize?: GavelTextSizePreset;
+};
+
+export function parseGavelTextSize(
+  value: unknown,
+): GavelTextSizePreset | undefined {
+  const key = typeof value === "string" ? value.trim().toLowerCase() : "";
+  return (GAVEL_TEXT_SIZE_PRESETS as readonly string[]).includes(key)
+    ? (key as GavelTextSizePreset)
+    : undefined;
+}
+
+export function newGavelBulkRowId(): string {
+  return `bulk-gavel-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function blankGavelBulkRow(): GavelBulkRow {
+  return {
+    id: newGavelBulkRowId(),
+    texts: ["", "", "", ""],
+    secondaryTexts: ["", "", "", ""],
+    quantity: 1,
+  };
+}
+
+export function gavelBulkRowIsBlank(row: GavelBulkRow): boolean {
+  return ![...row.texts, ...row.secondaryTexts].some((text) => text.trim());
+}
+
+export function secondaryLineCount(
+  surface: GavelBulkSecondarySurface | null | undefined,
+): number {
+  return surface === "stand" ? STAND_PLATE_MAX_LINES : SOUND_BLOCK_MAX_LINES;
+}
+
+/** The band text a shared-mode row repeats on its stand plate or sound block. */
+export function sharedSecondaryTexts(
+  texts: GavelBulkRow["texts"],
+  surface: GavelBulkSecondarySurface | null | undefined,
+): GavelBulkRow["secondaryTexts"] {
+  return padTexts(texts.slice(0, secondaryLineCount(surface)));
+}
+
+function rowContentKey(row: GavelBulkRow): string {
+  return JSON.stringify([
+    row.texts.map((text) => text.trim().toLowerCase()),
+    row.secondaryTexts.map((text) => text.trim().toLowerCase()),
+  ]);
+}
+
+export type GavelBulkRowIssues = {
+  /** Cells (`band-N`, `secondary-N`) whose text is past the limit for the row's size. */
+  overCells: Set<string>;
+  /** Band line 1 is empty; every gavel needs it, as in the single design. */
+  missingRequired: boolean;
+  /** 1-based number of the first row with identical wording, if any. */
+  duplicateOf: number | null;
+};
+
+export type GavelBulkCheck = {
+  issues: GavelBulkRowIssues[];
+  /** Rows that must be fixed before ordering. */
+  errorRows: number;
+  overRows: number;
+  missingRows: number;
+  /** Warning only: a repeated row is more often a slip than intent. */
+  duplicateRows: number;
+  /** Distinct wordings across the order. */
+  designs: number;
+};
+
+export function checkGavelBulkRows(
+  rows: readonly GavelBulkRow[],
+  options: {
+    textSize: GavelTextSizePreset;
+    /** Secondary columns the customer edits; 0 when they repeat the band. */
+    secondaryCount: number;
+    secondarySurface: GavelBulkSecondarySurface | null;
+  },
+): GavelBulkCheck {
+  const firstRowFor = new Map<string, number>();
+  let errorRows = 0;
+  let overRows = 0;
+  let missingRows = 0;
+  let duplicateRows = 0;
+
+  const issues = rows.map((row, index): GavelBulkRowIssues => {
+    const limit = GAVEL_MAX_CHARS_PER_LINE[row.textSize ?? options.textSize];
+    const overCells = new Set<string>();
+    row.texts.forEach((text, lineIndex) => {
+      if (text.length > limit) overCells.add(`band-${lineIndex}`);
+    });
+    const secondary = row.secondaryTexts.slice(0, options.secondaryCount);
+    if (options.secondarySurface === "stand") {
+      secondary.forEach((text, lineIndex) => {
+        if (text.length > limit) overCells.add(`secondary-${lineIndex}`);
+      });
+    } else if (
+      options.secondarySurface === "sound-block" &&
+      secondary.reduce((sum, text) => sum + text.length, 0) >
+        SOUND_BLOCK_MAX_CHARS
+    ) {
+      secondary.forEach((text, lineIndex) => {
+        if (text) overCells.add(`secondary-${lineIndex}`);
+      });
+    }
+
+    const missingRequired = !row.texts[0].trim();
+    let duplicateOf: number | null = null;
+    if (!gavelBulkRowIsBlank(row)) {
+      const key = rowContentKey(row);
+      const first = firstRowFor.get(key);
+      if (first === undefined) firstRowFor.set(key, index + 1);
+      else duplicateOf = first;
+    }
+
+    if (overCells.size > 0) overRows += 1;
+    if (missingRequired) missingRows += 1;
+    if (overCells.size > 0 || missingRequired) errorRows += 1;
+    if (duplicateOf !== null) duplicateRows += 1;
+    return { overCells, missingRequired, duplicateOf };
+  });
+
+  return {
+    issues,
+    errorRows,
+    overRows,
+    missingRows,
+    duplicateRows,
+    designs: firstRowFor.size,
+  };
+}
+
+/** Appends incoming rows, skipping any whose wording is already in the list. */
+export function mergeGavelBulkRows(
+  current: readonly GavelBulkRow[],
+  incoming: readonly GavelBulkRow[],
+): { rows: GavelBulkRow[]; added: number; skipped: number } {
+  const seen = new Set(current.map(rowContentKey));
+  const added: GavelBulkRow[] = [];
+  for (const row of incoming) {
+    const key = rowContentKey(row);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    added.push(row);
+  }
+  return {
+    rows: [...current, ...added],
+    added: added.length,
+    skipped: incoming.length - added.length,
+  };
+}
+
+/**
+ * The customer's current list in the template's own column layout, so it
+ * imports straight back in.
+ */
+export function gavelBulkRowsToCsv(
+  rows: readonly GavelBulkRow[],
+  mode: GavelBulkSecondaryMode,
+  surface: GavelBulkSecondarySurface | null,
+): string {
+  const secondaryCount =
+    mode === "separate" && surface ? secondaryLineCount(surface) : 0;
+  const secondaryLabel =
+    surface === "stand" ? "Stand Plate Line" : "Sound Block Line";
+  const header = [
+    "Band Line 1",
+    "Band Line 2",
+    "Band Line 3",
+    "Band Line 4",
+    ...Array.from(
+      { length: secondaryCount },
+      (_, index) => `${secondaryLabel} ${index + 1}`,
+    ),
+    "Text Size",
+    "Quantity",
+  ];
+  const body = rows.map((row) => [
+    ...row.texts,
+    ...row.secondaryTexts.slice(0, secondaryCount),
+    row.textSize ?? "",
+    String(row.quantity),
+  ]);
+  return Papa.unparse([header, ...body]);
+}
+
+/** Column names as the customer's own file spelled them, per engraved line. */
+export type GavelBulkColumnLabels = {
+  band: [string, string, string, string];
+  secondary: [string, string, string, string];
 };
 
 export type GavelBulkCsvResult = {
   rows: GavelBulkRow[];
   /** Non-fatal notice when rows carried more than {@link GAVEL_MAX_LINES} lines. */
   warning: string;
+  /** Null when the list had no header row to name the columns. */
+  columnLabels: GavelBulkColumnLabels | null;
 };
 
 const HEADER_ALIASES: Record<string, string> = {
   line1: "line1",
   "line 1": "line1",
   name: "line1",
+  "full name": "line1",
   delegate: "line1",
   line2: "line2",
   "line 2": "line2",
   title: "line2",
   role: "line2",
+  position: "line2",
   line3: "line3",
   "line 3": "line3",
   organization: "line3",
+  organisation: "line3",
   school: "line3",
   line4: "line4",
   "line 4": "line4",
   quantity: "quantity",
   qty: "quantity",
+  "text size": "textSize",
+  textsize: "textSize",
+  size: "textSize",
 };
 
 const SECONDARY_HEADER_PREFIXES = [
@@ -71,11 +275,13 @@ function normalizedHeader(value: string): string {
 
 /**
  * Only treat row 1 as a header when it is unambiguous: an explicit `Line N`
- * column or a quantity column. Pasted rows like `Jane Smith,Delegate` also
- * match softer aliases such as "name", so those alone must not consume a row.
+ * column, a quantity column, or a row made up entirely of column names such
+ * as `Name,Title,School`. A pasted row like `Jane Smith,Delegate` matches the
+ * soft alias "delegate" once, but "Jane Smith" is not a column name, so it
+ * stays a row of text.
  */
 function looksLikeHeaderRow(cells: string[]): boolean {
-  return cells.some((cell) => {
+  const explicit = cells.some((cell) => {
     const key = normalizeCell(cell).toLowerCase();
     return (
       /^(?:(?:gavel|gavel band|band|secondary|stand|stand plate|plate|sound block|soundblock|block)\s*)?line\s*[1-9]\d*$/.test(
@@ -85,6 +291,12 @@ function looksLikeHeaderRow(cells: string[]): boolean {
       key === "qty"
     );
   });
+  if (explicit) return true;
+  const named = cells.map(normalizeCell).filter(Boolean);
+  return (
+    named.length >= 2 &&
+    named.every((cell) => HEADER_ALIASES[cell.toLowerCase()] !== undefined)
+  );
 }
 
 function padTexts(texts: string[]): GavelBulkRow["texts"] {
@@ -95,14 +307,14 @@ function toRow(
   texts: string[],
   secondaryTexts: string[],
   quantity: number,
-  index: number,
+  textSize?: GavelTextSizePreset,
 ): GavelBulkRow {
-  const padded = [0, 1, 2, 3].map((i) => texts[i] ?? "");
   return {
-    id: `bulk-gavel-${index}-${Math.random().toString(36).slice(2, 8)}`,
-    texts: padded as GavelBulkRow["texts"],
+    id: newGavelBulkRowId(),
+    texts: padTexts(texts),
     secondaryTexts: padTexts(secondaryTexts),
     quantity,
+    ...(textSize ? { textSize } : {}),
   };
 }
 
@@ -161,6 +373,7 @@ export function parseGavelBulkCsv(
   const hasHeader = looksLikeHeaderRow(allRows[0]);
   const truncatedRowNumbers: number[] = [];
   let rows: GavelBulkRow[];
+  let columnLabels: GavelBulkColumnLabels | null = null;
 
   if (hasHeader) {
     const headers = allRows[0].map(normalizedHeader);
@@ -171,6 +384,16 @@ export function parseGavelBulkCsv(
       .slice(0, secondaryMaxLines)
       .map((line) => headers.indexOf(`secondaryLine${line}`))
       .filter((column) => column >= 0);
+    const labelFor = (columns: number[], index: number) =>
+      columns[index] !== undefined
+        ? normalizeCell(allRows[0][columns[index]])
+        : "";
+    columnLabels = {
+      band: padTexts([0, 1, 2, 3].map((i) => labelFor(lineColumns, i))),
+      secondary: padTexts(
+        [0, 1, 2, 3].map((i) => labelFor(secondaryLineColumns, i)),
+      ),
+    };
     if (
       lineColumns.length === 0 &&
       (secondaryMode === "shared" || secondaryLineColumns.length === 0)
@@ -182,6 +405,7 @@ export function parseGavelBulkCsv(
       );
     }
     const quantityColumn = headers.indexOf("quantity");
+    const textSizeColumn = headers.indexOf("textSize");
 
     rows = allRows.slice(1).flatMap((cells, index): GavelBulkRow[] => {
       const texts = lineColumns
@@ -201,7 +425,14 @@ export function parseGavelBulkCsv(
         throw new Error(`Row ${index + 2} has an invalid quantity.`);
       }
       return [
-        toRow(texts, secondaryTexts, Math.min(999, rawQuantity), index),
+        toRow(
+          texts,
+          secondaryTexts,
+          Math.min(999, rawQuantity),
+          textSizeColumn >= 0
+            ? parseGavelTextSize(cells[textSizeColumn])
+            : undefined,
+        ),
       ];
     });
   } else {
@@ -223,7 +454,7 @@ export function parseGavelBulkCsv(
       ) {
         truncatedRowNumbers.push(index + 1);
       }
-      return [toRow(texts, secondaryTexts, 1, index)];
+      return [toRow(texts, secondaryTexts, 1)];
     });
   }
 
@@ -232,6 +463,7 @@ export function parseGavelBulkCsv(
   }
   return {
     rows,
+    columnLabels,
     warning: formatTruncationWarning(
       truncatedRowNumbers,
       GAVEL_MAX_LINES +

@@ -702,18 +702,48 @@ export const GAVEL_UV_TEXT_COLORS: readonly string[] = [
   "#0f6e56",
 ];
 
-export const GAVEL_FONT_OPTIONS: readonly { value: string; label: string }[] = [
-  { value: "Georgia", label: "Georgia" },
-  { value: "Merriweather", label: "Merriweather" },
-  { value: "Noto Serif", label: "Noto Serif" },
-  { value: "Roboto Serif", label: "Roboto Serif" },
-  { value: "Roboto Slab", label: "Roboto Slab" },
-  { value: "Times New Roman", label: "Times New Roman" },
-  { value: "Roboto", label: "Roboto" },
-  { value: "Open Sans", label: "Open Sans" },
-  { value: "Lato", label: "Lato" },
-  { value: "Montserrat", label: "Montserrat" },
+export type GavelFontOption = {
+  value: string;
+  label: string;
+  /** A real 700 face, not a browser-synthesized bold. */
+  bold: boolean;
+  /** A real italic face. */
+  italic: boolean;
+  /** A real bold-italic face. */
+  boldItalic: boolean;
+};
+
+/**
+ * Faces actually shipped for each family (Google Fonts stylesheet in root.tsx,
+ * plus Georgia / Times as system fonts). Roboto Slab is roman-only.
+ */
+export const GAVEL_FONT_OPTIONS: readonly GavelFontOption[] = [
+  { value: "Georgia", label: "Georgia", bold: true, italic: true, boldItalic: true },
+  { value: "Merriweather", label: "Merriweather", bold: true, italic: true, boldItalic: true },
+  { value: "Noto Serif", label: "Noto Serif", bold: true, italic: true, boldItalic: true },
+  { value: "Roboto Serif", label: "Roboto Serif", bold: true, italic: true, boldItalic: true },
+  { value: "Roboto Slab", label: "Roboto Slab", bold: true, italic: false, boldItalic: false },
+  { value: "Times New Roman", label: "Times New Roman", bold: true, italic: true, boldItalic: true },
+  { value: "Roboto", label: "Roboto", bold: true, italic: true, boldItalic: true },
+  { value: "Open Sans", label: "Open Sans", bold: true, italic: true, boldItalic: true },
+  { value: "Lato", label: "Lato", bold: true, italic: true, boldItalic: true },
+  { value: "Montserrat", label: "Montserrat", bold: true, italic: true, boldItalic: true },
 ];
+
+export function getGavelFontOption(
+  family: string | null | undefined,
+): GavelFontOption {
+  const name = family?.trim() || GAVEL_DEFAULT_FONT;
+  return (
+    GAVEL_FONT_OPTIONS.find((font) => font.value === name) ?? {
+      value: name,
+      label: name,
+      bold: true,
+      italic: true,
+      boldItalic: true,
+    }
+  );
+}
 
 export const GAVEL_TEXTURE_FONT_PX: Record<GavelTextSizePreset, number> = {
   small: 42,
@@ -1006,7 +1036,7 @@ export function quoteGavelPrice(input: {
       isSample: false,
       tierNote:
         input.suedeBag && !bagFromStore
-          ? "Store pricing — suede bag estimated."
+          ? "Store pricing — velour bag estimated."
           : "Store pricing.",
       suedeBagUnitPrice: bagAdd,
     };
@@ -1064,13 +1094,13 @@ export function formatGavelOptionSummary(input: {
     input.bagSelection ?? (input.suedeBag ? "gavel" : "none");
   const bag =
     bagSelection === "gavel"
-      ? "Gavel bag"
+      ? "Velour gavel bag"
       : bagSelection === "secondary"
         ? input.productType === "stand"
-          ? "Stand bag"
-          : "Sound block bag"
+          ? "Velour stand bag"
+          : "Velour sound block bag"
         : bagSelection === "both"
-          ? "Both bags"
+          ? "Both velour bags"
           : "No bag";
   if (input.productType === "stand") {
     const finish = getGavelStandFinish(input.standFinish);

@@ -13,7 +13,10 @@ import {
 } from "~/constants/trophyOptions";
 import type { Badge, BadgeLine } from "~/types/badge";
 import { createApi } from "~/utils/api";
-import { buildDesignerCartLineProperties } from "~/utils/cartLineProperties";
+import {
+  buildDesignerCartLineProperties,
+  buildProductionLineProperties,
+} from "~/utils/cartLineProperties";
 import { generateTrophyProofPdf } from "~/utils/trophyPdf";
 import {
   trophyPlateToSvgString,
@@ -83,7 +86,7 @@ const PANEL_COPY: Record<StepId, { title: string; sub: string }> = {
   },
   done: {
     title: "Review your trophy",
-    sub: "Check the trophy, plate, wording, and quantity, then approve your proof.",
+    sub: "Check the trophy, plate, wording, and quantity, then approve your preview.",
   },
 };
 
@@ -480,7 +483,7 @@ export default function TrophyDesigner() {
         rows: [] as TrophyBulkRow[],
         warning: "",
         error:
-          error instanceof Error ? error.message : "Could not read that CSV.",
+          error instanceof Error ? error.message : "Could not read that list.",
       };
     }
   }, [bulkCsvText]);
@@ -753,7 +756,7 @@ export default function TrophyDesigner() {
       );
     } catch (error) {
       setBulkError(
-        error instanceof Error ? error.message : "Could not import the CSV.",
+        error instanceof Error ? error.message : "Could not import that file.",
       );
     }
   }
@@ -890,7 +893,7 @@ export default function TrophyDesigner() {
   /** Builds the proof PDF and saves the draft; the cart line comes later. */
   async function reviewProof() {
     if (!designReady) {
-      setCartError("Add wording (or a logo) before reviewing your proof.");
+      setCartError("Add wording (or a logo) before reviewing your preview.");
       return;
     }
     setBusy(true);
@@ -988,7 +991,7 @@ export default function TrophyDesigner() {
         throw new Error(`Could not save the trophy draft. ${body}`.trim());
       }
       if (!proofPdf || proofPdf.size === 0) {
-        throw new Error("Could not build the trophy proof PDF.");
+        throw new Error("Could not build the trophy preview PDF.");
       }
 
       pendingOrderRef.current = {
@@ -1008,7 +1011,7 @@ export default function TrophyDesigner() {
       setCartError(
         caught instanceof Error
           ? caught.message
-          : "Could not build your proof.",
+          : "Could not build your preview.",
       );
     } finally {
       setBusy(false);
@@ -1039,33 +1042,46 @@ export default function TrophyDesigner() {
       const finalized = await finalizeRes.json().catch(() => ({}));
       if (!finalizeRes.ok || finalized.success === false) {
         throw new Error(
-          finalized.error || "Could not finalize the trophy proof.",
+          finalized.error || "Could not finalize the trophy preview.",
         );
       }
 
       const definition = getDesignerConfig("trophy");
-      const cartLines = pending.rowSpecs.map((row, index) => ({
-        variantId,
-        quantity: row.quantity,
-        properties: buildDesignerCartLineProperties({
-          designerId: "trophy",
-          designId: pending.designId,
-          lineIndex: index,
-          indexPropertyPrimary: definition.cartIndexPropertyPrimary,
-          indexPropertyFallbacks: definition.cartIndexPropertyFallbacks,
-          lines: trophyTextsToLines(row.lines, pending.fontFamily, row.styles),
-          backgroundColor: pending.plateTextColor,
-          linePrice: pending.unitPrice.toFixed(2),
-          thumbnailUrl: finalized.thumbnailUrls?.[index] ?? "",
-          pdfUrl: finalized.pdfUrl ?? "",
-          orderQuantity: row.quantity,
-          uploadedLogo: pending.logoName || null,
-          extraHidden: {
-            "_Trophy Award": pending.awardLabel,
-            "_Plate Finish": pending.plateLabel,
-          },
-        }),
-      }));
+      const cartLines = pending.rowSpecs.map((row, index) => {
+        const productionLines = trophyTextsToLines(
+          row.lines,
+          pending.fontFamily,
+          row.styles,
+        ).map((line) => ({ ...line, color: pending.plateTextColor }));
+        return {
+          variantId,
+          quantity: row.quantity,
+          properties: buildDesignerCartLineProperties({
+            designerId: "trophy",
+            designId: pending.designId,
+            lineIndex: index,
+            indexPropertyPrimary: definition.cartIndexPropertyPrimary,
+            indexPropertyFallbacks: definition.cartIndexPropertyFallbacks,
+            lines: productionLines,
+            backgroundColor: pending.plateTextColor,
+            linePrice: pending.unitPrice.toFixed(2),
+            thumbnailUrl: finalized.thumbnailUrls?.[index] ?? "",
+            pdfUrl: finalized.pdfUrl ?? "",
+            orderQuantity: row.quantity,
+            uploadedLogo: pending.logoName || null,
+            extraHidden: {
+              ...buildProductionLineProperties("Trophy", productionLines, {
+                fontSizeLabels: row.styles.map(
+                  (style) =>
+                    style.size.charAt(0).toUpperCase() + style.size.slice(1),
+                ),
+              }),
+              "_Trophy Award": pending.awardLabel,
+              "_Plate Finish": pending.plateLabel,
+            },
+          }),
+        };
+      });
       const result = await apiRef.current.addToCartMultiple(cartLines);
       if (!result.success) {
         throw new Error(result.message || "Could not add the trophy to cart.");
@@ -1198,241 +1214,6 @@ export default function TrophyDesigner() {
 
               {step === "design" ? (
                 <>
-                  <div
-                    className={`gf-bulk-entry-choice ${bulkMode ? "is-active" : ""}`}
-                  >
-                    <div>
-                      <strong>
-                        {bulkMode ? "CSV bulk entry" : "Ordering in bulk?"}
-                      </strong>
-                      <p>
-                        {bulkMode
-                          ? "View every personalized trophy below and select any row for a live preview."
-                          : "Add many personalized trophies with a CSV file or pasted rows."}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className={
-                        bulkMode ? "gf-nav-secondary" : "gf-nav-primary"
-                      }
-                      onClick={
-                        bulkMode ? exitBulkMode : () => setBulkMode(true)
-                      }
-                    >
-                      {bulkMode ? "Use individual entry" : "Try CSV entry"}
-                    </button>
-                  </div>
-
-                  {bulkMode ? (
-                    <div className="gf-bulk-import">
-                      <div className="gf-bulk-import-head">
-                        <div>
-                          <p className="gf-sub-title">
-                            Bulk trophy personalization
-                          </p>
-                          <p className="gf-note">
-                            One row per design. Award, plate, formatting, and
-                            uploaded logo are shared across the order.
-                          </p>
-                        </div>
-                        <div className="gf-bulk-actions">
-                          <button
-                            type="button"
-                            className="gf-nav-secondary"
-                            onClick={downloadBulkCsvTemplate}
-                          >
-                            Download template
-                          </button>
-                          <button
-                            type="button"
-                            className="gf-nav-primary"
-                            onClick={() => bulkCsvInputRef.current?.click()}
-                          >
-                            {bulkRows.length > 0
-                              ? "Replace CSV"
-                              : "Upload CSV"}
-                          </button>
-                          <input
-                            ref={bulkCsvInputRef}
-                            type="file"
-                            accept=".csv,text/csv"
-                            className="gf-visually-hidden"
-                            onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              if (file) void importBulkCsv(file);
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="gf-bulk-paste">
-                        <label
-                          className="gf-bulk-paste-label"
-                          htmlFor="tr-bulk-paste"
-                        >
-                          Or paste your rows
-                        </label>
-                        <p className="gf-bulk-paste-example">
-                          {TROPHY_BULK_PASTE_EXAMPLES.map((row) => (
-                            <span key={row}>{row}</span>
-                          ))}
-                        </p>
-                        <textarea
-                          id="tr-bulk-paste"
-                          className="gf-bulk-paste-input"
-                          rows={4}
-                          spellCheck={false}
-                          placeholder={TROPHY_BULK_PASTE_EXAMPLES.join("\n")}
-                          value={bulkCsvText}
-                          onChange={(event) => {
-                            setBulkCsvText(event.target.value);
-                            setBulkError("");
-                          }}
-                        />
-                        {bulkPastePreview?.error || bulkError ? (
-                          <p className="gf-bulk-paste-error">
-                            {bulkError || bulkPastePreview?.error}
-                          </p>
-                        ) : null}
-                        {bulkPastePreview?.warning ? (
-                          <p className="gf-bulk-paste-warning">
-                            {bulkPastePreview.warning}
-                          </p>
-                        ) : null}
-                        <div className="gf-bulk-paste-foot">
-                          <span className="gf-note">
-                            {bulkPastePreview && !bulkPastePreview.error
-                              ? `${bulkPastePreview.rows.length} design${
-                                  bulkPastePreview.rows.length === 1 ? "" : "s"
-                                } ready`
-                              : `Up to ${TROPHY_MAX_PRICED_QUANTITY} total trophies.`}
-                          </span>
-                          <button
-                            type="button"
-                            className="gf-nav-primary"
-                            disabled={
-                              !bulkPastePreview ||
-                              Boolean(bulkPastePreview.error) ||
-                              bulkPastePreview.rows.length === 0
-                            }
-                            onClick={() => applyBulkCsv(bulkCsvText)}
-                          >
-                            Use these rows
-                          </button>
-                        </div>
-                      </div>
-
-                      {bulkRows.length > 0 ? (
-                        <>
-                          <div className="gf-bulk-status">
-                            <strong>
-                              {bulkRows.length} personalized design
-                              {bulkRows.length === 1 ? "" : "s"}
-                            </strong>
-                            <span>{bulkQuantity} total trophies</span>
-                          </div>
-                          {bulkCsvWarning ? (
-                            <p className="gf-bulk-paste-warning">
-                              {bulkCsvWarning}
-                            </p>
-                          ) : null}
-                          <div className="gf-bulk-grid-tools">
-                            <label>
-                              <span className="gf-visually-hidden">
-                                Search CSV text
-                              </span>
-                              <input
-                                type="search"
-                                className="gf-input"
-                                placeholder="Search any text…"
-                                value={bulkSearch}
-                                onChange={(event) =>
-                                  setBulkSearch(event.target.value)
-                                }
-                              />
-                            </label>
-                            <span className="gf-note">
-                              Viewing {visibleBulkRows.length} of{" "}
-                              {bulkRows.length}
-                            </span>
-                          </div>
-                          <div
-                            className="gf-bulk-grid tr-bulk-grid"
-                            role="table"
-                            aria-label="All personalized trophy designs"
-                          >
-                            <div className="gf-bulk-grid-header" role="row">
-                              <span role="columnheader">#</span>
-                              {(
-                                ["line1", "line2", "line3"] as const
-                              ).map((key, index) => (
-                                <button
-                                  key={key}
-                                  type="button"
-                                  role="columnheader"
-                                  onClick={() => toggleBulkSort(key)}
-                                >
-                                  Line {index + 1}
-                                  {bulkSortKey === key
-                                    ? bulkSortAscending
-                                      ? " ↑"
-                                      : " ↓"
-                                    : ""}
-                                </button>
-                              ))}
-                              <button
-                                type="button"
-                                role="columnheader"
-                                onClick={() => toggleBulkSort("quantity")}
-                              >
-                                Qty
-                                {bulkSortKey === "quantity"
-                                  ? bulkSortAscending
-                                    ? " ↑"
-                                    : " ↓"
-                                  : ""}
-                              </button>
-                            </div>
-                            {visibleBulkRows.map(({ row, index }) => (
-                              <button
-                                key={row.id}
-                                type="button"
-                                role="row"
-                                className={`gf-bulk-grid-row ${
-                                  selectedBulkRow === index
-                                    ? "is-selected"
-                                    : ""
-                                }`}
-                                onClick={() => selectBulkRow(index)}
-                              >
-                                <span role="cell">{index + 1}</span>
-                                {row.lines.map((line, lineIndex) => (
-                                  <span
-                                    key={lineIndex}
-                                    role="cell"
-                                    title={line}
-                                  >
-                                    {line || "—"}
-                                  </span>
-                                ))}
-                                <strong role="cell">{row.quantity}</strong>
-                              </button>
-                            ))}
-                            {visibleBulkRows.length === 0 ? (
-                              <p className="gf-bulk-grid-empty">
-                                No rows match “{bulkSearch}”.
-                              </p>
-                            ) : null}
-                          </div>
-                          <p className="gf-note">
-                            Select a row to preview it. Click a heading to sort.
-                          </p>
-                        </>
-                      ) : null}
-                    </div>
-                  ) : null}
-
                   {product.logoInsert ? (
                     <div className="tr-logo-upload">
                       <div className="gf-line-label">
@@ -1609,6 +1390,233 @@ export default function TrophyDesigner() {
                         : "Enter line 1 to continue."}
                     </p>
                   ) : null}
+                  {bulkMode ? (
+                    <div className="gf-bulk-import">
+                      <div className="gf-bulk-import-head">
+                        <div>
+                          <p className="gf-add-multiple-title">Add Multiple</p>
+                          <p className="gf-note">
+                            Paste a list of names. One design is applied to
+                            every piece. Award, plate, formatting, and uploaded
+                            logo are shared across the order.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="gf-bulk-paste">
+                        <label
+                          className="gf-bulk-paste-label"
+                          htmlFor="tr-bulk-paste"
+                        >
+                          Paste your list of names
+                        </label>
+                        <p className="gf-bulk-paste-example">
+                          {TROPHY_BULK_PASTE_EXAMPLES.map((row) => (
+                            <span key={row}>{row}</span>
+                          ))}
+                        </p>
+                        <textarea
+                          id="tr-bulk-paste"
+                          className="gf-bulk-paste-input"
+                          rows={4}
+                          spellCheck={false}
+                          placeholder={TROPHY_BULK_PASTE_EXAMPLES.join("\n")}
+                          value={bulkCsvText}
+                          onChange={(event) => {
+                            setBulkCsvText(event.target.value);
+                            setBulkError("");
+                          }}
+                        />
+                        {bulkPastePreview?.error || bulkError ? (
+                          <p className="gf-bulk-paste-error">
+                            {bulkError || bulkPastePreview?.error}
+                          </p>
+                        ) : null}
+                        {bulkPastePreview?.warning ? (
+                          <p className="gf-bulk-paste-warning">
+                            {bulkPastePreview.warning}
+                          </p>
+                        ) : null}
+                        <div className="gf-bulk-paste-foot">
+                          <span className="gf-note">
+                            {bulkPastePreview && !bulkPastePreview.error
+                              ? `${bulkPastePreview.rows.length} design${
+                                  bulkPastePreview.rows.length === 1 ? "" : "s"
+                                } ready`
+                              : `Up to ${TROPHY_MAX_PRICED_QUANTITY} total trophies.`}
+                          </span>
+                          <button
+                            type="button"
+                            className="gf-nav-primary"
+                            disabled={
+                              !bulkPastePreview ||
+                              Boolean(bulkPastePreview.error) ||
+                              bulkPastePreview.rows.length === 0
+                            }
+                            onClick={() => applyBulkCsv(bulkCsvText)}
+                          >
+                            Apply this list
+                          </button>
+                        </div>
+                        <div className="gf-bulk-actions">
+                          <button
+                            type="button"
+                            className="gf-nav-secondary"
+                            onClick={downloadBulkCsvTemplate}
+                          >
+                            Download template
+                          </button>
+                          <button
+                            type="button"
+                            className="gf-nav-secondary"
+                            onClick={() => bulkCsvInputRef.current?.click()}
+                          >
+                            Upload CSV
+                          </button>
+                          <button
+                            type="button"
+                            className="gf-nav-secondary"
+                            onClick={exitBulkMode}
+                          >
+                            Use one design
+                          </button>
+                          <input
+                            ref={bulkCsvInputRef}
+                            type="file"
+                            accept=".csv,text/csv"
+                            className="gf-visually-hidden"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              if (file) void importBulkCsv(file);
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {bulkRows.length > 0 ? (
+                        <>
+                          <div className="gf-bulk-status">
+                            <strong>
+                              {bulkRows.length} personalized design
+                              {bulkRows.length === 1 ? "" : "s"}
+                            </strong>
+                            <span>{bulkQuantity} total trophies</span>
+                          </div>
+                          {bulkCsvWarning ? (
+                            <p className="gf-bulk-paste-warning">
+                              {bulkCsvWarning}
+                            </p>
+                          ) : null}
+                          <div className="gf-bulk-grid-tools">
+                            <label>
+                              <span className="gf-visually-hidden">
+                                Search names
+                              </span>
+                              <input
+                                type="search"
+                                className="gf-input"
+                                placeholder="Search any text…"
+                                value={bulkSearch}
+                                onChange={(event) =>
+                                  setBulkSearch(event.target.value)
+                                }
+                              />
+                            </label>
+                            <span className="gf-note">
+                              Viewing {visibleBulkRows.length} of{" "}
+                              {bulkRows.length}
+                            </span>
+                          </div>
+                          <div
+                            className="gf-bulk-grid tr-bulk-grid"
+                            role="table"
+                            aria-label="All personalized trophy designs"
+                          >
+                            <div className="gf-bulk-grid-header" role="row">
+                              <span role="columnheader">#</span>
+                              {(
+                                ["line1", "line2", "line3"] as const
+                              ).map((key, index) => (
+                                <button
+                                  key={key}
+                                  type="button"
+                                  role="columnheader"
+                                  onClick={() => toggleBulkSort(key)}
+                                >
+                                  Line {index + 1}
+                                  {bulkSortKey === key
+                                    ? bulkSortAscending
+                                      ? " ↑"
+                                      : " ↓"
+                                    : ""}
+                                </button>
+                              ))}
+                              <button
+                                type="button"
+                                role="columnheader"
+                                onClick={() => toggleBulkSort("quantity")}
+                              >
+                                Qty
+                                {bulkSortKey === "quantity"
+                                  ? bulkSortAscending
+                                    ? " ↑"
+                                    : " ↓"
+                                  : ""}
+                              </button>
+                            </div>
+                            {visibleBulkRows.map(({ row, index }) => (
+                              <button
+                                key={row.id}
+                                type="button"
+                                role="row"
+                                className={`gf-bulk-grid-row ${
+                                  selectedBulkRow === index
+                                    ? "is-selected"
+                                    : ""
+                                }`}
+                                onClick={() => selectBulkRow(index)}
+                              >
+                                <span role="cell">{index + 1}</span>
+                                {row.lines.map((line, lineIndex) => (
+                                  <span
+                                    key={lineIndex}
+                                    role="cell"
+                                    title={line}
+                                  >
+                                    {line || "—"}
+                                  </span>
+                                ))}
+                                <strong role="cell">{row.quantity}</strong>
+                              </button>
+                            ))}
+                            {visibleBulkRows.length === 0 ? (
+                              <p className="gf-bulk-grid-empty">
+                                No rows match “{bulkSearch}”.
+                              </p>
+                            ) : null}
+                          </div>
+                          <p className="gf-note">
+                            Select a row to preview it. Click a heading to sort.
+                          </p>
+                        </>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="gf-add-multiple">
+                      <p className="gf-note">
+                        Ordering for a group? Add Multiple — paste your list of
+                        names and one design is applied to every piece.
+                      </p>
+                      <button
+                        type="button"
+                        className="gf-nav-primary"
+                        onClick={() => setBulkMode(true)}
+                      >
+                        Add Multiple
+                      </button>
+                    </div>
+
+                  )}
                 </>
               ) : null}
 
@@ -1622,8 +1630,8 @@ export default function TrophyDesigner() {
                         <span>{bulkRows.length} personalized designs</span>
                       </div>
                       <p className="gf-note">
-                        Quantities come from the CSV. Return to Design to
-                        replace or edit the file.
+                        Quantities come from your list. Return to Design to
+                        edit it.
                       </p>
                     </>
                   ) : (
@@ -1693,7 +1701,7 @@ export default function TrophyDesigner() {
                   <p className="tr-review-note">
                     {cartAdded
                       ? "Added to your cart. Your wording and plate art are saved with this order."
-                      : "Review the award, plate, and wording, then open your production proof to approve it."}
+                      : "Review the award, plate, and wording, then open your preview to approve it."}
                   </p>
                   {cartError ? (
                     <p className="gf-note" role="alert">
@@ -1747,8 +1755,8 @@ export default function TrophyDesigner() {
                     onClick={() => void reviewProof()}
                   >
                     {busy
-                      ? "Preparing proof…"
-                      : "Review proof & add to cart →"}
+                      ? "Preparing preview…"
+                      : "Review your preview & add to cart →"}
                   </button>
                 )}
               </div>
@@ -1806,7 +1814,7 @@ export default function TrophyDesigner() {
       {proofOpen && proofUrl ? (
         <div className="gf-modal-backdrop" role="dialog" aria-modal="true">
           <div className="gf-modal">
-            <h2 className="gf-modal-title">Design proof</h2>
+            <h2 className="gf-modal-title">Your preview</h2>
             <p className="gf-muted" style={{ marginBottom: 12 }}>
               Confirm the wording and plate, then add this{" "}
               {bulkMode && bulkRows.length > 0
@@ -1814,10 +1822,15 @@ export default function TrophyDesigner() {
                 : "trophy"}{" "}
               to your cart.{" "}
               {bulkMode && bulkRows.length > 1
-                ? "The proof shows the first CSV row; every row is added with the same award, plate, and font."
+                ? "The preview shows the first name; every piece is added with the same award, plate, and font."
                 : ""}
             </p>
-            <ProofPdfViewer url={proofUrl} title="Trophy plate proof" />
+            <ProofPdfViewer
+              url={proofUrl}
+              title="Trophy plate preview"
+              loadingLabel="Loading preview..."
+              failureLabel="Could not render the preview."
+            />
             {cartError ? <div className="gf-error">{cartError}</div> : null}
             <div className="gf-modal-actions">
               <button

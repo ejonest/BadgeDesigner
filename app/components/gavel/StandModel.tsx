@@ -232,6 +232,42 @@ export function StandModel({
     [],
   );
 
+  useLayoutEffect(() => {
+    return () => {
+      tiledColor?.dispose();
+    };
+  }, [tiledColor]);
+
+  useLayoutEffect(() => {
+    return () => {
+      tiledNormal?.dispose();
+    };
+  }, [tiledNormal]);
+
+  useLayoutEffect(() => {
+    return () => {
+      tiledRough?.dispose();
+    };
+  }, [tiledRough]);
+
+  useLayoutEffect(() => {
+    return () => {
+      bodyMat.dispose();
+    };
+  }, [bodyMat]);
+
+  useLayoutEffect(() => {
+    return () => {
+      plateMat.dispose();
+    };
+  }, [plateMat]);
+
+  useLayoutEffect(() => {
+    return () => {
+      footMat.dispose();
+    };
+  }, [footMat]);
+
   const footX = STAND_LENGTH_IN / 2 - FOOT_INSET - FOOT_W / 2;
   const footZ = standLedgeFrontZ() - FOOT_INSET - FOOT_D / 2;
   const feet: readonly (readonly [number, number])[] = [

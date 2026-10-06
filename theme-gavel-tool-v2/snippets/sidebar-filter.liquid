@@ -127,32 +127,7 @@
               </div>
               {% endif %}
 
-              {% if block.settings.collection == blank %}
-              <div class="widget-product">
-                  <div class="grid-item {{ grid_item_width }}">
-                      <div class="grid-view-item no-product">
-                          <div class="product-top">
-                              <div class="not_img">
-                                  Product Img
-                              </div>
-                          </div>
-
-                          <div class="product-bottom">
-                              <div class="product-title">
-                                  <span>
-                                      Your product's name
-                                  </span>
-                              </div>
-
-                              <div class="price-box">
-                                  <span> $250.00 </span>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-
-              {% else %}
+              {% if block.settings.collection != blank %}
               <div class="widget-product">
                   <div class="products-grid row">
                       {% for product in collections[block.settings.collection].products limit:block.settings.limit %}

@@ -83,8 +83,8 @@ export async function generateGavelProofPdf(
   let y = PAGE_HEIGHT - MARGIN;
   page.drawText(
     isStand
-      ? "Gavels Fast — Gavel + stand proof"
-      : "Gavels Fast — Custom band proof",
+      ? "Gavels Fast — Gavel + stand preview"
+      : "Gavels Fast — Custom band preview",
     {
       x: MARGIN,
       y,

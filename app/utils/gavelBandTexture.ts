@@ -6,7 +6,6 @@ import {
   gavelMetalTextureSet,
   GAVEL_BAND_TEXTURE_HEIGHT_PX,
   GAVEL_BAND_TEXTURE_WIDTH_PX,
-  GAVEL_DEFAULT_FONT,
   GAVEL_DEFAULT_TEXT_COLOR,
   GAVEL_MAX_LINES,
   GAVEL_TEXTURE_FONT_PX,
@@ -21,6 +20,12 @@ import {
   STAND_PLATE_W_IN,
   type GavelTextSizePreset,
 } from "~/constants/gavelStyles";
+import {
+  gavelCanvasFont,
+  gavelFontFamilyStack,
+  gavelPaintStyle,
+  gavelPaintWeight,
+} from "~/utils/gavelFonts";
 import { getReadyGavelMetalAlbedo } from "~/utils/gavelMetalTexture";
 import { blackInkLogo, blackInkLogoDataUrl } from "~/utils/logoBlackInk";
 import { standPlateOutline } from "~/utils/standPlateOutline";
@@ -38,10 +43,7 @@ function fontCss(
   line: GavelBandLineInput,
   sizePx: number,
 ): string {
-  const weight = line.bold ? "700" : "600";
-  const style = line.italic ? "italic" : "normal";
-  const family = line.fontFamily?.trim() || GAVEL_DEFAULT_FONT;
-  return `${style} ${weight} ${sizePx}px "${family}", Georgia, serif`;
+  return gavelCanvasFont(line, sizePx);
 }
 
 function parseHexRgb(
@@ -835,12 +837,12 @@ export function gavelBandToSvgString(
 
   const textEls = filled
     .map((line) => {
-      const family = line.fontFamily?.trim() || GAVEL_DEFAULT_FONT;
-      const weight = line.bold ? 700 : 600;
-      const fontStyle = line.italic ? "italic" : "normal";
+      const family = gavelFontFamilyStack(line.fontFamily);
+      const weight = gavelPaintWeight(line);
+      const fontStyle = gavelPaintStyle(line);
       const color = line.color?.trim() || GAVEL_DEFAULT_TEXT_COLOR;
       const text = escapeXml((line.text ?? "").trim());
-      const el = `<text x="${textCenterX}" y="${y}" text-anchor="middle" font-family="${escapeXml(family)}, Georgia, serif" font-size="${drawPx}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(color)}">${text}</text>`;
+      const el = `<text x="${textCenterX}" y="${y}" text-anchor="middle" font-family="${escapeXml(family)}" font-size="${drawPx}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(color)}">${text}</text>`;
       y += drawPx + drawGap;
       return el;
     })
@@ -879,12 +881,12 @@ export function gavelStandPlateToSvgString(
       : "";
   const textEls = rows
     .map(({ line, fontPx, baseline }) => {
-      const family = line.fontFamily?.trim() || GAVEL_DEFAULT_FONT;
-      const weight = line.bold ? 700 : 600;
-      const fontStyle = line.italic ? "italic" : "normal";
+      const family = gavelFontFamilyStack(line.fontFamily);
+      const weight = gavelPaintWeight(line);
+      const fontStyle = gavelPaintStyle(line);
       const color = line.color?.trim() || GAVEL_DEFAULT_TEXT_COLOR;
       const text = escapeXml((line.text ?? "").trim());
-      return `<text x="${layout.textCenterX.toFixed(2)}" y="${baseline.toFixed(2)}" text-anchor="middle" font-family="${escapeXml(family)}, Georgia, serif" font-size="${fontPx.toFixed(2)}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(color)}">${text}</text>`;
+      return `<text x="${layout.textCenterX.toFixed(2)}" y="${baseline.toFixed(2)}" text-anchor="middle" font-family="${escapeXml(family)}" font-size="${fontPx.toFixed(2)}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(color)}">${text}</text>`;
     })
     .join("\n");
   const toPath = (pts: { x: number; y: number }[]) =>
@@ -1162,11 +1164,11 @@ export function soundBlockTopToSvgString(
     : "";
   const textEls = rows
     .map((row) => {
-      const family = row.fontFamily?.trim() || GAVEL_DEFAULT_FONT;
-      const weight = row.bold ? 700 : 600;
-      const fontStyle = row.italic ? "italic" : "normal";
+      const family = gavelFontFamilyStack(row.fontFamily);
+      const weight = gavelPaintWeight(row);
+      const fontStyle = gavelPaintStyle(row);
       const deco = row.underline ? ' text-decoration="underline"' : "";
-      const el = `<text x="${size / 2}" y="${y}" text-anchor="middle" font-family="${escapeXml(family)}, Georgia, serif" font-size="${fontPx}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(textColor)}"${deco}>${escapeXml(row.text ?? "")}</text>`;
+      const el = `<text x="${size / 2}" y="${y}" text-anchor="middle" font-family="${escapeXml(family)}" font-size="${fontPx}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(textColor)}"${deco}>${escapeXml(row.text ?? "")}</text>`;
       y += fontPx + gap;
       return el;
     })

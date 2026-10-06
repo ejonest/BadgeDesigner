@@ -130,7 +130,10 @@ import {
   effectiveSignTemplateIdForBadge,
   getSignLikeShopifyShapeSizeForTemplateId,
 } from "~/utils/signTemplateShopifyOptions";
-import { buildDesignerCartLineProperties } from "~/utils/cartLineProperties";
+import {
+  buildDesignerCartLineProperties,
+  buildProductionLineProperties,
+} from "~/utils/cartLineProperties";
 
 import {
   loadTemplates,
@@ -7020,6 +7023,37 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
         return fromUrl || null;
       };
 
+      const plaqueProductionProperties = (
+        b: Badge,
+      ): Record<string, string> => {
+        if (variant !== "plaque") return {};
+        const parsedTemplate = parsePlaqueTemplateId(b.templateId);
+        const layoutId =
+          selectedPlaqueLayoutId ?? parsedTemplate?.layoutId ?? undefined;
+        const size =
+          selectedPlaqueSize ?? parsedTemplate?.size ?? undefined;
+        const layoutLabel = layoutId
+          ? (PLAQUE_LAYOUT_OPTIONS.find((option) => option.id === layoutId)
+              ?.name ?? layoutId)
+          : undefined;
+        const sizeLabel =
+          layoutId && size
+            ? [
+                getPlaqueSizeStepDisplay(layoutId, size).primaryLine,
+                ...getPlaqueSizeStepDisplay(layoutId, size).detailLines,
+              ].join(" · ")
+            : undefined;
+
+        return {
+          ...buildProductionLineProperties("Plaque", b.lines),
+          ...(layoutLabel ? { "_Plaque Layout": layoutLabel } : {}),
+          ...(sizeLabel ? { "_Plaque Size": sizeLabel } : {}),
+          ...(b.backgroundColor
+            ? { "_Plate Finish": b.backgroundColor }
+            : {}),
+        };
+      };
+
       const cartItems = addDuplicates
         ? allBadgesForSupabase.map((b, i) => {
             const { variantId, linePrice: itemTotalPrice } = isSignDesigner
@@ -7045,6 +7079,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               uploadedLogo: b.logo?.src?.trim()
                 ? b.logo.fileName || "Included"
                 : undefined,
+              extraHidden: plaqueProductionProperties(b),
               includeBackingType: !isSignDesigner,
             });
             return {
@@ -7075,6 +7110,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
               uploadedLogo: b.logo?.src?.trim()
                 ? b.logo.fileName || "Included"
                 : undefined,
+              extraHidden: plaqueProductionProperties(b),
               includeBackingType: !isSignDesigner,
             });
             return {

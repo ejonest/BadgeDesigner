@@ -15,7 +15,7 @@ export async function generateTrophyProofPdf(input: {
   pdf.setTextColor("#232323");
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(22);
-  pdf.text("Custom Trophy Design Proof", 54, 58);
+  pdf.text("Custom Trophy Design Preview", 54, 58);
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9);

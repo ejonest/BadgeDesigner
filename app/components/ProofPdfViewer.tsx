@@ -4,6 +4,10 @@ type ProofPdfViewerProps = {
   url: string;
   title?: string;
   className?: string;
+  /** Shown while the PDF renders. Gavels Fast passes preview wording. */
+  loadingLabel?: string;
+  /** Shown when the PDF cannot be drawn. */
+  failureLabel?: string;
 };
 
 type LoadState = "loading" | "ready" | "error";
@@ -16,6 +20,8 @@ export function ProofPdfViewer({
   url,
   title = "Design proof",
   className = "",
+  loadingLabel = "Loading proof preview...",
+  failureLabel = "Could not render the proof PDF.",
 }: ProofPdfViewerProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [state, setState] = useState<LoadState>("loading");
@@ -43,7 +49,7 @@ export function ProofPdfViewer({
         // Prefer raw bytes over blob: URL - more reliable across Android Chromium.
         const pdfBytes = await fetch(url).then((res) => {
           if (!res.ok) {
-            throw new Error(`Failed to load proof PDF (${res.status})`);
+            throw new Error(`Failed to load PDF (${res.status})`);
           }
           return res.arrayBuffer();
         });
@@ -106,7 +112,7 @@ export function ProofPdfViewer({
         if (cancelled) return;
         console.error("[ProofPdfViewer] failed to render proof PDF", err);
         setErrorMessage(
-          err instanceof Error ? err.message : "Could not render the proof PDF.",
+          err instanceof Error ? err.message : failureLabel,
         );
         setState("error");
       }
@@ -118,7 +124,7 @@ export function ProofPdfViewer({
       cancelled = true;
       host.replaceChildren();
     };
-  }, [url, title]);
+  }, [url, title, failureLabel]);
 
   return (
     <div
@@ -134,7 +140,7 @@ export function ProofPdfViewer({
               className="mx-auto mb-2 h-7 w-7 animate-spin rounded-full border-2 border-gray-300 border-t-[#02132B]"
               aria-hidden
             />
-            <p className="text-sm text-gray-600">Loading proof preview...</p>
+            <p className="text-sm text-gray-600">{loadingLabel}</p>
           </div>
         </div>
       ) : null}

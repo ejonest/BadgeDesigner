@@ -154,6 +154,12 @@ export function GavelModel({
     return () => handleGeom.dispose();
   }, [handleGeom]);
 
+  useLayoutEffect(() => {
+    return () => {
+      headGeom.dispose();
+    };
+  }, [headGeom]);
+
   const bodyMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
@@ -196,6 +202,20 @@ export function GavelModel({
       }),
     [bandHex, bandMap, metalMaps],
   );
+
+  // A new band image is built on every keystroke. Drop the previous material
+  // or the phone's GPU memory grows until the browser kills the tab.
+  useLayoutEffect(() => {
+    return () => {
+      bodyMat.dispose();
+    };
+  }, [bodyMat]);
+
+  useLayoutEffect(() => {
+    return () => {
+      bandMat.dispose();
+    };
+  }, [bandMat]);
 
   return (
     <group>
