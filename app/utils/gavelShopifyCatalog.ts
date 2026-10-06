@@ -58,7 +58,13 @@ export const GAVEL_PRODUCT_HANDLES: Record<GavelProductType, string> = {
   stand: "custom-wooden-gavel-stand",
 };
 
+/** Current storefront handle. The previous suede handle is tried if this 404s. */
+export const VELOUR_BAG_PRODUCT_HANDLE = "velour-gift-bag";
 export const SUEDE_BAG_PRODUCT_HANDLE = "suede-gavel-bag";
+export const BAG_PRODUCT_HANDLES = [
+  VELOUR_BAG_PRODUCT_HANDLE,
+  SUEDE_BAG_PRODUCT_HANDLE,
+] as const;
 export const GAVEL_BAG_OPTION_NAME = "Bag type";
 export const GAVEL_BAG_OPTION_VALUES: Record<
   Exclude<GavelBagSelectionId, "none">,
@@ -228,9 +234,26 @@ export function resolveSuedeBagVariant(
   if (selection === "none" || !product?.variants?.length) return null;
   const wanted = normOptionText(GAVEL_BAG_OPTION_VALUES[selection]);
   const aliases =
-    selection === "secondary"
-      ? new Set([wanted, "stand bag", "sound block bag", "secondary bag"])
-      : new Set([wanted]);
+    selection === "gavel"
+      ? new Set([
+          wanted,
+          "gavel bag",
+          "velour gavel bag",
+          "velour gift bag",
+          "suede gavel bag",
+          "suede gift bag",
+        ])
+      : selection === "secondary"
+        ? new Set([
+            wanted,
+            "stand bag",
+            "sound block bag",
+            "secondary bag",
+            "velour stand bag",
+            "velour sound block bag",
+            "suede stand bag",
+          ])
+        : new Set([wanted, "both bags", "both velour bags"]);
   const variant = product.variants.find((candidate) => {
     const values = [
       candidate.title,

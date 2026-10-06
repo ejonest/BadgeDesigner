@@ -14,7 +14,7 @@
       "settings": {
         "cart_notes": true,
         "secure_text": "Secure Shopping Guarantee.",
-        "cart_countdown_enable": true,
+        "cart_countdown_enable": false,
         "time_countdown": 30,
         "coupon_code_enable": true,
         "coupon_title": "Coupon Code:",
@@ -25,7 +25,7 @@
         "button_gift_text": "Add",
         "show_cart_best_sellers_product": true,
         "title": "Best Sellers",
-        "show_slider_featured_collection": "cosmopolis",
+        "show_slider_featured_collection": "best-sellers-2024",
         "slider_featured_limit_all": 16,
         "collection_results_per_row1": "5"
       }

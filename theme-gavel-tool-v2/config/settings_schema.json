@@ -3373,7 +3373,8 @@
         "type": "checkbox",
         "id": "enable_free_shipping_message",
         "label": "Enable Free Shipping Message",
-        "default": true
+        "info": "Leave off. Shipping is free on every order, and the cart no longer shows a spending bar.",
+        "default": false
       },
       {
         "type": "color",
@@ -3385,8 +3386,8 @@
         "type": "text",
         "id": "free_shipping_price",
         "label": "Enter total price of order to offer free shipping",
-        "default": "800",
-        "info": "Please enter only numbers. Example: 800"
+        "default": "0",
+        "info": "Unused. The cart threshold bar has been removed."
       },
       {
         "type": "color",

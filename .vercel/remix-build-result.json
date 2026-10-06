@@ -20,6 +20,7 @@
       "routes/api.delete-gavel-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.dev.desk-sign-image-crop.save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-plaque-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.link-order-trophy-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-desk-sign-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.delete-sign-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-gavel-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -39,6 +40,7 @@
       "routes/api.saved-desk-sign-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-pen-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-plaque-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.send-trophy-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-plaque-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-desk-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -69,6 +71,7 @@
       "routes/api.library-thumbnail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-badges": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-plaque": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-draft-trophy": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-gavel-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-pen-designs": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -101,6 +104,7 @@
       "routes/api.cart-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-plaque": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-trophy": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/deployment-test": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/plaque-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/trophy-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -216,6 +220,15 @@
         "file": "app/routes/api.link-order-plaque-to-supabase.tsx",
         "id": "routes/api.link-order-plaque-to-supabase",
         "path": "api/link-order-plaque-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.link-order-trophy-to-supabase": {
+        "file": "app/routes/api.link-order-trophy-to-supabase.tsx",
+        "id": "routes/api.link-order-trophy-to-supabase",
+        "path": "api/link-order-trophy-to-supabase",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -387,6 +400,15 @@
         "file": "app/routes/api.send-plaque-to-supabase.tsx",
         "id": "routes/api.send-plaque-to-supabase",
         "path": "api/send-plaque-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.send-trophy-to-supabase": {
+        "file": "app/routes/api.send-trophy-to-supabase.tsx",
+        "id": "routes/api.send-trophy-to-supabase",
+        "path": "api/send-trophy-to-supabase",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -657,6 +679,15 @@
         "file": "app/routes/api.save-draft-plaque.tsx",
         "id": "routes/api.save-draft-plaque",
         "path": "api/save-draft-plaque",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.save-draft-trophy": {
+        "file": "app/routes/api.save-draft-trophy.tsx",
+        "id": "routes/api.save-draft-trophy",
+        "path": "api/save-draft-trophy",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -950,6 +981,15 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.save-trophy": {
+        "file": "app/routes/api.save-trophy.tsx",
+        "id": "routes/api.save-trophy",
+        "path": "api/save-trophy",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/deployment-test": {
         "file": "app/routes/deployment-test.tsx",
         "id": "routes/deployment-test",
@@ -1231,6 +1271,12 @@
         "path": "api/link-order-plaque-to-supabase",
         "parentId": "root"
       },
+      "routes/api.link-order-trophy-to-supabase": {
+        "file": "routes/api.link-order-trophy-to-supabase.tsx",
+        "id": "routes/api.link-order-trophy-to-supabase",
+        "path": "api/link-order-trophy-to-supabase",
+        "parentId": "root"
+      },
       "routes/api.saved-desk-sign-design-detail": {
         "file": "routes/api.saved-desk-sign-design-detail.tsx",
         "id": "routes/api.saved-desk-sign-design-detail",
@@ -1343,6 +1389,12 @@
         "file": "routes/api.send-plaque-to-supabase.tsx",
         "id": "routes/api.send-plaque-to-supabase",
         "path": "api/send-plaque-to-supabase",
+        "parentId": "root"
+      },
+      "routes/api.send-trophy-to-supabase": {
+        "file": "routes/api.send-trophy-to-supabase.tsx",
+        "id": "routes/api.send-trophy-to-supabase",
+        "path": "api/send-trophy-to-supabase",
         "parentId": "root"
       },
       "routes/api.autosave-plaque-design": {
@@ -1523,6 +1575,12 @@
         "file": "routes/api.save-draft-plaque.tsx",
         "id": "routes/api.save-draft-plaque",
         "path": "api/save-draft-plaque",
+        "parentId": "root"
+      },
+      "routes/api.save-draft-trophy": {
+        "file": "routes/api.save-draft-trophy.tsx",
+        "id": "routes/api.save-draft-trophy",
+        "path": "api/save-draft-trophy",
         "parentId": "root"
       },
       "routes/api.save-gavel-design": {
@@ -1715,6 +1773,12 @@
         "file": "routes/api.save-plaque.tsx",
         "id": "routes/api.save-plaque",
         "path": "api/save-plaque",
+        "parentId": "root"
+      },
+      "routes/api.save-trophy": {
+        "file": "routes/api.save-trophy.tsx",
+        "id": "routes/api.save-trophy",
+        "path": "api/save-trophy",
         "parentId": "root"
       },
       "routes/deployment-test": {

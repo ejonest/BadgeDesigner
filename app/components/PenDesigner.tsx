@@ -32,7 +32,10 @@ import {
   getDesignerApiPaths,
   getDesignerConfig,
 } from "~/config/designers";
-import { buildDesignerCartLineProperties } from "~/utils/cartLineProperties";
+import {
+  buildDesignerCartLineProperties,
+  buildProductionLineProperties,
+} from "~/utils/cartLineProperties";
 import "../styles/penDesigner.css";
 
 type PenStep = "product" | "band" | "cap" | "quantity" | "review";
@@ -526,7 +529,7 @@ export default function PenDesigner({
       goTo("review");
     } catch (caught) {
       setError(
-        caught instanceof Error ? caught.message : "Could not build the proof.",
+        caught instanceof Error ? caught.message : "Could not build the preview.",
       );
     } finally {
       setBusy(false);
@@ -554,17 +557,18 @@ export default function PenDesigner({
       });
       const finalized = await finalizeResponse.json().catch(() => ({}));
       if (!finalizeResponse.ok || finalized.success === false) {
-        throw new Error(finalized.error || "Could not finalize the pen proof.");
+        throw new Error(finalized.error || "Could not finalize the pen preview.");
       }
 
       const definition = getDesignerConfig("pen");
+      const badge = buildBadge();
       const properties = buildDesignerCartLineProperties({
         designerId: "pen",
         designId: designIdRef.current,
         lineIndex: 0,
         indexPropertyPrimary: definition.cartIndexPropertyPrimary,
         indexPropertyFallbacks: definition.cartIndexPropertyFallbacks,
-        lines: buildBadge().lines,
+        lines: badge.lines,
         backgroundColor: "#315c7d",
         linePrice: unitPrice.toFixed(2),
         thumbnailUrl: finalized.thumbnailUrls?.[0] ?? "",
@@ -572,6 +576,12 @@ export default function PenDesigner({
         orderQuantity: quantity,
         uploadedLogo: bandLogoFile?.name,
         extraHidden: {
+          ...buildProductionLineProperties("Case Band", [badge.lines[0]], {
+            omitLineNumberWhenSingle: true,
+          }),
+          ...buildProductionLineProperties("Pen Cap", [badge.lines[1]], {
+            omitLineNumberWhenSingle: true,
+          }),
           "_Pen Style": "Black gift set",
           "_Case Band Artwork": describeArtwork(bandText, bandLogoFile),
           "_Pen Cap Artwork": describeArtwork(capText, null),
@@ -833,7 +843,7 @@ export default function PenDesigner({
                 disabled={busy}
                 onClick={buildProof}
               >
-                {busy ? "Building proof…" : "Open proof & add to cart"}
+                {busy ? "Building preview…" : "Open preview & add to cart"}
               </button>
             ) : (
               <button
@@ -933,14 +943,14 @@ export default function PenDesigner({
           >
             <div className="pen-proof-modal-head">
               <div>
-                <p className="pen-step-label">Production proof</p>
+                <p className="pen-step-label">Your preview</p>
                 <h2 id="pen-proof-title">Confirm your design</h2>
               </div>
               <button type="button" onClick={() => setProofOpen(false)}>
                 Close
               </button>
             </div>
-            <iframe src={proofUrl} title="Custom pen design proof" />
+            <iframe src={proofUrl} title="Custom pen design preview" />
             {error && (
               <div className="pen-error" role="alert">
                 {error}

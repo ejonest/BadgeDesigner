@@ -25,7 +25,7 @@
             "sidebar_blog_tags": false,
             "enable_product": true,
             "title_product": "Featured Products",
-            "collection": "cosmetic-all",
+            "collection": "best-sellers-2024",
             "limit": "3",
             "enable_img_1": true,
             "link_img_1": "shopify://collections/cosmopolitan",
@@ -112,7 +112,7 @@
         "gallery_lb_title": "LookBook Gallery",
         "show_cart_best_sellers_product": true,
         "title": "Best Sellers",
-        "show_slider_featured_collection": "cosmopolis",
+        "show_slider_featured_collection": "best-sellers-2024",
         "slider_featured_limit_all": 8,
         "collection_results_per_row1": "4"
       }

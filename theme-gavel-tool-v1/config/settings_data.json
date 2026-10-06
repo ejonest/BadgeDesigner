@@ -1870,7 +1870,7 @@
         "settings": {
           "eyebrow": "How it works",
           "title": "Design your gavel in 4 simple steps",
-          "subtitle": "No artwork files, no proofs by email, no waiting. Customize it and preview the finished look on screen.",
+          "subtitle": "No artwork files, no previews by email, no waiting. Customize it and preview the finished look on screen.",
           "cta_label": "Start designing",
           "cta_link": "/products/custom-wooden-gavel"
         },
@@ -1904,7 +1904,7 @@
             "settings": {
               "icon": "eye",
               "title": "Preview and order",
-              "text": "Turn it, zoom in, approve the proof on screen, then add to cart."
+              "text": "Turn it, zoom in, approve the preview on screen, then add to cart."
             }
           }
         },
@@ -2038,7 +2038,7 @@
             "type": "faq",
             "settings": {
               "question": "Can I add a logo or a seal?",
-              "answer": "<p>Yes. Add it in the design tool, or send it over and we will place it for you and share a proof.</p>"
+              "answer": "<p>Yes. Add it in the design tool, or send it over and we will place it for you and share a preview.</p>"
             }
           },
           "faq_6": {

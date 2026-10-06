@@ -57,32 +57,7 @@
                     {% render 'before-load-grid-item', product: product %}
                 </div>
             
-                {% else %}
-                
-                {% for product in (1..section.settings.product_list_limit_all) %}
-                <div class="grid-item {{ grid_item_width }}">
-                <div class="grid-view-item no-product">
-                    <div class="product-top">
-                    <div class="not_img">
-                        Product Img
-                    </div>
-                    </div>
-                    
-                    <div class="product-bottom">
-                    <div class="product-title">
-                        <span>
-                        Your product's name
-                        </span>
-                    </div>
-                    
-                    <div class="price-box">
-                        <span> $250.00 </span>
-                    </div>
-                    </div>
-                </div>
-                </div>
-                {% endfor %}
-                {% endfor %}
+                                {% endfor %}
             </div>
             
             {% if section.settings.display_infinite_scrolling_homepage and collections[section.settings.product_list_collection].handle != '' %}      

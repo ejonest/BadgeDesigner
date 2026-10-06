@@ -19,7 +19,6 @@ import type { GavelStyleDef } from "~/constants/gavelStyles";
 import {
   GAVEL_BAND_GOLD_HEX,
   GAVEL_VIEW_CAMERA_POSITION,
-  GAVEL_VIEW_TARGET,
   SOUND_BLOCK_VIEW_CAMERA_POSITION,
   SOUND_BLOCK_VIEW_TARGET,
   STAND_HEAD_WELL_DEPTH_IN,
@@ -68,6 +67,119 @@ export type GavelPreviewSubject =
   | "product"
   | "band";
 
+/**
+ * Which group of fields the shopper is editing. `token` bumps each time focus
+ * enters a new group, so the preview follows the cursor once per move and the
+ * shopper can still pick another tab while they type.
+ */
+export type GavelPreviewFocus = {
+  area: "band" | "plate" | "soundBlock" | null;
+  token: number;
+};
+
+/**
+ * A framing: where to look, which way the camera sits, and the world-space box
+ * the model occupies. The distance is solved from the canvas shape so the box
+ * fills the frame with a small margin instead of floating in the middle.
+ */
+type PreviewFrame = {
+  target: THREE.Vector3;
+  /** Unit vector from the target out to the camera. */
+  direction: THREE.Vector3;
+  min: THREE.Vector3;
+  max: THREE.Vector3;
+  /** Share of the frame the box should cover. The rest is the margin. */
+  fill: number;
+};
+
+const vec = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+
+function viewDirection(
+  camera: readonly [number, number, number],
+  target: readonly [number, number, number],
+) {
+  return new THREE.Vector3(
+    camera[0] - target[0],
+    camera[1] - target[1],
+    camera[2] - target[2],
+  ).normalize();
+}
+
+/**
+ * Side three-quarter of the whole gavel. The handle runs down −Z, so a view
+ * from the end (the old camera) foreshortens it to a small head in the middle
+ * of a wide canvas. From the side the handle spans the frame.
+ */
+const GAVEL_FRAME: PreviewFrame = {
+  target: vec(0, 0, -3.7),
+  direction: vec(1.05, 0.32, 0.62).normalize(),
+  min: vec(-1.1, -1.55, -8.9),
+  max: vec(1.1, 1.55, 1.1),
+  fill: 0.9,
+};
+
+/**
+ * The engraved face of the band, on the +Z side of the head. The head stands
+ * 3" tall, so the box has to cover that or the close-up crops the beads.
+ */
+const BAND_FRAME: PreviewFrame = {
+  target: vec(0, 0, 0),
+  direction: vec(0.22, 0.16, 1).normalize(),
+  min: vec(-1.15, -1.6, -0.3),
+  max: vec(1.15, 1.6, 1.15),
+  fill: 0.86,
+};
+
+const STAND_FRAME: PreviewFrame = {
+  target: vec(...STAND_VIEW_TARGET),
+  direction: viewDirection(STAND_VIEW_CAMERA_POSITION, STAND_VIEW_TARGET),
+  min: vec(-6.1, -0.1, -2.6),
+  max: vec(6.1, 4.0, 2.6),
+  fill: 0.86,
+};
+
+const BLOCK_FRAME: PreviewFrame = {
+  target: vec(...SOUND_BLOCK_VIEW_TARGET),
+  direction: viewDirection(
+    SOUND_BLOCK_VIEW_CAMERA_POSITION,
+    SOUND_BLOCK_VIEW_TARGET,
+  ),
+  min: vec(-1.65, -0.65, -1.65),
+  max: vec(1.65, 0.75, 1.65),
+  fill: 0.88,
+};
+
+const _corner = new THREE.Vector3();
+const _right = new THREE.Vector3();
+const _up = new THREE.Vector3();
+
+/** Distance at which `frame`'s box fills `fill` of both the width and height. */
+function fitDistance(camera: THREE.PerspectiveCamera, frame: PreviewFrame) {
+  const worldUp =
+    Math.abs(frame.direction.y) > 0.92
+      ? _up.set(0, 0, 1)
+      : _up.set(0, 1, 0);
+  _right.crossVectors(worldUp, frame.direction).normalize();
+  _up.crossVectors(frame.direction, _right).normalize();
+
+  let halfW = 0.001;
+  let halfH = 0.001;
+  const { min, max, target } = frame;
+  for (const x of [min.x, max.x]) {
+    for (const y of [min.y, max.y]) {
+      for (const z of [min.z, max.z]) {
+        _corner.set(x, y, z).sub(target);
+        halfW = Math.max(halfW, Math.abs(_corner.dot(_right)));
+        halfH = Math.max(halfH, Math.abs(_corner.dot(_up)));
+      }
+    }
+  }
+
+  const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+  const tanH = tanV * Math.max(camera.aspect, 0.25);
+  return Math.max(halfH / (tanV * frame.fill), halfW / (tanH * frame.fill));
+}
+
 export type GavelSpinPreviewHandle = {
   capturePngDataUrl: () => string | null;
   capturePngBlob: () => Promise<Blob | null>;
@@ -101,6 +213,17 @@ export type GavelSpinPreviewProps = {
   showFlatProofTabs?: boolean;
   /** Studio photo of the real product for the selected wood. */
   productPhotoSrc?: string;
+  /**
+   * Incremented when a covering modal closes. Remounts the WebGL canvas so a
+   * context that went blank while the dialog was up comes back.
+   */
+  previewRevive?: number;
+  /** Keeps the designer canvas centered when the shopper switches preview views. */
+  onViewChange?: () => void;
+  /** Field group being edited; the preview switches to the matching view. */
+  focus?: GavelPreviewFocus;
+  /** Reports the tab actually on screen, including switches the preview makes itself. */
+  onSubjectChange?: (subject: GavelPreviewSubject) => void;
 };
 
 function CaptureBridge({
@@ -117,18 +240,51 @@ function CaptureBridge({
 
 type CameraSubject = GavelPreviewSubject;
 
-function FrameView({ subject }: { subject: CameraSubject }) {
-  const { camera } = useThree();
-  useLayoutEffect(() => {
-    const pos =
+function FrameView({
+  subject,
+  bandZoom,
+}: {
+  subject: CameraSubject;
+  bandZoom: boolean;
+}) {
+  const camera = useThree((state) => state.camera) as THREE.PerspectiveCamera;
+  const size = useThree((state) => state.size);
+  const controls = useThree((state) => state.controls) as {
+    target: THREE.Vector3;
+    minDistance: number;
+    maxDistance: number;
+    update: () => void;
+  } | null;
+  const applied = useRef<{ key: string; controls: unknown } | null>(null);
+
+  useEffect(() => {
+    const frame =
       subject === "soundBlock"
-        ? SOUND_BLOCK_VIEW_CAMERA_POSITION
+        ? BLOCK_FRAME
         : subject === "stand"
-          ? STAND_VIEW_CAMERA_POSITION
-          : GAVEL_VIEW_CAMERA_POSITION;
-    camera.position.set(pos[0], pos[1], pos[2]);
+          ? STAND_FRAME
+          : bandZoom
+            ? BAND_FRAME
+            : GAVEL_FRAME;
+    const key = `${subject}|${bandZoom ? "band" : "wide"}|${Math.round(size.width)}x${Math.round(size.height)}`;
+    if (
+      !controls ||
+      (applied.current?.key === key && applied.current.controls === controls)
+    ) {
+      return;
+    }
+
+    camera.aspect = size.width / Math.max(size.height, 1);
+    const dist = fitDistance(camera, frame);
+    camera.position.copy(frame.target).addScaledVector(frame.direction, dist);
+    camera.lookAt(frame.target);
     camera.updateProjectionMatrix();
-  }, [camera, subject]);
+    controls.target.copy(frame.target);
+    controls.minDistance = dist * 0.7;
+    controls.maxDistance = dist * 1.4;
+    controls.update();
+    applied.current = { key, controls };
+  }, [bandZoom, camera, controls, size.height, size.width, subject]);
   return null;
 }
 
@@ -151,6 +307,10 @@ export const GavelSpinPreview = forwardRef<
     showStandToggle = false,
     showFlatProofTabs = false,
     productPhotoSrc = "",
+    previewRevive = 0,
+    onViewChange,
+    focus,
+    onSubjectChange,
   },
   ref,
 ) {
@@ -163,9 +323,9 @@ export const GavelSpinPreview = forwardRef<
   );
   const [enlarged, setEnlarged] = useState(false);
   const dialogRef = useRef<HTMLDialogElement | null>(null);
-  // A stand's Plate tab already stacks the band proof above the plate proof,
-  // so offering Band alongside it would be a second route to the same image.
-  const bandTabVisible = showFlatProofTabs && !showStandToggle;
+  const [bandZoom, setBandZoom] = useState(false);
+  const lastFocusToken = useRef(0);
+  const bandTabVisible = showFlatProofTabs;
   const plateTabVisible = showFlatProofTabs && showStandToggle;
   const viewingProduct = subject === "product";
   const viewingBand = bandTabVisible && subject === "band";
@@ -182,16 +342,62 @@ export const GavelSpinPreview = forwardRef<
       : gavelGroundY();
   const photoSrc = productPhotoSrc || style.thumbSrc;
   const photoAlt = `Actual ${style.label} ${showStandToggle ? "gavel and stand" : "gavel"}`;
+  const chooseSubject = (next: GavelPreviewSubject) => {
+    setSubject(next);
+    onViewChange?.();
+  };
   const cameraSubject: CameraSubject = viewingBlock
     ? "soundBlock"
     : viewingStandSet
       ? "stand"
       : "gavel";
-  const cameraTarget = viewingBlock
-    ? SOUND_BLOCK_VIEW_TARGET
+  const shownSubject: GavelPreviewSubject = viewingProduct
+    ? "product"
+    : viewingBand
+      ? "band"
+      : viewingPlate
+        ? "plate"
+        : cameraSubject;
+  useEffect(() => {
+    onSubjectChange?.(shownSubject);
+  }, [onSubjectChange, shownSubject]);
+  const zoomOnBand = bandZoom && cameraSubject === "gavel";
+  const viewFrame = viewingBlock
+    ? BLOCK_FRAME
     : viewingStandSet
-      ? STAND_VIEW_TARGET
-      : GAVEL_VIEW_TARGET;
+      ? STAND_FRAME
+      : zoomOnBand
+        ? BAND_FRAME
+        : GAVEL_FRAME;
+
+  const focusActive = Boolean(focus);
+  const focusArea = focus?.area ?? null;
+  const focusToken = focus?.token ?? 0;
+  useEffect(() => {
+    if (!focusActive || !focusArea) setBandZoom(false);
+  }, [focusActive, focusArea]);
+  useEffect(() => {
+    if (focusToken === lastFocusToken.current) return;
+    lastFocusToken.current = focusToken;
+    if (!focusArea) return;
+    setHintVisible(false);
+    setBandZoom(focusArea === "band");
+    if (focusArea === "band") {
+      setSubject(bandTabVisible ? "band" : "gavel");
+    } else if (focusArea === "plate") {
+      if (plateTabVisible) setSubject("plate");
+      else if (showStandToggle) setSubject("stand");
+    } else if (focusArea === "soundBlock" && showSoundBlockToggle) {
+      setSubject("soundBlock");
+    }
+  }, [
+    focusToken,
+    focusArea,
+    bandTabVisible,
+    plateTabVisible,
+    showStandToggle,
+    showSoundBlockToggle,
+  ]);
 
   useEffect(() => {
     if (!showSoundBlockToggle && subject === "soundBlock") setSubject("gavel");
@@ -273,7 +479,7 @@ export const GavelSpinPreview = forwardRef<
             role="tab"
             aria-selected={subject === "stand"}
             className={subject === "stand" ? "is-on" : ""}
-            onClick={() => setSubject("stand")}
+            onClick={() => chooseSubject("stand")}
           >
             Stand
           </button>
@@ -283,7 +489,7 @@ export const GavelSpinPreview = forwardRef<
           role="tab"
           aria-selected={subject === "gavel"}
           className={subject === "gavel" ? "is-on" : ""}
-          onClick={() => setSubject("gavel")}
+          onClick={() => chooseSubject("gavel")}
         >
           Gavel
         </button>
@@ -293,7 +499,7 @@ export const GavelSpinPreview = forwardRef<
             role="tab"
             aria-selected={subject === "band"}
             className={subject === "band" ? "is-on" : ""}
-            onClick={() => setSubject("band")}
+            onClick={() => chooseSubject("band")}
           >
             Band
           </button>
@@ -304,7 +510,7 @@ export const GavelSpinPreview = forwardRef<
             role="tab"
             aria-selected={subject === "soundBlock"}
             className={subject === "soundBlock" ? "is-on" : ""}
-            onClick={() => setSubject("soundBlock")}
+            onClick={() => chooseSubject("soundBlock")}
           >
             Sound block
           </button>
@@ -315,7 +521,7 @@ export const GavelSpinPreview = forwardRef<
             role="tab"
             aria-selected={subject === "plate"}
             className={subject === "plate" ? "is-on" : ""}
-            onClick={() => setSubject("plate")}
+            onClick={() => chooseSubject("plate")}
           >
             Plate
           </button>
@@ -325,10 +531,9 @@ export const GavelSpinPreview = forwardRef<
           role="tab"
           aria-selected={subject === "product"}
           className={subject === "product" ? "is-on" : ""}
-          onClick={() => setSubject("product")}
+          onClick={() => chooseSubject("product")}
         >
-          <span className="gf-switch-long">Actual product</span>
-          <span className="gf-switch-short">Product</span>
+          Real photo
         </button>
       </div>
       {viewingProduct ? (
@@ -418,23 +623,7 @@ export const GavelSpinPreview = forwardRef<
         <div className="gf-plate-proofs">
           <div className="gf-plate-proof">
             <span className="gf-plate-proof-label">
-              Unwrapped band (custom proof)
-            </span>
-            {bandTextureUrl ? (
-              <img
-                src={bandTextureUrl}
-                alt="Unwrapped gavel band with your custom text"
-                className="gf-plate-proof-img"
-              />
-            ) : (
-              <div className="gf-plate-proof-empty">
-                Enter text to see it laid out on the band
-              </div>
-            )}
-          </div>
-          <div className="gf-plate-proof">
-            <span className="gf-plate-proof-label">
-              Stand plate (custom proof)
+              Stand plate (custom preview)
             </span>
             {plateProofUrl ? (
               <img
@@ -451,6 +640,7 @@ export const GavelSpinPreview = forwardRef<
         </div>
       ) : null}
       <Canvas
+        key={previewRevive}
         shadows
         camera={{ position: [...GAVEL_VIEW_CAMERA_POSITION], fov: 28 }}
         dpr={[1, 2]}
@@ -481,7 +671,7 @@ export const GavelSpinPreview = forwardRef<
         <directionalLight position={[2, 3.5, 12]} intensity={0.14} />
         <directionalLight position={[0, 1.2, 4]} intensity={0.1} />
         <CaptureBridge glRef={glRef} />
-        <FrameView subject={cameraSubject} />
+        <FrameView subject={cameraSubject} bandZoom={zoomOnBand} />
         {viewingBlock ? (
           <SoundBlockModel
             style={style}
@@ -535,12 +725,13 @@ export const GavelSpinPreview = forwardRef<
           environmentIntensity={GAVEL_ENV_INTENSITY}
         />
         <OrbitControls
-          key={cameraSubject}
-          target={[...cameraTarget]}
+          key={`${cameraSubject}${zoomOnBand ? "-band" : ""}`}
+          makeDefault
+          target={viewFrame.target}
           enablePan={false}
           enableZoom
-          minDistance={viewingStandSet ? 7 : viewingBlock ? 6 : 7.2}
-          maxDistance={viewingBlock ? 28 : 32}
+          minDistance={2}
+          maxDistance={40}
           minPolarAngle={
             viewingStandSet ? 0.32 : viewingBlock ? 0.14 : Math.PI / 2 - 0.42
           }
@@ -554,7 +745,7 @@ export const GavelSpinPreview = forwardRef<
           rotateSpeed={0.85}
         />
       </Canvas>
-      {hintVisible && !hideCanvas ? (
+      {hintVisible && !hideCanvas && !zoomOnBand ? (
         <div className="gf-spin-hint" aria-hidden>
           <span className="gf-spin-hint-desktop">
             Drag to spin · scroll to zoom

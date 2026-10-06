@@ -38,8 +38,9 @@
     The store stacks an announcement ticker above the main header, so the
     designer gets exactly what those leave over. Do not floor this to a taller
     fixed height: that pushes the tool past the fold and the shopper cannot see
-    the preview and the Continue button at the same time. The wizard bounds
-    itself to its own viewport and scrolls the step controls internally.
+    the preview and the Continue button at the same time. On desktop this is
+    only the starting height: the designer reports its content height and the
+    script below sizes the iframe to it, so the page is the only scroller.
   */
   .gf-designer-embed iframe {
     display: block;
@@ -55,14 +56,49 @@
     color: #232323;
   }
 
+  /*
+    Product copy sits under the tool in collapsed sections so it never competes
+    with an active design for screen space. The text stays in the page for SEO.
+  */
+  .gf-designer-info details {
+    border-top: 1px solid #e6e1d8;
+  }
+
+  .gf-designer-info details:last-of-type {
+    border-bottom: 1px solid #e6e1d8;
+  }
+
+  .gf-designer-info summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .gf-designer-info summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .gf-designer-info summary::after {
+    content: '+';
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .gf-designer-info details[open] summary::after {
+    content: '−';
+  }
+
   .gf-designer-info h2 {
-    margin: 32px 0 10px;
+    margin: 0;
     font-size: 22px;
     line-height: 1.3;
   }
 
-  .gf-designer-info h2:first-child {
-    margin-top: 0;
+  .gf-designer-info details > :not(summary) {
+    margin-bottom: 16px;
   }
 
   .gf-designer-info p {
@@ -108,6 +144,28 @@
   }
 
   @media (max-width: 749px) {
+    /*
+      Designing is the primary task on a phone. Once the iframe occupies the
+      viewport, remove storefront chrome and give the tool the complete visual
+      viewport. The information section remains immediately after the iframe,
+      but cannot compete with it on screen.
+    */
+    html.gf-designer-focus-mobile #shopify-section-gfwm-home-header,
+    html.gf-designer-focus-mobile .wrapper-header,
+    html.gf-designer-focus-mobile .halo-sticky-toolbar-mobile {
+      display: none !important;
+    }
+
+    html.gf-designer-focus-mobile .gf-designer-embed {
+      margin-bottom: 0;
+    }
+
+    html.gf-designer-focus-mobile .gf-designer-embed iframe {
+      height: 100vh;
+      height: 100dvh;
+      min-height: 100svh;
+    }
+
     .gf-designer-info__steps {
       grid-template-columns: 1fr;
     }
@@ -117,6 +175,11 @@
 <script>
   (function() {
     var DESIGNER_ORIGIN = {{ gavel_designer_origin | json }};
+    var layoutWatching = false;
+    var designerFocusReady = false;
+    var headerOffset = 190;
+    var designerSource = null;
+    var designerSourceOrigin = null;
 
     function isAllowedDesignerOrigin(origin) {
       if (origin === DESIGNER_ORIGIN) return true;
@@ -143,12 +206,59 @@
       if (!main) return;
       var offset = Math.round(main.getBoundingClientRect().top + (window.scrollY || window.pageYOffset || 0));
       if (offset < 0 || offset > 600) return;
+      headerOffset = offset;
       document.documentElement.style.setProperty('--gf-header-height', offset + 'px');
     }
+
+    /*
+     * On desktop the designer reports its content height and the iframe is
+     * sized to it, so this page is the only scroller. The designer is told how
+     * much screen is left under the header and never renders shorter than that.
+     */
+    function sendDesignerFit() {
+      if (!designerSource) return;
+      try {
+        designerSource.postMessage({
+          action: 'gavel-designer-fit',
+          height: Math.max(460, window.innerHeight - headerOffset)
+        }, designerSourceOrigin);
+      } catch (e) {
+        console.error('Gavel designer: could not send fit height', e);
+      }
+    }
+
+    /*
+     * The iframe never scrolls on desktop, so the designer cannot pin its
+     * preview with CSS. Tell it how far the page has scrolled past its top.
+     */
+    var viewportFrame = 0;
+    function sendDesignerViewport() {
+      viewportFrame = 0;
+      if (!designerSource) return;
+      var frame = document.getElementById('gavel-designer-iframe');
+      if (!frame) return;
+      try {
+        designerSource.postMessage({
+          action: 'gavel-designer-viewport',
+          top: Math.round(-frame.getBoundingClientRect().top),
+          height: window.innerHeight
+        }, designerSourceOrigin);
+      } catch (e) {
+        console.error('Gavel designer: could not send viewport', e);
+      }
+    }
+
+    function scheduleDesignerViewport() {
+      if (!viewportFrame) viewportFrame = window.requestAnimationFrame(sendDesignerViewport);
+    }
+
+    window.addEventListener('scroll', scheduleDesignerViewport, { passive: true });
 
     function syncLayout() {
       syncBleedWidth();
       syncHeaderHeight();
+      sendDesignerFit();
+      scheduleDesignerViewport();
     }
 
     /* Set the width before first paint so the embed does not jump wider. */
@@ -156,10 +266,63 @@
 
     function watchLayout() {
       syncLayout();
-      window.addEventListener('resize', syncLayout);
-      window.addEventListener('load', syncLayout);
-      setTimeout(syncLayout, 600);
-      setTimeout(syncLayout, 2000);
+      if (!layoutWatching) {
+        layoutWatching = true;
+        window.addEventListener('resize', syncLayout);
+        window.addEventListener('load', syncLayout);
+        setTimeout(syncLayout, 600);
+        setTimeout(syncLayout, 2000);
+      }
+
+      if (designerFocusReady) return;
+      var embed = document.querySelector('.gf-designer-embed');
+      var mobileQuery = window.matchMedia('(max-width: 749px)');
+      if (!embed) {
+        setTimeout(watchLayout, 50);
+        return;
+      }
+      designerFocusReady = true;
+
+      function setDesignerFocus(active) {
+        var shouldFocus = mobileQuery.matches && active;
+        document.documentElement.classList.toggle(
+          'gf-designer-focus-mobile',
+          shouldFocus
+        );
+        if (shouldFocus) {
+          document.documentElement.style.setProperty('--gf-header-height', '0px');
+        } else {
+          syncHeaderHeight();
+        }
+      }
+
+      function syncDesignerFocus() {
+        var rect = embed.getBoundingClientRect();
+        var visible = Math.max(
+          0,
+          Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0)
+        );
+        setDesignerFocus(
+          visible >= Math.min(rect.height, window.innerHeight) * 0.45
+        );
+      }
+
+      if ('IntersectionObserver' in window) {
+        var focusObserver = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            setDesignerFocus(
+              entry.isIntersecting && entry.intersectionRatio >= 0.45
+            );
+          });
+        }, { threshold: [0, 0.45, 1] });
+        focusObserver.observe(embed);
+      } else {
+        window.addEventListener('scroll', syncDesignerFocus, { passive: true });
+      }
+
+      window.addEventListener('resize', syncDesignerFocus);
+      mobileQuery.addEventListener('change', syncDesignerFocus);
+      syncDesignerFocus();
     }
 
     if (document.readyState === 'loading') {
@@ -258,6 +421,33 @@
       var data = event.data;
       if (!data || !data.action) return;
 
+      if (data.action === 'gavel-designer-height') {
+        var sizedFrame = document.getElementById('gavel-designer-iframe');
+        if (!sizedFrame) return;
+        var height = Number(data.height);
+        sizedFrame.style.height = height > 0 ? Math.ceil(height) + 'px' : '';
+        if (designerSource !== event.source) {
+          designerSource = event.source;
+          designerSourceOrigin = event.origin;
+          sendDesignerFit();
+        }
+        scheduleDesignerViewport();
+        return;
+      }
+
+      if (data.action === 'gavel-designer-scroll-into-view') {
+        var designerFrame = document.getElementById('gavel-designer-iframe');
+        if (designerFrame) {
+          var tallFrame = designerFrame.offsetHeight > window.innerHeight;
+          designerFrame.scrollIntoView({
+            behavior: data.behavior === 'auto' ? 'auto' : 'smooth',
+            block: data.block === 'start' || tallFrame ? 'start' : 'center',
+            inline: 'nearest'
+          });
+        }
+        return;
+      }
+
       if (data.action === 'redirect-to-login') {
         var returnTo = window.location.pathname + window.location.search;
         window.location.href = '/account/login?return_url=' + encodeURIComponent(returnTo);
@@ -290,23 +480,26 @@
   </div>
 
   <div class="gf-designer-info">
-    <h2>How it works</h2>
+    <details>
+    <summary><h2>How it works</h2></summary>
     <ul class="gf-designer-info__steps">
       <li>
         <strong>1. Design it live</strong>
         Pick your wood and band finish{% if gavel_product_type == 'stand' %}, choose a plate finish{% else %}, add a sound block{% endif %}, then type your engraving text and watch it appear on the gavel in real time.
       </li>
       <li>
-        <strong>2. Review your proof</strong>
-        Before you add anything to the cart you get a full proof of exactly what will be engraved. No artwork fees, no waiting on a salesperson.
+        <strong>2. Review your preview</strong>
+        Before you add anything to the cart you get a full preview of exactly what will be engraved. No artwork fees, no waiting on a salesperson.
       </li>
       <li>
         <strong>3. Add to cart and check out</strong>
         Your design is saved to your order automatically, so what you see on screen is what we produce.
       </li>
     </ul>
+    </details>
 
-    <h2>About this {% if gavel_product_type == 'stand' %}gavel and stand{% else %}gavel{% endif %}</h2>
+    <details>
+    <summary><h2>About this {% if gavel_product_type == 'stand' %}gavel and stand{% else %}gavel{% endif %}</h2></summary>
     {%- if gavel_product_type == 'stand' -%}
       <p>
         A solid hardwood gavel paired with a matching wood stand. The gavel carries a personalized metal band, and the stand carries a personalized front plate — both engraved to your text. The stand is made from the same wood as the gavel so the set matches.
@@ -317,16 +510,171 @@
       </p>
     {%- endif -%}
     <ul>
-      <li>Wood options: American Walnut, Oak, Ebony and Purple finishes</li>
+      {%- liquid
+        # Step 1 names, in the designer's order. Stock notes use the same
+        # wording as the wood cards. Ebony is never made with a stand.
+        assign gf_wood_notes = ''
+        assign gf_walnut_seen = false
+        assign gf_walnut_ok = false
+        assign gf_hardwood_seen = false
+        assign gf_hardwood_ok = false
+        assign gf_ebony_seen = false
+        assign gf_ebony_ok = false
+        assign gf_wood_pos = 0
+        assign gf_block_pos = 0
+
+        for option in product.options_with_values
+          assign gf_oname = option.name | downcase | strip
+          if gf_oname == 'wood'
+            assign gf_wood_pos = forloop.index
+          elsif gf_oname == 'sound block'
+            assign gf_block_pos = forloop.index
+          endif
+        endfor
+
+        if gf_wood_pos > 0
+          for variant in product.variants
+            if gf_wood_pos == 1
+              assign gf_wood_value = variant.option1
+            elsif gf_wood_pos == 2
+              assign gf_wood_value = variant.option2
+            else
+              assign gf_wood_value = variant.option3
+            endif
+            assign gf_wood_key = gf_wood_value | downcase | strip
+            assign gf_counts = true
+            if gf_block_pos > 0
+              if gf_block_pos == 1
+                assign gf_block_value = variant.option1
+              elsif gf_block_pos == 2
+                assign gf_block_value = variant.option2
+              else
+                assign gf_block_value = variant.option3
+              endif
+              assign gf_block_key = gf_block_value | downcase | strip
+              unless gf_block_key == 'gavel only'
+                assign gf_counts = false
+              endunless
+            endif
+            if gf_counts
+              if gf_wood_key == 'genuine walnut' or gf_wood_key == 'american walnut' or gf_wood_key == 'wooden walnut'
+                assign gf_walnut_seen = true
+                if variant.available
+                  assign gf_walnut_ok = true
+                endif
+              elsif gf_wood_key == 'hardwood'
+                assign gf_hardwood_seen = true
+                if variant.available
+                  assign gf_hardwood_ok = true
+                endif
+              elsif gf_wood_key == 'ebony'
+                assign gf_ebony_seen = true
+                if variant.available
+                  assign gf_ebony_ok = true
+                endif
+              endif
+            endif
+          endfor
+        endif
+
+        if gavel_product_type == 'stand'
+          assign gf_gavel_walnut_ok = false
+          assign gf_gavel_hardwood_ok = false
+          assign gf_gavel_product = all_products['custom-wooden-gavel']
+          assign gf_gavel_wood_pos = 0
+          assign gf_gavel_block_pos = 0
+          for option in gf_gavel_product.options_with_values
+            assign gf_oname = option.name | downcase | strip
+            if gf_oname == 'wood'
+              assign gf_gavel_wood_pos = forloop.index
+            elsif gf_oname == 'sound block'
+              assign gf_gavel_block_pos = forloop.index
+            endif
+          endfor
+          if gf_gavel_wood_pos > 0
+            for variant in gf_gavel_product.variants
+              if gf_gavel_wood_pos == 1
+                assign gf_wood_value = variant.option1
+              elsif gf_gavel_wood_pos == 2
+                assign gf_wood_value = variant.option2
+              else
+                assign gf_wood_value = variant.option3
+              endif
+              assign gf_wood_key = gf_wood_value | downcase | strip
+              assign gf_counts = true
+              if gf_gavel_block_pos > 0
+                if gf_gavel_block_pos == 1
+                  assign gf_block_value = variant.option1
+                elsif gf_gavel_block_pos == 2
+                  assign gf_block_value = variant.option2
+                else
+                  assign gf_block_value = variant.option3
+                endif
+                assign gf_block_key = gf_block_value | downcase | strip
+                unless gf_block_key == 'gavel only'
+                  assign gf_counts = false
+                endunless
+              endif
+              if gf_counts and variant.available
+                if gf_wood_key == 'genuine walnut' or gf_wood_key == 'american walnut' or gf_wood_key == 'wooden walnut'
+                  assign gf_gavel_walnut_ok = true
+                elsif gf_wood_key == 'hardwood'
+                  assign gf_gavel_hardwood_ok = true
+                endif
+              endif
+            endfor
+          endif
+
+          if gf_walnut_seen
+            unless gf_walnut_ok
+              if gf_gavel_walnut_ok
+                assign gf_wood_notes = gf_wood_notes | append: ' Genuine Walnut is sold out with the stand — still available as a gavel.'
+              else
+                assign gf_wood_notes = gf_wood_notes | append: ' Genuine Walnut is back in stock soon.'
+              endif
+            endunless
+          endif
+          if gf_hardwood_seen
+            unless gf_hardwood_ok
+              if gf_gavel_hardwood_ok
+                assign gf_wood_notes = gf_wood_notes | append: ' Hardwood is sold out with the stand — still available as a gavel.'
+              else
+                assign gf_wood_notes = gf_wood_notes | append: ' Hardwood is back in stock soon.'
+              endif
+            endunless
+          endif
+          assign gf_wood_notes = gf_wood_notes | append: ' Ebony is not made with a stand.'
+        else
+          if gf_walnut_seen
+            unless gf_walnut_ok
+              assign gf_wood_notes = gf_wood_notes | append: ' Genuine Walnut is back in stock soon.'
+            endunless
+          endif
+          if gf_hardwood_seen
+            unless gf_hardwood_ok
+              assign gf_wood_notes = gf_wood_notes | append: ' Hardwood is back in stock soon.'
+            endunless
+          endif
+          if gf_ebony_seen
+            unless gf_ebony_ok
+              assign gf_wood_notes = gf_wood_notes | append: ' Ebony is back in stock soon.'
+            endunless
+          endif
+        endif
+      -%}
+      <li>Wood options: Genuine Walnut, Hardwood and Ebony.{{ gf_wood_notes }}</li>
       <li>Band finishes in gold and silver</li>
       <li>Free engraving — no setup or artwork fees</li>
       <li>Ideal for judges, gavel clubs, boards, associations and retirement gifts</li>
     </ul>
+    </details>
 
-    <h2>Production &amp; shipping</h2>
+    <details>
+    <summary><h2>Production &amp; shipping</h2></summary>
     <p>
       Orders ship out within 48 hours, often faster, and shipping is free on every order. Questions about a bulk order or a custom logo? Call us at (310) 534-1138 or email <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a>.
     </p>
+    </details>
 
     <p class="gf-designer-info__tagline">
       No artwork fees. No minimums. No back-and-forth. What you see in the tool is exactly what you get.

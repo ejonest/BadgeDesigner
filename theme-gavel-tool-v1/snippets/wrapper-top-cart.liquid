@@ -1,3 +1,18 @@
+<style>
+  .cart-free-shipping {
+    margin: 0 0 18px;
+    padding: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    color: #1c1408;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+</style>
 {% if settings.header_layout == 'default' %}
 <a href="javascript:void(0)" title="Cart" class="cart-icon" data-cart-toggle>
     {% render 'icon-cart' %}
@@ -40,10 +55,7 @@
   </div>
 
   <div class="has-items">
-    {% if settings.enable_free_shipping_message %}
-        <div class="free_shipping_progress"></div>
-        <div class="free_shipping_massage1"></div>
-    {% endif %}
+    <p class="cart-free-shipping">Free Shipping</p>
     <ol class="mini-products-list">  
       {% for item in cart.items %}
       <li class="item" id="cart-item-{{item.key}}" data-product-id="{{item.id}}" data-key="{{ item.key }}">

@@ -141,6 +141,42 @@ export function SoundBlockModel({
     [topMap],
   );
 
+  useLayoutEffect(() => {
+    return () => {
+      woodColor?.dispose();
+    };
+  }, [woodColor]);
+
+  useLayoutEffect(() => {
+    return () => {
+      woodNormal?.dispose();
+    };
+  }, [woodNormal]);
+
+  useLayoutEffect(() => {
+    return () => {
+      woodRough?.dispose();
+    };
+  }, [woodRough]);
+
+  useLayoutEffect(() => {
+    return () => {
+      bodyMat.dispose();
+    };
+  }, [bodyMat]);
+
+  useLayoutEffect(() => {
+    return () => {
+      topMat.dispose();
+    };
+  }, [topMat]);
+
+  useLayoutEffect(() => {
+    return () => {
+      footMat.dispose();
+    };
+  }, [footMat]);
+
   const footX = SOUND_BLOCK_W_IN / 2 - FOOT_INSET_IN;
   const footZ = SOUND_BLOCK_D_IN / 2 - FOOT_INSET_IN;
   const feet: readonly (readonly [number, number])[] = [

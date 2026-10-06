@@ -88,7 +88,7 @@
     window.free_shipping_color1 = "{{ settings.free_shipping_color1 }}";  
     window.free_shipping_color2 = "{{ settings.free_shipping_color2 }}";
     window.free_shipping_color3 = "{{ settings.free_shipping_color3 }}";
-    window.free_shipping_price = {% if settings.free_shipping_price != blank %}{{ settings.free_shipping_price }}{% else %}0{% endif %};
+    window.free_shipping_price = 0;
     window.free_shipping_text = {
         free_shipping_message_1: "{{ 'cart.general.free_shipping_message_1' | t}}",
         free_shipping_message_2:"{{ 'cart.general.free_shipping_message_2' | t}}",

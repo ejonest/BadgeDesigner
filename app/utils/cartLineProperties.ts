@@ -77,6 +77,81 @@ export type DesignerCartLinePropertyInput = {
   includeBackingType?: boolean;
 };
 
+export type ProductionCartTextLine = {
+  text?: string;
+  fontFamily?: string;
+  fontSize?: number;
+  sizeNorm?: number;
+  color?: string;
+  align?: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+};
+
+export type ProductionLinePropertyOptions = {
+  /** Store line text too (used for secondary surfaces without the standard visible text keys). */
+  includeText?: boolean;
+  /** Use `_Case Band Font` instead of `_Case Band Line 1 Font`. */
+  omitLineNumberWhenSingle?: boolean;
+  /** Human-readable sizes when the designer uses presets rather than numeric font sizes. */
+  fontSizeLabels?: Array<string | undefined>;
+};
+
+function formatProductionFontSize(
+  line: ProductionCartTextLine,
+  explicitLabel?: string,
+): string | undefined {
+  const label = explicitLabel?.trim();
+  if (label) return label;
+  if (typeof line.fontSize === "number" && Number.isFinite(line.fontSize)) {
+    return `${Math.round(line.fontSize * 100) / 100}px`;
+  }
+  if (typeof line.sizeNorm === "number" && Number.isFinite(line.sizeNorm)) {
+    return `${Math.round(line.sizeNorm * 10_000) / 100}% of design height`;
+  }
+  return undefined;
+}
+
+/**
+ * Hidden Shopify properties used by production/Trello to reconstruct artwork.
+ * Values stay on the order while `_` keeps them out of customer-facing themes.
+ */
+export function buildProductionLineProperties(
+  prefix: string,
+  lines: readonly ProductionCartTextLine[],
+  options: ProductionLinePropertyOptions = {},
+): Record<string, string> {
+  const properties: Record<string, string> = {};
+  const useBarePrefix =
+    options.omitLineNumberWhenSingle && lines.length === 1;
+
+  lines.forEach((line, index) => {
+    const text = line.text?.trim();
+    if (!text) return;
+
+    const stem = useBarePrefix ? prefix : `${prefix} Line ${index + 1}`;
+    const set = (label: string, value: string | undefined) => {
+      const normalized = value?.trim();
+      if (normalized) properties[`_${stem} ${label}`] = normalized;
+    };
+
+    if (options.includeText) set("Text", text);
+    set("Font", line.fontFamily || "Arial");
+    set(
+      "Font Size",
+      formatProductionFontSize(line, options.fontSizeLabels?.[index]),
+    );
+    set("Color", line.color);
+    set("Alignment", line.align);
+    set("Bold", line.bold ? "Yes" : "No");
+    set("Italic", line.italic ? "Yes" : "No");
+    set("Underline", line.underline ? "Yes" : "No");
+  });
+
+  return properties;
+}
+
 /**
  * Build cart properties: text lines visible; everything else `_`-prefixed.
  */

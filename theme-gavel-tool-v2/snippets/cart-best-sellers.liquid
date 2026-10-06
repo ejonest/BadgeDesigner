@@ -47,31 +47,7 @@
         {% endif %}
       </div>
 
-      {% else %}
-      {% for product in (1..section.settings.slider_featured_limit_all) %}
-      <div class="grid-item {{ grid_item_width }}">
-        <div class="grid-view-item no-product">
-          <div class="product-top">
-            <div class="not_img">
-              Product Img
-            </div>
-          </div>
-
-          <div class="product-bottom">
-            <div class="product-title">
-              <span>
-                Your product's name
-              </span>
-            </div>
-
-            <div class="price-box">
-              <span> $250.00 </span>
-            </div>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-      {% endfor %}
+            {% endfor %}
     </div>
   </div>
 </section>

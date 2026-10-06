@@ -18,7 +18,7 @@
   --gf-text: #0a1628;
   /* Shared by the controls/preview grid and the description row above it, so
      the "Live preview" label stays over the preview column. */
-  --gf-design-cols: minmax(0, 1fr) minmax(0, 1.2fr);
+  --gf-design-cols: minmax(0, 45fr) minmax(0, 55fr);
   --gf-design-col-gap: 24px;
   min-height: 100%;
   background: var(--gf-cream);
@@ -166,8 +166,9 @@
 .gf-bulk-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 8px;
+  margin-top: 12px;
 }
 
 .gf-bulk-actions .gf-nav-primary,
@@ -216,7 +217,8 @@
   font-size: 13px;
   line-height: 1.5;
   color: var(--gf-ink);
-  resize: vertical;
+  resize: none;
+  overflow: hidden;
 }
 
 .gf-bulk-paste-input:focus-visible {
@@ -309,8 +311,7 @@
 }
 
 .gf-bulk-grid {
-  max-height: 292px;
-  overflow: auto;
+  overflow-x: auto;
   border: 1px solid var(--gf-border);
   border-radius: 9px;
   background: #fff;
@@ -398,6 +399,436 @@
   color: var(--gf-muted);
 }
 
+/*
+  The name list. A real table so each column is as wide as its longest entry;
+  about 18 rows show before the list scrolls under its sticky header.
+*/
+.gf-bulk-table-wrap {
+  max-height: 720px;
+  overflow: auto;
+  border: 1px solid var(--gf-border);
+  border-radius: 9px;
+  background: #fff;
+}
+
+.gf-bulk-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
+
+.gf-bulk-table th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--gf-border);
+  background: var(--gf-cream-dark);
+  color: var(--gf-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.gf-bulk-table th > button,
+.gf-bulk-table th:not(:has(button)) {
+  padding: 9px 9px;
+}
+
+.gf-bulk-table th > button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gf-bulk-table td {
+  padding: 2px 3px;
+  border-top: 1px solid rgba(10, 22, 40, 0.07);
+  vertical-align: middle;
+}
+
+.gf-bulk-table tbody tr:first-child td {
+  border-top: 0;
+}
+
+.gf-bulk-table .gf-bulk-num {
+  width: 1%;
+  padding: 0 8px;
+  color: var(--gf-muted);
+  font-size: 11px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.gf-bulk-table tr.is-selected td {
+  background: #fff7e3;
+}
+
+.gf-bulk-table tr.is-selected .gf-bulk-num {
+  box-shadow: inset 3px 0 0 var(--gf-gold-2);
+}
+
+.gf-bulk-table tr.is-error .gf-bulk-num {
+  box-shadow: inset 3px 0 0 #c0392b;
+  color: #96261f;
+  font-weight: 700;
+}
+
+.gf-bulk-table tr.is-duplicate .gf-bulk-num {
+  box-shadow: inset 3px 0 0 #d9a520;
+}
+
+.gf-bulk-table td.is-flagged .gf-bulk-cell {
+  border-color: #e4a29d;
+  background: #fdeceb;
+}
+
+.gf-bulk-table td.is-flagged .gf-bulk-cell::placeholder {
+  color: #c0392b;
+}
+
+.gf-bulk-table tr.gf-bulk-issue td {
+  padding: 0 9px 7px;
+  border-top: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.gf-bulk-table tr.gf-bulk-issue.is-error td {
+  color: #96261f;
+}
+
+.gf-bulk-table tr.gf-bulk-issue.is-duplicate td {
+  color: #7a5610;
+}
+
+.gf-bulk-table tr.gf-bulk-issue td:first-child {
+  padding: 0;
+}
+
+.gf-bulk-table tr.is-error + tr.gf-bulk-issue .gf-bulk-num,
+.gf-bulk-table tr.gf-bulk-issue.is-error td:first-child {
+  box-shadow: inset 3px 0 0 #c0392b;
+}
+
+.gf-bulk-table tr.gf-bulk-issue.is-duplicate td:first-child {
+  box-shadow: inset 3px 0 0 #d9a520;
+}
+
+.gf-bulk-problems {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 14px;
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+
+.gf-bulk-problems.is-error {
+  border: 1px solid #f2b8b5;
+  background: #fdeceb;
+  color: #96261f;
+}
+
+.gf-bulk-problems.is-warn {
+  border: 1px solid #f0d9a8;
+  background: #fdf5e4;
+  color: #7a5610;
+}
+
+.gf-bulk-problems .gf-csv-link {
+  color: inherit;
+  font-weight: 700;
+}
+
+.gf-bulk-row-warning {
+  margin: 0;
+  padding: 7px 9px;
+  border: 1px solid #f0d9a8;
+  border-radius: 7px;
+  background: #fdf5e4;
+  color: #7a5610;
+  font-size: 12px;
+}
+
+.gf-bulk-import.has-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* With a list loaded, the list is the work; adding more names comes after. */
+.gf-bulk-import.has-rows > .gf-bulk-list {
+  order: -1;
+}
+
+.gf-bulk-import.has-rows .gf-bulk-import-head {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(10, 22, 40, 0.1);
+}
+
+.gf-bulk-list > .gf-bulk-status {
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gf-ink);
+}
+
+.gf-bulk-cell {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gf-text);
+  font: inherit;
+  font-size: 12px;
+  text-overflow: ellipsis;
+}
+
+.gf-bulk-cell::placeholder {
+  color: rgba(10, 22, 40, 0.28);
+}
+
+.gf-bulk-table tbody tr:hover .gf-bulk-cell {
+  border-color: rgba(10, 22, 40, 0.1);
+}
+
+.gf-bulk-cell:focus {
+  border-color: var(--gf-gold-2, #c4a35a);
+  outline: none;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(196, 163, 90, 0.25);
+}
+
+.gf-bulk-cell.is-over,
+.gf-bulk-text-preview .gf-input.is-over {
+  border-color: #e4a29d;
+  background: #fdeceb;
+}
+
+.gf-bulk-size {
+  padding-right: 2px;
+  color: var(--gf-muted);
+  cursor: pointer;
+}
+
+.gf-bulk-size.is-override {
+  color: var(--gf-text);
+  font-weight: 700;
+}
+
+.gf-bulk-qty {
+  width: 58px;
+  text-align: right;
+}
+
+.gf-bulk-size {
+  width: auto;
+  min-width: 96px;
+}
+
+.gf-bulk-table .gf-bulk-row-actions {
+  width: 1%;
+  padding-right: 6px;
+  white-space: nowrap;
+}
+
+.gf-bulk-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gf-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.gf-bulk-icon svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.gf-bulk-icon:hover:not(:disabled) {
+  border-color: var(--gf-border);
+  background: #fff;
+  color: var(--gf-text);
+}
+
+.gf-bulk-icon.is-danger:hover {
+  border-color: #f2b8b5;
+  color: #96261f;
+}
+
+.gf-bulk-icon:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.gf-bulk-grid-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 10px;
+}
+
+.gf-bulk-grid-foot .gf-nav-secondary {
+  min-height: 34px;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+
+.gf-bulk-grid-foot .gf-note {
+  flex: 1 1 260px;
+  margin: 0;
+}
+
+.gf-bulk-notice {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border: 1px solid #bfd9c4;
+  border-radius: 8px;
+  background: #eef7f0;
+  color: #24562f;
+  font-size: 12.5px;
+}
+
+.gf-bulk-merge {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #f0d9a8;
+  border-radius: 10px;
+  background: #fdf5e4;
+  font-size: 12.5px;
+  color: #5c4310;
+}
+
+.gf-bulk-merge p {
+  margin: 0;
+}
+
+.gf-bulk-merge-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.gf-bulk-merge-actions .gf-nav-primary,
+.gf-bulk-merge-actions .gf-nav-secondary {
+  min-height: 34px;
+  padding: 7px 14px;
+  font-size: 12px;
+}
+
+.gf-bulk-text-preview.is-editable > label.gf-bulk-edit-line {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  background: none;
+}
+
+.gf-bulk-edit-line > span {
+  color: var(--gf-muted);
+  font-size: 12px;
+}
+
+.gf-bulk-edit-line .gf-input {
+  min-height: 38px;
+  padding: 7px 10px;
+}
+
+.gf-bulk-edit-line small {
+  min-width: 38px;
+  color: var(--gf-muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.gf-bulk-edit-line small.is-warn {
+  color: var(--gf-mahogany);
+  font-weight: 600;
+}
+
+.gf-bulk-row-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gf-bulk-row-nav .gf-sub-title {
+  flex: 1;
+  margin: 0;
+  text-align: center;
+}
+
+.gf-bulk-row-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gf-bulk-row-settings > label,
+.gf-bulk-row-qty {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--gf-muted);
+}
+
+.gf-bulk-row-settings > label {
+  flex: 1 1 180px;
+}
+
+.gf-bulk-row-qty {
+  flex: 0 0 90px;
+}
+
+.gf-bulk-row-settings .gf-input {
+  min-height: 38px;
+  padding: 7px 10px;
+}
+
+.gf-bulk-text-preview.is-editable > .gf-note {
+  margin: 0;
+}
+
+.gf-bulk-text-preview.is-editable > div {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
+.gf-bulk-text-preview.is-editable > .gf-bulk-row-settings {
+  justify-content: flex-start;
+}
+
 .gf-bulk-grid-empty {
   margin: 0;
   padding: 22px;
@@ -436,6 +867,9 @@
 }
 
 .gf-bulk-empty {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
   margin-bottom: 14px;
   padding: 18px;
   border: 1px dashed rgba(10, 22, 40, 0.28);
@@ -444,6 +878,60 @@
   background: var(--gf-cream);
   font-size: 13px;
   text-align: center;
+}
+
+.gf-design-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 14px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--gf-cream);
+}
+
+.gf-design-tab {
+  flex: 1 1 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--gf-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gf-design-tab:hover {
+  color: var(--gf-navy);
+}
+
+.gf-design-tab.is-on {
+  background: #fff;
+  color: var(--gf-navy);
+  box-shadow: 0 1px 3px rgba(10, 22, 40, 0.14);
+}
+
+.gf-design-tab:focus-visible {
+  outline: 2px solid var(--gf-gold-2);
+  outline-offset: 1px;
+}
+
+.gf-bulk-preview-row {
+  margin: 0;
+  overflow: hidden;
+  color: var(--gf-navy);
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gf-bulk-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
 }
 
 .gf-bulk-row-list {
@@ -515,6 +1003,15 @@
   .gf-bulk-grid-tools label {
     width: 100%;
     max-width: none;
+  }
+
+  .gf-bulk-grid-tools label {
+    flex: none;
+  }
+
+  /* The phone dialog is shorter than 18 rows; keep the list inside it. */
+  .gf-bulk-table-wrap {
+    max-height: 60svh;
   }
 }
 
@@ -658,6 +1155,15 @@
 .gf-stepper-step small.is-active {
   color: #d9a94a;
   font-weight: 700;
+}
+
+.gf-stepper-step.is-skipped .gf-stepper-circle,
+.gf-stepper-step.is-skipped small {
+  opacity: 0.35;
+}
+
+.gf-stepper-step.is-skipped small {
+  text-decoration: line-through;
 }
 
 .gf-panel {
@@ -1015,12 +1521,65 @@
     padding-top: 36px;
   }
 
+  /*
+    The preview takes ~40% of the tool and never scrolls; only the fields
+    below it do. --gf-vv-height tracks the visible screen, not the layout one.
+  */
   .gf-wizard-root.is-preview-step .gf-spin-preview,
   .gf-wizard-root.is-preview-step .gf-spin-fallback,
   .gf-wizard-root.is-preview-step .gf-plate-frame {
     flex: none;
-    height: min(28svh, 200px);
+    height: clamp(160px, calc(var(--gf-vv-height, 100svh) * 0.36), 320px);
     min-height: 140px;
+  }
+
+  /* One line and a thin rule, instead of five labelled circles. */
+  .gf-wizard-root .gf-stepper {
+    display: none;
+  }
+
+  .gf-wizard-root .gf-stepper-compact {
+    display: block;
+    flex-shrink: 0;
+    margin: 0 2px 8px;
+  }
+
+  /*
+    Design step: edit one surface at a time. The preview tabs choose it, so
+    the fields on screen always match the surface in the preview.
+  */
+  .gf-wizard-root.is-surface-band [data-surface]:not([data-surface="band"]),
+  .gf-wizard-root.is-surface-plate [data-surface]:not([data-surface="plate"]),
+  .gf-wizard-root.is-surface-soundBlock
+    [data-surface]:not([data-surface="soundBlock"]) {
+    display: none;
+  }
+
+  .gf-wizard-root.is-surface-soundBlock .gf-surface-only {
+    display: block;
+  }
+
+  /*
+    Line 1 has to be on screen without scrolling at 375×548. The text-size
+    chips move under the lines, and the example note goes: the placeholders
+    already show the example wording.
+  */
+  .gf-wizard-root .gf-band-fields {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .gf-wizard-root .gf-band-fields .gf-text-size-row {
+    order: 1;
+    margin: 4px 0 0 !important;
+  }
+
+  .gf-wizard-root .gf-band-fields .gf-band-style {
+    order: 2;
+  }
+
+  .gf-wizard-root .gf-band-fields .gf-example-note {
+    display: none;
   }
 
   .gf-wizard-root.is-preview-step .gf-band-strip {
@@ -1028,8 +1587,10 @@
   }
 
   .gf-wizard-root.is-preview-step.is-keyboard .gf-stepper,
+  .gf-wizard-root.is-preview-step.is-keyboard .gf-stepper-compact,
   .gf-wizard-root.is-preview-step.is-keyboard .gf-panel-title,
   .gf-wizard-root.is-preview-step:has(.gf-input:focus) .gf-stepper,
+  .gf-wizard-root.is-preview-step:has(.gf-input:focus) .gf-stepper-compact,
   .gf-wizard-root.is-preview-step:has(.gf-input:focus) .gf-panel-title {
     display: none;
   }
@@ -1047,10 +1608,59 @@
   .gf-wizard-root.is-preview-step:has(.gf-input:focus) .gf-controls-col {
     padding-bottom: max(24px, var(--gf-keyboard-inset, 0px));
   }
+
+  /*
+    The CSV dialog covers the screen. Keep the WebGL frame at its normal size
+    while a field inside the dialog is focused, so closing it does not reveal
+    a canvas that was crushed to nothing by the keyboard.
+  */
+  .gf-wizard-root.is-csv-modal.is-preview-step .gf-spin-preview,
+  .gf-wizard-root.is-csv-modal.is-preview-step .gf-spin-fallback,
+  .gf-wizard-root.is-csv-modal.is-preview-step .gf-plate-frame,
+  .gf-wizard-root.is-csv-modal.is-preview-step.is-keyboard .gf-spin-preview,
+  .gf-wizard-root.is-csv-modal.is-preview-step.is-keyboard .gf-spin-fallback,
+  .gf-wizard-root.is-csv-modal.is-preview-step.is-keyboard .gf-plate-frame,
+  .gf-wizard-root.is-csv-modal.is-preview-step:has(.gf-input:focus) .gf-spin-preview,
+  .gf-wizard-root.is-csv-modal.is-preview-step:has(.gf-input:focus) .gf-spin-fallback,
+  .gf-wizard-root.is-csv-modal.is-preview-step:has(.gf-input:focus) .gf-plate-frame,
+  .gf-wizard-root.is-csv-modal.is-preview-step:has(textarea:focus) .gf-spin-preview,
+  .gf-wizard-root.is-csv-modal.is-preview-step:has(textarea:focus) .gf-spin-fallback,
+  .gf-wizard-root.is-csv-modal.is-preview-step:has(textarea:focus) .gf-plate-frame {
+    height: min(28svh, 200px);
+    min-height: 140px;
+  }
 }
 
 .gf-panel-sub-follow {
   display: none;
+}
+
+/* Phone-only pieces; the media query above turns them on. */
+.gf-stepper-compact,
+.gf-surface-only {
+  display: none;
+}
+.gf-stepper-compact-label {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #d9a94a;
+}
+
+.gf-stepper-compact-rule {
+  height: 3px;
+  border-radius: 2px;
+  background: #3a4a66;
+  overflow: hidden;
+}
+
+.gf-stepper-compact-rule > span {
+  display: block;
+  height: 100%;
+  background: var(--gf-gold-2);
+  transition: width 0.25s ease;
 }
 
 .gf-controls-col {
@@ -1490,10 +2100,20 @@
 
 .gf-step-nav {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
   margin-top: 18px;
+}
+
+.gf-nav-reason {
+  flex-basis: 100%;
+  margin: -4px 0 0;
+  color: var(--gf-mahogany);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
 }
 
 .gf-nav-primary {
@@ -1537,47 +2157,33 @@
 }
 
 /*
-  Desktop: keep every wizard step in the same viewport-sized frame as step 1.
-  Step 2 was growing with the wood list + 3D preview min-heights.
+  Desktop: the tool is at least one screen tall and grows with its content.
+  Only the document scrolls; no pane inside the card has its own scrollbar.
+  In the storefront the iframe is sized to that content (html.gf-autosized),
+  so the product page is the single scroller.
 */
 @media (min-width: 901px) {
   .gf-wizard-root {
-    height: 100dvh;
-    max-height: 100dvh;
+    min-height: var(--gf-fit-height, 100dvh);
+  }
+
+  html.gf-autosized .gf-designer-page {
     min-height: 0;
-    overflow: hidden;
+    height: auto;
   }
 
   .gf-page-title,
-  .gf-stepper,
-  .gf-panel-title,
-  .gf-panel-lead,
-  .gf-panel-sub,
-  .gf-step-nav {
-    flex-shrink: 0;
-  }
-
-  .gf-hero,
-  .gf-panel,
-  .gf-design-grid {
-    min-height: 0;
-    overflow: hidden;
+  .gf-hero {
+    max-width: 1500px;
   }
 
   .gf-design-grid > * {
-    min-height: 0;
-  }
-
-  .gf-design-grid .gf-controls-col {
-    align-self: stretch;
-    min-height: 0;
-    overflow: auto;
+    min-width: 0;
   }
 
   /*
-   * The nav lives inside the scrolling controls column, so on a short embed
-   * (the storefront iframe only gets what the two headers leave over) it
-   * scrolled out of sight. Pin it so Back/Continue stays reachable.
+   * Short of a tall window, Back/Continue sit under the last field. Where the
+   * document does scroll (standalone tool), pin them to the bottom edge.
    */
   .gf-design-grid .gf-controls-col .gf-step-nav {
     position: sticky;
@@ -1589,9 +2195,81 @@
     background: #fff;
   }
 
-  .gf-preview-pane {
-    min-height: 0;
-    overflow: hidden;
+  /*
+   * The preview keeps its own height instead of stretching to the length of
+   * the form beside it. The canvas itself is tall enough to read the band;
+   * the flat proofs stack under it and the page scrolls.
+   */
+  .gf-wizard-root.is-preview-step .gf-design-grid:not(.is-single) {
+    align-items: start;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-preview-pane {
+    position: sticky;
+    top: 16px;
+    height: auto;
+  }
+
+  .gf-wizard-root.is-preview-step .gf-spin-preview,
+  .gf-wizard-root.is-preview-step .gf-spin-fallback {
+    flex: none;
+    height: 500px;
+    min-height: 500px;
+  }
+
+  /* One personalization section at a time, chosen by the tab strip. */
+  .gf-wizard-root[data-design-tab="band"] [data-tab]:not([data-tab="band"]),
+  .gf-wizard-root[data-design-tab="plate"] [data-tab]:not([data-tab="plate"]),
+  .gf-wizard-root[data-design-tab="soundBlock"]
+    [data-tab]:not([data-tab="soundBlock"]),
+  .gf-wizard-root[data-design-tab="logo"] [data-tab]:not([data-tab="logo"]) {
+    display: none;
+  }
+
+  .gf-wizard-root[data-design-tab] [data-tab] {
+    margin-top: 0 !important;
+  }
+
+  /*
+   * A loaded list is a spreadsheet: it takes the card's width and the preview
+   * docks beside it at a compact size.
+   */
+  .gf-wizard-root:has(.gf-design-grid.is-bulk-wide) {
+    --gf-design-cols: minmax(0, 1fr) 340px;
+  }
+
+  .gf-wizard-root.is-preview-step
+    .gf-design-grid.is-bulk-wide
+    .gf-spin-preview,
+  .gf-wizard-root.is-preview-step
+    .gf-design-grid.is-bulk-wide
+    .gf-spin-fallback {
+    height: 260px;
+    min-height: 260px;
+  }
+
+  .gf-design-grid.is-bulk-wide .gf-bulk-table-wrap {
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+
+  .gf-design-grid.is-bulk-wide .gf-bulk-list {
+    margin-bottom: 12px;
+  }
+
+  /* Positioned from the page's scroll position by the embed script. */
+  html.gf-autosized .gf-wizard-root.is-preview-step .gf-preview-pane {
+    position: relative;
+    top: auto;
+    transition: transform 0.12s ease-out;
+    will-change: transform;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html.gf-autosized .gf-wizard-root.is-preview-step .gf-preview-pane {
+      transition: none;
+    }
   }
 
   .gf-wizard-root .gf-spin-preview,
@@ -1600,6 +2278,55 @@
     min-height: 0;
   }
 
+  /* As wide as the tool card, so the name list gets the full width. */
+  .gf-modal-backdrop .gf-modal.is-csv {
+    max-width: min(1500px, 100%);
+  }
+
+  /*
+   * In the storefront the dialog opens at the top of the tool and the page
+   * scrolls it like any other content.
+   */
+  html.gf-autosized .gf-modal-backdrop {
+    align-items: flex-start;
+    padding-top: 24px;
+  }
+
+  html.gf-autosized .gf-modal.is-csv {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .gf-bulk-grid {
+    overflow: visible;
+  }
+
+  .gf-bulk-grid-header,
+  .gf-bulk-grid-row,
+  .gf-bulk-grid.has-secondary.is-stand .gf-bulk-grid-header,
+  .gf-bulk-grid.has-secondary.is-stand .gf-bulk-grid-row,
+  .gf-bulk-grid.has-secondary.is-sound-block .gf-bulk-grid-header,
+  .gf-bulk-grid.has-secondary.is-sound-block .gf-bulk-grid-row {
+    min-width: 0;
+  }
+
+  .gf-bulk-grid-header {
+    grid-template-columns: 38px repeat(4, minmax(0, 1fr)) 48px;
+  }
+
+  .gf-bulk-grid-row {
+    grid-template-columns: 38px repeat(4, minmax(0, 1fr)) 48px;
+  }
+
+  .gf-bulk-grid.has-secondary.is-stand .gf-bulk-grid-header,
+  .gf-bulk-grid.has-secondary.is-stand .gf-bulk-grid-row {
+    grid-template-columns: 38px repeat(6, minmax(0, 1fr)) 48px;
+  }
+
+  .gf-bulk-grid.has-secondary.is-sound-block .gf-bulk-grid-header,
+  .gf-bulk-grid.has-secondary.is-sound-block .gf-bulk-grid-row {
+    grid-template-columns: 38px repeat(8, minmax(0, 1fr)) 48px;
+  }
   .gf-wizard-root .gf-style-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -1908,9 +2635,15 @@
   background: #fff;
 }
 
+/*
+ * The strip is the whole circumference with the engraving centered on the
+ * front face; the outer sixths are bare metal, so trade them for larger text.
+ */
 .gf-band-photo {
   object-fit: contain;
   pointer-events: none;
+  transform: scale(1.5);
+  transform-origin: 50% calc(50% + 13px);
 }
 
 .gf-band-photo-empty {
@@ -1979,19 +2712,31 @@
   border-radius: 4px;
 }
 
+/* Corner pill, clear of the band at the center of the frame; fades on its own. */
 .gf-spin-hint {
   position: absolute;
-  left: 50%;
-  bottom: 14px;
-  transform: translateX(-50%);
-  background: rgba(10, 22, 40, 0.78);
+  right: 10px;
+  bottom: 10px;
+  background: rgba(10, 22, 40, 0.72);
   color: #fff;
-  font-size: 12px;
-  letter-spacing: 0.08em;
+  font-size: 10px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 6px 12px;
+  padding: 4px 9px;
   border-radius: 999px;
   pointer-events: none;
+  animation: gf-spin-hint-fade 5s ease forwards;
+}
+
+@keyframes gf-spin-hint-fade {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
 }
 
 .gf-spin-hint-desktop {
@@ -2168,6 +2913,22 @@
   box-shadow: 0 0 0 2px rgba(10, 22, 40, 0.12);
 }
 
+/* A single orderable wood, stated rather than offered as a choice. */
+.gf-only-wood {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--gf-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: #fff;
+}
+
+.gf-only-wood > span {
+  display: flex;
+  flex-direction: column;
+}
+
 .gf-style-swatch {
   width: 48px;
   height: 48px;
@@ -2240,6 +3001,35 @@
   gap: 8px;
   margin-top: 8px;
   align-items: center;
+}
+
+.gf-line-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.gf-line-head .gf-line-label {
+  margin-bottom: 0;
+}
+
+.gf-surface-style {
+  margin: 0 0 12px;
+}
+
+.gf-style-split {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--gf-muted);
+  cursor: pointer;
+}
+
+.gf-style-split input {
+  margin: 0;
 }
 
 .gf-chip-row {
@@ -2367,6 +3157,67 @@
   max-height: 90vh;
   overflow: auto;
   padding: 18px;
+}
+
+.gf-modal.is-csv {
+  max-width: 920px;
+}
+
+.gf-csv-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.gf-csv-modal-head .gf-modal-title {
+  margin-bottom: 0;
+}
+
+.gf-csv-link-row {
+  margin: 14px 0 0;
+}
+
+.gf-add-multiple {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--gf-border);
+}
+
+.gf-add-multiple .gf-note {
+  margin: 0 0 10px;
+}
+
+.gf-add-multiple-title {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gf-navy);
+}
+
+.gf-csv-link {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gf-navy);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.gf-bulk-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--gf-navy);
 }
 
 .gf-modal-title {
