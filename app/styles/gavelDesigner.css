@@ -1839,9 +1839,28 @@
   text-align: center;
 }
 
-.gf-design-grid.is-product .gf-style-thumb {
+/* Full-bleed photos belong on the choice cards only. The single-wood
+   row reuses this thumb class and must keep a fixed photo beside its text. */
+.gf-design-grid.is-product .gf-style-card .gf-style-thumb {
   width: 100%;
   height: 92px;
+}
+
+.gf-design-grid.is-product .gf-only-wood {
+  align-items: center;
+}
+
+.gf-design-grid.is-product .gf-only-wood .gf-style-thumb {
+  width: 86px;
+  height: 86px;
+  flex: 0 0 auto;
+}
+
+.gf-design-grid.is-product .gf-only-wood > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .gf-design-grid.is-product .gf-style-card-desc {
@@ -1852,6 +1871,18 @@
 .gf-design-grid.is-product .gf-option-price {
   width: 100%;
   text-align: center;
+}
+
+.gf-design-grid.is-product .gf-only-wood .gf-option-price {
+  width: auto;
+  text-align: left;
+}
+
+@media (max-width: 700px) {
+  .gf-design-grid.is-product .gf-only-wood .gf-style-thumb {
+    width: 72px;
+    height: 72px;
+  }
 }
 
 /* Step 1 is meant to be read without scrolling, so its chrome stays tight. */
@@ -2343,6 +2374,11 @@
   .gf-wizard-root .gf-style-thumb {
     width: 56px;
     height: 56px;
+  }
+
+  .gf-design-grid.is-product .gf-only-wood .gf-style-thumb {
+    width: 148px;
+    height: 96px;
   }
 
   .gf-design-grid.is-style .gf-sub-section {
@@ -2926,7 +2962,11 @@
 
 .gf-only-wood > span {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
+  min-width: 0;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .gf-style-swatch {
