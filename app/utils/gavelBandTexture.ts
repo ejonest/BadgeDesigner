@@ -37,6 +37,8 @@ export type GavelBandLineInput = {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
+  /** This line's own size. Missing lines use the surface preset. */
+  textSize?: GavelTextSizePreset;
 };
 
 function fontCss(
@@ -378,23 +380,35 @@ function activeLines(lines: readonly GavelBandLineInput[]): GavelBandLineInput[]
     .filter((l) => (l.text ?? "").trim().length > 0);
 }
 
+function bandLineFontPx(
+  line: GavelBandLineInput,
+  preset: GavelTextSizePreset,
+): number {
+  return GAVEL_TEXTURE_FONT_PX[line.textSize ?? preset];
+}
+
 function bandTextLayout(
-  filledCount: number,
+  filled: readonly GavelBandLineInput[],
   preset: GavelTextSizePreset,
   canvasHeight: number = GAVEL_BAND_TEXTURE_HEIGHT_PX,
   fill: number = 0.86,
 ) {
-  const fontPx = GAVEL_TEXTURE_FONT_PX[preset];
-  const lineGap = fontPx * 0.22;
-  const rawBlock =
-    filledCount * fontPx + Math.max(0, filledCount - 1) * lineGap;
+  const fontPx = filled.map((line) => bandLineFontPx(line, preset));
+  const gaps = fontPx.map((px) => px * 0.22);
+  const rawBlock = fontPx.reduce(
+    (sum, px, index) => sum + px + (index > 0 ? gaps[index - 1] : 0),
+    0,
+  );
   const maxBlock = canvasHeight * fill;
   const scale = rawBlock > maxBlock ? maxBlock / rawBlock : 1;
-  const drawPx = fontPx * scale;
-  const drawGap = lineGap * scale;
-  const blockHeight =
-    filledCount * drawPx + Math.max(0, filledCount - 1) * drawGap;
-  const y0 = (canvasHeight - blockHeight) / 2 + drawPx * 0.78;
+  const drawPx = fontPx.map((px) => px * scale);
+  const drawGap = gaps.map((gap) => gap * scale);
+  const blockHeight = drawPx.reduce(
+    (sum, px, index) => sum + px + (index > 0 ? drawGap[index - 1] : 0),
+    0,
+  );
+  const y0 =
+    (canvasHeight - blockHeight) / 2 + (drawPx[0] ?? 0) * 0.78;
   return { drawPx, drawGap, y0 };
 }
 
@@ -427,7 +441,7 @@ export function paintGavelBandCanvas(
   const logo = options?.logo;
   if (filled.length === 0 && !logo?.image) return canvas;
 
-  const { drawPx, drawGap, y0 } = bandTextLayout(filled.length, preset);
+  const { drawPx, drawGap, y0 } = bandTextLayout(filled, preset);
   let y = y0;
   let textCenterX = width / 2;
 
@@ -443,14 +457,15 @@ export function paintGavelBandCanvas(
     if (hasCopy) textCenterX = width * 0.59;
   }
 
-  for (const line of filled) {
-    ctx.font = fontCss(line, drawPx);
+  filled.forEach((line, index) => {
+    const size = drawPx[index] ?? drawPx[0] ?? 0;
+    ctx.font = fontCss(line, size);
     ctx.fillStyle = line.color?.trim() || GAVEL_DEFAULT_TEXT_COLOR;
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "center";
     ctx.fillText((line.text ?? "").trim(), textCenterX, y);
-    y += drawPx + drawGap;
-  }
+    y += size + (drawGap[index] ?? 0);
+  });
 
   return canvas;
 }
@@ -560,19 +575,29 @@ const STAND_PLATE_PRESET_SCALE: Record<GavelTextSizePreset, number> = {
 };
 
 function standPlateFontSizes(
-  count: number,
+  filled: readonly GavelBandLineInput[],
   preset: GavelTextSizePreset,
 ): number[] {
+  const count = filled.length;
   if (count <= 0) return [];
   const scale = STAND_PLATE_PRESET_SCALE[preset] ?? 1;
-  if (count === 1) {
-    return [
-      STAND_PLATE_TEXTURE_H_PX * STAND_PLATE_SOLO_FONT_FRACTION * scale,
-    ];
-  }
-  const headline =
-    STAND_PLATE_TEXTURE_H_PX * STAND_PLATE_HEADLINE_FONT_FRACTION * scale;
-  return [headline, headline * STAND_PLATE_SUBTITLE_FONT_RATIO];
+  const base =
+    count === 1
+      ? [STAND_PLATE_TEXTURE_H_PX * STAND_PLATE_SOLO_FONT_FRACTION * scale]
+      : Array.from({ length: count }, (_, index) => {
+          const headline =
+            STAND_PLATE_TEXTURE_H_PX *
+            STAND_PLATE_HEADLINE_FONT_FRACTION *
+            scale;
+          return index === 0
+            ? headline
+            : headline * STAND_PLATE_SUBTITLE_FONT_RATIO;
+        });
+  return base.map((px, index) => {
+    const lineScale =
+      STAND_PLATE_PRESET_SCALE[filled[index]?.textSize ?? preset] ?? 1;
+    return px * (lineScale / scale);
+  });
 }
 
 /** Leading is set off the headline, so both lines stay one lockup. */
@@ -698,7 +723,7 @@ function standPlateArtPlan(
       textHeight: metrics.height,
     });
 
-  let fontSizes = standPlateFontSizes(filled.length, preset);
+  let fontSizes = standPlateFontSizes(filled, preset);
   let metrics = plateTextMetrics(ctx, filled, fontSizes);
   let layout = layoutFor(metrics);
   // Copy longer than the space the logo leaves is set smaller rather than
@@ -818,7 +843,7 @@ export function gavelBandToSvgString(
   const width = GAVEL_BAND_TEXTURE_WIDTH_PX;
   const height = GAVEL_BAND_TEXTURE_HEIGHT_PX;
   const filled = activeLines(lines);
-  const { drawPx, drawGap, y0 } = bandTextLayout(filled.length, preset);
+  const { drawPx, drawGap, y0 } = bandTextLayout(filled, preset);
   let y = y0;
   const logo = options?.logo;
   const maxLogoH =
@@ -836,14 +861,15 @@ export function gavelBandToSvgString(
   const textCenterX = hasLogo && filled.length > 0 ? width * 0.59 : width / 2;
 
   const textEls = filled
-    .map((line) => {
+    .map((line, index) => {
       const family = gavelFontFamilyStack(line.fontFamily);
       const weight = gavelPaintWeight(line);
       const fontStyle = gavelPaintStyle(line);
       const color = line.color?.trim() || GAVEL_DEFAULT_TEXT_COLOR;
       const text = escapeXml((line.text ?? "").trim());
-      const el = `<text x="${textCenterX}" y="${y}" text-anchor="middle" font-family="${escapeXml(family)}" font-size="${drawPx}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(color)}">${text}</text>`;
-      y += drawPx + drawGap;
+      const size = drawPx[index] ?? drawPx[0] ?? 0;
+      const el = `<text x="${textCenterX}" y="${y}" text-anchor="middle" font-family="${escapeXml(family)}" font-size="${size}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(color)}">${text}</text>`;
+      y += size + (drawGap[index] ?? 0);
       return el;
     })
     .join("\n");
@@ -979,29 +1005,40 @@ function soundBlockRowsWithGaps(
   return rows.slice(0, lastFilledIndex + 1);
 }
 
+function soundBlockSizeWeight(line: GavelBandLineInput): number {
+  const preset = line.textSize ?? "medium";
+  return GAVEL_TEXTURE_FONT_PX[preset] / GAVEL_TEXTURE_FONT_PX.medium;
+}
+
 function fitSoundBlockTopLines(
   ctx: CanvasRenderingContext2D,
   lines: readonly GavelBandLineInput[],
   maxWidth: number,
   maxHeight: number,
-): { rows: GavelBandLineInput[]; fontPx: number; gap: number } {
+): { rows: GavelBandLineInput[]; fontPx: number[]; gap: number } {
   const rows = soundBlockRowsWithGaps(lines);
-  if (rows.length === 0) return { rows, fontPx: 0, gap: 0 };
-  let fontPx = Math.min(110, maxHeight * (rows.length === 1 ? 0.28 : 0.2));
+  if (rows.length === 0) return { rows, fontPx: [], gap: 0 };
+  const weights = rows.map(soundBlockSizeWeight);
+  let base = Math.min(110, maxHeight * (rows.length === 1 ? 0.28 : 0.2));
   const minPx = 18;
-  while (fontPx >= minPx) {
-    const gap = fontPx * 0.22;
-    const blockH = rows.length * fontPx + Math.max(0, rows.length - 1) * gap;
+  const sized = (unit: number) => weights.map((weight) => unit * weight);
+  while (base >= minPx) {
+    const fontPx = sized(base);
+    const gap = fontPx[0] * 0.22;
+    const blockH =
+      fontPx.reduce((sum, px) => sum + px, 0) +
+      Math.max(0, rows.length - 1) * gap;
     if (blockH <= maxHeight) {
-      const tooWide = rows.some((row) => {
-        ctx.font = fontCss(row, fontPx);
+      const tooWide = rows.some((row, index) => {
+        ctx.font = fontCss(row, fontPx[index]);
         return ctx.measureText(row.text ?? "").width > maxWidth;
       });
       if (!tooWide) return { rows, fontPx, gap };
     }
-    fontPx -= 2;
+    base -= 2;
   }
-  return { rows, fontPx: minPx, gap: minPx * 0.22 };
+  const fontPx = sized(minPx);
+  return { rows, fontPx, gap: fontPx[0] * 0.22 };
 }
 
 function drawSoundBlockUnderline(
@@ -1052,11 +1089,14 @@ export function paintSoundBlockTopCanvas(
   const coloredRows = sourceRows.map((line) => ({ ...line, color: textColor }));
   const { rows, fontPx, gap } = coloredRows.length
     ? fitSoundBlockTopLines(ctx, coloredRows, maxWidth, maxHeight)
-    : { rows: [] as GavelBandLineInput[], fontPx: 0, gap: 0 };
-  const blockH = rows.length * fontPx + Math.max(0, rows.length - 1) * gap;
+    : { rows: [] as GavelBandLineInput[], fontPx: [] as number[], gap: 0 };
+  const blockH =
+    fontPx.reduce((sum, px) => sum + px, 0) +
+    Math.max(0, rows.length - 1) * gap;
+  const firstPx = fontPx[0] ?? 0;
   let y = hasLogo
-    ? size * 0.62 + fontPx * 0.78
-    : (size - blockH) / 2 + fontPx * 0.78;
+    ? size * 0.62 + firstPx * 0.78
+    : (size - blockH) / 2 + firstPx * 0.78;
 
   if (logo?.image) {
     const ink = blackInkLogo(logo.image);
@@ -1081,8 +1121,9 @@ export function paintSoundBlockTopCanvas(
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = textColor;
-  for (const row of rows) {
-    ctx.font = fontCss(row, fontPx);
+  rows.forEach((row, index) => {
+    const linePx = fontPx[index] ?? firstPx;
+    ctx.font = fontCss(row, linePx);
     ctx.fillText(row.text ?? "", size / 2, y);
     if (row.underline) {
       drawSoundBlockUnderline(
@@ -1090,12 +1131,12 @@ export function paintSoundBlockTopCanvas(
         row.text ?? "",
         size / 2,
         y,
-        fontPx,
+        linePx,
         textColor,
       );
     }
-    y += fontPx + gap;
-  }
+    y += linePx + gap;
+  });
   return canvas;
 }
 
@@ -1139,18 +1180,21 @@ export function soundBlockTopToSvgString(
     color: textColor,
   }));
   let rows: GavelBandLineInput[] = coloredRows;
-  let fontPx = 64;
-  let gap = fontPx * 0.22;
+  let fontPx = coloredRows.map(() => 64);
+  let gap = 64 * 0.22;
   if (ctx && coloredRows.length) {
     const fitted = fitSoundBlockTopLines(ctx, coloredRows, maxWidth, maxHeight);
     rows = fitted.rows;
     fontPx = fitted.fontPx;
     gap = fitted.gap;
   }
-  const blockH = rows.length * fontPx + Math.max(0, rows.length - 1) * gap;
+  const blockH =
+    fontPx.reduce((sum, px) => sum + px, 0) +
+    Math.max(0, rows.length - 1) * gap;
+  const firstPx = fontPx[0] ?? 0;
   let y = hasLogo
-    ? size * 0.62 + fontPx * 0.78
-    : (size - blockH) / 2 + fontPx * 0.78;
+    ? size * 0.62 + firstPx * 0.78
+    : (size - blockH) / 2 + firstPx * 0.78;
   const logoAspect =
     ink?.aspect ??
     (logo && Number.isFinite(logo.aspect) && logo.aspect > 0 ? logo.aspect : 1);
@@ -1163,13 +1207,14 @@ export function soundBlockTopToSvgString(
     ? `<image x="${((size - logoW) / 2).toFixed(2)}" y="${logoY.toFixed(2)}" width="${logoW.toFixed(2)}" height="${logoH.toFixed(2)}" preserveAspectRatio="xMidYMid meet" href="${escapeXml(logoHref)}"${ink ? "" : ' filter="url(#black-ink-logo)"'}/>`
     : "";
   const textEls = rows
-    .map((row) => {
+    .map((row, index) => {
       const family = gavelFontFamilyStack(row.fontFamily);
       const weight = gavelPaintWeight(row);
       const fontStyle = gavelPaintStyle(row);
       const deco = row.underline ? ' text-decoration="underline"' : "";
-      const el = `<text x="${size / 2}" y="${y}" text-anchor="middle" font-family="${escapeXml(family)}" font-size="${fontPx}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(textColor)}"${deco}>${escapeXml(row.text ?? "")}</text>`;
-      y += fontPx + gap;
+      const linePx = fontPx[index] ?? firstPx;
+      const el = `<text x="${size / 2}" y="${y}" text-anchor="middle" font-family="${escapeXml(family)}" font-size="${linePx}" font-weight="${weight}" font-style="${fontStyle}" fill="${escapeXml(textColor)}"${deco}>${escapeXml(row.text ?? "")}</text>`;
+      y += linePx + gap;
       return el;
     })
     .join("\n");
