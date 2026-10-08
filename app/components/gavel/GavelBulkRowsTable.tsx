@@ -5,7 +5,13 @@ import {
   SOUND_BLOCK_MAX_CHARS,
   type GavelTextSizePreset,
 } from "~/constants/gavelStyles";
-import type { GavelBulkRow, GavelBulkRowIssues } from "~/utils/gavelBulkCsv";
+import { GavelLineSizeFontControls } from "~/components/gavel/GavelLineStyleControls";
+import {
+  gavelBulkLineTextSize,
+  type GavelBulkLineStyle,
+  type GavelBulkRow,
+  type GavelBulkRowIssues,
+} from "~/utils/gavelBulkCsv";
 
 export type GavelBulkSortKey =
   | "line1"
@@ -116,8 +122,6 @@ function describeIssues(
     secondaryUsesBandLimit: boolean;
   },
 ): string[] {
-  const size = row.textSize ?? options.textSize;
-  const limit = GAVEL_MAX_CHARS_PER_LINE[size];
   const messages: string[] = [];
   if (issues.missingRequired) {
     messages.push(`${options.bandLabels[0]} is required.`);
@@ -126,6 +130,13 @@ function describeIssues(
   for (const key of issues.overCells) {
     const [surface, rawIndex] = key.split("-");
     const lineIndex = Number(rawIndex);
+    const size = gavelBulkLineTextSize(
+      row,
+      lineIndex,
+      options.textSize,
+      surface === "secondary" ? "secondary" : "band",
+    );
+    const limit = GAVEL_MAX_CHARS_PER_LINE[size];
     if (surface === "band") {
       messages.push(
         `${options.bandLabels[lineIndex]} is ${row.texts[lineIndex].length} characters; ${limit} fit at ${size} size.`,
@@ -164,8 +175,16 @@ type EditorProps = {
   onEditBand: (index: number, lineIndex: number, value: string) => void;
   onEditSecondary: (index: number, lineIndex: number, value: string) => void;
   onEditQuantity: (index: number, value: string) => void;
-  onEditTextSize: (index: number, value: string) => void;
-  onOpenList: () => void;
+  onEditBandStyle: (
+    index: number,
+    lineIndex: number,
+    changes: Partial<GavelBulkLineStyle>,
+  ) => void;
+  onEditSecondaryStyle: (
+    index: number,
+    lineIndex: number,
+    changes: Partial<GavelBulkLineStyle>,
+  ) => void;
 };
 
 /** The design step's view of one bulk row, editable in place. */
@@ -184,11 +203,21 @@ export function GavelBulkRowEditor({
   onEditBand,
   onEditSecondary,
   onEditQuantity,
-  onEditTextSize,
-  onOpenList,
+  onEditBandStyle,
+  onEditSecondaryStyle,
 }: EditorProps) {
   if (!row) return null;
-  const limit = GAVEL_MAX_CHARS_PER_LINE[row.textSize ?? textSize];
+  const lineLimit = (lineIndex: number, surface: "band" | "secondary" = "band") =>
+    GAVEL_MAX_CHARS_PER_LINE[
+      gavelBulkLineTextSize(row, lineIndex, textSize, surface)
+    ];
+  const lineStyle = (
+    lineIndex: number,
+    surface: "band" | "secondary",
+  ): GavelBulkLineStyle => {
+    const styles = surface === "band" ? row.bandStyles : row.secondaryStyles;
+    return styles?.[lineIndex] ?? {};
+  };
   const duplicateOf = issues?.duplicateOf ?? null;
 
   const field = (
@@ -198,11 +227,14 @@ export function GavelBulkRowEditor({
     max: number | undefined,
     flagged: boolean,
     placeholder: string,
+    style: GavelBulkLineStyle,
+    size: GavelTextSizePreset,
     onChange: (value: string) => void,
+    onStyle: (changes: Partial<GavelBulkLineStyle>) => void,
   ) => {
     const over = max !== undefined && value.length > max;
     return (
-      <label key={key} className="gf-bulk-edit-line">
+      <div key={key} className="gf-bulk-edit-line">
         <span>{label}</span>
         <input
           className={`gf-input${over || flagged ? " is-over" : ""}`}
@@ -216,8 +248,16 @@ export function GavelBulkRowEditor({
           <small className={over ? "is-warn" : undefined}>
             {value.length}/{max}
           </small>
-        ) : null}
-      </label>
+        ) : (
+          <span />
+        )}
+        <GavelLineSizeFontControls
+          style={style}
+          size={size}
+          ariaLabel={label}
+          onChange={onStyle}
+        />
+      </div>
     );
   };
 
@@ -255,10 +295,13 @@ export function GavelBulkRowEditor({
           `band-${lineIndex}`,
           bandLabels[lineIndex],
           text,
-          limit,
+          lineLimit(lineIndex),
           lineIndex === 0 && Boolean(issues?.missingRequired),
           lineIndex === 0 ? "Required" : "Optional",
+          lineStyle(lineIndex, "band"),
+          gavelBulkLineTextSize(row, lineIndex, textSize),
           (value) => onEditBand(index, lineIndex, value),
+          (changes) => onEditBandStyle(index, lineIndex, changes),
         ),
       )}
       {secondaryTitle && secondaryCount > 0 ? (
@@ -269,10 +312,13 @@ export function GavelBulkRowEditor({
               `secondary-${lineIndex}`,
               secondaryLabels[lineIndex],
               text,
-              secondaryUsesBandLimit ? limit : undefined,
+              secondaryUsesBandLimit ? lineLimit(lineIndex, "secondary") : undefined,
               Boolean(issues?.overCells.has(`secondary-${lineIndex}`)),
               "Optional",
+              lineStyle(lineIndex, "secondary"),
+              gavelBulkLineTextSize(row, lineIndex, textSize, "secondary"),
               (value) => onEditSecondary(index, lineIndex, value),
+              (changes) => onEditSecondaryStyle(index, lineIndex, changes),
             ),
           )}
         </>
@@ -288,21 +334,6 @@ export function GavelBulkRowEditor({
         </p>
       ) : null}
       <div className="gf-bulk-row-settings">
-        <label>
-          <span>Size</span>
-          <select
-            className="gf-input"
-            value={row.textSize ?? ""}
-            onChange={(event) => onEditTextSize(index, event.target.value)}
-          >
-            <option value="">Same as order ({textSize})</option>
-            {GAVEL_TEXT_SIZE_PRESETS.map((size) => (
-              <option key={size} value={size}>
-                {size} — this row only
-              </option>
-            ))}
-          </select>
-        </label>
         <div className="gf-bulk-row-qty">
           <span aria-hidden="true">Qty</span>
           <QuantityCell
@@ -313,12 +344,7 @@ export function GavelBulkRowEditor({
           />
         </div>
       </div>
-      <p className="gf-note">
-        Changes apply to this row only.{" "}
-        <button type="button" className="gf-csv-link" onClick={onOpenList}>
-          Edit the full list
-        </button>
-      </p>
+      <p className="gf-note">Changes apply to this gavel only.</p>
     </div>
   );
 }
@@ -393,7 +419,13 @@ export function GavelBulkRowsTable({
         <tbody>
           {entries.map(({ row, index, issues }) => {
             const rowNumber = index + 1;
-            const limit = GAVEL_MAX_CHARS_PER_LINE[row.textSize ?? textSize];
+            const lineLimit = (
+              lineIndex: number,
+              surface: "band" | "secondary" = "band",
+            ) =>
+              GAVEL_MAX_CHARS_PER_LINE[
+                gavelBulkLineTextSize(row, lineIndex, textSize, surface)
+              ];
             const hasError = issues.overCells.size > 0 || issues.missingRequired;
             const messages = describeIssues(row, issues, {
               textSize,
@@ -452,7 +484,7 @@ export function GavelBulkRowsTable({
                     `band-${lineIndex}`,
                     text,
                     bandLabels[lineIndex],
-                    limit,
+                    lineLimit(lineIndex),
                     lineIndex === 0 ? "Required" : "—",
                     (value) => onEditBand(index, lineIndex, value),
                   ),
@@ -462,7 +494,9 @@ export function GavelBulkRowsTable({
                     `secondary-${lineIndex}`,
                     text,
                     secondaryLabels[lineIndex],
-                    secondaryUsesBandLimit ? limit : undefined,
+                    secondaryUsesBandLimit
+                      ? lineLimit(lineIndex, "secondary")
+                      : undefined,
                     "—",
                     (value) => onEditSecondary(index, lineIndex, value),
                   ),

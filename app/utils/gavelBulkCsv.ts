@@ -12,6 +12,14 @@ import {
 export type GavelBulkSecondaryMode = "shared" | "separate";
 export type GavelBulkSecondarySurface = "stand" | "sound-block";
 
+export type GavelBulkLineStyle = {
+  fontFamily?: string;
+  bold?: boolean;
+  italic?: boolean;
+  /** Overrides the row, then the order, for this line only. */
+  textSize?: GavelTextSizePreset;
+};
+
 export type GavelBulkRow = {
   id: string;
   /** Text engraved on the gavel band. */
@@ -21,6 +29,9 @@ export type GavelBulkRow = {
   quantity: number;
   /** Overrides the order-wide text size for this row only. */
   textSize?: GavelTextSizePreset;
+  /** Per-gavel formatting overrides. Missing entries inherit the bulk design. */
+  bandStyles?: GavelBulkLineStyle[];
+  secondaryStyles?: GavelBulkLineStyle[];
 };
 
 export function parseGavelTextSize(
@@ -107,14 +118,21 @@ export function checkGavelBulkRows(
   let duplicateRows = 0;
 
   const issues = rows.map((row, index): GavelBulkRowIssues => {
-    const limit = GAVEL_MAX_CHARS_PER_LINE[row.textSize ?? options.textSize];
     const overCells = new Set<string>();
     row.texts.forEach((text, lineIndex) => {
+      const limit =
+        GAVEL_MAX_CHARS_PER_LINE[
+          gavelBulkLineTextSize(row, lineIndex, options.textSize)
+        ];
       if (text.length > limit) overCells.add(`band-${lineIndex}`);
     });
     const secondary = row.secondaryTexts.slice(0, options.secondaryCount);
     if (options.secondarySurface === "stand") {
       secondary.forEach((text, lineIndex) => {
+        const limit =
+          GAVEL_MAX_CHARS_PER_LINE[
+            gavelBulkLineTextSize(row, lineIndex, options.textSize, "secondary")
+          ];
         if (text.length > limit) overCells.add(`secondary-${lineIndex}`);
       });
     } else if (
@@ -177,6 +195,39 @@ export function mergeGavelBulkRows(
  * The customer's current list in the template's own column layout, so it
  * imports straight back in.
  */
+/** The size a line is engraved at: its own, then the row's, then the order's. */
+export function gavelBulkLineTextSize(
+  row: GavelBulkRow,
+  lineIndex: number,
+  fallback: GavelTextSizePreset,
+  surface: "band" | "secondary" = "band",
+): GavelTextSizePreset {
+  const styles = surface === "band" ? row.bandStyles : row.secondaryStyles;
+  return styles?.[lineIndex]?.textSize ?? row.textSize ?? fallback;
+}
+
+/**
+ * The list as plain rows for the paste boxes. Blank rows stay as a comma so
+ * a gavel line and its sound-block line keep the same row number.
+ */
+export function gavelBulkRowsToPaste(
+  rows: readonly GavelBulkRow[],
+  pick: (row: GavelBulkRow) => readonly string[],
+): string {
+  return rows
+    .map((row) => {
+      const cells = [...pick(row)];
+      while (cells.length > 1 && !cells[cells.length - 1].trim()) cells.pop();
+      if (!cells.some((cell) => cell.trim())) return ",";
+      return cells
+        .map((cell) =>
+          /[",\n\r]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell,
+        )
+        .join(",");
+    })
+    .join("\n");
+}
+
 export function gavelBulkRowsToCsv(
   rows: readonly GavelBulkRow[],
   mode: GavelBulkSecondaryMode,
@@ -517,3 +568,50 @@ export const GAVEL_BULK_PASTE_EXAMPLE_ROWS: readonly string[] = [
   "MODEL UNITED NATIONS,Secretary-General",
   "MODEL UNITED NATIONS,Delegate,Lincoln High School",
 ];
+
+/**
+ * Pairs two independently pasted or uploaded lists. Row 1 of the gavel list
+ * belongs with row 1 of the sound block or stand plate, and so on.
+ */
+export function pairGavelBulkSurfaceRows(
+  bandRows: readonly GavelBulkRow[],
+  secondaryRows: readonly GavelBulkRow[],
+  options: { surfaceLabel: string; secondaryLineCount: number },
+): GavelBulkRow[] {
+  if (bandRows.length === 0) {
+    throw new Error("Add at least one row of gavel text.");
+  }
+  if (secondaryRows.length === 0) {
+    throw new Error(`Add at least one row of ${options.surfaceLabel} text.`);
+  }
+  if (bandRows.length !== secondaryRows.length) {
+    const bandLabel = `${bandRows.length} row${bandRows.length === 1 ? "" : "s"}`;
+    const secondaryLabel = `${secondaryRows.length} row${
+      secondaryRows.length === 1 ? "" : "s"
+    }`;
+    throw new Error(
+      `The gavel list has ${bandLabel} and the ${options.surfaceLabel} list has ${secondaryLabel}. Use the same number of rows so each gavel lines up.`,
+    );
+  }
+  return bandRows.map((row, index) => ({
+    ...row,
+    secondaryTexts: padTexts(
+      secondaryRows[index].texts.slice(0, options.secondaryLineCount),
+    ),
+  }));
+}
+
+/** A one-surface template. The window it is uploaded into decides where it goes. */
+export function gavelBulkSurfaceCsvTemplate(lineCount: number): string {
+  const headers = Array.from(
+    { length: lineCount },
+    (_, index) => `Line ${index + 1}`,
+  );
+  const example = [
+    "MODEL UNITED NATIONS",
+    "Secretary-General",
+    ...Array.from({ length: Math.max(0, lineCount - 2) }, () => ""),
+    "1",
+  ];
+  return [[...headers, "Quantity"].join(","), example.join(",")].join("\n");
+}

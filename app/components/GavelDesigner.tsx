@@ -82,6 +82,7 @@ import {
   type GavelBulkSortKey,
 } from "~/components/gavel/GavelBulkRowsTable";
 import {
+  GavelLineSizeFontControls,
   GavelLineStyleControls,
   GavelSurfaceStyleRow,
   linesShareStyle,
@@ -132,10 +133,13 @@ import {
   GAVEL_BULK_PASTE_EXAMPLE_ROWS,
   blankGavelBulkRow,
   gavelBulkCsvTemplate,
+  gavelBulkSurfaceCsvTemplate,
   gavelBulkRowIsBlank,
   gavelBulkRowsToCsv,
+  gavelBulkRowsToPaste,
   mergeGavelBulkRows,
   newGavelBulkRowId,
+  pairGavelBulkSurfaceRows,
   parseGavelBulkCsv,
   parseGavelTextSize,
   secondaryLineCount,
@@ -143,6 +147,7 @@ import {
   checkGavelBulkRows,
   type GavelBulkColumnLabels,
   type GavelBulkCsvResult,
+  type GavelBulkLineStyle,
   type GavelBulkRow,
   type GavelBulkSecondaryMode,
 } from "~/utils/gavelBulkCsv";
@@ -151,6 +156,8 @@ import "../styles/gavelDesigner.css";
 /** One decision per screen — the gavel flow adds a wood/handle step. */
 type StepId = "product" | "style" | "design" | "quantity" | "done";
 type GavelLogoSurface = "stand" | "sound-block";
+type GavelDesignChoice = "one" | "multiple" | null;
+type GavelBulkWorkspace = "table" | "grid" | "one" | "bulk";
 const STEP_IDS: StepId[] = ["product", "style", "design", "quantity", "done"];
 
 /**
@@ -347,16 +354,36 @@ function sanitizeCachedLines(
 
 function sanitizeCachedBulkRows(raw: unknown): GavelBulkRow[] {
   if (!Array.isArray(raw)) return [];
+  const sanitizeStyles = (value: unknown): GavelBulkLineStyle[] | undefined => {
+    if (!Array.isArray(value)) return undefined;
+    return value.slice(0, 4).map((item) => {
+      const style =
+        item && typeof item === "object"
+          ? (item as Record<string, unknown>)
+          : {};
+      return {
+        ...(typeof style.fontFamily === "string"
+          ? { fontFamily: style.fontFamily }
+          : {}),
+        bold: Boolean(style.bold),
+        italic: Boolean(style.italic),
+        ...(parseGavelTextSize(style.textSize)
+          ? { textSize: parseGavelTextSize(style.textSize) }
+          : {}),
+      };
+    });
+  };
   return raw.flatMap((item, index): GavelBulkRow[] => {
     if (!item || typeof item !== "object") return [];
     const row = item as Record<string, unknown>;
     if (!Array.isArray(row.texts)) return [];
+    const rawTexts = row.texts;
     const texts = [0, 1, 2, 3].map((lineIndex) =>
-      typeof row.texts[lineIndex] === "string" ? row.texts[lineIndex] : "",
+      typeof rawTexts[lineIndex] === "string" ? rawTexts[lineIndex] : "",
     ) as GavelBulkRow["texts"];
     const rawSecondary = Array.isArray(row.secondaryTexts)
       ? row.secondaryTexts
-      : row.texts;
+      : rawTexts;
     const secondaryTexts = [0, 1, 2, 3].map((lineIndex) =>
       typeof rawSecondary[lineIndex] === "string"
         ? rawSecondary[lineIndex]
@@ -377,6 +404,12 @@ function sanitizeCachedBulkRows(raw: unknown): GavelBulkRow[] {
             : 1,
         ...(parseGavelTextSize(row.textSize)
           ? { textSize: parseGavelTextSize(row.textSize) }
+          : {}),
+        ...(sanitizeStyles(row.bandStyles)
+          ? { bandStyles: sanitizeStyles(row.bandStyles) }
+          : {}),
+        ...(sanitizeStyles(row.secondaryStyles)
+          ? { secondaryStyles: sanitizeStyles(row.secondaryStyles) }
           : {}),
       },
     ];
@@ -436,6 +469,7 @@ type GavelDesignerCachePayload = {
   lines?: BadgeLine[];
   qty?: number;
   bulkMode?: boolean;
+  designChoice?: GavelDesignChoice;
   bulkRows?: GavelBulkRow[];
   bulkCsvText?: string;
   bulkCsvWarning?: string;
@@ -493,6 +527,14 @@ function newLine(partial?: Partial<BadgeLine>): BadgeLine {
     underline: false,
     ...partial,
   };
+}
+
+function gavelLineStyles(lines: readonly BadgeLine[]): GavelBulkLineStyle[] {
+  return lines.map((line) => ({
+    fontFamily: line.fontFamily,
+    bold: Boolean(line.bold),
+    italic: Boolean(line.italic),
+  }));
 }
 
 function defaultLines(): BadgeLine[] {
@@ -795,11 +837,21 @@ export default function GavelDesigner({
   const [bandFinish, setBandFinish] = useState<GavelBandFinishId>("gold");
   const [textSize, setTextSize] = useState<GavelTextSizePreset>("medium");
   const [lines, setLines] = useState<BadgeLine[]>(defaultLines);
+  const [bulkBandStyles, setBulkBandStyles] = useState<GavelBulkLineStyle[]>(
+    () => gavelLineStyles(defaultLines()),
+  );
+  const [bulkSecondaryStyles, setBulkSecondaryStyles] = useState<
+    GavelBulkLineStyle[]
+  >(() => [{}, {}, {}, {}]);
   const [qty, setQty] = useState(1);
+  const bulkModeLocked = readQueryParam("audience") === "model-un";
   const [bulkMode, setBulkMode] = useState(false);
+  const [designChoice, setDesignChoice] =
+    useState<GavelDesignChoice>(bulkModeLocked ? "multiple" : null);
   const [bulkRows, setBulkRows] = useState<GavelBulkRow[]>([]);
   const [selectedBulkRow, setSelectedBulkRow] = useState(0);
   const [bulkCsvText, setBulkCsvText] = useState("");
+  const [bulkSecondaryCsvText, setBulkSecondaryCsvText] = useState("");
   const [bulkCsvWarning, setBulkCsvWarning] = useState("");
   const [bulkSecondaryMode, setBulkSecondaryMode] =
     useState<GavelBulkSecondaryMode>("shared");
@@ -817,9 +869,13 @@ export default function GavelDesigner({
   const [bulkProblemsOnly, setBulkProblemsOnly] = useState(false);
   const bulkFocusRowRef = useRef<string | null>(null);
   const bulkCsvInputRef = useRef<HTMLInputElement>(null);
+  const bulkSecondaryCsvInputRef = useRef<HTMLInputElement>(null);
   const bulkPasteRef = useRef<HTMLTextAreaElement>(null);
-  const bulkModeLocked = readQueryParam("audience") === "model-un";
+  const bulkSecondaryPasteRef = useRef<HTMLTextAreaElement>(null);
   const [csvModalOpen, setCsvModalOpen] = useState(false);
+  /** The left-column multiple-gavel workspace; CSV import remains a popup. */
+  const [bulkWorkspace, setBulkWorkspace] =
+    useState<GavelBulkWorkspace>("table");
   /** Bumped when the CSV modal closes so a blank WebGL canvas is recreated. */
   const [previewRevive, setPreviewRevive] = useState(0);
   /** Bumped after the requested font faces finish downloading. */
@@ -1023,8 +1079,12 @@ export default function GavelDesigner({
     const area = tab === "logo" ? logoHomeTab : tab;
     setPreviewFocus((prev) => ({ area, token: prev.token + 1 }));
   };
-  /** A loaded list on desktop is edited as a spreadsheet across the card. */
-  const bulkWide = step === "design" && bulkRows.length > 0 && !isNarrow;
+  /** The spreadsheet fills the card only while adding names from a CSV. */
+  const bulkWide =
+    step === "design" &&
+    bulkRows.length > 0 &&
+    !isNarrow &&
+    bulkWorkspace === "table";
 
   /**
    * With nothing typed anywhere, the preview shows the example copy from the
@@ -1444,7 +1504,8 @@ export default function GavelDesigner({
   }, [gavelStyle, storeProduct]);
 
   const hasText = lines.some((l) => (l.text ?? "").trim());
-  const designReady = bulkMode ? bulkRows.length > 0 : hasText;
+  const designReady =
+    designChoice !== null && (bulkMode ? bulkRows.length > 0 : hasText);
   const bulkQuantity = bulkRows.reduce((sum, row) => sum + row.quantity, 0);
   const orderQuantity = bulkRows.length > 0 ? bulkQuantity : qty;
   const bulkSecondarySurface = isStand
@@ -1542,15 +1603,56 @@ export default function GavelDesigner({
   const bulkOrderSummary = `${bulkQuantity} gavel${bulkQuantity === 1 ? "" : "s"} · ${
     bulkCheck.designs
   } different design${bulkCheck.designs === 1 ? "" : "s"}`;
+  const bulkSurfaceLabel = isStand ? "stand plate" : "sound block";
   /** Live read-out for the paste box, so mistakes surface before applying. */
   const bulkPastePreview = useMemo(() => {
-    if (!bulkCsvText.trim()) return null;
+    const separate =
+      effectiveBulkSecondaryMode === "separate" && bulkSecondarySurface;
+    if (!bulkCsvText.trim() && !(separate && bulkSecondaryCsvText.trim())) {
+      return null;
+    }
     try {
-      const { rows, warning } = parseGavelBulkCsv(bulkCsvText, {
-        secondaryMode: effectiveBulkSecondaryMode,
-        secondarySurface: bulkSecondarySurface ?? undefined,
+      if (!separate) {
+        const { rows, warning } = parseGavelBulkCsv(bulkCsvText, {
+          secondaryMode: "shared",
+          secondarySurface: bulkSecondarySurface ?? undefined,
+        });
+        return { rows, warning, error: "" };
+      }
+      if (!bulkCsvText.trim()) {
+        return {
+          rows: [] as GavelBulkRow[],
+          warning: "",
+          error: "Add the gavel list.",
+        };
+      }
+      if (!bulkSecondaryCsvText.trim()) {
+        return {
+          rows: [] as GavelBulkRow[],
+          warning: "",
+          error: `Add the ${bulkSurfaceLabel} list.`,
+        };
+      }
+      const band = parseGavelBulkCsv(bulkCsvText, { secondaryMode: "shared" });
+      const secondary = parseGavelBulkCsv(bulkSecondaryCsvText, {
+        secondaryMode: "shared",
       });
-      return { rows, warning, error: "" };
+      return {
+        rows: pairGavelBulkSurfaceRows(band.rows, secondary.rows, {
+          surfaceLabel: bulkSurfaceLabel,
+          secondaryLineCount: secondaryLineCount(bulkSecondarySurface),
+        }),
+        warning: [band.warning, secondary.warning].filter(Boolean).join(" "),
+        error: "",
+        columnLabels: band.columnLabels
+          ? {
+              band: band.columnLabels.band,
+                secondary:
+                  secondary.columnLabels?.band ??
+                  (["", "", "", ""] as GavelBulkColumnLabels["band"]),
+            }
+          : null,
+      };
     } catch (err) {
       return {
         rows: [] as GavelBulkRow[],
@@ -1558,7 +1660,13 @@ export default function GavelDesigner({
         error: err instanceof Error ? err.message : "Could not read that file.",
       };
     }
-  }, [bulkCsvText, effectiveBulkSecondaryMode, bulkSecondarySurface]);
+  }, [
+    bulkCsvText,
+    bulkSecondaryCsvText,
+    bulkSecondarySurface,
+    bulkSurfaceLabel,
+    effectiveBulkSecondaryMode,
+  ]);
   const quote = quoteGavelPrice({
     productType,
     soundBlock: isStand ? "none" : soundBlock,
@@ -1704,6 +1812,13 @@ export default function GavelDesigner({
             setQty(clampBadgeLineQty(payload.qty));
           }
           setBulkMode(restoredBulkMode);
+          setDesignChoice(
+            restoredBulkMode
+              ? "multiple"
+              : payload.designChoice === "one"
+                ? "one"
+                : null,
+          );
           setBulkRows(restoredBulkRows);
           if (typeof payload.bulkCsvText === "string") {
             setBulkCsvText(payload.bulkCsvText);
@@ -1738,9 +1853,16 @@ export default function GavelDesigner({
           setSelectedBulkRow(restoredBulkIndex);
           const restoredSelectedRow = restoredBulkRows[restoredBulkIndex];
           if (restoredBulkMode && restoredSelectedRow) {
+            if (restoredBulkRows[0]?.bandStyles) {
+              setBulkBandStyles(restoredBulkRows[0].bandStyles);
+            }
+            if (restoredBulkRows[0]?.secondaryStyles) {
+              setBulkSecondaryStyles(restoredBulkRows[0].secondaryStyles);
+            }
             setLines((current) =>
               current.map((line, index) => ({
                 ...line,
+                ...(restoredSelectedRow.bandStyles?.[index] ?? {}),
                 text: restoredSelectedRow.texts[index] ?? "",
               })),
             );
@@ -1907,6 +2029,7 @@ export default function GavelDesigner({
       lines,
       qty,
       bulkMode,
+      designChoice,
       bulkRows,
       bulkCsvText,
       bulkCsvWarning,
@@ -1939,6 +2062,7 @@ export default function GavelDesigner({
     bulkCsvText,
     bulkCsvWarning,
     bulkMode,
+    designChoice,
     bulkColumnLabels,
     bulkRows,
     bulkRowsEdited,
@@ -2158,10 +2282,11 @@ export default function GavelDesigner({
     (row: GavelBulkRow): BadgeLine[] =>
       bandArtLines.map((line, index) => ({
         ...line,
+        ...(row.bandStyles?.[index] ?? bulkBandStyles[index] ?? {}),
         id: `${row.id}-line-${index}`,
         text: row.texts[index] ?? "",
       })),
-    [bandArtLines],
+    [bandArtLines, bulkBandStyles],
   );
 
   const secondaryLinesForBulkRow = useCallback(
@@ -2169,6 +2294,7 @@ export default function GavelDesigner({
       const base = isStand ? plateArtLines : soundBlockArtLines;
       return base.map((line, index) => ({
         ...line,
+        ...(row.secondaryStyles?.[index] ?? {}),
         id: `${row.id}-secondary-line-${index}`,
         text: row.secondaryTexts[index] ?? "",
       }));
@@ -2260,6 +2386,7 @@ export default function GavelDesigner({
     setLines((prev) =>
       prev.map((line, lineIndex) => ({
         ...line,
+        ...(row.bandStyles?.[lineIndex] ?? bulkBandStyles[lineIndex] ?? {}),
         text: row.texts[lineIndex] ?? "",
       })),
     );
@@ -2267,6 +2394,7 @@ export default function GavelDesigner({
       setPlateLines((prev) =>
         prev.map((line, lineIndex) => ({
           ...line,
+          ...(row.secondaryStyles?.[lineIndex] ?? {}),
           text: row.secondaryTexts[lineIndex] ?? "",
         })),
       );
@@ -2274,6 +2402,7 @@ export default function GavelDesigner({
       setSoundBlockLines((prev) =>
         prev.map((line, lineIndex) => ({
           ...line,
+          ...(row.secondaryStyles?.[lineIndex] ?? {}),
           text: row.secondaryTexts[lineIndex] ?? "",
         })),
       );
@@ -2360,6 +2489,86 @@ export default function GavelDesigner({
     });
   };
 
+  const applyBulkLineStyle = (
+    styles: readonly GavelBulkLineStyle[] | undefined,
+    fallback: readonly GavelBulkLineStyle[],
+    lineIndex: number,
+    changes: Partial<GavelBulkLineStyle>,
+  ): GavelBulkLineStyle[] =>
+    Array.from({ length: GAVEL_MAX_LINES }, (_, index) => ({
+      ...(fallback[index] ?? {}),
+      ...(styles?.[index] ?? {}),
+      ...(index === lineIndex ? changes : {}),
+    }));
+
+  const editBulkLineStyle = (
+    index: number,
+    surface: "band" | "secondary",
+    lineIndex: number,
+    changes: Partial<GavelBulkLineStyle>,
+  ) => {
+    const fallback =
+      surface === "band" ? bulkBandStyles : bulkSecondaryStyles;
+    patchBulkRow(index, (row) => ({
+      ...row,
+      [surface === "band" ? "bandStyles" : "secondaryStyles"]:
+        applyBulkLineStyle(
+          surface === "band" ? row.bandStyles : row.secondaryStyles,
+          fallback,
+          lineIndex,
+          changes,
+        ),
+    }));
+  };
+
+  const editAllBulkLineStyle = (
+    surface: "band" | "secondary",
+    lineIndex: number,
+    changes: Partial<GavelBulkLineStyle>,
+  ) => {
+    if (surface === "band") {
+      const nextTemplate = applyBulkLineStyle(
+        bulkBandStyles,
+        bulkBandStyles,
+        lineIndex,
+        changes,
+      );
+      setBulkBandStyles(nextTemplate);
+      commitBulkRows(
+        bulkRows.map((row) => ({
+          ...row,
+          bandStyles: applyBulkLineStyle(
+            row.bandStyles,
+            nextTemplate,
+            lineIndex,
+            changes,
+          ),
+        })),
+        selectedBulkRow,
+      );
+      return;
+    }
+    const nextTemplate = applyBulkLineStyle(
+      bulkSecondaryStyles,
+      bulkSecondaryStyles,
+      lineIndex,
+      changes,
+    );
+    setBulkSecondaryStyles(nextTemplate);
+    commitBulkRows(
+      bulkRows.map((row) => ({
+        ...row,
+        secondaryStyles: applyBulkLineStyle(
+          row.secondaryStyles,
+          nextTemplate,
+          lineIndex,
+          changes,
+        ),
+      })),
+      selectedBulkRow,
+    );
+  };
+
   const duplicateBulkRow = (index: number) => {
     const row = bulkRows[index];
     if (!row) return;
@@ -2387,10 +2596,17 @@ export default function GavelDesigner({
   };
 
   const addBlankBulkRow = () => {
-    const row = blankGavelBulkRow();
+    const row = {
+      ...blankGavelBulkRow(),
+      bandStyles: bulkBandStyles.map((style) => ({ ...style })),
+      secondaryStyles: bulkSecondaryStyles.map((style) => ({ ...style })),
+    };
     bulkFocusRowRef.current = row.id;
     setBulkMode(true);
+    setDesignChoice("multiple");
     setBulkSearch("");
+    setBulkWorkspace("one");
+    setCsvModalOpen(false);
     commitBulkRows([...bulkRows, row], bulkRows.length);
   };
 
@@ -2416,14 +2632,41 @@ export default function GavelDesigner({
     how: "replace" | "merge",
   ) => {
     setBulkMode(true);
+    setDesignChoice("multiple");
+    const styledRows = rows.map((row, index) => {
+      const previous = how === "replace" ? bulkRows[index] : undefined;
+      if (previous) {
+        return {
+          ...row,
+          id: previous.id,
+          quantity: previous.quantity,
+          ...(previous.textSize ? { textSize: previous.textSize } : {}),
+          bandStyles:
+            previous.bandStyles ??
+            bulkBandStyles.map((style) => ({ ...style })),
+          ...(previous.secondaryStyles
+            ? { secondaryStyles: previous.secondaryStyles }
+            : {}),
+        };
+      }
+      return {
+        ...row,
+        bandStyles:
+          row.bandStyles ?? bulkBandStyles.map((style) => ({ ...style })),
+        secondaryStyles:
+          row.secondaryStyles ??
+          bulkSecondaryStyles.map((style) => ({ ...style })),
+      };
+    });
     setBulkCsvWarning(warning);
     setBulkCsvText("");
+    setBulkSecondaryCsvText("");
     setPendingBulkImport(null);
     setBulkProblemsOnly(false);
     if (how === "merge") {
       // Merged rows keep the names the list already shows.
       if (!bulkColumnLabels) setBulkColumnLabels(columnLabels);
-      const merged = mergeGavelBulkRows(bulkRows, rows);
+      const merged = mergeGavelBulkRows(bulkRows, styledRows);
       commitBulkRows(merged.rows, selectedBulkRow);
       setBulkNotice(
         `Added ${merged.added} row${merged.added === 1 ? "" : "s"}` +
@@ -2432,31 +2675,80 @@ export default function GavelDesigner({
             : "") +
           ".",
       );
+      setBulkWorkspace("table");
+      setCsvModalOpen(false);
       return;
     }
-    commitBulkRows(rows, 0, { edited: false });
+    if (bulkRows.length > 0) {
+      commitBulkRows(
+        styledRows,
+        Math.min(selectedBulkRow, Math.max(0, styledRows.length - 1)),
+      );
+      if (columnLabels) setBulkColumnLabels(columnLabels);
+      setBulkNotice("");
+      setBulkWorkspace("table");
+      setCsvModalOpen(false);
+      return;
+    }
+    commitBulkRows(styledRows, 0, { edited: false });
     setBulkColumnLabels(columnLabels);
     setBulkRowsEdited(false);
     setBulkSortKey(null);
     setBulkNotice("");
+    setBulkWorkspace("table");
+    setCsvModalOpen(false);
   };
 
   /**
    * Returns true when the list was applied straight away; false when it failed
    * or is waiting on the Merge / Replace choice.
    */
-  const applyBulkCsv = (csv: string): boolean => {
+  const applyBulkCsv = (
+    csv: string,
+    how?: "replace" | "merge",
+  ): boolean => {
     setError(null);
     try {
-      const result = parseGavelBulkCsv(csv, {
-        secondaryMode: effectiveBulkSecondaryMode,
-        secondarySurface: bulkSecondarySurface ?? undefined,
-      });
-      if (bulkRows.length > 0) {
-        setPendingBulkImport(result);
-        return false;
+      const result = (() => {
+        if (
+          effectiveBulkSecondaryMode !== "separate" ||
+          !bulkSecondarySurface
+        ) {
+          return parseGavelBulkCsv(csv, {
+            secondaryMode: effectiveBulkSecondaryMode,
+            secondarySurface: bulkSecondarySurface ?? undefined,
+          });
+        }
+        const band = parseGavelBulkCsv(csv, { secondaryMode: "shared" });
+        const secondary = parseGavelBulkCsv(bulkSecondaryCsvText, {
+          secondaryMode: "shared",
+        });
+        return {
+          rows: pairGavelBulkSurfaceRows(band.rows, secondary.rows, {
+            surfaceLabel: bulkSurfaceLabel,
+            secondaryLineCount: secondaryLineCount(bulkSecondarySurface),
+          }),
+          warning: [band.warning, secondary.warning].filter(Boolean).join(" "),
+          columnLabels: band.columnLabels
+            ? {
+                band: band.columnLabels.band,
+                secondary:
+                  secondary.columnLabels?.band ??
+                  (["", "", "", ""] as GavelBulkColumnLabels["band"]),
+              }
+            : null,
+        };
+      })();
+      if (how === "merge") {
+        loadBulkRows(result, "merge");
+        return true;
       }
-      loadBulkRows(result, "replace");
+      if (how === "replace" || bulkRows.length === 0) {
+        loadBulkRows(result, "replace");
+        return true;
+      }
+      setPendingBulkImport(result);
+      return false;
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not import that file.");
@@ -2503,16 +2795,27 @@ export default function GavelDesigner({
 
   const closeCsvModal = (options?: { keepBulk?: boolean }) => {
     setCsvModalOpen(false);
-    // Rows applied in this same click are not in state yet, so the caller
-    // passes keepBulk to avoid undoing that import.
-    if (!options?.keepBulk && !bulkModeLocked && bulkRows.length === 0) {
-      setBulkMode(false);
-    }
+    // Applying a list sets bulk mode in the same click, before the rows are in
+    // state. keepBulk is that signal. Closing an empty list stays on the
+    // one-gavel / several-gavels choice instead of silently picking one.
+    if (options?.keepBulk) setBulkMode(true);
     setPreviewRevive((n) => n + 1);
   };
 
-  const openCsvModal = () => {
+  const openCsvModal = (options?: { prefill?: boolean }) => {
     setError(null);
+    if (options?.prefill && bulkRows.length > 0) {
+      setBulkCsvText(gavelBulkRowsToPaste(bulkRows, (row) => row.texts));
+      if (effectiveBulkSecondaryMode === "separate" && bulkSecondarySurface) {
+        const count = secondaryLineCount(bulkSecondarySurface);
+        setBulkSecondaryCsvText(
+          gavelBulkRowsToPaste(bulkRows, (row) =>
+            row.secondaryTexts.slice(0, count),
+          ),
+        );
+      }
+      setPendingBulkImport(null);
+    }
     setCsvModalOpen(true);
     if (
       window.parent !== window &&
@@ -2529,13 +2832,41 @@ export default function GavelDesigner({
     }
   };
 
+  const chooseMultipleDesigns = () => {
+    if (bulkRows.length === 0) setBulkBandStyles(gavelLineStyles(lines));
+    setBulkMode(true);
+    setDesignChoice("multiple");
+    openCsvModal({ prefill: bulkRows.length > 0 });
+  };
+
+  const openBulkGrid = () => {
+    setCsvModalOpen(false);
+    setBulkWorkspace("grid");
+  };
+
+  const openBulkTable = () => {
+    setCsvModalOpen(false);
+    setBulkWorkspace("table");
+  };
+
+  const openBulkCsvEditor = () => {
+    openCsvModal({ prefill: bulkRows.length > 0 });
+  };
+
+  const editBulkGavel = (index: number) => {
+    selectBulkRow(index);
+    setCsvModalOpen(false);
+    setBulkWorkspace("one");
+  };
+
   /* The pasted list grows the box instead of scrolling inside it. */
   useLayoutEffect(() => {
-    const field = bulkPasteRef.current;
-    if (!field) return;
-    field.style.height = "auto";
-    field.style.height = `${field.scrollHeight + 2}px`;
-  }, [bulkCsvText, csvModalOpen]);
+    for (const field of [bulkPasteRef.current, bulkSecondaryPasteRef.current]) {
+      if (!field) continue;
+      field.style.height = "auto";
+      field.style.height = `${field.scrollHeight + 2}px`;
+    }
+  }, [bulkCsvText, bulkSecondaryCsvText, bulkSecondaryMode, csvModalOpen]);
 
   const fontSignature = useMemo(() => {
     const parts: string[] = [];
@@ -2571,16 +2902,43 @@ export default function GavelDesigner({
     return () => window.removeEventListener("keydown", onKey);
   }, [csvModalOpen, bulkModeLocked, bulkRows.length]);
 
-  const importBulkCsv = async (file: File) => {
+  const importBulkCsv = async (
+    file: File,
+    target: "band" | "secondary" = "band",
+  ) => {
     try {
       const text = await file.text();
+      if (target === "secondary") {
+        setBulkSecondaryCsvText(text);
+        return;
+      }
       setBulkCsvText(text);
+      if (effectiveBulkSecondaryMode === "separate" || bulkRows.length > 0) {
+        return;
+      }
       applyBulkCsv(text);
     } catch {
       setError("Could not read that file.");
     } finally {
-      if (bulkCsvInputRef.current) bulkCsvInputRef.current.value = "";
+      const input =
+        target === "secondary"
+          ? bulkSecondaryCsvInputRef.current
+          : bulkCsvInputRef.current;
+      if (input) input.value = "";
     }
+  };
+
+  const downloadSurfaceCsvTemplate = (lineCount: number, filename: string) => {
+    const url = URL.createObjectURL(
+      new Blob([gavelBulkSurfaceCsvTemplate(lineCount)], {
+        type: "text/csv;charset=utf-8",
+      }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const downloadBulkCsvTemplate = () => {
@@ -2605,6 +2963,7 @@ export default function GavelDesigner({
   const exitBulkMode = () => {
     if (bulkModeLocked) return;
     setBulkMode(false);
+    setDesignChoice("one");
     setBulkRows([]);
     setSelectedBulkRow(0);
     setBulkSearch("");
@@ -2765,6 +3124,111 @@ export default function GavelDesigner({
     centerDesignerForStep();
   }, [centerDesignerForStep, hydrated, step]);
 
+  /**
+   * Entry links (product page, bulk, logo surface) should survive a reset the
+   * same way they win over a blank first visit.
+   */
+  function applyEntryQuery() {
+    const requested = readQueryParam("productType") as GavelProductType;
+    if (GAVEL_PRODUCT_TYPES.includes(requested)) {
+      setProductType(requested);
+      if (requested === "stand") setSoundBlock("none");
+    }
+    const requestedSoundBlock = readQueryParam(
+      "soundBlock",
+    ) as GavelSoundBlockId;
+    if (
+      requested !== "stand" &&
+      GAVEL_SOUND_BLOCK_IDS.includes(requestedSoundBlock)
+    ) {
+      setSoundBlock(requestedSoundBlock);
+    }
+    if (readQueryParam("bulk") === "1") {
+      setBulkMode(true);
+      setDesignChoice("multiple");
+    }
+    const requestedLogoSurface = readQueryParam("logoSurface");
+    if (
+      requestedLogoSurface === "stand" ||
+      requestedLogoSurface === "sound-block"
+    ) {
+      setLogoSurface(requestedLogoSurface);
+    } else if (requested === "stand") {
+      setLogoSurface("stand");
+    }
+  }
+
+  /** Clears choices, engraving, and quantity and returns to the first step. */
+  function resetDesign() {
+    removeGavelDesignerDraftCache(shop, productId);
+    designIdRef.current = `design_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    mockupRef.current = { dataUrl: null, blob: null };
+    bulkFocusRowRef.current = null;
+    setStep("product");
+    setVisited(["product"]);
+    setProductType("gavel");
+    setSoundBlock("none");
+    setSoundBlockShape("square");
+    setSoundBlockLines(defaultSoundBlockLines());
+    setBagSelection("none");
+    setProductionMethod("engrave");
+    setLogoFile(null);
+    setLogoDataUrl(null);
+    setLogoScale(1);
+    setLogoGapScale(1);
+    setLogoSurface("sound-block");
+    setUvTextColor(GAVEL_UV_TEXT_COLORS[0]);
+    setPlateLines(defaultPlateLines());
+    setGavelStyle("walnut");
+    setBandFinish("gold");
+    setTextSize("medium");
+    setLines(defaultLines());
+    setBulkBandStyles(gavelLineStyles(defaultLines()));
+    setBulkSecondaryStyles([{}, {}, {}, {}]);
+    setQty(1);
+    setBulkMode(false);
+    setDesignChoice(null);
+    setBulkRows([]);
+    setSelectedBulkRow(0);
+    setBulkCsvText("");
+    setBulkSecondaryCsvText("");
+    setBulkCsvWarning("");
+    setBulkSecondaryMode("shared");
+    setBulkSearch("");
+    setBulkSortKey(null);
+    setBulkSortAscending(true);
+    setBulkRowsEdited(false);
+    setPendingBulkImport(null);
+    setBulkNotice("");
+    setBulkColumnLabels(null);
+    setBulkProblemsOnly(false);
+    setCsvModalOpen(false);
+    setBulkWorkspace("table");
+    setPreviewRevive((n) => n + 1);
+    setBandStyleSplit(false);
+    setPlateStyleSplit(false);
+    setError(null);
+    setLineError(false);
+    setProofOpen(false);
+    setProofUrl(null);
+    setPendingPdfBlob(null);
+    setPreviewSubject("gavel");
+    setEditSurface("band");
+    setDesignTab("band");
+    setPreviewFocus({ area: null, token: 0 });
+    applyEntryQuery();
+  }
+
+  function confirmReset() {
+    if (
+      window.confirm(
+        "Reset this design? Your choices, engraving, and quantity will be cleared.",
+      )
+    ) {
+      resetDesign();
+    }
+  }
+
   function goToStep(next: StepId) {
     const fromIdx = sequence.indexOf(step);
     const toIdx = sequence.indexOf(next);
@@ -2793,8 +3257,8 @@ export default function GavelDesigner({
         const shown = bulkErrorRowNumbers.slice(0, 5).join(", ");
         selectBulkRow(bulkErrorRowNumbers[0] - 1);
         setBulkProblemsOnly(true);
-        if (bulkWide) openDesignTab("band");
-        else openCsvModal();
+        openBulkTable();
+        openDesignTab("band");
         setError(
           `${count} row${count === 1 ? " needs" : "s need"} fixing before you continue ` +
             `(${count === 1 ? "row" : "rows"} ${shown}${count > 5 ? ", …" : ""}). ` +
@@ -3470,6 +3934,13 @@ export default function GavelDesigner({
               {bulkRows.length} rows
             </span>
           ) : null}
+          <button
+            type="button"
+            className="gf-csv-link gf-bulk-view-switch"
+            onClick={openBulkGrid}
+          >
+            Grid view
+          </button>
         </div>
         <GavelBulkRowsTable
           entries={visibleBulkRows}
@@ -3492,13 +3963,22 @@ export default function GavelDesigner({
           onDelete={deleteBulkRow}
         />
         <div className="gf-bulk-grid-foot">
-          <button
-            type="button"
-            className="gf-nav-secondary"
-            onClick={addBlankBulkRow}
-          >
-            + Add blank row
-          </button>
+          <div className="gf-bulk-foot-actions">
+            <button
+              type="button"
+              className="gf-nav-secondary"
+              onClick={addBlankBulkRow}
+            >
+              + Add blank row
+            </button>
+            <button
+              type="button"
+              className="gf-nav-secondary"
+              onClick={openBulkCsvEditor}
+            >
+              Add/edit CSV
+            </button>
+          </div>
           <p className="gf-note">
             Click any cell to edit it — the preview follows
             the row you&apos;re on. Use Size for a row whose
@@ -3943,29 +4423,11 @@ export default function GavelDesigner({
               ) : null}
 
               {step === "design" ? (
-                <>
-                  {bulkRows.length > 0 ? (
-                    <div className="gf-bulk-summary-bar">
-                      {bulkWide ? null : <span>{bulkOrderSummary}</span>}
-                      <button
-                        type="button"
-                        className="gf-csv-link"
-                        onClick={openCsvModal}
-                      >
-                        {bulkWide ? "Paste or upload more names" : "Edit list"}
-                      </button>
-                      {!bulkModeLocked ? (
-                        <button
-                          type="button"
-                          className="gf-csv-link"
-                          onClick={exitBulkMode}
-                        >
-                          Use one design
-                        </button>
-                      ) : null}
-                    </div>
-                  ) : null}
-
+                <div
+                  className={`gf-design-step${
+                    designChoice === null ? " is-awaiting-path" : ""
+                  }`}
+                >
                   {!isNarrow && designTabs.length > 1 ? (
                     <div
                       className="gf-design-tabs"
@@ -3998,48 +4460,82 @@ export default function GavelDesigner({
                     <p className="gf-sub-title">Gavel band</p>
                   ) : null}
 
+                  <div
+                    className="gf-entry-choice"
+                    role="radiogroup"
+                    aria-label="One design or designing multiple"
+                  >
+                    {bulkModeLocked ? null : (
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={designChoice === "one"}
+                        className={`gf-entry-option${
+                          designChoice === "one" ? " is-selected" : ""
+                        }`}
+                        onClick={() => exitBulkMode()}
+                      >
+                        <span className="gf-entry-option-title">One design</span>
+                        <span className="gf-entry-option-desc">
+                          Use our custom flow to personalize and design your
+                          individual gavel
+                        </span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={designChoice === "multiple"}
+                      className={`gf-entry-option${
+                        designChoice === "multiple" ? " is-selected" : ""
+                      }`}
+                      onClick={chooseMultipleDesigns}
+                    >
+                      <span className="gf-entry-option-title">
+                        Multiple designs
+                      </span>
+                      <span className="gf-entry-option-desc">
+                        Upload a CSV or enter your text for quick and easy
+                        generation. Customize just one, or all of them
+                      </span>
+                    </button>
+                  </div>
+
                   {csvModalOpen && typeof document !== "undefined"
                     ? createPortal(
-                        // Escape is handled by the document keydown listener.
-                        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
-                        <div
-                          className="gf-modal-backdrop"
-                          role="dialog"
-                          aria-modal="true"
-                          aria-labelledby="gf-csv-modal-title"
-                          onClick={(event) => {
-                            if (event.target === event.currentTarget) {
-                              closeCsvModal();
-                            }
-                          }}
-                        >
-                          <div className="gf-modal is-csv">
-                            <div className="gf-csv-modal-head">
-                              <h2
-                                id="gf-csv-modal-title"
-                                className="gf-modal-title"
-                              >
-                                Add Multiple
-                              </h2>
-                              <button
-                                type="button"
-                                className="gf-nav-secondary"
-                                onClick={() => closeCsvModal()}
-                              >
-                                Close
-                              </button>
-                            </div>
-                    <div
-                      className={`gf-bulk-import${
-                        bulkRows.length > 0 && !bulkWide ? " has-rows" : ""
-                      }`}
-                    >
+                      <div
+                        className="gf-modal-backdrop"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="gf-csv-modal-title"
+                        onClick={(event) => {
+                          if (event.target === event.currentTarget) {
+                            closeCsvModal();
+                          }
+                        }}
+                      >
+                        <div className="gf-modal is-csv">
+                          <div className="gf-csv-modal-head">
+                            <h2 id="gf-csv-modal-title" className="gf-modal-title">
+                              {bulkRows.length > 0
+                                ? "Add or edit names"
+                                : "Add multiple gavels"}
+                            </h2>
+                            <button
+                              type="button"
+                              className="gf-nav-secondary"
+                              onClick={() => closeCsvModal()}
+                            >
+                              Close
+                            </button>
+                          </div>
+                    <div className="gf-bulk-import">
                       <div className="gf-bulk-import-head">
                         <div>
                           <p className="gf-note">
-                            Paste a list of names. One design is applied to
-                            every piece. Style, formatting, and any uploaded
-                            logo are shared across the order.
+                            {bulkRows.length > 0
+                              ? "The boxes start with your current list. Edit them and save to update it, or upload a CSV and add those rows to the list. Save and close replaces the list with whatever is in the boxes."
+                              : "Paste or upload a list of names. Every gavel starts with the bulk design, and you can customize individual gavels after importing."}
                           </p>
                         </div>
                       </div>
@@ -4047,11 +4543,12 @@ export default function GavelDesigner({
                       {bulkSecondarySurface ? (
                         <div className="gf-bulk-surface-mode">
                           <div>
-                            <strong>Text across both surfaces</strong>
+                            <strong>
+                              Text on the gavel and {bulkSurfaceLabel}
+                            </strong>
                             <span>
-                              Choose whether the gavel band and{" "}
-                              {isStand ? "stand plate" : "sound block"} use the
-                              same wording or different wording.
+                              Same wording uses one list. Different wording
+                              uses a list for each, lined up row by row.
                             </span>
                           </div>
                           <div className="gf-pill-row">
@@ -4064,7 +4561,7 @@ export default function GavelDesigner({
                               }`}
                               onClick={() => changeBulkSecondaryMode("shared")}
                             >
-                              Same text on both
+                              Same text on gavel and {bulkSurfaceLabel}
                             </button>
                             <button
                               type="button"
@@ -4075,42 +4572,125 @@ export default function GavelDesigner({
                               }`}
                               onClick={() => changeBulkSecondaryMode("separate")}
                             >
-                              Different text for each
+                              Different text on gavel and {bulkSurfaceLabel}
                             </button>
                           </div>
                         </div>
                       ) : null}
 
                       <div className="gf-bulk-paste">
-                        <label
-                          className="gf-bulk-paste-label"
-                          htmlFor="gf-bulk-paste"
-                        >
-                          {bulkRows.length > 0
-                            ? "Paste more names"
-                            : "Paste your list of names"}
-                        </label>
-                        <p className="gf-bulk-paste-example">
-                          {bulkSecondaryMode === "shared"
-                            ? GAVEL_BULK_PASTE_EXAMPLE_ROWS.map((row) => (
+                        {effectiveBulkSecondaryMode === "separate" ? (
+                          <>
+                            <p className="gf-note">
+                              Paste into each box, or upload a CSV for each.
+                              Row 1 on the gavel uses row 1 on the{" "}
+                              {bulkSurfaceLabel}.
+                            </p>
+                            <div className="gf-bulk-paste-pair">
+                              <div>
+                                <label
+                                  className="gf-bulk-paste-label"
+                                  htmlFor="gf-bulk-paste"
+                                >
+                                  Gavel text
+                                </label>
+                                <p className="gf-bulk-paste-example">
+                                  {GAVEL_BULK_PASTE_EXAMPLE_ROWS.map((row) => (
+                                    <span key={row}>{row}</span>
+                                  ))}
+                                </p>
+                                <textarea
+                                  ref={bulkPasteRef}
+                                  id="gf-bulk-paste"
+                                  className="gf-bulk-paste-input"
+                                  rows={4}
+                                  spellCheck={false}
+                                  placeholder={
+                                    "MODEL UNITED NATIONS,Secretary-General\nMODEL UNITED NATIONS,Delegate,Lincoln High School"
+                                  }
+                                  value={bulkCsvText}
+                                  onChange={(event) =>
+                                    setBulkCsvText(event.target.value)
+                                  }
+                                />
+                                <button
+                                  type="button"
+                                  className="gf-nav-secondary"
+                                  onClick={() =>
+                                    bulkCsvInputRef.current?.click()
+                                  }
+                                >
+                                  Upload gavel CSV
+                                </button>
+                              </div>
+                              <div>
+                                <label
+                                  className="gf-bulk-paste-label"
+                                  htmlFor="gf-bulk-secondary-paste"
+                                >
+                                  {isStand ? "Stand plate" : "Sound block"} text
+                                </label>
+                                <p className="gf-bulk-paste-example">
+                                  <span>MODEL UNITED NATIONS,Chair</span>
+                                  <span>MODEL UNITED NATIONS,Delegate</span>
+                                </p>
+                                <textarea
+                                  ref={bulkSecondaryPasteRef}
+                                  id="gf-bulk-secondary-paste"
+                                  className="gf-bulk-paste-input"
+                                  rows={4}
+                                  spellCheck={false}
+                                  placeholder={
+                                    "MODEL UNITED NATIONS,Chair\nMODEL UNITED NATIONS,Delegate"
+                                  }
+                                  value={bulkSecondaryCsvText}
+                                  onChange={(event) =>
+                                    setBulkSecondaryCsvText(event.target.value)
+                                  }
+                                />
+                                <button
+                                  type="button"
+                                  className="gf-nav-secondary"
+                                  onClick={() =>
+                                    bulkSecondaryCsvInputRef.current?.click()
+                                  }
+                                >
+                                  Upload {bulkSurfaceLabel} CSV
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <label
+                              className="gf-bulk-paste-label"
+                              htmlFor="gf-bulk-paste"
+                            >
+                              {bulkRows.length > 0
+                                ? "Paste more names"
+                                : "Paste your list of names"}
+                            </label>
+                            <p className="gf-bulk-paste-example">
+                              {GAVEL_BULK_PASTE_EXAMPLE_ROWS.map((row) => (
                                 <span key={row}>{row}</span>
-                              ))
-                            : "Use the downloadable template to enter separate band and secondary-surface columns."}
-                        </p>
-                        <textarea
-                          ref={bulkPasteRef}
-                          id="gf-bulk-paste"
-                          className="gf-bulk-paste-input"
-                          rows={4}
-                          spellCheck={false}
-                          placeholder={
-                            "MODEL UNITED NATIONS,Secretary-General\nMODEL UNITED NATIONS,Delegate,Lincoln High School"
-                          }
-                          value={bulkCsvText}
-                          onChange={(event) =>
-                            setBulkCsvText(event.target.value)
-                          }
-                        />
+                              ))}
+                            </p>
+                            <textarea
+                              ref={bulkPasteRef}
+                              id="gf-bulk-paste"
+                              className="gf-bulk-paste-input"
+                              rows={4}
+                              spellCheck={false}
+                              placeholder={
+                                "MODEL UNITED NATIONS,Secretary-General\nMODEL UNITED NATIONS,Delegate,Lincoln High School"
+                              }
+                              value={bulkCsvText}
+                              onChange={(event) =>
+                                setBulkCsvText(event.target.value)
+                              }
+                            />
+                          </>
+                        )}
                         {bulkPastePreview?.error ? (
                           <p className="gf-bulk-paste-error">
                             {bulkPastePreview.error}
@@ -4129,38 +4709,55 @@ export default function GavelDesigner({
                                 } ready to add`
                               : "Add as many rows as you need."}
                           </span>
-                          <button
-                            type="button"
-                            className="gf-nav-primary"
-                            disabled={
-                              !bulkPastePreview ||
-                              Boolean(bulkPastePreview.error) ||
-                              bulkPastePreview.rows.length === 0
-                            }
-                            onClick={() => {
-                              if (applyBulkCsv(bulkCsvText)) {
-                                closeCsvModal({ keepBulk: true });
-                              }
-                            }}
-                          >
-                            Apply this list
-                          </button>
                         </div>
                         <div className="gf-bulk-actions">
-                          <button
-                            type="button"
-                            className="gf-nav-secondary"
-                            onClick={downloadBulkCsvTemplate}
-                          >
-                            Download template
-                          </button>
-                          <button
-                            type="button"
-                            className="gf-nav-secondary"
-                            onClick={() => bulkCsvInputRef.current?.click()}
-                          >
-                            Upload CSV
-                          </button>
+                          {effectiveBulkSecondaryMode === "separate" ? (
+                            <>
+                              <button
+                                type="button"
+                                className="gf-nav-secondary"
+                                onClick={() =>
+                                  downloadSurfaceCsvTemplate(
+                                    GAVEL_MAX_LINES,
+                                    "gavel-text.csv",
+                                  )
+                                }
+                              >
+                                Download gavel template
+                              </button>
+                              <button
+                                type="button"
+                                className="gf-nav-secondary"
+                                onClick={() =>
+                                  downloadSurfaceCsvTemplate(
+                                    secondaryLineCount(bulkSecondarySurface),
+                                    isStand
+                                      ? "stand-plate-text.csv"
+                                      : "sound-block-text.csv",
+                                  )
+                                }
+                              >
+                                Download {bulkSurfaceLabel} template
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                className="gf-nav-secondary"
+                                onClick={downloadBulkCsvTemplate}
+                              >
+                                Download template
+                              </button>
+                              <button
+                                type="button"
+                                className="gf-nav-secondary"
+                                onClick={() => bulkCsvInputRef.current?.click()}
+                              >
+                                Upload CSV
+                              </button>
+                            </>
+                          )}
                           {bulkRows.length > 0 ? (
                             <button
                               type="button"
@@ -4169,15 +4766,43 @@ export default function GavelDesigner({
                             >
                               Download current rows
                             </button>
-                          ) : (
+                          ) : null}
+                          {bulkRows.length > 0 ? (
                             <button
                               type="button"
-                              className="gf-nav-secondary"
-                              onClick={addBlankBulkRow}
+                              className="gf-nav-secondary gf-bulk-add-rows"
+                              disabled={
+                                Boolean(pendingBulkImport) ||
+                                !bulkPastePreview ||
+                                Boolean(bulkPastePreview.error) ||
+                                bulkPastePreview.rows.length === 0
+                              }
+                              onClick={() => {
+                                if (applyBulkCsv(bulkCsvText, "merge")) {
+                                  closeCsvModal({ keepBulk: true });
+                                }
+                              }}
                             >
-                              Type names instead
+                              Add these rows
                             </button>
-                          )}
+                          ) : null}
+                          <button
+                            type="button"
+                            className="gf-nav-primary gf-bulk-save"
+                            disabled={
+                              Boolean(pendingBulkImport) ||
+                              !bulkPastePreview ||
+                              Boolean(bulkPastePreview.error) ||
+                              bulkPastePreview.rows.length === 0
+                            }
+                            onClick={() => {
+                              if (applyBulkCsv(bulkCsvText, "replace")) {
+                                closeCsvModal({ keepBulk: true });
+                              }
+                            }}
+                          >
+                            Save and close
+                          </button>
                           <input
                             ref={bulkCsvInputRef}
                             type="file"
@@ -4185,7 +4810,17 @@ export default function GavelDesigner({
                             className="gf-visually-hidden"
                             onChange={(event) => {
                               const file = event.target.files?.[0];
-                              if (file) void importBulkCsv(file);
+                              if (file) void importBulkCsv(file, "band");
+                            }}
+                          />
+                          <input
+                            ref={bulkSecondaryCsvInputRef}
+                            type="file"
+                            accept=".csv,text/csv"
+                            className="gf-visually-hidden"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              if (file) void importBulkCsv(file, "secondary");
                             }}
                           />
                         </div>
@@ -4236,29 +4871,14 @@ export default function GavelDesigner({
                           </div>
                         ) : null}
                       </div>
-
-                      {bulkWide ? null : bulkListPanel}
                     </div>
-                            {!bulkModeLocked && bulkRows.length > 0 ? (
-                              <div className="gf-modal-actions">
-                                <button
-                                  type="button"
-                                  className="gf-nav-secondary"
-                                  onClick={() => {
-                                    exitBulkMode();
-                                    closeCsvModal();
-                                  }}
-                                >
-                                  Use one design instead
-                                </button>
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>,
-                        document.body,
-                      )
+                        </div>
+                      </div>,
+                      document.body,
+                    )
                     : null}
 
+                  {designChoice === "one" ? (
                   <div
                     className="gf-line-tools gf-text-size-row"
                     style={{ marginBottom: 12 }}
@@ -4281,8 +4901,9 @@ export default function GavelDesigner({
                       {GAVEL_MAX_LINES} lines · {maxChars} chars
                     </span>
                   </div>
+                  ) : null}
 
-                  {!bulkMode ? (
+                  {designChoice === "one" ? (
                     <div className="gf-band-style" data-preview-focus="band">
                       <GavelSurfaceStyleRow
                         lines={lines}
@@ -4294,7 +4915,7 @@ export default function GavelDesigner({
                     </div>
                   ) : null}
 
-                  {usingExampleCopy && !bulkMode ? (
+                  {usingExampleCopy && designChoice === "one" ? (
                     <p
                       className="gf-note gf-example-note"
                       style={{ marginBottom: 12 }}
@@ -4304,7 +4925,7 @@ export default function GavelDesigner({
                     </p>
                   ) : null}
 
-                  {!bulkMode ? lines.map((line, index) => (
+                  {designChoice === "one" ? lines.map((line, index) => (
                     <div
                       key={line.id}
                       className="gf-line-block"
@@ -4352,57 +4973,247 @@ export default function GavelDesigner({
                         </div>
                       ) : null}
                     </div>
-                  )) : bulkWide ? (
-                    bulkListPanel
-                  ) : bulkRows.length > 0 ? (
-                    <GavelBulkRowEditor
-                      row={bulkRows[selectedBulkRow]}
-                      index={selectedBulkRow}
-                      total={bulkRows.length}
-                      textSize={textSize}
-                      secondaryCount={bulkSecondaryCount}
-                      bandLabels={bulkBandLabels}
-                      secondaryLabels={bulkSecondaryLabels}
-                      issues={bulkCheck.issues[selectedBulkRow]}
-                      secondaryTitle={
-                        bulkSecondarySurface
-                          ? isStand
-                            ? "Stand plate"
-                            : "Sound block"
-                          : null
-                      }
-                      secondaryUsesBandLimit={isStand}
-                      onSelect={selectBulkRow}
-                      onEditBand={editBulkBandText}
-                      onEditSecondary={editBulkSecondaryText}
-                      onEditQuantity={editBulkQuantity}
-                      onEditTextSize={editBulkTextSize}
-                      onOpenList={openCsvModal}
-                    />
-                  ) : (
+                  )) : designChoice !== "multiple" ? null : bulkRows.length === 0 ? (
                     <div className="gf-bulk-empty">
-                      <p>
-                        Add your list of names. One design is applied to every
-                        piece, and the preview shows row 1 as soon as the list
-                        is in.
-                      </p>
-                      <div className="gf-bulk-empty-actions">
+                      <p>Add names by pasting a list or uploading a CSV.</p>
+                      <button
+                        type="button"
+                        className="gf-nav-primary"
+                        onClick={openBulkCsvEditor}
+                      >
+                        Open CSV entry
+                      </button>
+                    </div>
+                  ) : bulkWorkspace === "one" ? (
+                    <div className="gf-bulk-one">
+                      <div className="gf-bulk-one-nav">
                         <button
                           type="button"
-                          className="gf-nav-primary"
-                          onClick={openCsvModal}
+                          className="gf-csv-link"
+                          onClick={openBulkTable}
                         >
-                          Add Multiple
+                          Table view
                         </button>
                         <button
                           type="button"
-                          className="gf-nav-secondary"
-                          onClick={addBlankBulkRow}
+                          className="gf-csv-link"
+                          onClick={() => setBulkWorkspace("bulk")}
                         >
-                          Type names one by one
+                          Bulk edit all
                         </button>
                       </div>
+                      <div className="gf-bulk-edit-mode" role="group" aria-label="Edit scope">
+                        <button type="button" className="gf-pill is-selected">
+                          Edit this gavel
+                        </button>
+                        <button
+                          type="button"
+                          className="gf-pill"
+                          onClick={() => setBulkWorkspace("bulk")}
+                        >
+                          Bulk edit all
+                        </button>
+                      </div>
+                      <GavelBulkRowEditor
+                        row={
+                          bulkRows[selectedBulkRow]
+                            ? {
+                                ...bulkRows[selectedBulkRow],
+                                bandStyles: Array.from(
+                                  { length: GAVEL_MAX_LINES },
+                                  (_, lineIndex) => ({
+                                    ...(bulkBandStyles[lineIndex] ?? {}),
+                                    ...(bulkRows[selectedBulkRow].bandStyles?.[
+                                      lineIndex
+                                    ] ?? {}),
+                                  }),
+                                ),
+                                secondaryStyles: Array.from(
+                                  { length: GAVEL_MAX_LINES },
+                                  (_, lineIndex) => ({
+                                    ...(bulkSecondaryStyles[lineIndex] ?? {}),
+                                    ...(bulkRows[selectedBulkRow]
+                                      .secondaryStyles?.[lineIndex] ?? {}),
+                                  }),
+                                ),
+                              }
+                            : undefined
+                        }
+                        index={selectedBulkRow}
+                        total={bulkRows.length}
+                        textSize={textSize}
+                        secondaryCount={bulkSecondaryCount}
+                        bandLabels={bulkBandLabels}
+                        secondaryLabels={bulkSecondaryLabels}
+                        issues={bulkCheck.issues[selectedBulkRow]}
+                        secondaryTitle={
+                          bulkSecondarySurface
+                            ? isStand
+                              ? "Stand plate"
+                              : "Sound block"
+                            : null
+                        }
+                        secondaryUsesBandLimit={isStand}
+                        onSelect={selectBulkRow}
+                        onEditBand={editBulkBandText}
+                        onEditSecondary={editBulkSecondaryText}
+                        onEditQuantity={editBulkQuantity}
+                        onEditBandStyle={(rowIndex, lineIndex, changes) =>
+                          editBulkLineStyle(rowIndex, "band", lineIndex, changes)
+                        }
+                        onEditSecondaryStyle={(rowIndex, lineIndex, changes) =>
+                          editBulkLineStyle(
+                            rowIndex,
+                            "secondary",
+                            lineIndex,
+                            changes,
+                          )
+                        }
+                      />
                     </div>
+                  ) : bulkWorkspace === "bulk" ? (
+                    <div className="gf-bulk-design-editor">
+                      <div className="gf-bulk-one-nav">
+                        <button
+                          type="button"
+                          className="gf-csv-link"
+                          onClick={openBulkTable}
+                        >
+                          Table view
+                        </button>
+                        <button
+                          type="button"
+                          className="gf-csv-link"
+                          onClick={openBulkGrid}
+                        >
+                          Grid view
+                        </button>
+                      </div>
+                      <div className="gf-bulk-edit-mode" role="group" aria-label="Edit scope">
+                        <button
+                          type="button"
+                          className="gf-pill"
+                          onClick={() => setBulkWorkspace("one")}
+                        >
+                          Edit this gavel
+                        </button>
+                        <button type="button" className="gf-pill is-selected">
+                          Bulk edit all
+                        </button>
+                      </div>
+                      <p className="gf-note">
+                        Each line keeps its own size and font. These settings
+                        apply to that line on every gavel.
+                      </p>
+                      {Array.from({ length: GAVEL_MAX_LINES }, (_, lineIndex) => {
+                        const style = bulkBandStyles[lineIndex] ?? {};
+                        return (
+                          <div
+                            key={`bulk-band-${lineIndex}`}
+                            className="gf-bulk-style-block"
+                          >
+                            <span className="gf-line-label">
+                              {bulkBandLabels[lineIndex]}
+                            </span>
+                            <GavelLineSizeFontControls
+                              style={style}
+                              size={style.textSize ?? textSize}
+                              ariaLabel={`${bulkBandLabels[lineIndex]} for every gavel`}
+                              onChange={(changes) =>
+                                editAllBulkLineStyle("band", lineIndex, changes)
+                              }
+                            />
+                          </div>
+                        );
+                      })}
+                      {bulkSecondaryCount > 0
+                        ? Array.from(
+                            { length: bulkSecondaryCount },
+                            (_, lineIndex) => {
+                              const style = bulkSecondaryStyles[lineIndex] ?? {};
+                              return (
+                                <div
+                                  key={`bulk-secondary-${lineIndex}`}
+                                  className="gf-bulk-style-block"
+                                >
+                                  <span className="gf-line-label">
+                                    {bulkSecondaryLabels[lineIndex]}
+                                  </span>
+                                  <GavelLineSizeFontControls
+                                    style={style}
+                                    size={style.textSize ?? textSize}
+                                    ariaLabel={`${bulkSecondaryLabels[lineIndex]} for every gavel`}
+                                    onChange={(changes) =>
+                                      editAllBulkLineStyle(
+                                        "secondary",
+                                        lineIndex,
+                                        changes,
+                                      )
+                                    }
+                                  />
+                                </div>
+                              );
+                            },
+                          )
+                        : null}
+                    </div>
+                  ) : bulkWorkspace === "grid" ? (
+                    <div className="gf-gavel-grid-wrap">
+                      <div className="gf-bulk-grid-tools">
+                        <p className="gf-note" style={{ margin: 0 }}>
+                          Pick a gavel to edit it on its own. The preview follows
+                          the one you choose.
+                        </p>
+                        <button
+                          type="button"
+                          className="gf-csv-link gf-bulk-view-switch"
+                          onClick={openBulkTable}
+                        >
+                          Table view
+                        </button>
+                      </div>
+                      <div className="gf-gavel-grid">
+                        {bulkRows.map((row, index) => {
+                          const issues = bulkCheck.issues[index];
+                          const problem =
+                            issues.overCells.size > 0 || issues.missingRequired;
+                          const title =
+                            row.texts.find((text) => text.trim())?.trim() ||
+                            "No name yet";
+                          const detail = row.texts
+                            .slice(1)
+                            .map((text) => text.trim())
+                            .filter(Boolean)
+                            .join(" · ");
+                          return (
+                            <button
+                              key={row.id}
+                              type="button"
+                              className={`gf-gavel-grid-card${
+                                index === selectedBulkRow ? " is-selected" : ""
+                              }${problem ? " is-problem" : ""}`}
+                              onClick={() => editBulkGavel(index)}
+                            >
+                              <span className="gf-gavel-grid-num">
+                                Gavel {index + 1}
+                                {row.quantity > 1 ? ` · Qty ${row.quantity}` : ""}
+                              </span>
+                              <span className="gf-gavel-grid-title">{title}</span>
+                              {detail ? (
+                                <span className="gf-gavel-grid-sub">{detail}</span>
+                              ) : null}
+                              {problem ? (
+                                <span className="gf-gavel-grid-flag">
+                                  Needs a look
+                                </span>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    bulkListPanel
                   )}
                   </div>
 
@@ -4774,7 +5585,7 @@ export default function GavelDesigner({
                     </div>
                   ) : null}
 
-                  <div className="gf-sub-section" style={{ marginTop: 12 }}>
+                  <div className="gf-sub-section gf-bags" style={{ marginTop: 12 }}>
                     <p className="gf-sub-title">Add velour storage bags?</p>
                     <div className="gf-pill-row">
                       <button
@@ -4791,9 +5602,7 @@ export default function GavelDesigner({
                         className={`gf-pill ${
                           bagSelection === "gavel" ? "is-selected" : ""
                         }`}
-                        disabled={
-                          bagProduct !== null && !bagVariants.gavel
-                        }
+                        disabled={bagProduct !== null && !bagVariants.gavel}
                         onClick={() => setBagSelection("gavel")}
                       >
                         Velour gavel bag — +
@@ -4806,6 +5615,11 @@ export default function GavelDesigner({
                         type="button"
                         className={`gf-pill ${
                           bagSelection === "secondary" ? "is-selected" : ""
+                        }${
+                          (!isStand && !hasSoundBlock) ||
+                          (bagProduct !== null && !bagVariants.secondary)
+                            ? " is-unavailable"
+                            : ""
                         }`}
                         disabled={
                           (!isStand && !hasSoundBlock) ||
@@ -4823,6 +5637,11 @@ export default function GavelDesigner({
                         type="button"
                         className={`gf-pill ${
                           bagSelection === "both" ? "is-selected" : ""
+                        }${
+                          (!isStand && !hasSoundBlock) ||
+                          (bagProduct !== null && !bagVariants.both)
+                            ? " is-unavailable"
+                            : ""
                         }`}
                         disabled={
                           (!isStand && !hasSoundBlock) ||
@@ -4844,22 +5663,7 @@ export default function GavelDesigner({
                       </p>
                     ) : null}
                   </div>
-                  {!bulkMode ? (
-                    <div className="gf-add-multiple">
-                      <p className="gf-note">
-                        Ordering for a group? Add Multiple — paste your list of
-                        names and one design is applied to every piece.
-                      </p>
-                      <button
-                        type="button"
-                        className="gf-nav-primary"
-                        onClick={openCsvModal}
-                      >
-                        Add Multiple
-                      </button>
-                    </div>
-                  ) : null}
-                  </>
+                </div>
               ) : null}
 
               {step === "quantity" ? (
@@ -4944,17 +5748,27 @@ export default function GavelDesigner({
               ) : null}
 
               <div className="gf-step-nav">
-                {stepIndex > 0 && step !== "done" ? (
-                  <button
-                    type="button"
-                    className="gf-nav-secondary"
-                    onClick={goBack}
-                  >
-                    ← Back
-                  </button>
-                ) : (
-                  <span />
-                )}
+                <div className="gf-nav-secondary-group">
+                  {stepIndex > 0 && step !== "done" ? (
+                    <button
+                      type="button"
+                      className="gf-nav-secondary"
+                      onClick={goBack}
+                    >
+                      ← Back
+                    </button>
+                  ) : null}
+                  {step !== "done" ? (
+                    <button
+                      type="button"
+                      className="gf-nav-secondary"
+                      disabled={busy}
+                      onClick={confirmReset}
+                    >
+                      Reset design
+                    </button>
+                  ) : null}
+                </div>
 
                 {continueLabel[step] ? (
                   <button
@@ -4962,8 +5776,9 @@ export default function GavelDesigner({
                     className="gf-nav-primary"
                     disabled={
                       step === "design" &&
-                      bulkMode &&
-                      (busy || !designReady || currentSelectionOutOfStock)
+                      (designChoice === null ||
+                        (bulkMode &&
+                          (busy || !designReady || currentSelectionOutOfStock)))
                     }
                     aria-describedby={
                       showBulkCartBlocker ? "gf-cart-blocker" : undefined
@@ -4998,7 +5813,7 @@ export default function GavelDesigner({
                   <button
                     type="button"
                     className="gf-nav-primary"
-                    onClick={() => goToStep("product")}
+                    onClick={resetDesign}
                   >
                     Design another →
                   </button>

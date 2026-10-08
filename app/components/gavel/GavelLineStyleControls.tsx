@@ -3,8 +3,11 @@ import { FontFamilySelect } from "~/components/FontFamilySelect";
 import {
   GAVEL_DEFAULT_FONT,
   GAVEL_FONT_OPTIONS,
+  GAVEL_TEXT_SIZE_PRESETS,
   getGavelFontOption,
+  type GavelTextSizePreset,
 } from "~/constants/gavelStyles";
+import type { GavelBulkLineStyle } from "~/utils/gavelBulkCsv";
 
 type Props = {
   line: BadgeLine;
@@ -68,6 +71,63 @@ export function GavelLineStyleControls({ line, ariaLabel, onChange }: Props) {
         </button>
       ) : null}
     </>
+  );
+}
+
+/** Size chips plus the font menu, for one engraved line. */
+export function GavelLineSizeFontControls({
+  style,
+  size,
+  ariaLabel,
+  onChange,
+}: {
+  style: GavelBulkLineStyle;
+  size: GavelTextSizePreset;
+  ariaLabel: string;
+  onChange: (changes: Partial<GavelBulkLineStyle>) => void;
+}) {
+  const line: BadgeLine = {
+    id: "gavel-line-style",
+    text: "",
+    yNorm: 0.5,
+    sizeNorm: 0.2,
+    color: "",
+    align: "center",
+    fontFamily: style.fontFamily || GAVEL_DEFAULT_FONT,
+    bold: Boolean(style.bold),
+    italic: Boolean(style.italic),
+    underline: false,
+  };
+
+  return (
+    <div className="gf-bulk-line-style">
+      <div className="gf-chip-row" role="group" aria-label={`${ariaLabel} size`}>
+        {GAVEL_TEXT_SIZE_PRESETS.map((preset) => (
+          <button
+            key={preset}
+            type="button"
+            className={`gf-chip ${size === preset ? "is-on" : ""}`}
+            aria-pressed={size === preset}
+            onClick={() => onChange({ textSize: preset })}
+          >
+            {preset}
+          </button>
+        ))}
+      </div>
+      <GavelLineStyleControls
+        line={line}
+        ariaLabel={ariaLabel}
+        onChange={(changes) =>
+          onChange({
+            ...(changes.fontFamily !== undefined
+              ? { fontFamily: changes.fontFamily }
+              : {}),
+            ...(changes.bold !== undefined ? { bold: changes.bold } : {}),
+            ...(changes.italic !== undefined ? { italic: changes.italic } : {}),
+          })
+        }
+      />
+    </div>
   );
 }
 
