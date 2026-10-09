@@ -65,6 +65,53 @@
     margin-top: 0;
   }
 
+  /*
+    How it works and About sit collapsed under the tool, so they are not the
+    first thing on screen while someone is designing.
+  */
+  .gf-designer-info details {
+    border-top: 1px solid #e6e1d8;
+    margin-top: 20px;
+  }
+
+  .gf-designer-info details + details {
+    margin-top: 0;
+  }
+
+  .gf-designer-info details:last-of-type {
+    border-bottom: 1px solid #e6e1d8;
+  }
+
+  .gf-designer-info summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 0;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .gf-designer-info summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .gf-designer-info summary::after {
+    content: "+";
+    flex: 0 0 auto;
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .gf-designer-info details[open] summary::after {
+    content: "−";
+  }
+
+  .gf-designer-info summary h2 {
+    margin: 0;
+    font-size: 18px;
+  }
+
   .gf-designer-info p {
     margin: 0 0 14px;
     font-size: 15px;
@@ -388,7 +435,13 @@
   </div>
 
   <div class="gf-designer-info">
-    <h2>How it works</h2>
+    <h2>Production &amp; shipping</h2>
+    <p>
+      Orders ship out within 48 hours, often faster, and shipping is free on every order. Questions about a bulk order or a custom logo? Call us at (310) 534-1138 or email <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a>.
+    </p>
+
+    <details>
+      <summary><h2>How it works</h2></summary>
     <ul class="gf-designer-info__steps">
       <li>
         <strong>1. Design it live</strong>
@@ -403,8 +456,10 @@
         Your design is saved to your order automatically, so what you see on screen is what we produce.
       </li>
     </ul>
+    </details>
 
-    <h2>About this {% if gavel_product_type == 'stand' %}gavel and stand{% else %}gavel{% endif %}</h2>
+    <details>
+      <summary><h2>About this {% if gavel_product_type == 'stand' %}gavel and stand{% else %}gavel{% endif %}</h2></summary>
     {%- if gavel_product_type == 'stand' -%}
       <p>
         A solid hardwood gavel paired with a matching wood stand. The gavel carries a personalized metal band, and the stand carries a personalized front plate — both engraved to your text. The stand is made from the same wood as the gavel so the set matches.
@@ -572,11 +627,7 @@
       <li>Free engraving — no setup or artwork fees</li>
       <li>Ideal for judges, gavel clubs, boards, associations and retirement gifts</li>
     </ul>
-
-    <h2>Production &amp; shipping</h2>
-    <p>
-      Orders ship out within 48 hours, often faster, and shipping is free on every order. Questions about a bulk order or a custom logo? Call us at (310) 534-1138 or email <a href="mailto:info@gavelsfast.com">info@gavelsfast.com</a>.
-    </p>
+    </details>
 
     <p class="gf-designer-info__tagline">
       No artwork fees. No minimums. No back-and-forth. What you see in the tool is exactly what you get.

@@ -45,6 +45,21 @@ export const GAVEL_BAG_SELECTION_IDS = [
 ] as const;
 export type GavelBagSelectionId = (typeof GAVEL_BAG_SELECTION_IDS)[number];
 
+/** Catalog photo shared by every paid velour gift-bag variant. */
+export const VELOUR_GIFT_BAG_PHOTO = "/images/gavel/velour-gift-bag.jpg";
+
+/** Customer-facing name for a paid velour gift-bag choice. */
+export function gavelGiftBagLabel(
+  selection: Exclude<GavelBagSelectionId, "none">,
+  productType: GavelProductType,
+): string {
+  if (selection === "gavel") return "Velour gavel gift bag";
+  if (selection === "both") return "Both gift bags";
+  return productType === "stand"
+    ? "Velour stand gift bag"
+    : "Velour sound block gift bag";
+}
+
 /**
  * Head and band dimensions come from the manufacturer's dimensioned drawing:
  * 3" head length × 2" diameter, 10.25" overall.
@@ -693,6 +708,21 @@ export function clampGavelLogoGapScale(n: number): number {
   return clampRange(n, GAVEL_LOGO_GAP_SCALE_MIN, GAVEL_LOGO_GAP_SCALE_MAX);
 }
 
+/** Where the logo sits on the sound-block top relative to the text. */
+export const GAVEL_SOUND_BLOCK_LOGO_POSITIONS = [
+  { id: "top", label: "Top" },
+  { id: "bottom", label: "Bottom" },
+  { id: "left", label: "Left of text" },
+] as const;
+export type GavelSoundBlockLogoPosition =
+  (typeof GAVEL_SOUND_BLOCK_LOGO_POSITIONS)[number]["id"];
+
+export function isGavelSoundBlockLogoPosition(
+  value: unknown,
+): value is GavelSoundBlockLogoPosition {
+  return GAVEL_SOUND_BLOCK_LOGO_POSITIONS.some((p) => p.id === value);
+}
+
 /** UV-print text colors (single-color engraving always uses the default). */
 export const GAVEL_UV_TEXT_COLORS: readonly string[] = [
   "#1c2430",
@@ -1093,15 +1123,9 @@ export function formatGavelOptionSummary(input: {
   const bagSelection =
     input.bagSelection ?? (input.suedeBag ? "gavel" : "none");
   const bag =
-    bagSelection === "gavel"
-      ? "Velour gavel bag"
-      : bagSelection === "secondary"
-        ? input.productType === "stand"
-          ? "Velour stand bag"
-          : "Velour sound block bag"
-        : bagSelection === "both"
-          ? "Both velour bags"
-          : "No bag";
+    bagSelection === "none"
+      ? "No gift bag"
+      : gavelGiftBagLabel(bagSelection, input.productType);
   if (input.productType === "stand") {
     const finish = getGavelStandFinish(input.standFinish);
     const method = getGavelProductionMethod(input.productionMethod);
