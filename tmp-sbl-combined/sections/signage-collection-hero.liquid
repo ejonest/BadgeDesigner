@@ -72,30 +72,22 @@
 
     <div class="sbl-sg-hero__visual">
       <a href="{{ tool_url }}" class="sbl-sg-hero__tool" aria-label="{{ section.settings.primary_label | default: 'Open the custom sign designer' | escape }}">
-        <div class="sbl-sg-hero__tool-bar" aria-hidden="true">
-          <span></span><span></span><span></span>
-          <p>{{ section.settings.tool_label | escape }}</p>
-        </div>
-        <div class="sbl-sg-hero__tool-stage">
-          <div class="sbl-sg-hero__sign" aria-hidden="true">
-            <span class="sbl-sg-hero__sign-line1">{{ section.settings.mock_line_1 | escape }}</span>
-            {%- if section.settings.mock_line_2 != blank -%}
-              <span class="sbl-sg-hero__sign-line2">{{ section.settings.mock_line_2 | escape }}</span>
-            {%- endif -%}
-          </div>
-          <div class="sbl-sg-hero__tool-controls" aria-hidden="true">
-            <div class="sbl-sg-hero__swatches">
-              <i style="background:#1f2a37"></i>
-              <i style="background:#8b1e2d"></i>
-              <i style="background:#1d4e89"></i>
-              <i style="background:#c9a227"></i>
-              <i style="background:#e5e7eb"></i>
-            </div>
-            <div class="sbl-sg-hero__chips">
-              <b>2×8"</b><b class="is-active">3×10"</b><b>6×9"</b>
-            </div>
-          </div>
-        </div>
+        {%- if section.settings.designer_image != blank -%}
+          {{
+            section.settings.designer_image
+            | image_url: width: 1600
+            | image_tag: class: 'sbl-sg-hero__designer-image', loading: 'eager', widths: '700,1000,1300,1600', sizes: '(min-width: 990px) 38vw, 100vw', alt: section.settings.designer_image_alt
+          }}
+        {%- else -%}
+          <img
+            class="sbl-sg-hero__designer-image"
+            src="{{ 'sbl-sign-designer-real.png' | asset_url }}"
+            alt="{{ section.settings.designer_image_alt | escape }}"
+            width="1300"
+            height="720"
+            loading="eager"
+          >
+        {%- endif -%}
         {%- if section.settings.tool_tag != blank -%}
           <span class="sbl-sg-hero__tag">{{ section.settings.tool_tag | escape }}</span>
         {%- endif -%}
@@ -292,92 +284,12 @@
     transition: transform 0.2s;
   }
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool:hover { transform: translateY(-2px); }
-  #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool-bar {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 14px;
-    background: #fff;
-    border-bottom: 1px solid #e5e7eb;
-  }
-  #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool-bar span {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: #d1d5db;
-  }
-  #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool-bar p {
-    margin: 0 0 0 8px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: #4b5563;
-  }
-  #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool-stage {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 26px;
-    padding: 24px 20px 56px;
-    background-image: radial-gradient(#dfe3e8 1px, transparent 1px);
-    background-size: 16px 16px;
-  }
-  #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__sign {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 86%;
-    aspect-ratio: 10 / 3.4;
-    border-radius: 10px;
-    background: linear-gradient(160deg, #24364d 0%, #12263f 100%);
-    box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.85), inset 0 0 0 6px #12263f, 0 10px 24px rgba(18, 38, 63, 0.35);
-    color: #fff;
-    text-align: center;
-  }
-  #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__sign-line1 {
-    font-size: clamp(18px, 2.2vw, 28px);
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-  }
-  #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__sign-line2 {
-    margin-top: 4px;
-    font-size: clamp(12px, 1.2vw, 15px);
-    letter-spacing: 1px;
-    opacity: 0.85;
-  }
-  #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool-controls {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-  }
-  #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__swatches { display: flex; gap: 6px; }
-  #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__swatches i {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 1px #cbd5e1;
-  }
-  #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__chips { display: flex; gap: 6px; }
-  #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__chips b {
-    padding: 4px 9px;
-    border-radius: 6px;
-    border: 1px solid #cbd5e1;
-    background: #fff;
-    font-size: 11px;
-    font-weight: 700;
-    color: #374151;
-  }
-  #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__chips b.is-active {
-    border-color: var(--sg-navy);
-    background: var(--sg-navy);
-    color: #fff;
+  #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__designer-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: left top;
+    display: block;
   }
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tag {
     position: absolute;
@@ -508,7 +420,7 @@
     #sbl-sg-hero-{{ section.id }} { padding: 48px 20px 40px; }
     #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__inner { grid-template-columns: 1fr; gap: 36px; }
     #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__visual { grid-template-columns: 1fr; height: auto; }
-    #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool-stage { min-height: 260px; }
+    #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool { min-height: 300px; }
     #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__stack { display: none; }
     #sbl-sg-steps-{{ section.id }} .sbl-sg-steps__inner { grid-template-columns: 1fr; gap: 18px; }
   }
@@ -546,11 +458,10 @@
     { "type": "text", "id": "stat_1_label", "label": "Stat 1 label", "default": "Design preview" },
     { "type": "text", "id": "stat_2_value", "label": "Stat 2 value", "default": "Your text" },
     { "type": "text", "id": "stat_2_label", "label": "Stat 2 label", "default": "Any wording" },
-    { "type": "header", "content": "Designer preview card" },
-    { "type": "text", "id": "tool_label", "label": "Window title", "default": "Custom Sign Designer" },
-    { "type": "text", "id": "mock_line_1", "label": "Sample sign line 1", "default": "Main Office" },
-    { "type": "text", "id": "mock_line_2", "label": "Sample sign line 2", "default": "Please Check In" },
-    { "type": "text", "id": "tool_tag", "label": "Card tag", "default": "Try the designer" },
+    { "type": "header", "content": "Designer screenshot" },
+    { "type": "image_picker", "id": "designer_image", "label": "Designer screenshot", "info": "Leave empty to use the included screenshot of the real sign designer." },
+    { "type": "text", "id": "designer_image_alt", "label": "Image alt text", "default": "The real custom sign designer showing shape, size, color, border, and text options" },
+    { "type": "text", "id": "tool_tag", "label": "Card tag", "default": "Real designer — click to try" },
     {
       "type": "text",
       "id": "fallback_handles",

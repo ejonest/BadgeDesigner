@@ -139,6 +139,7 @@ import {
   loadTemplates,
   loadTemplateById,
   getTemplateConfigsForVariant,
+  clearTemplateCache,
 } from "../utils/templates";
 import type { LoadedTemplate } from "../utils/templates";
 import {
@@ -2880,6 +2881,7 @@ const BadgeDesigner: React.FC<BadgeDesignerProps> = ({
           templateRefreshKey,
           ")",
         );
+        if (templateRefreshKey > 0) clearTemplateCache();
         const list = await loadTemplates(variant);
         if (cancelled) return;
         setTemplates(list);
