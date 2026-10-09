@@ -1,8 +1,12 @@
 import type { MetaFunction, LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import BadgeDesigner from "~/components/BadgeDesigner";
-import { getDesignerConfig, resolveGadgetUrl } from "~/config/designers";
+import BadgeDesignerRedesign from "~/components/BadgeDesignerRedesign";
+import {
+  getDesignerConfig,
+  resolveGadgetApiKey,
+  resolveGadgetUrl,
+} from "~/config/designers";
 
 export const meta: MetaFunction = () => {
   return [
@@ -31,9 +35,9 @@ export const loader: LoaderFunction = async ({ request }) => {
       customerId: customerId ?? null,
       timestamp: Date.now(),
       GADGET_API_URL: resolveGadgetUrl(signCfg),
-      GADGET_API_KEY: undefined,
+      GADGET_API_KEY: resolveGadgetApiKey(signCfg),
     },
-    { headers }
+    { headers },
   );
 };
 
@@ -47,8 +51,8 @@ export default function SignDesigner() {
   } = useLoaderData<typeof loader>();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <BadgeDesigner
+    <div className="min-h-screen h-full bg-[#F0EDE6]">
+      <BadgeDesignerRedesign
         variant="sign"
         productId={productId}
         shop={shop}

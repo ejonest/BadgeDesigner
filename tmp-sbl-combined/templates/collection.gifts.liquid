@@ -1,0 +1,15 @@
+<div class="page-tpl">
+  <div class="container">
+    {% render 'breadcrumb' %}
+
+    <header class="page-header">
+      <h2>
+        {% render 'multilang' with page.title %}
+      </h2>      
+    </header>
+    {% section "mini-header-gifts" %}
+	{% section "collections-gift-items" %}
+    {% section "featured-gifts" %}
+    {% section "home-store-info" %}
+  </div>
+</div>

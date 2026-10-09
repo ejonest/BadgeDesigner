@@ -1,0 +1,318 @@
+{%- comment -%}
+  Collection toolbar: view mode, items per page, sort by (Ella-style).
+  Used on the plaques collection template main column.
+{%- endcomment -%}
+
+{%- liquid
+  assign per_page = section.settings.default_per_page | default: 50
+  if request.params.limit != blank
+    assign limit_param = request.params.limit | plus: 0
+    if limit_param > 0 and limit_param <= 50
+      assign per_page = limit_param
+    endif
+  endif
+
+  assign sort_by = collection.sort_by | default: collection.default_sort_by
+  assign base_collection_url = collection.url
+-%}
+
+<div class="plaques-collection-toolbar toolbar toolbar-collection" data-section-id="{{ section.id }}">
+  {%- if section.settings.show_view_as -%}
+    <div class="toolbar-item toolbar-view-as view-mode">
+      <span class="toolbar-label">{{ section.settings.view_as_label | escape }}</span>
+      <ul class="icon-view list-unstyled" data-plaques-view-toggle>
+        <li>
+          <button
+            type="button"
+            class="icon-view-2{% if section.settings.default_view == '2' %} active{% endif %}"
+            data-plaques-cols="2"
+            aria-label="2 columns"
+            title="2 columns"
+          ></button>
+        </li>
+        <li>
+          <button
+            type="button"
+            class="icon-view-3{% if section.settings.default_view == '3' %} active{% endif %}"
+            data-plaques-cols="3"
+            aria-label="3 columns"
+            title="3 columns"
+          ></button>
+        </li>
+        <li>
+          <button
+            type="button"
+            class="icon-view-4{% if section.settings.default_view == '4' %} active{% endif %}"
+            data-plaques-cols="4"
+            aria-label="4 columns"
+            title="4 columns"
+          ></button>
+        </li>
+      </ul>
+    </div>
+  {%- endif -%}
+
+  {%- if section.settings.show_items_per_page -%}
+    <div class="toolbar-item toolbar-limit filter-limit">
+      <label class="toolbar-label" for="plaques-limit-{{ section.id }}">{{ section.settings.per_page_label | escape }}</label>
+      <select
+        id="plaques-limit-{{ section.id }}"
+        class="select-box"
+        data-plaques-limit-select
+        aria-label="{{ section.settings.per_page_label | escape }}"
+      >
+        {%- assign limits = section.settings.per_page_options | split: ',' -%}
+        {%- for limit_str in limits -%}
+          {%- assign limit_num = limit_str | strip | plus: 0 -%}
+          {%- if limit_num > 0 -%}
+            {%- capture limit_url -%}
+              {{ base_collection_url }}?limit={{ limit_num }}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}
+            {%- endcapture -%}
+            <option value="{{ limit_url | strip }}" {% if per_page == limit_num %}selected{% endif %}>
+              {{ limit_num }}
+            </option>
+          {%- endif -%}
+        {%- endfor -%}
+      </select>
+    </div>
+  {%- endif -%}
+
+  {%- if section.settings.show_sort -%}
+    <div class="toolbar-item toolbar-sort filter-sortby">
+      <label class="toolbar-label" for="plaques-sort-{{ section.id }}">{{ section.settings.sort_label | escape }}</label>
+      <select
+        id="plaques-sort-{{ section.id }}"
+        class="select-box"
+        data-plaques-sort-select
+        aria-label="{{ section.settings.sort_label | escape }}"
+      >
+        {%- for option in collection.sort_options -%}
+          {%- capture sort_url -%}
+            {{ base_collection_url }}?sort_by={{ option.value }}{% if per_page %}&limit={{ per_page }}{% endif %}
+          {%- endcapture -%}
+          <option value="{{ sort_url | strip }}" {% if option.value == sort_by %}selected{% endif %}>
+            {{ option.name | escape }}
+          </option>
+        {%- endfor -%}
+      </select>
+    </div>
+  {%- endif -%}
+</div>
+
+<script>
+  (function () {
+    var root = document.querySelector('[data-section-id="{{ section.id }}"]');
+    if (!root) return;
+
+    var limitSel = root.querySelector('[data-plaques-limit-select]');
+    var sortSel = root.querySelector('[data-plaques-sort-select]');
+    if (limitSel) {
+      limitSel.addEventListener('change', function () {
+        if (limitSel.value) window.location.href = limitSel.value;
+      });
+    }
+    if (sortSel) {
+      sortSel.addEventListener('change', function () {
+        if (sortSel.value) window.location.href = sortSel.value;
+      });
+    }
+
+    var viewRoot = root.querySelector('[data-plaques-view-toggle]');
+    var grid = document.querySelector('[data-plaques-product-grid]');
+    if (!viewRoot || !grid) return;
+
+    var storageKey = 'plaquesCollectionViewCols';
+    var saved = localStorage.getItem(storageKey);
+
+    function setCols(cols) {
+      grid.style.setProperty('--plaques-grid-cols', cols);
+      viewRoot.querySelectorAll('button').forEach(function (btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-plaques-cols') === cols);
+      });
+      localStorage.setItem(storageKey, cols);
+    }
+
+    viewRoot.querySelectorAll('button[data-plaques-cols]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setCols(btn.getAttribute('data-plaques-cols'));
+      });
+    });
+
+    if (saved) setCols(saved);
+  })();
+</script>
+
+<style>
+  .plaques-collection-toolbar.toolbar-collection {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px 24px;
+    margin: 0 0 20px;
+    padding: 12px 0;
+    border-top: 1px solid #e8e8e8;
+    border-bottom: 1px solid #e8e8e8;
+  }
+  .plaques-collection-toolbar .toolbar-label {
+    font-size: 13px;
+    font-weight: 600;
+    margin-right: 8px;
+    color: #333;
+  }
+  .plaques-collection-toolbar .toolbar-item {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .plaques-collection-toolbar .icon-view {
+    display: flex;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .plaques-collection-toolbar .icon-view button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid #ccc;
+    background: #fff;
+    cursor: pointer;
+    border-radius: 2px;
+    opacity: 0.55;
+  }
+  .plaques-collection-toolbar .icon-view button.active {
+    opacity: 1;
+    border-color: #333;
+    background: #333;
+  }
+  .plaques-collection-toolbar .icon-view-2::before,
+  .plaques-collection-toolbar .icon-view-3::before,
+  .plaques-collection-toolbar .icon-view-4::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: currentColor;
+    mask-size: 18px 18px;
+    mask-repeat: no-repeat;
+    mask-position: center;
+  }
+  .plaques-collection-toolbar .icon-view button {
+    color: #fff;
+  }
+  .plaques-collection-toolbar .icon-view button:not(.active) {
+    color: #666;
+    background: #f5f5f5;
+  }
+  .plaques-collection-toolbar .icon-view-2::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Crect x='1' y='4' width='8' height='12' fill='black'/%3E%3Crect x='11' y='4' width='8' height='12' fill='black'/%3E%3C/svg%3E");
+  }
+  .plaques-collection-toolbar .icon-view-3::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Crect x='1' y='4' width='5' height='12'/%3E%3Crect x='7.5' y='4' width='5' height='12'/%3E%3Crect x='14' y='4' width='5' height='12'/%3E%3C/svg%3E");
+  }
+  .plaques-collection-toolbar .icon-view-4::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Crect x='1' y='4' width='3.5' height='12'/%3E%3Crect x='5.5' y='4' width='3.5' height='12'/%3E%3Crect x='10' y='4' width='3.5' height='12'/%3E%3Crect x='14.5' y='4' width='3.5' height='12'/%3E%3C/svg%3E");
+  }
+  .plaques-collection-toolbar .select-box {
+    min-width: 140px;
+    min-height: 36px;
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    background: #fff;
+    font-size: 14px;
+  }
+  @media (max-width: 749px) {
+    .plaques-collection-toolbar.toolbar-collection {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .plaques-collection-toolbar .toolbar-item {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .plaques-collection-toolbar .select-box {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Plaques toolbar",
+  "tag": "section",
+  "class": "section-plaques-collection-toolbar",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_view_as",
+      "label": "Show view as",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "view_as_label",
+      "label": "View as label",
+      "default": "View as"
+    },
+    {
+      "type": "select",
+      "id": "default_view",
+      "label": "Default grid columns",
+      "default": "4",
+      "options": [
+        { "value": "2", "label": "2 columns" },
+        { "value": "3", "label": "3 columns" },
+        { "value": "4", "label": "4 columns" }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "show_items_per_page",
+      "label": "Show items per page",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "per_page_label",
+      "label": "Items per page label",
+      "default": "Items per page"
+    },
+    {
+      "type": "text",
+      "id": "per_page_options",
+      "label": "Items per page options (comma-separated)",
+      "default": "12,24,36,50"
+    },
+    {
+      "type": "range",
+      "id": "default_per_page",
+      "min": 12,
+      "max": 50,
+      "step": 2,
+      "label": "Default items per page",
+      "default": 50
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sort",
+      "label": "Show sort by",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "sort_label",
+      "label": "Sort by label",
+      "default": "Sort by"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Plaques toolbar"
+    }
+  ]
+}
+{% endschema %}

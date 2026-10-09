@@ -1,0 +1,144 @@
+{% comment %}
+  Trophy designer — ONE iframe only (same layout rules as sign-designer-embed / plaque-designer-embed).
+
+  DUPLICATE / WRONG PAGE SAFETY
+  - This snippet only outputs when the current product is the custom-trophy product (same rule as
+    product-template-default's is_trophy_designer_product). Sync the handle/title check below with that
+    section if you change the product slug.
+
+  Optional: {% render 'trophy-designer-embed', trophy_designer_force: true %} to bypass the product check
+  (advanced / debugging only).
+
+  Set trophy_designer_url to your Vercel origin (no path, no trailing slash).
+{% endcomment %}
+{% liquid
+  assign trophy_designer_url = 'https://all-quality-design-tool.vercel.app'
+  assign trophy_designer_match = false
+  if trophy_designer_force
+    assign trophy_designer_match = true
+  elsif product != blank
+    if product.handle == 'custom-trophy' or product.title == 'Custom Trophy'
+      assign trophy_designer_match = true
+    endif
+  endif
+%}
+{% if trophy_designer_match %}
+{% assign trophy_fallback_variant = product.selected_or_first_available_variant | default: product.variants[0] %}
+{% assign trophy_unit_price = product.price | divided_by: 100.0 %}
+<iframe
+  class="trophy-designer-iframe"
+  data-trophy-designer-embed-root
+  title="Trophy designer"
+  src="{{ trophy_designer_url }}/trophy-designer?embedded=1&shop={{ shop.permanent_domain | url_param_escape }}&storeUrl={{ shop.permanent_domain | url_param_escape }}&product={{ product.id | url_param_escape }}&productHandle={{ product.handle | url_param_escape }}&variantId={{ trophy_fallback_variant.id | url_param_escape }}&price={{ trophy_unit_price }}{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}"
+  style="display:block;width:100%;height:min(90vh,900px);border:0;"
+  loading="lazy"
+  allow="clipboard-read; clipboard-write; fullscreen"
+></iframe>
+
+<script>
+(function () {
+  var iframeEl = document.currentScript && document.currentScript.previousElementSibling;
+  if (!iframeEl || iframeEl.tagName !== 'IFRAME' || iframeEl.getAttribute('data-trophy-designer-embed-root') == null) {
+    return;
+  }
+  var all = document.querySelectorAll('iframe.trophy-designer-iframe[data-trophy-designer-embed-root]');
+  if (all.length > 1) {
+    for (var d = 1; d < all.length; d++) {
+      all[d].remove();
+    }
+  }
+  if (!iframeEl.isConnected) {
+    return;
+  }
+
+  if (window.__trophyDesignerEmbedMessageBound) {
+    return;
+  }
+  window.__trophyDesignerEmbedMessageBound = true;
+
+  var designerOrigin = '{{ trophy_designer_url }}'.replace(/\/$/, '');
+  var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root ? window.Shopify.routes.root : '/').replace(/\/$/, '');
+
+  function replyToDesigner(event, requestId, success, error) {
+    if (!requestId || !event.source) return;
+    event.source.postMessage({ action: 'add-to-cart-result', requestId: requestId, success: success, error: error || null }, event.origin);
+  }
+
+  function removeReplacedCartLines(replaceDesignId) {
+    if (!replaceDesignId) return Promise.resolve();
+    return fetch(cartRoot + '/cart.js', { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (cart) {
+        var stale = (cart.items || []).filter(function (item) {
+          var props = item.properties || {};
+          return (props['_Design ID'] || props['Design ID']) === replaceDesignId;
+        });
+        // Sequential: each change.js response invalidates the previous line keys.
+        return stale.reduce(function (chain, item) {
+          return chain.then(function () {
+            return fetch(cartRoot + '/cart/change.js', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: item.key, quantity: 0 })
+            });
+          });
+        }, Promise.resolve());
+      })
+      .catch(function (err) {
+        console.error('Trophy designer: could not remove replaced cart lines', err);
+      });
+  }
+
+  function addToCart(items, event, requestId, replaceDesignId) {
+    if (!items || !items.length) {
+      replyToDesigner(event, requestId, false, 'No cart items to add');
+      return;
+    }
+    fetch(cartRoot + '/cart/add.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: items.map(function (item) {
+          return { id: parseInt(String(item.variantId), 10), quantity: item.quantity || 1, properties: item.properties || {} };
+        })
+      })
+    })
+      .then(function (res) {
+        return res.json().then(function (body) {
+          if (!res.ok) throw new Error((body && (body.description || body.message)) || ('HTTP ' + res.status));
+          return body;
+        });
+      })
+      .then(function () { return removeReplacedCartLines(replaceDesignId); })
+      .then(function () {
+        replyToDesigner(event, requestId, true);
+        window.location.href = cartRoot + '/cart';
+      })
+      .catch(function (err) {
+        var message = err && err.message ? err.message : String(err);
+        console.error('Trophy designer: cart/add.js failed', err);
+        replyToDesigner(event, requestId, false, message);
+        alert('Could not add your trophy to the cart. Please try again.\n\n' + message);
+      });
+  }
+
+  window.addEventListener('message', function (event) {
+    if (event.origin !== designerOrigin) return;
+    var data = event.data;
+    if (!data || !data.action) return;
+    if (data.action === 'redirect-to-login') {
+      var returnTo = window.location.pathname + window.location.search;
+      window.location.href = '/customer_authentication/login?return_to=' + encodeURIComponent(returnTo);
+      return;
+    }
+    if (data.action === 'add-to-cart' && data.payload) {
+      addToCart([data.payload], event, data.requestId, data.payload.replaceDesignId);
+      return;
+    }
+    if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
+      addToCart(data.payload.items, event, data.requestId, data.payload.replaceDesignId);
+    }
+  });
+})();
+</script>
+{% endif %}
