@@ -186,6 +186,8 @@ export interface SignTemplateType {
   id: string;
   name: string;
   sizes: SignTemplateSizeOption[];
+  /** Product-style artwork used only in the shape picker; SVG templates remain the editable geometry. */
+  previewImageSrc?: string;
   /**
    * When `false`, the SVG has no border trim overlay — hide border color UI and treat the border step as complete.
    * Omit or `true` for designs with a configurable border.
@@ -198,6 +200,7 @@ export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "classic-framed",
     name: "Classic framed",
+    previewImageSrc: "/sign-template-previews/classic-framed.jpg",
     sizes: [
       { templateId: "classic-framed-4x6", label: "Small", sizeText: '4×6"' },
       { templateId: "classic-framed-5x7", label: "Medium", sizeText: '5×7"' },
@@ -212,6 +215,7 @@ export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "standard",
     name: "Standard",
+    previewImageSrc: "/sign-template-previews/standard.jpg",
     sizes: [
       { templateId: "standard-2x6-small", label: "Small", sizeText: '2×6"' },
       {
@@ -230,6 +234,7 @@ export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "fancy",
     name: "Fancy",
+    previewImageSrc: "/sign-template-previews/fancy.jpg",
     sizes: [
       { templateId: "fancy-6x3", label: "Small", sizeText: '6×3"' },
       { templateId: "fancy-7x3_5", label: "Medium", sizeText: '7×3.5"' },
@@ -239,6 +244,7 @@ export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "designer-heart",
     name: "Designer",
+    previewImageSrc: "/sign-template-previews/designer.jpg",
     sizes: [
       { templateId: "designer-2x5", label: "Small", sizeText: '2×5"' },
       { templateId: "designer-2_8x7", label: "Medium", sizeText: '2.8×7"' },
@@ -268,6 +274,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "circle",
     name: "Circle",
+    previewImageSrc: "/sign-template-previews/circle.jpg",
     hasBorderTrim: false,
     sizes: [
       { templateId: "circle-4x4", label: "Small", sizeText: '4×4"' },
@@ -279,6 +286,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "square",
     name: "Square",
+    previewImageSrc: "/sign-template-previews/square.jpg",
     sizes: [
       { templateId: "square-4x4-small", label: "Small", sizeText: '4×4"' },
       { templateId: "square-6x6-medium", label: "Medium", sizeText: '6×6"' },
@@ -293,6 +301,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "oval",
     name: "Oval",
+    previewImageSrc: "/sign-template-previews/oval.jpg",
     sizes: [
       { templateId: "oval-2x5-small", label: "Small", sizeText: '2×5"' },
       {
@@ -307,6 +316,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "portrait",
     name: "Portrait",
+    previewImageSrc: "/sign-template-previews/portrait.jpg",
     sizes: [
       {
         templateId: "portrait-round-4x6",
@@ -329,6 +339,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "victorian",
     name: "Victorian",
+    previewImageSrc: "/sign-template-previews/victorian.jpg",
     sizes: [
       { templateId: "victorian-3x6-small", label: "Small", sizeText: '3×6"' },
       {
@@ -346,6 +357,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "notched",
     name: "Notched",
+    previewImageSrc: "/sign-template-previews/notched.jpg",
     sizes: [
       {
         templateId: "notched-6x3_5-small",
@@ -411,6 +423,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "door-hanger",
     name: "Door hanger",
+    previewImageSrc: "/sign-template-previews/door-hanger.jpg",
     sizes: [
       {
         templateId: "door-hanger-4x8",
@@ -422,6 +435,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "headstone-basic",
     name: "Headstone basic",
+    previewImageSrc: "/sign-template-previews/headstone.jpg",
     sizes: [
       {
         templateId: "headstone-basic-5x6-small",
@@ -469,6 +483,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "western-elegant",
     name: "Western elegant",
+    previewImageSrc: "/sign-template-previews/western.jpg",
     sizes: [
       {
         templateId: "western-elegant-6_75x4_5-small",

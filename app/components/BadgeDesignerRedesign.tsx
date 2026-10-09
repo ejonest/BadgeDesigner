@@ -3858,7 +3858,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   // Picker cards only need one preview per shape family. Other sizes load on selection.
   const templateThumbKey = useMemo(() => {
     if (variant === "sign") {
-      return ALL_SIGN_TEMPLATE_TYPES.map((type) => type.sizes[0].templateId)
+      return ALL_SIGN_TEMPLATE_TYPES.filter((type) => !type.previewImageSrc)
+        .map((type) => type.sizes[0].templateId)
         .filter((id) => templates.some((t) => t.id === id))
         .join("|");
     }
@@ -3881,11 +3882,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       (badge.backgroundColor || "").trim() || initialPlateBackgroundHex;
     const thumbTemplates =
       variant === "sign"
-        ? ALL_SIGN_TEMPLATE_TYPES.map((type) =>
-            templatesForThumbsRef.current.find(
-              (t) => t.id === type.sizes[0].templateId,
-            ),
-          ).filter((t): t is LoadedTemplate => Boolean(t))
+        ? ALL_SIGN_TEMPLATE_TYPES.filter((type) => !type.previewImageSrc)
+            .map((type) =>
+              templatesForThumbsRef.current.find(
+                (t) => t.id === type.sizes[0].templateId,
+              ),
+            )
+            .filter((t): t is LoadedTemplate => Boolean(t))
         : templatesForThumbsRef.current;
     const pending = thumbTemplates.filter(
       (t) => !renderedThumbKeysRef.current.has(`${t.id}\0${plateColor}`),
@@ -12687,7 +12690,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                       selected={isSelected}
                                       onClick={() => handleSignTypeSelect(type)}
                                     >
-                                      {previewSvg || fallbackPreviewSrc ? (
+                                      {type.previewImageSrc ? (
+                                        <img
+                                          src={type.previewImageSrc}
+                                          alt={type.name}
+                                          className="max-h-full max-w-full object-contain"
+                                        />
+                                      ) : previewSvg || fallbackPreviewSrc ? (
                                         <TemplatePreviewThumb
                                           svgMarkup={previewSvg}
                                           variant={variant}
@@ -17646,7 +17655,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               allowOverflow={modalSignThumbBoost}
                               onClick={() => handleSignTypeSelectInModal(type)}
                             >
-                              {previewSvg || fallbackPreviewSrc ? (
+                              {type.previewImageSrc ? (
+                                <img
+                                  src={type.previewImageSrc}
+                                  alt={type.name}
+                                  loading="lazy"
+                                  className="max-h-full max-w-full object-contain"
+                                />
+                              ) : previewSvg || fallbackPreviewSrc ? (
                                 <TemplatePreviewThumb
                                   svgMarkup={previewSvg}
                                   variant={variant}

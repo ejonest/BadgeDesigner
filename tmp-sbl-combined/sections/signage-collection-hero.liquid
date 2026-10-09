@@ -6,7 +6,6 @@
 {%- liquid
   assign tool_url = section.settings.primary_link | default: '/products/custom-sign'
   assign browse_url = section.settings.secondary_link | default: '#signage-collection-products'
-  assign fallback_handles = section.settings.fallback_handles | split: ','
 -%}
 
 <section
@@ -92,34 +91,6 @@
           <span class="sbl-sg-hero__tag">{{ section.settings.tool_tag | escape }}</span>
         {%- endif -%}
       </a>
-
-      <div class="sbl-sg-hero__stack">
-        {%- assign tile_blocks = section.blocks | where: 'type', 'product_tile' -%}
-        {%- if tile_blocks.size > 0 -%}
-          {%- for block in tile_blocks -%}
-            {%- if block.settings.product != blank -%}
-              {%- render 'signage-hero-tile', product: block.settings.product, image: block.settings.image, label: block.settings.label, attrs: block.shopify_attributes -%}
-            {%- endif -%}
-          {%- endfor -%}
-        {%- else -%}
-          {%- assign shown = 0 -%}
-          {%- for handle in fallback_handles -%}
-            {%- assign h = handle | strip -%}
-            {%- assign tile_product = all_products[h] -%}
-            {%- if tile_product != blank and tile_product.featured_image and shown < 3 -%}
-              {%- assign shown = shown | plus: 1 -%}
-              {%- render 'signage-hero-tile', product: tile_product, image: blank, label: blank, attrs: '' -%}
-            {%- endif -%}
-          {%- endfor -%}
-          {%- if shown == 0 -%}
-            {%- for tile_product in collection.products limit: 3 -%}
-              {%- if tile_product.featured_image -%}
-                {%- render 'signage-hero-tile', product: tile_product, image: blank, label: blank, attrs: '' -%}
-              {%- endif -%}
-            {%- endfor -%}
-          {%- endif -%}
-        {%- endif -%}
-      </div>
     </div>
   </div>
 </section>
@@ -265,10 +236,7 @@
   }
 
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__visual {
-    display: grid;
-    grid-template-columns: 1.35fr 0.65fr;
-    gap: 12px;
-    height: 440px;
+    display: block;
     min-width: 0;
   }
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool {
@@ -286,9 +254,9 @@
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool:hover { transform: translateY(-2px); }
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__designer-image {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: left top;
+    height: auto;
+    object-fit: contain;
+    object-position: center;
     display: block;
   }
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tag {
@@ -420,7 +388,7 @@
     #sbl-sg-hero-{{ section.id }} { padding: 48px 20px 40px; }
     #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__inner { grid-template-columns: 1fr; gap: 36px; }
     #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__visual { grid-template-columns: 1fr; height: auto; }
-    #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool { min-height: 300px; }
+    #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool { min-height: 0; }
     #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__stack { display: none; }
     #sbl-sg-steps-{{ section.id }} .sbl-sg-steps__inner { grid-template-columns: 1fr; gap: 18px; }
   }
@@ -460,7 +428,7 @@
     { "type": "text", "id": "stat_2_label", "label": "Stat 2 label", "default": "Any wording" },
     { "type": "header", "content": "Designer screenshot" },
     { "type": "image_picker", "id": "designer_image", "label": "Designer screenshot", "info": "Leave empty to use the included screenshot of the real sign designer." },
-    { "type": "text", "id": "designer_image_alt", "label": "Image alt text", "default": "The real custom sign designer showing shape, size, color, border, and text options" },
+    { "type": "text", "id": "designer_image_alt", "label": "Image alt text", "default": "The custom sign designer with the text editor and live sign preview" },
     { "type": "text", "id": "tool_tag", "label": "Card tag", "default": "Real designer — click to try" },
     {
       "type": "text",

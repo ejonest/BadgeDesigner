@@ -231,7 +231,7 @@
     display: block;
     overflow: hidden;
     min-width: 0;
-    height: 440px;
+    height: auto;
     border: 10px solid rgba(255, 255, 255, 0.12);
     border-radius: 14px;
     background: #f3f1ed;
@@ -243,9 +243,9 @@
   #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__designer-image {
     display: block;
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: left top;
+    height: auto;
+    object-fit: contain;
+    object-position: center;
   }
   #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__image-label {
     position: absolute;
@@ -336,7 +336,7 @@
       grid-template-columns: 1fr;
       gap: 36px;
     }
-    #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__designer { height: min(58vw, 440px); }
+    #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__designer { height: auto; }
     #sbl-ds-steps-{{ section.id }} .sbl-ds-steps__inner {
       grid-template-columns: 1fr;
       gap: 18px;
@@ -349,7 +349,7 @@
     }
     #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__stats { gap: 20px; }
     #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__designer {
-      height: 300px;
+      height: auto;
       border-width: 6px;
     }
     #sbl-ds-steps-{{ section.id }} .sbl-ds-steps__list {
@@ -388,7 +388,7 @@
     { "type": "text", "id": "stat_2_label", "label": "Stat 2 label", "default": "Design process" },
     { "type": "header", "content": "Designer screenshot" },
     { "type": "image_picker", "id": "designer_image", "label": "Designer screenshot", "info": "Leave empty to use the included screenshot of the real desk-sign designer." },
-    { "type": "text", "id": "designer_image_alt", "label": "Image alt text", "default": "The real desk sign designer showing acrylic, piano-finished rosewood, and classic materials" },
+    { "type": "text", "id": "designer_image_alt", "label": "Image alt text", "default": "The desk sign designer with the text editor and live preview" },
     { "type": "text", "id": "image_label", "label": "Image label", "default": "Real designer — click to try" },
     { "type": "header", "content": "How it works strip" },
     { "type": "checkbox", "id": "show_steps", "label": "Show steps strip", "default": true },
