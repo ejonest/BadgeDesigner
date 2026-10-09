@@ -29,6 +29,7 @@ import {
   GAVEL_PRODUCTION_METHOD_OPTIONS,
   GAVEL_SAMPLE_PRICING,
   GAVEL_SOUND_BLOCK_IDS,
+  GAVEL_SOUND_BLOCK_LOGO_POSITIONS,
   GAVEL_SOUND_BLOCK_OPTIONS,
   GAVEL_SOUND_BLOCK_SHAPE_IDS,
   GAVEL_SOUND_BLOCK_SHAPE_OPTIONS,
@@ -43,6 +44,8 @@ import {
   clampSoundBlockLineText,
   formatGavelMoney,
   formatGavelOptionSummary,
+  gavelGiftBagLabel,
+  VELOUR_GIFT_BAG_PHOTO,
   formatGavelOrderFinish,
   getGavelBandFinish,
   getGavelProductPhoto,
@@ -54,6 +57,7 @@ import {
   getGavelStyle,
   getSoundBlockTopTextColor,
   isGavelRoundSoundBlockAvailable,
+  isGavelSoundBlockLogoPosition,
   isGavelSoundBlockOffered,
   isGavelStandOffered,
   joinSoundBlockText,
@@ -64,6 +68,7 @@ import {
   type GavelProductionMethodId,
   type GavelProductType,
   type GavelSoundBlockId,
+  type GavelSoundBlockLogoPosition,
   type GavelSoundBlockShapeId,
   type GavelStyleId,
   type GavelTextSizePreset,
@@ -95,10 +100,13 @@ import {
   gavelBandToSvgString,
   gavelStandPlateToDataUrl,
   gavelStandPlateToSvgString,
+  measureSoundBlockTop,
   paintGavelStandPlateCanvas,
   soundBlockTopToDataUrl,
   soundBlockTopToSvgString,
   type GavelPlateLogo,
+  type SoundBlockTopFit,
+  type SoundBlockTopRect,
 } from "~/utils/gavelBandTexture";
 import {
   getGavelMetalTexturesVersion,
@@ -106,7 +114,10 @@ import {
   preloadGavelMetalTextures,
   subscribeGavelMetalTextures,
 } from "~/utils/gavelMetalTexture";
-import { generateGavelProofPdf } from "~/utils/gavelPdf";
+import {
+  generateGavelProofPdf,
+  type GavelProofArtwork,
+} from "~/utils/gavelPdf";
 import { createApi } from "~/utils/api";
 import { createDesignerAnalytics } from "~/utils/designerAnalytics";
 import {
@@ -461,6 +472,7 @@ type GavelDesignerCachePayload = {
   logoScale?: number;
   logoGapScale?: number;
   logoSurface?: GavelLogoSurface;
+  soundBlockLogoPosition?: GavelSoundBlockLogoPosition;
   uvTextColor?: string;
   plateLines?: BadgeLine[];
   gavelStyle?: GavelStyleId;
@@ -500,6 +512,12 @@ const GAVEL_EXAMPLE_HEADLINE = "JUSTICE SERVES ALL";
 const GAVEL_EXAMPLE_SUBTITLE = "WITH INTEGRITY AND FAIRNESS";
 
 /** The logo sliders move continuously; keep stored values tidy for the payload. */
+/** "6 × $4.99 = $29.94" — the add-on line that stays live with the piece count. */
+function gavelAddonEquation(count: number, unit: number): string {
+  const pieces = Math.max(0, Math.round(count));
+  return `${pieces} × ${formatGavelMoney(unit)} = ${formatGavelMoney(pieces * unit)}`;
+}
+
 function roundAdjust(value: number): number {
   return Math.round(value * 1000) / 1000;
 }
@@ -556,6 +574,90 @@ function exampleArtLines(styleSource?: readonly BadgeLine[]): BadgeLine[] {
       bold: style?.bold,
       italic: style?.italic,
     });
+  });
+}
+
+function soundBlockFitIssue(fit: SoundBlockTopFit): string | null {
+  if (fit.overflowLine != null) {
+    return `Line ${fit.overflowLine} runs off the block at this logo size.`;
+  }
+  if (fit.lineCount > fit.capacity) {
+    const first = fit.capacity + 1;
+    const which =
+      first >= fit.lineCount
+        ? `Line ${fit.lineCount} doesn't`
+        : `Lines ${first}–${fit.lineCount} don't`;
+    return `${which} fit at a readable size with the logo this big.`;
+  }
+  if (fit.longLine != null) {
+    return `Line ${fit.longLine} is too long to print at a readable size in the text area.`;
+  }
+  return null;
+}
+
+function SoundBlockLayoutPreview({
+  textureUrl,
+  fit,
+  hasIssue,
+}: {
+  textureUrl: string;
+  fit: SoundBlockTopFit;
+  hasIssue: boolean;
+}) {
+  const box = (rect: SoundBlockTopRect) => ({
+    left: `${(rect.x / fit.size) * 100}%`,
+    top: `${(rect.y / fit.size) * 100}%`,
+    width: `${(rect.w / fit.size) * 100}%`,
+    height: `${(rect.h / fit.size) * 100}%`,
+  });
+  return (
+    <div
+      className="gf-sb-layout"
+      role="img"
+      aria-label={`Sound block top layout: logo zone and text zone, room for ${fit.capacity} of ${SOUND_BLOCK_MAX_LINES} lines`}
+    >
+      {textureUrl ? <img src={textureUrl} alt="" /> : null}
+      {fit.logoRect ? (
+        <span className="gf-sb-zone is-logo" style={box(fit.logoRect)}>
+          <span className="gf-sb-zone-tag">Logo</span>
+        </span>
+      ) : null}
+      {fit.lineCount > 0 ? (
+        <span
+          className={`gf-sb-zone is-text${hasIssue ? " is-over" : ""}`}
+          style={box(fit.textZone)}
+        >
+          <span className="gf-sb-zone-tag">Text</span>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/** Proof pages are viewed around 500pt wide, so full texture PNGs are wasted weight. */
+function shrinkProofPng(dataUrl: string, maxWidth: number): Promise<string> {
+  if (!dataUrl.startsWith("data:")) return Promise.resolve(dataUrl);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      if (img.width <= maxWidth) {
+        resolve(dataUrl);
+        return;
+      }
+      const scale = maxWidth / img.width;
+      const canvas = document.createElement("canvas");
+      canvas.width = maxWidth;
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(dataUrl);
+        return;
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
   });
 }
 
@@ -830,6 +932,8 @@ export default function GavelDesigner({
   const [logoGapScale, setLogoGapScale] = useState(1);
   const [logoSurface, setLogoSurface] =
     useState<GavelLogoSurface>("sound-block");
+  const [soundBlockLogoPosition, setSoundBlockLogoPosition] =
+    useState<GavelSoundBlockLogoPosition>("top");
   const [uvTextColor, setUvTextColor] = useState(GAVEL_UV_TEXT_COLORS[0]);
   const [plateLines, setPlateLines] = useState<BadgeLine[]>(defaultPlateLines);
 
@@ -1055,9 +1159,12 @@ export default function GavelDesigner({
       : []),
     ...(logoAllowed ? [{ id: "logo" as const, label: "Logo" }] : []),
   ];
-  const activeDesignTab = designTabs.some((tab) => tab.id === designTab)
-    ? designTab
-    : "band";
+  // The tabs stay hidden until the customer picks one or multiple designs,
+  // and that choice lives on the band tab.
+  const activeDesignTab =
+    designChoice !== null && designTabs.some((tab) => tab.id === designTab)
+      ? designTab
+      : "band";
   useEffect(() => {
     if (previewSubject === "product" || previewSubject === "stand") return;
     const next = editSurfaceForSubject(previewSubject);
@@ -1079,12 +1186,33 @@ export default function GavelDesigner({
     const area = tab === "logo" ? logoHomeTab : tab;
     setPreviewFocus((prev) => ({ area, token: prev.token + 1 }));
   };
+  const secondaryDesignTab: GavelDesignTab | null = isStand
+    ? "plate"
+    : soundBlockEngraved
+      ? "soundBlock"
+      : null;
+  /** With desktop tabs, the open tab decides which half of the name table is live. */
+  const bulkTableSurface: "band" | "secondary" | null =
+    isNarrow || designTabs.length <= 1
+      ? null
+      : activeDesignTab === "band"
+        ? "band"
+        : activeDesignTab === secondaryDesignTab
+          ? "secondary"
+          : null;
+  const hasDesignTabs = !isNarrow && designTabs.length > 1;
+  /**
+   * The name list is the order, so it stays on every tab. Other tabs show it as
+   * the table, whose columns follow the tab; the row editors are band work.
+   */
+  const bulkView: GavelBulkWorkspace =
+    !hasDesignTabs || activeDesignTab === "band" ? bulkWorkspace : "table";
   /** The spreadsheet fills the card only while adding names from a CSV. */
   const bulkWide =
     step === "design" &&
     bulkRows.length > 0 &&
     !isNarrow &&
-    bulkWorkspace === "table";
+    bulkView === "table";
 
   /**
    * With nothing typed anywhere, the preview shows the example copy from the
@@ -1167,8 +1295,13 @@ export default function GavelDesigner({
     [logoGapScale, logoScale, makePlateLogo],
   );
   const standLogo = isStand && logoSurface === "stand" ? plateLogo : null;
-  const soundBlockLogo =
-    soundBlockEngraved && logoSurface === "sound-block" ? plateLogo : null;
+  const soundBlockLogo = useMemo(
+    () =>
+      soundBlockEngraved && logoSurface === "sound-block" && plateLogo
+        ? { ...plateLogo, position: soundBlockLogoPosition }
+        : null,
+    [logoSurface, plateLogo, soundBlockEngraved, soundBlockLogoPosition],
+  );
 
   /**
    * The scanned brushed finishes arrive after first paint. Tracking their
@@ -1508,6 +1641,74 @@ export default function GavelDesigner({
     designChoice !== null && (bulkMode ? bulkRows.length > 0 : hasText);
   const bulkQuantity = bulkRows.reduce((sum, row) => sum + row.quantity, 0);
   const orderQuantity = bulkRows.length > 0 ? bulkQuantity : qty;
+  /** Pieces a matching block would be added for. In a list this is the Qty column, not the row count. */
+  const matchingPieceCount = bulkMode ? bulkQuantity : qty;
+  const matchingBlockUnit = (
+    id: Exclude<GavelSoundBlockId, "none">,
+    shape: GavelSoundBlockShapeId,
+  ): number | null => {
+    if (!isGavelSoundBlockOffered(id, gavelStyle)) return null;
+    if (shape === "square" && typeof soundBlockPriceAdds[id] === "number") {
+      return soundBlockPriceAdds[id]!;
+    }
+    if (!storeProduct) return null;
+    const base = resolveGavelVariant(storeProduct, {
+      productType: "gavel",
+      styleId: gavelStyle,
+      soundBlock: "none",
+      soundBlockShape: "square",
+    });
+    const match = resolveGavelVariant(storeProduct, {
+      productType: "gavel",
+      styleId: gavelStyle,
+      soundBlock: id,
+      soundBlockShape: shape,
+    });
+    if (!base || !match) return null;
+    return Math.max(0, Math.round((match.price - base.price) * 100) / 100);
+  };
+  const blankBlockShape: GavelSoundBlockShapeId =
+    soundBlock === "plain" ? effectiveSoundBlockShape : "square";
+  const blankBlockUnit = matchingBlockUnit("plain", blankBlockShape);
+  const personalizedBlockUnit = isGavelSoundBlockOffered("engraved", gavelStyle)
+    ? matchingBlockUnit("engraved", "square")
+    : null;
+  const blankBlockSoldOut =
+    soundBlock !== "plain" &&
+    storeProduct !== null &&
+    !isGavelVariantInStock(storeProduct, {
+      productType: "gavel",
+      styleId: gavelStyle,
+      soundBlock: "plain",
+      soundBlockShape: "square",
+    });
+  const personalizedBlockSoldOut =
+    soundBlock !== "engraved" &&
+    storeProduct !== null &&
+    !isGavelVariantInStock(storeProduct, {
+      productType: "gavel",
+      styleId: gavelStyle,
+      soundBlock: "engraved",
+      soundBlockShape: "square",
+    });
+  const blockBagsOn =
+    bagSelection === "secondary" || bagSelection === "both";
+  const gavelBagsOn = bagSelection === "gavel" || bagSelection === "both";
+  const matchingBagUnit = (() => {
+    const sample = bagProduct === null && !bagProductLoading;
+    const secondary =
+      bagVariants.secondary?.price ??
+      (sample ? GAVEL_SAMPLE_PRICING.suedeBagAdd : null);
+    if (!gavelBagsOn) return secondary;
+    const both =
+      bagVariants.both?.price ??
+      (sample ? GAVEL_SAMPLE_PRICING.suedeBagBothAdd : null);
+    const gavelBag =
+      bagVariants.gavel?.price ??
+      (sample ? GAVEL_SAMPLE_PRICING.suedeBagAdd : null);
+    if (both == null || gavelBag == null) return secondary;
+    return Math.max(0, Math.round((both - gavelBag) * 100) / 100);
+  })();
   const bulkSecondarySurface = isStand
     ? ("stand" as const)
     : soundBlockEngraved
@@ -1781,6 +1982,9 @@ export default function GavelDesigner({
           ) {
             setLogoSurface(payload.logoSurface);
           }
+          if (isGavelSoundBlockLogoPosition(payload.soundBlockLogoPosition)) {
+            setSoundBlockLogoPosition(payload.soundBlockLogoPosition);
+          }
           if (
             typeof payload.uvTextColor === "string" &&
             (GAVEL_UV_TEXT_COLORS as readonly string[]).includes(
@@ -2021,6 +2225,7 @@ export default function GavelDesigner({
       logoScale,
       logoGapScale,
       logoSurface,
+      soundBlockLogoPosition,
       uvTextColor,
       plateLines,
       gavelStyle,
@@ -2075,6 +2280,7 @@ export default function GavelDesigner({
     logoGapScale,
     logoScale,
     logoSurface,
+    soundBlockLogoPosition,
     plateLines,
     productId,
     productType,
@@ -2170,13 +2376,11 @@ export default function GavelDesigner({
   }, [gavelStyle, soundBlock]);
 
   useEffect(() => {
-    if (
-      !isStand &&
-      !hasSoundBlock &&
-      (bagSelection === "secondary" || bagSelection === "both")
-    ) {
-      setBagSelection("gavel");
-    }
+    if (isStand || hasSoundBlock) return;
+    // The block bag has nothing to cover once the blocks are gone. A gavel bag
+    // that was paired with it stays.
+    if (bagSelection === "secondary") setBagSelection("none");
+    else if (bagSelection === "both") setBagSelection("gavel");
   }, [bagSelection, hasSoundBlock, isStand]);
 
   useEffect(() => {
@@ -2301,6 +2505,35 @@ export default function GavelDesigner({
     },
     [isStand, plateArtLines, soundBlockArtLines],
   );
+
+  const soundBlockFit = useMemo(
+    () =>
+      isClient && soundBlockLogo
+        ? measureSoundBlockTop(soundBlockPreviewLines, { logo: soundBlockLogo })
+        : null,
+    [fontEpoch, isClient, soundBlockLogo, soundBlockPreviewLines],
+  );
+  /** 1-based list rows whose sound-block text loses a line to the logo. */
+  const soundBlockMisfitRows = useMemo(() => {
+    if (!isClient || !soundBlockLogo || !bulkMode || bulkRows.length < 2) {
+      return [];
+    }
+    const misfits: number[] = [];
+    bulkRows.forEach((row, index) => {
+      const fit = measureSoundBlockTop(secondaryLinesForBulkRow(row), {
+        logo: soundBlockLogo,
+      });
+      if (fit && soundBlockFitIssue(fit)) misfits.push(index + 1);
+    });
+    return misfits;
+  }, [
+    bulkMode,
+    bulkRows,
+    fontEpoch,
+    isClient,
+    secondaryLinesForBulkRow,
+    soundBlockLogo,
+  ]);
 
   const badgeForSave = useCallback((
     overrideLines?: BadgeLine[],
@@ -2842,6 +3075,7 @@ export default function GavelDesigner({
   const openBulkGrid = () => {
     setCsvModalOpen(false);
     setBulkWorkspace("grid");
+    if (activeDesignTab !== "band") openDesignTab("band");
   };
 
   const openBulkTable = () => {
@@ -3177,6 +3411,7 @@ export default function GavelDesigner({
     setLogoScale(1);
     setLogoGapScale(1);
     setLogoSurface("sound-block");
+    setSoundBlockLogoPosition("top");
     setUvTextColor(GAVEL_UV_TEXT_COLORS[0]);
     setPlateLines(defaultPlateLines());
     setGavelStyle("walnut");
@@ -3345,6 +3580,7 @@ export default function GavelDesigner({
       gavelLogoScale: logoFile && logoAllowed ? logoScale : null,
       gavelLogoGapScale: logoFile && logoAllowed ? logoGapScale : null,
       gavelLogoSurface: logoFile && logoAllowed ? logoSurface : null,
+      gavelSoundBlockLogoPosition: soundBlockLogo ? soundBlockLogoPosition : null,
       gavelLogoColorMode:
         logoFile && logoAllowed ? (isStand ? "full-color" : "black") : null,
       totalPrice: quote.total,
@@ -3479,6 +3715,62 @@ export default function GavelDesigner({
       await saveDraft({
         thumbnailBlob: mockupRef.current.blob,
       });
+      const artworks: GavelProofArtwork[] = [];
+      if (bulkRows.length > 1) {
+        for (let index = 0; index < bulkRows.length; index += 1) {
+          const row = bulkRows[index];
+          const rowPreset = row.textSize ?? textSize;
+          const rowLines = linesForBulkRow(row);
+          const secondary =
+            isStand || soundBlockEngraved
+              ? secondaryLinesForBulkRow(row)
+              : null;
+          const name =
+            row.texts.map((text) => text.trim()).find(Boolean) ||
+            `Design ${index + 1}`;
+          const bandUrl = await shrinkProofPng(
+            gavelBandToDataUrl(rowLines, rowPreset, bandDef.color),
+            1200,
+          );
+          const plateUrl =
+            isStand && secondary
+              ? await shrinkProofPng(
+                  gavelStandPlateToDataUrl(
+                    secondary,
+                    rowPreset,
+                    standDef.plateHex,
+                    { shaped: true, logo: standLogo },
+                  ),
+                  1200,
+                )
+              : null;
+          const blockUrl =
+            soundBlockEngraved && secondary
+              ? await shrinkProofPng(
+                  soundBlockTopToDataUrl(
+                    secondary,
+                    getSoundBlockTopTextColor(gavelStyle),
+                    { logo: soundBlockLogo },
+                  ),
+                  800,
+                )
+              : null;
+          artworks.push({
+            title: `${index + 1}. ${name}`,
+            quantity: row.quantity,
+            note:
+              row.textSize && row.textSize !== textSize
+                ? `Text size: ${row.textSize}`
+                : undefined,
+            unwrappedDataUrl: bandUrl,
+            plateDataUrl: plateUrl,
+            soundBlockDataUrl: blockUrl,
+          });
+          if (index % 3 === 2) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+          }
+        }
+      }
       const pdfBlob = await generateGavelProofPdf({
         styleId: gavelStyle,
         bandFinishId: bandFinish,
@@ -3503,6 +3795,7 @@ export default function GavelDesigner({
         unitPrice: quote.unitPrice,
         estimatedTotal: quote.total,
         logoFileName: logoAllowed ? (logoFile?.name ?? null) : null,
+        artworks: artworks.length > 1 ? artworks : undefined,
       });
       if (proofUrl) URL.revokeObjectURL(proofUrl);
       const url = URL.createObjectURL(pdfBlob);
@@ -3616,15 +3909,12 @@ export default function GavelDesigner({
             "_Gavel Style": styleDef.label,
             "_Band Finish": bandDef.label,
             "_Velour Bag":
-              bagSelection === "gavel"
-                ? "Velour gavel bag"
-                : bagSelection === "secondary"
-                  ? isStand
-                    ? "Velour stand bag"
-                    : "Velour sound block bag"
-                  : bagSelection === "both"
-                    ? "Both velour bags"
-                    : "No",
+              bagSelection === "none"
+                ? "No"
+                : gavelGiftBagLabel(
+                    bagSelection,
+                    isStand ? "stand" : "gavel",
+                  ),
             ...(logoFile && logoAllowed
               ? {
                   "_Logo File": logoFile.name,
@@ -3950,6 +4240,12 @@ export default function GavelDesigner({
           bandLabels={bulkBandLabels}
           secondaryLabels={bulkSecondaryLabels}
           secondaryUsesBandLimit={isStand}
+          secondaryTitle={isStand ? "Stand plate" : "Sound block"}
+          activeSurface={bulkTableSurface}
+          onActivateSurface={(surface) => {
+            if (surface === "band") openDesignTab("band");
+            else if (secondaryDesignTab) openDesignTab(secondaryDesignTab);
+          }}
           sortKey={bulkSortKey}
           sortAscending={bulkSortAscending}
           searchQuery={bulkSearch}
@@ -4426,7 +4722,7 @@ export default function GavelDesigner({
                 <div
                   className={`gf-design-step${
                     designChoice === null ? " is-awaiting-path" : ""
-                  }`}
+                  }${designChoice === "multiple" ? " has-bulk-list" : ""}`}
                 >
                   {!isNarrow && designTabs.length > 1 ? (
                     <div
@@ -4454,6 +4750,9 @@ export default function GavelDesigner({
                   <div
                     data-surface="band"
                     data-tab="band"
+                    data-bulk-table-shared={
+                      designChoice === "multiple" ? "" : undefined
+                    }
                     className="gf-band-fields"
                   >
                   {isStand ? (
@@ -4984,7 +5283,7 @@ export default function GavelDesigner({
                         Open CSV entry
                       </button>
                     </div>
-                  ) : bulkWorkspace === "one" ? (
+                  ) : bulkView === "one" ? (
                     <div className="gf-bulk-one">
                       <div className="gf-bulk-one-nav">
                         <button
@@ -5071,7 +5370,7 @@ export default function GavelDesigner({
                         }
                       />
                     </div>
-                  ) : bulkWorkspace === "bulk" ? (
+                  ) : bulkView === "bulk" ? (
                     <div className="gf-bulk-design-editor">
                       <div className="gf-bulk-one-nav">
                         <button
@@ -5157,7 +5456,7 @@ export default function GavelDesigner({
                           )
                         : null}
                     </div>
-                  ) : bulkWorkspace === "grid" ? (
+                  ) : bulkView === "grid" ? (
                     <div className="gf-gavel-grid-wrap">
                       <div className="gf-bulk-grid-tools">
                         <p className="gf-note" style={{ margin: 0 }}>
@@ -5244,7 +5543,9 @@ export default function GavelDesigner({
                           {bulkMode
                             ? bulkSecondaryMode === "shared"
                               ? "Each stand plate repeats the first two lines from its list entry."
-                              : "Each stand plate uses its own two lines from the list."
+                              : hasDesignTabs
+                                ? "Each stand plate uses its own two lines. Edit them in the Stand plate columns below."
+                                : "Each stand plate uses its own two lines from the list."
                             : "Independent of the band — leave blank to repeat the band text on the plate. Line 1 prints large, line 2 smaller beneath it."}
                         </p>
                         {!bulkMode ? (
@@ -5450,6 +5751,45 @@ export default function GavelDesigner({
                       </label>
                       {logoFile ? (
                         <div className="gf-logo-adjust">
+                          {soundBlockFit ? (
+                            <SoundBlockLayoutPreview
+                              textureUrl={soundBlockTextureUrl}
+                              fit={soundBlockFit}
+                              hasIssue={soundBlockFitIssue(soundBlockFit) != null}
+                            />
+                          ) : null}
+                          <div className="gf-logo-adjust-row">
+                            <span
+                              className="gf-logo-adjust-label"
+                              id="gf-logo-position-gavel"
+                            >
+                              Logo position
+                            </span>
+                          </div>
+                          <div
+                            className="gf-chip-row gf-sb-position"
+                            role="radiogroup"
+                            aria-labelledby="gf-logo-position-gavel"
+                          >
+                            {GAVEL_SOUND_BLOCK_LOGO_POSITIONS.map((option) => (
+                              <button
+                                key={option.id}
+                                type="button"
+                                role="radio"
+                                aria-checked={soundBlockLogoPosition === option.id}
+                                className={`gf-chip${
+                                  soundBlockLogoPosition === option.id
+                                    ? " is-on"
+                                    : ""
+                                }`}
+                                onClick={() =>
+                                  setSoundBlockLogoPosition(option.id)
+                                }
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
                           <div className="gf-logo-adjust-row">
                             <label htmlFor="gf-logo-size-gavel">Logo size</label>
                             <span className="gf-logo-adjust-value">
@@ -5464,6 +5804,7 @@ export default function GavelDesigner({
                             max={GAVEL_LOGO_SCALE_MAX}
                             step="any"
                             value={logoScale}
+                            aria-describedby="gf-sb-fit-note"
                             onChange={(event) =>
                               setLogoScale(
                                 clampGavelLogoScale(
@@ -5472,6 +5813,40 @@ export default function GavelDesigner({
                               )
                             }
                           />
+                          {soundBlockFit ? (
+                            <p
+                              className="gf-note gf-sb-fit-note"
+                              id="gf-sb-fit-note"
+                              aria-live="polite"
+                            >
+                              The logo takes about{" "}
+                              {Math.round(soundBlockFit.logoShare * 100)}% of
+                              the block.{" "}
+                              {soundBlockFit.capacity === 0
+                                ? "There is no room left for text."
+                                : `Room for ${soundBlockFit.capacity} of ${SOUND_BLOCK_MAX_LINES} lines at a readable size${
+                                    soundBlockFit.lineCount > 0
+                                      ? ` (using ${soundBlockFit.lineCount}).`
+                                      : "."
+                                  }`}
+                            </p>
+                          ) : null}
+                          {soundBlockFit && soundBlockFitIssue(soundBlockFit) ? (
+                            <p className="gf-sb-fit-warning" role="alert">
+                              {soundBlockFitIssue(soundBlockFit)} Make the logo
+                              smaller or try another position.
+                            </p>
+                          ) : null}
+                          {soundBlockMisfitRows.length > 0 ? (
+                            <p className="gf-sb-fit-warning" role="alert">
+                              {soundBlockMisfitRows.length === 1
+                                ? `Row ${soundBlockMisfitRows[0]} in your list has`
+                                : `${soundBlockMisfitRows.length} rows in your list (${soundBlockMisfitRows.slice(0, 6).join(", ")}${
+                                    soundBlockMisfitRows.length > 6 ? "…" : ""
+                                  }) have`}{" "}
+                              sound block text that won't fit at this logo size.
+                            </p>
+                          ) : null}
                         </div>
                       ) : null}
                       <p className="gf-note">
@@ -5496,7 +5871,9 @@ export default function GavelDesigner({
                         {bulkMode
                           ? bulkSecondaryMode === "shared"
                             ? "Each sound block repeats the band text from its list entry."
-                            : "Each sound block uses its own lines from the list."
+                            : hasDesignTabs
+                              ? "Each sound block uses its own lines. Edit them in the Sound block columns below."
+                              : "Each sound block uses its own lines from the list."
                           : "Leave all fields blank to repeat line 1 of the band. Blank optional lines stay blank so you can create spacing. Formatting is independent of the band."}
                       </p>
                       {!bulkMode ? (
@@ -5585,35 +5962,153 @@ export default function GavelDesigner({
                     </div>
                   ) : null}
 
+                  {!isStand ? (
+                    <div
+                      className="gf-sub-section gf-block-addons"
+                      style={{ marginTop: 12 }}
+                    >
+                      <p className="gf-sub-title">Add matching sound blocks?</p>
+                      <p className="gf-note">
+                        One {styleDef.label.toLowerCase()} block for each gavel
+                        already in this order. The price follows the list.
+                      </p>
+                      <div className="gf-addon-list">
+                        <button
+                          type="button"
+                          className={`gf-addon-row${
+                            soundBlock === "plain" ? " is-on" : ""
+                          }`}
+                          aria-pressed={soundBlock === "plain"}
+                          disabled={blankBlockSoldOut}
+                          onClick={() => {
+                            if (soundBlock === "plain") {
+                              setSoundBlock("none");
+                              return;
+                            }
+                            setSoundBlockShape("square");
+                            setSoundBlock("plain");
+                          }}
+                        >
+                          Add blank matching sound blocks
+                          {blankBlockSoldOut
+                            ? " — sold out"
+                            : blankBlockUnit == null
+                              ? storeProductLoading
+                                ? ""
+                                : " — price shown at checkout"
+                              : ` — ${gavelAddonEquation(
+                                  matchingPieceCount,
+                                  blankBlockUnit,
+                                )}`}
+                        </button>
+                        {isGavelSoundBlockOffered("engraved", gavelStyle) ? (
+                          <button
+                            type="button"
+                            className={`gf-addon-row${
+                              soundBlock === "engraved" ? " is-on" : ""
+                            }`}
+                            aria-pressed={soundBlock === "engraved"}
+                            disabled={personalizedBlockSoldOut}
+                            onClick={() => {
+                              if (soundBlock === "engraved") {
+                                setSoundBlock("none");
+                                return;
+                              }
+                              setSoundBlockShape("square");
+                              setSoundBlock("engraved");
+                            }}
+                          >
+                            Add personalized matching sound blocks
+                            {personalizedBlockSoldOut
+                              ? " — sold out"
+                              : personalizedBlockUnit == null
+                                ? storeProductLoading
+                                  ? ""
+                                  : " — price shown at checkout"
+                                : ` — ${gavelAddonEquation(
+                                    matchingPieceCount,
+                                    personalizedBlockUnit,
+                                  )}`}
+                          </button>
+                        ) : null}
+                        {hasSoundBlock ? (
+                          <button
+                            type="button"
+                            className={`gf-addon-row${
+                              blockBagsOn ? " is-on" : ""
+                            }`}
+                            aria-pressed={blockBagsOn}
+                            disabled={!blockBagsOn && matchingBagUnit == null}
+                            onClick={() => {
+                              if (blockBagsOn) {
+                                setBagSelection(
+                                  bagSelection === "both" ? "gavel" : "none",
+                                );
+                                return;
+                              }
+                              setBagSelection(
+                                bagSelection === "gavel" ? "both" : "secondary",
+                              );
+                            }}
+                          >
+                            Add matching gift bags
+                            {matchingBagUnit == null
+                              ? ""
+                              : ` — ${gavelAddonEquation(
+                                  matchingPieceCount,
+                                  matchingBagUnit,
+                                )}${
+                                  gavelBagsOn ? " on top of the gavel bags" : ""
+                                }`}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="gf-sub-section gf-bags" style={{ marginTop: 12 }}>
-                    <p className="gf-sub-title">Add velour storage bags?</p>
-                    <div className="gf-pill-row">
+                    <p className="gf-sub-title">Add a velour gift bag?</p>
+                    <div
+                      className="gf-bag-options"
+                      role="group"
+                      aria-label="Add a velour gift bag?"
+                    >
                       <button
                         type="button"
-                        className={`gf-pill ${
+                        className={`gf-bag-option is-plain ${
                           bagSelection === "none" ? "is-selected" : ""
                         }`}
                         onClick={() => setBagSelection("none")}
                       >
-                        No thanks
+                        <span className="gf-bag-option-label">No thanks</span>
                       </button>
                       <button
                         type="button"
-                        className={`gf-pill ${
+                        className={`gf-bag-option ${
                           bagSelection === "gavel" ? "is-selected" : ""
                         }`}
                         disabled={bagProduct !== null && !bagVariants.gavel}
                         onClick={() => setBagSelection("gavel")}
                       >
-                        Velour gavel bag — +
-                        {formatGavelMoney(
-                          bagVariants.gavel?.price ??
-                            GAVEL_SAMPLE_PRICING.suedeBagAdd,
-                        )}
+                        <img
+                          className="gf-bag-option-photo"
+                          src={VELOUR_GIFT_BAG_PHOTO}
+                          alt=""
+                        />
+                        <span className="gf-bag-option-label">
+                          {gavelGiftBagLabel("gavel", productType)}
+                        </span>
+                        <span className="gf-bag-option-price">
+                          +
+                          {formatGavelMoney(
+                            bagVariants.gavel?.price ??
+                              GAVEL_SAMPLE_PRICING.suedeBagAdd,
+                          )}
+                        </span>
                       </button>
                       <button
                         type="button"
-                        className={`gf-pill ${
+                        className={`gf-bag-option ${
                           bagSelection === "secondary" ? "is-selected" : ""
                         }${
                           (!isStand && !hasSoundBlock) ||
@@ -5627,15 +6122,25 @@ export default function GavelDesigner({
                         }
                         onClick={() => setBagSelection("secondary")}
                       >
-                        {isStand ? "Velour stand" : "Velour sound block"} bag — +
-                        {formatGavelMoney(
-                          bagVariants.secondary?.price ??
-                            GAVEL_SAMPLE_PRICING.suedeBagAdd,
-                        )}
+                        <img
+                          className="gf-bag-option-photo"
+                          src={VELOUR_GIFT_BAG_PHOTO}
+                          alt=""
+                        />
+                        <span className="gf-bag-option-label">
+                          {gavelGiftBagLabel("secondary", productType)}
+                        </span>
+                        <span className="gf-bag-option-price">
+                          +
+                          {formatGavelMoney(
+                            bagVariants.secondary?.price ??
+                              GAVEL_SAMPLE_PRICING.suedeBagAdd,
+                          )}
+                        </span>
                       </button>
                       <button
                         type="button"
-                        className={`gf-pill ${
+                        className={`gf-bag-option ${
                           bagSelection === "both" ? "is-selected" : ""
                         }${
                           (!isStand && !hasSoundBlock) ||
@@ -5649,17 +6154,30 @@ export default function GavelDesigner({
                         }
                         onClick={() => setBagSelection("both")}
                       >
-                        Both velour bags — +
-                        {formatGavelMoney(
-                          bagVariants.both?.price ??
-                            GAVEL_SAMPLE_PRICING.suedeBagBothAdd,
-                        )}
+                        <img
+                          className="gf-bag-option-photo"
+                          src={VELOUR_GIFT_BAG_PHOTO}
+                          alt=""
+                        />
+                        <span className="gf-bag-option-label">
+                          {gavelGiftBagLabel("both", productType)}
+                        </span>
+                        <span className="gf-bag-option-price">
+                          +
+                          {formatGavelMoney(
+                            bagVariants.both?.price ??
+                              GAVEL_SAMPLE_PRICING.suedeBagBothAdd,
+                          )}
+                        </span>
                       </button>
                     </div>
+                    <p className="gf-note">
+                      Soft velour bag — presentation-ready for the award.
+                    </p>
                     {!isStand && !hasSoundBlock ? (
                       <p className="gf-note">
-                        Add a sound block in Options to choose its bag or the
-                        two-bag set.
+                        Add matching sound blocks above to include a gift bag
+                        for each block.
                       </p>
                     ) : null}
                   </div>
@@ -5944,17 +6462,22 @@ export default function GavelDesigner({
                   ? "gavel and stand"
                   : "gavel"}{" "}
               to your cart.{" "}
-              {bulkRows.length > 0
-                ? "The preview shows the selected name; every piece is added with the same style."
+              {bulkRows.length > 1
+                ? "Each design is shown flat: the unwrapped band, plus the stand plate or sound block when those are part of the order."
                 : ""}
             </p>
             <ProofPdfViewer
               url={proofUrl}
-              title="Gavel band preview"
+              title={
+                bulkRows.length > 1 ? "Design previews" : "Gavel band preview"
+              }
               loadingLabel="Loading preview..."
               failureLabel="Could not render the preview."
             />
             {error ? <div className="gf-error">{error}</div> : null}
+            <p className="gf-muted" style={{ margin: "12px 0 0" }}>
+              What you see on screen is what we produce.
+            </p>
             <div className="gf-modal-actions">
               <button
                 type="button"

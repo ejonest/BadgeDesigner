@@ -489,6 +489,78 @@
   cursor: pointer;
 }
 
+/* Two header rows: surface groups on top, sortable columns pinned beneath. */
+.gf-bulk-table.has-groups .gf-bulk-group-row th {
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 9px;
+  border-bottom: 0;
+}
+
+.gf-bulk-table.has-groups thead tr:not(.gf-bulk-group-row) th {
+  top: 30px;
+}
+
+.gf-bulk-table th.gf-bulk-group {
+  border-left: 1px solid var(--gf-border);
+  vertical-align: middle;
+}
+
+.gf-bulk-group-label {
+  color: var(--gf-text);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gf-bulk-table th.gf-bulk-group.is-active {
+  box-shadow: inset 0 3px 0 var(--gf-gold-2);
+}
+
+.gf-bulk-table th > .gf-bulk-group-next {
+  float: right;
+  width: auto;
+  padding: 0;
+  margin-left: 12px;
+  border: 0;
+  background: transparent;
+  color: #8a6a1e;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.gf-bulk-table th > .gf-bulk-group-next:hover,
+.gf-bulk-table th > .gf-bulk-group-next:focus-visible {
+  text-decoration: underline;
+}
+
+/* The secondary surface's first column starts a visible divide. */
+.gf-bulk-table tr > .is-band + .is-secondary {
+  border-left: 1px solid var(--gf-border);
+}
+
+.gf-bulk-table th.is-dim,
+.gf-bulk-table td.is-dim .gf-bulk-cell {
+  opacity: 0.42;
+}
+
+.gf-bulk-table td.is-dim .gf-bulk-cell {
+  cursor: pointer;
+}
+
+.gf-bulk-table tbody tr:hover td.is-dim .gf-bulk-cell {
+  border-color: transparent;
+  opacity: 0.6;
+}
+
+.gf-bulk-table td.is-dim .gf-bulk-cell:focus {
+  box-shadow: none;
+}
+
 .gf-bulk-table td {
   padding: 2px 3px;
   border-top: 1px solid rgba(10, 22, 40, 0.07);
@@ -1024,8 +1096,46 @@
 .gf-design-step.is-awaiting-path .gf-band-fields > .gf-sub-title,
 .gf-design-step.is-awaiting-path [data-surface="plate"],
 .gf-design-step.is-awaiting-path [data-surface="soundBlock"],
-.gf-design-step.is-awaiting-path .gf-bags {
+.gf-design-step.is-awaiting-path .gf-bags,
+.gf-design-step.is-awaiting-path .gf-block-addons {
   display: none;
+}
+
+.gf-addon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.gf-addon-row {
+  width: 100%;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1.5px solid var(--gf-border);
+  border-radius: 10px;
+  color: var(--gf-navy);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gf-addon-row.is-on {
+  border-color: var(--gf-gold-2);
+  background: #fffbf2;
+}
+
+.gf-addon-row:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.gf-addon-row:focus-visible {
+  outline: 2px solid var(--gf-gold-2);
+  outline-offset: 2px;
 }
 
 .gf-path-hero {
@@ -1093,8 +1203,72 @@
   opacity: 0.4;
 }
 
-.gf-bags.is-held .gf-pill.is-unavailable {
+.gf-bags.is-held .gf-bag-option.is-unavailable {
   display: none;
+}
+
+.gf-bag-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.gf-bag-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  min-height: 118px;
+  height: 100%;
+  padding: 8px 8px 10px;
+  background: #fff;
+  border: 1.5px solid var(--gf-border);
+  border-radius: 10px;
+  color: var(--gf-navy);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+
+.gf-bag-option.is-plain {
+  justify-content: center;
+}
+
+.gf-bag-option.is-selected {
+  border-color: var(--gf-gold-2);
+  background: #fffbf2;
+}
+
+.gf-bag-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.gf-bag-option:focus-visible {
+  outline: 2px solid var(--gf-gold-2);
+  outline-offset: 2px;
+}
+
+.gf-bag-option-photo {
+  width: 100%;
+  height: 108px;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  margin-bottom: 4px;
+  pointer-events: none;
+}
+
+.gf-bag-option-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.gf-bag-option-price {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 @media (max-width: 700px) {
@@ -2191,6 +2365,89 @@
   font-variant-numeric: tabular-nums;
 }
 
+.gf-logo-adjust-label {
+  font-weight: 600;
+  color: var(--gf-navy);
+}
+
+/* Sound-block top as a layout: the engraved art over wood, zones outlined. */
+.gf-sb-layout {
+  position: relative;
+  width: min(220px, 100%);
+  aspect-ratio: 1;
+  margin: 0 auto 14px;
+  border-radius: 8px;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(90, 52, 22, 0.08) 0 3px,
+      transparent 3px 11px
+    ),
+    linear-gradient(135deg, #b9895a, #9c6a3d);
+  box-shadow:
+    inset 0 0 0 1px rgba(60, 35, 15, 0.35),
+    0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.gf-sb-layout img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.gf-sb-zone {
+  position: absolute;
+  border: 1.5px dashed rgba(255, 255, 255, 0.9);
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.gf-sb-zone.is-logo {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.gf-sb-zone.is-text.is-over {
+  border-color: #ffd7d2;
+  background: rgba(200, 40, 30, 0.22);
+}
+
+.gf-sb-zone-tag {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(20, 28, 40, 0.72);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.gf-sb-position {
+  margin-bottom: 12px;
+}
+
+.gf-sb-fit-note {
+  margin-top: -4px;
+}
+
+.gf-sb-fit-warning {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fdecea;
+  border: 1px solid #f3c2bc;
+  color: #8a2a1f;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
 /* The quantity slider carries a large bottom margin; stacked sliders sit tighter. */
 .gf-range.is-inline {
   margin-bottom: 12px;
@@ -2447,6 +2704,44 @@
 
   .gf-wizard-root[data-design-tab] [data-tab] {
     margin-top: 0 !important;
+  }
+
+  /*
+   * In bulk mode the name list is the order, so it stays on screen for every
+   * tab. The tab's own controls come first, the list below them, then bags.
+   */
+  .gf-wizard-root[data-design-tab] .gf-design-step.has-bulk-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .gf-wizard-root[data-design-tab]
+    .gf-design-step.has-bulk-list
+    > .gf-band-fields[data-bulk-table-shared] {
+    display: block;
+    order: 1;
+  }
+
+  .gf-wizard-root[data-design-tab]
+    .gf-design-step.has-bulk-list
+    > .gf-block-addons {
+    order: 2;
+  }
+
+  .gf-wizard-root[data-design-tab] .gf-design-step.has-bulk-list > .gf-bags {
+    order: 3;
+  }
+
+  .gf-wizard-root[data-design-tab]:not([data-design-tab="band"])
+    .gf-design-step.has-bulk-list
+    > .gf-band-fields[data-bulk-table-shared] {
+    margin-top: 12px !important;
+  }
+
+  .gf-wizard-root[data-design-tab]:not([data-design-tab="band"])
+    .gf-band-fields[data-bulk-table-shared]
+    > :not(.gf-bulk-list, .gf-bulk-empty) {
+    display: none;
   }
 
   /*

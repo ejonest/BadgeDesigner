@@ -40,6 +40,14 @@ type Props = {
   secondaryLabels: readonly string[];
   /** Plate lines share the band's per-size limit; sound-block lines share a total. */
   secondaryUsesBandLimit: boolean;
+  /** Group heading over the secondary columns, e.g. "Sound block". */
+  secondaryTitle?: string;
+  /**
+   * The surface the design tab is on. Its columns are editable; the other
+   * surface's stay visible but dimmed. Null leaves every column live.
+   */
+  activeSurface?: "band" | "secondary" | null;
+  onActivateSurface?: (surface: "band" | "secondary") => void;
   sortKey: GavelBulkSortKey | null;
   sortAscending: boolean;
   searchQuery: string;
@@ -362,6 +370,9 @@ export function GavelBulkRowsTable({
   bandLabels,
   secondaryLabels,
   secondaryUsesBandLimit,
+  secondaryTitle = "Second surface",
+  activeSurface = null,
+  onActivateSurface,
   sortKey,
   sortAscending,
   searchQuery,
@@ -376,11 +387,28 @@ export function GavelBulkRowsTable({
 }: Props) {
   /** Everything after the # column: band, secondary, size, qty, actions. */
   const columnCount = 4 + secondaryCount + 3;
+  const grouped = secondaryCount > 0;
+  const scoped = grouped && activeSurface !== null;
+  const isDim = (surface: "band" | "secondary") =>
+    scoped && activeSurface !== surface;
+  const groupClass = (surface: "band" | "secondary") =>
+    [
+      surface === "band" ? "is-band" : "is-secondary",
+      isDim(surface) ? "is-dim" : "",
+      scoped && !isDim(surface) ? "is-active" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
 
-  const sortHeader = (key: GavelBulkSortKey, label: string) => (
+  const sortHeader = (
+    key: GavelBulkSortKey,
+    label: string,
+    surface?: "band" | "secondary",
+  ) => (
     <th
       key={key}
       scope="col"
+      className={surface ? groupClass(surface) : undefined}
       aria-sort={
         sortKey === key ? (sortAscending ? "ascending" : "descending") : undefined
       }
@@ -394,19 +422,61 @@ export function GavelBulkRowsTable({
 
   return (
     <div className="gf-bulk-table-wrap">
-      <table className="gf-bulk-table" aria-label="Name list">
+      <table
+        className={`gf-bulk-table${grouped ? " has-groups" : ""}`}
+        aria-label="Name list"
+      >
         <thead>
+          {grouped ? (
+            <tr className="gf-bulk-group-row">
+              <th aria-hidden="true" />
+              <th
+                scope="colgroup"
+                colSpan={4}
+                className={`gf-bulk-group ${groupClass("band")}`}
+              >
+                <span className="gf-bulk-group-label">Gavel band</span>
+                {activeSurface === "band" && onActivateSurface ? (
+                  <button
+                    type="button"
+                    className="gf-bulk-group-next"
+                    onClick={() => onActivateSurface("secondary")}
+                  >
+                    {`Now edit the ${secondaryTitle.toLowerCase()}s →`}
+                  </button>
+                ) : null}
+              </th>
+              <th
+                scope="colgroup"
+                colSpan={secondaryCount}
+                className={`gf-bulk-group ${groupClass("secondary")}`}
+              >
+                <span className="gf-bulk-group-label">{secondaryTitle}</span>
+                {activeSurface === "secondary" && onActivateSurface ? (
+                  <button
+                    type="button"
+                    className="gf-bulk-group-next"
+                    onClick={() => onActivateSurface("band")}
+                  >
+                    ← Back to the gavel band
+                  </button>
+                ) : null}
+              </th>
+              <th colSpan={3} aria-hidden="true" />
+            </tr>
+          ) : null}
           <tr>
             <th scope="col" className="gf-bulk-num">
               #
             </th>
             {(["line1", "line2", "line3", "line4"] as const).map((key, index) =>
-              sortHeader(key, bandLabels[index]),
+              sortHeader(key, bandLabels[index], grouped ? "band" : undefined),
             )}
             {Array.from({ length: secondaryCount }, (_, index) =>
               sortHeader(
                 `secondary${index + 1}` as GavelBulkSortKey,
                 secondaryLabels[index],
+                "secondary",
               ),
             )}
             <th scope="col">Size</th>
@@ -436,6 +506,7 @@ export function GavelBulkRowsTable({
 
             const cell = (
               key: string,
+              surface: "band" | "secondary",
               value: string,
               label: string,
               max: number | undefined,
@@ -446,8 +517,19 @@ export function GavelBulkRowsTable({
                 issues.overCells.has(key) ||
                 (key === "band-0" && issues.missingRequired);
               const over = max !== undefined && value.length > max;
+              const dim = isDim(surface);
               return (
-                <td key={key} className={flagged ? "is-flagged" : undefined}>
+                <td
+                  key={key}
+                  className={
+                    [
+                      flagged ? "is-flagged" : "",
+                      grouped ? groupClass(surface) : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ") || undefined
+                  }
+                >
                   <input
                     className="gf-bulk-cell"
                     value={value}
@@ -457,6 +539,20 @@ export function GavelBulkRowsTable({
                     aria-label={`Row ${rowNumber}, ${label}`}
                     aria-invalid={flagged || undefined}
                     spellCheck={false}
+                    readOnly={dim}
+                    tabIndex={dim ? -1 : undefined}
+                    title={
+                      dim
+                        ? `Click to edit the ${
+                            surface === "band"
+                              ? "gavel band"
+                              : secondaryTitle.toLowerCase()
+                          }`
+                        : undefined
+                    }
+                    onMouseDown={
+                      dim ? () => onActivateSurface?.(surface) : undefined
+                    }
                     onChange={(event) => onChange(event.target.value)}
                   />
                 </td>
@@ -482,6 +578,7 @@ export function GavelBulkRowsTable({
                 {row.texts.map((text, lineIndex) =>
                   cell(
                     `band-${lineIndex}`,
+                    "band",
                     text,
                     bandLabels[lineIndex],
                     lineLimit(lineIndex),
@@ -492,6 +589,7 @@ export function GavelBulkRowsTable({
                 {row.secondaryTexts.slice(0, secondaryCount).map((text, lineIndex) =>
                   cell(
                     `secondary-${lineIndex}`,
+                    "secondary",
                     text,
                     secondaryLabels[lineIndex],
                     secondaryUsesBandLimit
