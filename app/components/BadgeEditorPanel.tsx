@@ -275,7 +275,7 @@ export interface BadgeEditorPanelProps {
   /** Plaque: slot placeholder per line (HTML placeholder + treat as unset when it matches stored text). */
   linePlaceholders?: (string | undefined)[];
   /** Badge redesign: reference-style text line cards. Desk sign: same shell, auto sizes (no size picker). */
-  panelLayout?: "default" | "aqb-badge" | "aqb-desk-sign";
+  panelLayout?: "default" | "aqb-badge" | "aqb-desk-sign" | "aqb-sign";
   /** Lines flagged after layout refit (e.g. icon added) truncated text to fit. */
   layoutCharLimitByLine?: Record<number, boolean>;
   /** Acrylic desk signs: personalized text color is fixed — hide color controls. */
@@ -397,8 +397,13 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
     variant === "plaque" &&
     Boolean(badge.templateId && isPlaqueAttachedTemplateId(badge.templateId));
 
-  if (panelLayout === "aqb-badge" || panelLayout === "aqb-desk-sign") {
+  if (
+    panelLayout === "aqb-badge" ||
+    panelLayout === "aqb-desk-sign" ||
+    panelLayout === "aqb-sign"
+  ) {
     const isDeskSignPanel = panelLayout === "aqb-desk-sign";
+    const isSignPanel = panelLayout === "aqb-sign";
     const lineInputValue = (line: BadgeLine, idx: number) => {
       const defaultTexts =
         idx === 0
@@ -454,7 +459,19 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
           const maxTextWidth = isDeskSignPanel
             ? deskSignMaxTextWidth(designBox.width)
             : aqbBadgeMaxTextWidth(designBox, badge, badge.templateId);
-          const showCharLimitError = isDeskSignPanel
+          const signLogoCeilPx = isSignPanel
+            ? badge.logo?.src?.trim()
+              ? badge.signLogoLayoutSnapshot?.textPxCeilingByLine?.[idx] ??
+                badge.signLogoLayoutSnapshot?.textPxByLine?.[idx]
+              : undefined
+            : undefined;
+          const maxFontPxForLine =
+            signLogoCeilPx !== undefined
+              ? Math.min(fontSizeMaxPx, signLogoCeilPx)
+              : fontSizeMaxPx;
+          const showCharLimitError = isSignPanel
+            ? false
+            : isDeskSignPanel
             ? Boolean(charLimitRejectedByLine[idx]) ||
               Boolean(layoutCharLimitByLine?.[idx]) ||
               (displayText.trim().length > 0 &&
@@ -520,6 +537,10 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   value={displayText}
                   onChange={(e) => {
                     const attempted = e.target.value;
+                    if (isSignPanel) {
+                      onLineChange(idx, { text: attempted });
+                      return;
+                    }
                     if (isDeskSignPanel) {
                       const {
                         text: fitted,
@@ -584,7 +605,23 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                       ariaLabel={`Font for line ${idx + 1}`}
                     />
                   </div>
-                {!isDeskSignPanel ? (
+                {isSignPanel ? (
+                  <div className="aqb-badge-trc-group">
+                    <div className="aqb-badge-trc-label">Size</div>
+                    <FontSizeControl
+                      line={line}
+                      lineIndex={idx}
+                      designBox={{
+                        ...designBox,
+                        height: fontMetricsHeight,
+                      }}
+                      editable={editable}
+                      onLineChange={onLineChange}
+                      minFontPx={fontSizeMinPx}
+                      maxFontPx={maxFontPxForLine}
+                    />
+                  </div>
+                ) : !isDeskSignPanel ? (
                   <div className="aqb-badge-trc-group">
                     <div className="aqb-badge-trc-label">Size</div>
                     <AqbBadgeSizeSelect
@@ -666,6 +703,64 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                   </button>
                 ) : null}
               </div>
+
+              {isSignPanel ? (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    className={`aqb-badge-finish-pill ${
+                      line.bold ? "selected" : ""
+                    }`}
+                    onClick={() => onLineChange(idx, { bold: !line.bold })}
+                    disabled={!editable}
+                  >
+                    Bold
+                  </button>
+                  <button
+                    type="button"
+                    className={`aqb-badge-finish-pill ${
+                      line.italic ? "selected" : ""
+                    }`}
+                    onClick={() => onLineChange(idx, { italic: !line.italic })}
+                    disabled={!editable}
+                  >
+                    Italic
+                  </button>
+                  <button
+                    type="button"
+                    className={`aqb-badge-finish-pill ${
+                      line.underline ? "selected" : ""
+                    }`}
+                    onClick={() =>
+                      onLineChange(idx, { underline: !line.underline })
+                    }
+                    disabled={!editable}
+                  >
+                    Underline
+                  </button>
+                  {(
+                    [
+                      ["left", "Left"],
+                      ["center", "Center"],
+                      ["right", "Right"],
+                    ] as const
+                  ).map(([alignKey, alignLabel]) => (
+                    <button
+                      key={alignKey}
+                      type="button"
+                      className={`aqb-badge-finish-pill ${
+                        (line.align || "center") === alignKey
+                          ? "selected"
+                          : ""
+                      }`}
+                      onClick={() => onAlignmentChange(idx, alignKey)}
+                      disabled={!editable}
+                    >
+                      {alignLabel}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
 
               {line.color &&
               (badgeTextColorConflictsWithBackground(

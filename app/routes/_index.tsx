@@ -2,6 +2,7 @@ import type { MetaFunction, LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import BadgeDesigner from "~/components/BadgeDesigner";
+import BadgeDesignerRedesign from "~/components/BadgeDesignerRedesign";
 import type { DesignerVariant } from "~/constants/designerVariants";
 import {
   getDesignerConfig,
@@ -75,6 +76,21 @@ export default function Index() {
     GADGET_API_URL,
     GADGET_API_KEY,
   } = useLoaderData<typeof loader>();
+
+  if (designerVariant === "sign") {
+    return (
+      <div className="min-h-screen h-full bg-[#F0EDE6]">
+        <BadgeDesignerRedesign
+          variant="sign"
+          productId={productId}
+          shop={shop}
+          customerId={customerId}
+          gadgetApiUrl={GADGET_API_URL}
+          gadgetApiKey={GADGET_API_KEY}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

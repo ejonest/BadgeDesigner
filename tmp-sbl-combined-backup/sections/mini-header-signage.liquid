@@ -1,0 +1,108 @@
+<header class="collection-header collection-header-sections">
+	{% if section.settings.display_collection_image %}
+    
+    {% if collection.description contains 'img' %}
+    {%- assign img_url = collection.description | split: '<img' | last | split: '>' | first -%}
+
+    {% elsif section.settings.collection_image != blank %}
+    {%- assign img_url = section.settings.collection_image | img_url: 'master' -%}
+    
+    {% endif %}
+    
+    <div class="collection-image">
+        {% if collection.description contains 'img' or section.settings.collection_image != blank %}
+        
+        {% if collection.description contains 'img' %}
+        <img {{ img_url }} alt="{{ collection_title }}" class="lazyautosizes lazyloaded" data-sizes="auto"/>
+        {% else %}
+        <img data-src="{{ img_url }}"
+            src="{{ img_url }}" class="lazyautosizes lazyloaded" data-sizes="auto">
+        {% endif %}
+      
+        {% endif %}     
+        
+    </div>
+    {% endif %}
+</header> 
+
+<div class="collections-wrapper header-copy-text">
+      
+      <h2 class="collection-title">
+        <span title="{{ 'collections.general.link_title' | t: title: collection_title }}" {% if settings.enable_multilang %}data-translate="collections.general.link_title|title:{{collection_title}}" translate-item="title"{% endif %}>
+          {% render 'multilang' with collection.title %}
+        </span>
+      </h2>
+      <div class="des">
+        {% if settings.enable_multilang and collection.description contains '[lang2]' %}
+        <div class="lang1">
+          {{ collection.description | split: '[lang2]' | first | truncatewords: 300 }}
+        </div>
+        <div class="lang2">
+          {{ collection.description | split: '[lang2]' | last | truncatewords: 300 }}
+        </div>
+        {% else %}
+        <div>
+          {{ collection.description | truncatewords: 300 }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+<style>
+.collections-wrapper.header-copy-text {
+	padding: 20px !important;
+    margin-top: -20px;
+    text-align: left;
+    background: #f7f8f9;
+    border-radius: 5px;
+    margin-bottom: 30px;
+}
+h2.collection-title span {
+    font-size: 28px;
+  	margin-bottom: 10px;
+  	color: #0e5ea1;
+}
+</style>
+
+{% schema %}
+  {
+    "name": "Collection Header",
+    "settings": [
+      {
+        "type": "checkbox",
+        "id": "display_collection_image",
+        "label": "Show collection image?",
+        "default": true
+      },
+      {
+        "type": "image_picker",
+        "id": "collection_image",
+        "label": "Image Category",
+	    "info": "This image will show up when you don't add image in Collections Description"
+      },
+	  {
+        "type": "checkbox",
+        "id": "display_collection_des",
+        "label": "Display Collections Description?",
+        "default": true
+      },
+	  {
+		"type" : "color",
+		"id" : "color_wrapper",
+		"label" : "Color Wrapper",
+		"default" : "#fff"
+	  },
+	  {
+		"type" : "text",
+		"id" : "height_img",
+		"label" : "Image height",
+		"default" : "240px"
+      }
+	]
+  }
+{% endschema %}
+
+<style>
+header.page-header h2 {
+	display: none;
+}
+</style>
