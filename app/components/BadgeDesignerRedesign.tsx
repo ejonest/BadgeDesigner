@@ -259,6 +259,7 @@ import {
   loadTemplates,
   loadTemplateById,
   getTemplateConfigsForVariant,
+  clearTemplateCache,
 } from "../utils/templates";
 import type { LoadedTemplate } from "../utils/templates";
 import {
@@ -3783,10 +3784,33 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     }
   }, [sectionsOpen.border]);
 
-  // Load templates - refresh when templateRefreshKey changes
+  // Load templates - refresh when templateRefreshKey changes.
+  // Signs paint after the four featured shapes; the rest of the catalog fills in behind them.
   useEffect(() => {
     let cancelled = false;
     setTemplateLoadError(null);
+    const applyLoadedList = (list: LoadedTemplate[]) => {
+      setTemplates(list);
+      setTemplateLoadError(null);
+      console.log(
+        "[BadgeDesignerRedesign] templates loaded:",
+        list.map((t) => t.id),
+      );
+      // Only apply default when nothing valid is selected yet — never clobber a user pick
+      // when a slow/stale async load finishes (e.g. React Strict Mode double mount).
+      if (list.length > 0) {
+        setUniversalTemplateId((current) => {
+          if (current && list.some((t) => t.id === current)) {
+            return current;
+          }
+          return variant === "plaque"
+            ? defaultPlaqueTemplateId()
+            : variant === "desk-sign"
+              ? ""
+              : list[0].id;
+        });
+      }
+    };
     (async () => {
       try {
         console.log(
@@ -3796,29 +3820,26 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           templateRefreshKey,
           ")",
         );
-        const list = await loadTemplates(variant);
-        if (cancelled) return;
-        setTemplates(list);
-        setTemplateLoadError(null);
-        console.log(
-          "[BadgeDesignerRedesign] templates loaded:",
-          list.map((t) => t.id),
+        if (templateRefreshKey > 0) clearTemplateCache();
+        const priorityIds =
+          variant === "sign"
+            ? SIGN_TEMPLATE_TYPES.map((type) => type.sizes[0].templateId)
+            : undefined;
+        const first = await loadTemplates(
+          variant,
+          priorityIds ? { ids: priorityIds } : undefined,
         );
+        if (cancelled) return;
+        applyLoadedList(first);
 
-        // Only apply default when nothing valid is selected yet — never clobber a user pick
-        // when a slow/stale async load finishes (e.g. React Strict Mode double mount).
-        if (list.length > 0) {
-          setUniversalTemplateId((current) => {
-            if (current && list.some((t) => t.id === current)) {
-              return current;
-            }
-            return variant === "plaque"
-              ? defaultPlaqueTemplateId()
-              : variant === "desk-sign"
-                ? ""
-                : list[0].id;
-          });
-        }
+        if (!priorityIds) return;
+        const rest = await loadTemplates(variant);
+        if (cancelled) return;
+        setTemplates((prev) => {
+          const ids = new Set(rest.map((t) => t.id));
+          const extras = prev.filter((t) => !ids.has(t.id));
+          return extras.length ? [...rest, ...extras] : rest;
+        });
       } catch (error) {
         if (cancelled) return;
         const message = error instanceof Error ? error.message : String(error);
@@ -3834,12 +3855,42 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   // Desk sign: do not auto-create a design — user must pick material first.
   // (Material change handler creates the first design via handleUniversalTemplateChange.)
 
+  // Picker cards only need one preview per shape family. Other sizes load on selection.
+  const templateThumbKey = useMemo(() => {
+    if (variant === "sign") {
+      return ALL_SIGN_TEMPLATE_TYPES.map((type) => type.sizes[0].templateId)
+        .filter((id) => templates.some((t) => t.id === id))
+        .join("|");
+    }
+    return templates.map((t) => t.id).join("|");
+  }, [templates, variant]);
+  const templatesForThumbsRef = useRef(templates);
+  templatesForThumbsRef.current = templates;
+  const renderedThumbKeysRef = useRef(new Set<string>());
+  const thumbRefreshKeyRef = useRef(templateRefreshKey);
+
   // Build template picker thumbnails for sign/plaque/desk-sign (badge uses per-card BadgeTemplatePhotoPreview).
   useEffect(() => {
-    if (templates.length === 0 || variant === "badge") return;
+    if (thumbRefreshKeyRef.current !== templateRefreshKey) {
+      thumbRefreshKeyRef.current = templateRefreshKey;
+      renderedThumbKeysRef.current.clear();
+    }
+    if (!templateThumbKey || variant === "badge") return;
 
     const plateColor =
       (badge.backgroundColor || "").trim() || initialPlateBackgroundHex;
+    const thumbTemplates =
+      variant === "sign"
+        ? ALL_SIGN_TEMPLATE_TYPES.map((type) =>
+            templatesForThumbsRef.current.find(
+              (t) => t.id === type.sizes[0].templateId,
+            ),
+          ).filter((t): t is LoadedTemplate => Boolean(t))
+        : templatesForThumbsRef.current;
+    const pending = thumbTemplates.filter(
+      (t) => !renderedThumbKeysRef.current.has(`${t.id}\0${plateColor}`),
+    );
+    if (pending.length === 0) return;
 
     let cancelled = false;
     const timer = window.setTimeout(() => {
@@ -3857,7 +3908,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         const templateThumbRenderOpts = SIGN_LIKE_TEMPLATE_THUMB_RENDER_OPTS;
 
         const next: Record<string, string> = {};
-        for (const t of templates) {
+        for (const t of pending) {
+          if (cancelled) return;
+          const key = `${t.id}\0${plateColor}`;
+          if (renderedThumbKeysRef.current.has(key)) continue;
           try {
             const svg = await renderBadgeToSvgStringWithFonts(
               {
@@ -3872,6 +3926,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 plateRenderMode: "vector",
               },
             );
+            if (cancelled) return;
+            renderedThumbKeysRef.current.add(key);
             next[t.id] = svg;
           } catch (e) {
             console.error(
@@ -3880,7 +3936,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             );
           }
         }
-        if (!cancelled) {
+        if (!cancelled && Object.keys(next).length > 0) {
           setTemplatePreviewSvgs((prev) => ({ ...prev, ...next }));
         }
       })();
@@ -3891,7 +3947,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       window.clearTimeout(timer);
     };
   }, [
-    templates,
+    templateThumbKey,
+    templateRefreshKey,
     variant,
     badge.backgroundColor,
     initialPlateBackgroundHex,
@@ -8068,12 +8125,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   ) => {
     console.log(`[UNIVERSAL] Template changed to: ${newTemplateId}`);
 
+    const keepLoadedTemplate = (loaded: LoadedTemplate | null | undefined) => {
+      if (!loaded) return;
+      setTemplates((prev) =>
+        prev.some((t) => t.id === loaded.id) ? prev : [...prev, loaded],
+      );
+    };
+
     if (multipleBadges.length === 0) {
       const newTemplate = await loadTemplateById(newTemplateId, variant);
       if (!newTemplate) {
         console.error("Template not found:", newTemplateId);
         return;
       }
+      keepLoadedTemplate(newTemplate);
       const protoForBox: Badge = {
         ...INITIAL_BADGE,
         templateId: newTemplateId,
@@ -8275,6 +8340,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       console.error("Template not found:", newTemplateId);
       return;
     }
+    keepLoadedTemplate(newTemplate);
 
     // Account for 0.1" (9.6px) inset on each side for text clipping
     const INSET_INCHES = 0.1;

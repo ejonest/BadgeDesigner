@@ -1,9 +1,11 @@
 // app/utils/templates.ts
 /**
- * Template Loading System - Loads directly from SVG files
+ * Template Loading System - Loads SVG files and parses them in the browser.
  *
- * NO CACHING - Templates are loaded fresh from SVG files on every request
- * to ensure changes to SVG files are immediately visible.
+ * Parsed templates are kept in a session memory cache (including in-flight
+ * promises) so remounts do not download the same file twice. Production
+ * fetches use a stable catalog-version query so the browser and CDN can cache
+ * SVGs. Vite dev still cache-busts so local SVG edits show up on a full reload.
  */
 
 import {
@@ -126,6 +128,57 @@ function getCfgForVariant(variant: DesignerVariant): TemplateConfig[] {
   if (variant === "desk-sign") return deskSignCfg;
   if (variant === "gavel") return [];
   return badgeCfg;
+}
+
+/** Parallel SVG fetches. High enough to hide latency, low enough to avoid a request stampede. */
+const TEMPLATE_LOAD_CONCURRENCY = 8;
+
+const templateFetchIsDev = Boolean(
+  (import.meta.env as { DEV?: boolean } | undefined)?.DEV,
+);
+
+/** Session cache of parsed templates. Values are promises so in-flight loads dedupe. */
+const templateLoadCache = new Map<string, Promise<LoadedTemplate>>();
+
+function catalogVersion(variant: DesignerVariant): number {
+  if (variant === "plaque") {
+    return (plaqueTemplatesJson as TemplatesFile).version ?? 1;
+  }
+  if (variant === "sign") {
+    return (signTemplatesJson as TemplatesFile).version ?? 1;
+  }
+  if (variant === "desk-sign") {
+    return (deskSignTemplatesJson as TemplatesFile).version ?? 1;
+  }
+  return (templatesJson as TemplatesFile).version ?? 1;
+}
+
+function templateCacheKey(
+  variant: DesignerVariant,
+  config: TemplateConfig,
+): string {
+  return `${variant}\0${config.id}\0${config.svgFile}`;
+}
+
+async function mapPool<T, R>(
+  items: readonly T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  if (items.length === 0) return results;
+  let next = 0;
+  const runners = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      while (next < items.length) {
+        const index = next++;
+        results[index] = await worker(items[index]!, index);
+      }
+    },
+  );
+  await Promise.all(runners);
+  return results;
 }
 
 /**
@@ -978,8 +1031,7 @@ function tightDesignerViewBoxIfCanvasMismatch(
 }
 
 /**
- * Loads a template directly from SVG file - NO CACHING.
- * This ensures changes to SVG files are immediately visible.
+ * Loads a template directly from its SVG file.
  * @param variant - "sign" vs "badge"; sign Designer templates use Border as inner + overlay.
  */
 async function loadOne(
@@ -990,27 +1042,31 @@ async function loadOne(
     `[templates] Loading template "${c.id}" from SVG file: ${c.svgFile}`,
   );
 
-  // Fetch the SVG file directly with aggressive cache-busting to force fresh loads
-  // Encode path so spaces etc. become %20 (sign templates have spaces in filenames)
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(7);
-  const cacheBuster = `?v=${timestamp}&r=${random}&_=${performance.now()}`;
+  // Encode path so spaces etc. become %20 (sign templates have spaces in filenames).
+  // Dev cache-busts so an SVG edit shows up on the next full reload. Production
+  // uses the JSON catalog version so a version bump invalidates CDN cache.
   const pathEncoded =
     typeof c.svgFile === "string" && c.svgFile.includes(" ")
       ? encodeURI(c.svgFile)
       : c.svgFile;
-  const url = `${pathEncoded}${cacheBuster}`;
+  const url = templateFetchIsDev
+    ? `${pathEncoded}?v=${Date.now()}&r=${Math.random().toString(36).slice(2)}`
+    : `${pathEncoded}?v=${catalogVersion(variant)}`;
   console.log(`[templates] Fetching template "${c.id}" from: ${url}`);
 
-  const response = await fetch(url, {
-    cache: "no-store",
-    headers: {
-      "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-      Pragma: "no-cache",
-      Expires: "0",
-      "X-Requested-With": "XMLHttpRequest", // Some servers respect this
-    },
-  });
+  const response = await fetch(
+    url,
+    templateFetchIsDev
+      ? {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        }
+      : { cache: "force-cache" },
+  );
   if (!response.ok) {
     throw new Error(
       `[templates] Failed to fetch SVG file "${c.svgFile}": ${response.status} ${response.statusText}`,
@@ -1502,13 +1558,27 @@ async function loadOne(
     designBox,
   );
 
-  // NO CACHE - return fresh template every time
   return t;
 }
 
+function loadOneCached(
+  config: TemplateConfig,
+  variant: DesignerVariant,
+): Promise<LoadedTemplate> {
+  const key = templateCacheKey(variant, config);
+  const existing = templateLoadCache.get(key);
+  if (existing) return existing;
+  const pending = loadOne(config, variant).catch((error) => {
+    templateLoadCache.delete(key);
+    throw error;
+  });
+  templateLoadCache.set(key, pending);
+  return pending;
+}
+
 /**
- * Loads a template by ID directly from SVG file.
- * NO CACHING - loads fresh every time.
+ * Loads a template by ID. Shares the session cache with {@link loadTemplates},
+ * including loads that are already in flight.
  */
 export async function loadTemplateById(
   id: string,
@@ -1519,27 +1589,32 @@ export async function loadTemplateById(
   if (!found) {
     throw new Error(`Template not found: ${id}`);
   }
-  return await loadOne(found, variant);
+  return await loadOneCached(found, variant);
 }
 
 /**
- * Loads all templates directly from SVG files.
- * NO CACHING - loads fresh every time.
- * Individual template failures are caught and logged, but don't stop other templates from loading.
+ * Loads templates from SVG files.
+ * Pass `ids` to load a subset (order follows `ids`). Omitted ids load the full catalog.
+ * Fetches run in a small pool. A failed file is skipped; the call throws only if none load.
  */
 export async function loadTemplates(
   variant: DesignerVariant = "badge",
+  options?: { ids?: readonly string[] },
 ): Promise<LoadedTemplate[]> {
-  const loaded: LoadedTemplate[] = [];
   const cfgV = getCfgForVariant(variant);
+  const wanted = options?.ids
+    ? options.ids.flatMap((id) => {
+        const found = cfgV.find((t) => t.id === id);
+        return found ? [found] : [];
+      })
+    : cfgV;
   let firstError: string | null = null;
   console.log(
-    `[templates] loadTemplates variant="${variant}" configs=${cfgV.length}`,
+    `[templates] loadTemplates variant="${variant}" configs=${wanted.length}`,
   );
-  for (const config of cfgV) {
+  const settled = await mapPool(wanted, TEMPLATE_LOAD_CONCURRENCY, async (config) => {
     try {
-      const template = await loadOne(config, variant);
-      loaded.push(template);
+      return await loadOneCached(config, variant);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       if (!firstError) firstError = `${config.id}: ${msg}`;
@@ -1547,9 +1622,10 @@ export async function loadTemplates(
         `[templates] Failed to load template "${config.id}":`,
         error,
       );
-      // Continue loading other templates instead of failing completely
+      return null;
     }
-  }
+  });
+  const loaded = settled.filter((t): t is LoadedTemplate => t != null);
   if (loaded.length === 0) {
     const detail = firstError
       ? ` First failure: ${firstError}`
@@ -1560,13 +1636,11 @@ export async function loadTemplates(
 }
 
 /**
- * Clears any cached templates (for development/debugging).
- * Note: This system no longer uses caching, but this function is kept for API compatibility.
+ * Drops the session parse cache so the next load refetches SVGs.
+ * Used by the designer refresh shortcut.
  */
 export function clearTemplateCache(): void {
-  console.log(
-    "[templates] Cache clear requested (but no cache exists - templates load fresh from SVG files)",
-  );
+  templateLoadCache.clear();
 }
 
 /**
