@@ -1,0 +1,40 @@
+{%- comment -%}
+  Renders up to `limit` product cards from `collection`, real product photos
+  first. Stock size placeholders (files named "..._Images_-_...") go last.
+{%- endcomment -%}
+{%- liquid
+  assign shown = 0
+  assign limit = limit | default: 4
+-%}
+{%- for pass in (1..2) -%}
+  {%- for card_product in collection.products limit: 50 -%}
+    {%- if shown >= limit -%}{%- break -%}{%- endif -%}
+    {%- assign card_src = card_product.featured_image.src | default: '' -%}
+    {%- assign is_placeholder = false -%}
+    {%- if card_product.featured_image == blank or card_src contains '_Images_-_' -%}
+      {%- assign is_placeholder = true -%}
+    {%- endif -%}
+    {%- if pass == 1 and is_placeholder -%}{%- continue -%}{%- endif -%}
+    {%- if pass == 2 and is_placeholder == false -%}{%- continue -%}{%- endif -%}
+    {%- assign shown = shown | plus: 1 -%}
+    <a class="sbl-ind__card" href="{{ card_product.url }}">
+      <span class="sbl-ind__card-image">
+        {%- if card_product.featured_image -%}
+          {{
+            card_product.featured_image
+            | image_url: width: 720
+            | image_tag:
+              loading: 'lazy',
+              widths: '280, 420, 640, 720',
+              sizes: '(min-width: 990px) 25vw, (min-width: 600px) 50vw, 100vw',
+              alt: card_product.featured_image.alt
+          }}
+        {%- endif -%}
+      </span>
+      <span class="sbl-ind__card-copy">
+        <strong>{{ card_product.title | escape }}</strong>
+        <small>{{ card_product.price | money }}</small>
+      </span>
+    </a>
+  {%- endfor -%}
+{%- endfor -%}

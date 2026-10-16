@@ -5,7 +5,14 @@ import {
   FEATURED_BRUSHED_BLACK_HEX,
   FEATURED_BRUSHED_GOLD_HEX,
   FEATURED_BRUSHED_SILVER_HEX,
+  LEGACY_BRUSHED_GOLD_HEX,
+  LEGACY_BRUSHED_SILVER_HEX,
 } from "~/constants/colors";
+import {
+  GAVEL_METAL_PROOF_MEAN_LUMINANCE,
+  GAVEL_METAL_TILE_PX,
+  gavelMetalAlbedoUrl,
+} from "~/constants/gavelStyles";
 
 /**
  * Vector-plate stand-in for acrylic. Acrylic photographs as a mid grey against a
@@ -375,6 +382,123 @@ export function deskSignStandFillForRender(
     return null;
   }
   return null;
+}
+
+type DeskSignMetalSet = "metal-gold" | "metal-silver";
+
+/**
+ * Tile edge in plate units. The gavel proofs show their tile at about a third
+ * of its texel size and plates render near 1:1, so the tile is shrunk to match
+ * or the brush reads as corrugation.
+ */
+const DESK_SIGN_METAL_TILE_UNITS = Math.round(GAVEL_METAL_TILE_PX / 3);
+
+/**
+ * Share of the tile's light/dark swing carried onto the plate. Plates are
+ * larger on screen than the gavel strip, so the full swing reads heavier.
+ */
+const DESK_SIGN_METAL_BRUSH_GAIN = 0.7;
+
+/**
+ * Gold and silver plates (rosewood brushed and traditional plastic) take the
+ * gavel's brushed finish. Legacy saved hexes still map to their metal.
+ */
+export function deskSignBrushedMetalSet(
+  plateHex: string | undefined | null,
+): DeskSignMetalSet | null {
+  const hex = (plateHex ?? "").trim().toUpperCase();
+  if (!hex) return null;
+  const gold = [
+    FEATURED_BRUSHED_GOLD_HEX,
+    LEGACY_BRUSHED_GOLD_HEX,
+    DESK_SIGN_PLASTIC_PLATE_FINISHES.find((f) => f.id === "gold")?.plateColor,
+  ];
+  const silver = [
+    FEATURED_BRUSHED_SILVER_HEX,
+    LEGACY_BRUSHED_SILVER_HEX,
+    DESK_SIGN_PLASTIC_PLATE_FINISHES.find((f) => f.id === "silver")?.plateColor,
+  ];
+  if (gold.some((c) => c?.toUpperCase() === hex)) return "metal-gold";
+  if (silver.some((c) => c?.toUpperCase() === hex)) return "metal-silver";
+  return null;
+}
+
+function hexToUnitRgb(hex: string): [number, number, number] | null {
+  const m = hex.trim().match(/^#?([0-9a-f]{6})$/i);
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) / 255, ((n >> 8) & 0xff) / 255, (n & 0xff) / 255];
+}
+
+/**
+ * Brushed gold/silver plate: the plate's own color, with the gavel proof tile's
+ * brush carried over as relative light and dark. The tile is recolored rather
+ * than shown as-is so each plate keeps its catalog shade. The flat plate stays
+ * underneath, so a render where the tile cannot load (an SVG drawn through
+ * `<img>`) still shows the right color.
+ */
+export function deskSignBrushedMetalPlateTreatment(params: {
+  innerPathWithFill: string;
+  baseHex: string;
+  set: DeskSignMetalSet;
+  idSuffix: string;
+  widthPx: number;
+  heightPx: number;
+}): { defsXml: string; innerPlateMarkup: string } | null {
+  const { innerPathWithFill, baseHex, set, idSuffix, widthPx, heightPx } =
+    params;
+  const base = hexToUnitRgb(baseHex);
+  if (!base) return null;
+
+  const patternId = `deskSignMetalTile${idSuffix}`;
+  const filterId = `deskSignMetalTint${idSuffix}`;
+  const maskId = `deskSignMetalMask${idSuffix}`;
+  const tile = DESK_SIGN_METAL_TILE_UNITS;
+  const href = gavelMetalAlbedoUrl(set, "proof");
+  const mean = GAVEL_METAL_PROOF_MEAN_LUMINANCE[set];
+
+  // out = base × (1 + gain × (tile luminance ÷ tile mean − 1)), per channel.
+  const gain = DESK_SIGN_METAL_BRUSH_GAIN;
+  const rows = base
+    .map((c) => {
+      const k = (c * gain) / mean;
+      return `${(k * 0.299).toFixed(4)} ${(k * 0.587).toFixed(4)} ${(
+        k * 0.114
+      ).toFixed(4)} 0 ${(c * (1 - gain)).toFixed(4)}`;
+    })
+    .join(" ");
+
+  const maskShape = innerPathWithFill.replace(
+    /fill\s*=\s*["'][^"']*["']/gi,
+    'fill="#ffffff"',
+  );
+
+  const defsXml = `<pattern id="${patternId}" patternUnits="userSpaceOnUse" width="${tile}" height="${tile}">
+      <image href="${href}" xlink:href="${href}" x="0" y="0" width="${tile}" height="${tile}" preserveAspectRatio="none"/>
+    </pattern>
+    <filter id="${filterId}" filterUnits="objectBoundingBox" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="${rows} 0 0 0 1 0"/>
+    </filter>
+    <mask id="${maskId}" maskUnits="userSpaceOnUse" x="0" y="0" width="${widthPx}" height="${heightPx}">${maskShape}</mask>`;
+
+  const innerPlateMarkup = `${innerPathWithFill}
+    <g mask="url(#${maskId})"><rect x="0" y="0" width="${widthPx}" height="${heightPx}" fill="url(#${patternId})" filter="url(#${filterId})"/></g>`;
+
+  return { defsXml, innerPlateMarkup };
+}
+
+/** CSS fill for a gold/silver plate swatch, matching the plate preview. */
+export function deskSignPlateSwatchStyle(
+  plateHex: string,
+): Record<string, string> {
+  const set = deskSignBrushedMetalSet(plateHex);
+  if (!set) return { backgroundColor: plateHex };
+  return {
+    backgroundColor: plateHex,
+    backgroundImage: `url(${gavelMetalAlbedoUrl(set, "proof")})`,
+    backgroundSize: `${DESK_SIGN_METAL_TILE_UNITS}px`,
+    backgroundBlendMode: "luminosity",
+  };
 }
 
 export function buildDeskSignStandMarkup(

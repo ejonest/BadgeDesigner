@@ -14,6 +14,7 @@ import {
   DESK_SIGN_ALUMINUM_COLORS,
   DESK_SIGN_PLASTIC_PLATE_FINISHES,
   DESK_SIGN_ROSEWOOD_PLATE_FINISHES,
+  deskSignPlateSwatchStyle,
   findDeskSignAcrylicFinish,
   findDeskSignPlasticPlateFinish,
   findDeskSignRosewoodPlateFinish,
@@ -303,7 +304,7 @@ export function DeskSignColorsPicker({
                   className={`mb-2 h-8 w-full rounded ${
                     light ? "border border-black/15" : "border border-black/10"
                   }`}
-                  style={{ backgroundColor: finish.plateColor }}
+                  style={deskSignPlateSwatchStyle(finish.plateColor)}
                 />
                 <div className="text-xs font-semibold text-[#02132B] leading-tight">
                   {finish.label}

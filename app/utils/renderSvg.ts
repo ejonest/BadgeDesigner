@@ -1,6 +1,8 @@
 // app/utils/renderSvg.ts
 import {
   buildDeskSignStandMarkup,
+  deskSignBrushedMetalPlateTreatment,
+  deskSignBrushedMetalSet,
   deskSignInnerFillForRender,
   isDeskSignTemplateId,
 } from "~/utils/deskSignRender";
@@ -80,6 +82,10 @@ import {
   resolveBadgePlatePhoto,
   resolveCustomBadgeBackgroundPrintImageSrc,
 } from "~/utils/badgeCustomBackgrounds";
+import {
+  getSignFinishById,
+  resolveDisplayedSignFinish,
+} from "~/data/signFinishes";
 import { inlineBadgeBlankPhotoSrc } from "~/utils/inlineBadgePhoto";
 import {
   getDefaultSignLogoPlacementForTemplate,
@@ -1728,6 +1734,39 @@ function renderBg(
   `;
 }
 
+/** Use the selected finish, or the shape's default photo so the SVG die never shows. */
+function badgeShowingSignFinish(
+  badge: Badge,
+  template: LoadedTemplate,
+): Badge {
+  const resolved = resolveDisplayedSignFinish(template.id, badge.signFinishId);
+  if (!resolved || resolved.id === badge.signFinishId) return badge;
+  return {
+    ...badge,
+    signFinishId: resolved.id,
+    signFinishImageSrc: undefined,
+  };
+}
+
+/** Shape-specific stock finish rendered across the full sign die. */
+function renderSignFinishLayer(
+  badge: Badge,
+  template: LoadedTemplate,
+): string {
+  const src =
+    badge.signFinishImageSrc ??
+    getSignFinishById(badge.signFinishId)?.imageSrc;
+  if (!src) return "";
+  return `<image
+    href="${esc(src)}"
+    xlink:href="${esc(src)}"
+    x="0" y="0"
+    width="${template.widthPx}" height="${template.heightPx}"
+    preserveAspectRatio="none"
+    style="image-rendering:optimizeQuality"
+  />`;
+}
+
 /** Sign Designer user logo: fitted rect + meet. Non-sign: legacy absolute positioning. */
 function renderUserLogoLayer(
   logo: BadgeImage | undefined,
@@ -1881,9 +1920,13 @@ function buildInnerFillAndClipData(
   }
 
   let innerPathData = template.innerElement;
-  const gMatch = innerPathData.match(/<g[^>]*>(.*?)<\/g>/s);
-  if (gMatch) {
-    innerPathData = gMatch[1];
+  if (gTransformMatch && gTransformMatch[2].trim()) {
+    innerPathData = `<g transform="${gTransformMatch[1].trim()}">${gTransformMatch[2].trim()}</g>`;
+  } else {
+    const gMatch = innerPathData.match(/<g[^>]*>(.*?)<\/g>/s);
+    if (gMatch) {
+      innerPathData = gMatch[1];
+    }
   }
   const pathMatch = innerPathData.match(/<path[^>]*>/);
   if (!pathMatch) {
@@ -1902,10 +1945,30 @@ function plateBrushGradientForBadgeInner(
   clipId: string,
   innerPathWithFill: string,
 ): { innerPlateMarkup: string; gradientDefXml: string } {
+  const safeClip = clipId.replace(/[^a-zA-Z0-9]/g, "");
+  if (isDeskSignTemplateId(template.id)) {
+    const deskFill = deskSignInnerFillForRender(badge, template);
+    const set = deskSignBrushedMetalSet(deskFill);
+    const treatment = set
+      ? deskSignBrushedMetalPlateTreatment({
+          innerPathWithFill,
+          baseHex: deskFill,
+          set,
+          idSuffix: safeClip,
+          widthPx: template.widthPx,
+          heightPx: template.heightPx,
+        })
+      : null;
+    if (treatment) {
+      return {
+        innerPlateMarkup: treatment.innerPlateMarkup,
+        gradientDefXml: treatment.defsXml,
+      };
+    }
+  }
   if (!isFeaturedBrushedMetalPlateColor(badge.backgroundColor)) {
     return { innerPlateMarkup: innerPathWithFill, gradientDefXml: "" };
   }
-  const safeClip = clipId.replace(/[^a-zA-Z0-9]/g, "");
   const filterId = `badgePlateMetalBrush${safeClip}`;
   const baseHex = normalizeFeaturedBrushedMetalBaseHex(
     badge.backgroundColor || DEFAULT_PLATE_BG,
@@ -2475,6 +2538,7 @@ export function renderBadgeToSvgString(
   template: LoadedTemplate,
   opts: RenderOpts = {},
 ): string {
+  badge = badgeShowingSignFinish(badge, template);
   if (isPlaqueTemplateId(template.id)) {
     return renderPlaqueBadgeSvg(badge, template, opts, [], undefined);
   }
@@ -2512,7 +2576,8 @@ export function renderBadgeToSvgString(
   const designBox = getEffectiveDesignBox(template, badge);
   const overlayActive = resolveSignBorderOverlayActive(badge, template);
   const overlayMarkup = resolveSignOverlayMarkup(template, badge);
-  const paintOverlay = overlayActive && Boolean(overlayMarkup);
+  const paintOverlay =
+    !badge.signFinishId && overlayActive && Boolean(overlayMarkup);
 
   const clipId = clipPathIdForSvg(opts, badge);
 
@@ -2548,6 +2613,10 @@ export function renderBadgeToSvgString(
     !isPrint && badge.backgroundImage
       ? renderBg(badge.backgroundImage, designBox)
       : "";
+  const signFinishLayer = renderSignFinishLayer(
+    badge,
+    template,
+  );
 
   // Text rendering: desk signs + AQB badge presets use exact sizeNorm px (no fractional re-shrink).
   const lineLayout = isDeskSignTemplateId(template.id)
@@ -2617,8 +2686,9 @@ export function renderBadgeToSvgString(
   const deskSignStandLayer = isPrint
     ? ""
     : buildDeskSignStandMarkup(template, badge);
-  const outlineMarkup =
-    isDeskSignTemplateId(template.id) && !isPrint
+  const outlineMarkup = badge.signFinishId
+    ? ""
+    : isDeskSignTemplateId(template.id) && !isPrint
       ? ""
       : template.outlineElement
       ? prepareElementForOutline(
@@ -2733,6 +2803,8 @@ export function renderBadgeToSvgString(
     ${deskSignStandLayer}
     <!-- Background: inner path filled with color (defines editable area) -->
     ${innerPlateMarkup}
+    <!-- Shape-specific stock finish/texture -->
+    ${signFinishLayer}
     <!-- Background image (if present) -->
     ${bgImageLayer}
     <!-- User logo (sign): clipped to die; under border overlay and text -->
@@ -2754,6 +2826,7 @@ export async function renderBadgeToSvgStringWithFonts(
   template: LoadedTemplate,
   opts: RenderOpts = {},
 ): Promise<string> {
+  badge = badgeShowingSignFinish(badge, template);
   // Collect all unique font families used in the badge
   const fontFamilies = new Set<string>();
   (badge.lines || []).forEach((line) => {
@@ -2821,6 +2894,16 @@ export async function renderBadgeToSvgStringWithFonts(
     }
   }
 
+  if (badge.signFinishId && opts.inlineRemoteImages !== false) {
+    const finishSrc = getSignFinishById(badge.signFinishId)?.imageSrc;
+    if (finishSrc) {
+      badge = {
+        ...badge,
+        signFinishImageSrc: await inlineBadgeBlankPhotoSrc(finishSrc),
+      };
+    }
+  }
+
   if (isPlaqueTemplateId(template.id)) {
     let svg = renderPlaqueBadgeSvg(
       badge,
@@ -2878,7 +2961,8 @@ export async function renderBadgeToSvgStringWithFonts(
   const designBox = getEffectiveDesignBox(template, badge);
   const overlayActive = resolveSignBorderOverlayActive(badge, template);
   const overlayMarkup = resolveSignOverlayMarkup(template, badge);
-  const paintOverlay = overlayActive && Boolean(overlayMarkup);
+  const paintOverlay =
+    !badge.signFinishId && overlayActive && Boolean(overlayMarkup);
 
   const clipId = clipPathIdForSvg(opts, badge);
 
@@ -2917,6 +3001,10 @@ export async function renderBadgeToSvgStringWithFonts(
     !isPrint && badge.backgroundImage
       ? renderBg(badge.backgroundImage, designBox)
       : "";
+  const signFinishLayer = renderSignFinishLayer(
+    badge,
+    template,
+  );
 
   // Text rendering with embedded fonts, uniform spacing and proportional scaling
   const lineLayout = isDeskSignTemplateId(template.id)
@@ -2986,8 +3074,9 @@ export async function renderBadgeToSvgStringWithFonts(
   const deskSignStandLayer = isPrint
     ? ""
     : buildDeskSignStandMarkup(template, badge);
-  const outlineMarkup =
-    isDeskSignTemplateId(template.id) && !isPrint
+  const outlineMarkup = badge.signFinishId
+    ? ""
+    : isDeskSignTemplateId(template.id) && !isPrint
       ? ""
       : template.outlineElement
       ? prepareElementForOutline(
@@ -3119,6 +3208,7 @@ export async function renderBadgeToSvgStringWithFonts(
     ${deskSignStandLayer}
     <!-- Background: inner path filled with color (defines editable area) -->
     ${innerPlateMarkup}
+    ${signFinishLayer}
     ${bgImageLayer}
     ${userLogoLayer}
     ${overlayLayer}

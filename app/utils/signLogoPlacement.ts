@@ -5,6 +5,8 @@ const NO_USER_LOGO_SIGN_PREFIXES = [
   /^frontier-elegant-/i,
   /^arrow-/i,
   /^door-hanger-/i,
+  /^triangle-/i,
+  /^diamond-/i,
 ] as const;
 
 /**

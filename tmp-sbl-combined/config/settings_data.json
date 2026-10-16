@@ -10,8 +10,8 @@
 {
   "current": {
     "layout_body": "default",
-    "bg_body_boxed": "#f8f8f8",
-    "header_layout": "03",
+    "bg_body_boxed": "#eee7da",
+    "header_layout": "sbl",
     "list_collections_layout": "collections_01_grid",
     "category_layout": "default",
     "product_layout": "default",
@@ -175,8 +175,8 @@
     "number_of_recently_viewed_products": 0,
     "recently_viewed_products_expires_date": 0,
     "enable_promotion": true,
-    "background_pro": "#edebf7",
-    "color_pro": "#3c3c3c",
+    "background_pro": "#f1ebdf",
+    "color_pro": "#1b2433",
     "promotion_text_1": "",
     "promotion_text_2": "",
     "promotion_text_3": "",
@@ -190,35 +190,35 @@
     "social_tumblr_link": "",
     "social_snapchat_link": "",
     "social_youtube_link": "",
-    "body_bg": "#ffffff",
-    "body_color": "#3c3c3c",
-    "link_color": "#0688e2",
-    "link_color_hover": "#232323",
-    "breadcrumb_color": "#999999",
-    "page_title_color": "#232323",
-    "btn_1_bg_color": "#79c9c6",
-    "btn_1_border_color": "#79c9c6",
-    "btn_1_text_color": "#ffffff",
-    "btn_2_bg_color": "#6eb7b4",
-    "btn_2_border_color": "#6eb7b4",
-    "btn_2_text_color": "#ffffff",
+    "body_bg": "#f5f1eb",
+    "body_color": "#1b2433",
+    "link_color": "#0f2744",
+    "link_color_hover": "#9a6c17",
+    "breadcrumb_color": "#5a6577",
+    "page_title_color": "#0f2744",
+    "btn_1_bg_color": "#c9932e",
+    "btn_1_border_color": "#c9932e",
+    "btn_1_text_color": "#0f2744",
+    "btn_2_bg_color": "#0f2744",
+    "btn_2_border_color": "#0f2744",
+    "btn_2_text_color": "#f5f1eb",
     "btn_3_bg_color": "#e13b3f",
     "btn_3_border_color": "#e13b3f",
     "btn_3_text_color": "#ffffff",
-    "bg_menu_mb": "#fff",
-    "color_menu_mb": "#232323",
-    "border_color_menu_mb": "#ebebeb",
-    "color_menu_mb_lv1": "#232323",
-    "color_menu_mb_lv1_hover": "#0688e2",
-    "bg_color_menu_mb_lv1_hover": "#f8f8f8",
-    "color_menu_mb_lv2": "#232323",
-    "color_menu_mb_lv2_hover": "#232323",
-    "color_menu_mb_lv3": "#3c3c3c",
-    "color_menu_mb_lv3_hover": "#0688e2",
-    "color_title_product": "#232323",
-    "color_title_product_hover": "#232323",
-    "color_vendor": "#232323",
-    "color_price": "#232323",
+    "bg_menu_mb": "#f5f1eb",
+    "color_menu_mb": "#0f2744",
+    "border_color_menu_mb": "#e3dccd",
+    "color_menu_mb_lv1": "#0f2744",
+    "color_menu_mb_lv1_hover": "#9a6c17",
+    "bg_color_menu_mb_lv1_hover": "#f1ebdf",
+    "color_menu_mb_lv2": "#1b2433",
+    "color_menu_mb_lv2_hover": "#9a6c17",
+    "color_menu_mb_lv3": "#5a6577",
+    "color_menu_mb_lv3_hover": "#9a6c17",
+    "color_title_product": "#0f2744",
+    "color_title_product_hover": "#9a6c17",
+    "color_vendor": "#5a6577",
+    "color_price": "#0f2744",
     "color_price_sale": "#e95144",
     "color_compare_price": "#969696",
     "color_quick_view": "#ffffff",
@@ -236,22 +236,22 @@
     "new_label_border": "#f6f6f6",
     "sold_out_text": "#fff",
     "bg_sold_out": "#c1c1c1",
-    "bg_sticky": "#fff",
-    "color_sticky": "#3c3c3c",
-    "color_variants": "#646464",
+    "bg_sticky": "#f5f1eb",
+    "color_sticky": "#1b2433",
+    "color_variants": "#5a6577",
     "checkout_header_image": "",
     "checkout_logo_image": "shopify://shop_images/All_Quality_logo_2.jpg",
     "checkout_logo_position": "center",
     "checkout_logo_size": "medium",
     "checkout_body_background_image": "",
-    "checkout_body_background_color": "#ffffff",
+    "checkout_body_background_color": "#f5f1eb",
     "checkout_input_background_color_mode": "white",
     "checkout_sidebar_background_image": "",
-    "checkout_sidebar_background_color": "#fafafa",
+    "checkout_sidebar_background_color": "#eee7da",
     "checkout_heading_font": "Raleway",
     "checkout_body_font": "Roboto",
-    "checkout_accent_color": "#79c9c6",
-    "checkout_button_color": "#79c9c6",
+    "checkout_accent_color": "#c9932e",
+    "checkout_button_color": "#0f2744",
     "checkout_error_color": "#ff6d6d",
     "secure_text": "Secure Shopping Guarantee.",
     "enable_multilang": false,
@@ -313,27 +313,27 @@
         "settings": {
           "footer_border_top": true,
           "bg_footer_img": "none",
-          "bg_footer_color": "#f8f8f8",
+          "bg_footer_color": "#0a1c33",
           "bg_footer_position_x": "left",
           "bg_footer_position_y": "top",
           "bg_footer_repeat": "repeat",
           "bg_footer_attachment": "scroll",
-          "footer_title_color": "#79c9c6",
-          "footer_link_color": "#3c3c3c",
-          "footer_link_hover_color": "#3c3c3c",
-          "bg_footer_line_color": "#ebebeb",
+          "footer_title_color": "#f5f1eb",
+          "footer_link_color": "#b9c3d2",
+          "footer_link_hover_color": "#c9a84c",
+          "bg_footer_line_color": "#37465a",
           "footer_newsletter_enable": true,
           "footer_newsletter_title": "Newsletter Sign Up",
           "des_newslette": "Receive our latest updates about our products and promotions.",
-          "bg_newsletter_color": "#ffffff",
-          "newsletter_color": "#9d9d9d",
-          "newsletter_border_color": "#d2d2d2",
-          "bg_newsletter_button_color": "#79c9c6",
-          "newsletter_button_color": "#ffffff",
+          "bg_newsletter_color": "#0f2744",
+          "newsletter_color": "#b9c3d2",
+          "newsletter_border_color": "#5a6577",
+          "bg_newsletter_button_color": "#c9932e",
+          "newsletter_button_color": "#0f2744",
           "footer_social_enable": true,
           "footer_typography_label": true,
-          "bg_footer_bottom_color": "#232323",
-          "footer_bottom_color": "#969696",
+          "bg_footer_bottom_color": "#071525",
+          "footer_bottom_color": "#b9c3d2",
           "footer_address_code": "© 2026 Signs ByLITA. All Rights Reserved.",
           "show_payment_icons": true,
           "payment_display_visa": true,
@@ -682,7 +682,7 @@
           "color_icon_answer": "#ffffff",
           "color_question_answer": "#3c3c3c",
           "font_size_answer": "12",
-          "color_question_link": "#0688e2",
+          "color_question_link": "#9a6c17",
           "icon_show": "Show",
           "icon_hide": "Hide"
         }
@@ -1345,7 +1345,7 @@
               "color_1": "#ffffff",
               "button_1": "",
               "link_1": "shopify://collections/rubber-stamps",
-              "bg_button_1": "#79c9c6",
+              "bg_button_1": "#c9932e",
               "border_button_1": "#ffffff",
               "color_button_1": "#ffffff",
               "image_2": "shopify://shop_images/gift_items.jpg",
@@ -1480,11 +1480,11 @@
           "1550720941591"
         ],
         "settings": {
-          "featured_products_title": "<span style=\"color:#79C9C6;\">Rubber Stamps</span>",
+          "featured_products_title": "<span style=\"color:#c9932e;\">Rubber Stamps</span>",
           "display_banner": false,
           "font_size_banner_heading": "30px",
           "font_size_banner_des": "12px",
-          "bg_banner_button": "#79c9c6",
+          "bg_banner_button": "#c9932e",
           "border_banner_button": "#ffffff",
           "color_banner_button": "#ffffff",
           "image_1": "shopify://shop_images/rubber_stamps_banner.png",
@@ -1540,7 +1540,7 @@
           "1550734787648"
         ],
         "settings": {
-          "featured_products_title": "<span style=\"color:#79C9C6;\">Signage</span>",
+          "featured_products_title": "<span style=\"color:#c9932e;\">Signage</span>",
           "display_banner": false,
           "font_size_banner_heading": "30px",
           "font_size_banner_des": "12px",
@@ -1615,7 +1615,7 @@
           "1550735231598"
         ],
         "settings": {
-          "featured_products_title": "<span style=\"color:#79C9C6;\">Gift Items</span>",
+          "featured_products_title": "<span style=\"color:#c9932e;\">Gift Items</span>",
           "display_banner": false,
           "font_size_banner_heading": "30px",
           "font_size_banner_des": "12px",
@@ -1690,7 +1690,7 @@
           "1588159935990"
         ],
         "settings": {
-          "featured_products_title": "<span style=\"color:#79C9C6;\">Name Badges & Desk Signs</span>",
+          "featured_products_title": "<span style=\"color:#c9932e;\">Name Badges & Desk Signs</span>",
           "display_banner": false,
           "font_size_banner_heading": "30px",
           "font_size_banner_des": "12px",
@@ -1739,7 +1739,7 @@
           "1550745516795": {
             "type": "Text",
             "settings": {
-              "icon": "<i class=\"fa fa-truck\" aria-hidden=\"true\" style=\"color:#79C9C6;\"></i>",
+              "icon": "<i class=\"fa fa-truck\" aria-hidden=\"true\" style=\"color:#c9932e;\"></i>",
               "title": "Free Shipping",
               "text": "We offer Free Shipping on all orders. Orders ship out within 48 hours, often faster"
             }
@@ -1747,7 +1747,7 @@
           "1550745595729": {
             "type": "Text",
             "settings": {
-              "icon": "<i class=\"fa fa-credit-card\" aria-hidden=\"true\" style=\"color:#79C9C6;\"></i>",
+              "icon": "<i class=\"fa fa-credit-card\" aria-hidden=\"true\" style=\"color:#c9932e;\"></i>",
               "title": "Secure Shopping",
               "text": "We accept all major credit cards and offer numerous other payment methods"
             }
@@ -1755,7 +1755,7 @@
           "1550745607091": {
             "type": "Text",
             "settings": {
-              "icon": "<i class=\"fa fa-shield\" aria-hidden=\"true\" style=\"color:#79C9C6;\"></i>",
+              "icon": "<i class=\"fa fa-shield\" aria-hidden=\"true\" style=\"color:#c9932e;\"></i>",
               "title": "Register for an account",
               "text": "Receive bulk order discounts and special deals when you register for an account"
             }
@@ -2074,16 +2074,16 @@
           "logo_fix": "shopify://shop_images/logo-mobile.gif",
           "horizontal_linklist": "menu-v2",
           "alignment": "center",
-          "bg_menu": "#f8f8f8",
-          "bg_dropdown_menu": "#ffffff",
-          "color_menu_lv1": "#242424",
-          "hover_color_mnu_lv1": "#e13b3f",
+          "bg_menu": "#0f2744",
+          "bg_dropdown_menu": "#f5f1eb",
+          "color_menu_lv1": "#e8dfcd",
+          "hover_color_mnu_lv1": "#c9a84c",
           "font_size_mnu_lv1": "13px",
-          "color_menu_lv2": "#232323",
-          "hover_color_mnu_lv2": "#e13b3f",
+          "color_menu_lv2": "#0f2744",
+          "hover_color_mnu_lv2": "#9a6c17",
           "font_size_mnu_lv2": "13px",
-          "color_menu_lv3": "#3c3c3c",
-          "hover_color_mnu_lv3": "#e13b3f",
+          "color_menu_lv3": "#5a6577",
+          "hover_color_mnu_lv3": "#9a6c17",
           "font_size_mnu_lv3": "13px",
           "enable_sale": true,
           "lb_sale": "Sale",
@@ -2101,9 +2101,9 @@
           "bg_lb_hot": "#ffbb49",
           "color_lb_hot": "#ffffff",
           "display_megamenu": true,
-          "bg_style_new": "#eaeaea",
-          "bg_color_arrow": "#8c8c8c",
-          "color_arrow": "#ffffff"
+          "bg_style_new": "#eee7da",
+          "bg_color_arrow": "#c9932e",
+          "color_arrow": "#0f2744"
         }
       },
       "header-03": {
@@ -2112,14 +2112,14 @@
           "display_header_top": false,
           "top_message_text": "<strong><span style=\"letter-spacing:1.6px;\">2022 SALE! <span style=\"color:red;\">GET 10% OFF</span> ON ALL ITEMS! <span style=\"color:red;\">SHOP NOW!</span></span></strong>",
           "font_weight_bold": true,
-          "bg_header_top": "#e8e8e8",
-          "text_header_top_color": "#454545",
+          "bg_header_top": "#0a1c33",
+          "text_header_top_color": "#e8dfcd",
           "display_parallax": false,
           "menu_parallax_color": "#ffffff",
-          "bg_header_bottom_color_1": "#e13b3f",
-          "bg_header_bottom_color": "#ffffff",
-          "header_bottom_icon_color": "#ffffff",
-          "header_bottom_text_color": "#ffffff",
+          "bg_header_bottom_color_1": "#0a1c33",
+          "bg_header_bottom_color": "#0f2744",
+          "header_bottom_icon_color": "#f5f1eb",
+          "header_bottom_text_color": "#e8dfcd",
           "display_header_social": true,
           "display_customer_service": true,
           "customer_service_text": "<strong>FREE SHIPPING ON ALL ORDERS ( US ONLY ) </strong>",
@@ -2128,16 +2128,16 @@
           "brand_type": "image",
           "brand_text": "",
           "logo_max_width": 90,
-          "logo_text_color": "#000000",
+          "logo_text_color": "#f5f1eb",
           "logo_pc": "shopify://shop_images/signs_by_lita_logo.png",
           "max_height_logo_pc": "250px",
           "logo": "shopify://shop_images/signs_by_lita_logo.png",
           "max_height_logo_mb": "85px",
-          "bg_search_color": "#ffffff",
-          "search_color": "#848484",
-          "search_border_color": "#cacaca",
-          "bg_cart_color": "#e95144",
-          "cart_color": "#ffffff"
+          "bg_search_color": "#f5f1eb",
+          "search_color": "#5a6577",
+          "search_border_color": "#cfc6b5",
+          "bg_cart_color": "#c9932e",
+          "cart_color": "#0f2744"
         }
       },
       "header-04": {
@@ -2217,8 +2217,8 @@
               "color_border_box": "#bcbcbc",
               "heading": "See our Huge Range of Stock<br> & Custom Office Supplies",
               "font_size_heading": "28px",
-              "color_heading": "#79c9c6",
-              "color_heading_mb": "#79c9c6",
+              "color_heading": "#c9932e",
+              "color_heading_mb": "#c9932e",
               "sub_heading": "",
               "font_size_sub_heading": "30px",
               "color_sub_heading": "#ffffff",
@@ -2229,8 +2229,8 @@
               "color_des_mb": "#00c3cc",
               "button_slide": "Shop Our Collection",
               "link": "shopify://collections/all",
-              "bg_button": "#79c9c6",
-              "border_button": "#79c9c6",
+              "bg_button": "#c9932e",
+              "border_button": "#c9932e",
               "color_button": "#ffffff",
               "bg_button_mb": "#232323",
               "border_button_mb": "#232323",
@@ -2316,7 +2316,7 @@
           "1585645245627"
         ],
         "settings": {
-          "featured_products_title": "<span style=\"color:#79C9C6;\">Awards</span>",
+          "featured_products_title": "<span style=\"color:#c9932e;\">Awards</span>",
           "display_banner": false,
           "font_size_banner_heading": "30px",
           "font_size_banner_des": "12px",
@@ -2772,7 +2772,7 @@
       "supermarket-new-arrivals": {
         "type": "supermarket-new-arrivals",
         "settings": {
-          "new_arrivals_title": "<span style=\"color:#0e5ea1;\">FEATURED PRODUCTS</span>",
+          "new_arrivals_title": "<span style=\"color:#0f2744;\">FEATURED PRODUCTS</span>",
           "block_bg": "#ffffff",
           "bg_grid_item": "rgba(0,0,0,0)",
           "product_list_collection": "featured-products",
@@ -2790,7 +2790,7 @@
           "1595315742620": {
             "type": "Text",
             "settings": {
-              "icon": "<i class=\"fa fa-truck\" aria-hidden=\"true\" style=\"color:#79C9C6;\"></i>",
+              "icon": "<i class=\"fa fa-truck\" aria-hidden=\"true\" style=\"color:#c9932e;\"></i>",
               "title": "Free Shipping",
               "text": "We offer Free Shipping on all orders. Orders ship out within 48 hours, often faster"
             }
@@ -2798,7 +2798,7 @@
           "1595315817308": {
             "type": "Text",
             "settings": {
-              "icon": "<i class=\"fa fa-credit-card\" aria-hidden=\"true\" style=\"color:#79C9C6;\"></i>",
+              "icon": "<i class=\"fa fa-credit-card\" aria-hidden=\"true\" style=\"color:#c9932e;\"></i>",
               "title": "Secure Shopping",
               "text": "We accept all major credit cards and offer numerous other payment methods"
             }
@@ -2806,7 +2806,7 @@
           "1595315842153": {
             "type": "Text",
             "settings": {
-              "icon": "<i class=\"fa fa-shield\" aria-hidden=\"true\" style=\"color:#79C9C6;\"></i>",
+              "icon": "<i class=\"fa fa-shield\" aria-hidden=\"true\" style=\"color:#c9932e;\"></i>",
               "title": "Register for an account",
               "text": "Receive bulk order discounts and special deals when you register for an account"
             }
@@ -3203,19 +3203,246 @@
           "secondary_button_text": "#1e3a5f",
           "margin_bottom": 24
         }
+      },
+      "sbl-homepage-v2": {
+        "type": "sbl-homepage-v2",
+        "blocks": {
+          "sbl-cat-restroom": {
+            "type": "category",
+            "settings": {
+              "collection": "restroom-signs",
+              "title": "Restroom & hygiene",
+              "subtitle": "Restrooms, hand washing and facility reminders",
+              "link_label": "Shop restroom signs"
+            }
+          },
+          "sbl-cat-office": {
+            "type": "category",
+            "settings": {
+              "collection": "office-signs",
+              "title": "Office & door signs",
+              "subtitle": "Rooms, offices, suites and directories",
+              "link_label": "Shop office signs"
+            }
+          },
+          "sbl-cat-safety": {
+            "type": "category",
+            "settings": {
+              "collection": "safety-signs",
+              "title": "Safety & compliance",
+              "subtitle": "Warnings, electrical panels and first aid",
+              "link_label": "Shop safety signs"
+            }
+          },
+          "sbl-cat-security": {
+            "type": "category",
+            "settings": {
+              "collection": "security-surveillance-signs",
+              "title": "Security & camera",
+              "subtitle": "Video surveillance and monitored property",
+              "link_label": "Shop security signs"
+            }
+          },
+          "sbl-cat-staff": {
+            "type": "category",
+            "settings": {
+              "collection": "employee-only-signs",
+              "title": "Staff only & private",
+              "subtitle": "Employees only, private and restricted areas",
+              "link_label": "Shop staff signs"
+            }
+          },
+          "sbl-cat-food": {
+            "type": "category",
+            "settings": {
+              "collection": "signage-signs-for-business-food-signs",
+              "title": "Kitchen & break room",
+              "subtitle": "Food service, kitchens and shared spaces",
+              "link_label": "Shop kitchen signs"
+            }
+          },
+          "sbl-cat-desk": {
+            "type": "category",
+            "settings": {
+              "collection": "custom-engraved-desk-nameplates",
+              "title": "Desk nameplates",
+              "subtitle": "Professional names and titles for every desk",
+              "link_label": "Shop nameplates",
+              "product": "black-piano-finish-desk-name-plate"
+            }
+          },
+          "sbl-cat-property": {
+            "type": "category",
+            "settings": {
+              "collection": "no-soliciting-signs",
+              "title": "Property notices",
+              "subtitle": "No soliciting, private property and entry notices",
+              "link_label": "Shop property signs"
+            }
+          },
+          "sbl-ind-business": {
+            "type": "industry",
+            "settings": {
+              "collection": "general-business-signs",
+              "title": "Business & offices",
+              "subtitle": "Offices, suites, shops and warehouses",
+              "link_label": "Shop business signs",
+              "anchor": "offices"
+            }
+          },
+          "sbl-ind-health": {
+            "type": "industry",
+            "settings": {
+              "collection": "exam-room",
+              "title": "Healthcare",
+              "subtitle": "Hospitals, clinics and treatment rooms",
+              "link_label": "Shop healthcare signs",
+              "anchor": "clinics"
+            }
+          },
+          "sbl-ind-education": {
+            "type": "industry",
+            "settings": {
+              "collection": "designer-school-student-desk-signs",
+              "title": "Education",
+              "subtitle": "Schools, classrooms and university offices",
+              "link_label": "Shop education signs",
+              "anchor": "schools"
+            }
+          },
+          "sbl-ind-food": {
+            "type": "industry",
+            "settings": {
+              "collection": "signage-signs-for-business-food-signs",
+              "title": "Food & hospitality",
+              "subtitle": "Restaurants, cafés and commercial kitchens",
+              "link_label": "Shop restaurant signs",
+              "anchor": "restaurants"
+            }
+          },
+          "sbl-ind-public": {
+            "type": "industry",
+            "settings": {
+              "collection": "property-signs",
+              "title": "Public safety & government",
+              "subtitle": "Departments, facilities and public spaces",
+              "link_label": "Shop facility signs",
+              "anchor": "government"
+            }
+          },
+          "sbl-ind-faith": {
+            "type": "industry",
+            "settings": {
+              "collection": "church-office-signs",
+              "title": "Churches & ministries",
+              "subtitle": "Church offices, prayer rooms and ministries",
+              "link_label": "Shop church signs",
+              "anchor": "churches"
+            }
+          },
+          "sbl-ind-home": {
+            "type": "industry",
+            "settings": {
+              "collection": "signage-signs-for-home",
+              "title": "Home & rentals",
+              "subtitle": "Welcome signs, house rules and guest information",
+              "link_label": "Shop home signs",
+              "anchor": "homes"
+            }
+          },
+          "sbl-hero-business": {
+            "type": "hero_slide",
+            "settings": {
+              "word": "business",
+              "product": "designer-main-office-sign"
+            }
+          },
+          "sbl-hero-university": {
+            "type": "hero_slide",
+            "settings": {
+              "word": "university",
+              "product": "signs-bylita-oval-faculty-lounge-sign"
+            }
+          },
+          "sbl-hero-office": {
+            "type": "hero_slide",
+            "settings": {
+              "word": "office",
+              "product": "signs-bylita-designer-conference-room-sign"
+            }
+          },
+          "sbl-hero-restaurant": {
+            "type": "hero_slide",
+            "settings": {
+              "word": "restaurant",
+              "product": "signs-bylita-classic-framed-please-wait-to-be-seated-sign"
+            }
+          },
+          "sbl-hero-school": {
+            "type": "hero_slide",
+            "settings": {
+              "word": "school",
+              "product": "signs-bylita-standard-principal-sign"
+            }
+          },
+          "sbl-hero-church": {
+            "type": "hero_slide",
+            "settings": {
+              "word": "church",
+              "product": "signs-bylita-standard-pastors-office-sign"
+            }
+          },
+          "sbl-hero-clinic": {
+            "type": "hero_slide",
+            "settings": {
+              "word": "clinic",
+              "product": "signs-bylita-circle-exam-room-sign"
+            }
+          },
+          "sbl-hero-warehouse": {
+            "type": "hero_slide",
+            "settings": {
+              "word": "warehouse",
+              "product": "fancy-loading-dock-wall-or-door-sign"
+            }
+          }
+        },
+        "block_order": [
+          "sbl-hero-business",
+          "sbl-hero-university",
+          "sbl-hero-office",
+          "sbl-hero-restaurant",
+          "sbl-hero-school",
+          "sbl-hero-church",
+          "sbl-hero-clinic",
+          "sbl-hero-warehouse",
+          "sbl-cat-restroom",
+          "sbl-cat-office",
+          "sbl-cat-safety",
+          "sbl-cat-security",
+          "sbl-cat-staff",
+          "sbl-cat-food",
+          "sbl-cat-desk",
+          "sbl-cat-property",
+          "sbl-ind-business",
+          "sbl-ind-health",
+          "sbl-ind-education",
+          "sbl-ind-food",
+          "sbl-ind-public",
+          "sbl-ind-faith",
+          "sbl-ind-home"
+        ],
+        "settings": {
+          "designer_url": "/products/custom-sign",
+          "featured_collection": "featured-signage",
+          "bulk_url": "/products/custom-desk-sign",
+          "plaque_url": "/products/custom-plaque",
+          "trophy_url": "/products/custom-trophy"
+        }
       }
     },
     "content_for_index": [
-      "1585291266077",
-      "1542340479262",
-      "1550720181092",
-      "1550734615507",
-      "1550735154809",
-      "1550736793802",
-      "1585645130394",
-      "1585653611799",
-      "1550737803165",
-      "1550745498097"
+      "sbl-homepage-v2"
     ]
   },
   "presets": {

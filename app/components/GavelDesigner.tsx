@@ -1327,6 +1327,18 @@ export default function GavelDesigner({
     [bandDef.color, bandPreviewLines, fontEpoch, isClient, metalScanVersion, previewTextSize],
   );
 
+  /** The same band with the viewer's light baked in, for every flat view of it. */
+  const bandProofUrl = useMemo(
+    () =>
+      isClient
+        ? gavelBandToDataUrl(bandPreviewLines, previewTextSize, bandDef.color, {
+            proof: true,
+          })
+        : "",
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- metalScanVersion busts this when the scanned finish lands; the painter reads it out of module state
+    [bandDef.color, bandPreviewLines, fontEpoch, isClient, metalScanVersion, previewTextSize],
+  );
+
   const renderPlateTexture = useCallback(
     (logo: GavelPlateLogo | null, shaped = false) => {
       if (!isClient || !isStand) return "";
@@ -3729,7 +3741,9 @@ export default function GavelDesigner({
             row.texts.map((text) => text.trim()).find(Boolean) ||
             `Design ${index + 1}`;
           const bandUrl = await shrinkProofPng(
-            gavelBandToDataUrl(rowLines, rowPreset, bandDef.color),
+            gavelBandToDataUrl(rowLines, rowPreset, bandDef.color, {
+              proof: true,
+            }),
             1200,
           );
           const plateUrl =
@@ -3777,8 +3791,8 @@ export default function GavelDesigner({
         textSizePreset: previewTextSize,
         lines: bandArtLines,
         quantity: orderQuantity,
-        mockupDataUrl: mockupRef.current.dataUrl || bandTextureUrl,
-        unwrappedDataUrl: bandTextureUrl,
+        mockupDataUrl: mockupRef.current.dataUrl || bandProofUrl,
+        unwrappedDataUrl: bandProofUrl,
         productType,
         soundBlock: isStand ? "none" : soundBlock,
         soundBlockShape: effectiveSoundBlockShape,
@@ -6379,6 +6393,7 @@ export default function GavelDesigner({
                   previewRef={previewRef}
                   style={styleDef}
                   bandTextureUrl={bandTextureUrl}
+                  bandProofUrl={bandProofUrl}
                   bandHex={bandDef.color}
                   showSoundBlockToggle={hasSoundBlock}
                   soundBlockTextureUrl={soundBlockTextureUrl}
@@ -6403,7 +6418,7 @@ export default function GavelDesigner({
                 />
                 {step === "design" ? (
                   <GavelUnwrappedBandStrip
-                    dataUrl={bandTextureUrl}
+                    dataUrl={bandProofUrl}
                     empty={!hasText && !usingExampleCopy}
                     label={
                       usingExampleCopy

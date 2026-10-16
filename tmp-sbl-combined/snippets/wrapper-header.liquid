@@ -42,4 +42,9 @@
     {% section 'header-supermarket' %}
     {% section 'navigation-supermarket' %}
 </div>
+
+{% elsif settings.header_layout == 'sbl' %}
+<div class="wrapper-header wrapper_header_sbl">
+    {% section 'sbl-site-header' %}
+</div>
 {% endif %}

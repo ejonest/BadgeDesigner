@@ -421,6 +421,32 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
     ],
   },
   {
+    id: "triangle",
+    name: "Triangle",
+    previewImageSrc: "/sign-finishes/triangle/triangle-black-gold.jpg",
+    hasBorderTrim: false,
+    sizes: [
+      {
+        templateId: "triangle-11_7x10",
+        label: "One size",
+        sizeText: '11.7×10"',
+      },
+    ],
+  },
+  {
+    id: "diamond",
+    name: "Diamond",
+    previewImageSrc: "/sign-finishes/diamond/diamond-dark-oak.jpg",
+    hasBorderTrim: false,
+    sizes: [
+      {
+        templateId: "diamond-12x10",
+        label: "One size",
+        sizeText: '12×10"',
+      },
+    ],
+  },
+  {
     id: "door-hanger",
     name: "Door hanger",
     previewImageSrc: "/sign-template-previews/door-hanger.jpg",

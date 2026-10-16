@@ -1,0 +1,258 @@
+{%- liquid
+  assign path = request.path
+  assign pen_product = all_products['custom-daxmoor-pen']
+  if section.settings.pen_url != blank
+    assign pen_url = section.settings.pen_url
+  elsif pen_product != blank
+    assign pen_url = pen_product.url
+  else
+    assign pen_url = '/products/custom-daxmoor-pen'
+  endif
+  assign industry_page = routes.all_products_collection_url | append: '?view=sbl-industries'
+-%}
+
+<header class="sbl-header" data-sbl-header>
+  <div class="sbl-header__bar">
+    <a class="sbl-header__logo" href="{{ routes.root_url }}">
+      <span>Signs</span>
+      <small>BYLITA</small>
+    </a>
+
+    <input class="sbl-header__check" type="checkbox" id="sbl-header-menu-{{ section.id }}">
+    <label class="sbl-header__burger" for="sbl-header-menu-{{ section.id }}">
+      <span class="sbl-header__visually-hidden">Menu</span>
+      <span aria-hidden="true"></span>
+    </label>
+
+    <nav class="sbl-header__nav" aria-label="Primary">
+      <a class="sbl-header__link{% if path contains '/products/custom-sign' %} is-current{% endif %}" href="/products/custom-sign">
+        <span class="sbl-header__dot" aria-hidden="true"></span>
+        Design your sign
+      </a>
+      <a class="sbl-header__link" href="/#sbl-popular">Popular signs</a>
+      <a class="sbl-header__link{% if template.suffix == 'sbl-industries' %} is-current{% endif %}" href="{{ industry_page }}">Industries</a>
+      <a class="sbl-header__link{% if path contains '/products/custom-desk-sign' %} is-current{% endif %}" href="/products/custom-desk-sign">Desk signs</a>
+      <a class="sbl-header__link{% if path contains '/products/custom-plaque' %} is-current{% endif %}" href="/products/custom-plaque">Plaques & awards</a>
+      <a class="sbl-header__link" href="/#sbl-bulk">Bulk orders</a>
+
+      <details class="sbl-header__more">
+        <summary>More from LITA</summary>
+        <div class="sbl-header__more-menu">
+          <a href="https://allqualitybadges.com/" target="_blank" rel="noopener">
+            <strong>Name badges</strong>
+            <span>All Quality Badges · design live in minutes</span>
+          </a>
+          <a href="https://www.gavelsfast.com/" target="_blank" rel="noopener">
+            <strong>Gavels & presentation sets</strong>
+            <span>Gavels Fast · personalized gavels</span>
+          </a>
+          <a href="{{ collections['rubber-stamps'].url }}">
+            <strong>Rubber stamps</strong>
+            <span>Office, address and date stamps</span>
+          </a>
+          <a href="https://www.designsbylita.com/" target="_blank" rel="noopener">
+            <strong>Home decor & gifts</strong>
+            <span>Designs ByLITA · prints, mugs, seasonal</span>
+          </a>
+          <a href="{{ pen_url }}">
+            <strong>Executive pens</strong>
+            <span>Daxmoor · corporate gifts</span>
+          </a>
+        </div>
+      </details>
+    </nav>
+
+    <div class="sbl-header__tools">
+      <details class="sbl-header__search">
+        <summary aria-label="Search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 16.5L20 20.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </summary>
+        <form action="{{ routes.search_url }}" method="get" role="search">
+          <label class="sbl-header__visually-hidden" for="sbl-header-search-{{ section.id }}">Search signs</label>
+          <input id="sbl-header-search-{{ section.id }}" type="search" name="q" placeholder="Search signs" autocomplete="off">
+          <input type="hidden" name="type" value="product">
+          <button type="submit">Search</button>
+        </form>
+      </details>
+
+      <a class="sbl-header__icon" href="{% if customer %}{{ routes.account_url }}{% else %}{{ routes.account_login_url }}{% endif %}" aria-label="Account">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 19.2c1.4-3 3.8-4.4 7-4.4s5.6 1.4 7 4.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </a>
+
+      <div data-cart-header-02>
+        <a class="sbl-header__icon sbl-header__cart" href="{{ routes.cart_url }}" data-cart-toggle aria-label="Cart">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 8h11l-.8 11.2a1 1 0 0 1-1 .8H8.3a1 1 0 0 1-1-.8L6.5 8z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 8V6.8A3 3 0 0 1 12 3.8 3 3 0 0 1 15 6.8V8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span data-cart-count>{{ cart.item_count }}</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
+{% stylesheet %}
+  .sbl-header {
+    --sbl-navy: #0f2744;
+    --sbl-gold: #c9932e;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: var(--sbl-navy);
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+    border-bottom: 1px solid rgba(201, 147, 46, .55);
+  }
+  .sbl-header * { box-sizing: border-box; }
+  .sbl-header__bar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 28px;
+    width: min(1440px, calc(100% - 40px));
+    min-height: 74px;
+    margin: 0 auto;
+  }
+  .sbl-header a { color: inherit; text-decoration: none; }
+  .sbl-header__logo { display: inline-flex; align-items: baseline; gap: 8px; color: #fff; }
+  .sbl-header__logo span { font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 500; letter-spacing: -.03em; line-height: 1; }
+  .sbl-header__logo small { color: #e6c66e; font-size: 11px; font-weight: 800; letter-spacing: .2em; }
+  .sbl-header__check { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  .sbl-header__burger { display: none; }
+  .sbl-header__nav { display: flex; align-items: center; justify-content: center; gap: 22px; }
+  .sbl-header__link,
+  .sbl-header__more summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, .88);
+    font-size: 14.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .sbl-header__link:hover,
+  .sbl-header__more summary:hover,
+  .sbl-header__link.is-current { color: #fff; }
+  .sbl-header__link.is-current { box-shadow: inset 0 -2px 0 var(--sbl-gold); }
+  .sbl-header__dot { width: 8px; height: 8px; border-radius: 50%; background: #3ddc84; box-shadow: 0 0 0 4px rgba(61, 220, 132, .16); }
+  .sbl-header__more { position: relative; }
+  .sbl-header__more summary { list-style: none; }
+  .sbl-header__more summary::-webkit-details-marker { display: none; }
+  .sbl-header__more summary::after { content: ""; width: 7px; height: 7px; margin-top: -3px; border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor; transform: rotate(45deg); }
+  .sbl-header__more[open] summary { color: #fff; }
+  .sbl-header__more[open] summary::after { margin-top: 2px; transform: rotate(225deg); }
+  .sbl-header__more-menu {
+    position: absolute;
+    top: calc(100% + 16px);
+    right: 0;
+    z-index: 5;
+    display: grid;
+    width: 320px;
+    padding: 8px;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 22px 50px rgba(8, 26, 48, .28);
+  }
+  .sbl-header__more-menu a,
+  .sbl-header__more-pending {
+    display: grid;
+    gap: 2px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    color: var(--sbl-navy);
+  }
+  .sbl-header__more-menu a:hover { background: #f6f1e8; color: var(--sbl-navy); }
+  .sbl-header__more-menu strong { font-size: 15px; font-weight: 800; }
+  .sbl-header__more-menu span { color: #667085; font-size: 13px; font-weight: 500; line-height: 1.35; }
+  .sbl-header__more-pending { cursor: default; }
+  .sbl-header__tools { display: flex; align-items: center; gap: 6px; }
+  .sbl-header__icon,
+  .sbl-header__search summary {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    list-style: none;
+    cursor: pointer;
+  }
+  .sbl-header__search summary::-webkit-details-marker { display: none; }
+  .sbl-header__icon svg,
+  .sbl-header__search summary svg { width: 22px; height: 22px; }
+  .sbl-header__cart { position: relative; }
+  .sbl-header__cart span {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 99px;
+    background: var(--sbl-gold);
+    color: var(--sbl-navy);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 16px;
+    text-align: center;
+  }
+  .sbl-header__search { position: relative; }
+  .sbl-header__search form {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    display: flex;
+    width: min(360px, 70vw);
+    padding: 8px;
+    gap: 8px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 18px 40px rgba(8, 26, 48, .28);
+  }
+  .sbl-header__search input[type="search"] { min-width: 0; flex: 1; border: 0; outline: 0; color: var(--sbl-navy); font-size: 15px; }
+  .sbl-header__search button { border: 0; border-radius: 8px; background: var(--sbl-navy); color: #fff; font-weight: 800; padding: 0 14px; min-height: 40px; cursor: pointer; }
+  .sbl-header__visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  @media (max-width: 1100px) {
+    .sbl-header__bar { grid-template-columns: auto auto 1fr auto; width: min(100% - 20px, 1440px); min-height: 64px; gap: 12px; }
+    .sbl-header__burger { display: inline-flex; width: 40px; height: 40px; align-items: center; justify-content: center; cursor: pointer; }
+    .sbl-header__burger span[aria-hidden="true"],
+    .sbl-header__burger span[aria-hidden="true"]::before,
+    .sbl-header__burger span[aria-hidden="true"]::after { display: block; width: 18px; height: 1.6px; background: #fff; content: ""; }
+    .sbl-header__burger span[aria-hidden="true"] { position: relative; }
+    .sbl-header__burger span[aria-hidden="true"]::before,
+    .sbl-header__burger span[aria-hidden="true"]::after { position: absolute; left: 0; }
+    .sbl-header__burger span[aria-hidden="true"]::before { top: -6px; }
+    .sbl-header__burger span[aria-hidden="true"]::after { top: 6px; }
+    .sbl-header__nav {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      padding: 12px 16px 20px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 4px;
+      background: var(--sbl-navy);
+      border-bottom: 1px solid rgba(201, 147, 46, .55);
+    }
+    .sbl-header__check:checked ~ .sbl-header__nav { display: flex; }
+    .sbl-header__link,
+    .sbl-header__more summary { min-height: 44px; }
+    .sbl-header__more-menu { position: static; width: 100%; margin: 4px 0 8px; }
+    .sbl-header__logo span { font-size: 26px; }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Signs ByLITA header",
+  "settings": [
+    {
+      "type": "url",
+      "id": "pen_url",
+      "label": "Executive pens link",
+      "info": "Shown in More from LITA. Leave blank until the pen product page is ready."
+    }
+  ]
+}
+{% endschema %}

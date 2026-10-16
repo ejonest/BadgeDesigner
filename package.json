@@ -7,6 +7,8 @@
     "build": "remix vite:build",
     "dev": "remix vite:dev",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
+    "product-tags": "node scripts/product-tagging/cli.mjs",
+    "product-tags:test": "node --test scripts/product-tagging/*.test.mjs",
     "start": "remix-serve ./build/server/index.js",
     "typecheck": "tsc"
   },

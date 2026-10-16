@@ -25,11 +25,31 @@
 <div class="inner product-item{% if sold_out %} sold-out{% endif %}{% if on_sale %} on-sale{% endif %}" data-product-id="product-{{ product.id }}">
   <div class="inner-top">
     <div class="product-top">
+      {%- liquid
+        assign designer_fallback = blank
+        if product.featured_image == blank
+          if collection.handle == 'awards-and-plaques' or collection.handle == 'awards-plaques-plaques' or collection.handle == 'awards-plaques-medals' or template.suffix == 'grid-card'
+            if product.handle == 'custom-plaque'
+              assign designer_fallback = 'sbl-plaque-designer-shot.jpg'
+            elsif product.handle == 'custom-trophy'
+              assign designer_fallback = 'sbl-trophy-designer-shot.jpg'
+            endif
+          endif
+        endif
+      -%}
+      {%- if designer_fallback != blank -%}
+      <div class="product-image">
+        <a href="{{ product.url | within: collection }}" class="product-grid-image adaptive_height" style="display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;background:#eef3f6;overflow:hidden;">
+          <img src="{{ designer_fallback | asset_url }}" alt="{{ product.title | escape }} online designer" loading="lazy" width="1600" height="1000" style="width:100%;height:100%;object-fit:contain;">
+        </a>
+      </div>
+      {%- else -%}
       <div class="product-image{% if product.images.size > 1 and settings.image_swap %} image-swap{% endif %}">
         <a href="{{ product.url | within: collection }}" class="product-grid-image adaptive_height" data-collections-related="{{ routes.collections_url }}/{{collection.handle}}?view=related" {% unless settings.product_image_resize %}style="padding-top: {{ 1 | divided_by: product.featured_image.aspect_ratio | times: 100 }}%"{% endunless %}>
           {% render 'image-size', product: product, img: url %}
         </a>
       </div>
+      {%- endif -%}
 
       {% render 'product-label' with product as product %}
 

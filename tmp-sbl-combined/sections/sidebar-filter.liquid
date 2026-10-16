@@ -34,13 +34,28 @@
 
         <div class="widget-content">
             <ul>
-                {% if section.settings.style_categories == 'style_show_all' %}
+                {%- if collection.handle == 'awards-and-plaques' or collection.handle == 'awards-plaques-plaques' or collection.handle == 'awards-plaques-medals' -%}
+                <li>
+                    <a href="/collections/awards-and-plaques" data-award-filter="all"{% if collection.handle == 'awards-and-plaques' %} class="active" aria-current="page"{% endif %}>All</a>
+                </li>
+                <li>
+                    <a href="/collections/awards-plaques-plaques" data-award-filter="plaques"{% if collection.handle == 'awards-plaques-plaques' %} class="active" aria-current="page"{% endif %}>Plaques</a>
+                </li>
+                <li>
+                    <a href="/collections/awards-and-plaques?award=trophies" data-award-filter="trophies">Trophies</a>
+                </li>
+                <li>
+                    <a href="/collections/awards-plaques-medals" data-award-filter="medals"{% if collection.handle == 'awards-plaques-medals' %} class="active" aria-current="page"{% endif %}>Medals &amp; Medallions</a>
+                </li>
+                {% elsif section.settings.style_categories == 'style_show_all' %}
                 {% for category in collections %}
+                {% unless category.handle == 'plaques' or category.handle contains 'awards-plaques-' %}
                 <li>
                     <a href="{{ category.url }}" {% if collection.handle == category.handle %}class="active"{% endif %}>              
                         {% render 'multilang' with category.title %}
                     </a>
-                </li>     
+                </li>
+                {% endunless %}
                 {% endfor %}
                
                 {% elsif section.settings.style_categories == 'style_main_menu' %}
@@ -48,6 +63,7 @@
 
                 {% for link in linklists.main-menu.links %}
                 {%if link.url contains '/collections/'%}
+                {% unless link.url == '/collections/plaques' %}
                 <li class="sidebar-link-lv1 {% if linklists[link.handle] != empty %} dropdown{% if link.active %} open{% endif %}{% endif %}">
                     <a href="{{ link.url }}" {% if link.active %}class="active"{% endif %}>
                         {% render 'multilang' with link.title %}
@@ -60,7 +76,8 @@
                     {% assign link_child = link.handle %}
                     {% render 'dropdown-cat' with link_child as link_child %}
                     {% endif %}
-                </li>   
+                </li>
+                {% endunless %}
                 {%endif%}
                 {%endfor%}
 
@@ -68,6 +85,7 @@
                 {% assign cat_link_list = section.settings.link_list | handleize %}
 
                 {% for link in linklists[cat_link_list].links %}
+                {% unless link.url == '/collections/plaques' %}
                 <li class="sidebar-link-lv1{% if linklists[link.handle] != empty %} dropdown{% if link.active %} open{% endif %}{% endif %}">
                     <a href="{{ link.url }}" {% if link.active %}class="active"{% endif %}>
                         {% render 'multilang' with link.title %}
@@ -80,7 +98,8 @@
                     {% assign link_child = link.handle %}
                     {% render 'dropdown-cat' with link_child as link_child %}
                     {% endif %}
-                </li>        
+                </li>
+                {% endunless %}
                 {% endfor %}        
                 {% endif %}
             </ul>
@@ -729,6 +748,129 @@
   {% endif %}
   {% endif %}
 </style>
+{%- if collection.handle == 'awards-and-plaques' or collection.handle == 'awards-plaques-plaques' or collection.handle == 'awards-plaques-medals' -%}
+<style>
+  .product-collection.is-award-loading { opacity: 0.35; pointer-events: none; transition: opacity 0.15s; }
+</style>
+<script>
+  (function () {
+    var links = document.querySelectorAll('[data-award-filter]');
+    if (!links.length) return;
+    var sectionId = 'collection-template-default';
+
+    function gridRoot() {
+      return document.querySelector('[data-section-type="collection-template"]');
+    }
+
+    function setActive(filter) {
+      links.forEach(function (link) {
+        var on = link.getAttribute('data-award-filter') === filter;
+        link.classList.toggle('active', on);
+        if (on) link.setAttribute('aria-current', 'page');
+        else link.removeAttribute('aria-current');
+      });
+    }
+
+    function replaceGrid(gridHtml, paddingHtml) {
+      var root = gridRoot();
+      if (!root) return;
+      var grid = root.querySelector('.product-collection');
+      if (!grid) return;
+      grid.innerHTML = gridHtml;
+      var padding = root.querySelector(':scope > .padding');
+      if (paddingHtml) {
+        if (padding) padding.outerHTML = paddingHtml;
+        else grid.insertAdjacentHTML('afterend', paddingHtml);
+      } else if (padding) {
+        padding.remove();
+      }
+      if (window.Currency && typeof window.Currency.convertAll === 'function') {
+        var active = document.querySelector('#currencies .active');
+        window.Currency.convertAll(window.shop_currency, active && active.getAttribute('data-currency'), 'span.money', 'money_format');
+      }
+    }
+
+    function loadCollection(url) {
+      var root = gridRoot();
+      var grid = root && root.querySelector('.product-collection');
+      if (grid) grid.classList.add('is-award-loading');
+      var endpoint = url.split('?')[0] + '?section_id=' + sectionId;
+      return fetch(endpoint, { credentials: 'same-origin' })
+        .then(function (response) { return response.text(); })
+        .then(function (html) {
+          var doc = new DOMParser().parseFromString(html, 'text/html');
+          var nextGrid = doc.querySelector('.product-collection');
+          var nextPadding = doc.querySelector('.padding');
+          if (!nextGrid) throw new Error('Missing product grid');
+          replaceGrid(nextGrid.innerHTML, nextPadding ? nextPadding.outerHTML : '');
+        })
+        .finally(function () {
+          var current = gridRoot();
+          var currentGrid = current && current.querySelector('.product-collection');
+          if (currentGrid) currentGrid.classList.remove('is-award-loading');
+        });
+    }
+
+    function loadTrophies() {
+      var root = gridRoot();
+      var grid = root && root.querySelector('.product-collection');
+      if (grid) grid.classList.add('is-award-loading');
+      return fetch('/products/custom-trophy?view=grid-card', { credentials: 'same-origin' })
+        .then(function (response) { return response.text(); })
+        .then(function (html) {
+          var itemClass = (grid && grid.querySelector('.grid-item') && grid.querySelector('.grid-item').className) || 'grid-item col-6 col-md-4 col-lg-3';
+          var doc = new DOMParser().parseFromString(html, 'text/html');
+          var item = doc.querySelector('.grid-item');
+          if (!item) throw new Error('Missing trophy card');
+          item.className = itemClass;
+          replaceGrid(item.outerHTML, '');
+        })
+        .finally(function () {
+          var current = gridRoot();
+          var currentGrid = current && current.querySelector('.product-collection');
+          if (currentGrid) currentGrid.classList.remove('is-award-loading');
+        });
+    }
+
+    function load(filter, url, updateHistory) {
+      setActive(filter);
+      var request = filter === 'trophies' ? loadTrophies() : loadCollection(url);
+      return request.then(function () {
+        if (updateHistory) history.pushState({ awardFilter: filter }, '', url);
+      });
+    }
+
+    links.forEach(function (link) {
+      link.addEventListener('click', function (event) {
+        event.preventDefault();
+        var filter = link.getAttribute('data-award-filter');
+        if (link.classList.contains('active')) return;
+        load(filter, link.href, true);
+      });
+    });
+
+    window.addEventListener('popstate', function () {
+      var filter = 'all';
+      var url = '/collections/awards-and-plaques';
+      if (location.pathname.indexOf('/collections/awards-plaques-plaques') === 0) {
+        filter = 'plaques';
+        url = location.pathname;
+      } else if (location.pathname.indexOf('/collections/awards-plaques-medals') === 0) {
+        filter = 'medals';
+        url = location.pathname;
+      } else if (new URLSearchParams(location.search).get('award') === 'trophies') {
+        filter = 'trophies';
+        url = location.pathname + location.search;
+      }
+      load(filter, url, false);
+    });
+
+    if (new URLSearchParams(location.search).get('award') === 'trophies') {
+      load('trophies', location.pathname + location.search, false);
+    }
+  })();
+</script>
+{%- endif -%}
 {% comment %}
 
 This file has been rewritten to preserve the original behavior.

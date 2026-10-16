@@ -27,6 +27,7 @@ import {
   gavelPaintStyle,
   gavelPaintWeight,
 } from "~/utils/gavelFonts";
+import type { GavelMetalAlbedoKind } from "~/constants/gavelStyles";
 import { getReadyGavelMetalAlbedo } from "~/utils/gavelMetalTexture";
 import { blackInkLogo, blackInkLogoDataUrl } from "~/utils/logoBlackInk";
 import { standPlateOutline } from "~/utils/standPlateOutline";
@@ -236,14 +237,17 @@ function metalSurfaceCanvas(
   width: number,
   height: number,
   hex: string,
+  kind: GavelMetalAlbedoKind,
 ): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
 
   const set = gavelMetalTextureSet(hex);
-  const scan = set ? getReadyGavelMetalAlbedo(set) : null;
+  const scan = set ? getReadyGavelMetalAlbedo(set, kind) : null;
   // The scan arrives after first paint, so it is part of the key: the cached
   // stand-in has to be superseded rather than kept.
-  const key = `${width}x${height}:${hex.trim().toLowerCase()}:${scan ? set : "flat"}`;
+  const key = `${width}x${height}:${hex.trim().toLowerCase()}:${
+    scan ? `${set}:${kind}` : "flat"
+  }`;
   const cached = metalSurfaceCache.get(key);
   if (cached) return cached;
 
@@ -310,16 +314,25 @@ function paintScannedMetalSurface(
  * The brushed metal the band and the stand plaque are both cut from: an even
  * mid-tone held close enough to the base color that engraved text keeps its
  * contrast everywhere on the surface.
+ *
+ * `proof` paints the lit finish for flat images; the 3D material needs the
+ * plain albedo or the studio light is applied twice.
  */
 export function fillGavelMetalSurface(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   hex: string,
+  proof = false,
 ) {
   // Always composited with drawImage: the surface is built as raw pixels, and
   // putImageData would ignore the silhouette clip the shaped plate draws under.
-  const cached = metalSurfaceCanvas(width, height, hex);
+  const cached = metalSurfaceCanvas(
+    width,
+    height,
+    hex,
+    proof ? "proof" : "color",
+  );
   if (cached) {
     ctx.drawImage(cached, 0, 0);
     return;
@@ -413,6 +426,13 @@ function bandTextLayout(
   return { drawPx, drawGap, y0 };
 }
 
+type GavelBandPaintOptions = {
+  solidFill?: boolean;
+  /** Flat proof (strip, band tab, PDF) rather than the 3D wrap texture. */
+  proof?: boolean;
+  logo?: GavelPlateLogo | null;
+};
+
 /**
  * Paint the unwrapped band (metal + up to 4 centered text lines) onto a canvas.
  * Used for the 3D wrap texture, the flat proof strip, and print SVG raster.
@@ -422,7 +442,7 @@ export function paintGavelBandCanvas(
   lines: readonly GavelBandLineInput[],
   preset: GavelTextSizePreset,
   bandHex: string = GAVEL_BAND_GOLD_HEX,
-  options?: { solidFill?: boolean; logo?: GavelPlateLogo | null },
+  options?: GavelBandPaintOptions,
 ): HTMLCanvasElement {
   const width = GAVEL_BAND_TEXTURE_WIDTH_PX;
   const height = GAVEL_BAND_TEXTURE_HEIGHT_PX;
@@ -435,7 +455,7 @@ export function paintGavelBandCanvas(
     ctx.fillStyle = bandHex;
     ctx.fillRect(0, 0, width, height);
   } else {
-    fillGavelMetalSurface(ctx, width, height, bandHex);
+    fillGavelMetalSurface(ctx, width, height, bandHex, options?.proof);
   }
 
   const filled = activeLines(lines);
@@ -475,7 +495,7 @@ export function gavelBandToDataUrl(
   lines: readonly GavelBandLineInput[] | readonly BadgeLine[],
   preset: GavelTextSizePreset,
   bandHex: string = GAVEL_BAND_GOLD_HEX,
-  options?: { solidFill?: boolean; logo?: GavelPlateLogo | null },
+  options?: GavelBandPaintOptions,
 ): string {
   if (typeof document === "undefined") return "";
   const canvas = document.createElement("canvas");
@@ -781,7 +801,7 @@ export function paintGavelStandPlateCanvas(
     ctx.clip();
   }
 
-  fillGavelMetalSurface(ctx, width, height, plateHex);
+  fillGavelMetalSurface(ctx, width, height, plateHex, options?.shaped);
 
   const dark = plateHex.trim().toLowerCase() === "#ffffff" ? "#4f5359" : "#231c13";
   tracePath(ctx, standPlateKeylinePath());

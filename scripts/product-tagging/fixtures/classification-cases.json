@@ -1,0 +1,53 @@
+[
+  {
+    "name": "restroom and business",
+    "product": {
+      "title": "RESTROOM - Customers Only Sign",
+      "descriptionHtml": "<p>Bathroom sign for a business.</p>",
+      "productType": "Signs",
+      "tags": []
+    },
+    "includes": [
+      "category:restroom-hygiene"
+    ]
+  },
+  {
+    "name": "healthcare commercial kitchen",
+    "product": {
+      "title": "Hospital Employees Must Wash Hands",
+      "descriptionHtml": "Commercial kitchen hygiene sign for clinic staff",
+      "productType": "Safety Signs",
+      "tags": []
+    },
+    "includes": [
+      "category:restroom-hygiene",
+      "industry:healthcare",
+      "industry:commercial-kitchen"
+    ]
+  },
+  {
+    "name": "warehouse safety",
+    "product": {
+      "title": "Loading Dock B - Hard Hats Required",
+      "descriptionHtml": "Industrial warehouse safety sign",
+      "productType": "Signs",
+      "tags": []
+    },
+    "includes": [
+      "category:safety-compliance",
+      "industry:warehouse-industrial"
+    ]
+  },
+  {
+    "name": "church prayer room",
+    "product": {
+      "title": "Library and Prayer Room",
+      "descriptionHtml": "Church ministry door sign",
+      "productType": "Signs",
+      "tags": []
+    },
+    "includes": [
+      "industry:faith"
+    ]
+  }
+]

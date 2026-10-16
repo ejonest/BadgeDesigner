@@ -156,6 +156,13 @@ import {
 } from "../constants/designerVariants";
 import type { PlaqueSizeKey } from "~/constants/plaqueLayouts";
 import {
+  defaultSignFinishForShape,
+  getSignFinishById,
+  getSignFinishesForShape,
+  signShapeHasFinishes,
+  type SignFinishOption,
+} from "~/data/signFinishes";
+import {
   getPlaqueSizeStepOptionsForLayout,
   getPlaqueSizeStepDisplay,
   buildPlaqueTemplateId,
@@ -2204,6 +2211,70 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     applyBackgroundColor(colorValue);
   };
 
+  const badgeWithSignFinish = (
+    source: Badge,
+    finish: SignFinishOption,
+  ): Badge => ({
+    ...source,
+    signFinishId: finish.id,
+    signFinishImageSrc: undefined,
+    backgroundColor: finish.backgroundColor,
+    backgroundImage: undefined,
+    borderColor: finish.inkColor,
+    signBorderOptionId: SIGN_BORDER_OPTION_NONE,
+    signBorderEnabled: false,
+    lines: source.lines.map((line) => ({
+      ...line,
+      color: finish.inkColor,
+    })),
+  });
+
+  const applySignFinish = (finish: SignFinishOption) => {
+    saveToUndoHistory({
+      type: "background-color",
+      badgeIndex: selectedBadgeIndex,
+    });
+    setHasChosenBackgroundColor(true);
+    const updatedBadge = badgeWithSignFinish(badge, finish);
+    setBadge(updatedBadge);
+    setMultipleBadges((prev) =>
+      prev.map((item, index) =>
+        index === selectedBadgeIndex ? updatedBadge : item,
+      ),
+    );
+    if (selectedBadgeIndex === 0) setBadge1Data(updatedBadge);
+    setSectionsOpen({
+      template: false,
+      size: false,
+      export: false,
+      badgeStyle: false,
+      background: false,
+      badgeIcon: false,
+      textLines: true,
+      backing: false,
+      border: false,
+      plaqueFormat: false,
+    });
+    setSectionsOpened((prev) => ({
+      ...prev,
+      background: true,
+      textLines: true,
+    }));
+    guidedFlowCompletedRef.current = true;
+  };
+
+  const applySignFinishToAll = () => {
+    if (!selectedSignFinish) return;
+    const updated = multipleBadges.map((item) =>
+      badgeWithSignFinish(item, selectedSignFinish),
+    );
+    setMultipleBadges(updated);
+    const active = updated[selectedBadgeIndex];
+    if (active) setBadge(active);
+    if (updated[0]) setBadge1Data(updated[0]);
+    setHasChosenBackgroundColor(true);
+  };
+
   const syncBadgeStyleToMultiple = (updatedBadge: Badge) => {
     setBadge(updatedBadge);
     const updatedMultipleBadges = [...multipleBadges];
@@ -3038,6 +3109,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   /** True when the selected sign template family has a border trim (Circle/Basic omit the border step). */
   const signBorderStepRequired =
     isSignLikeVariant(variant) &&
+    variant !== "sign" &&
     config.hasBorder &&
     signTemplateTypeShowsBorderStep(selectedSignTemplateType);
   /** Sign: framed trim + motif (not "No border" and user has chosen an option). */
@@ -3047,6 +3119,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   /** Sign: border step complete once user picks any option (including No border). */
   const signBorderConfigured =
     !signBorderStepRequired || badge.signBorderOptionId !== undefined;
+  const selectedSignFinish = getSignFinishById(badge.signFinishId);
+  const signFinishConfigured =
+    variant !== "sign" ||
+    Boolean(
+      selectedSignFinish &&
+        selectedSignFinish.shapeTypeId === selectedSignTemplateType,
+    );
   const signUserLogoUploadSupported = signTemplateSupportsUserLogoUpload(
     badge.templateId ?? universalTemplateId,
   );
@@ -3177,7 +3256,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       (deskSignMaterial != null && selectedDeskSignSize !== null)) &&
     (isDeskSignVariant(variant)
       ? deskSignColorsComplete
-      : hasChosenBackgroundColor) &&
+      : variant === "sign"
+        ? signFinishConfigured
+        : hasChosenBackgroundColor) &&
     (!needsBadgeStyleStep || hasChosenBadgeStyle) &&
     (!showBadgeIconStep || hasChosenBadgeIcon) &&
     (!requiresPlaqueLogo || Boolean(badge.logo?.src?.trim())) &&
@@ -3349,12 +3430,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       // Sign: 1=template type, 2=size, 3=backgrounds, 4=border (when hasBorder), 5=text
       const st1 = selectedSignTemplateType != null;
       const st2 = selectedSignSizeTemplateId != null;
-      const st3 = hasChosenBackgroundColor;
+      const st3 = signFinishConfigured;
       const st5 = hasStep3TextEntered;
       const actions: string[] = [];
       if (forStep >= 2 && !st1) actions.push("pick a template");
       if (forStep >= 3 && !st2) actions.push("choose a size");
-      if (forStep >= 4 && !st3) actions.push("select a background color");
+      if (forStep >= 4 && !st3) actions.push("select a finish");
       if (forStep >= 5 && signBorderStepRequired && !signBorderConfigured) {
         actions.push("select a border type");
       }
@@ -5313,7 +5394,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     if (variant !== "badge") return null;
     const templateDone = multipleBadges.length > 0;
     const styleDone = !needsBadgeStyleStep || hasChosenBadgeStyle;
-    const backgroundDone = hasChosenBackgroundColor;
+    const backgroundDone = signFinishConfigured;
     /** Optional icon step: complete only after an explicit choice (including No icon). */
     const iconDone = !showBadgeIconStep || hasChosenBadgeIcon;
     const textDone = hasStep3TextValid;
@@ -5636,33 +5717,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       (s) => s.templateId === selectedSignSizeTemplateId,
     );
 
-    const lookup = [
-      ...BADGE_AQB_FEATURED_BACKGROUND_COLORS,
-      ...BACKGROUND_COLORS,
-      ...EXTENDED_BACKGROUND_COLORS,
-      ...SMART_PALETTE_COLORS,
-    ];
-    const hx = (badge.backgroundColor || "").toUpperCase();
-    const bgName = (() => {
-      if (isFeaturedBrushedMetalPlateColor(badge.backgroundColor)) {
-        const norm = normalizeFeaturedBrushedMetalBaseHex(
-          badge.backgroundColor!,
-        ).toUpperCase();
-        const brushedHit = BADGE_AQB_FEATURED_BACKGROUND_COLORS.find(
-          (c) =>
-            "brushed" in c &&
-            c.brushed &&
-            normalizeFeaturedBrushedMetalBaseHex(c.value).toUpperCase() ===
-              norm,
-        );
-        if (brushedHit) return brushedHit.name;
-      }
-      return (
-        lookup.find((c) => c.value.toUpperCase() === hx)?.name ??
-        badge.backgroundColor ??
-        ""
-      );
-    })();
+    const bgName = selectedSignFinish?.label ?? "";
 
     const borderLabel = getSignBorderStepChipOptions(
       badge.templateId ?? universalTemplateId,
@@ -5731,12 +5786,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     selectedSignTemplateType,
     selectedSignSizeTemplateId,
     hasChosenBackgroundColor,
+    signFinishConfigured,
     signBorderStepRequired,
     signBorderConfigured,
     hasStep3TextValid,
     signUserLogoUploadSupported,
     badge.logo?.src,
     badge.backgroundColor,
+    badge.signFinishId,
     badge.lines,
     badge.signBorderOptionId,
     badge.templateId,
@@ -5789,7 +5846,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       const entries: StepEntry[] = [
         { label: "Pick a Shape", done: selectedSignTemplateType != null },
         { label: "Choose size", done: selectedSignSizeTemplateId != null },
-        { label: "Pick a Color", done: hasChosenBackgroundColor },
+        { label: "Pick a Finish", done: signFinishConfigured },
         ...(signBorderStepRequired
           ? [{ label: "Border", done: signBorderConfigured }]
           : []),
@@ -5843,6 +5900,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     deskSignMaterial,
     deskSignShowColorsStep,
     hasChosenBackgroundColor,
+    signFinishConfigured,
     hasChosenDeskSignStandColor,
     hasChosenBadgeStyle,
     hasStep3TextEntered,
@@ -8227,6 +8285,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           ? { plaqueUseDefaultAttachedAwardVisual: true }
           : {}),
       };
+      if (variant === "sign") {
+        const shapeId =
+          findSignTypeAndSizeForUniversalTemplate(newTemplateId)?.typeId;
+        const finish = defaultSignFinishForShape(shapeId);
+        if (finish) newBadge = badgeWithSignFinish(newBadge, finish);
+      }
       if (variant === "desk-sign") {
         newBadge = applyDeskSignMaterialDefaults(
           {
@@ -8498,11 +8562,46 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           signBorderEnabled: undefined,
         }
       : {};
+    const nextSignType =
+      variant === "sign"
+        ? findSignTypeAndSizeForUniversalTemplate(newTemplateId)?.typeId
+        : undefined;
 
     const computeBadgeAfterUniversalTemplateChange = (prevB: Badge): Badge => {
+      const previousFinish = getSignFinishById(prevB.signFinishId);
+      const finishStillFits = Boolean(
+        previousFinish &&
+          nextSignType &&
+          previousFinish.shapeTypeId === nextSignType,
+      );
+      const replacementFinish =
+        variant === "sign" && nextSignType && !finishStillFits
+          ? defaultSignFinishForShape(nextSignType)
+          : undefined;
+      const clearSignFinish =
+        variant === "sign" &&
+        Boolean(nextSignType) &&
+        !finishStillFits &&
+        !replacementFinish;
       let proto: Badge = {
         ...prevB,
         templateId: newTemplateId,
+        ...(replacementFinish
+          ? {
+              signFinishId: replacementFinish.id,
+              signFinishImageSrc: undefined,
+              backgroundColor: replacementFinish.backgroundColor,
+              backgroundImage: undefined,
+              borderColor: replacementFinish.inkColor,
+              signBorderOptionId: SIGN_BORDER_OPTION_NONE,
+              signBorderEnabled: false,
+            }
+          : clearSignFinish
+            ? {
+                signFinishId: undefined,
+                signFinishImageSrc: undefined,
+              }
+            : {}),
         ...(variant === "desk-sign" && options?.deskSignSize
           ? { deskSignSize: options.deskSignSize }
           : {}),
@@ -8535,7 +8634,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           proto = { ...proto, customBadgeBackgroundId: undefined };
         }
       }
-      let linesSource = prevB.lines;
+      let linesSource = replacementFinish
+        ? prevB.lines.map((line) => ({
+            ...line,
+            color: replacementFinish.inkColor,
+          }))
+        : prevB.lines;
       if (variant === "plaque") {
         const nowAttached = isPlaqueAttachedTemplateId(newTemplateId);
         const wasAttached = isPlaqueAttachedTemplateId(prevB.templateId ?? "");
@@ -10083,6 +10187,21 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             : {}),
         };
       };
+      const designerExtraCartProperties = (
+        b: Badge,
+      ): Record<string, string> => {
+        const finish =
+          variant === "sign" ? getSignFinishById(b.signFinishId) : undefined;
+        return {
+          ...deskSignCartProperties(b),
+          ...(finish
+            ? {
+                "_Sign Finish": finish.label,
+                "_Sign Finish ID": finish.id,
+              }
+            : {}),
+        };
+      };
 
       const cartItems = addDuplicates
         ? allBadgesForSupabase.map((b, i) => {
@@ -10112,7 +10231,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 ? b.logo.fileName || "Included"
                 : undefined,
               includeBackingType: !isSignDesigner && !isDeskSignDesigner,
-              extraHidden: deskSignCartProperties(b),
+              extraHidden: designerExtraCartProperties(b),
             });
             return {
               variantId,
@@ -10149,7 +10268,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 ? b.logo.fileName || "Included"
                 : undefined,
               includeBackingType: !isSignDesigner && !isDeskSignDesigner,
-              extraHidden: deskSignCartProperties(b),
+              extraHidden: designerExtraCartProperties(b),
             });
             return {
               variantId,
@@ -11800,7 +11919,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
                 const backgroundLabel =
                   config.templatesKey === "sign"
-                    ? "Backgrounds"
+                    ? "Finishes"
                     : variant === "badge"
                       ? "Pick a Color"
                       : "Background";
@@ -11809,7 +11928,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 }
                 const signBgDone =
                   multipleBadges.length > 0 &&
-                  hasChosenBackgroundColor &&
+                  signFinishConfigured &&
                   (config.hasSizeStep
                     ? selectedSignSizeTemplateId != null
                     : true);
@@ -11874,15 +11993,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     : []),
                   {
                     label:
-                      variant === "sign" ? "Pick a Color" : backgroundLabel,
+                      variant === "sign" ? "Pick a Finish" : backgroundLabel,
                     navLabel:
                       variant === "badge" || variant === "sign"
-                        ? "Color"
+                        ? variant === "sign"
+                          ? "Finish"
+                          : "Color"
                         : undefined,
                     sectionKey:
                       variant === "sign" ? ("background" as const) : undefined,
-                    guard: variant === "sign" ? (4 as const) : undefined,
-                    done: hasChosenBackgroundColor,
+                    guard: variant === "sign" ? (3 as const) : undefined,
+                    done:
+                      variant === "sign"
+                        ? signFinishConfigured
+                        : hasChosenBackgroundColor,
                     current:
                       multipleBadges.length > 0 &&
                       !hasChosenBackgroundColor &&
@@ -11940,7 +12064,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         : hasStep3TextEntered,
                     current: signBorderStepRequired
                       ? signBorderConfigured && !hasStep3TextEntered
-                      : hasChosenBackgroundColor &&
+                      : (variant === "sign"
+                          ? signFinishConfigured
+                          : hasChosenBackgroundColor) &&
                         (!showBadgeIconStep || hasChosenBadgeIcon) &&
                         !(variant === "badge"
                           ? hasStep3TextValid
@@ -12644,6 +12770,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           type: (typeof SIGN_TEMPLATE_TYPES)[0],
                         ) => {
                           const firstSizeId = type.sizes[0].templateId;
+                          if (selectedSignTemplateType !== type.id) {
+                            setHasChosenBackgroundColor(false);
+                          }
                           setSelectedSignTemplateType(type.id);
                           setUniversalTemplateId(firstSizeId);
                           setSelectedSignSizeTemplateId(null);
@@ -13241,7 +13370,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       isDeskSignVariant(variant)
                         ? "Colors"
                         : variant === "sign"
-                          ? "Pick a Color"
+                          ? "Pick a Finish"
                           : badgeBackgroundStepTitle
                     }
                     summary={
@@ -13257,7 +13386,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         isDeskSignVariant(variant)
                           ? 3
                           : variant === "sign"
-                            ? 4
+                            ? 3
                             : badgeBackgroundStepGuard,
                       );
                       if (msg) {
@@ -13323,10 +13452,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             ? "Step 4: Metal plate finish"
                             : "Step 3: Metal plate finish"
                           : config.templatesKey === "sign"
-                          ? "Step 3: Pick backgrounds"
+                          ? "Step 3: Pick a finish"
                           : "Pick a Color"}
                       </h3>
-                      {hasChosenBackgroundColor && (
+                      {(variant === "sign"
+                        ? signFinishConfigured
+                        : hasChosenBackgroundColor) && (
                         <CheckCircleIcon className="h-5 w-5 text-green-600" />
                       )}
                     </div>
@@ -13638,97 +13769,87 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     }
 
                     if (variant === "sign") {
+                      const finishes = getSignFinishesForShape(
+                        selectedSignTemplateType,
+                      );
+                      const groups = Array.from(
+                        new Set(finishes.map((finish) => finish.group)),
+                      );
                       return (
                         <>
-                          <div className="aqb-badge-colour-row">
-                            {featuredColors.map((c) => {
-                              const selected =
-                                !c.isRainbow &&
-                                hasChosenBackgroundColor &&
-                                isAqbBadgeBgSwatchSelected(
-                                  badge.backgroundColor,
-                                  c.value,
-                                );
-                              const light = c.value === "#FFFFFF";
-                              return (
+                          {finishes.length > 0 ? (
+                            <div className="max-h-[480px] space-y-4 overflow-y-auto pr-1">
+                              {groups.map((group) => (
+                                <div key={group}>
+                                  <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-[#6b7f92]">
+                                    {group}
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2.5">
+                                    {finishes
+                                      .filter(
+                                        (finish) => finish.group === group,
+                                      )
+                                      .map((finish) => {
+                                        const selected =
+                                          selectedSignFinish?.id === finish.id;
+                                        return (
+                                          <button
+                                            key={finish.id}
+                                            type="button"
+                                            className={`relative overflow-hidden rounded-[9px] border-2 bg-white text-left transition ${
+                                              selected
+                                                ? "border-[#02132B] shadow-[0_0_0_2px_rgba(2,19,43,0.08)]"
+                                                : "border-[rgba(2,19,43,0.1)] hover:border-[#1a3d5c]"
+                                            }`}
+                                            title={finish.label}
+                                            onClick={(event) => {
+                                              event.preventDefault();
+                                              applySignFinish(finish);
+                                            }}
+                                          >
+                                            <span className="flex h-[92px] items-center justify-center overflow-hidden bg-[#f0ede6] p-2">
+                                              <img
+                                                src={finish.imageSrc}
+                                                alt=""
+                                                loading="lazy"
+                                                className="max-h-full max-w-full object-contain"
+                                              />
+                                            </span>
+                                            <span className="flex min-h-[42px] items-center justify-center px-2 py-1.5 text-center text-[13px] font-semibold leading-tight text-[#02132B]">
+                                              {finish.label}
+                                            </span>
+                                            {selected ? (
+                                              <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#02132B] text-white shadow">
+                                                <CheckIcon
+                                                  className="h-4 w-4 stroke-[3]"
+                                                  aria-hidden
+                                                />
+                                              </span>
+                                            ) : null}
+                                          </button>
+                                        );
+                                      })}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-[#6b7f92]">
+                              No finishes are available for this shape yet.
+                            </p>
+                          )}
+                          {multipleBadges.length > 1 &&
+                          selectedSignFinish ? (
+                            <div className="mt-3 flex flex-col gap-1">
                                 <button
-                                  key={c.value}
                                   type="button"
-                                  className="aqb-badge-colour-swatch"
-                                  title={c.name}
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    if (c.isRainbow) {
-                                      setShowColorModal(true);
-                                    } else {
-                                      handleColorClick(c.value);
-                                    }
-                                  }}
+                                  onClick={applySignFinishToAll}
+                                  className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#02132B] underline transition-colors hover:text-[#1a3d5c]"
+                                  title={`Apply finish to all ${config.labelProductPlural.toLowerCase()}`}
                                 >
-                                  <span
-                                    className={`aqb-badge-cs-circle ${
-                                      light ? "light" : ""
-                                    } ${selected ? "selected" : ""}`}
-                                    style={
-                                      c.isRainbow
-                                        ? {
-                                            background:
-                                              "linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)",
-                                          }
-                                        : featuredPlateBackgroundSwatchStyle(
-                                            c.value,
-                                          )
-                                    }
-                                  >
-                                    {selected ? (
-                                      <CheckIcon
-                                        className={`h-3.5 w-3.5 stroke-[3] ${
-                                          light
-                                            ? "text-[#02132B]"
-                                            : "text-white"
-                                        }`}
-                                        aria-hidden
-                                      />
-                                    ) : null}
-                                  </span>
-                                  <span className="aqb-badge-cs-name">
-                                    {c.name === "Brushed Gold" ? (
-                                      <>
-                                        Brushed
-                                        <br />
-                                        Gold
-                                      </>
-                                    ) : c.name === "Brushed Silver" ? (
-                                      <>
-                                        Brushed
-                                        <br />
-                                        Silver
-                                      </>
-                                    ) : c.name === "More Colors" ? (
-                                      <>
-                                        More
-                                        <br />
-                                        Colors
-                                      </>
-                                    ) : (
-                                      c.name
-                                    )}
-                                  </span>
+                                  Apply finish to all{" "}
+                                  {config.labelProductPlural.toLowerCase()}
                                 </button>
-                              );
-                            })}
-                          </div>
-                          {multipleBadges.length > 1 ? (
-                            <div className="mt-2 flex flex-col gap-1">
-                              <button
-                                type="button"
-                                onClick={applyBackgroundColorToAll}
-                                className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#02132B] underline transition-colors hover:text-[#1a3d5c]"
-                                title={`Apply background color to all ${config.labelProductPlural.toLowerCase()}`}
-                              >
-                                Apply background color to all{" "}
-                                {config.labelProductPlural.toLowerCase()}
-                              </button>
                             </div>
                           ) : null}
                         </>
@@ -16490,6 +16611,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   ];
                   const hx = (p.badge.backgroundColor || "").toUpperCase();
                   const bgName = (() => {
+                    if (variant === "sign") {
+                      return (
+                        getSignFinishById(p.badge.signFinishId)?.label ?? "—"
+                      );
+                    }
                     if (
                       isFeaturedBrushedMetalPlateColor(p.badge.backgroundColor)
                     ) {
@@ -16535,7 +16661,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         </span>
                       </div>
                       <div className="flex justify-between gap-2">
-                        <span className="text-[#6b7f92]">Background</span>
+                        <span className="text-[#6b7f92]">
+                          {variant === "sign" ? "Finish" : "Background"}
+                        </span>
                         <span className="font-medium text-[#02132B] text-right">
                           {bgName}
                         </span>
@@ -16902,11 +17030,16 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           selectedSignSizeTemplateId == null,
                       },
                       {
-                        label: "Backgrounds",
-                        done: hasChosenBackgroundColor,
+                        label: variant === "sign" ? "Finish" : "Backgrounds",
+                        done:
+                          variant === "sign"
+                            ? signFinishConfigured
+                            : hasChosenBackgroundColor,
                         current:
                           selectedSignSizeTemplateId != null &&
-                          !hasChosenBackgroundColor,
+                          !(variant === "sign"
+                            ? signFinishConfigured
+                            : hasChosenBackgroundColor),
                       },
                       ...(signBorderStepRequired
                         ? [
@@ -17604,6 +17737,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   ) => {
                     const firstSizeId = type.sizes[0].templateId;
                     setShowTemplateModal(false);
+                    if (selectedSignTemplateType !== type.id) {
+                      setHasChosenBackgroundColor(false);
+                    }
                     setSelectedSignTemplateType(type.id);
                     setUniversalTemplateId(firstSizeId);
                     setSelectedSignSizeTemplateId(null);
@@ -17625,7 +17761,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   };
                   return (
                     <>
-                      {ALL_SIGN_TEMPLATE_TYPES.map((type) => {
+                      {ALL_SIGN_TEMPLATE_TYPES.filter((type) =>
+                        signShapeHasFinishes(type.id),
+                      ).map((type) => {
                         const firstSizeId = type.sizes[0].templateId;
                         const firstTemplate = templates.find(
                           (t) => t.id === firstSizeId,

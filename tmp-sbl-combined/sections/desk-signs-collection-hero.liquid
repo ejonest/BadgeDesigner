@@ -6,6 +6,7 @@
 {%- liquid
   assign tool_url = section.settings.primary_link | default: '/products/custom-desk-sign'
   assign browse_url = section.settings.secondary_link | default: '#desk-signs-collection-products'
+  assign fallback_handles = section.settings.fallback_handles | split: ','
 -%}
 
 <section
@@ -58,31 +59,61 @@
       </div>
     </div>
 
-    <a
-      href="{{ tool_url }}"
-      class="sbl-ds-hero__designer"
-      aria-label="{{ section.settings.primary_label | default: 'Open the custom desk sign designer' | escape }}"
-    >
-      {%- if section.settings.designer_image != blank -%}
-        {{
-          section.settings.designer_image
-          | image_url: width: 1800
-          | image_tag: class: 'sbl-ds-hero__designer-image', loading: 'eager', widths: '700,1000,1300,1600,1800', sizes: '(min-width: 990px) 48vw, 100vw', alt: section.settings.designer_image_alt
-        }}
-      {%- else -%}
-        <img
-          class="sbl-ds-hero__designer-image"
-          src="{{ 'sbl-desk-sign-designer-real.png' | asset_url }}"
-          alt="{{ section.settings.designer_image_alt | escape }}"
-          width="1300"
-          height="720"
-          loading="eager"
-        >
-      {%- endif -%}
-      {%- if section.settings.image_label != blank -%}
-        <span class="sbl-ds-hero__image-label">{{ section.settings.image_label | escape }}</span>
-      {%- endif -%}
-    </a>
+    <div class="sbl-ds-hero__visual">
+      <a
+        href="{{ tool_url }}"
+        class="sbl-ds-hero__designer"
+        aria-label="{{ section.settings.primary_label | default: 'Open the custom desk sign designer' | escape }}"
+      >
+        {%- if section.settings.designer_image != blank -%}
+          {{
+            section.settings.designer_image
+            | image_url: width: 1800
+            | image_tag: class: 'sbl-ds-hero__designer-image', loading: 'eager', widths: '700,1000,1300,1600,1800', sizes: '(min-width: 990px) 38vw, 100vw', alt: section.settings.designer_image_alt
+          }}
+        {%- else -%}
+          <img
+            class="sbl-ds-hero__designer-image"
+            src="{{ 'sbl-desk-sign-designer-real.png' | asset_url }}"
+            alt="{{ section.settings.designer_image_alt | escape }}"
+            width="788"
+            height="1024"
+            loading="eager"
+          >
+        {%- endif -%}
+        {%- if section.settings.image_label != blank -%}
+          <span class="sbl-ds-hero__image-label">{{ section.settings.image_label | escape }}</span>
+        {%- endif -%}
+      </a>
+
+      <div class="sbl-ds-hero__stack">
+        {%- assign tile_blocks = section.blocks | where: 'type', 'product_tile' -%}
+        {%- if tile_blocks.size > 0 -%}
+          {%- for block in tile_blocks -%}
+            {%- if block.settings.product != blank -%}
+              {%- render 'signage-hero-tile', product: block.settings.product, image: block.settings.image, label: block.settings.label, attrs: block.shopify_attributes, class_prefix: 'sbl-ds-hero' -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- else -%}
+          {%- assign shown = 0 -%}
+          {%- for handle in fallback_handles -%}
+            {%- assign h = handle | strip -%}
+            {%- assign tile_product = all_products[h] -%}
+            {%- if tile_product != blank and tile_product.featured_image and shown < 3 -%}
+              {%- assign shown = shown | plus: 1 -%}
+              {%- render 'signage-hero-tile', product: tile_product, image: blank, label: blank, attrs: '', class_prefix: 'sbl-ds-hero' -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- if shown == 0 -%}
+            {%- for tile_product in collection.products limit: 3 -%}
+              {%- if tile_product.featured_image -%}
+                {%- render 'signage-hero-tile', product: tile_product, image: blank, label: blank, attrs: '', class_prefix: 'sbl-ds-hero' -%}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
+        {%- endif -%}
+      </div>
+    </div>
   </div>
 </section>
 
@@ -111,7 +142,7 @@
     --ds-accent: {{ section.settings.accent_color }};
     --ds-btn: {{ section.settings.button_color }};
     --ds-btn-text: {{ section.settings.button_text_color }};
-    --ds-white: #fefcf9;
+    --ds-white: #f5f1eb;
     --ds-max: 1170px;
   }
 
@@ -126,7 +157,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse 65% 85% at 82% 50%, rgba(121, 201, 198, 0.16) 0%, transparent 70%);
+    background: radial-gradient(ellipse 65% 85% at 82% 50%, rgba(201, 147, 46, 0.18) 0%, transparent 70%);
     pointer-events: none;
   }
   #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__inner {
@@ -163,7 +194,7 @@
   #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__sub {
     max-width: 440px;
     margin: 0 0 30px;
-    color: rgba(254, 252, 249, 0.75);
+    color: rgba(245, 241, 235, 0.78);
     font-size: 16px;
     line-height: 1.7;
   }
@@ -196,13 +227,13 @@
     filter: brightness(1.06);
   }
   #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__btn--ghost {
-    border: 1.5px solid rgba(254, 252, 249, 0.35);
+    border: 1.5px solid rgba(245, 241, 235, 0.4);
     background: transparent;
     color: var(--ds-white);
   }
   #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__btn--ghost:hover {
-    border-color: rgba(254, 252, 249, 0.7);
-    background: rgba(254, 252, 249, 0.06);
+    border-color: rgba(201, 168, 76, 0.8);
+    background: rgba(245, 241, 235, 0.06);
   }
   #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__stats {
     display: flex;
@@ -210,7 +241,7 @@
     gap: 28px;
     margin-top: 30px;
     padding-top: 24px;
-    border-top: 1px solid rgba(254, 252, 249, 0.15);
+    border-top: 1px solid rgba(201, 168, 76, 0.25);
   }
   #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__stat-val {
     color: var(--ds-accent);
@@ -220,21 +251,28 @@
   }
   #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__stat-label {
     margin-top: 2px;
-    color: rgba(254, 252, 249, 0.55);
+    color: #b9c3d2;
     font-size: 12px;
     letter-spacing: 1px;
     text-transform: uppercase;
   }
 
+  #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__visual {
+    display: grid;
+    grid-template-columns: 1.35fr 0.65fr;
+    gap: 12px;
+    align-items: stretch;
+    min-width: 0;
+  }
   #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__designer {
     position: relative;
-    display: block;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
     min-width: 0;
     height: auto;
-    border: 10px solid rgba(255, 255, 255, 0.12);
     border-radius: 14px;
-    background: #f3f1ed;
+    background: #eee7da;
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
     text-decoration: none;
     transition: transform 0.2s;
@@ -248,9 +286,9 @@
     object-position: center;
   }
   #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__image-label {
-    position: absolute;
-    left: 12px;
-    bottom: 12px;
+    position: static;
+    align-self: flex-start;
+    margin: 0 12px 12px;
     padding: 7px 12px;
     border-radius: 6px;
     background: var(--ds-btn);
@@ -260,12 +298,53 @@
     letter-spacing: 0.5px;
     text-transform: uppercase;
   }
+  #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__stack {
+    display: grid;
+    grid-template-rows: repeat(3, 1fr);
+    gap: 12px;
+    min-height: 0;
+  }
+  #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__tile {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    min-height: 0;
+    border-radius: 10px;
+    background: #fff;
+  }
+  #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__tile img {
+    position: absolute;
+    inset: 8px 8px 30px;
+    width: calc(100% - 16px);
+    height: calc(100% - 38px);
+    object-fit: contain;
+    display: block;
+    transition: transform 0.25s;
+  }
+  #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__tile:hover img { transform: scale(1.04); }
+  #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__tile-label {
+    position: absolute;
+    left: 7px;
+    right: 7px;
+    bottom: 7px;
+    overflow: hidden;
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: rgba(15, 39, 68, 0.94);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
 
   #sbl-ds-steps-{{ section.id }} {
     margin-bottom: 24px;
     padding: 28px 20px;
-    border-bottom: 1px solid #e5e9ee;
-    background: #f4f7f9;
+    border-bottom: 1px solid #e3dccd;
+    background: #f5f1eb;
   }
   #sbl-ds-steps-{{ section.id }} .sbl-ds-steps__inner {
     display: grid;
@@ -277,7 +356,7 @@
   }
   #sbl-ds-steps-{{ section.id }} h2 {
     margin: 0 0 6px;
-    color: #12263f;
+    color: #0f2744;
     font-size: 20px;
     font-weight: 700;
     line-height: 1.3;
@@ -285,7 +364,7 @@
     text-transform: none;
   }
   #sbl-ds-steps-{{ section.id }} .sbl-ds-steps__link {
-    color: #0688e2;
+    color: #9a6c17;
     font-size: 14px;
     font-weight: 700;
     text-decoration: none;
@@ -320,12 +399,12 @@
   }
   #sbl-ds-steps-{{ section.id }} .sbl-ds-steps__list strong {
     display: block;
-    color: #12263f;
+    color: #0f2744;
     font-size: 15px;
   }
   #sbl-ds-steps-{{ section.id }} .sbl-ds-steps__list p {
     margin: 2px 0 0;
-    color: #556270;
+    color: #5a6577;
     font-size: 13px;
     line-height: 1.5;
   }
@@ -336,7 +415,9 @@
       grid-template-columns: 1fr;
       gap: 36px;
     }
-    #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__designer { height: auto; }
+    #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__visual { grid-template-columns: 1fr; }
+    #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__designer { width: 100%; height: auto; }
+    #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__stack { display: none; }
     #sbl-ds-steps-{{ section.id }} .sbl-ds-steps__inner {
       grid-template-columns: 1fr;
       gap: 18px;
@@ -348,10 +429,6 @@
       align-items: stretch;
     }
     #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__stats { gap: 20px; }
-    #sbl-ds-hero-{{ section.id }} .sbl-ds-hero__designer {
-      height: auto;
-      border-width: 6px;
-    }
     #sbl-ds-steps-{{ section.id }} .sbl-ds-steps__list {
       grid-template-columns: 1fr;
       gap: 14px;
@@ -388,8 +465,15 @@
     { "type": "text", "id": "stat_2_label", "label": "Stat 2 label", "default": "Design process" },
     { "type": "header", "content": "Designer screenshot" },
     { "type": "image_picker", "id": "designer_image", "label": "Designer screenshot", "info": "Leave empty to use the included screenshot of the real desk-sign designer." },
-    { "type": "text", "id": "designer_image_alt", "label": "Image alt text", "default": "The desk sign designer with the text editor and live preview" },
+    { "type": "text", "id": "designer_image_alt", "label": "Image alt text", "default": "Live desk sign preview of a wood name and role sign" },
     { "type": "text", "id": "image_label", "label": "Image label", "default": "Real designer — click to try" },
+    {
+      "type": "text",
+      "id": "fallback_handles",
+      "label": "Side tile product handles",
+      "default": "reception-office-desk-accessories-d-cor, piano-finished-rosewood-standard-engraved-desk-name-plate-welcome-2-x-8-black-gold-plate, welcome-guests-desk-sign-or-front-desk-counter-sign-2-x-8",
+      "info": "Comma-separated. Used when no Product tile blocks are added."
+    },
     { "type": "header", "content": "How it works strip" },
     { "type": "checkbox", "id": "show_steps", "label": "Show steps strip", "default": true },
     { "type": "text", "id": "steps_heading", "label": "Heading", "default": "Create a desk sign in 3 steps" },
@@ -401,10 +485,22 @@
     { "type": "text", "id": "step_3_title", "label": "Step 3 title", "default": "Add your wording" },
     { "type": "text", "id": "step_3_text", "label": "Step 3 text", "default": "Enter your name and title, then add the finished design to your cart." },
     { "type": "header", "content": "Colors" },
-    { "type": "color", "id": "background_color", "label": "Hero background", "default": "#12263f" },
-    { "type": "color", "id": "accent_color", "label": "Accent", "default": "#79c9c6" },
-    { "type": "color", "id": "button_color", "label": "Primary button", "default": "#79c9c6" },
-    { "type": "color", "id": "button_text_color", "label": "Primary button text", "default": "#12263f" }
+    { "type": "color", "id": "background_color", "label": "Hero background", "default": "#0f2744" },
+    { "type": "color", "id": "accent_color", "label": "Accent", "default": "#c9932e" },
+    { "type": "color", "id": "button_color", "label": "Primary button", "default": "#c9932e" },
+    { "type": "color", "id": "button_text_color", "label": "Primary button text", "default": "#0f2744" }
+  ],
+  "blocks": [
+    {
+      "type": "product_tile",
+      "name": "Product tile",
+      "limit": 3,
+      "settings": [
+        { "type": "product", "id": "product", "label": "Product" },
+        { "type": "image_picker", "id": "image", "label": "Image override" },
+        { "type": "text", "id": "label", "label": "Label override" }
+      ]
+    }
   ]
 }
 {% endschema %}

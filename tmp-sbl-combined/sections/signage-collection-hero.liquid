@@ -6,6 +6,7 @@
 {%- liquid
   assign tool_url = section.settings.primary_link | default: '/products/custom-sign'
   assign browse_url = section.settings.secondary_link | default: '#signage-collection-products'
+  assign fallback_handles = section.settings.fallback_handles | split: ','
 -%}
 
 <section
@@ -91,6 +92,34 @@
           <span class="sbl-sg-hero__tag">{{ section.settings.tool_tag | escape }}</span>
         {%- endif -%}
       </a>
+
+      <div class="sbl-sg-hero__stack">
+        {%- assign tile_blocks = section.blocks | where: 'type', 'product_tile' -%}
+        {%- if tile_blocks.size > 0 -%}
+          {%- for block in tile_blocks -%}
+            {%- if block.settings.product != blank -%}
+              {%- render 'signage-hero-tile', product: block.settings.product, image: block.settings.image, label: block.settings.label, attrs: block.shopify_attributes -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- else -%}
+          {%- assign shown = 0 -%}
+          {%- for handle in fallback_handles -%}
+            {%- assign h = handle | strip -%}
+            {%- assign tile_product = all_products[h] -%}
+            {%- if tile_product != blank and tile_product.featured_image and shown < 3 -%}
+              {%- assign shown = shown | plus: 1 -%}
+              {%- render 'signage-hero-tile', product: tile_product, image: blank, label: blank, attrs: '' -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- if shown == 0 -%}
+            {%- for tile_product in collection.products limit: 3 -%}
+              {%- if tile_product.featured_image -%}
+                {%- render 'signage-hero-tile', product: tile_product, image: blank, label: blank, attrs: '' -%}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
+        {%- endif -%}
+      </div>
     </div>
   </div>
 </section>
@@ -120,7 +149,7 @@
     --sg-accent: {{ section.settings.accent_color }};
     --sg-btn: {{ section.settings.button_color }};
     --sg-btn-text: {{ section.settings.button_text_color }};
-    --sg-white: #fefcf9;
+    --sg-white: #f5f1eb;
     --sg-max: 1170px;
   }
 
@@ -135,7 +164,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(121, 201, 198, 0.16) 0%, transparent 70%);
+    background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(201, 147, 46, 0.18) 0%, transparent 70%);
     pointer-events: none;
   }
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__inner {
@@ -174,7 +203,7 @@
     max-width: 440px;
     font-size: 16px;
     line-height: 1.7;
-    color: rgba(254, 252, 249, 0.75);
+    color: rgba(245, 241, 235, 0.78);
   }
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__actions {
     display: flex;
@@ -207,11 +236,11 @@
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__btn--ghost {
     background: transparent;
     color: var(--sg-white);
-    border: 1.5px solid rgba(254, 252, 249, 0.35);
+    border: 1.5px solid rgba(245, 241, 235, 0.4);
   }
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__btn--ghost:hover {
-    border-color: rgba(254, 252, 249, 0.7);
-    background: rgba(254, 252, 249, 0.06);
+    border-color: rgba(201, 168, 76, 0.8);
+    background: rgba(245, 241, 235, 0.06);
   }
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__stats {
     display: flex;
@@ -219,7 +248,7 @@
     gap: 28px;
     margin-top: 30px;
     padding-top: 24px;
-    border-top: 1px solid rgba(254, 252, 249, 0.15);
+    border-top: 1px solid rgba(201, 168, 76, 0.25);
   }
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__stat-val {
     font-size: 26px;
@@ -232,20 +261,26 @@
     font-size: 12px;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: rgba(254, 252, 249, 0.55);
+    color: #b9c3d2;
   }
 
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__visual {
-    display: block;
+    display: grid;
+    grid-template-columns: 1.35fr 0.65fr;
+    gap: 12px;
+    align-items: stretch;
+    height: auto;
     min-width: 0;
   }
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool {
     position: relative;
     display: flex;
     flex-direction: column;
+    height: auto;
+    min-height: 0;
     overflow: hidden;
     border-radius: 14px;
-    background: #f4f6f8;
+    background: #eee7da;
     color: inherit;
     text-decoration: none;
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
@@ -260,9 +295,9 @@
     display: block;
   }
   #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tag {
-    position: absolute;
-    left: 12px;
-    bottom: 12px;
+    position: static;
+    align-self: flex-start;
+    margin: 0 12px 12px;
     padding: 6px 11px;
     border-radius: 6px;
     background: var(--sg-btn);
@@ -305,7 +340,7 @@
     overflow: hidden;
     padding: 3px 7px;
     border-radius: 5px;
-    background: rgba(18, 38, 63, 0.9);
+    background: rgba(15, 39, 68, 0.94);
     color: #fff;
     font-size: 10px;
     font-weight: 700;
@@ -316,8 +351,8 @@
   }
 
   #sbl-sg-steps-{{ section.id }} {
-    background: #f4f7f9;
-    border-bottom: 1px solid #e5e9ee;
+    background: #f5f1eb;
+    border-bottom: 1px solid #e3dccd;
     padding: 28px 20px;
     margin-bottom: 24px;
   }
@@ -336,12 +371,12 @@
     line-height: 1.3;
     text-transform: none;
     letter-spacing: 0;
-    color: #12263f;
+    color: #0f2744;
   }
   #sbl-sg-steps-{{ section.id }} .sbl-sg-steps__link {
     font-size: 14px;
     font-weight: 700;
-    color: #0688e2;
+    color: #9a6c17;
     text-decoration: none;
   }
   #sbl-sg-steps-{{ section.id }} .sbl-sg-steps__link:hover { text-decoration: underline; }
@@ -375,20 +410,20 @@
   #sbl-sg-steps-{{ section.id }} .sbl-sg-steps__list strong {
     display: block;
     font-size: 15px;
-    color: #12263f;
+    color: #0f2744;
   }
   #sbl-sg-steps-{{ section.id }} .sbl-sg-steps__list p {
     margin: 2px 0 0;
     font-size: 13px;
     line-height: 1.5;
-    color: #556270;
+    color: #5a6577;
   }
 
   @media (max-width: 989px) {
     #sbl-sg-hero-{{ section.id }} { padding: 48px 20px 40px; }
     #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__inner { grid-template-columns: 1fr; gap: 36px; }
     #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__visual { grid-template-columns: 1fr; height: auto; }
-    #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool { min-height: 0; }
+    #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__tool { height: auto; aspect-ratio: auto; }
     #sbl-sg-hero-{{ section.id }} .sbl-sg-hero__stack { display: none; }
     #sbl-sg-steps-{{ section.id }} .sbl-sg-steps__inner { grid-template-columns: 1fr; gap: 18px; }
   }
@@ -428,7 +463,7 @@
     { "type": "text", "id": "stat_2_label", "label": "Stat 2 label", "default": "Any wording" },
     { "type": "header", "content": "Designer screenshot" },
     { "type": "image_picker", "id": "designer_image", "label": "Designer screenshot", "info": "Leave empty to use the included screenshot of the real sign designer." },
-    { "type": "text", "id": "designer_image_alt", "label": "Image alt text", "default": "The custom sign designer with the text editor and live sign preview" },
+    { "type": "text", "id": "designer_image_alt", "label": "Image alt text", "default": "Live sign preview of a gold name and title sign" },
     { "type": "text", "id": "tool_tag", "label": "Card tag", "default": "Real designer — click to try" },
     {
       "type": "text",
@@ -448,10 +483,10 @@
     { "type": "text", "id": "step_3_title", "label": "Step 3 title", "default": "Add to cart" },
     { "type": "text", "id": "step_3_text", "label": "Step 3 text", "default": "Your design is saved with the order — we make it and ship it." },
     { "type": "header", "content": "Colors" },
-    { "type": "color", "id": "background_color", "label": "Hero background", "default": "#12263f" },
-    { "type": "color", "id": "accent_color", "label": "Accent", "default": "#79c9c6" },
-    { "type": "color", "id": "button_color", "label": "Primary button", "default": "#79c9c6" },
-    { "type": "color", "id": "button_text_color", "label": "Primary button text", "default": "#12263f" }
+    { "type": "color", "id": "background_color", "label": "Hero background", "default": "#0f2744" },
+    { "type": "color", "id": "accent_color", "label": "Accent", "default": "#c9932e" },
+    { "type": "color", "id": "button_color", "label": "Primary button", "default": "#c9932e" },
+    { "type": "color", "id": "button_text_color", "label": "Primary button text", "default": "#0f2744" }
   ],
   "blocks": [
     {

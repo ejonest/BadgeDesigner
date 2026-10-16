@@ -12,6 +12,9 @@ app/temp/
 # Default output of scripts/regenerate-gavel-svgs.mjs (customer artwork)
 tmp-gavel-svgs/
 
+# Local Shopify product-tagging review, audit, and rollback artifacts
+product-tagging-output/
+
 .venv-bleed/
 
 # Playwright QA framework — keep source; ignore run artifacts
