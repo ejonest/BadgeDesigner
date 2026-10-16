@@ -1,0 +1,508 @@
+{%- comment -%}
+  Name Badges collection hero. The visual is a screenshot of the real badge designer.
+  Existing badge categories and featured products stay below this section.
+{%- endcomment -%}
+
+{%- liquid
+  assign tool_url = section.settings.primary_link | default: '/products/custom-1x3-badge'
+  assign browse_url = section.settings.secondary_link | default: '#name-badges-shop'
+  assign fallback_handles = section.settings.fallback_handles | split: ','
+-%}
+
+<section
+  id="sbl-nb-hero-{{ section.id }}"
+  class="sbl-nb-hero"
+  aria-label="{{ section.settings.heading | strip_html | escape }}"
+>
+  <div class="sbl-nb-hero__inner">
+    <div class="sbl-nb-hero__content">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="sbl-nb-hero__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+
+      {%- if section.settings.heading != blank -%}
+        <h1 class="sbl-nb-hero__heading">{{ section.settings.heading }}</h1>
+      {%- endif -%}
+
+      {%- if section.settings.subheading != blank -%}
+        <p class="sbl-nb-hero__sub">{{ section.settings.subheading | escape }}</p>
+      {%- endif -%}
+
+      <div class="sbl-nb-hero__actions">
+        {%- if section.settings.primary_label != blank -%}
+          <a href="{{ tool_url }}" class="sbl-nb-hero__btn sbl-nb-hero__btn--primary">
+            {{ section.settings.primary_label | escape }}
+          </a>
+        {%- endif -%}
+        {%- if section.settings.secondary_label != blank -%}
+          <a href="{{ browse_url }}" class="sbl-nb-hero__btn sbl-nb-hero__btn--ghost">
+            {{ section.settings.secondary_label | escape }}
+          </a>
+        {%- endif -%}
+      </div>
+
+      <div class="sbl-nb-hero__stats">
+        {%- if section.settings.show_product_count and collection.products_count > 0 -%}
+          <div class="sbl-nb-hero__stat">
+            <div class="sbl-nb-hero__stat-val">{{ collection.products_count }}+</div>
+            <div class="sbl-nb-hero__stat-label">{{ section.settings.product_count_label | escape }}</div>
+          </div>
+        {%- endif -%}
+        <div class="sbl-nb-hero__stat">
+          <div class="sbl-nb-hero__stat-val">{{ section.settings.stat_1_value | escape }}</div>
+          <div class="sbl-nb-hero__stat-label">{{ section.settings.stat_1_label | escape }}</div>
+        </div>
+        <div class="sbl-nb-hero__stat">
+          <div class="sbl-nb-hero__stat-val">{{ section.settings.stat_2_value | escape }}</div>
+          <div class="sbl-nb-hero__stat-label">{{ section.settings.stat_2_label | escape }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sbl-nb-hero__visual">
+      <a
+        href="{{ tool_url }}"
+        class="sbl-nb-hero__designer"
+        aria-label="{{ section.settings.primary_label | default: 'Open the badge designer' | escape }}"
+      >
+        {%- if section.settings.designer_image != blank -%}
+          {{
+            section.settings.designer_image
+            | image_url: width: 1800
+            | image_tag: class: 'sbl-nb-hero__designer-image', loading: 'eager', widths: '700,1000,1300,1600,1800', sizes: '(min-width: 990px) 38vw, 100vw', alt: section.settings.designer_image_alt
+          }}
+        {%- else -%}
+          <img
+            class="sbl-nb-hero__designer-image"
+            src="{{ 'sbl-badge-designer-shot.jpg' | asset_url }}"
+            alt="{{ section.settings.designer_image_alt | escape }}"
+            width="1600"
+            height="1068"
+            loading="eager"
+          >
+        {%- endif -%}
+        {%- if section.settings.image_label != blank -%}
+          <span class="sbl-nb-hero__image-label">{{ section.settings.image_label | escape }}</span>
+        {%- endif -%}
+      </a>
+
+      <div class="sbl-nb-hero__stack">
+        {%- assign tile_blocks = section.blocks | where: 'type', 'product_tile' -%}
+        {%- if tile_blocks.size > 0 -%}
+          {%- for block in tile_blocks -%}
+            {%- if block.settings.product != blank -%}
+              {%- render 'signage-hero-tile', product: block.settings.product, image: block.settings.image, label: block.settings.label, attrs: block.shopify_attributes, class_prefix: 'sbl-nb-hero' -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- else -%}
+          {%- assign tile_labels = 'Plastic|Metal|Magnet' | split: '|' -%}
+          {%- assign shown = 0 -%}
+          {%- for handle in fallback_handles -%}
+            {%- assign h = handle | strip -%}
+            {%- assign tile_product = all_products[h] -%}
+            {%- if tile_product != blank and tile_product.featured_image and shown < 3 -%}
+              {%- assign tile_label = tile_labels[shown] -%}
+              {%- assign shown = shown | plus: 1 -%}
+              {%- render 'signage-hero-tile', product: tile_product, image: blank, label: tile_label, attrs: '', class_prefix: 'sbl-nb-hero' -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- if shown == 0 -%}
+            {%- for tile_product in collection.products limit: 3 -%}
+              {%- if tile_product.featured_image -%}
+                {%- render 'signage-hero-tile', product: tile_product, image: blank, label: blank, attrs: '', class_prefix: 'sbl-nb-hero' -%}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</section>
+
+{%- if section.settings.show_steps -%}
+  <section class="sbl-nb-steps" id="sbl-nb-steps-{{ section.id }}" aria-label="{{ section.settings.steps_heading | escape }}">
+    <div class="sbl-nb-steps__inner">
+      <div class="sbl-nb-steps__intro">
+        {%- if section.settings.steps_heading != blank -%}
+          <h2>{{ section.settings.steps_heading | escape }}</h2>
+        {%- endif -%}
+        <a href="{{ tool_url }}" class="sbl-nb-steps__link">{{ section.settings.steps_link_label | escape }}</a>
+      </div>
+      <ol class="sbl-nb-steps__list">
+        <li><span>1</span><div><strong>{{ section.settings.step_1_title | escape }}</strong><p>{{ section.settings.step_1_text | escape }}</p></div></li>
+        <li><span>2</span><div><strong>{{ section.settings.step_2_title | escape }}</strong><p>{{ section.settings.step_2_text | escape }}</p></div></li>
+        <li><span>3</span><div><strong>{{ section.settings.step_3_title | escape }}</strong><p>{{ section.settings.step_3_text | escape }}</p></div></li>
+      </ol>
+    </div>
+  </section>
+{%- endif -%}
+
+<style>
+  #sbl-nb-hero-{{ section.id }},
+  #sbl-nb-steps-{{ section.id }} {
+    --nb-navy: {{ section.settings.background_color }};
+    --nb-accent: {{ section.settings.accent_color }};
+    --nb-btn: {{ section.settings.button_color }};
+    --nb-btn-text: {{ section.settings.button_text_color }};
+    --nb-white: #f5f1eb;
+    --nb-max: 1170px;
+  }
+
+  #sbl-nb-hero-{{ section.id }} {
+    position: relative;
+    overflow: hidden;
+    margin: 0;
+    padding: 64px 20px 56px;
+    background: var(--nb-navy);
+  }
+  #sbl-nb-hero-{{ section.id }}::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 65% 85% at 82% 50%, rgba(201, 147, 46, 0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__inner {
+    position: relative;
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 52px;
+    align-items: center;
+    max-width: var(--nb-max);
+    margin: 0 auto;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__content { min-width: 0; }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__eyebrow {
+    margin: 0 0 16px;
+    color: var(--nb-accent);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__heading {
+    margin: 0 0 20px;
+    color: var(--nb-white);
+    font-size: clamp(32px, 4vw, 46px);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__heading em {
+    color: var(--nb-accent);
+    font-style: italic;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__sub {
+    max-width: 440px;
+    margin: 0 0 30px;
+    color: rgba(245, 241, 235, 0.78);
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 26px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    transition: transform 0.15s, border-color 0.2s, background 0.2s;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__btn--primary {
+    border: 2px solid var(--nb-btn);
+    background: var(--nb-btn);
+    color: var(--nb-btn-text);
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__btn--primary:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__btn--ghost {
+    border: 1.5px solid rgba(245, 241, 235, 0.4);
+    background: transparent;
+    color: var(--nb-white);
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__btn--ghost:hover {
+    border-color: rgba(201, 168, 76, 0.8);
+    background: rgba(245, 241, 235, 0.06);
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    margin-top: 30px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(201, 168, 76, 0.25);
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__stat-val {
+    color: var(--nb-accent);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__stat-label {
+    margin-top: 2px;
+    color: #b9c3d2;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__visual {
+    display: grid;
+    grid-template-columns: 1.35fr 0.65fr;
+    gap: 12px;
+    align-items: stretch;
+    min-width: 0;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__designer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+    height: auto;
+    border-radius: 14px;
+    background: #eee7da;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+    text-decoration: none;
+    transition: transform 0.2s;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__designer:hover { transform: translateY(-2px); }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__designer-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    object-position: center;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__image-label {
+    position: static;
+    align-self: flex-start;
+    margin: 0 12px 12px;
+    padding: 7px 12px;
+    border-radius: 6px;
+    background: var(--nb-btn);
+    color: var(--nb-btn-text);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__stack {
+    display: grid;
+    grid-template-rows: repeat(3, 1fr);
+    gap: 12px;
+    min-height: 0;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__tile {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    min-height: 0;
+    border-radius: 10px;
+    background: #fff;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__tile img {
+    position: absolute;
+    inset: 8px 8px 30px;
+    width: calc(100% - 16px);
+    height: calc(100% - 38px);
+    object-fit: contain;
+    display: block;
+    transition: transform 0.25s;
+  }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__tile:hover img { transform: scale(1.04); }
+  #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__tile-label {
+    position: absolute;
+    left: 7px;
+    right: 7px;
+    bottom: 7px;
+    overflow: hidden;
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: rgba(15, 39, 68, 0.94);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  #sbl-nb-steps-{{ section.id }} {
+    margin-bottom: 24px;
+    padding: 28px 20px;
+    border-bottom: 1px solid #e3dccd;
+    background: #f5f1eb;
+  }
+  #sbl-nb-steps-{{ section.id }} .sbl-nb-steps__inner {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 32px;
+    align-items: center;
+    max-width: var(--nb-max);
+    margin: 0 auto;
+  }
+  #sbl-nb-steps-{{ section.id }} h2 {
+    margin: 0 0 6px;
+    color: #0f2744;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  #sbl-nb-steps-{{ section.id }} .sbl-nb-steps__link {
+    color: #9a6c17;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  #sbl-nb-steps-{{ section.id }} .sbl-nb-steps__link:hover { text-decoration: underline; }
+  #sbl-nb-steps-{{ section.id }} .sbl-nb-steps__list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  #sbl-nb-steps-{{ section.id }} .sbl-nb-steps__list li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin: 0;
+  }
+  #sbl-nb-steps-{{ section.id }} .sbl-nb-steps__list span {
+    flex: 0 0 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--nb-navy);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  #sbl-nb-steps-{{ section.id }} .sbl-nb-steps__list strong {
+    display: block;
+    color: #0f2744;
+    font-size: 15px;
+  }
+  #sbl-nb-steps-{{ section.id }} .sbl-nb-steps__list p {
+    margin: 2px 0 0;
+    color: #5a6577;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 989px) {
+    #sbl-nb-hero-{{ section.id }} { padding: 48px 20px 40px; }
+    #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__inner {
+      grid-template-columns: 1fr;
+      gap: 36px;
+    }
+    #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__visual { grid-template-columns: 1fr; }
+    #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__designer { width: 100%; height: auto; }
+    #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__stack { display: none; }
+    #sbl-nb-steps-{{ section.id }} .sbl-nb-steps__inner {
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+  }
+  @media (max-width: 640px) {
+    #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    #sbl-nb-hero-{{ section.id }} .sbl-nb-hero__stats { gap: 20px; }
+    #sbl-nb-steps-{{ section.id }} .sbl-nb-steps__list {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Name Badges hero",
+  "tag": "div",
+  "class": "section-badges-collection-hero",
+  "settings": [
+    { "type": "header", "content": "Text" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Name Badges · Design It Online" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "A name badge that's<br><em>ready to wear.</em>" },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Pick a shape, color, and backing, then see the badge before you order. Prefer something ready-made? Browse plastic, metal, and accessories below."
+    },
+    { "type": "header", "content": "Buttons" },
+    { "type": "text", "id": "primary_label", "label": "Primary button", "default": "Design a Badge" },
+    { "type": "url", "id": "primary_link", "label": "Primary button link", "info": "Defaults to /products/custom-1x3-badge" },
+    { "type": "text", "id": "secondary_label", "label": "Secondary button", "default": "Shop Badges ↓" },
+    { "type": "url", "id": "secondary_link", "label": "Secondary button link", "info": "Defaults to the product grid below the hero" },
+    { "type": "header", "content": "Stats" },
+    { "type": "checkbox", "id": "show_product_count", "label": "Show collection product count", "default": false },
+    { "type": "text", "id": "product_count_label", "label": "Product count label", "default": "Name badges" },
+    { "type": "text", "id": "stat_1_value", "label": "Stat 1 value", "default": "1×3" },
+    { "type": "text", "id": "stat_1_label", "label": "Stat 1 label", "default": "Standard size" },
+    { "type": "text", "id": "stat_2_value", "label": "Stat 2 value", "default": "Live" },
+    { "type": "text", "id": "stat_2_label", "label": "Stat 2 label", "default": "Badge preview" },
+    { "type": "header", "content": "Designer screenshot" },
+    { "type": "image_picker", "id": "designer_image", "label": "Designer screenshot", "info": "Leave empty to use the included screenshot of the real badge designer." },
+    { "type": "text", "id": "designer_image_alt", "label": "Image alt text", "default": "Live badge preview of a black name and role badge" },
+    { "type": "text", "id": "image_label", "label": "Image label", "default": "Real designer — click to try" },
+    {
+      "type": "text",
+      "id": "fallback_handles",
+      "label": "Side tile product handles",
+      "default": "name-tag-badge-blanks-25-pack-1-x-3-round-corners-pin, 1-x-3-name-tag-badge-blanks-with-magnetic-backing-50-pack, all-quality-badges-3-post-badge-name-tag-magnet",
+      "info": "Comma-separated. Used when no Product tile blocks are added."
+    },
+    { "type": "header", "content": "How it works strip" },
+    { "type": "checkbox", "id": "show_steps", "label": "Show steps strip", "default": true },
+    { "type": "text", "id": "steps_heading", "label": "Heading", "default": "Design a badge in 3 steps" },
+    { "type": "text", "id": "steps_link_label", "label": "Link label", "default": "Open the badge designer →" },
+    { "type": "text", "id": "step_1_title", "label": "Step 1 title", "default": "Pick a shape" },
+    { "type": "text", "id": "step_1_text", "label": "Step 1 text", "default": "Choose a rounded, oval, or custom badge shape." },
+    { "type": "text", "id": "step_2_title", "label": "Step 2 title", "default": "Choose color & backing" },
+    { "type": "text", "id": "step_2_text", "label": "Step 2 text", "default": "Select the badge color and a pin, magnet, or adhesive backing." },
+    { "type": "text", "id": "step_3_title", "label": "Step 3 title", "default": "Add the name" },
+    { "type": "text", "id": "step_3_text", "label": "Step 3 text", "default": "Type the name and title, check the live preview, and add it to your cart." },
+    { "type": "header", "content": "Colors" },
+    { "type": "color", "id": "background_color", "label": "Hero background", "default": "#0f2744" },
+    { "type": "color", "id": "accent_color", "label": "Accent", "default": "#c9932e" },
+    { "type": "color", "id": "button_color", "label": "Primary button", "default": "#c9932e" },
+    { "type": "color", "id": "button_text_color", "label": "Primary button text", "default": "#0f2744" }
+  ],
+  "blocks": [
+    {
+      "type": "product_tile",
+      "name": "Product tile",
+      "limit": 3,
+      "settings": [
+        { "type": "product", "id": "product", "label": "Product" },
+        { "type": "image_picker", "id": "image", "label": "Image override" },
+        { "type": "text", "id": "label", "label": "Label override" }
+      ]
+    }
+  ]
+}
+{% endschema %}

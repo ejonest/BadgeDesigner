@@ -16,8 +16,8 @@ endfor
   Sign / plaque designer: full-width embed only (no default product gallery).
   Sign: handle custom-sign or title "Custom Sign".
   Plaque: handle custom-plaque or title "Custom Plaque Design".
-  Badge / desk sign / trophy: handles custom-1x3-badge, custom-desk-sign, custom-trophy
-  (title checks in the matching *-designer-embed snippets).
+  Badge / desk sign / trophy / pen: handles custom-1x3-badge, custom-desk-sign,
+  custom-trophy, custom-daxmoor-pen (title checks in the matching embed snippets).
 {%- endcomment -%}
 {%- assign is_sign_designer_product = false -%}
 {%- assign is_plaque_designer_product = false -%}
@@ -32,6 +32,8 @@ endfor
   {%- assign extra_designer = 'desk-sign' -%}
 {%- elsif product.handle == 'custom-trophy' or product.title == 'Custom Trophy' -%}
   {%- assign extra_designer = 'trophy' -%}
+{%- elsif product.handle == 'custom-daxmoor-pen' or product.title == 'Custom Daxmoor Pen' -%}
+  {%- assign extra_designer = 'pen' -%}
 {%- endif -%}
 <div data-section-id="{{ section.id }}" data-section-type="product" id="ProductSection-{{ section.id }}" class="{% if is_sign_designer_product %}product-template--sign-designer {% endif %}{% if is_plaque_designer_product %}product-template--plaque-designer {% endif %}{% if extra_designer != blank %}product-template--{{ extra_designer }}-designer {% endif %}" data-enable-history-state="true" data-collections-related="{{ routes.collections_url }}/{{collection.handle}}?view=related">
 {%- if is_plaque_designer_product -%}
@@ -93,6 +95,8 @@ endfor
         {% render 'desk-sign-designer-embed' %}
       {%- when 'trophy' -%}
         {% render 'trophy-designer-embed' %}
+      {%- when 'pen' -%}
+        {% render 'pen-designer-embed' %}
     {%- endcase -%}
   </div>
 {%- else -%}

@@ -1,0 +1,251 @@
+{%- liquid
+  assign catalog = 'restaurants%%Restaurants%%Host stands, dining rooms, restrooms and kitchens%%signage-signs-for-business-food-signs::Restaurant signs;;restroom-signs::Bathroom signs;;employee-only-signs::Staff-only signs;;safety-signs::Safety signs@@hotels%%Hotels%%Front desk, guest rooms, restrooms and property notices%%custom-engraved-desk-nameplates::Front desk nameplates;;restroom-signs::Bathroom signs;;office-signs::Room and door signs;;no-soliciting-signs::Property notices;;employee-only-signs::Staff-only signs%%black-piano-finish-desk-name-plate@@offices%%Offices%%Suites, conference rooms, restrooms and nameplates%%office-signs::Office and door signs;;general-business-signs::Business signs;;restroom-signs::Bathroom signs;;employee-only-signs::Staff-only signs;;custom-engraved-desk-nameplates::Desk nameplates%%signs-bylita-designer-conference-room-sign@@schools%%Schools%%Classrooms, offices, restrooms and safety signs%%designer-school-student-desk-signs::School signs;;restroom-signs::Bathroom signs;;safety-signs::Safety signs;;employee-only-signs::Staff-only signs%%signs-bylita-standard-principal-sign@@universities%%Universities%%Faculty offices, lecture rooms and campus signs%%office-signs::Faculty and room signs;;designer-school-student-desk-signs::Campus signs;;restroom-signs::Bathroom signs;;employee-only-signs::Staff-only signs%%signs-bylita-oval-faculty-lounge-sign@@clinics%%Clinics%%Exam rooms, restrooms and staff areas%%exam-room::Exam and treatment rooms;;restroom-signs::Bathroom signs;;employee-only-signs::Staff-only signs;;safety-signs::Safety signs@@churches%%Churches%%Offices, ministries and gathering spaces%%church-office-signs::Church office signs;;custom-church-products::Church products;;restroom-signs::Bathroom signs;;employee-only-signs::Staff-only signs@@warehouses%%Warehouses%%Docks, restricted areas and safety signs%%safety-signs::Safety signs;;employee-only-signs::Staff-only signs;;office-signs::Door signs;;security-surveillance-signs::Security signs%%fancy-loading-dock-wall-or-door-sign@@government%%Government%%Public buildings, notices and facility signs%%property-signs::Facility notices;;safety-signs::Safety signs;;restroom-signs::Bathroom signs;;office-signs::Room and door signs@@homes%%Homes & rentals%%Welcome signs, house rules and guest information%%signage-signs-for-home::Home signs;;no-soliciting-signs::Property notices;;restroom-signs::Bathroom signs'
+  assign industries = catalog | split: '@@'
+  assign custom_tools = '/products/custom-sign%%Design a custom sign%%Any wording for this building%%sbl-sign-designer-real.png@@/products/custom-desk-sign%%Desk nameplate%%Names and titles for every desk%%sbl-desk-sign-designer-real.png@@/products/custom-plaque%%Award plaque%%A logo, a name and a message%%sbl-plaque-designer-shot.jpg@@/products/custom-trophy%%Trophy%%Preview the award before you order%%sbl-trophy-designer-shot.jpg' | split: '@@'
+-%}
+
+<section class="sbl-ind" data-sbl-industries>
+  <script>document.title = {{ 'Industries – ' | append: shop.name | json }};</script>
+  <div class="sbl-ind__hero">
+    <div class="sbl-ind__wrap">
+      <p class="sbl-ind__eyebrow">Shop by industry</p>
+      <h1>Signs for every kind of building.</h1>
+      <p class="sbl-ind__lead">Choose a restaurant, hotel, office or any other building. You will get the custom tools plus the ready-made signs that belong there, including bathroom signs, room signs and staff signs.</p>
+    </div>
+  </div>
+
+  <div class="sbl-ind__wrap sbl-ind__body">
+    <div class="sbl-ind__picker">
+      {%- for row in industries -%}
+        {%- assign parts = row | split: '%%' -%}
+        {%- assign image_product = nil -%}
+        {%- if parts[4] != blank -%}
+          {%- assign image_product = all_products[parts[4]] -%}
+        {%- endif -%}
+        {%- if image_product.featured_image == blank -%}
+          {%- assign image_groups = parts[3] | split: ';;' -%}
+          {%- assign image_group = image_groups | first | split: '::' -%}
+          {%- assign image_collection = collections[image_group[0]] -%}
+          {%- assign image_product = image_collection.products | first -%}
+        {%- endif -%}
+        <a href="#{{ parts[0] }}" data-sbl-industry="{{ parts[0] }}">
+          <span class="sbl-ind__pick-image">
+            {%- if image_product.featured_image -%}
+              {{
+                image_product.featured_image
+                | image_url: width: 800
+                | image_tag:
+                  loading: 'lazy',
+                  widths: '320, 480, 640, 800',
+                  sizes: '(min-width: 990px) 20vw, 50vw',
+                  alt: image_product.featured_image.alt
+              }}
+            {%- endif -%}
+          </span>
+          <span class="sbl-ind__pick-copy">
+            <strong>{{ parts[1] }}</strong>
+            <span>{{ parts[2] }}</span>
+          </span>
+        </a>
+      {%- endfor -%}
+    </div>
+
+    <div class="sbl-ind__toolbar">
+      <h2 class="sbl-ind__all-title">All industries</h2>
+      <button type="button" class="sbl-ind__show-all" data-sbl-show-all>Show all industries</button>
+    </div>
+
+    <div class="sbl-ind__overview">
+      <h3 class="sbl-ind__custom-label">Custom for any building</h3>
+      <div class="sbl-ind__grid sbl-ind__grid--custom">
+        {%- for tool in custom_tools -%}
+          {%- assign tool_parts = tool | split: '%%' -%}
+          <a class="sbl-ind__card" href="{{ tool_parts[0] }}">
+            <span class="sbl-ind__card-image">
+              <img src="{{ tool_parts[3] | asset_url }}" alt="" width="640" height="480" loading="lazy">
+            </span>
+            <span class="sbl-ind__card-copy">
+              <strong>{{ tool_parts[1] }}</strong>
+              <small>{{ tool_parts[2] }}</small>
+            </span>
+          </a>
+        {%- endfor -%}
+      </div>
+
+      {%- for row in industries -%}
+        {%- assign parts = row | split: '%%' -%}
+        {%- assign groups = parts[3] | split: ';;' -%}
+        <div class="sbl-ind__group">
+          <div class="sbl-ind__group-head">
+            <h3>{{ parts[1] }}</h3>
+            <a href="#{{ parts[0] }}" data-sbl-industry-link="{{ parts[0] }}">See everything for {{ parts[1] | downcase }} →</a>
+          </div>
+          <div class="sbl-ind__grid">
+            {%- assign first_group = groups.first | split: '::' -%}
+            {%- render 'sbl-ind-products', collection: collections[first_group[0]], limit: 4 -%}
+          </div>
+        </div>
+      {%- endfor -%}
+    </div>
+
+    {%- for row in industries -%}
+      {%- assign parts = row | split: '%%' -%}
+      {%- assign groups = parts[3] | split: ';;' -%}
+      <div class="sbl-ind__panel" id="{{ parts[0] }}" data-sbl-panel="{{ parts[0] }}">
+        <p class="sbl-ind__eyebrow">{{ parts[1] }}</p>
+        <h2>What we make for {{ parts[1] | downcase }}.</h2>
+        <p class="sbl-ind__panel-lead">{{ parts[2] }}. Start with something custom, or choose a ready-made sign below.</p>
+
+        <h3 class="sbl-ind__custom-label">Custom</h3>
+        <div class="sbl-ind__grid sbl-ind__grid--custom">
+          {%- for tool in custom_tools -%}
+            {%- assign tool_parts = tool | split: '%%' -%}
+            <a class="sbl-ind__card" href="{{ tool_parts[0] }}">
+              <span class="sbl-ind__card-image">
+                <img src="{{ tool_parts[3] | asset_url }}" alt="" width="640" height="480" loading="lazy">
+              </span>
+              <span class="sbl-ind__card-copy">
+                <strong>{{ tool_parts[1] }}</strong>
+                <small>{{ tool_parts[2] }}</small>
+              </span>
+            </a>
+          {%- endfor -%}
+        </div>
+
+        {%- for group in groups -%}
+          {%- assign group_parts = group | split: '::' -%}
+          {%- assign group_collection = collections[group_parts[0]] -%}
+          {%- if group_collection != blank and group_collection.products_count > 0 -%}
+            <div class="sbl-ind__group">
+              <div class="sbl-ind__group-head">
+                <h3>{{ group_parts[1] }}</h3>
+                <a href="{{ group_collection.url }}">Shop all →</a>
+              </div>
+              <div class="sbl-ind__grid">
+                {%- render 'sbl-ind-products', collection: group_collection, limit: 4 -%}
+              </div>
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endfor -%}
+  </div>
+</section>
+
+{% stylesheet %}
+  .sbl-ind {
+    --sbl-navy: #0f2744;
+    --sbl-gold: #c9932e;
+    --sbl-cream: #f5f1eb;
+    --sbl-ink: #1b2433;
+    --sbl-muted: #667085;
+    background: var(--sbl-cream);
+    color: var(--sbl-ink);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .sbl-ind * { box-sizing: border-box; }
+  .sbl-ind a { color: inherit; text-decoration: none; }
+  .sbl-ind__wrap { width: min(1240px, calc(100% - 48px)); margin: 0 auto; }
+  .sbl-ind__hero { padding: 54px 0 28px; background: var(--sbl-navy); color: #fff; }
+  .sbl-ind__eyebrow { margin: 0 0 10px; color: var(--sbl-gold); font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+  .sbl-ind h1,
+  .sbl-ind h2 { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-weight: 500; letter-spacing: -.025em; line-height: 1.08; }
+  .sbl-ind h1 { max-width: 760px; font-size: clamp(40px, 5vw, 64px); }
+  .sbl-ind h2 { color: var(--sbl-navy); font-size: clamp(32px, 4vw, 46px); }
+  .sbl-ind__lead { max-width: 680px; margin: 16px 0 0; color: #d7dfeb; font-size: 18px; line-height: 1.6; }
+  .sbl-ind__body { padding: 36px 0 80px; }
+  .sbl-ind__picker { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+  .sbl-ind__picker a { display: flex; overflow: hidden; min-height: 0; padding: 0; flex-direction: column; border: 1px solid #e4ddd1; border-radius: 12px; background: #fff; align-content: stretch; }
+  .sbl-ind__picker a:hover,
+  .sbl-ind__picker a.is-current { border-color: var(--sbl-gold); box-shadow: 0 12px 28px rgba(15, 39, 68, .1); }
+  .sbl-ind__pick-image { display: flex; height: 148px; align-items: center; justify-content: center; background: #eee9e0; }
+  .sbl-ind__pick-image img { width: 100%; height: 100%; object-fit: contain; }
+  .sbl-ind__pick-copy { display: grid; gap: 6px; padding: 14px 14px 16px; }
+  .sbl-ind__picker strong { color: var(--sbl-navy); font-size: 16px; }
+  .sbl-ind__pick-copy span { color: var(--sbl-muted); font-size: 13px; line-height: 1.4; }
+  .sbl-ind__toolbar { display: flex; margin-top: 36px; align-items: end; justify-content: space-between; gap: 16px; }
+  .sbl-ind__all-title { margin: 0; }
+  .sbl-ind.has-selection .sbl-ind__all-title { display: none; }
+  .sbl-ind__show-all { display: none; min-height: 44px; padding: 0 16px; border: 1px solid #e4ddd1; border-radius: 8px; background: #fff; color: var(--sbl-navy); font-size: 14px; font-weight: 800; cursor: pointer; }
+  .sbl-ind.has-selection .sbl-ind__show-all { display: inline-flex; align-items: center; }
+  .sbl-ind__panel { display: none; margin-top: 28px; scroll-margin-top: 96px; }
+  .sbl-ind__panel:target,
+  .sbl-ind.has-selection .sbl-ind__panel.is-active { display: block; }
+  .sbl-ind.is-enhanced .sbl-ind__panel:not(.is-active) { display: none; }
+  .sbl-ind:has(.sbl-ind__panel:target) .sbl-ind__overview,
+  .sbl-ind.has-selection .sbl-ind__overview { display: none; }
+  .sbl-ind.is-enhanced:not(.has-selection) .sbl-ind__overview { display: block; }
+  .sbl-ind__overview .sbl-ind__group { padding-top: 8px; border-top: 1px solid #e4ddd1; margin-top: 24px; }
+  .sbl-ind__panel-lead { max-width: 680px; margin: 12px 0 8px; color: var(--sbl-muted); font-size: 16px; line-height: 1.6; }
+  .sbl-ind__custom-label,
+  .sbl-ind__group-head h3 { margin: 28px 0 14px; color: var(--sbl-navy); font-size: 18px; }
+  .sbl-ind__group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+  .sbl-ind__group-head h3 { margin: 28px 0 14px; }
+  .sbl-ind__group-head a { color: var(--sbl-gold); font-size: 14px; font-weight: 800; }
+  .sbl-ind__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .sbl-ind__card { display: flex; overflow: hidden; min-height: 100%; flex-direction: column; border: 1px solid #e4ddd1; border-radius: 12px; background: #fff; }
+  .sbl-ind__card:hover { box-shadow: 0 16px 36px rgba(15, 39, 68, .12); }
+  .sbl-ind__card-image { display: flex; height: 180px; align-items: center; justify-content: center; background: #eee9e0; }
+  .sbl-ind__card-image img { width: 100%; height: 100%; object-fit: contain; }
+  .sbl-ind__card-copy { display: grid; gap: 6px; padding: 14px 16px 16px; }
+  .sbl-ind__card-copy strong { color: var(--sbl-navy); font-size: 14px; line-height: 1.35; }
+  .sbl-ind__card-copy small { color: var(--sbl-gold); font-size: 13px; font-weight: 800; }
+  @media (max-width: 990px) {
+    .sbl-ind__picker,
+    .sbl-ind__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 599px) {
+    .sbl-ind__wrap { width: min(100% - 28px, 1240px); }
+    .sbl-ind__hero { padding: 36px 0 24px; }
+    .sbl-ind__picker,
+    .sbl-ind__grid { grid-template-columns: 1fr; }
+    .sbl-ind__lead { font-size: 16px; }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const root = document.querySelector('[data-sbl-industries]');
+    if (!root || root.dataset.sblReady === 'true') return;
+    root.dataset.sblReady = 'true';
+    root.classList.add('is-enhanced');
+    const links = Array.from(root.querySelectorAll('[data-sbl-industry]'));
+    const panels = Array.from(root.querySelectorAll('[data-sbl-panel]'));
+    const showAll = root.querySelector('[data-sbl-show-all]');
+    const show = (id, scroll) => {
+      const match = Boolean(id) && panels.some((panel) => panel.dataset.sblPanel === id);
+      root.classList.toggle('has-selection', match);
+      panels.forEach((panel) => panel.classList.toggle('is-active', match && panel.dataset.sblPanel === id));
+      links.forEach((link) => link.classList.toggle('is-current', match && link.dataset.sblIndustry === id));
+      if (scroll && match) {
+        const panel = root.querySelector('[data-sbl-panel="' + id + '"]');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+    const jumpLinks = Array.from(root.querySelectorAll('[data-sbl-industry], [data-sbl-industry-link]'));
+    jumpLinks.forEach((link) => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        const id = link.dataset.sblIndustry || link.dataset.sblIndustryLink;
+        history.replaceState(null, '', '#' + id);
+        show(id, true);
+      });
+    });
+    if (showAll) {
+      showAll.addEventListener('click', () => {
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+        show('', false);
+        root.querySelector('.sbl-ind__picker').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+    show((window.location.hash || '').replace('#', ''), false);
+    window.addEventListener('hashchange', () => show((window.location.hash || '').replace('#', ''), false));
+  })();
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "Industry guide",
+  "settings": []
+}
+{% endschema %}

@@ -89,6 +89,10 @@
           {
             "value": "supermarket",
             "label": "Supermarket"
+          },
+          {
+            "value": "sbl",
+            "label": "Signs ByLITA"
           }
         ],
         "default": "default",

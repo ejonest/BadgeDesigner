@@ -76,6 +76,10 @@ export interface Badge {
     | "recycle";
   lines: BadgeLine[];
   backgroundColor: string;
+  /** Sign designer: product finish/texture selected from the shape-specific image catalog. */
+  signFinishId?: string;
+  /** Render-only inlined source. UI state stores signFinishId instead. */
+  signFinishImageSrc?: string;
   /** Sign designer only: color for trim and decorative overlay (default #FFFFFF when template has overlay). */
   borderColor?: string;
   /**

@@ -22,6 +22,8 @@ export const SIGN_SHOPIFY_SHAPE_BY_TYPE_ID: Readonly<Record<string, string>> = {
   notched: "Notched Standard",
   "frontier-elegant": "Frontier Elegant",
   arrow: "Arrow",
+  triangle: "Triangle",
+  diamond: "Diamond",
   "door-hanger": "Door Hanger",
   "headstone-basic": "Headstone",
   vintage: "Vintage",

@@ -188,6 +188,8 @@ export type GavelSpinPreviewHandle = {
 export type GavelSpinPreviewProps = {
   style: GavelStyleDef;
   bandTextureUrl: string;
+  /** The band with the viewer's light baked in, shown flat on the Band tab. */
+  bandProofUrl?: string;
   bandHex?: string;
   className?: string;
   /** Personalized sound-block top art; toggle is shown when this is set. */
@@ -295,6 +297,7 @@ export const GavelSpinPreview = forwardRef<
   {
     style,
     bandTextureUrl,
+    bandProofUrl = "",
     bandHex = GAVEL_BAND_GOLD_HEX,
     className = "",
     soundBlockTextureUrl = "",
@@ -607,9 +610,9 @@ export const GavelSpinPreview = forwardRef<
         </>
       ) : null}
       {viewingBand ? (
-        bandTextureUrl ? (
+        bandProofUrl || bandTextureUrl ? (
           <img
-            src={bandTextureUrl}
+            src={bandProofUrl || bandTextureUrl}
             alt="Unwrapped gavel band with your custom text"
             className="gf-band-photo"
           />

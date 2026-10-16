@@ -37,7 +37,14 @@
     {% endif %}
   
   {% elsif template contains 'collection' and collection.handle %}
-    {% if current_tags %}
+    {% if collection.handle == 'awards-plaques-plaques' or collection.handle == 'awards-plaques-medals' %}
+      <span class="arrow"><i class="fa fa-angle-right" aria-hidden="true"></i></span>
+      <span class="bd-title">
+        <span><a href="/collections/awards-and-plaques">Awards &amp; Plaques</a></span>
+        <span class="arrow"><i class="fa fa-angle-right" aria-hidden="true"></i></span>
+        <span>{% if collection.handle == 'awards-plaques-plaques' %}Plaques{% else %}Medals &amp; Medallions{% endif %}</span>
+      </span>
+    {% elsif current_tags %}
       <span class="arrow">
         <i class="fa fa-angle-right" aria-hidden="true"></i>
       </span>

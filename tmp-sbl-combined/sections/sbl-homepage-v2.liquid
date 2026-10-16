@@ -1,0 +1,684 @@
+{%- liquid
+  assign designer_url = section.settings.designer_url | default: '/products/custom-sign'
+  assign industry_page = routes.all_products_collection_url | append: '?view=sbl-industries'
+  assign featured_collection = collections[section.settings.featured_collection]
+  assign hero_slides = section.blocks | where: 'type', 'hero_slide'
+  assign first_slide = hero_slides | first
+-%}
+
+<section id="sbl-home-{{ section.id }}" class="sbl-home" data-sbl-home>
+  <div class="sbl-home__hero">
+    <div class="sbl-home__wrap sbl-home__hero-grid">
+      <div class="sbl-home__hero-copy">
+        <p class="sbl-home__eyebrow">{{ section.settings.hero_eyebrow | escape }}</p>
+        <h1 class="sbl-home__hero-title">
+          {{ section.settings.hero_heading | escape }}
+          <a class="sbl-home__rotator" href="{{ designer_url }}" data-sbl-rotator>
+            <span data-sbl-rotator-label>{{ first_slide.settings.word | default: 'business' | escape }}</span>
+            <span aria-hidden="true">↗</span>
+          </a>
+        </h1>
+        <p class="sbl-home__hero-text">{{ section.settings.hero_text | escape }}</p>
+
+        <div class="sbl-home__quick-links" aria-label="Start a custom sign">
+          {%- for slide in hero_slides -%}
+            <a href="{{ designer_url }}" data-sbl-slide-link="{{ forloop.index0 }}" {{ slide.shopify_attributes }}>
+              {{- slide.settings.word | escape -}}
+            </a>
+          {%- endfor -%}
+        </div>
+
+        <div class="sbl-home__start">
+          <div class="sbl-home__start-copy">
+            <span>{{ section.settings.input_label | escape }}</span>
+            <strong>{{ section.settings.input_example | escape }}</strong>
+          </div>
+          <a href="{{ designer_url }}" class="sbl-home__button sbl-home__button--gold">
+            {{ section.settings.designer_button | escape }}
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
+
+        <div class="sbl-home__hero-notes">
+          <span>✓ Live preview</span>
+          <span>✓ Made in California</span>
+          <span>✓ Free US shipping</span>
+        </div>
+      </div>
+
+      <a class="sbl-home__designer-card" href="{{ designer_url }}">
+        <span class="sbl-home__designer-kicker">
+          {{ section.settings.designer_kicker | escape }}
+          {%- if first_slide -%}
+            <span>· for your <span data-sbl-card-word>{{ first_slide.settings.word | escape }}</span></span>
+          {%- endif -%}
+        </span>
+        <div class="sbl-home__designer-image-wrap{% if hero_slides.size > 0 %} sbl-home__designer-image-wrap--slides{% endif %}">
+          {%- if hero_slides.size > 0 -%}
+            {%- for slide in hero_slides -%}
+              {%- assign slide_product = slide.settings.product -%}
+              {%- assign slide_image = slide.settings.image | default: slide_product.featured_image -%}
+              {%- if slide_image -%}
+                {{
+                  slide_image
+                  | image_url: width: 1200
+                  | image_tag:
+                    class: 'sbl-home__designer-image sbl-home__slide-image',
+                    loading: 'eager',
+                    widths: '600, 900, 1200',
+                    sizes: '(min-width: 990px) 44vw, calc(100vw - 32px)',
+                    alt: slide_product.title,
+                    data-sbl-slide: forloop.index0,
+                    data-active: forloop.first
+                }}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- elsif section.settings.designer_image != blank -%}
+            {{
+              section.settings.designer_image
+              | image_url: width: 1400
+              | image_tag:
+                class: 'sbl-home__designer-image',
+                loading: 'eager',
+                widths: '600, 900, 1200, 1400',
+                sizes: '(min-width: 990px) 44vw, calc(100vw - 32px)',
+                alt: section.settings.designer_image_alt
+            }}
+          {%- else -%}
+            <img
+              class="sbl-home__designer-image"
+              src="{{ 'sbl-sign-designer-real.png' | asset_url }}"
+              alt="{{ section.settings.designer_image_alt | escape }}"
+              width="780"
+              height="1024"
+              loading="eager"
+            >
+          {%- endif -%}
+        </div>
+        <span class="sbl-home__designer-cta">
+          {{ section.settings.designer_card_link | escape }}
+          <span aria-hidden="true">→</span>
+        </span>
+      </a>
+    </div>
+  </div>
+
+  <div class="sbl-home__search-wrap">
+    <div class="sbl-home__wrap">
+      <form class="sbl-home__search" action="{{ routes.search_url }}" method="get" role="search">
+        <span class="sbl-home__search-icon" aria-hidden="true">⌕</span>
+        <label class="sbl-home__visually-hidden" for="sbl-home-search-{{ section.id }}">
+          {{ section.settings.search_placeholder | escape }}
+        </label>
+        <input
+          id="sbl-home-search-{{ section.id }}"
+          type="search"
+          name="q"
+          placeholder="{{ section.settings.search_placeholder | escape }}"
+          autocomplete="off"
+        >
+        <input type="hidden" name="type" value="product">
+        <button type="submit">Search</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="sbl-home__proof">
+    <div class="sbl-home__wrap sbl-home__proof-grid">
+      <div><strong>Factory-direct prices</strong><span>We make every custom sign</span></div>
+      <div><strong>Made in the USA</strong><span>Produced in Signal Hill, California</span></div>
+      <div><strong>Fast production</strong><span>Most orders ship within 48 hours</span></div>
+      <div><strong>Bulk made easy</strong><span>Matching signs for every room</span></div>
+    </div>
+  </div>
+
+  <div class="sbl-home__section sbl-home__section--cream" id="sbl-popular">
+    <div class="sbl-home__wrap">
+      <div class="sbl-home__heading-row">
+        <div>
+          <p class="sbl-home__section-label">{{ section.settings.categories_label | escape }}</p>
+          <h2>{{ section.settings.categories_heading | escape }}</h2>
+        </div>
+        <a href="{{ routes.all_products_collection_url }}">{{ section.settings.categories_link | escape }} →</a>
+      </div>
+
+      <div class="sbl-home__category-grid">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'category' -%}
+            {%- assign category_collection = collections[block.settings.collection] -%}
+            {%- assign category_product = category_collection.products | first -%}
+            <a
+              href="{{ category_collection.url | default: routes.all_products_collection_url }}"
+              class="sbl-home__category-card"
+              {{ block.shopify_attributes }}
+            >
+              {%- if block.settings.product != blank -%}
+                {%- assign category_product = block.settings.product -%}
+              {%- endif -%}
+              <div class="sbl-home__category-image">
+                {%- if block.settings.image != blank -%}
+                  {{
+                    block.settings.image
+                    | image_url: width: 800
+                    | image_tag:
+                      loading: 'lazy',
+                      widths: '320, 480, 640, 800',
+                      sizes: '(min-width: 990px) 25vw, (min-width: 600px) 50vw, 100vw',
+                      alt: block.settings.title
+                  }}
+                {%- elsif category_product.featured_image -%}
+                  {{
+                    category_product.featured_image
+                    | image_url: width: 800
+                    | image_tag:
+                      loading: 'lazy',
+                      widths: '320, 480, 640, 800',
+                      sizes: '(min-width: 990px) 25vw, (min-width: 600px) 50vw, 100vw',
+                      alt: category_product.featured_image.alt
+                  }}
+                {%- endif -%}
+              </div>
+              <div class="sbl-home__category-copy">
+                <h3>{{ block.settings.title | default: category_collection.title | escape }}</h3>
+                <p>{{ block.settings.subtitle | escape }}</p>
+                <span>{{ block.settings.link_label | escape }} →</span>
+              </div>
+            </a>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </div>
+
+  {%- if featured_collection != blank and featured_collection.products_count > 0 -%}
+    <div class="sbl-home__section sbl-home__section--white">
+      <div class="sbl-home__wrap">
+        <div class="sbl-home__heading-row">
+          <div>
+            <p class="sbl-home__section-label">{{ section.settings.products_label | escape }}</p>
+            <h2>{{ section.settings.products_heading | escape }}</h2>
+          </div>
+          <a href="{{ featured_collection.url }}">{{ section.settings.products_link | escape }} →</a>
+        </div>
+        <div class="sbl-home__product-grid">
+          {%- for featured_product in featured_collection.products limit: 8 -%}
+            <a class="sbl-home__product-card" href="{{ featured_product.url }}">
+              <div class="sbl-home__product-image">
+                {%- if featured_product.featured_image -%}
+                  {{
+                    featured_product.featured_image
+                    | image_url: width: 720
+                    | image_tag:
+                      loading: 'lazy',
+                      widths: '280, 420, 560, 720',
+                      sizes: '(min-width: 990px) 25vw, (min-width: 600px) 50vw, 100vw',
+                      alt: featured_product.featured_image.alt
+                  }}
+                {%- endif -%}
+              </div>
+              <div class="sbl-home__product-copy">
+                <h3>{{ featured_product.title | escape }}</h3>
+                <span>{{ featured_product.price | money }}</span>
+              </div>
+            </a>
+          {%- endfor -%}
+        </div>
+      </div>
+    </div>
+  {%- endif -%}
+
+  <div class="sbl-home__section sbl-home__section--navy">
+    <div class="sbl-home__wrap">
+      <div class="sbl-home__heading-row sbl-home__heading-row--light">
+        <div>
+          <p class="sbl-home__section-label">{{ section.settings.industries_label | escape }}</p>
+          <h2>{{ section.settings.industries_heading | escape }}</h2>
+        </div>
+        <a href="{{ industry_page }}">All industries →</a>
+      </div>
+      <div class="sbl-home__industry-grid">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'industry' -%}
+            {%- assign industry_collection = collections[block.settings.collection] -%}
+            {%- assign industry_product = industry_collection.products | first -%}
+            <a
+              href="{% if block.settings.anchor != blank %}{{ industry_page }}#{{ block.settings.anchor }}{% else %}{{ industry_page }}{% endif %}"
+              class="sbl-home__industry-card"
+              {{ block.shopify_attributes }}
+            >
+              {%- if block.settings.image != blank -%}
+                {{
+                  block.settings.image
+                  | image_url: width: 720
+                  | image_tag:
+                    loading: 'lazy',
+                    widths: '320, 480, 720',
+                    sizes: '(min-width: 990px) 33vw, 100vw',
+                    alt: block.settings.title
+                }}
+              {%- elsif industry_product.featured_image -%}
+                {{
+                  industry_product.featured_image
+                  | image_url: width: 720
+                  | image_tag:
+                    loading: 'lazy',
+                    widths: '320, 480, 720',
+                    sizes: '(min-width: 990px) 33vw, 100vw',
+                    alt: industry_product.featured_image.alt
+                }}
+              {%- endif -%}
+              <span class="sbl-home__industry-shade"></span>
+              <span class="sbl-home__industry-copy">
+                <strong>{{ block.settings.title | default: industry_collection.title | escape }}</strong>
+                <small>{{ block.settings.subtitle | escape }}</small>
+                <b>{{ block.settings.link_label | escape }} →</b>
+              </span>
+            </a>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </div>
+
+  <div class="sbl-home__section sbl-home__section--cream" id="sbl-bulk">
+    <div class="sbl-home__wrap sbl-home__bulk">
+      <div class="sbl-home__bulk-copy">
+        <p class="sbl-home__section-label">{{ section.settings.bulk_label | escape }}</p>
+        <h2>{{ section.settings.bulk_heading | escape }}</h2>
+        <p>{{ section.settings.bulk_text | escape }}</p>
+        <ul>
+          <li>✓ {{ section.settings.bulk_point_one | escape }}</li>
+          <li>✓ {{ section.settings.bulk_point_two | escape }}</li>
+          <li>✓ {{ section.settings.bulk_point_three | escape }}</li>
+        </ul>
+        <div class="sbl-home__actions">
+          <a href="{{ section.settings.bulk_url | default: designer_url }}" class="sbl-home__button sbl-home__button--navy">
+            {{ section.settings.bulk_button | escape }} →
+          </a>
+          <a href="{{ designer_url }}" class="sbl-home__text-link">{{ section.settings.bulk_secondary | escape }}</a>
+        </div>
+      </div>
+      <a class="sbl-home__bulk-image" href="{{ section.settings.bulk_url | default: designer_url }}">
+        <img
+          src="{{ 'sbl-desk-sign-designer-real.png' | asset_url }}"
+          alt="{{ section.settings.bulk_image_alt | escape }}"
+          width="780"
+          height="1024"
+          loading="lazy"
+        >
+      </a>
+    </div>
+  </div>
+
+  <div class="sbl-home__plaque">
+    <div class="sbl-home__wrap sbl-home__plaque-grid">
+      <a class="sbl-home__plaque-image" href="{{ section.settings.plaque_url }}">
+        <img
+          src="{{ 'sbl-plaque-designer-shot.jpg' | asset_url }}"
+          alt="{{ section.settings.plaque_image_alt | escape }}"
+          width="1600"
+          height="835"
+          loading="lazy"
+        >
+      </a>
+      <div>
+        <p class="sbl-home__section-label">{{ section.settings.plaque_label | escape }}</p>
+        <h2>{{ section.settings.plaque_heading | escape }}</h2>
+        <p>{{ section.settings.plaque_text | escape }}</p>
+        <a href="{{ section.settings.plaque_url }}" class="sbl-home__button sbl-home__button--gold">
+          {{ section.settings.plaque_button | escape }} →
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {%- assign trophy_url = section.settings.trophy_url | default: '/products/custom-trophy' -%}
+  <div class="sbl-home__plaque sbl-home__trophy">
+    <div class="sbl-home__wrap sbl-home__plaque-grid">
+      <div>
+        <p class="sbl-home__section-label">Trophies & awards</p>
+        <h2>{{ section.settings.trophy_heading | escape }}</h2>
+        <p>Pick a trophy style, add your logo and engraving, and see the finished award before you order.</p>
+        <a href="{{ trophy_url }}" class="sbl-home__button sbl-home__button--gold">
+          Design a trophy →
+        </a>
+      </div>
+      <a class="sbl-home__plaque-image" href="{{ trophy_url }}">
+        <img
+          src="{{ 'sbl-trophy-designer-shot.jpg' | asset_url }}"
+          alt="Signs ByLITA trophy designer showing a personalized award trophy"
+          width="1600"
+          height="1070"
+          loading="lazy"
+        >
+      </a>
+    </div>
+  </div>
+</section>
+
+{% stylesheet %}
+  .sbl-home {
+    --sbl-navy: #0f2744;
+    --sbl-navy-dark: #081a30;
+    --sbl-gold: #c9932e;
+    --sbl-cream: #f5f1eb;
+    --sbl-ink: #1b2433;
+    --sbl-muted: #667085;
+    background: var(--sbl-cream);
+    color: var(--sbl-ink);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .sbl-home * { box-sizing: border-box; }
+  .sbl-home__wrap { width: min(1240px, calc(100% - 48px)); margin: 0 auto; }
+  .sbl-home__hero { background: var(--sbl-navy); color: #fff; padding: 68px 0 86px; overflow: hidden; }
+  .sbl-home__hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(380px, .95fr); gap: 68px; align-items: center; }
+  .sbl-home__eyebrow,
+  .sbl-home__section-label {
+    margin: 0 0 12px;
+    color: var(--sbl-gold);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  .sbl-home__hero-title,
+  .sbl-home h2 {
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    color: inherit;
+    font-weight: 500;
+    letter-spacing: -.025em;
+  }
+  .sbl-home__hero-title { max-width: 680px; font-size: clamp(46px, 5.5vw, 72px); line-height: 1.01; }
+  .sbl-home__rotator { display: inline-flex; gap: 12px; align-items: center; color: #e6c66e; border-bottom: 3px solid var(--sbl-gold); text-decoration: none; }
+  .sbl-home__rotator:hover { color: #fff0b9; }
+  .sbl-home__hero-text { max-width: 610px; margin: 26px 0 20px; color: #d7dfeb; font-size: 18px; line-height: 1.65; }
+  .sbl-home__quick-links { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 24px; }
+  .sbl-home__quick-links a {
+    padding: 8px 12px;
+    border: 1px solid rgba(255,255,255,.24);
+    border-radius: 999px;
+    color: #e9edf4;
+    font-size: 13px;
+    text-decoration: none;
+  }
+  .sbl-home__quick-links a:hover { border-color: var(--sbl-gold); color: #fff; }
+  .sbl-home__start { display: flex; max-width: 640px; min-height: 68px; padding: 8px; gap: 12px; align-items: center; border-radius: 10px; background: #fff; }
+  .sbl-home__start-copy { display: flex; min-width: 0; flex: 1; padding: 2px 10px; flex-direction: column; color: var(--sbl-ink); }
+  .sbl-home__start-copy span { color: var(--sbl-muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .sbl-home__start-copy strong { overflow: hidden; margin-top: 3px; font-size: 17px; text-overflow: ellipsis; white-space: nowrap; }
+  .sbl-home__button { display: inline-flex; min-height: 50px; padding: 0 22px; align-items: center; justify-content: center; gap: 8px; border-radius: 7px; font-size: 14px; font-weight: 800; text-decoration: none; }
+  .sbl-home__button--gold { background: var(--sbl-gold); color: var(--sbl-navy); }
+  .sbl-home__button--gold:hover { background: #dba849; color: var(--sbl-navy); }
+  .sbl-home__button--navy { background: var(--sbl-navy); color: #fff; }
+  .sbl-home__button--navy:hover { background: #183b64; color: #fff; }
+  .sbl-home__hero-notes { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 18px; color: #bfcbd9; font-size: 13px; }
+  .sbl-home__designer-card { position: relative; display: block; padding: 16px; border-radius: 16px; background: #fff; box-shadow: 0 32px 70px rgba(0,0,0,.32), 0 0 0 0 rgba(201,147,46,0); color: var(--sbl-ink); text-decoration: none; transition: transform .25s ease, box-shadow .25s ease; }
+  .sbl-home__designer-card:hover,
+  .sbl-home__designer-card:focus-visible { color: var(--sbl-ink); box-shadow: 0 40px 90px rgba(0,0,0,.42), 0 0 0 4px var(--sbl-gold), 0 0 48px rgba(230,198,110,.45); outline: none; transform: scale(1.04); }
+  .sbl-home__designer-kicker { display: block; padding: 2px 4px 13px; color: var(--sbl-navy); font-size: 13px; font-weight: 800; }
+  .sbl-home__designer-kicker > span { color: var(--sbl-gold); }
+  .sbl-home__designer-image-wrap { position: relative; overflow: hidden; height: 440px; border-radius: 10px; background: #ebe7df; }
+  .sbl-home__designer-image { width: 100%; height: 100%; object-fit: cover; object-position: center 55%; }
+  .sbl-home__designer-image-wrap--slides { background: #fff; }
+  .sbl-home__slide-image { position: absolute; inset: 0; padding: 24px; object-fit: contain; object-position: center; opacity: 0; transition: opacity .5s ease; }
+  .sbl-home__slide-image[data-active="true"] { opacity: 1; }
+  .sbl-home__quick-links a[aria-current="true"] { border-color: var(--sbl-gold); background: rgba(201,147,46,.16); color: #fff; }
+  .sbl-home__designer-cta { display: flex; padding: 15px 4px 2px; align-items: center; justify-content: space-between; color: var(--sbl-navy); font-size: 15px; font-weight: 800; }
+  .sbl-home__search-wrap { position: relative; z-index: 2; margin-top: -34px; }
+  .sbl-home__search { display: flex; min-height: 68px; padding: 8px 8px 8px 20px; align-items: center; gap: 12px; border: 1px solid #e7e0d4; border-radius: 12px; background: #fff; box-shadow: 0 15px 38px rgba(15,39,68,.15); }
+  .sbl-home__search-icon { color: var(--sbl-gold); font-size: 30px; line-height: 1; }
+  .sbl-home__search input { min-width: 0; flex: 1; border: 0; outline: 0; color: var(--sbl-ink); font-size: 16px; }
+  .sbl-home__search button { align-self: stretch; padding: 0 26px; border: 0; border-radius: 7px; background: var(--sbl-navy); color: #fff; font-weight: 800; cursor: pointer; }
+  .sbl-home__visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  .sbl-home__proof { padding: 52px 0 24px; }
+  .sbl-home__proof-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+  .sbl-home__proof-grid div { padding-left: 16px; border-left: 3px solid var(--sbl-gold); }
+  .sbl-home__proof-grid strong,
+  .sbl-home__proof-grid span { display: block; }
+  .sbl-home__proof-grid strong { color: var(--sbl-navy); font-size: 15px; }
+  .sbl-home__proof-grid span { margin-top: 4px; color: var(--sbl-muted); font-size: 13px; line-height: 1.45; }
+  .sbl-home__section { padding: 82px 0; }
+  .sbl-home__section--cream { background: var(--sbl-cream); }
+  .sbl-home__section--white { background: #fff; }
+  .sbl-home__section--navy { background: var(--sbl-navy); color: #fff; }
+  .sbl-home__heading-row { display: flex; margin-bottom: 32px; align-items: end; justify-content: space-between; gap: 24px; }
+  .sbl-home__heading-row h2,
+  .sbl-home__bulk h2,
+  .sbl-home__plaque h2 { color: var(--sbl-navy); font-size: clamp(34px, 4vw, 48px); line-height: 1.08; }
+  .sbl-home__heading-row > a { color: var(--sbl-navy); font-size: 14px; font-weight: 800; text-decoration: none; }
+  .sbl-home__heading-row--light h2 { color: #fff; }
+  .sbl-home__heading-row--light > a { color: #f2cf78; }
+  #sbl-popular, #sbl-bulk { scroll-margin-top: 90px; }
+  .sbl-home__category-grid,
+  .sbl-home__product-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+  .sbl-home__category-card,
+  .sbl-home__product-card { overflow: hidden; border: 1px solid #e4ddd1; border-radius: 12px; background: #fff; color: var(--sbl-ink); text-decoration: none; transition: transform .2s ease, box-shadow .2s ease; }
+  .sbl-home__category-card:hover,
+  .sbl-home__product-card:hover { color: var(--sbl-ink); box-shadow: 0 18px 40px rgba(15,39,68,.12); transform: translateY(-4px); }
+  .sbl-home__category-image,
+  .sbl-home__product-image { display: flex; overflow: hidden; height: 220px; align-items: center; justify-content: center; background: #eee9e0; }
+  .sbl-home__category-image img,
+  .sbl-home__product-image img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; transition: transform .3s ease; }
+  .sbl-home__category-card:hover img,
+  .sbl-home__product-card:hover img { transform: scale(1.035); }
+  .sbl-home__category-copy,
+  .sbl-home__product-copy { padding: 18px; }
+  .sbl-home__category-copy h3,
+  .sbl-home__product-copy h3 { margin: 0; color: var(--sbl-navy); font-size: 16px; line-height: 1.35; }
+  .sbl-home__category-copy p { min-height: 38px; margin: 5px 0 12px; color: var(--sbl-muted); font-size: 13px; line-height: 1.45; }
+  .sbl-home__category-copy span { color: var(--sbl-gold); font-size: 13px; font-weight: 800; }
+  .sbl-home__product-copy { display: flex; flex-direction: column; gap: 8px; }
+  .sbl-home__product-copy h3 { min-height: 44px; font-size: 14px; }
+  .sbl-home__product-copy span { color: var(--sbl-gold); font-weight: 800; }
+  .sbl-home__industry-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .sbl-home__industry-card { position: relative; display: block; overflow: hidden; min-height: 260px; border-radius: 12px; color: #fff; text-decoration: none; }
+  .sbl-home__industry-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .35s ease; }
+  .sbl-home__industry-card:hover img { transform: scale(1.045); }
+  .sbl-home__industry-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,26,48,.08), rgba(8,26,48,.92)); }
+  .sbl-home__industry-copy { position: absolute; inset: auto 0 0; display: flex; padding: 24px; flex-direction: column; color: #fff; }
+  .sbl-home__industry-copy strong { font-family: Georgia, 'Times New Roman', serif; font-size: 25px; font-weight: 500; }
+  .sbl-home__industry-copy small { margin-top: 4px; color: #d4deeb; font-size: 13px; line-height: 1.4; }
+  .sbl-home__industry-copy b { margin-top: 12px; color: #f2cf78; font-size: 13px; }
+  .sbl-home__bulk,
+  .sbl-home__plaque-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .85fr); gap: 70px; align-items: center; }
+  .sbl-home__bulk-copy > p:not(.sbl-home__section-label),
+  .sbl-home__plaque-grid > div > p:not(.sbl-home__section-label) { margin: 18px 0 22px; color: var(--sbl-muted); font-size: 16px; line-height: 1.65; }
+  .sbl-home__bulk ul { display: grid; margin: 0 0 28px; padding: 0; gap: 10px; list-style: none; color: var(--sbl-ink); font-size: 14px; }
+  .sbl-home__bulk li::first-letter { color: var(--sbl-gold); }
+  .sbl-home__actions { display: flex; align-items: center; gap: 18px; }
+  .sbl-home__text-link { color: var(--sbl-navy); font-weight: 800; }
+  .sbl-home__bulk-image,
+  .sbl-home__plaque-image { display: block; overflow: hidden; border-radius: 14px; background: #e7e1d6; box-shadow: 0 24px 55px rgba(15,39,68,.16); }
+  .sbl-home__bulk-image img { display: block; width: 100%; max-height: 520px; object-fit: cover; object-position: center 45%; }
+  .sbl-home__plaque { padding: 82px 0; background: var(--sbl-navy-dark); color: #fff; }
+  .sbl-home__plaque-grid { grid-template-columns: minmax(360px, .9fr) minmax(0, 1fr); }
+  .sbl-home__plaque-image img { display: block; width: 100%; height: 390px; object-fit: cover; object-position: center; }
+  .sbl-home__plaque h2 { color: #fff; }
+  .sbl-home__plaque-grid > div > p:not(.sbl-home__section-label) { color: #ced8e5; }
+  .sbl-home__trophy { background: var(--sbl-cream); color: var(--sbl-ink); }
+  .sbl-home__trophy .sbl-home__plaque-grid { grid-template-columns: minmax(0, 1fr) minmax(360px, .9fr); }
+  .sbl-home .sbl-home__trophy h2 { color: var(--sbl-navy); }
+  .sbl-home__trophy .sbl-home__plaque-grid > div > p:not(.sbl-home__section-label) { color: var(--sbl-muted); }
+  .sbl-home__trophy .sbl-home__plaque-image img { height: 420px; }
+  @media (max-width: 990px) {
+    .sbl-home__hero-grid,
+    .sbl-home__bulk,
+    .sbl-home__plaque-grid,
+    .sbl-home__trophy .sbl-home__plaque-grid { grid-template-columns: 1fr; }
+    .sbl-home__trophy .sbl-home__plaque-image { order: -1; }
+    .sbl-home__hero-grid { gap: 44px; }
+    .sbl-home__designer-card { width: min(620px, 100%); margin: 0 auto; }
+    .sbl-home__category-grid,
+    .sbl-home__product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sbl-home__industry-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sbl-home__proof-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 599px) {
+    .sbl-home__wrap { width: min(100% - 28px, 1240px); }
+    .sbl-home__hero { padding: 48px 0 70px; }
+    .sbl-home__hero-title { font-size: 43px; }
+    .sbl-home__hero-text { font-size: 16px; }
+    .sbl-home__start { align-items: stretch; flex-direction: column; }
+    .sbl-home__start-copy { padding: 8px; }
+    .sbl-home__designer-image-wrap { height: 390px; }
+    .sbl-home__search { flex-wrap: wrap; }
+    .sbl-home__search button { width: 100%; min-height: 48px; }
+    .sbl-home__proof-grid,
+    .sbl-home__category-grid,
+    .sbl-home__product-grid,
+    .sbl-home__industry-grid { grid-template-columns: 1fr; }
+    .sbl-home__heading-row { align-items: start; flex-direction: column; }
+    .sbl-home__section { padding: 60px 0; }
+    .sbl-home__category-image,
+    .sbl-home__product-image { height: 250px; }
+    .sbl-home__industry-card { min-height: 290px; }
+    .sbl-home__actions { align-items: stretch; flex-direction: column; }
+    .sbl-home__text-link { text-align: center; }
+    .sbl-home__plaque-image img,
+    .sbl-home__trophy .sbl-home__plaque-image img { height: 280px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sbl-home__category-card,
+    .sbl-home__product-card,
+    .sbl-home__designer-card,
+    .sbl-home img { transition: none !important; }
+    .sbl-home__designer-card:hover,
+    .sbl-home__designer-card:focus-visible { transform: none; }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const roots = document.querySelectorAll('[data-sbl-home]');
+    roots.forEach((root) => {
+      if (root.dataset.sblReady === 'true') return;
+      root.dataset.sblReady = 'true';
+      const rotator = root.querySelector('[data-sbl-rotator-label]');
+      const cardWord = root.querySelector('[data-sbl-card-word]');
+      const links = Array.from(root.querySelectorAll('[data-sbl-slide-link]'));
+      const slides = Array.from(root.querySelectorAll('[data-sbl-slide]'));
+      const card = root.querySelector('.sbl-home__designer-card');
+      if (!rotator || links.length === 0) return;
+
+      let index = 0;
+      let paused = false;
+      const show = (next) => {
+        index = next;
+        const word = links[index].textContent.trim();
+        rotator.textContent = word;
+        if (cardWord) cardWord.textContent = word;
+        links.forEach((link, i) => link.setAttribute('aria-current', i === index ? 'true' : 'false'));
+        slides.forEach((slide) => {
+          slide.dataset.active = String(Number(slide.dataset.sblSlide) === index);
+        });
+      };
+      show(0);
+
+      links.forEach((link, i) => {
+        link.addEventListener('mouseenter', () => { paused = true; show(i); });
+        link.addEventListener('focus', () => { paused = true; show(i); });
+        link.addEventListener('mouseleave', () => { paused = false; });
+        link.addEventListener('blur', () => { paused = false; });
+      });
+      if (card) {
+        card.addEventListener('mouseenter', () => { paused = true; });
+        card.addEventListener('mouseleave', () => { paused = false; });
+      }
+
+      if (links.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      window.setInterval(() => {
+        if (!paused) show((index + 1) % links.length);
+      }, 2800);
+    });
+  })();
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "Signs ByLITA homepage",
+  "max_blocks": 30,
+  "settings": [
+    { "type": "url", "id": "designer_url", "label": "Custom sign tool link" },
+    { "type": "textarea", "id": "hero_eyebrow", "label": "Hero eyebrow", "default": "Made by the manufacturer · Custom signs made in the USA" },
+    { "type": "text", "id": "hero_heading", "label": "Hero heading", "default": "Signs for your" },
+    { "type": "textarea", "id": "hero_text", "label": "Hero text", "default": "From the front door to the loading dock, we make the signs America walks past every day. Start with a ready-made sign or create your own in minutes." },
+    { "type": "text", "id": "input_label", "label": "Designer prompt label", "default": "Your sign can say anything" },
+    { "type": "text", "id": "input_example", "label": "Designer prompt example", "default": "Add your custom text in the designer" },
+    { "type": "text", "id": "designer_button", "label": "Designer button", "default": "Design your sign" },
+    { "type": "text", "id": "designer_kicker", "label": "Designer card label", "default": "Real custom sign designer" },
+    { "type": "image_picker", "id": "designer_image", "label": "Designer screenshot" },
+    { "type": "textarea", "id": "designer_image_alt", "label": "Designer image alt text", "default": "Signs ByLITA custom sign designer showing a live engraved sign preview" },
+    { "type": "text", "id": "designer_card_link", "label": "Designer card link text", "default": "Open the live designer" },
+    { "type": "textarea", "id": "search_placeholder", "label": "Search placeholder", "default": "Search ready-made signs: restroom, employees only, hand wash..." },
+    { "type": "text", "id": "categories_label", "label": "Categories label", "default": "Popular signs" },
+    { "type": "text", "id": "categories_heading", "label": "Categories heading", "default": "The signs every building needs." },
+    { "type": "text", "id": "categories_link", "label": "Categories link text", "default": "Shop all signs" },
+    { "type": "collection", "id": "featured_collection", "label": "Featured product collection" },
+    { "type": "text", "id": "products_label", "label": "Products label", "default": "Ready-made favorites" },
+    { "type": "text", "id": "products_heading", "label": "Products heading", "default": "Real signs, ready to ship." },
+    { "type": "text", "id": "products_link", "label": "Products link text", "default": "View the collection" },
+    { "type": "text", "id": "industries_label", "label": "Industries label", "default": "Shop by industry" },
+    { "type": "text", "id": "industries_heading", "label": "Industries heading", "default": "Made for every kind of building." },
+    { "type": "text", "id": "bulk_label", "label": "Bulk label", "default": "Bulk & business orders" },
+    { "type": "text", "id": "bulk_heading", "label": "Bulk heading", "default": "Ten signs or a whole building. One consistent look." },
+    { "type": "textarea", "id": "bulk_text", "label": "Bulk text", "default": "Create matching room signs and staff nameplates with one style. Use the designer to duplicate signs, then change only the wording." },
+    { "type": "text", "id": "bulk_point_one", "label": "First bulk point", "default": "Duplicate a design in one click" },
+    { "type": "text", "id": "bulk_point_two", "label": "Second bulk point", "default": "Add multiple signs in one project" },
+    { "type": "text", "id": "bulk_point_three", "label": "Third bulk point", "default": "Save designs for easy reorders" },
+    { "type": "url", "id": "bulk_url", "label": "Bulk link" },
+    { "type": "text", "id": "bulk_button", "label": "Bulk button", "default": "Start a sign set" },
+    { "type": "text", "id": "bulk_secondary", "label": "Bulk secondary link", "default": "Or design one sign" },
+    { "type": "textarea", "id": "bulk_image_alt", "label": "Bulk image alt text", "default": "Desk sign designer with duplicate and add multiple controls" },
+    { "type": "text", "id": "plaque_label", "label": "Plaque label", "default": "Plaques & awards" },
+    { "type": "text", "id": "plaque_heading", "label": "Plaque heading", "default": "Recognition designed by you." },
+    { "type": "textarea", "id": "plaque_text", "label": "Plaque text", "default": "Add a logo, recipient name, and message to create a professional award plaque with a live preview." },
+    { "type": "url", "id": "plaque_url", "label": "Plaque designer link" },
+    { "type": "text", "id": "plaque_button", "label": "Plaque button", "default": "Design a plaque" },
+    { "type": "textarea", "id": "plaque_image_alt", "label": "Plaque image alt text", "default": "Signs ByLITA plaque designer showing a personalized award plaque" },
+    { "type": "text", "id": "trophy_heading", "label": "Trophy heading", "default": "Trophies made for your winners." },
+    { "type": "url", "id": "trophy_url", "label": "Trophy designer link" }
+  ],
+  "blocks": [
+    {
+      "type": "hero_slide",
+      "name": "Hero rotating word",
+      "settings": [
+        { "type": "text", "id": "word", "label": "Word", "default": "business" },
+        { "type": "product", "id": "product", "label": "Example product" },
+        { "type": "image_picker", "id": "image", "label": "Override image" }
+      ]
+    },
+    {
+      "type": "category",
+      "name": "Popular category",
+      "settings": [
+        { "type": "collection", "id": "collection", "label": "Collection" },
+        { "type": "product", "id": "product", "label": "Image from product" },
+        { "type": "image_picker", "id": "image", "label": "Override image" },
+        { "type": "text", "id": "title", "label": "Title" },
+        { "type": "text", "id": "subtitle", "label": "Subtitle" },
+        { "type": "text", "id": "link_label", "label": "Link text", "default": "Shop signs" }
+      ]
+    },
+    {
+      "type": "industry",
+      "name": "Industry",
+      "settings": [
+        { "type": "collection", "id": "collection", "label": "Collection" },
+        { "type": "text", "id": "anchor", "label": "Industry page anchor" },
+        { "type": "image_picker", "id": "image", "label": "Override image" },
+        { "type": "text", "id": "title", "label": "Title" },
+        { "type": "text", "id": "subtitle", "label": "Subtitle" },
+        { "type": "text", "id": "link_label", "label": "Link text", "default": "Shop signs" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Signs ByLITA homepage",
+      "category": "Custom"
+    }
+  ]
+}
+{% endschema %}

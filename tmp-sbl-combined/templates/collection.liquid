@@ -2,6 +2,10 @@
   {% section 'desk-signs-collection-hero' %}
   <div id="desk-signs-collection-products"></div>
 {%- endif -%}
+{%- if collection.handle == 'awards-and-plaques' or collection.handle == 'awards-plaques-plaques' or collection.handle == 'awards-plaques-medals' -%}
+  {% section 'awards-plaques-hero' %}
+  <div id="awards-plaques-collection-products"></div>
+{%- endif -%}
 
 {% if settings.category_layout == "default" %} 
 

@@ -464,6 +464,36 @@ export function gavelMetalTextureSet(
   }
 }
 
+/**
+ * `color` is the plain albedo the 3D material lights itself. `proof` has that
+ * light baked in (scripts/build-metal-proof-textures.mjs), for flat images that
+ * should read like the spinning model rather than like an unlit texture.
+ */
+export type GavelMetalAlbedoKind = "color" | "proof";
+
+/** Edge of the square brushed-metal tiles, in texels. */
+export const GAVEL_METAL_TILE_PX = 1024;
+
+/**
+ * Mean sRGB luminance (0–1) of each proof tile, so other surfaces can borrow
+ * the brush as a relative light/dark pattern over their own base color.
+ */
+export const GAVEL_METAL_PROOF_MEAN_LUMINANCE: Record<
+  "metal-gold" | "metal-silver",
+  number
+> = {
+  "metal-gold": 0.711,
+  "metal-silver": 0.769,
+};
+
+/** Public URL of a finish's albedo, for canvas, SVG and CSS fills. */
+export function gavelMetalAlbedoUrl(
+  set: "metal-gold" | "metal-silver",
+  kind: GavelMetalAlbedoKind = "color",
+): string {
+  return `/textures/gavel/${set}/${kind}.jpg`;
+}
+
 export type GavelStyleDef = {
   id: GavelStyleId;
   label: string;

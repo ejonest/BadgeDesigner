@@ -370,6 +370,38 @@
       "safeInsetPx": 6
     },
     {
+      "id": "triangle-11_7x10",
+      "name": "Triangle 11.7 x 10\"",
+      "widthInches": 11.67,
+      "heightInches": 10,
+      "svgFile": "/templates/sign/Triangle.svg",
+      "safeInsetPx": 6,
+      "textLayout": {
+        "region": {
+          "xNorm": 0.28,
+          "yNorm": 0.48,
+          "widthNorm": 0.44,
+          "heightNorm": 0.38
+        }
+      }
+    },
+    {
+      "id": "diamond-12x10",
+      "name": "Diamond 12 x 10\"",
+      "widthInches": 12.02,
+      "heightInches": 10,
+      "svgFile": "/templates/sign/Diamond.svg",
+      "safeInsetPx": 6,
+      "textLayout": {
+        "region": {
+          "xNorm": 0.22,
+          "yNorm": 0.34,
+          "widthNorm": 0.56,
+          "heightNorm": 0.32
+        }
+      }
+    },
+    {
       "id": "door-hanger-4x8",
       "name": "Door hanger 4 x 8\"",
       "widthInches": 4,

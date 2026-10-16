@@ -54,6 +54,7 @@
   <!-- Styles -->
   {% render 'css-variables' %}
   {% render 'head_styles' %}
+  {{ 'sbl-brand-palette.css' | asset_url | stylesheet_tag }}
   
    <!-- Scripts -->
   {% render 'head_scripts' %}

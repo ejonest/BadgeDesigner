@@ -1,0 +1,21 @@
+{
+  "input": {
+    "title": "Awards & Plaques",
+    "handle": "awards-and-plaques",
+    "descriptionHtml": "<p>Medals, plaques, and trophies for every kind of recognition. Design your own plaque or trophy online, or choose from our ready-made awards.</p>",
+    "sortOrder": "BEST_SELLING",
+    "ruleSet": {
+      "appliedDisjunctively": true,
+      "rules": [
+        { "column": "TYPE", "relation": "EQUALS", "condition": "Medals" },
+        { "column": "TYPE", "relation": "EQUALS", "condition": "Custom Medals" },
+        { "column": "TYPE", "relation": "EQUALS", "condition": "Custom Plaques" },
+        { "column": "TYPE", "relation": "EQUALS", "condition": "Custom Plaque" },
+        { "column": "TITLE", "relation": "CONTAINS", "condition": "Medal Award" },
+        { "column": "TITLE", "relation": "CONTAINS", "condition": "Award Medals" },
+        { "column": "TITLE", "relation": "CONTAINS", "condition": "Award Plaque" },
+        { "column": "TITLE", "relation": "EQUALS", "condition": "Custom Trophy" }
+      ]
+    }
+  }
+}

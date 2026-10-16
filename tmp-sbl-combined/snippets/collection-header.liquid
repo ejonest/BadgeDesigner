@@ -22,11 +22,19 @@
   {% endif %}
   
   <div class="collection-wrapper page-header">
+    {%- liquid
+      assign collection_heading = collection.title
+      assign hide_collection_description = false
+      if collection.handle == 'awards-plaques-plaques' or collection.handle == 'awards-plaques-medals'
+        assign collection_heading = 'Awards & Plaques'
+        assign hide_collection_description = true
+      endif
+    -%}
     <h1>
-      {% render 'multilang' with collection.title %}
+      {% render 'multilang' with collection_heading %}
     </h1>
 
-    {% if collection.description != '' and section.settings.display_collection_des %}
+    {% if collection.description != '' and section.settings.display_collection_des and hide_collection_description == false %}
     <div class="collection-des">
       {% if settings.enable_multilang and collection.description contains '[lang2]' %}      
       <div class="rte lang1">

@@ -1,4 +1,8 @@
 import * as THREE from "three";
+import {
+  gavelMetalAlbedoUrl,
+  type GavelMetalAlbedoKind,
+} from "~/constants/gavelStyles";
 
 /**
  * Scanned finishes for the gavel band and stand plaque, built by
@@ -18,8 +22,10 @@ export type GavelMetalMaps = {
 
 const EMPTY_MAPS: GavelMetalMaps = { normalMap: null, roughnessMap: null };
 
-const albedoReady = new Map<GavelMetalTextureSet, HTMLImageElement>();
-const albedoInflight = new Map<GavelMetalTextureSet, Promise<HTMLImageElement>>();
+type AlbedoKey = `${GavelMetalTextureSet}:${GavelMetalAlbedoKind}`;
+
+const albedoReady = new Map<AlbedoKey, HTMLImageElement>();
+const albedoInflight = new Map<AlbedoKey, Promise<HTMLImageElement>>();
 const mapsReady = new Map<GavelMetalTextureSet, GavelMetalMaps>();
 const mapsInflight = new Map<GavelMetalTextureSet, Promise<GavelMetalMaps>>();
 
@@ -51,37 +57,40 @@ export function getServerGavelMetalTexturesVersion(): number {
 /** The albedo if it is already decoded, otherwise null — never a partial image. */
 export function getReadyGavelMetalAlbedo(
   set: GavelMetalTextureSet,
+  kind: GavelMetalAlbedoKind = "color",
 ): HTMLImageElement | null {
-  return albedoReady.get(set) ?? null;
+  return albedoReady.get(`${set}:${kind}`) ?? null;
 }
 
 export function loadGavelMetalAlbedo(
   set: GavelMetalTextureSet,
+  kind: GavelMetalAlbedoKind = "color",
 ): Promise<HTMLImageElement> {
   if (typeof document === "undefined") {
     return Promise.reject(new Error("No document"));
   }
-  const done = albedoReady.get(set);
+  const key: AlbedoKey = `${set}:${kind}`;
+  const done = albedoReady.get(key);
   if (done) return Promise.resolve(done);
-  const pending = albedoInflight.get(set);
+  const pending = albedoInflight.get(key);
   if (pending) return pending;
 
   const promise = new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      albedoReady.set(set, img);
-      albedoInflight.delete(set);
+      albedoReady.set(key, img);
+      albedoInflight.delete(key);
       announce();
       resolve(img);
     };
     img.onerror = () => {
-      albedoInflight.delete(set);
-      reject(new Error(`Failed to load ${set} albedo`));
+      albedoInflight.delete(key);
+      reject(new Error(`Failed to load ${set} ${kind} albedo`));
     };
-    img.src = `/textures/gavel/${set}/color.jpg`;
+    img.src = gavelMetalAlbedoUrl(set, kind);
   });
 
-  albedoInflight.set(set, promise);
+  albedoInflight.set(key, promise);
   return promise;
 }
 
@@ -153,9 +162,11 @@ export function preloadGavelMetalTextures(
   sets: readonly GavelMetalTextureSet[] = ["metal-gold", "metal-silver"],
 ): void {
   for (const set of sets) {
-    void loadGavelMetalAlbedo(set).catch(() => {
-      /* The painter falls back to its procedural finish. */
-    });
+    for (const kind of ["color", "proof"] as const) {
+      void loadGavelMetalAlbedo(set, kind).catch(() => {
+        /* The painter falls back to its procedural finish. */
+      });
+    }
     void loadGavelMetalMaps(set).catch(() => {
       /* The material falls back to a flat roughness. */
     });

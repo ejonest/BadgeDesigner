@@ -1,8 +1,9 @@
 {%- liquid
   assign tile_image = image | default: product.featured_image
   assign tile_label = label | default: product.title
+  assign tile_prefix = class_prefix | default: 'sbl-sg-hero'
 -%}
-<a href="{{ product.url }}" class="sbl-sg-hero__tile" {{ attrs }}>
+<a href="{{ product.url }}" class="{{ tile_prefix }}__tile" {{ attrs }}>
   {%- if tile_image != blank -%}
     {{
       tile_image
@@ -10,5 +11,5 @@
       | image_tag: loading: 'eager', widths: '250,400,500', sizes: '(min-width: 990px) 15vw, 1px', alt: tile_label
     }}
   {%- endif -%}
-  <span class="sbl-sg-hero__tile-label">{{ tile_label | escape }}</span>
+  <span class="{{ tile_prefix }}__tile-label">{{ tile_label | escape }}</span>
 </a>

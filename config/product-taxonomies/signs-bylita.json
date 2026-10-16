@@ -1,0 +1,508 @@
+{
+  "schemaVersion": 1,
+  "taxonomyVersion": "2026-10-15",
+  "name": "Signs ByLITA",
+  "managedPrefix": "sbl:",
+  "minimumScore": 3,
+  "searchAliasesPerRule": 4,
+  "textCleanup": {
+    "cutAt": ["|", " - laser-engraved", " - easy installation"],
+    "ignoredPhrases": [
+      "signs bylita",
+      "bylita",
+      "all quality",
+      "laser engraved lettering",
+      "laser engraved",
+      "durable abs plastic",
+      "vibrant colors",
+      "powerful foam tape",
+      "easy installation",
+      "durable material",
+      "with adhesive tape mounts on any surface weather resistant indoor outdoor use",
+      "with adhesive tape",
+      "mounts on any surface",
+      "weather resistant",
+      "indoor outdoor use",
+      "classic framed plus",
+      "portrait round plus",
+      "heritage plus",
+      "designer plus",
+      "fancy plus",
+      "victorian plus",
+      "standard plus",
+      "square plus",
+      "circle plus",
+      "oval plus",
+      "classic framed",
+      "portrait round",
+      "hanging plus",
+      "5x10",
+      "6x8",
+      "5x5",
+      "6x5",
+      "9x12",
+      "2x8",
+      "wall or door sign",
+      "door or wall sign",
+      "door wall sign",
+      "wall door sign",
+      "can be attached to the door wall or window of your home or business",
+      "for your door wall or window",
+      "for use at home or business",
+      "of your home or business",
+      "home or business",
+      "comes in multiple colors",
+      "etched into the plastic",
+      "adhesive foam backing",
+      "workplace health and safety warning signage",
+      "business and warehouse signage",
+      "business protection construction site warehouse and shop area"
+    ],
+    "stylePrefixes": [
+      "classic framed plus",
+      "portrait round plus",
+      "heritage plus",
+      "designer plus",
+      "fancy plus",
+      "victorian plus",
+      "standard plus",
+      "square plus",
+      "circle plus",
+      "oval plus",
+      "classic framed",
+      "portrait round",
+      "hanging plus",
+      "designer",
+      "fancy",
+      "standard",
+      "victorian",
+      "circle",
+      "square",
+      "oval",
+      "basic",
+      "decorative",
+      "hanging"
+    ]
+  },
+  "scope": {
+    "exclude": [
+      "rubber stamp",
+      "self inking",
+      "self-inking",
+      "wood stamp",
+      "inking stamp",
+      "stamp",
+      "name badge",
+      "name tag",
+      "lapel badge",
+      "badge blank",
+      "id badge",
+      "safety pin",
+      "gavel",
+      "coffee mug",
+      "tumbler",
+      " mug",
+      "mugs",
+      "executive pen",
+      "wall print"
+    ]
+  },
+  "rules": [
+    {
+      "kind": "category",
+      "id": "restroom-hygiene",
+      "label": "Restroom & hygiene",
+      "keywords": [
+        "restroom", "rest room", "bathroom", "washroom", "toilet", "lavatory", "bano", "banos",
+        "hand wash", "wash hands", "wash your hands", "please wash", "hand soap", "sanitize",
+        "please flush", "do not flush", "flush after", "hygiene", "feminine", "diaper",
+        "changing station", "changing room", "powder room", "poo room", "poop room",
+        "unisex", "all gender", "ladies and gents", "men women", "mens room", "womens room",
+        "staff restroom", "public restroom", "customers only", "sink",
+        "wash", "rinse", "conserve water", "do not waste water", "waste water"
+      ],
+      "exclude": ["restroom key", "eye wash", "dishes", "cups"],
+      "searchAliases": ["restroom", "bathroom", "washroom", "hand-washing"]
+    },
+    {
+      "kind": "category",
+      "id": "office-door",
+      "label": "Office & door signs",
+      "keywords": [
+        "room", "office", "suite", "reception", "directory", "lobby", "conference", "meeting room",
+        "closet", "nursery", "storage", "janitor", "custodian", "electrical", "utility",
+        "server room", "boiler", "mechanical", "telecom", "mail room", "copy room",
+        "keep door closed", "door closed", "remain closed", "close door", "door to remain",
+        "please use other door", "other door", "lounge", "manager", "cleaning supplies",
+        "ring bell", "bell for assistance"
+      ],
+      "exclude": [
+        "desk sign", "desk name", "nameplate", "name plate", "novelty",
+        "powder room", "changing room", "poo room", "poop room", "rest room",
+        "men s room", "women s room", "my room", "this room", "in my room"
+      ],
+      "searchAliases": ["office", "door", "room", "conference-room"]
+    },
+    {
+      "kind": "category",
+      "id": "safety-compliance",
+      "label": "Safety & compliance",
+      "keywords": [
+        "safety", "warning", "caution", "danger", "first aid", "fire extinguisher", "fire exit",
+        "keep clear", "keep area clear", "hard hat", "hard hats", "flammable", "hazard",
+        "biohazard", "high voltage", "electrical panel", "watch your step", "watch your head",
+        "wet floor", "slippery", "sharp", "emergency", "sprinkler", "no weapons", "no firearms",
+        "unattended", "open door slowly", "construction zone", "do not block", "shallow water",
+        "no diving", "stairs", "facp", "eye wash"
+      ],
+      "exclude": ["novelty", "desk sign", "nameplate", "name plate", "wall print", "funny", "coffee", "soliciting"],
+      "searchAliases": ["safety", "warning", "caution", "emergency"]
+    },
+    {
+      "kind": "category",
+      "id": "security-camera",
+      "label": "Security & camera",
+      "keywords": [
+        "surveillance", "video recording", "on camera", "cctv", "security camera",
+        "24hr", "24 hr", "24 hour", "alarm", "monitored", "smile you", "premises"
+      ],
+      "searchAliases": ["security", "camera", "surveillance", "cctv"]
+    },
+    {
+      "kind": "category",
+      "id": "staff-private",
+      "label": "Staff only & private",
+      "keywords": [
+        "employees only", "employee only", "staff only", "authorized personnel", "personnel only",
+        "authorized only", "no entry", "do not enter", "no entrar", "restricted",
+        "employees only beyond", "employee entrance", "no guest access", "private",
+        "solo empleados", "prohibido"
+      ],
+      "exclude": ["private property", "private restroom", "novelty"],
+      "searchAliases": ["employees-only", "staff-only", "private", "do-not-enter"]
+    },
+    {
+      "kind": "category",
+      "id": "kitchen-break-room",
+      "label": "Kitchen & break room",
+      "keywords": [
+        "break room", "breakroom", "kitchen", "microwave", "refrigerator", "fridge", "dishes",
+        "paper towel", "napkin", "breakfast", "lunch room", "hydration", "dishwasher",
+        "coffee station", "clean station", "clean the microwave"
+      ],
+      "exclude": ["flush", "novelty"],
+      "searchAliases": ["break-room", "kitchen", "microwave", "dishes"]
+    },
+    {
+      "kind": "category",
+      "id": "names-titles",
+      "label": "Names & titles",
+      "keywords": ["personalized name", "custom name", "name sign", "professional title", "office name"],
+      "exclude": ["novelty", "funny", "desk sign", "nameplate", "name plate"],
+      "searchAliases": ["name-sign", "title-sign", "personalized", "nameplate"]
+    },
+    {
+      "kind": "category",
+      "id": "desk-nameplates",
+      "label": "Desk nameplates",
+      "keywords": ["desk sign", "desk name", "nameplate", "name plate", "desk wedge", "desktop name"],
+      "searchAliases": ["desk-sign", "desk-nameplate", "nameplate", "desktop"]
+    },
+    {
+      "kind": "category",
+      "id": "no-smoking",
+      "label": "No smoking",
+      "keywords": [
+        "no smoking", "smoke free", "smokefree", "smoking area", "no vaping", "tobacco",
+        "e cigarette", "e-cigarette", "cigarette", "no fumar", "smoking"
+      ],
+      "searchAliases": ["no-smoking", "smoke-free", "vaping", "tobacco"]
+    },
+    {
+      "kind": "category",
+      "id": "property-notices",
+      "label": "Property notices",
+      "keywords": [
+        "no soliciting", "no solicitar", "soliciting", "private property", "no trespassing",
+        "trespassing", "keep gate closed", "beware of dog", "dog in yard", "doorbell",
+        "no flyers", "no politics", "no hunting", "posted", "2nd amendment", "second amendment"
+      ],
+      "searchAliases": ["no-soliciting", "private-property", "no-trespassing", "beware-of-dog"]
+    },
+    {
+      "kind": "category",
+      "id": "entrance-exit",
+      "label": "Entrance & exit",
+      "keywords": ["entrance", "exit", "salida", "entrada", "not an exit", "not an entrance", "way out"],
+      "searchAliases": ["entrance", "exit", "emergency-exit", "way-out"]
+    },
+    {
+      "kind": "category",
+      "id": "waste-recycling",
+      "label": "Waste & recycling",
+      "keywords": ["recycling", "recycle", "garbage", "trash", "compost", "landfill", "waste"],
+      "exclude": ["waste water", "do not waste"],
+      "searchAliases": ["recycling", "garbage", "trash", "compost"]
+    },
+    {
+      "kind": "category",
+      "id": "do-not-disturb",
+      "label": "Do not disturb",
+      "keywords": ["do not disturb", "please knock", "knock before", "quiet please", "quiet hours", "in session", "session in progress", "shhh"],
+      "searchAliases": ["do-not-disturb", "please-knock", "quiet", "in-session"]
+    },
+    {
+      "kind": "category",
+      "id": "push-pull",
+      "label": "Push & pull",
+      "keywords": ["push pull", "push", "pull"],
+      "exclude": ["push pin", "pull up"],
+      "searchAliases": ["push", "pull", "push-pull", "door"]
+    },
+    {
+      "kind": "category",
+      "id": "social-distancing",
+      "label": "Social distancing",
+      "keywords": ["social distancing", "6 feet", "six feet", "no handshake", "footshake", "stay apart", "face mask", "mask required"],
+      "searchAliases": ["social-distancing", "six-feet", "face-mask", "no-handshake"]
+    },
+    {
+      "kind": "category",
+      "id": "retail-customer",
+      "label": "Retail & customer service",
+      "keywords": [
+        "pay here", "no checks", "no refund", "come again", "refuse service", "we are open",
+        "we are closed", "open closed", "store hours", "checkout", "cashier", "fitting room",
+        "dressing room", "all sales final", "customer service", "no shirt", "shoes required"
+      ],
+      "searchAliases": ["retail", "checkout", "store-hours", "open-closed"]
+    },
+    {
+      "kind": "category",
+      "id": "parking-traffic",
+      "label": "Parking & traffic",
+      "keywords": ["parking", "no parking", "tow away", "tow zone", "reserved parking", "handicap parking", "loading zone", "valet", "speed limit"],
+      "searchAliases": ["parking", "no-parking", "tow-away", "reserved-parking"]
+    },
+    {
+      "kind": "category",
+      "id": "accessibility-ada",
+      "label": "Accessibility & ADA",
+      "keywords": ["ada", "wheelchair", "accessible", "accessibility", "braille", "service animal", "service dog", "handicap"],
+      "searchAliases": ["ada", "accessible", "wheelchair", "braille"]
+    },
+    {
+      "kind": "category",
+      "id": "wayfinding-directory",
+      "label": "Wayfinding & directories",
+      "keywords": ["wayfinding", "you are here", "directory", "this way", "arrow", "other door", "left arrow", "right arrow"],
+      "searchAliases": ["wayfinding", "directory", "arrow", "directional"]
+    },
+    {
+      "kind": "category",
+      "id": "pool-pet-facility",
+      "label": "Pool, pet & facility rules",
+      "keywords": ["pool", "no diving", "no pets", "pets allowed", "service dog", "spa rules", "sauna", "steam room", "locker room", "gym"],
+      "searchAliases": ["pool", "no-pets", "sauna", "locker-room"]
+    },
+    {
+      "kind": "industry",
+      "id": "business-office",
+      "label": "Business & offices",
+      "keywords": [
+        "office", "suite", "reception", "conference", "corporate", "accounting", "lobby",
+        "board room", "warehouse", "loading dock", "forklift", "shop", "retail", "cashier",
+        "checkout", "store hours"
+      ],
+      "exclude": ["pastor", "church", "novelty", "desk sign", "nameplate", "name plate"],
+      "searchAliases": ["business", "office", "corporate", "warehouse"]
+    },
+    {
+      "kind": "industry",
+      "id": "healthcare",
+      "label": "Healthcare",
+      "keywords": [
+        "hospital", "clinic", "medical", "doctor", "physician", "nurse", "dental", "dentist",
+        "pharmacy", "patient", "radiology", "exam room", "examination", "hipaa", "healthcare",
+        "treatment room", "procedure room", "medication", "lactation", "nursing room", "laboratory", "lab room",
+        "care home", "senior living", "assisted living", "nursing home", "memory care",
+        "therapy", "therapist",         "counseling", "counselor", "psychologist", "mental health"
+      ],
+      "exclude": ["novelty", "desk sign", "nameplate"],
+      "searchAliases": ["healthcare", "hospital", "clinic", "medical"]
+    },
+    {
+      "kind": "industry",
+      "id": "senior-living",
+      "label": "Care homes & senior living",
+      "keywords": ["care home", "senior living", "assisted living", "nursing home", "memory care", "residents and visitors"],
+      "searchAliases": ["senior-living", "care-home", "assisted-living", "nursing-home"]
+    },
+    {
+      "kind": "industry",
+      "id": "therapy-counseling",
+      "label": "Therapy & counseling",
+      "keywords": ["therapy", "therapist", "counseling", "counsellor", "counselor", "session in progress", "psychologist", "psychiatrist", "mental health", "counseling room"],
+      "exclude": ["novelty", "desk sign", "nameplate"],
+      "searchAliases": ["therapy", "counseling", "mental-health", "session"]
+    },
+    {
+      "kind": "industry",
+      "id": "education",
+      "label": "Education",
+      "keywords": [
+        "school", "classroom", "teacher", "principal", "student", "grade", "library",
+        "university", "college", "campus", "professor", "faculty", "lecture", "dorm", "dean"
+      ],
+      "exclude": ["stamp", "library and prayer", "novelty", "desk sign"],
+      "searchAliases": ["school", "classroom", "university", "college"]
+    },
+    {
+      "kind": "industry",
+      "id": "education-school",
+      "label": "Schools",
+      "keywords": ["school", "classroom", "teacher", "principal", "student", "grade", "elementary", "high school"],
+      "exclude": ["stamp", "novelty", "desk sign"],
+      "searchAliases": ["school", "classroom", "teacher", "student"]
+    },
+    {
+      "kind": "industry",
+      "id": "education-university",
+      "label": "Universities & colleges",
+      "keywords": ["university", "college", "campus", "professor", "faculty", "lecture hall", "dormitory", "dean"],
+      "searchAliases": ["university", "college", "campus", "faculty"]
+    },
+    {
+      "kind": "industry",
+      "id": "food-hospitality",
+      "label": "Food & hospitality",
+      "keywords": [
+        "restaurant", "cafe", "café", "coffee shop", "barista", "espresso", "dining",
+        "wait to be seated", "menu", "kitchen", "no outside food", "food or drink",
+        "breakfast", "buffet", "no alcohol", "food safety", "wash hands", "food preparation"
+      ],
+      "exclude": ["coffee desk", "novelty", "desk sign"],
+      "searchAliases": ["restaurant", "cafe", "kitchen", "food"]
+    },
+    {
+      "kind": "industry",
+      "id": "cafe-coffee",
+      "label": "Cafés & coffee shops",
+      "keywords": ["cafe", "café", "coffee shop", "barista", "espresso", "order here"],
+      "exclude": ["novelty", "desk sign"],
+      "searchAliases": ["cafe", "coffee-shop", "barista", "espresso"]
+    },
+    {
+      "kind": "industry",
+      "id": "restaurant",
+      "label": "Restaurants & chains",
+      "keywords": ["restaurant", "wait to be seated", "hostess", "dining room", "menu", "reservations", "no outside food", "buffet", "no alcohol"],
+      "searchAliases": ["restaurant", "dining", "menu", "wait-to-be-seated"]
+    },
+    {
+      "kind": "industry",
+      "id": "commercial-kitchen",
+      "label": "Commercial kitchens",
+      "keywords": ["commercial kitchen", "food preparation", "wash hands", "employees must wash", "dishwasher", "exhaust hood", "food safety", "food handler", "hair net"],
+      "searchAliases": ["commercial-kitchen", "food-safety", "wash-hands", "kitchen"]
+    },
+    {
+      "kind": "industry",
+      "id": "warehouse-industrial",
+      "label": "Warehouses & industrial",
+      "keywords": ["warehouse", "loading dock", "forklift", "shipping department", "receiving", "pallet", "hard hat", "hard hats", "manufacturing"],
+      "searchAliases": ["warehouse", "loading-dock", "forklift", "industrial"]
+    },
+    {
+      "kind": "industry",
+      "id": "public-safety-government",
+      "label": "Public safety & government",
+      "keywords": [
+        "government", "city hall", "municipal", "courthouse", "public safety", "county",
+        "police", "sheriff", "law enforcement", "precinct", "deputy",
+        "correctional", "detention", "jail", "inmate", "visitation", "corrections"
+      ],
+      "exclude": ["fun police"],
+      "searchAliases": ["government", "police", "sheriff", "correctional"]
+    },
+    {
+      "kind": "industry",
+      "id": "police",
+      "label": "Police departments",
+      "keywords": ["police", "sheriff", "law enforcement", "precinct", "deputy"],
+      "exclude": ["fun police"],
+      "searchAliases": ["police", "sheriff", "law-enforcement", "precinct"]
+    },
+    {
+      "kind": "industry",
+      "id": "correctional",
+      "label": "Correctional facilities",
+      "keywords": ["correctional", "detention", "jail", "inmate", "visitation", "corrections"],
+      "searchAliases": ["correctional", "detention", "jail", "visitation"]
+    },
+    {
+      "kind": "industry",
+      "id": "faith",
+      "label": "Churches & ministries",
+      "keywords": [
+        "church", "chapel", "prayer", "pastor", "ministry", "worship", "fellowship",
+        "congregation", "bible", "scripture", "jesus", "god", "faith", "psalm", "amen",
+        "choir", "christian", "religious", "hymn"
+      ],
+      "exclude": ["worship coffee"],
+      "searchAliases": ["church", "prayer", "bible", "chapel"]
+    },
+    {
+      "kind": "industry",
+      "id": "home-rental",
+      "label": "Homes & vacation rentals",
+      "keywords": [
+        "remove your shoes", "remove shoes", "shoes off", "no shoes", "vacation rental",
+        "airbnb", "guest room", "wifi", "wi fi", "pool rules", "beware of dog",
+        "doorbell", "welcome", "house rules"
+      ],
+      "exclude": ["novelty", "desk sign", "shirt and shoes", "shoes required", "no shirt", "no service"],
+      "searchAliases": ["home", "welcome", "wifi", "remove-shoes"]
+    },
+    {
+      "kind": "family",
+      "id": "custom-sign",
+      "label": "Custom signs",
+      "keywords": ["custom sign", "design your sign", "design your own sign"],
+      "searchAliases": ["custom-sign", "personalized-sign", "design-your-sign", "custom"]
+    },
+    {
+      "kind": "family",
+      "id": "plaque-award",
+      "label": "Plaques & awards",
+      "keywords": ["plaque", "award", "medal", "trophy", "recognition", "achievement", "employee of the year"],
+      "exclude": ["wall print"],
+      "searchAliases": ["plaque", "award", "medal", "recognition"]
+    },
+    {
+      "kind": "family",
+      "id": "door-hanger",
+      "label": "Door hangers",
+      "keywords": ["door hanger", "doorknob", "door knob"],
+      "searchAliases": ["door-hanger", "doorknob", "door-knob-sign", "hanger"]
+    },
+    {
+      "kind": "family",
+      "id": "table-sign",
+      "label": "Table signs",
+      "keywords": ["table sign", "table tent", "dry wipe"],
+      "searchAliases": ["table-sign", "table-tent", "dry-wipe", "counter-sign"]
+    }
+  ],
+  "synonymGroups": [
+    ["restroom", "bathroom", "washroom", "lavatory", "toilet", "bano"],
+    ["employees only", "staff only", "personnel only", "authorized personnel", "solo empleados"],
+    ["desk sign", "desk nameplate", "desktop name plate", "nameplate"],
+    ["security camera", "video surveillance", "cctv", "video recording"],
+    ["break room", "breakroom", "staff kitchen"],
+    ["no smoking", "smoke free", "tobacco free", "no vaping"],
+    ["no soliciting", "no solicitar", "no trespassing"],
+    ["vacation rental", "airbnb", "guest house"],
+    ["plaque", "award", "medal", "trophy"]
+  ]
+}

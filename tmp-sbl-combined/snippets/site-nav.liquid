@@ -103,9 +103,19 @@ More info on linklists:
         {% assign hot = link.title | downcase | handle  %}
     {% endif %}
 
+    {%- unless link.url == '/collections/plaques' -%}
+    {%- assign nav_url = link.url -%}
+    {%- assign nav_title = link.title -%}
+    {%- assign nav_active = link.active -%}
+    {%- if link.url == '/collections/awards' and collections['awards-and-plaques'].id -%}
+        {%- assign nav_url = collections['awards-and-plaques'].url -%}
+        {%- assign nav_title = 'Awards & Plaques' -%}
+        {%- if collection.handle == 'awards-and-plaques' or collection.handle contains 'awards-plaques-' -%}{%- assign nav_active = true -%}{%- endif -%}
+    {%- endif -%}
+
     <li class="menu-lv-1 item{% if linklists[link.handle] != empty %} dropdown{% if is_megamenu %} mega-menu{% else %} no-mega-menu{% endif %}{% endif %}">
-        <a class="{%if linklists[link.handle] != empty %}menu__moblie {% endif %}{% if link.active %}current{% endif %}"  href="{{ link.url }}">
-            {% render 'multilang' with link.title %}
+        <a class="{%if linklists[link.handle] != empty %}menu__moblie {% endif %}{% if nav_active %}current{% endif %}"  href="{{ nav_url }}">
+            {% render 'multilang' with nav_title %}
 
             {% if linklists[link.handle] != empty %}
             <span class="icon-dropdown" data-toggle-menu-mb>
@@ -188,5 +198,6 @@ More info on linklists:
         </div>
         {% endif %}
     </li>
+    {%- endunless -%}
     {% endfor %}
 </ul>
