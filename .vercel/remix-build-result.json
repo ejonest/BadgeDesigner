@@ -24,6 +24,7 @@
       "routes/api.saved-desk-sign-design-detail": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.delete-sign-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-gavel-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.link-order-medal-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.shopify-order-webhook-plaque": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.delete-pen-design-milestone": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.link-order-sign-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -45,6 +46,7 @@
       "routes/api.link-order-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-desk-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-gavel-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.send-medal-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.track-storefront-event": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.autosave-gavel-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-desk-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -77,6 +79,7 @@
       "routes/api.saved-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.production.order": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-draft-gavel": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-draft-medal": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-sign-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.saved-pen-design": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.send-to-supabase": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -110,7 +113,9 @@
       "routes/trophy-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-badge": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-gavel": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.save-medal": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/gavel-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/medal-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.save-sign": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.test-save": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/sign-designer": "nodejs-eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -256,6 +261,15 @@
         "file": "app/routes/api.link-order-gavel-to-supabase.tsx",
         "id": "routes/api.link-order-gavel-to-supabase",
         "path": "api/link-order-gavel-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.link-order-medal-to-supabase": {
+        "file": "app/routes/api.link-order-medal-to-supabase.tsx",
+        "id": "routes/api.link-order-medal-to-supabase",
+        "path": "api/link-order-medal-to-supabase",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -445,6 +459,15 @@
         "file": "app/routes/api.send-gavel-to-supabase.tsx",
         "id": "routes/api.send-gavel-to-supabase",
         "path": "api/send-gavel-to-supabase",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.send-medal-to-supabase": {
+        "file": "app/routes/api.send-medal-to-supabase.tsx",
+        "id": "routes/api.send-medal-to-supabase",
+        "path": "api/send-medal-to-supabase",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -733,6 +756,15 @@
         "file": "app/routes/api.save-draft-gavel.tsx",
         "id": "routes/api.save-draft-gavel",
         "path": "api/save-draft-gavel",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.save-draft-medal": {
+        "file": "app/routes/api.save-draft-medal.tsx",
+        "id": "routes/api.save-draft-medal",
+        "path": "api/save-draft-medal",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -1035,10 +1067,28 @@
           "runtime": "nodejs"
         }
       },
+      "routes/api.save-medal": {
+        "file": "app/routes/api.save-medal.tsx",
+        "id": "routes/api.save-medal",
+        "path": "api/save-medal",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "routes/gavel-designer": {
         "file": "app/routes/gavel-designer.tsx",
         "id": "routes/gavel-designer",
         "path": "gavel-designer",
+        "parentId": "root",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/medal-designer": {
+        "file": "app/routes/medal-designer.tsx",
+        "id": "routes/medal-designer",
+        "path": "medal-designer",
         "parentId": "root",
         "config": {
           "runtime": "nodejs"
@@ -1295,6 +1345,12 @@
         "path": "api/link-order-gavel-to-supabase",
         "parentId": "root"
       },
+      "routes/api.link-order-medal-to-supabase": {
+        "file": "routes/api.link-order-medal-to-supabase.tsx",
+        "id": "routes/api.link-order-medal-to-supabase",
+        "path": "api/link-order-medal-to-supabase",
+        "parentId": "root"
+      },
       "routes/api.shopify-order-webhook-plaque": {
         "file": "routes/api.shopify-order-webhook-plaque.tsx",
         "id": "routes/api.shopify-order-webhook-plaque",
@@ -1419,6 +1475,12 @@
         "file": "routes/api.send-gavel-to-supabase.tsx",
         "id": "routes/api.send-gavel-to-supabase",
         "path": "api/send-gavel-to-supabase",
+        "parentId": "root"
+      },
+      "routes/api.send-medal-to-supabase": {
+        "file": "routes/api.send-medal-to-supabase.tsx",
+        "id": "routes/api.send-medal-to-supabase",
+        "path": "api/send-medal-to-supabase",
         "parentId": "root"
       },
       "routes/api.track-storefront-event": {
@@ -1611,6 +1673,12 @@
         "file": "routes/api.save-draft-gavel.tsx",
         "id": "routes/api.save-draft-gavel",
         "path": "api/save-draft-gavel",
+        "parentId": "root"
+      },
+      "routes/api.save-draft-medal": {
+        "file": "routes/api.save-draft-medal.tsx",
+        "id": "routes/api.save-draft-medal",
+        "path": "api/save-draft-medal",
         "parentId": "root"
       },
       "routes/api.save-sign-design": {
@@ -1811,10 +1879,22 @@
         "path": "api/save-gavel",
         "parentId": "root"
       },
+      "routes/api.save-medal": {
+        "file": "routes/api.save-medal.tsx",
+        "id": "routes/api.save-medal",
+        "path": "api/save-medal",
+        "parentId": "root"
+      },
       "routes/gavel-designer": {
         "file": "routes/gavel-designer.tsx",
         "id": "routes/gavel-designer",
         "path": "gavel-designer",
+        "parentId": "root"
+      },
+      "routes/medal-designer": {
+        "file": "routes/medal-designer.tsx",
+        "id": "routes/medal-designer",
+        "path": "medal-designer",
         "parentId": "root"
       },
       "routes/api.save-sign": {

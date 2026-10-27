@@ -1,0 +1,22 @@
+{%- comment -%}
+  Prints yes when the product is a joke or novelty sign.
+  Professional industry and category grids skip these.
+{%- endcomment -%}
+{%- liquid
+  assign novelty_title = sbl_product.title | downcase
+  assign novelty_tags = sbl_product.tags | join: '|' | downcase
+  assign novelty_phrases = 'novelty|gag gift|poo room|poop room|shit just got real|wash your balls|wash your paws|be gross|stop stealing our toilet|do not steal the toilet|steal the toilet paper|shit show' | split: '|'
+  assign novelty_match = false
+  if novelty_tags contains 'novelty' or novelty_tags contains 'sbl:category:novelty'
+    assign novelty_match = true
+  endif
+  unless novelty_match
+    for novelty_phrase in novelty_phrases
+      if novelty_title contains novelty_phrase
+        assign novelty_match = true
+        break
+      endif
+    endfor
+  endunless
+-%}
+{%- if novelty_match -%}yes{%- endif -%}

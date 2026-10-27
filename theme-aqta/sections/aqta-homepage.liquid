@@ -1,0 +1,714 @@
+<section id="aqta-home" class="aqta-home" data-aqta-home>
+  {% render 'aqta-header', section_id: section.id %}
+
+  <div class="aqta-home__hero">
+    <div class="aqta-home__wrap aqta-home__hero-grid">
+      <div>
+        <p class="aqta-home__eyebrow">{{ section.settings.hero_eyebrow | escape }}</p>
+        <div class="aqta-home__picker">
+          <h1 class="aqta-home__hero-title">
+            {{ section.settings.hero_heading | escape }}
+            <button type="button" class="aqta-home__rotator" data-aqta-rotator aria-expanded="false" aria-controls="aqta-menu-panel-{{ section.id }}">
+              <span class="aqta-home__rotator-word"><span data-aqta-rotator-label>team</span><span aria-hidden="true">.</span></span>
+              <svg class="aqta-home__rotator-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 6.1 8 10.4l4.8-4.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </button>
+          </h1>
+          <div class="aqta-home__menu" id="aqta-menu-panel-{{ section.id }}" data-aqta-menu hidden>
+            <button type="button" class="aqta-home__menu-close" data-aqta-menu-close aria-label="Close award list">×</button>
+            <p class="aqta-home__menu-label">Popular awards</p>
+            <div class="aqta-home__menu-pills">
+              <button type="button" data-aqta-pick="team">Team trophies</button>
+              <button type="button" data-aqta-pick="school">Academic awards</button>
+              <button type="button" data-aqta-pick="company">Corporate recognition</button>
+              <button type="button" data-aqta-pick="champion">Victory trophies</button>
+              <button type="button" data-aqta-pick="league">Sports trophies</button>
+              <button type="button" data-aqta-pick="church">Classic awards</button>
+            </div>
+            <p class="aqta-home__menu-label">By occasion</p>
+            <div class="aqta-home__menu-cols">
+              <div>
+                <p>Sports</p>
+                <a href="/pages/trophies">League trophies</a>
+                <a href="/pages/medals">Finish medals</a>
+              </div>
+              <div>
+                <p>Schools</p>
+                <a href="/pages/plaques">Honor plaques</a>
+                <a href="/pages/trophies">Academic trophies</a>
+              </div>
+              <div>
+                <p>Work &amp; community</p>
+                <a href="/pages/trophies">Employee awards</a>
+                <a href="/pages/plaques">Service plaques</a>
+              </div>
+            </div>
+            <p class="aqta-home__menu-note">Product pages will be linked here once the awards catalog is imported.</p>
+          </div>
+        </div>
+        <p class="aqta-home__hero-text">{{ section.settings.hero_text | escape }}</p>
+        <div class="aqta-home__quick-links" aria-label="Award types">
+          <button type="button" data-aqta-pick="team" aria-current="true">team</button>
+          <button type="button" data-aqta-pick="school">school</button>
+          <button type="button" data-aqta-pick="company">company</button>
+          <button type="button" data-aqta-pick="champion">champion</button>
+          <button type="button" data-aqta-pick="league">league</button>
+          <button type="button" data-aqta-pick="church">church</button>
+        </div>
+        <div class="aqta-home__start">
+          <div class="aqta-home__start-copy">
+            <span>Your award can say anything</span>
+            <strong>Add a name, date, and message</strong>
+          </div>
+          <a class="aqta-home__button aqta-home__button--gold" href="#aqta-trophies">See award styles <span aria-hidden="true">→</span></a>
+        </div>
+        <div class="aqta-home__hero-notes">
+          <span>✓ Trophies, medals, and plaques</span>
+          <span>✓ Custom engraving</span>
+          <span>✓ Bulk sets for teams and schools</span>
+        </div>
+      </div>
+
+      <div class="aqta-home__stage">
+        <span class="aqta-home__stage-kicker">Award styles <span>· for your <span data-aqta-card-word>team</span></span></span>
+        <div class="aqta-home__stage-frame">
+          <img class="aqta-home__slide" data-aqta-slide="team" data-active="true" src="{{ 'aqta-team-trophy.jpg' | asset_url }}" alt="Gold team player trophy with a black base and an engraving plate" width="800" height="800" loading="eager">
+          <img class="aqta-home__slide" data-aqta-slide="school" src="{{ 'aqta-honor-trophy.jpg' | asset_url }}" alt="Gold honor roll trophy with a graduation cap emblem" width="800" height="800" loading="lazy">
+          <img class="aqta-home__slide" data-aqta-slide="company" src="{{ 'aqta-employee-trophy.jpg' | asset_url }}" alt="Gold employee of the month trophy" width="800" height="800" loading="lazy">
+          <img class="aqta-home__slide" data-aqta-slide="champion" src="{{ 'aqta-victory-trophy.jpg' | asset_url }}" alt="Gold victory figurine trophy with a purple engraving plate" width="800" height="1000" loading="lazy">
+          <img class="aqta-home__slide" data-aqta-slide="league" src="{{ 'aqta-medal-soccer.png' | asset_url }}" alt="Gold, silver, and bronze soccer medals with place ribbons" width="900" height="900" loading="lazy">
+          <img class="aqta-home__slide" data-aqta-slide="church" src="{{ 'aqta-star-trophy.jpg' | asset_url }}" alt="Gold star trophy on a black base" width="800" height="1000" loading="lazy">
+        </div>
+        <span class="aqta-home__stage-note">Catalog links will be added with the new products.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="aqta-home__search-wrap" id="aqta-search">
+    <div class="aqta-home__wrap">
+      <form class="aqta-home__search" action="{{ routes.search_url }}" method="get" role="search">
+        <span class="aqta-home__search-icon" aria-hidden="true">⌕</span>
+        <label class="aqta-home__visually-hidden" for="aqta-search-input-{{ section.id }}">Search awards</label>
+        <input id="aqta-search-input-{{ section.id }}" type="search" name="q" placeholder="Search trophies, medals, and plaques" autocomplete="off">
+        <input type="hidden" name="type" value="product">
+        <button type="submit">Search</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="aqta-home__proof">
+    <div class="aqta-home__wrap aqta-home__proof-grid">
+      <div><strong>Trophies</strong><span>Figurines, stars, and sports awards</span></div>
+      <div><strong>Medals</strong><span>Finish medals for races, teams, and events</span></div>
+      <div><strong>Plaques</strong><span>Photo plaques and engraved recognition</span></div>
+      <div><strong>Bulk sets</strong><span>Matching awards for a whole roster</span></div>
+    </div>
+  </div>
+
+  <div class="aqta-home__section aqta-home__section--cream" id="aqta-categories">
+    <div class="aqta-home__wrap">
+      <div class="aqta-home__heading-row">
+        <div>
+          <p class="aqta-home__section-label">The lineup</p>
+          <h2>{{ section.settings.categories_heading | escape }}</h2>
+        </div>
+      </div>
+      <div class="aqta-home__category-grid">
+        <a class="aqta-home__category-card" id="aqta-trophies" href="/pages/trophies">
+          <div class="aqta-home__category-image"><img src="{{ 'aqta-star-trophy.jpg' | asset_url }}" alt="Gold star trophy" width="800" height="1000" loading="lazy"></div>
+          <div class="aqta-home__category-copy"><h3>Trophies</h3><p>Stars, figurines, and sports trophies with an engraving plate.</p><span>View styles</span></div>
+        </a>
+        <a class="aqta-home__category-card" id="aqta-medals" href="/pages/medals">
+          <div class="aqta-home__category-image"><img src="{{ 'aqta-medal-gold.png' | asset_url }}" alt="Gold first place medal hanging from its ribbon" width="900" height="900" loading="lazy"></div>
+          <div class="aqta-home__category-copy"><h3>Medals</h3><p>Gold, silver, and bronze medals for races, teams, and ceremonies.</p><span>View styles</span></div>
+        </a>
+        <a class="aqta-home__category-card" id="aqta-plaques" href="/pages/plaques">
+          <div class="aqta-home__category-image"><img src="{{ 'aqta-plaque-boss.jpg' | asset_url }}" alt="Full wooden best boss award plaque on an easel" width="900" height="900" loading="lazy"></div>
+          <div class="aqta-home__category-copy"><h3>Plaques</h3><p>Wooden award plaques with a full engraved plate and easel stand.</p><span>View styles</span></div>
+        </a>
+        <a class="aqta-home__category-card" href="/pages/occasions#sports">
+          <div class="aqta-home__category-image"><img src="{{ 'aqta-medal-baseball.png' | asset_url }}" alt="Gold, silver, and bronze baseball medals with place ribbons" width="900" height="900" loading="lazy"></div>
+          <div class="aqta-home__category-copy"><h3>Sports</h3><p>Baseball, soccer, and action awards for leagues and tournaments.</p><span>View styles</span></div>
+        </a>
+        <a class="aqta-home__category-card" href="/pages/occasions#companies">
+          <div class="aqta-home__category-image"><img src="{{ 'aqta-employee-trophy.jpg' | asset_url }}" alt="Employee of the month trophy" width="800" height="800" loading="lazy"></div>
+          <div class="aqta-home__category-copy"><h3>Corporate</h3><p>Employee, sales, and service awards with a custom plate.</p><span>View styles</span></div>
+        </a>
+        <a class="aqta-home__category-card" href="/pages/occasions#schools">
+          <div class="aqta-home__category-image"><img src="{{ 'aqta-medal-spelling.png' | asset_url }}" alt="Spelling bee medallion with a star border" width="900" height="900" loading="lazy"></div>
+          <div class="aqta-home__category-copy"><h3>Academic</h3><p>Honor roll, attendance, and graduation recognition.</p><span>View styles</span></div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="aqta-home__section aqta-home__section--navy" id="aqta-occasions">
+    <div class="aqta-home__wrap">
+      <div class="aqta-home__heading-row aqta-home__heading-row--light">
+        <div>
+          <p class="aqta-home__section-label">Shop by occasion</p>
+          <h2>{{ section.settings.occasions_heading | escape }}</h2>
+        </div>
+        <a href="/pages/occasions">All occasions</a>
+      </div>
+      <div class="aqta-home__occasion-grid">
+        <a class="aqta-home__occasion-card" href="/pages/occasions#sports">
+          <img src="{{ 'aqta-medal-soccer.png' | asset_url }}" alt="" width="900" height="900" loading="lazy">
+          <span><strong>Sports &amp; teams</strong><small>Trophies and medals for the season</small></span>
+        </a>
+        <a class="aqta-home__occasion-card" href="/pages/occasions#schools">
+          <img src="{{ 'aqta-plaque-graduation.jpg' | asset_url }}" alt="" width="900" height="900" loading="lazy">
+          <span><strong>Schools</strong><small>Honor roll, sports, and graduation</small></span>
+        </a>
+        <a class="aqta-home__occasion-card" href="/pages/occasions#companies">
+          <img src="{{ 'aqta-plaque-employee.jpg' | asset_url }}" alt="" width="900" height="900" loading="lazy">
+          <span><strong>Companies</strong><small>Employee and sales recognition</small></span>
+        </a>
+        <a class="aqta-home__occasion-card" href="/pages/occasions#churches">
+          <img src="{{ 'aqta-plaque-service.jpg' | asset_url }}" alt="" width="900" height="900" loading="lazy">
+          <span><strong>Churches</strong><small>Service and volunteer awards</small></span>
+        </a>
+        <a class="aqta-home__occasion-card" href="/pages/occasions#youth">
+          <img src="{{ 'aqta-medal-swim.png' | asset_url }}" alt="" width="900" height="900" loading="lazy">
+          <span><strong>Youth leagues</strong><small>A matching award for every player</small></span>
+        </a>
+        <a class="aqta-home__occasion-card" href="/pages/bulk-orders">
+          <img src="{{ 'aqta-plaque-honor.jpg' | asset_url }}" alt="" width="900" height="900" loading="lazy">
+          <span><strong>Banquets</strong><small>Sets for the whole roster</small></span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="aqta-home__band aqta-home__band--cream">
+    <div class="aqta-home__wrap aqta-home__band-grid">
+      <div>
+        <p class="aqta-home__section-label">Trophies</p>
+        <h2>Trophies made for your winners.</h2>
+        <p>Choose a figure, star, or sports trophy, then add the name and the line that goes on the plate.</p>
+        <a class="aqta-home__button aqta-home__button--gold" href="/pages/trophies">View trophy styles <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="aqta-home__band-image">
+        <img src="{{ 'aqta-victory-trophy.jpg' | asset_url }}" alt="Gold victory figurine trophy" width="800" height="1000" loading="lazy">
+      </div>
+    </div>
+  </div>
+
+  <div class="aqta-home__band aqta-home__band--navy">
+    <div class="aqta-home__wrap aqta-home__band-grid aqta-home__band-grid--flip">
+      <div class="aqta-home__band-image">
+        <img src="{{ 'aqta-plaque-honor.jpg' | asset_url }}" alt="Full wooden honor roll plaque on an easel" width="900" height="900" loading="lazy">
+      </div>
+      <div>
+        <p class="aqta-home__section-label">Plaques</p>
+        <h2>The whole plaque, ready to present.</h2>
+        <p>Wooden award plaques with the plate, the frame, and the easel. Add the name, the date, and the line you want remembered.</p>
+        <a class="aqta-home__button aqta-home__button--gold" href="/pages/plaques">View plaque styles <span aria-hidden="true">→</span></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="aqta-home__band aqta-home__band--cream">
+    <div class="aqta-home__wrap aqta-home__band-grid">
+      <div>
+        <p class="aqta-home__section-label">Medals</p>
+        <h2>A medal for every finish.</h2>
+        <p>Race medals, participation medals, and championship medals, ready for a name and an event date.</p>
+        <a class="aqta-home__button aqta-home__button--navy" href="/pages/medals">View medal styles <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="aqta-home__band-image">
+        <img src="{{ 'aqta-medal-set.png' | asset_url }}" alt="Gold, silver, and bronze victory medals with place ribbons" width="900" height="900" loading="lazy">
+      </div>
+    </div>
+  </div>
+
+  <div class="aqta-home__section aqta-home__section--cream" id="aqta-bulk">
+    <div class="aqta-home__wrap aqta-home__bulk">
+      <div>
+        <p class="aqta-home__section-label">Bulk &amp; banquet orders</p>
+        <h2>{{ section.settings.bulk_heading | escape }}</h2>
+        <p>{{ section.settings.bulk_text | escape }}</p>
+        <ul>
+          <li>✓ One look for the whole set</li>
+          <li>✓ Change only the name on each award</li>
+          <li>✓ A person reviews the roster and sends pricing</li>
+        </ul>
+        <a class="aqta-home__button aqta-home__button--navy" href="/pages/bulk-orders">Request a bulk quote <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="aqta-home__band-image">
+        <img src="{{ 'aqta-team-trophy.jpg' | asset_url }}" alt="Gold team player trophy for a group award set" width="800" height="800" loading="lazy">
+      </div>
+    </div>
+  </div>
+</section>
+
+{% stylesheet %}
+  body:has(#aqta-home) > header { display: none; }
+  #aqta-home {
+    --aqta-navy: #0f2744;
+    --aqta-gold: #c9932e;
+    --aqta-cream: #f5f1eb;
+    --aqta-ink: #1b2433;
+    --aqta-muted: #667085;
+    --aqta-header: #f3eee4;
+    background: var(--aqta-cream);
+    color: var(--aqta-ink);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  #aqta-home * { box-sizing: border-box; }
+  #aqta-home img { max-width: 100%; }
+  .aqta-home__wrap { width: min(1240px, calc(100% - 48px)); margin: 0 auto; }
+  .aqta-home__utility { background: #0a1c33; color: #e8dfcd; font-size: 13px; }
+  .aqta-home__utility-row { display: flex; min-height: 38px; align-items: center; justify-content: space-between; gap: 16px; }
+  .aqta-home__utility p { margin: 0; }
+  .aqta-home__header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: var(--aqta-header);
+    border-bottom: 3px solid var(--aqta-gold);
+    box-shadow: 0 10px 28px rgba(15, 39, 68, .12);
+  }
+  .aqta-home__bar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 24px;
+    width: min(1240px, calc(100% - 48px));
+    max-width: 100%;
+    min-height: 74px;
+    margin: 0 auto;
+  }
+  .aqta-home__logo { display: inline-flex; align-items: baseline; gap: 8px; color: var(--aqta-navy); text-decoration: none; }
+  .aqta-home__logo span { font-family: Georgia, "Times New Roman", serif; font-size: 30px; font-weight: 500; letter-spacing: -.03em; line-height: 1; }
+  .aqta-home__logo small { color: #8a6416; font-size: 11px; font-weight: 800; letter-spacing: .18em; }
+  .aqta-home__check { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  .aqta-home__burger { display: none; }
+  .aqta-home__nav { display: flex; min-width: 0; align-items: center; justify-content: center; gap: 18px; }
+  .aqta-home__nav > a,
+  .aqta-home__drop summary,
+  .aqta-home__more summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #24344c;
+    font-size: 14.5px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    list-style: none;
+  }
+  .aqta-home__nav > a:hover,
+  .aqta-home__more summary:hover { color: var(--aqta-navy); }
+  .aqta-home__more { position: relative; }
+  .aqta-home__more summary::-webkit-details-marker { display: none; }
+  .aqta-home__more summary::after { content: ""; width: 7px; height: 7px; margin-top: -3px; border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor; transform: rotate(45deg); }
+  .aqta-home__more-menu {
+    position: absolute;
+    top: calc(100% + 16px);
+    right: 0;
+    z-index: 5;
+    display: grid;
+    width: 280px;
+    padding: 8px;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 22px 50px rgba(8, 26, 48, .28);
+  }
+  .aqta-home__more-menu a { display: grid; gap: 2px; padding: 12px 14px; border-radius: 10px; color: var(--aqta-navy); text-decoration: none; }
+  .aqta-home__more-menu a:hover { background: #f6f1e8; }
+  .aqta-home__more-menu strong { font-size: 15px; }
+  .aqta-home__more-menu span { color: var(--aqta-muted); font-size: 13px; font-weight: 500; }
+  .aqta-home__tools { display: flex; align-items: center; gap: 4px; }
+  .aqta-home__icon { display: inline-flex; width: 40px; height: 40px; align-items: center; justify-content: center; color: var(--aqta-navy); }
+  .aqta-home__icon svg { width: 22px; height: 22px; }
+  .aqta-home__cart { position: relative; }
+  .aqta-home__cart span {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 99px;
+    background: var(--aqta-gold);
+    color: var(--aqta-navy);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 16px;
+    text-align: center;
+  }
+  .aqta-home__hero { background: var(--aqta-navy); color: #fff; padding: 68px 0 86px; }
+  .aqta-home__hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 64px; align-items: center; }
+  .aqta-home__eyebrow,
+  .aqta-home__section-label {
+    margin: 0 0 12px;
+    color: var(--aqta-gold);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  .aqta-home__hero-title,
+  #aqta-home h2 {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 500;
+    letter-spacing: -.025em;
+  }
+  .aqta-home__hero-title { max-width: 680px; color: #fff; font-size: clamp(46px, 5.4vw, 72px); line-height: 1.02; }
+  .aqta-home__picker { position: relative; }
+  .aqta-home__rotator {
+    display: inline-flex;
+    gap: .16em;
+    align-items: center;
+    padding: 0 0 .08em;
+    border: 0;
+    border-bottom: 2px dotted #d7b15a;
+    background: transparent;
+    color: #e6c66e;
+    font: inherit;
+    font-style: italic;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .aqta-home__rotator-arrow { width: .28em; height: .28em; }
+  .aqta-home__rotator[aria-expanded="true"] .aqta-home__rotator-arrow { transform: rotate(180deg); }
+  .aqta-home__menu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 16px);
+    left: 0;
+    width: min(720px, 100%);
+    max-height: min(74vh, 640px);
+    padding: 26px 26px 18px;
+    overflow: auto;
+    border-radius: 16px;
+    background: #fff;
+    color: var(--aqta-ink);
+    box-shadow: 0 24px 60px rgba(8, 26, 48, .28);
+  }
+  .aqta-home__menu[hidden] { display: none; }
+  .aqta-home__menu-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    color: #98a2b3;
+    font-size: 24px;
+    cursor: pointer;
+  }
+  .aqta-home__menu-label { margin: 0 0 12px; color: var(--aqta-gold); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+  .aqta-home__menu-pills,
+  .aqta-home__quick-links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .aqta-home__menu-pills { margin-bottom: 22px; }
+  .aqta-home__menu-pills button,
+  .aqta-home__quick-links button {
+    padding: 8px 14px;
+    border: 1px solid #e6e0d6;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--aqta-navy);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .aqta-home__quick-links { margin-bottom: 24px; }
+  .aqta-home__quick-links button { border-color: rgba(255, 255, 255, .24); background: transparent; color: #e9edf4; font-weight: 600; }
+  .aqta-home__quick-links button[aria-current="true"],
+  .aqta-home__menu-pills button:hover,
+  .aqta-home__quick-links button:hover { border-color: var(--aqta-gold); background: rgba(201, 147, 46, .16); color: #fff; }
+  .aqta-home__menu-pills button:hover { color: var(--aqta-navy); background: #f6f1e8; }
+  .aqta-home__menu-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .aqta-home__menu-cols p { margin: 0 0 8px; color: #98a2b3; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .aqta-home__menu-cols a { display: block; margin-top: 8px; color: var(--aqta-navy); font-size: 16px; text-decoration: none; }
+  .aqta-home__menu-note { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid #eee7dc; color: var(--aqta-muted); font-size: 13px; }
+  .aqta-home__hero-text { max-width: 610px; margin: 26px 0 20px; color: #d7dfeb; font-size: 18px; line-height: 1.65; }
+  .aqta-home__start { display: flex; max-width: 640px; min-height: 68px; padding: 8px; gap: 12px; align-items: center; border-radius: 10px; background: #fff; }
+  .aqta-home__start-copy { display: flex; min-width: 0; flex: 1; padding: 2px 10px; flex-direction: column; color: var(--aqta-ink); }
+  .aqta-home__start-copy span { color: var(--aqta-muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .aqta-home__start-copy strong { margin-top: 3px; font-size: 17px; }
+  .aqta-home__button { display: inline-flex; min-height: 50px; padding: 0 22px; align-items: center; justify-content: center; gap: 8px; border-radius: 7px; font-size: 14px; font-weight: 800; text-decoration: none; }
+  .aqta-home__button--gold { background: var(--aqta-gold); color: var(--aqta-navy); }
+  .aqta-home__button--gold:hover { background: #dba849; color: var(--aqta-navy); }
+  .aqta-home__button--navy { background: var(--aqta-navy); color: #fff; }
+  .aqta-home__button--navy:hover { background: #183b64; color: #fff; }
+  .aqta-home__hero-notes { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 18px; color: #bfcbd9; font-size: 13px; }
+  .aqta-home__stage { padding: 16px; border-radius: 16px; background: #fff; color: var(--aqta-ink); box-shadow: 0 32px 70px rgba(0, 0, 0, .32); }
+  .aqta-home__stage-kicker,
+  .aqta-home__stage-note { display: block; color: var(--aqta-navy); font-size: 13px; font-weight: 800; }
+  .aqta-home__stage-kicker { padding: 2px 4px 13px; }
+  .aqta-home__stage-kicker span { color: var(--aqta-gold); }
+  .aqta-home__stage-frame { position: relative; overflow: hidden; height: 460px; border-radius: 10px; background: #f7f4ee; }
+  .aqta-home__slide { position: absolute; inset: 0; width: 100%; height: 100%; padding: 18px; object-fit: contain; opacity: 0; transition: opacity .45s ease; }
+  .aqta-home__slide[data-active="true"] { opacity: 1; }
+  .aqta-home__stage-note { padding: 14px 4px 2px; }
+  .aqta-home__search-wrap { position: relative; z-index: 2; margin-top: -34px; }
+  .aqta-home__search { display: flex; min-height: 68px; padding: 8px 8px 8px 20px; align-items: center; gap: 12px; border: 1px solid #e7e0d4; border-radius: 12px; background: #fff; box-shadow: 0 15px 38px rgba(15, 39, 68, .15); }
+  .aqta-home__search-icon { color: var(--aqta-gold); font-size: 28px; }
+  .aqta-home__search input { min-width: 0; flex: 1; border: 0; outline: 0; color: var(--aqta-ink); font-size: 16px; }
+  .aqta-home__search button { align-self: stretch; padding: 0 26px; border: 0; border-radius: 7px; background: var(--aqta-navy); color: #fff; font-weight: 800; cursor: pointer; }
+  .aqta-home__visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  .aqta-home__proof { padding: 52px 0 8px; }
+  .aqta-home__proof-grid,
+  .aqta-home__category-grid,
+  .aqta-home__occasion-grid { display: grid; gap: 18px; }
+  .aqta-home__proof-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .aqta-home__proof-grid div { padding-left: 16px; border-left: 3px solid var(--aqta-gold); }
+  .aqta-home__proof-grid strong,
+  .aqta-home__proof-grid span { display: block; }
+  .aqta-home__proof-grid strong { color: var(--aqta-navy); }
+  .aqta-home__proof-grid span { margin-top: 4px; color: var(--aqta-muted); font-size: 13px; line-height: 1.45; }
+  .aqta-home__section { padding: 82px 0; }
+  .aqta-home__section--cream,
+  .aqta-home__band--cream { background: var(--aqta-cream); }
+  .aqta-home__section--navy,
+  .aqta-home__band--navy { background: var(--aqta-navy); color: #fff; }
+  .aqta-home__heading-row { display: flex; margin-bottom: 28px; align-items: end; justify-content: space-between; gap: 24px; }
+  .aqta-home__heading-row h2,
+  .aqta-home__band h2,
+  .aqta-home__bulk h2 { color: var(--aqta-navy); font-size: clamp(34px, 4vw, 48px); line-height: 1.08; }
+  .aqta-home__heading-row--light h2,
+  .aqta-home__band--navy h2 { color: #fff; }
+  .aqta-home__heading-row > a { color: var(--aqta-gold); font-size: 14px; font-weight: 800; text-decoration: none; white-space: nowrap; }
+  .aqta-home__heading-row--light > a { color: #e6c66e; }
+  #aqta-trophies,
+  #aqta-medals,
+  #aqta-plaques,
+  #aqta-occasions,
+  #aqta-bulk,
+  #aqta-search { scroll-margin-top: 96px; }
+  .aqta-home__category-grid,
+  .aqta-home__occasion-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .aqta-home__category-card { display: block; min-width: 0; overflow: hidden; border: 1px solid #e4ddd1; border-radius: 12px; background: #fff; color: inherit; text-decoration: none; }
+  .aqta-home__category-image { display: flex; height: 240px; align-items: center; justify-content: center; background: #f7f4ee; }
+  .aqta-home__category-image img { width: 100%; height: 100%; object-fit: contain; }
+  .aqta-home__category-copy { padding: 18px; }
+  .aqta-home__category-copy h3 { margin: 0; color: var(--aqta-navy); font-size: 18px; }
+  .aqta-home__category-copy p { min-height: 44px; margin: 6px 0 12px; color: var(--aqta-muted); font-size: 14px; line-height: 1.45; }
+  .aqta-home__category-copy span { color: var(--aqta-gold); font-size: 13px; font-weight: 800; }
+  .aqta-home__occasion-card { display: grid; min-width: 0; min-height: 280px; overflow: hidden; border-radius: 12px; background: #16345a; color: #fff; text-decoration: none; }
+  .aqta-home__occasion-card img { width: 100%; height: 180px; object-fit: contain; background: #f7f4ee; }
+  .aqta-home__occasion-card span { display: flex; padding: 16px 18px 18px; flex-direction: column; }
+  .aqta-home__occasion-card strong { font-family: Georgia, "Times New Roman", serif; font-size: 24px; font-weight: 500; }
+  .aqta-home__occasion-card small { margin-top: 4px; color: #d4deeb; font-size: 13px; }
+  .aqta-home__occasion-card:hover { color: #fff; outline: 3px solid var(--aqta-gold); outline-offset: -3px; }
+  .aqta-home__band { padding: 82px 0; }
+  .aqta-home__band-grid,
+  .aqta-home__bulk { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .85fr); gap: 64px; align-items: center; }
+  .aqta-home__band-grid--flip { grid-template-columns: minmax(0, .9fr) minmax(0, 1fr); }
+  .aqta-home__band p:not(.aqta-home__section-label),
+  .aqta-home__bulk p:not(.aqta-home__section-label) { margin: 16px 0 22px; color: var(--aqta-muted); font-size: 16px; line-height: 1.65; }
+  .aqta-home__band--navy p:not(.aqta-home__section-label) { color: #ced8e5; }
+  .aqta-home__band-image { display: flex; min-height: 360px; align-items: center; justify-content: center; overflow: hidden; border-radius: 14px; background: #f7f4ee; box-shadow: 0 24px 55px rgba(15, 39, 68, .16); }
+  .aqta-home__band-image img { width: 100%; height: 420px; object-fit: contain; }
+  .aqta-home__bulk ul { display: grid; margin: 0 0 18px; padding: 0; gap: 10px; list-style: none; }
+  .aqta-home__soon { color: var(--aqta-navy); font-size: 14px; font-weight: 700; }
+  @media (max-width: 1180px) {
+    .aqta-home__nav { display: none; }
+    .aqta-home__burger { display: inline-flex; width: 42px; height: 42px; align-items: center; justify-content: center; cursor: pointer; }
+    .aqta-home__burger span[aria-hidden="true"],
+    .aqta-home__burger span[aria-hidden="true"]::before,
+    .aqta-home__burger span[aria-hidden="true"]::after { display: block; width: 18px; height: 2px; background: var(--aqta-navy); content: ""; }
+    .aqta-home__burger span[aria-hidden="true"] { position: relative; }
+    .aqta-home__burger span[aria-hidden="true"]::before,
+    .aqta-home__burger span[aria-hidden="true"]::after { position: absolute; left: 0; }
+    .aqta-home__burger span[aria-hidden="true"]::before { top: -6px; }
+    .aqta-home__burger span[aria-hidden="true"]::after { top: 6px; }
+    .aqta-home__check:checked ~ .aqta-home__nav {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      display: grid;
+      gap: 4px;
+      padding: 12px 20px 18px;
+      background: var(--aqta-header);
+      box-shadow: 0 16px 30px rgba(15, 39, 68, .12);
+    }
+    .aqta-home__drop[open] { display: grid; }
+    .aqta-home__drop-menu,
+    .aqta-home__more-menu { position: static; width: 100%; max-height: none; margin-top: 8px; box-shadow: none; }
+    .aqta-home__bar { position: relative; }
+  }
+  @media (max-width: 990px) {
+    .aqta-home__hero-grid,
+    .aqta-home__band-grid,
+    .aqta-home__band-grid--flip,
+    .aqta-home__bulk,
+    .aqta-home__category-grid,
+    .aqta-home__occasion-grid,
+    .aqta-home__proof-grid { grid-template-columns: 1fr 1fr; }
+    .aqta-home__hero-grid,
+    .aqta-home__band-grid,
+    .aqta-home__band-grid--flip,
+    .aqta-home__bulk { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .aqta-home__wrap { width: min(100% - 28px, 1240px); }
+    .aqta-home__utility-row { align-items: flex-start; flex-direction: column; padding: 8px 0; }
+    .aqta-home__utility-row p:last-child { display: none; }
+    .aqta-home__hero { padding: 42px 0 72px; }
+    .aqta-home__hero-title { font-size: 42px; }
+    .aqta-home__menu-cols,
+    .aqta-home__category-grid,
+    .aqta-home__occasion-grid,
+    .aqta-home__proof-grid { grid-template-columns: 1fr; }
+    .aqta-home__start { align-items: stretch; flex-direction: column; }
+    .aqta-home__stage-frame,
+    .aqta-home__band-image img { height: 320px; }
+    .aqta-home__search { flex-wrap: wrap; }
+    .aqta-home__search button { width: 100%; min-height: 46px; }
+    .aqta-home__section,
+    .aqta-home__band { padding: 56px 0; }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const root = document.querySelector('[data-aqta-home]');
+    if (!root || root.dataset.aqtaReady === 'true') return;
+    root.dataset.aqtaReady = 'true';
+    const menuToggle = root.querySelector('.aqta-home__check');
+    root.querySelectorAll('.aqta-home__nav a').forEach((link) => {
+      link.addEventListener('click', () => {
+        if (menuToggle) menuToggle.checked = false;
+      });
+    });
+    const label = root.querySelector('[data-aqta-rotator-label]');
+    const toggle = root.querySelector('[data-aqta-rotator]');
+    const menu = root.querySelector('[data-aqta-menu]');
+    const cardWord = root.querySelector('[data-aqta-card-word]');
+    const picks = Array.from(root.querySelectorAll('[data-aqta-pick]'));
+    const slides = Array.from(root.querySelectorAll('[data-aqta-slide]'));
+    if (!label || picks.length === 0) return;
+
+    const words = [];
+    picks.forEach((pick) => {
+      const word = pick.getAttribute('data-aqta-pick');
+      if (word && words.indexOf(word) === -1) words.push(word);
+    });
+    let index = 0;
+    let paused = false;
+    let menuOpen = false;
+
+    const show = (next) => {
+      index = next;
+      const word = words[index];
+      label.textContent = word;
+      if (cardWord) cardWord.textContent = word;
+      picks.forEach((pick) => {
+        if (pick.getAttribute('data-aqta-pick') === word) {
+          pick.setAttribute('aria-current', 'true');
+        } else {
+          pick.removeAttribute('aria-current');
+        }
+      });
+      slides.forEach((slide) => {
+        slide.setAttribute('data-active', slide.getAttribute('data-aqta-slide') === word ? 'true' : 'false');
+      });
+    };
+
+    const setMenu = (open) => {
+      menuOpen = open;
+      paused = open;
+      if (!menu || !toggle) return;
+      menu.hidden = !open;
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+
+    if (toggle && menu) {
+      toggle.addEventListener('click', () => setMenu(!menuOpen));
+      const close = root.querySelector('[data-aqta-menu-close]');
+      if (close) close.addEventListener('click', () => setMenu(false));
+      document.addEventListener('click', (event) => {
+        const picker = root.querySelector('.aqta-home__picker');
+        if (menuOpen && picker && !picker.contains(event.target)) setMenu(false);
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && menuOpen) setMenu(false);
+      });
+    }
+
+    picks.forEach((pick) => {
+      pick.addEventListener('click', () => {
+        const word = pick.getAttribute('data-aqta-pick');
+        const next = words.indexOf(word);
+        if (next >= 0) show(next);
+        paused = true;
+      });
+      pick.addEventListener('mouseenter', () => {
+        const next = words.indexOf(pick.getAttribute('data-aqta-pick'));
+        if (next >= 0) show(next);
+        paused = true;
+      });
+      pick.addEventListener('mouseleave', () => {
+        if (!menuOpen) paused = false;
+      });
+    });
+
+    if (words.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    window.setInterval(() => {
+      if (!paused) show((index + 1) % words.length);
+    }, 2800);
+  })();
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "Awards homepage",
+  "settings": [
+    {
+      "type": "text",
+      "id": "hero_eyebrow",
+      "label": "Hero eyebrow",
+      "default": "Trophies, medals, and plaques"
+    },
+    {
+      "type": "text",
+      "id": "hero_heading",
+      "label": "Hero heading",
+      "default": "Awards for your"
+    },
+    {
+      "type": "textarea",
+      "id": "hero_text",
+      "label": "Hero text",
+      "default": "From the championship trophy to the service plaque, this is where teams, schools, and companies will choose the award. The catalog is on the way."
+    },
+    {
+      "type": "text",
+      "id": "categories_heading",
+      "label": "Categories heading",
+      "default": "Trophies, medals, and plaques."
+    },
+    {
+      "type": "text",
+      "id": "occasions_heading",
+      "label": "Occasions heading",
+      "default": "Made for the day they earn it."
+    },
+    {
+      "type": "text",
+      "id": "bulk_heading",
+      "label": "Bulk heading",
+      "default": "One design. A name for every winner."
+    },
+    {
+      "type": "textarea",
+      "id": "bulk_text",
+      "label": "Bulk text",
+      "default": "Order a matching set for a team, a classroom, or a company banquet. We will connect quote requests here after the products are imported."
+    }
+  ],
+  "presets": [
+    {
+      "name": "Awards homepage"
+    }
+  ]
+}
+{% endschema %}

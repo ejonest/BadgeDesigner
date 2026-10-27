@@ -1,0 +1,38 @@
+{% doc %}
+  One award style on a category or occasion page.
+  @param {string} image - Theme asset filename
+  @param {string} title - Style name
+  @param {string} note - Short line under the name
+  @param {string} [url] - Product path. When set, the card opens that product.
+{% enddoc %}
+{% capture aqta_style_card_body %}
+  <div class="aqta-guide__card-image">
+    <img src="{{ image | asset_url }}" alt="" width="900" height="900" loading="lazy">
+  </div>
+  <div class="aqta-guide__card-copy">
+    <strong>{{ title }}</strong>
+    <small>{{ note }}</small>
+  </div>
+{% endcapture %}
+{% if url != blank %}
+  <a
+    class="aqta-guide__card"
+    href="{{ url }}"
+    data-aqta-card
+    data-title="{{ title | downcase | escape }}"
+    data-note="{{ note | downcase | escape }}"
+    data-price="2499"
+  >
+    {{ aqta_style_card_body }}
+  </a>
+{% else %}
+  <article
+    class="aqta-guide__card"
+    data-aqta-card
+    data-title="{{ title | downcase | escape }}"
+    data-note="{{ note | downcase | escape }}"
+    data-price="0"
+  >
+    {{ aqta_style_card_body }}
+  </article>
+{% endif %}

@@ -1,0 +1,73 @@
+{% doc %}
+  Left-column search, filters, and sorting for one award catalogue.
+  @param {string} kind - trophies, medals, or plaques
+{% enddoc %}
+<div class="aqta-filters" data-aqta-filters>
+  <div class="aqta-filters__head">
+    <p class="aqta-filters__title">
+      Filter
+      <span data-aqta-filter-count aria-live="polite"></span>
+    </p>
+    <button type="button" data-aqta-filter-clear hidden>Clear all</button>
+  </div>
+
+  <div class="aqta-filters__group">
+    <p class="aqta-filters__title">Search</p>
+    <label class="aqta-filters__search">
+      <span class="aqta-visually-hidden">Search {{ kind }}</span>
+      <input type="search" placeholder="Search {{ kind }}" data-aqta-filter-search>
+    </label>
+  </div>
+
+  <div class="aqta-filters__group" data-aqta-filter="industry">
+    <p class="aqta-filters__title" id="aqta-filter-industry-{{ kind }}">Industry</p>
+    <div class="aqta-filters__list" role="group" aria-labelledby="aqta-filter-industry-{{ kind }}">
+      <button type="button" data-value="" aria-pressed="true">All industries</button>
+      <button type="button" data-value="sports">Sports &amp; teams</button>
+      <button type="button" data-value="school">Schools &amp; academics</button>
+      <button type="button" data-value="workplace">Workplace</button>
+      <button type="button" data-value="community">Community &amp; service</button>
+      <button type="button" data-value="events">Events &amp; competitions</button>
+      <button type="button" data-value="general">General recognition</button>
+    </div>
+  </div>
+
+  <div class="aqta-filters__group" data-aqta-filter="style">
+    <p class="aqta-filters__title" id="aqta-filter-style-{{ kind }}">{% if kind == 'plaques' %}Finish{% else %}Type{% endif %}</p>
+    <div class="aqta-filters__list" role="group" aria-labelledby="aqta-filter-style-{{ kind }}">
+      <button type="button" data-value="" aria-pressed="true">All types</button>
+      {%- if kind == 'trophies' -%}
+        <button type="button" data-value="cup">Cup trophies</button>
+        <button type="button" data-value="sports-figure">Sports figures</button>
+        <button type="button" data-value="star">Star awards</button>
+        <button type="button" data-value="figure">General figures</button>
+      {%- elsif kind == 'medals' -%}
+        <button type="button" data-value="stars">Stars design</button>
+        <button type="button" data-value="wreath">Wreath design</button>
+        <button type="button" data-value="set">Place sets</button>
+        <button type="button" data-value="personalized">Personalized</button>
+      {%- else -%}
+        <button type="button" data-value="wood">Wood</button>
+        <button type="button" data-value="black-frame">Black frame</button>
+        <button type="button" data-value="patriotic">Patriotic</button>
+      {%- endif -%}
+    </div>
+  </div>
+
+  <div class="aqta-filters__group" data-aqta-sort>
+    <p class="aqta-filters__title" id="aqta-filter-sort-{{ kind }}">Sort</p>
+    <div class="aqta-filters__list" role="group" aria-labelledby="aqta-filter-sort-{{ kind }}">
+      <button type="button" data-value="featured" aria-pressed="true">Featured</button>
+      <button type="button" data-value="title-asc">Name: A–Z</button>
+      <button type="button" data-value="title-desc">Name: Z–A</button>
+      {%- unless kind == 'plaques' -%}
+        <button type="button" data-value="price-asc">Price: low to high</button>
+        <button type="button" data-value="price-desc">Price: high to low</button>
+      {%- endunless -%}
+    </div>
+  </div>
+
+  <p class="aqta-filters__empty" data-aqta-filter-empty hidden>
+    No {{ kind }} match those filters.
+  </p>
+</div>

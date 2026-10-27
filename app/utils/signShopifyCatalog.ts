@@ -98,6 +98,20 @@ export function findSignVariantByShapeAndSize(
   return null;
 }
 
+/** Match a trophy Design or medal Style option, which is stored as the variant title. */
+export function findShopifyVariantByLabel(
+  product: ShopifyProductJs | null,
+  label: string,
+): ShopifyProductJsVariant | null {
+  if (!product || !label.trim()) return null;
+  const target = normOpt(label);
+  for (const variant of product.variants) {
+    const values = [variant.title, variant.option1, variant.option2, variant.option3];
+    if (values.some((value) => normOpt(value) === target)) return variant;
+  }
+  return null;
+}
+
 export function resolveSignVariantIdAndPrice(
   product: ShopifyProductJs | null,
   shape: string,

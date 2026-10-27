@@ -1,0 +1,157 @@
+{% doc %}
+  Full-page custom designer for the Custom Plaque, Custom Trophy, and Custom Medal products.
+  @param {string} designer - plaque, trophy, or medal
+{% enddoc %}
+{% liquid
+  assign designer_origin = 'https://all-quality-design-tool.vercel.app'
+  assign award_variant = product.selected_or_first_available_variant | default: product.variants.first
+  assign award_price = award_variant.price | divided_by: 100.0
+  assign designer_kind = designer | default: 'medal'
+  case designer_kind
+    when 'plaque'
+      assign designer_path = '/plaque-designer'
+      assign designer_title = 'Design your custom plaque'
+      assign product_message = 'PLAQUE_DESIGNER_SHOPIFY_PRODUCT'
+    when 'trophy'
+      assign designer_path = '/trophy-designer'
+      assign designer_title = 'Design your custom trophy'
+      assign product_message = 'TROPHY_DESIGNER_SHOPIFY_PRODUCT'
+    else
+      assign designer_path = '/medal-designer'
+      assign designer_title = 'Design your custom medal'
+      assign product_message = 'MEDAL_DESIGNER_SHOPIFY_PRODUCT'
+  endcase
+%}
+<style>
+  .aqta-award-designer {
+    width: 100vw;
+    max-width: 100vw;
+    margin: 0 0 48px calc(50% - 50vw);
+    background: #f7f4ee;
+  }
+  .aqta-award-designer iframe {
+    display: block;
+    width: 100%;
+    height: calc(100dvh - 150px);
+    min-height: 640px;
+    border: 0;
+  }
+</style>
+{% if product %}
+  <div class="aqta-award-designer">
+    <iframe
+      id="aqta-award-designer"
+      title="{{ designer_title | escape }}"
+      src="{{ designer_origin }}{{ designer_path }}?embedded=1&shop={{ shop.permanent_domain | url_param_escape }}&storeUrl={{ shop.permanent_domain | url_param_escape }}&product={{ product.id | url_param_escape }}{% if designer_kind == 'plaque' %}&plaqueProductHandle={{ product.handle | url_param_escape }}&variantIdSign={{ award_variant.id | url_param_escape }}{% else %}&productHandle={{ product.handle | url_param_escape }}&variantId={{ award_variant.id | url_param_escape }}&price={{ award_price }}{% endif %}&style={{ award_variant.title | url_param_escape }}{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}"
+      allow="clipboard-read; clipboard-write; fullscreen"
+    ></iframe>
+  </div>
+  <script>
+    (function () {
+      var DESIGNER_ORIGIN = {{ designer_origin | json }};
+      var PRODUCT_MESSAGE = {{ product_message | json }};
+      var LIVE_PRODUCT = {{ product | json }};
+      var frame = document.getElementById('aqta-award-designer');
+      if (!frame) return;
+
+      function allowed(origin) {
+        if (origin === DESIGNER_ORIGIN) return true;
+        if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+        return /^https:\/\/.*\.vercel\.app$/.test(origin);
+      }
+
+      function reply(event, requestId, success, error) {
+        if (!requestId || !event.source) return;
+        event.source.postMessage({
+          action: 'add-to-cart-result',
+          requestId: requestId,
+          success: success,
+          error: error || null
+        }, event.origin);
+      }
+
+      function removeReplaced(cartRoot, replaceDesignId) {
+        if (!replaceDesignId) return Promise.resolve();
+        var base = cartRoot.replace(/\/$/, '');
+        return fetch(base + '/cart.js', { headers: { Accept: 'application/json' } })
+          .then(function (response) { return response.json(); })
+          .then(function (cart) {
+            var stale = (cart.items || []).filter(function (item) {
+              var properties = item.properties || {};
+              return (properties['_Design ID'] || properties['Design ID']) === replaceDesignId;
+            });
+            return stale.reduce(function (chain, item) {
+              return chain.then(function () {
+                return fetch(base + '/cart/change.js', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ id: item.key, quantity: 0 })
+                });
+              });
+            }, Promise.resolve());
+          })
+          .catch(function (error) {
+            console.error('Award designer: could not remove replaced cart lines', error);
+          });
+      }
+
+      function add(items, event, requestId, replaceDesignId) {
+        if (!items || !items.length) {
+          reply(event, requestId, false, 'No cart items to add');
+          return;
+        }
+        var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root ? window.Shopify.routes.root : '/');
+        var base = cartRoot.replace(/\/$/, '');
+        fetch(base + '/cart/add.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: items.map(function (item) {
+              return {
+                id: parseInt(String(item.variantId), 10),
+                quantity: item.quantity || 1,
+                properties: item.properties || {}
+              };
+            })
+          })
+        })
+          .then(function (response) {
+            return response.json().then(function (body) {
+              if (!response.ok) {
+                throw new Error((body && (body.description || body.message)) || ('HTTP ' + response.status));
+              }
+              return body;
+            });
+          })
+          .then(function () { return removeReplaced(cartRoot, replaceDesignId); })
+          .then(function () {
+            reply(event, requestId, true);
+            window.location.href = base + '/cart';
+          })
+          .catch(function (error) {
+            var message = error && error.message ? error.message : String(error);
+            reply(event, requestId, false, message);
+            alert('Could not add this design to the cart. Please try again.\n\n' + message);
+          });
+      }
+
+      function sendProduct() {
+        if (!frame.contentWindow) return;
+        frame.contentWindow.postMessage({ type: PRODUCT_MESSAGE, payload: LIVE_PRODUCT }, DESIGNER_ORIGIN);
+      }
+
+      frame.addEventListener('load', sendProduct);
+
+      window.addEventListener('message', function (event) {
+        if (!allowed(event.origin)) return;
+        var data = event.data;
+        if (!data || !data.action) return;
+        if (data.action === 'add-to-cart' && data.payload) {
+          add([data.payload], event, data.requestId, data.payload.replaceDesignId);
+        } else if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
+          add(data.payload.items, event, data.requestId, data.payload.replaceDesignId);
+        }
+      });
+    })();
+  </script>
+{% endif %}

@@ -1334,456 +1334,6 @@
           "accept_cookies_text": "accept"
         }
       },
-      "1542340479262": {
-        "type": "home-custom-sub-banner",
-        "blocks": {
-          "1542340479262-0": {
-            "type": "twoImage",
-            "settings": {
-              "image_1": "shopify://shop_images/stamp_final_b0967b09-d00c-41c3-a3b4-7e0d3b33378e.jpg",
-              "title_1": "",
-              "color_1": "#ffffff",
-              "button_1": "",
-              "link_1": "shopify://collections/rubber-stamps",
-              "bg_button_1": "#c9932e",
-              "border_button_1": "#ffffff",
-              "color_button_1": "#ffffff",
-              "image_2": "shopify://shop_images/gift_items.jpg",
-              "title_2": "",
-              "color_2": "#ffffff",
-              "button_2": "",
-              "link_2": "shopify://collections/gifts",
-              "bg_button_2": "#ffffff",
-              "border_button_2": "#ffffff",
-              "color_button_2": "#000000"
-            }
-          },
-          "1542340479262-1": {
-            "type": "oneImage",
-            "settings": {
-              "image": "shopify://shop_images/signage.jpg",
-              "title": "",
-              "des": "",
-              "countdown": "",
-              "color": "#ffffff",
-              "link": "shopify://collections/signage",
-              "title_2": "",
-              "des_2": "",
-              "countdown_2": "2020/01/7 0:0:00",
-              "color_2": "#ffffff",
-              "link_2": ""
-            }
-          },
-          "1542340479262-2": {
-            "type": "twoImage",
-            "settings": {
-              "image_1": "shopify://shop_images/awards.jpg",
-              "title_1": "",
-              "color_1": "#ffffff",
-              "button_1": "",
-              "link_1": "shopify://collections/awards",
-              "bg_button_1": "#ffffff",
-              "border_button_1": "#ffffff",
-              "color_button_1": "#232323",
-              "image_2": "shopify://shop_images/name_badges.jpg",
-              "title_2": "",
-              "color_2": "#ffffff",
-              "button_2": "",
-              "link_2": "shopify://collections/name-badges",
-              "bg_button_2": "#ffffff",
-              "border_button_2": "#ffffff",
-              "color_button_2": "#232323"
-            }
-          }
-        },
-        "block_order": [
-          "1542340479262-0",
-          "1542340479262-1",
-          "1542340479262-2"
-        ],
-        "settings": {
-          "font_size_title": "20px",
-          "block_des": "",
-          "margin_bottom_mb": 0,
-          "margin_bottom_tab": 0,
-          "margin_bottom": 0
-        }
-      },
-      "1550720181092": {
-        "type": "supermarket-product-tabs",
-        "blocks": {
-          "1588158848751": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Stock Office",
-              "collection": "rubber-stamps-stock-office-stamps"
-            }
-          },
-          "1550720876321": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Address",
-              "collection": "rubber-stamps-address-stamps"
-            }
-          },
-          "1550720893409": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Teacher",
-              "collection": "rubber-stamps-teacher-stamps"
-            }
-          },
-          "1550720908218": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Date",
-              "collection": "rubber-stamps-date-stamps"
-            }
-          },
-          "1550720917405": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Self-Inking Stamps",
-              "collection": "rubber-stamps-self-inking-stamps"
-            }
-          },
-          "1588159074518": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Traditional Wooden",
-              "collection": ""
-            }
-          },
-          "1550720869808": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Novelty Stamps",
-              "collection": "rubber-stamps-novelty-stamps"
-            }
-          },
-          "1550720941591": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Ink, Refill and Ink Pads",
-              "collection": "rubber-stamps-ink-refills-amp-ink-pads"
-            }
-          }
-        },
-        "block_order": [
-          "1588158848751",
-          "1550720876321",
-          "1550720893409",
-          "1550720908218",
-          "1550720917405",
-          "1588159074518",
-          "1550720869808",
-          "1550720941591"
-        ],
-        "settings": {
-          "featured_products_title": "<span style=\"color:#c9932e;\">Rubber Stamps</span>",
-          "display_banner": false,
-          "font_size_banner_heading": "30px",
-          "font_size_banner_des": "12px",
-          "bg_banner_button": "#c9932e",
-          "border_banner_button": "#ffffff",
-          "color_banner_button": "#ffffff",
-          "image_1": "shopify://shop_images/rubber_stamps_banner.png",
-          "banner_heading_1": "RUBBER STAMPS",
-          "banner_des_1": "",
-          "banner_button_1": "Shop",
-          "link_1": "shopify://collections/rubber-stamps",
-          "color_banner_1": "#ffffff",
-          "banner_heading_2": "#Cosmó",
-          "banner_des_2": "Phasellus lorem pulvinar maecenas cosmopolis",
-          "banner_button_2": "Shop Now",
-          "link_2": "",
-          "color_banner_2": "#ffffff",
-          "banner_heading_3": "#Dapbõe",
-          "banner_des_3": "Phasellus lorem pulvinar maecenas cosmopolis",
-          "banner_button_3": "Shop Now",
-          "link_3": "",
-          "color_banner_3": "#ffffff",
-          "collection_results_per_row": "5",
-          "margin_bottom_mb": 20,
-          "margin_bottom_tab": 40,
-          "margin_bottom": 13
-        }
-      },
-      "1550734615507": {
-        "type": "supermarket-product-tabs",
-        "blocks": {
-          "1550734767831": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Property Signs",
-              "collection": "property-signs"
-            }
-          },
-          "1550734778760": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Retail Signs",
-              "collection": "retail-signs"
-            }
-          },
-          "1550734787648": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Custom Signs",
-              "collection": "custom-signs"
-            }
-          }
-        },
-        "block_order": [
-          "1550734767831",
-          "1550734778760",
-          "1550734787648"
-        ],
-        "settings": {
-          "featured_products_title": "<span style=\"color:#c9932e;\">Signage</span>",
-          "display_banner": false,
-          "font_size_banner_heading": "30px",
-          "font_size_banner_des": "12px",
-          "bg_banner_button": "#ffffff",
-          "border_banner_button": "#ffffff",
-          "color_banner_button": "#232323",
-          "banner_heading_1": "#Cosmó",
-          "banner_des_1": "Phasellus lorem pulvinar maecenas cosmopolis",
-          "banner_button_1": "Shop Now",
-          "link_1": "",
-          "color_banner_1": "#ffffff",
-          "banner_heading_2": "Milancelos",
-          "banner_des_2": "Phasellus lorem pulvinar maecenas cosmopolis",
-          "banner_button_2": "Shop Now",
-          "link_2": "",
-          "color_banner_2": "#ffffff",
-          "banner_heading_3": "#Dapbõe",
-          "banner_des_3": "Phasellus lorem pulvinar maecenas cosmopolis",
-          "banner_button_3": "Shop Now",
-          "link_3": "",
-          "color_banner_3": "#ffffff",
-          "collection_results_per_row": "5",
-          "margin_bottom_mb": 20,
-          "margin_bottom_tab": 40,
-          "margin_bottom": 13
-        }
-      },
-      "1550735154809": {
-        "type": "supermarket-product-tabs",
-        "blocks": {
-          "1550735224887": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Novelty Desk Signs",
-              "collection": "gift-items-novelty-desk-signs"
-            }
-          },
-          "1588159658063": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Novelty Bad Parking Cards",
-              "collection": "novelty-cards"
-            }
-          },
-          "1588159692273": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Novelty Stamps",
-              "collection": "rubber-stamps-novelty-stamps"
-            }
-          },
-          "1588159714919": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Gavels",
-              "collection": "gavels"
-            }
-          },
-          "1550735231598": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Mugs",
-              "collection": "gift-items-mugs"
-            }
-          }
-        },
-        "block_order": [
-          "1550735224887",
-          "1588159658063",
-          "1588159692273",
-          "1588159714919",
-          "1550735231598"
-        ],
-        "settings": {
-          "featured_products_title": "<span style=\"color:#c9932e;\">Gift Items</span>",
-          "display_banner": false,
-          "font_size_banner_heading": "30px",
-          "font_size_banner_des": "12px",
-          "bg_banner_button": "#ffffff",
-          "border_banner_button": "#ffffff",
-          "color_banner_button": "#232323",
-          "banner_heading_1": "Metropolis",
-          "banner_des_1": "Phasellus lorem pulvinar maecenas cosmopolis",
-          "banner_button_1": "Shop Now",
-          "link_1": "",
-          "color_banner_1": "#ffffff",
-          "banner_heading_2": "#Dapbõe",
-          "banner_des_2": "Phasellus lorem pulvinar maecenas cosmopolis",
-          "banner_button_2": "Shop Now",
-          "link_2": "",
-          "color_banner_2": "#ffffff",
-          "banner_heading_3": "Milancelos",
-          "banner_des_3": "Phasellus lorem pulvinar maecenas cosmopolis",
-          "banner_button_3": "Shop Now",
-          "link_3": "",
-          "color_banner_3": "#ffffff",
-          "collection_results_per_row": "5",
-          "margin_bottom_mb": 20,
-          "margin_bottom_tab": 40,
-          "margin_bottom": 13
-        }
-      },
-      "1550736793802": {
-        "type": "supermarket-product-tabs",
-        "blocks": {
-          "1550736834288": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Blank Name Badges",
-              "collection": "id-tags-blank-name-tag-badges"
-            }
-          },
-          "1550736825118": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Custom Engraved Name Badges",
-              "collection": "custom-name-badges"
-            }
-          },
-          "1550736839245": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Badge Accessories",
-              "collection": "id-tags-badge-accessories"
-            }
-          },
-          "1588159918644": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Stock Desk Signs",
-              "collection": "signage-signs-for-business-office-signs-desk-signs"
-            }
-          },
-          "1588159935990": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Custom Desk Nameplates",
-              "collection": "custom-engraved-desk-nameplates"
-            }
-          }
-        },
-        "block_order": [
-          "1550736834288",
-          "1550736825118",
-          "1550736839245",
-          "1588159918644",
-          "1588159935990"
-        ],
-        "settings": {
-          "featured_products_title": "<span style=\"color:#c9932e;\">Name Badges & Desk Signs</span>",
-          "display_banner": false,
-          "font_size_banner_heading": "30px",
-          "font_size_banner_des": "12px",
-          "bg_banner_button": "#ffffff",
-          "border_banner_button": "#ffffff",
-          "color_banner_button": "#232323",
-          "banner_heading_1": "#Dapbõe",
-          "banner_des_1": "Phasellus lorem pulvinar maecenas cosmopolis",
-          "banner_button_1": "Shop Now",
-          "link_1": "",
-          "color_banner_1": "#ffffff",
-          "banner_heading_2": "Milancelos",
-          "banner_des_2": "Phasellus lorem pulvinar maecenas cosmopolis",
-          "banner_button_2": "Shop Now",
-          "link_2": "",
-          "color_banner_2": "#ffffff",
-          "banner_heading_3": "Milancelos",
-          "banner_des_3": "Phasellus lorem pulvinar maecenas cosmopolis",
-          "banner_button_3": "Shop Now",
-          "link_3": "",
-          "color_banner_3": "#ffffff",
-          "collection_results_per_row": "5",
-          "margin_bottom_mb": 20,
-          "margin_bottom_tab": 40,
-          "margin_bottom": 33
-        }
-      },
-      "1550737803165": {
-        "type": "supermarket-new-arrivals",
-        "settings": {
-          "new_arrivals_title": "Featured Products",
-          "block_bg": "#ffffff",
-          "bg_grid_item": "#ffffff",
-          "product_list_collection": "featured-products",
-          "product_list_limit_all": 10,
-          "display_infinite_scrolling_homepage": false,
-          "collection_results_per_row1": "5",
-          "margin_bottom_mb": 10,
-          "margin_bottom_tab": 10,
-          "margin_bottom": 15
-        }
-      },
-      "1550745498097": {
-        "type": "home-store-info",
-        "blocks": {
-          "1550745516795": {
-            "type": "Text",
-            "settings": {
-              "icon": "<i class=\"fa fa-truck\" aria-hidden=\"true\" style=\"color:#c9932e;\"></i>",
-              "title": "Free Shipping",
-              "text": "We offer Free Shipping on all orders. Orders ship out within 48 hours, often faster"
-            }
-          },
-          "1550745595729": {
-            "type": "Text",
-            "settings": {
-              "icon": "<i class=\"fa fa-credit-card\" aria-hidden=\"true\" style=\"color:#c9932e;\"></i>",
-              "title": "Secure Shopping",
-              "text": "We accept all major credit cards and offer numerous other payment methods"
-            }
-          },
-          "1550745607091": {
-            "type": "Text",
-            "settings": {
-              "icon": "<i class=\"fa fa-shield\" aria-hidden=\"true\" style=\"color:#c9932e;\"></i>",
-              "title": "Register for an account",
-              "text": "Receive bulk order discounts and special deals when you register for an account"
-            }
-          },
-          "720c9720-aa81-4fe3-af16-1641b24aa687": {
-            "type": "Text",
-            "settings": {
-              "icon": "",
-              "title": "Worldwide Delivery",
-              "text": "Metus tellus multricies a quam sit amet lorem diam libero de cosmopolis."
-            }
-          }
-        },
-        "block_order": [
-          "1550745516795",
-          "1550745595729",
-          "1550745607091",
-          "720c9720-aa81-4fe3-af16-1641b24aa687"
-        ],
-        "settings": {
-          "layout": "default",
-          "border_block": "#ffffff",
-          "border_item": "#e8e8e8",
-          "margin_bottom_mb": 10,
-          "margin_bottom_tab": 15,
-          "margin_bottom": 20
-        }
-      },
       "header-supermarket": {
         "type": "header-supermarket",
         "settings": {
@@ -2201,201 +1751,12 @@
           "display_megamenu": true
         }
       },
-      "1585291266077": {
-        "type": "home-slideshow",
-        "blocks": {
-          "1585291266077-0": {
-            "type": "image",
-            "settings": {
-              "dpl_slide_img": true,
-              "image_slide": "shopify://shop_images/hero.jpg",
-              "image_slide_mb": "shopify://shop_images/hero_mobile_a0f067bd-c9a8-42cb-9b2e-d176feea7a67.jpg",
-              "style_content": "style_1",
-              "alignment": "left",
-              "text_alignment": "center",
-              "bg_color_box": "#ffffff",
-              "color_border_box": "#bcbcbc",
-              "heading": "See our Huge Range of Stock<br> & Custom Office Supplies",
-              "font_size_heading": "28px",
-              "color_heading": "#c9932e",
-              "color_heading_mb": "#c9932e",
-              "sub_heading": "",
-              "font_size_sub_heading": "30px",
-              "color_sub_heading": "#ffffff",
-              "color_sub_heading_mb": "#ffffff",
-              "slide-des": "We are manufacturers of standard and personalized door signs, no soliciting signs, restroom signs, rubber stamps, and engravable gifts.",
-              "font_size_des": "16px",
-              "color_des": "#232323",
-              "color_des_mb": "#00c3cc",
-              "button_slide": "Shop Our Collection",
-              "link": "shopify://collections/all",
-              "bg_button": "#c9932e",
-              "border_button": "#c9932e",
-              "color_button": "#ffffff",
-              "bg_button_mb": "#232323",
-              "border_button_mb": "#232323",
-              "color_button_mb": "#ffffff",
-              "lb_product_1": "",
-              "top_position_1": "10",
-              "left_position_1": "10",
-              "dots_color_1": "#ffffff",
-              "dots_bg_color_1": "#323232",
-              "dots_shadow_color_1": "#ffffff",
-              "lb_product_2": "",
-              "top_position_2": "10",
-              "left_position_2": "10",
-              "dots_color_2": "#ffffff",
-              "dots_bg_color_2": "#323232",
-              "dots_shadow_color_2": "#ffffff",
-              "lb_product_3": "",
-              "top_position_3": "10",
-              "left_position_3": "10",
-              "dots_color_3": "#ffffff",
-              "dots_bg_color_3": "#323232",
-              "dots_shadow_color_3": "#ffffff"
-            }
-          }
-        },
-        "block_order": [
-          "1585291266077-0"
-        ],
-        "settings": {
-          "layout": "full",
-          "margin_bottom_mb": 20,
-          "margin_bottom_tab": 20,
-          "margin_bottom": 30,
-          "style_slideshow": "style_1",
-          "autoplay": false,
-          "slideshow_speed": "5000",
-          "slideshow_transition": "true",
-          "dots": "true",
-          "dots_color": "#707979",
-          "dots_active_color": "#505656",
-          "dots_opacity": false,
-          "bg_dots_color": "#bababa",
-          "arrow_active": true,
-          "arrow_color": "#666d6d",
-          "arrow_border_color": "#666d6d",
-          "arrow_bg_color": "#ffffff",
-          "position_slick_arrow": "10%",
-          "min_width_banner_button": "",
-          "bg_video": "#866965",
-          "bg_overlay_opacity": 40,
-          "video_height": "100%",
-          "auto_playvideo": false
-        }
-      },
       "product-recommendations": {
         "type": "product-recommendations",
         "settings": {
           "display_related_products": true,
           "related_products_title": "Related Products",
           "number_of_related_products": "8"
-        }
-      },
-      "1585645130394": {
-        "type": "supermarket-product-tabs",
-        "blocks": {
-          "1585645224207": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Medals",
-              "collection": "awards-medals"
-            }
-          },
-          "1585645245627": {
-            "type": "ProductTabs",
-            "settings": {
-              "title": "Resin",
-              "collection": "awards-resin"
-            }
-          }
-        },
-        "block_order": [
-          "1585645224207",
-          "1585645245627"
-        ],
-        "settings": {
-          "featured_products_title": "<span style=\"color:#c9932e;\">Awards</span>",
-          "display_banner": false,
-          "font_size_banner_heading": "30px",
-          "font_size_banner_des": "12px",
-          "bg_banner_button": "#ffffff",
-          "border_banner_button": "#ffffff",
-          "color_banner_button": "#232323",
-          "banner_heading_1": "Milancelos",
-          "banner_des_1": "Phasellus lorem pulvinar maecenas cosmopolis",
-          "banner_button_1": "Shop Now",
-          "link_1": "",
-          "color_banner_1": "#ffffff",
-          "banner_heading_2": "Milancelos",
-          "banner_des_2": "Phasellus lorem pulvinar maecenas cosmopolis",
-          "banner_button_2": "Shop Now",
-          "link_2": "",
-          "color_banner_2": "#ffffff",
-          "banner_heading_3": "Milancelos",
-          "banner_des_3": "Phasellus lorem pulvinar maecenas cosmopolis",
-          "banner_button_3": "Shop Now",
-          "link_3": "",
-          "color_banner_3": "#ffffff",
-          "collection_results_per_row": "5",
-          "margin_bottom_mb": 20,
-          "margin_bottom_tab": 40,
-          "margin_bottom": 33
-        }
-      },
-      "1585653611799": {
-        "type": "home-custom-sub-banner-3",
-        "blocks": {
-          "1585653611799-0": {
-            "type": "image",
-            "settings": {
-              "image": "shopify://shop_images/Security_Signs_5590d975-da7d-4c4a-89ac-01ab730178b7.png",
-              "color": "#ffffff",
-              "title": "",
-              "des": "",
-              "link_text": "",
-              "link": "shopify://collections/security-surveillance-signs"
-            }
-          },
-          "1585653611799-2": {
-            "type": "image",
-            "settings": {
-              "image": "shopify://shop_images/picturemessage_kda0felq.lur.png",
-              "color": "#ffffff",
-              "title": "",
-              "des": "",
-              "link_text": "",
-              "link": "shopify://collections/gift-items-novelty-desk-signs"
-            }
-          },
-          "1585653611799-1": {
-            "type": "image",
-            "settings": {
-              "image": "shopify://shop_images/picturemessage_hhzkaklh.jce.png",
-              "color": "#ffffff",
-              "title": "",
-              "des": "",
-              "link_text": "",
-              "link": "shopify://collections/general-business-signs"
-            }
-          }
-        },
-        "block_order": [
-          "1585653611799-0",
-          "1585653611799-2",
-          "1585653611799-1"
-        ],
-        "settings": {
-          "layout": "default",
-          "img_results_per_row": "3",
-          "widget_title": "Check this out!",
-          "widget_des": "Check out some of security and business signs as well as our cool name plates.",
-          "title_style": "style_1",
-          "margin_bottom_mb": 0,
-          "margin_bottom_tab": 0,
-          "margin_bottom": 0,
-          "font_size_title": "30px"
         }
       },
       "page-header": {
@@ -3265,89 +2626,80 @@
             "type": "category",
             "settings": {
               "collection": "custom-engraved-desk-nameplates",
+              "product": "black-piano-finish-desk-name-plate",
               "title": "Desk nameplates",
               "subtitle": "Professional names and titles for every desk",
-              "link_label": "Shop nameplates",
-              "product": "black-piano-finish-desk-name-plate"
-            }
-          },
-          "sbl-cat-property": {
-            "type": "category",
-            "settings": {
-              "collection": "no-soliciting-signs",
-              "title": "Property notices",
-              "subtitle": "No soliciting, private property and entry notices",
-              "link_label": "Shop property signs"
+              "link_label": "Shop nameplates"
             }
           },
           "sbl-ind-business": {
             "type": "industry",
             "settings": {
               "collection": "general-business-signs",
+              "anchor": "offices",
               "title": "Business & offices",
               "subtitle": "Offices, suites, shops and warehouses",
-              "link_label": "Shop business signs",
-              "anchor": "offices"
+              "link_label": "Shop business signs"
             }
           },
           "sbl-ind-health": {
             "type": "industry",
             "settings": {
               "collection": "exam-room",
+              "anchor": "clinics",
               "title": "Healthcare",
               "subtitle": "Hospitals, clinics and treatment rooms",
-              "link_label": "Shop healthcare signs",
-              "anchor": "clinics"
+              "link_label": "Shop healthcare signs"
             }
           },
           "sbl-ind-education": {
             "type": "industry",
             "settings": {
               "collection": "designer-school-student-desk-signs",
+              "anchor": "schools",
               "title": "Education",
               "subtitle": "Schools, classrooms and university offices",
-              "link_label": "Shop education signs",
-              "anchor": "schools"
+              "link_label": "Shop education signs"
             }
           },
           "sbl-ind-food": {
             "type": "industry",
             "settings": {
               "collection": "signage-signs-for-business-food-signs",
+              "anchor": "restaurants",
               "title": "Food & hospitality",
               "subtitle": "Restaurants, cafés and commercial kitchens",
-              "link_label": "Shop restaurant signs",
-              "anchor": "restaurants"
+              "link_label": "Shop restaurant signs"
             }
           },
           "sbl-ind-public": {
             "type": "industry",
             "settings": {
               "collection": "property-signs",
+              "anchor": "government",
               "title": "Public safety & government",
               "subtitle": "Departments, facilities and public spaces",
-              "link_label": "Shop facility signs",
-              "anchor": "government"
+              "link_label": "Shop facility signs"
             }
           },
           "sbl-ind-faith": {
             "type": "industry",
             "settings": {
               "collection": "church-office-signs",
+              "anchor": "churches",
               "title": "Churches & ministries",
               "subtitle": "Church offices, prayer rooms and ministries",
-              "link_label": "Shop church signs",
-              "anchor": "churches"
+              "link_label": "Shop church signs"
             }
           },
           "sbl-ind-home": {
             "type": "industry",
             "settings": {
               "collection": "signage-signs-for-home",
+              "anchor": "homes",
               "title": "Home & rentals",
               "subtitle": "Welcome signs, house rules and guest information",
-              "link_label": "Shop home signs",
-              "anchor": "homes"
+              "link_label": "Shop home signs"
             }
           },
           "sbl-hero-business": {
@@ -3423,7 +2775,6 @@
           "sbl-cat-staff",
           "sbl-cat-food",
           "sbl-cat-desk",
-          "sbl-cat-property",
           "sbl-ind-business",
           "sbl-ind-health",
           "sbl-ind-education",
@@ -3435,7 +2786,7 @@
         "settings": {
           "designer_url": "/products/custom-sign",
           "featured_collection": "featured-signage",
-          "bulk_url": "/products/custom-desk-sign",
+          "bulk_url": "/pages/bulk-orders",
           "plaque_url": "/products/custom-plaque",
           "trophy_url": "/products/custom-trophy"
         }

@@ -36,6 +36,12 @@
   <div class="product-collection {{ rows }} row">
     {% if collection.products_count > 0 %}  
     {% for product in collection.products %}
+    {% assign sbl_professional_collections = '|restroom-signs|employee-only-signs|safety-signs|office-signs|general-business-signs|exam-room|church-office-signs|custom-church-products|security-surveillance-signs|property-signs|no-soliciting-signs|signage-signs-for-home|signage-signs-for-business-food-signs|designer-school-student-desk-signs|custom-engraved-desk-nameplates|' %}
+    {% assign sbl_collection_token = '|' | append: collection.handle | append: '|' %}
+    {% if sbl_professional_collections contains sbl_collection_token %}
+      {% capture sbl_novelty_flag %}{% render 'sbl-novelty-flag', sbl_product: product %}{% endcapture %}
+      {% if sbl_novelty_flag contains 'yes' %}{% continue %}{% endif %}
+    {% endif %}
     <div class="grid-item {{ grid_item_width }} {% if settings.product_image_border%}grid-item-border {% endif %}">
       {% if settings.style_product_grid == 'style_product_grid_2' %}
         {% render 'product-grid-item-style-2' with product as product %}

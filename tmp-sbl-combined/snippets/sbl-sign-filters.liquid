@@ -1,0 +1,448 @@
+{% doc %}
+  Sign type and sign shape filters for collection and search sidebars.
+  Type is hanging, wall, or table top. Shape groups the catalog shape tags
+  (square, rectangle, circle, victorian, and the other shapes in the catalog).
+  Choices within a group match any selected option. A type and a shape together
+  both have to match.
+
+  @example
+  {% render 'sbl-sign-filters' %}
+{% enddoc %}
+
+{% stylesheet %}
+  .sbl-sign-filters { margin: 22px 0 8px; }
+  .sbl-sign-filters .widget-title { margin-top: 18px; }
+  .sbl-sign-filters .widget-title:first-child { margin-top: 0; }
+  .sbl-sign-filters .sidebar-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .sbl-sign-filters__clear {
+    border: 0;
+    padding: 0;
+    background: none;
+    color: #8a6a2f;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .sbl-sign-filters__group { display: flex; flex-direction: column; }
+  .sbl-sign-filters__choice-hidden { display: none !important; }
+  .sbl-sign-filters__status {
+    margin: 8px 0 0;
+    color: #667085;
+    font-size: 13px;
+  }
+  .sbl-sign-filters__empty {
+    padding: 28px 8px;
+    color: #667085;
+    text-align: center;
+  }
+{% endstylesheet %}
+
+{%- if collection.handle != blank or search.performed -%}
+  {%- assign sbl_professional = '|restroom-signs|employee-only-signs|safety-signs|office-signs|general-business-signs|exam-room|church-office-signs|custom-church-products|security-surveillance-signs|property-signs|no-soliciting-signs|signage-signs-for-home|signage-signs-for-business-food-signs|designer-school-student-desk-signs|custom-engraved-desk-nameplates|' -%}
+  {%- assign sbl_professional_token = '|' | append: collection.handle | append: '|' -%}
+  <span data-sbl-filters-slot hidden></span>
+  <div
+    class="widget sbl-sign-filters"
+    data-sbl-filters
+    {% if search.performed %}data-sbl-context="search"{% else %}data-sbl-context="collection"{% endif %}
+    {% if sbl_professional contains sbl_professional_token %}data-sbl-skip-novelty="true"{% endif %}
+  >
+    <div class="widget-title">
+      <h3 class="sidebar-title"><span>Sign type</span></h3>
+    </div>
+    <div class="sbl-sign-filters__group" data-sbl-filter-group="type">
+      <input id="sbl-type-hanging" type="checkbox" value="hanging">
+      <label for="sbl-type-hanging">Hanging</label>
+      <input id="sbl-type-wall" type="checkbox" value="wall">
+      <label for="sbl-type-wall">Wall</label>
+      <input id="sbl-type-table" type="checkbox" value="table">
+      <label for="sbl-type-table">Table top</label>
+    </div>
+
+    <div class="widget-title">
+      <h3 class="sidebar-title">
+        <span>Sign shape</span>
+        <button type="button" class="sbl-sign-filters__clear" data-sbl-filter-clear hidden>Clear</button>
+      </h3>
+    </div>
+    <div class="sbl-sign-filters__group" data-sbl-filter-group="shape">
+      <input id="sbl-shape-square" type="checkbox" value="square">
+      <label for="sbl-shape-square">Square</label>
+      <input id="sbl-shape-rectangle" type="checkbox" value="rectangle">
+      <label for="sbl-shape-rectangle">Rectangle</label>
+      <input id="sbl-shape-circle" type="checkbox" value="circle">
+      <label for="sbl-shape-circle">Circle</label>
+      <input id="sbl-shape-oval" type="checkbox" value="oval">
+      <label for="sbl-shape-oval">Oval</label>
+      <input id="sbl-shape-victorian" type="checkbox" value="victorian">
+      <label for="sbl-shape-victorian">Victorian</label>
+      <input id="sbl-shape-fancy" type="checkbox" value="fancy">
+      <label for="sbl-shape-fancy">Fancy</label>
+      <input id="sbl-shape-designer" type="checkbox" value="designer">
+      <label for="sbl-shape-designer">Designer</label>
+      <input id="sbl-shape-portrait" type="checkbox" value="portrait">
+      <label for="sbl-shape-portrait">Portrait round</label>
+      <input id="sbl-shape-arrow" type="checkbox" value="arrow">
+      <label for="sbl-shape-arrow">Arrow</label>
+      <input id="sbl-shape-heart" type="checkbox" value="heart">
+      <label for="sbl-shape-heart">Heart</label>
+      <input id="sbl-shape-triangle" type="checkbox" value="triangle">
+      <label for="sbl-shape-triangle">Triangle</label>
+      <input id="sbl-shape-arch" type="checkbox" value="arch">
+      <label for="sbl-shape-arch">Arch</label>
+    </div>
+    <p class="sbl-sign-filters__status" data-sbl-filter-status>Loading filters…</p>
+  </div>
+{%- endif -%}
+
+{% javascript %}
+    (function () {
+      var root = document.querySelector('[data-sbl-filters]');
+      if (!root || root.dataset.sblReady === 'true') return;
+      root.dataset.sblReady = 'true';
+
+      var SHAPES = {
+        square: ['sbl:shape:square', 'sbl:shape:table-square-5x5'],
+        rectangle: ['sbl:shape:standard', 'sbl:shape:basic', 'sbl:shape:classic', 'sbl:shape:classic-framed', 'sbl:shape:heritage', 'sbl:shape:notched-standard', 'sbl:shape:table-6x8'],
+        circle: ['sbl:shape:circle', 'sbl:shape:table-circle'],
+        oval: ['sbl:shape:oval'],
+        victorian: ['sbl:shape:victorian'],
+        fancy: ['sbl:shape:fancy'],
+        designer: ['sbl:shape:designer'],
+        portrait: ['sbl:shape:portrait-round'],
+        arrow: ['sbl:shape:arrow'],
+        heart: ['sbl:shape:table-heart'],
+        triangle: ['sbl:shape:triangle'],
+        arch: ['sbl:shape:headstone']
+      };
+      var NOVELTY = ['novelty', 'gag gift', 'poo room', 'poop room', 'shit just got real', 'wash your balls', 'wash your paws', 'be gross', 'stop stealing our toilet', 'do not steal the toilet', 'steal the toilet paper', 'shit show'];
+
+      var statusEl = root.querySelector('[data-sbl-filter-status]');
+      var clearBtn = root.querySelector('[data-sbl-filter-clear]');
+      var catalog = null;
+      var loading = null;
+      var originalGrid = null;
+      var gridWasReplaced = false;
+
+      function selected(group) {
+        return Array.prototype.map.call(
+          root.querySelectorAll('[data-sbl-filter-group="' + group + '"] input:checked'),
+          function (input) { return input.value; }
+        );
+      }
+
+      function tagsOf(product) {
+        return product.tags || [];
+      }
+
+      function isNovelty(product) {
+        if (root.dataset.sblSkipNovelty !== 'true') return false;
+        var tags = tagsOf(product).join('|').toLowerCase();
+        var title = (product.title || '').toLowerCase();
+        if (tags.indexOf('novelty') !== -1) return true;
+        return NOVELTY.some(function (phrase) { return title.indexOf(phrase) !== -1; });
+      }
+
+      function matchesType(product, types) {
+        if (!types.length) return true;
+        var tags = tagsOf(product);
+        return types.some(function (type) {
+          if (type === 'hanging') return tags.indexOf('sbl:shape:5x10-hanging') !== -1;
+          if (type === 'table') return tags.indexOf('sbl:class:table-sign') !== -1;
+          if (type === 'wall') {
+            return tags.indexOf('sbl:class:sign') !== -1 && tags.indexOf('sbl:shape:5x10-hanging') === -1;
+          }
+          return false;
+        });
+      }
+
+      function matchesShape(product, shapes) {
+        if (!shapes.length) return true;
+        var tags = tagsOf(product);
+        return shapes.some(function (shape) {
+          var wanted = SHAPES[shape] || [];
+          return wanted.some(function (tag) { return tags.indexOf(tag) !== -1; });
+        });
+      }
+
+      function visibleCatalog() {
+        return (catalog || []).filter(function (product) { return !isNovelty(product); });
+      }
+
+      function matching() {
+        var types = selected('type');
+        var shapes = selected('shape');
+        return visibleCatalog().filter(function (product) {
+          return matchesType(product, types) && matchesShape(product, shapes);
+        });
+      }
+
+      function hideEmptyChoices() {
+        var products = visibleCatalog();
+        root.querySelectorAll('[data-sbl-filter-group] input').forEach(function (input) {
+          var group = input.closest('[data-sbl-filter-group]').getAttribute('data-sbl-filter-group');
+          var count = products.filter(function (product) {
+            return group === 'type' ? matchesType(product, [input.value]) : matchesShape(product, [input.value]);
+          }).length;
+          var hide = count === 0 && !input.checked;
+          input.classList.toggle('sbl-sign-filters__choice-hidden', hide);
+          var label = root.querySelector('label[for="' + input.id + '"]');
+          if (label) label.classList.toggle('sbl-sign-filters__choice-hidden', hide);
+        });
+      }
+
+      function grid() {
+        return document.querySelector('.halo-collection-content .product-collection');
+      }
+
+      function pagination() {
+        var main = document.querySelector('.halo-collection-content .col-main');
+        return main ? main.querySelector('.padding') : null;
+      }
+
+      function money(amount) {
+        var number = Number(amount);
+        if (!isFinite(number)) return '';
+        return '$' + number.toFixed(2);
+      }
+
+      function cardFromCollection(product) {
+        var prices = (product.variants || []).map(function (variant) { return Number(variant.price); }).filter(function (price) { return price > 0; });
+        var min = prices.length ? Math.min.apply(null, prices) : 0;
+        var max = prices.length ? Math.max.apply(null, prices) : 0;
+        var image = product.images && product.images[0] && product.images[0].src;
+        if (image && image.indexOf('width=') === -1) image += (image.indexOf('?') === -1 ? '?' : '&') + 'width=600';
+        return {
+          title: product.title,
+          url: '/products/' + product.handle,
+          image: image || '',
+          price: (min && min !== max ? 'from ' : '') + money(min),
+          tags: product.tags || []
+        };
+      }
+
+      function render(products) {
+        var host = grid();
+        if (!host) return;
+        if (originalGrid === null) originalGrid = host.innerHTML;
+        host.textContent = '';
+        if (!products.length) {
+          var empty = document.createElement('p');
+          empty.className = 'col-12 sbl-sign-filters__empty';
+          empty.textContent = 'No signs match these filters.';
+          host.appendChild(empty);
+          return;
+        }
+        var sample = document.createElement('div');
+        sample.innerHTML = originalGrid;
+        var sampleItem = sample.querySelector('.grid-item');
+        var itemClass = sampleItem ? sampleItem.className : 'grid-item col-6 col-md-4 col-lg-3';
+        products.forEach(function (product) {
+          var item = document.createElement('div');
+          item.className = itemClass;
+          var inner = document.createElement('div');
+          inner.className = 'inner product-item';
+          var top = document.createElement('div');
+          top.className = 'inner-top';
+          var imageWrap = document.createElement('div');
+          imageWrap.className = 'product-top';
+          var imageBox = document.createElement('div');
+          imageBox.className = 'product-image';
+          var link = document.createElement('a');
+          link.className = 'product-grid-image';
+          link.href = product.url;
+          link.style.paddingTop = '100%';
+          if (product.image) {
+            var img = document.createElement('img');
+            img.src = product.image;
+            img.alt = product.title;
+            img.width = 600;
+            img.height = 600;
+            img.loading = 'lazy';
+            img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;';
+            link.appendChild(img);
+          }
+          imageBox.appendChild(link);
+          imageWrap.appendChild(imageBox);
+          var bottom = document.createElement('div');
+          bottom.className = 'product-bottom';
+          var title = document.createElement('a');
+          title.className = 'product-title';
+          title.href = product.url;
+          title.textContent = product.title;
+          var priceBox = document.createElement('div');
+          priceBox.className = 'price-box';
+          var price = document.createElement('div');
+          price.className = 'price-regular';
+          var priceText = document.createElement('span');
+          priceText.textContent = product.price || '';
+          price.appendChild(priceText);
+          priceBox.appendChild(price);
+          bottom.appendChild(title);
+          bottom.appendChild(priceBox);
+          top.appendChild(imageWrap);
+          top.appendChild(bottom);
+          inner.appendChild(top);
+          item.appendChild(inner);
+          host.appendChild(item);
+        });
+      }
+
+      function restore() {
+        var host = grid();
+        if (host && originalGrid !== null && gridWasReplaced) host.innerHTML = originalGrid;
+        gridWasReplaced = false;
+        var pages = pagination();
+        if (pages) pages.hidden = false;
+      }
+
+      function writeUrl() {
+        var params = new URLSearchParams(window.location.search);
+        var types = selected('type');
+        var shapes = selected('shape');
+        if (types.length) params.set('sign_type', types.join(','));
+        else params.delete('sign_type');
+        if (shapes.length) params.set('sign_shape', shapes.join(','));
+        else params.delete('sign_shape');
+        var next = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.history.replaceState({}, '', next);
+      }
+
+      function apply() {
+        var types = selected('type');
+        var shapes = selected('shape');
+        var active = types.length || shapes.length;
+        clearBtn.hidden = !active;
+        if (!catalog) return;
+        hideEmptyChoices();
+        if (!active) {
+          restore();
+          statusEl.textContent = '';
+          return;
+        }
+        var products = matching();
+        render(products);
+        gridWasReplaced = true;
+        var pages = pagination();
+        if (pages) pages.hidden = true;
+        statusEl.textContent = products.length === 1 ? '1 sign' : products.length + ' signs';
+      }
+
+      function readUrl() {
+        var params = new URLSearchParams(window.location.search);
+        ['type', 'shape'].forEach(function (group) {
+          var raw = params.get(group === 'type' ? 'sign_type' : 'sign_shape') || '';
+          raw.split(',').forEach(function (value) {
+            var input = root.querySelector('[data-sbl-filter-group="' + group + '"] input[value="' + value + '"]');
+            if (input) input.checked = true;
+          });
+        });
+      }
+
+      function previewParams(params) {
+        if (window.Shopify && Shopify.theme && Shopify.theme.role && Shopify.theme.role !== 'main') {
+          params.set('preview_theme_id', String(Shopify.theme.id));
+        }
+        return params;
+      }
+
+      function loadCollection() {
+        var products = [];
+        var page = 1;
+        function next() {
+          var url = window.location.pathname.replace(/\/$/, '') + '/products.json?limit=250&page=' + page;
+          return fetch(url, { credentials: 'same-origin' })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+              var batch = data.products || [];
+              batch.forEach(function (product) { products.push(cardFromCollection(product)); });
+              if (batch.length === 250 && page < 12) {
+                page += 1;
+                return next();
+              }
+              return products;
+            });
+        }
+        return next();
+      }
+
+      function loadSearch() {
+        var params = previewParams(new URLSearchParams(window.location.search));
+        params.delete('sign_type');
+        params.delete('sign_shape');
+        params.delete('page');
+        params.set('view', 'sbl-filter-data');
+        if (!params.get('type')) params.set('type', 'product');
+        var products = [];
+        var page = 1;
+        var pages = 1;
+        function next() {
+          params.set('page', String(page));
+          return fetch('/search?' + params.toString(), { credentials: 'same-origin' })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+              (data.products || []).forEach(function (product) {
+                var price = String(product.price || '').replace(/<[^>]+>/g, '').trim();
+                if (product.priceVaries && price.indexOf('from ') !== 0) price = 'from ' + price;
+                product.price = price;
+                products.push(product);
+              });
+              pages = data.pages || 1;
+              if (page < pages && page < 30) {
+                page += 1;
+                return next();
+              }
+              return products;
+            });
+        }
+        return next();
+      }
+
+      function load() {
+        if (loading) return loading;
+        statusEl.textContent = 'Loading filters…';
+        loading = (root.dataset.sblContext === 'search' ? loadSearch() : loadCollection())
+          .then(function (products) {
+            catalog = products;
+            apply();
+            if (!selected('type').length && !selected('shape').length) statusEl.textContent = '';
+          })
+          .catch(function () {
+            statusEl.textContent = 'Filters could not be loaded.';
+          });
+        return loading;
+      }
+
+      root.addEventListener('change', function (event) {
+        if (!event.target.matches('input[type="checkbox"]')) return;
+        writeUrl();
+        if (!catalog) load();
+        else apply();
+      });
+      clearBtn.addEventListener('click', function () {
+        root.querySelectorAll('input[type="checkbox"]').forEach(function (input) { input.checked = false; });
+        writeUrl();
+        apply();
+      });
+
+      function place() {
+        var slot = document.querySelector('[data-sbl-filters-slot]');
+        var main = document.querySelector('.halo-collection-content .col-main');
+        if (!slot || !main) return;
+        if (window.innerWidth < 1200) {
+          if (root.parentElement !== main) main.insertBefore(root, main.firstChild);
+        } else if (root.previousElementSibling !== slot) {
+          slot.insertAdjacentElement('afterend', root);
+        }
+      }
+      place();
+      window.addEventListener('resize', place);
+      readUrl();
+      load();
+    })();
+{% endjavascript %}

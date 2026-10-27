@@ -13,6 +13,7 @@ export const DESIGNER_IDS = [
   "gavel",
   "pen",
   "trophy",
+  "medal",
 ] as const;
 export type DesignerId = (typeof DESIGNER_IDS)[number];
 
@@ -23,7 +24,8 @@ export type LineIdColumn =
   | "desk_sign_id"
   | "gavel_id"
   | "pen_id"
-  | "trophy_id";
+  | "trophy_id"
+  | "medal_id";
 
 /** Supabase design-library tables (milestones + autosave). */
 export type DesignLibraryTable =
@@ -33,7 +35,8 @@ export type DesignLibraryTable =
   | "desk_sign_designs"
   | "gavel_designs"
   | "pen_designs"
-  | "trophy_designs";
+  | "trophy_designs"
+  | "medal_designs";
 
 /** Sign and plaque share extended order-item rows and library shape. */
 export type SignLikeDesignsTable =
@@ -42,7 +45,8 @@ export type SignLikeDesignsTable =
   | "desk_sign_designs"
   | "gavel_designs"
   | "pen_designs"
-  | "trophy_designs";
+  | "trophy_designs"
+  | "medal_designs";
 
 export interface DesignerGadgetGraphQL {
   /** Env var for API base URL */
@@ -325,6 +329,32 @@ export const DESIGNERS: Record<DesignerId, DesignerDefinition> = {
     orderSlipPdfRelativePath: (designId) =>
       `${designId}/trophy-design.pdf`,
   },
+  medal: {
+    id: "medal",
+    label: "Medal",
+    orderItemsTable: "medal_order_items",
+    imageBucket: "medal-images",
+    pdfBucket: "medal-pdfs",
+    lineIdPrefix: "medal",
+    lineIdColumn: "medal_id",
+    upsertOnConflict: "design_id,medal_id",
+    cartIndexPropertyPrimary: "_Medal Index",
+    cartIndexPropertyFallbacks: ["_Badge Index"],
+    gadget: {
+      apiUrlEnv: "GADGET_MEDAL_API_URL",
+      apiKeyEnv: "GADGET_MEDAL_API_KEY",
+      defaultApiUrl: BADGE_DEFAULT_URL,
+      createField: "createMedalDesign",
+      inputVariable: "medalDesign",
+      inputType: "CreateMedalDesignInput",
+      resultSelection: "medalDesign",
+    },
+    linkOrderSecretEnv: "LINK_ORDER_SECRET_MEDAL",
+    pdfProofRelativePath: (designId) =>
+      `${designId}/medal-design_proof.pdf`,
+    orderSlipPdfRelativePath: (designId) =>
+      `${designId}/medal-design.pdf`,
+  },
 };
 
 export function isDesignerId(value: string): value is DesignerId {
@@ -348,6 +378,7 @@ export function getDesignLibraryTable(
   if (id === "gavel") return "gavel_designs";
   if (id === "pen") return "pen_designs";
   if (id === "trophy") return "trophy_designs";
+  if (id === "medal") return "medal_designs";
   return null;
 }
 
@@ -360,6 +391,7 @@ export function getSignLikeLibraryTable(
   if (id === "gavel") return "gavel_designs";
   if (id === "pen") return "pen_designs";
   if (id === "trophy") return "trophy_designs";
+  if (id === "medal") return "medal_designs";
   return null;
 }
 
@@ -447,6 +479,17 @@ export function getDesignerLibraryApiPaths(id: DesignerId): {
       savedDesigns: "/api/saved-trophy-designs",
       savedDesignDetail: "/api/saved-trophy-design-detail",
       deleteMilestone: "/api/delete-trophy-design-milestone",
+      uploadLogo: "",
+    };
+  }
+  if (id === "medal") {
+    return {
+      saveDesign: "/api/save-medal-design",
+      autosaveDesign: "/api/autosave-medal-design",
+      savedDesign: "/api/saved-medal-design",
+      savedDesigns: "/api/saved-medal-designs",
+      savedDesignDetail: "/api/saved-medal-design-detail",
+      deleteMilestone: "/api/delete-medal-design-milestone",
       uploadLogo: "",
     };
   }

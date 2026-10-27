@@ -181,6 +181,9 @@ export interface Badge {
   trophyProductLabel?: string;
   trophyPlateId?: string;
   trophyPlateLabel?: string;
+  /** Medal designer: personalized medal catalog listing. */
+  medalProductId?: string;
+  medalProductLabel?: string;
 }
 
 export interface BadgeEditorPanelProps {

@@ -20,7 +20,7 @@ export type VerifiedAdminSession = {
 };
 
 /**
- * Client IDs and shops are known from the three production-card app configs.
+ * Client IDs and shops are known from the production-card app configs.
  * Only the Client secret belongs in env — that is the value Shopify uses to
  * HMAC-sign Admin extension ID tokens.
  */
@@ -29,6 +29,11 @@ const KNOWN_APPS: {
   clientId: string;
   secretEnv: string;
 }[] = [
+  {
+    shop: "pacificsignandstamp.myshopify.com",
+    clientId: "ed924687984a6d63916a097fca959d62",
+    secretEnv: "SHOPIFY_ADMIN_PSS_CLIENT_SECRET",
+  },
   {
     shop: "gavelsfast.myshopify.com",
     clientId: "6490c879339bec4fcf421185e16f92a3",

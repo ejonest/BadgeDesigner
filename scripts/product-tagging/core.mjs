@@ -205,6 +205,13 @@ export function classifyProduct(product, taxonomy) {
   }
 
   matchedRules.sort((left, right) => right.score - left.score || left.id.localeCompare(right.id));
+  const noveltyMatch = matchedRules.find((rule) => rule.kind === "category" && rule.id === "novelty");
+  if (noveltyMatch) {
+    const noveltyOnly = matchedRules.filter(
+      (rule) => rule.kind === "family" || (rule.kind === "category" && rule.id === "novelty"),
+    );
+    matchedRules.splice(0, matchedRules.length, ...noveltyOnly);
+  }
   const maxScore = matchedRules[0]?.score ?? 0;
   const matchedKeys = new Set(matchedRules.map((rule) => `${rule.kind}:${rule.id}`));
   const conflicts = uniqueTags(

@@ -1,6 +1,6 @@
 /**
  * Native Shopify `orders/paid` webhook for the All Quality Badges store.
- * Handles badge, desk-sign, and pen cart lines on the same order.
+ * Handles badge, desk-sign, pen, and medal cart lines on the same order.
  *
  * Register in Shopify admin → Settings → Notifications → Webhooks:
  *   Event:  Order payment
@@ -12,10 +12,10 @@
  *
  * Lines with no `_Designer` property are treated as badges (legacy carts).
  */
-import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
+import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { handleNativeShopifyOrderPaid } from "~/lib/shopify/nativeOrderWebhook";
 
-export async function loader(_args: LoaderFunctionArgs) {
+export async function loader() {
   return json(
     { error: "Method not allowed", message: "Shopify posts orders/paid here" },
     { status: 405 },
@@ -27,7 +27,7 @@ export async function action({ request }: ActionFunctionArgs) {
     request,
     logPrefix: "[aqb-webhook]",
     hmacEnvNames: ["SHOPIFY_WEBHOOK_SECRET_AQB"],
-    allowed: ["badge", "desk-sign", "pen"],
+    allowed: ["badge", "desk-sign", "pen", "medal"],
     defaultKind: "badge",
   });
 }
