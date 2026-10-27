@@ -48,6 +48,22 @@ test("classifies a restroom sign with searchable aliases", () => {
   assert(result.managedTags.includes("sbl:search:bathroom"));
 });
 
+test("keeps gag signs out of professional categories", () => {
+  const result = classifyProduct(
+    {
+      title: "Signs ByLITA Classic Framed Don't Wash Your Balls in this Sink Wall or Door Sign",
+      descriptionHtml: "<p>Funny restroom sign.</p>",
+      productType: "Signs",
+      tags: ["sbl:category:restroom-hygiene"],
+    },
+    taxonomy,
+  );
+  assert(result.matchedRules.includes("category:novelty"));
+  assert.equal(result.matchedRules.includes("category:restroom-hygiene"), false);
+  assert.equal(result.matchedRules.some((rule) => rule.startsWith("industry:")), false);
+  assert(result.managedTags.includes("sbl:category:novelty"));
+});
+
 test("supports multiple valid classifications", () => {
   const result = classifyProduct(
     {
@@ -88,7 +104,8 @@ test("honors exclusion rules", () => {
     taxonomy,
   );
   assert(!result.matchedRules.includes("category:names-titles"));
-  assert(result.matchedRules.includes("category:desk-nameplates"));
+  assert(result.matchedRules.includes("category:novelty"));
+  assert.equal(result.matchedRules.includes("category:desk-nameplates"), false);
 });
 
 test("leaves ambiguous products unclassified", () => {

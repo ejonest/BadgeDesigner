@@ -16,6 +16,18 @@
     {%- endif -%}
     {%- if pass == 1 and is_placeholder -%}{%- continue -%}{%- endif -%}
     {%- if pass == 2 and is_placeholder == false -%}{%- continue -%}{%- endif -%}
+    {%- if include_novelty != true -%}
+      {%- capture skip_novelty -%}
+        {%- assign novelty_title = card_product.title | downcase -%}
+        {%- assign novelty_tags = card_product.tags | join: '|' | downcase -%}
+        {%- if novelty_tags contains 'novelty' -%}yes{%- endif -%}
+        {%- assign novelty_phrases = 'wash your balls|wash your paws|poo room|poop room|be gross|shit just got real|steal the toilet|shit show|gag gift' | split: '|' -%}
+        {%- for novelty_phrase in novelty_phrases -%}
+          {%- if novelty_title contains novelty_phrase -%}yes{%- endif -%}
+        {%- endfor -%}
+      {%- endcapture -%}
+      {%- if skip_novelty contains 'yes' -%}{%- continue -%}{%- endif -%}
+    {%- endif -%}
     {%- assign shown = shown | plus: 1 -%}
     <a class="sbl-ind__card" href="{{ card_product.url }}">
       <span class="sbl-ind__card-image">

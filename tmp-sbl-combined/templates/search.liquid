@@ -1,7 +1,22 @@
 {% assign grid_results = true %}
 
-<div class="search-page collection-template" data-search-page>
+<style>
+  @media (min-width: 1200px) {
+    .search-page .halo-collection-content > .row > .col-main {
+      -webkit-box-flex: 0;
+      -ms-flex: 0 0 calc(100% - 240px) !important;
+      flex: 0 0 calc(100% - 240px) !important;
+      max-width: calc(100% - 240px) !important;
+    }
+  }
+</style>
+
+<div class="search-page collection-template collection-template-default" data-search-page>
   <div class="container">
+    <div class="halo-collection-content">
+      <div class="row">
+        {% section 'sidebar-filter' %}
+        <div class="col-12 col-xl-9 col-main">
     {% if search.performed %}
 
     {% comment %}
@@ -39,7 +54,7 @@
     Each result template, based on the grid_layout variable above
     {% endcomment %}
 
-    <div class="block-row col-main">
+    <div class="block-row">
       {% if grid_results == false %}
       <div class="product-collection products-list product-search row">
         {% for product in search.results %}
@@ -84,7 +99,7 @@
     <header class="page-header">
       <h2 style="text-align:center" {% if settings.enable_multilang %}data-translate="general.search.title"{%endif%}>{{ 'general.search.title' | t }}</h2>
       <div class="header-search__form">
-          <form action="/search" method="get" class="search-bar" role="search">
+          <form action="{{ routes.search_url }}" method="get" class="search-bar" role="search">
               <input type="hidden" name="type" value="product">
 
               <input type="search" name="q"
@@ -99,5 +114,8 @@
       </div>
     </header>
     {% endif %}
+        </div>
+      </div>
+    </div>
   </div>
 </div>

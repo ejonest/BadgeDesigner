@@ -7,12 +7,19 @@ import {
   TROPHY_PRODUCTS,
   getTrophyPrice,
   getTrophyProduct,
+  trophyIdForShopifyDesign,
+  trophyShopifyDesign,
   type TrophyPlateOption,
   type TrophyProduct,
   type TrophyTextArea,
 } from "~/constants/trophyOptions";
 import type { Badge, BadgeLine } from "~/types/badge";
 import { createApi } from "~/utils/api";
+import {
+  findShopifyVariantByLabel,
+  isShopifyProductJsPayload,
+  type ShopifyProductJs,
+} from "~/utils/signShopifyCatalog";
 import {
   buildDesignerCartLineProperties,
   buildProductionLineProperties,
@@ -430,6 +437,7 @@ export default function TrophyDesigner() {
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [proofOpen, setProofOpen] = useState(false);
   const pendingOrderRef = useRef<PendingTrophyOrder | null>(null);
+  const catalogRef = useRef<ShopifyProductJs | null>(null);
   const designIdRef = useRef(newDesignId());
   const apiRef = useRef(createApi(undefined, undefined, { designerId: "trophy" }));
   const [previewMode, setPreviewMode] = useState<PreviewMode>("plate");
@@ -522,7 +530,13 @@ export default function TrophyDesigner() {
 
   useEffect(() => {
     try {
+      const styleId = trophyIdForShopifyDesign(readQueryParam("style"));
       const raw = localStorage.getItem(CACHE_KEY);
+      if (styleId) {
+        const styled = getTrophyProduct(styleId);
+        setProductId(styleId);
+        setPlateId(styled.options[0].id);
+      }
       if (raw) {
         const draft = JSON.parse(raw) as TrophyDraft;
         // v1 drafts stored only the trophy body, whose ids match the four
@@ -530,7 +544,7 @@ export default function TrophyDesigner() {
         const restoredProduct = TROPHY_PRODUCTS.find(
           (item) => item.id === (draft.productId ?? draft.trophyType),
         );
-        if (restoredProduct) {
+        if (restoredProduct && !styleId) {
           setProductId(restoredProduct.id);
           setPlateId(
             restoredProduct.options.some((item) => item.id === draft.plateId)
@@ -641,6 +655,33 @@ export default function TrophyDesigner() {
     } finally {
       setRestored(true);
     }
+  }, []);
+
+  useEffect(() => {
+    const shop = readQueryParam("storeUrl") || readQueryParam("shop");
+    const handle = readQueryParam("productHandle");
+    let cancelled = false;
+    function accept(payload: unknown) {
+      if (!cancelled && isShopifyProductJsPayload(payload)) {
+        catalogRef.current = payload;
+      }
+    }
+    function onMessage(event: MessageEvent) {
+      const data = event.data as { type?: string; payload?: unknown } | null;
+      if (data?.type === "TROPHY_DESIGNER_SHOPIFY_PRODUCT") accept(data.payload);
+    }
+    window.addEventListener("message", onMessage);
+    if (shop && handle) {
+      const params = new URLSearchParams({ shop, handle });
+      fetch(`/api/shopify-product?${params}`)
+        .then((response) => response.json())
+        .then(accept)
+        .catch(() => undefined);
+    }
+    return () => {
+      cancelled = true;
+      window.removeEventListener("message", onMessage);
+    };
   }, []);
 
   useEffect(() => {
@@ -1021,7 +1062,13 @@ export default function TrophyDesigner() {
   async function confirmAddToCart() {
     const pending = pendingOrderRef.current;
     if (!pending) return;
-    const variantId = readQueryParam("variantId");
+    const matchedVariant = findShopifyVariantByLabel(
+      catalogRef.current,
+      trophyShopifyDesign(product.id),
+    );
+    const variantId = matchedVariant
+      ? String(matchedVariant.id)
+      : readQueryParam("variantId");
     if (!variantId) {
       setCartError(
         "Open this designer from the custom trophy product page so it can add to cart.",

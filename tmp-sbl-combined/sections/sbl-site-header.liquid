@@ -9,9 +9,46 @@
     assign pen_url = '/products/custom-daxmoor-pen'
   endif
   assign industry_page = routes.all_products_collection_url | append: '?view=sbl-industries'
+  assign catalog_url = routes.all_products_collection_url
+  assign search_base = routes.search_url | append: '?type=product&q='
+  assign home_popular = routes.root_url | append: '#sbl-popular'
+  assign desk_listing = collections['custom-engraved-desk-nameplates'].url | default: '/collections/custom-engraved-desk-nameplates'
+  assign awards_listing = collections['awards-and-plaques'].url | default: '/collections/awards-and-plaques'
+  assign bulk_listing = pages['bulk-orders'].url | default: '/pages/bulk-orders'
+
+  assign industries_current = false
+  if template.suffix == 'sbl-industries'
+    assign industries_current = true
+  endif
+  assign desk_current = false
+  if path contains '/products/custom-desk-sign' or collection.handle == 'custom-engraved-desk-nameplates' or collection.handle == 'standard-acrylic-desk-signs' or collection.handle == 'designer-school-student-desk-signs'
+    assign desk_current = true
+  endif
+  assign plaques_current = false
+  if collection.handle == 'awards-and-plaques' or collection.handle contains 'awards-plaques-' or path contains '/products/custom-plaque' or path contains '/products/custom-trophy'
+    assign plaques_current = true
+  endif
+  assign bulk_current = false
+  if template.suffix == 'bulk-orders' or page.handle == 'bulk-orders' or page.handle == 'bulk'
+    assign bulk_current = true
+  endif
+
+  assign popular_groups = 'Restroom & hygiene%%sbl:category:restroom-hygiene%%Please Do Not Flush;;Employees Must Wash Hands;;All Gender Restroom;;Restroom@@Safety & compliance%%sbl:category:safety-compliance%%Please Watch Your Step;;Electrical Room;;Electrical Panel;;Fire Sprinkler Riser Room@@Security & surveillance%%sbl:category:security-camera%%Property Under 24hr Video Recording;;Smile You Are On Camera;;No Unauthorized Recording;;Video Surveillance@@Employees only & private%%sbl:category:staff-private%%Employees Only Beyond This Point;;Employees Only;;Staff Only;;Authorized Personnel Only@@Entrance, exit & doors%%sbl:category:entrance-exit%%Exit;;Emergency Exit Only;;Please Knock Before Entering;;Not An Exit@@Retail & customer service%%sbl:category:retail-customer%%We Reserve The Right To Refuse Service;;Please Ring Bell For Assistance;;All Sales Final;;Open Closed@@Office & room ID%%sbl:category:office-door%%Conference Room;;Mail Drop;;Laundry Room;;No Storage Permitted@@Property & no trespassing%%sbl:category:property-notices%%No Soliciting;;Beware Of Dog;;No Trespassing Private Property;;Private Residence@@No smoking%%sbl:category:no-smoking%%No Smoking;;Smoke Free;;No Vaping;;Smoking Area@@Kitchen & break room%%sbl:category:kitchen-break-room%%Break Room;;Kitchen;;Microwave;;Coffee Station@@Do not disturb%%sbl:category:do-not-disturb%%Do Not Disturb;;Please Knock;;Quiet Please;;Session In Progress@@Push & pull%%sbl:category:push-pull%%Push;;Pull;;Push Pull@@Parking & traffic%%sbl:category:parking-traffic%%Reserved Parking;;No Parking;;Tow Away Zone;;Loading Zone@@Waste & recycling%%sbl:category:waste-recycling%%Recycling;;Trash;;Compost;;Garbage@@Accessibility & ADA%%sbl:category:accessibility-ada%%Wheelchair Accessible;;Service Animals Welcome;;Accessible Entrance;;Braille@@Pool, pet & facility%%sbl:category:pool-pet-facility%%Pool Rules;;No Diving;;No Pets;;Locker Room@@Wayfinding%%sbl:category:wayfinding-directory%%You Are Here;;This Way;;Directory;;Other Door@@Door hangers%%sbl:family:door-hanger%%Do Not Disturb;;Please Knock;;Privacy;;Room Service@@Hanging, wall & table%%url:/collections/hanging-wall-table-signs%%Hanging Signs;;Wall Signs;;Table Signs;;Desk Signs@@Novelty%%sbl:category:novelty%%Funny Signs;;Gag Gifts;;Joke Signs@@Social distancing%%sbl:category:social-distancing%%Six Feet Apart;;Face Mask Required;;No Handshake;;Stay Apart'
+
+  assign industry_groups = 'Business & offices%%sbl:industry:business-office%%Conference Room;;Reception;;Suite;;Lobby@@Healthcare%%sbl:industry:healthcare%%Exam Room;;Patients Only;;Laboratory;;Pharmacy@@Care homes & senior living%%sbl:industry:senior-living%%Memory Care;;Assisted Living;;Residents;;Nursing Station@@Therapy & counseling%%sbl:industry:therapy-counseling%%Session In Progress;;Counseling;;Therapy Room;;Please Knock@@Schools%%sbl:industry:education-school%%Principal;;Classroom;;Faculty Lounge;;Library@@Universities & colleges%%sbl:industry:education-university%%Faculty;;Dean;;Lecture Hall;;Campus@@Cafés & coffee shops%%sbl:industry:cafe-coffee%%Order Here;;Barista;;Espresso;;Employees Must Wash Hands@@Restaurants%%sbl:industry:restaurant%%Please Wait To Be Seated;;Host Stand;;No Outside Food;;Menu@@Commercial kitchens%%sbl:industry:commercial-kitchen%%Employees Must Wash Hands;;Food Preparation;;Hair Net;;Dish Room@@Warehouses & industrial%%sbl:industry:warehouse-industrial%%Hard Hat Area;;Loading Dock;;Forklift Traffic;;Receiving@@Government%%sbl:industry:public-safety-government%%City Hall;;Public Safety;;Visitors;;Employees Only@@Police departments%%sbl:industry:police%%Police;;Sheriff;;Precinct;;Authorized Personnel@@Correctional facilities%%sbl:industry:correctional%%Visitation;;Detention;;Authorized Personnel;;No Weapons@@Churches & ministries%%sbl:industry:faith%%Pastor;;Chapel;;Prayer Room;;Fellowship Hall@@Homes & vacation rentals%%sbl:industry:home-rental%%Welcome;;Wifi;;Remove Your Shoes;;Beware Of Dog@@Hotels%%url:' | append: industry_page | append: '#hotels%%Front Desk;;Guest Rooms;;Do Not Disturb;;Housekeeping'
+
+  assign desk_groups = 'Desk nameplates%%sbl:category:desk-nameplates%%Doctor;;Manager;;Receptionist;;Director@@Names & titles%%sbl:category:names-titles%%Principal;;Pastor;;Professor;;Supervisor@@Engraved nameplates%%url:/collections/custom-engraved-desk-nameplates%%Rosewood;;Piano Finish;;Executive;;Reception@@Standard acrylic%%url:/collections/standard-acrylic-desk-signs%%Acrylic Desk Sign;;Classic Desk Sign;;Office Nameplate@@School desk signs%%url:/collections/designer-school-student-desk-signs%%Student;;Teacher;;Principal;;Classroom@@Design your own%%url:/products/custom-desk-sign%%Preview Your Name;;Add A Title;;Choose A Finish'
+
+  assign plaque_groups = 'Plaques%%url:/collections/awards-plaques-plaques%%Employee Of The Month;;Service Award;;Graduation;;Recognition@@Medals%%url:/collections/awards-plaques-medals%%Gold Medal;;Sports Medal;;Academic Medal;;Participation@@Trophies%%q:trophy%%Baseball Trophy;;Soccer Trophy;;Star Trophy;;Team Trophy@@All awards%%sbl:family:plaque-award%%Employee Of The Year;;Achievement;;Coach;;Honor@@Custom plaque%%url:/products/custom-plaque%%Add A Logo;;Add A Name;;Add A Message@@Custom trophy%%url:/products/custom-trophy%%Preview The Award;;Add Engraving;;Team Awards'
+
+  assign bulk_groups = 'Wall & door signs%%url:/products/custom-sign%%One Design, Many Rooms;;Matching Finishes;;Offices And Clinics@@Desk nameplates%%url:/products/custom-desk-sign%%A Name For Every Desk;;Same Finish Across The Office@@Plaques & trophies%%url:/products/custom-plaque%%Ceremony Sets;;Employee Awards;;Team Trophies@@How a quote works%%url:/pages/bulk-orders%%Tell Us The Quantity;;Pricing And Lead Time;;No Commitment'
+
+  assign sign_styles = 'Classic Framed|classic framed;;Designer|designer sign;;Fancy|fancy sign;;Portrait Round|portrait round;;Standard|standard sign;;Basic|basic sign;;Square|square sign;;Circle|circle sign;;Victorian|victorian sign;;Plus Full-Color|full color sign'
+  assign desk_finishes = 'Acrylic|acrylic desk sign;;Rosewood|rosewood desk;;Piano finish|piano desk sign;;Classic|classic desk sign'
 -%}
 
 <header class="sbl-header" data-sbl-header>
+  <button type="button" class="sbl-header__scrim" data-sbl-scrim tabindex="-1" aria-hidden="true"></button>
   <div class="sbl-header__bar">
     <a class="sbl-header__logo" href="{{ routes.root_url }}">
       <span>Signs</span>
@@ -25,17 +62,96 @@
     </label>
 
     <nav class="sbl-header__nav" aria-label="Primary">
-      <a class="sbl-header__link{% if path contains '/products/custom-sign' %} is-current{% endif %}" href="/products/custom-sign">
-        <span class="sbl-header__dot" aria-hidden="true"></span>
+      <a class="sbl-header__cta sbl-header__cta--menu" href="/products/custom-sign">
         Design your sign
+        <span aria-hidden="true">→</span>
       </a>
-      <a class="sbl-header__link" href="/#sbl-popular">Popular signs</a>
-      <a class="sbl-header__link{% if template.suffix == 'sbl-industries' %} is-current{% endif %}" href="{{ industry_page }}">Industries</a>
-      <a class="sbl-header__link{% if path contains '/products/custom-desk-sign' %} is-current{% endif %}" href="/products/custom-desk-sign">Desk signs</a>
-      <a class="sbl-header__link{% if path contains '/products/custom-plaque' %} is-current{% endif %}" href="/products/custom-plaque">Plaques & awards</a>
-      <a class="sbl-header__link" href="/#sbl-bulk">Bulk orders</a>
 
-      <details class="sbl-header__more">
+      {% render 'sbl-mega-panel',
+        summary: 'Popular signs',
+        menu_id: 'popular',
+        section_id: section.id,
+        groups: popular_groups,
+        catalog_url: catalog_url,
+        search_base: search_base,
+        placeholder: 'Search 3,000+ signs',
+        cta_title: "Can't find your wording?",
+        cta_label: 'Design your own sign',
+        cta_url: '/products/custom-sign',
+        styles_heading: 'Shop by style',
+        styles: sign_styles,
+        extra_label: 'Shop popular signs',
+        extra_url: home_popular,
+        view_all_url: home_popular
+      %}
+      {% render 'sbl-mega-panel',
+        summary: 'Industries',
+        menu_id: 'industries',
+        section_id: section.id,
+        groups: industry_groups,
+        catalog_url: catalog_url,
+        search_base: search_base,
+        current: industries_current,
+        placeholder: 'Search industries',
+        cta_title: "Don't see your building?",
+        cta_label: 'Design your own sign',
+        cta_url: '/products/custom-sign',
+        extra_label: 'Browse all industries',
+        extra_url: industry_page,
+        view_all_url: industry_page
+      %}
+      {% render 'sbl-mega-panel',
+        summary: 'Desk signs',
+        menu_id: 'desk',
+        section_id: section.id,
+        groups: desk_groups,
+        catalog_url: catalog_url,
+        search_base: search_base,
+        current: desk_current,
+        placeholder: 'Search desk signs',
+        cta_title: 'Need a different name?',
+        cta_label: 'Design your desk sign',
+        cta_url: '/products/custom-desk-sign',
+        styles_heading: 'Shop by finish',
+        styles: desk_finishes,
+        extra_label: 'Design a wall sign instead',
+        extra_url: '/products/custom-sign',
+        view_all_url: desk_listing
+      %}
+      {% render 'sbl-mega-panel',
+        summary: 'Plaques & awards',
+        menu_id: 'plaques',
+        section_id: section.id,
+        groups: plaque_groups,
+        catalog_url: catalog_url,
+        search_base: search_base,
+        current: plaques_current,
+        placeholder: 'Search plaques and awards',
+        cta_title: 'Making a set of awards?',
+        cta_label: 'Design a plaque',
+        cta_url: '/products/custom-plaque',
+        extra_label: 'Design a trophy',
+        extra_url: '/products/custom-trophy',
+        view_all_url: awards_listing
+      %}
+      {% render 'sbl-mega-panel',
+        summary: 'Bulk orders',
+        menu_id: 'bulk',
+        section_id: section.id,
+        groups: bulk_groups,
+        catalog_url: catalog_url,
+        search_base: search_base,
+        current: bulk_current,
+        placeholder: 'Search signs for a whole order',
+        cta_title: 'Ready for pricing?',
+        cta_label: 'Request a quote',
+        cta_url: '/pages/bulk-orders#bulk-quote-form',
+        extra_label: 'Design one sign first',
+        extra_url: '/products/custom-sign',
+        view_all_url: bulk_listing
+      %}
+
+      <details class="sbl-header__more" data-sbl-drop>
         <summary>More from LITA</summary>
         <div class="sbl-header__more-menu">
           <a href="https://allqualitybadges.com/" target="_blank" rel="noopener">
@@ -63,17 +179,12 @@
     </nav>
 
     <div class="sbl-header__tools">
-      <details class="sbl-header__search">
-        <summary aria-label="Search">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 16.5L20 20.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </summary>
-        <form action="{{ routes.search_url }}" method="get" role="search">
-          <label class="sbl-header__visually-hidden" for="sbl-header-search-{{ section.id }}">Search signs</label>
-          <input id="sbl-header-search-{{ section.id }}" type="search" name="q" placeholder="Search signs" autocomplete="off">
-          <input type="hidden" name="type" value="product">
-          <button type="submit">Search</button>
-        </form>
-      </details>
+      <form class="sbl-header__searchbar" action="{{ routes.search_url }}" method="get" role="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 16.5L20 20.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <label class="sbl-header__visually-hidden" for="sbl-header-search-{{ section.id }}">Search signs</label>
+        <input id="sbl-header-search-{{ section.id }}" type="search" name="q" placeholder="Search signs" autocomplete="off">
+        <input type="hidden" name="type" value="product">
+      </form>
 
       <a class="sbl-header__icon" href="{% if customer %}{{ routes.account_url }}{% else %}{{ routes.account_login_url }}{% endif %}" aria-label="Account">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 19.2c1.4-3 3.8-4.4 7-4.4s5.6 1.4 7 4.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -85,6 +196,10 @@
           <span data-cart-count>{{ cart.item_count }}</span>
         </a>
       </div>
+      <a class="sbl-header__cta sbl-header__cta--bar" href="/products/custom-sign">
+        Design your sign
+        <span aria-hidden="true">→</span>
+      </a>
     </div>
   </div>
 </header>
@@ -93,52 +208,84 @@
   .sbl-header {
     --sbl-navy: #0f2744;
     --sbl-gold: #c9932e;
+    --sbl-header: #f3eee4;
     position: sticky;
     top: 0;
     z-index: 40;
-    background: var(--sbl-navy);
-    color: #fff;
+    overflow: visible;
+    background: var(--sbl-header);
+    color: var(--sbl-navy);
     font-family: Arial, Helvetica, sans-serif;
-    border-bottom: 1px solid rgba(201, 147, 46, .55);
+    border-bottom: 3px solid var(--sbl-gold);
+    box-shadow: 0 10px 28px rgba(15, 39, 68, .12);
   }
   .sbl-header * { box-sizing: border-box; }
+  .sbl-header__scrim {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    z-index: 3;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: default;
+  }
+  .sbl-header:has([data-sbl-drop][open]) .sbl-header__scrim { display: block; }
   .sbl-header__bar {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 28px;
-    width: min(1440px, calc(100% - 40px));
+    width: min(1440px, calc(100% - 32px));
     min-height: 74px;
     margin: 0 auto;
   }
   .sbl-header a { color: inherit; text-decoration: none; }
-  .sbl-header__logo { display: inline-flex; align-items: baseline; gap: 8px; color: #fff; }
+  .sbl-header__logo { display: inline-flex; align-items: baseline; gap: 8px; color: var(--sbl-navy); }
   .sbl-header__logo span { font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 500; letter-spacing: -.03em; line-height: 1; }
-  .sbl-header__logo small { color: #e6c66e; font-size: 11px; font-weight: 800; letter-spacing: .2em; }
-  .sbl-header__check { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  .sbl-header__logo small { color: #8a6416; font-size: 11px; font-weight: 800; letter-spacing: .2em; }
+  .sbl-header input[type="checkbox"].sbl-header__check {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    appearance: none;
+    opacity: 0;
+    pointer-events: none;
+  }
   .sbl-header__burger { display: none; }
-  .sbl-header__nav { display: flex; align-items: center; justify-content: center; gap: 22px; }
-  .sbl-header__link,
+  .sbl-header__nav { display: flex; align-items: center; justify-content: center; gap: 24px; min-width: 0; }
+  .sbl-header__drop summary,
   .sbl-header__more summary {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    color: rgba(255, 255, 255, .88);
-    font-size: 14.5px;
+    gap: 7px;
+    color: #24344c;
+    font-size: 16px;
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
   }
-  .sbl-header__link:hover,
+  .sbl-header__drop summary:hover,
   .sbl-header__more summary:hover,
-  .sbl-header__link.is-current { color: #fff; }
-  .sbl-header__link.is-current { box-shadow: inset 0 -2px 0 var(--sbl-gold); }
-  .sbl-header__dot { width: 8px; height: 8px; border-radius: 50%; background: #3ddc84; box-shadow: 0 0 0 4px rgba(61, 220, 132, .16); }
+  .sbl-header__drop summary.is-current { color: var(--sbl-navy); }
+  .sbl-header__drop summary.is-current { box-shadow: inset 0 -2px 0 var(--sbl-gold); }
+  .sbl-header__drop,
+  .sbl-header__more { position: static; }
   .sbl-header__more { position: relative; }
+  .sbl-header__drop summary,
   .sbl-header__more summary { list-style: none; }
+  .sbl-header__drop summary::-webkit-details-marker,
   .sbl-header__more summary::-webkit-details-marker { display: none; }
-  .sbl-header__more summary::after { content: ""; width: 7px; height: 7px; margin-top: -3px; border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor; transform: rotate(45deg); }
-  .sbl-header__more[open] summary { color: #fff; }
+  .sbl-header__drop summary::after,
+  .sbl-header__more summary::after { content: ""; width: 6px; height: 6px; margin-top: -3px; border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor; transform: rotate(45deg); }
+  .sbl-header__drop[open] summary,
+  .sbl-header__more[open] summary { color: var(--sbl-navy); }
+  .sbl-header__drop[open] summary::after,
   .sbl-header__more[open] summary::after { margin-top: 2px; transform: rotate(225deg); }
   .sbl-header__more-menu {
     position: absolute;
@@ -152,8 +299,7 @@
     background: #fff;
     box-shadow: 0 22px 50px rgba(8, 26, 48, .28);
   }
-  .sbl-header__more-menu a,
-  .sbl-header__more-pending {
+  .sbl-header__more-menu a {
     display: grid;
     gap: 2px;
     padding: 12px 14px;
@@ -163,22 +309,153 @@
   .sbl-header__more-menu a:hover { background: #f6f1e8; color: var(--sbl-navy); }
   .sbl-header__more-menu strong { font-size: 15px; font-weight: 800; }
   .sbl-header__more-menu span { color: #667085; font-size: 13px; font-weight: 500; line-height: 1.35; }
-  .sbl-header__more-pending { cursor: default; }
-  .sbl-header__tools { display: flex; align-items: center; gap: 6px; }
-  .sbl-header__icon,
-  .sbl-header__search summary {
+  .sbl-mega {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    z-index: 6;
+    max-height: min(78vh, 760px);
+    overflow: auto;
+    background: #fff;
+    box-shadow: 0 22px 50px rgba(8, 26, 48, .18);
+  }
+  .sbl-mega__find {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: min(1440px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 16px 0 8px;
+    background: #fff;
+  }
+  .sbl-mega__find svg { width: 18px; height: 18px; color: #667085; flex: none; }
+  .sbl-mega__find input[type="search"] {
+    width: min(420px, 100%);
+    height: 42px;
+    padding: 0 14px;
+    border: 1px solid #e4ddd1;
+    border-radius: 999px;
+    color: var(--sbl-navy);
+    font: inherit;
+    font-size: 15px;
+  }
+  .sbl-mega__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 28px;
+    width: min(1440px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 8px 0 28px;
+  }
+  .sbl-mega__cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px 26px; align-content: start; }
+  .sbl-mega__group { display: grid; align-content: start; gap: 2px; }
+  .sbl-header .sbl-mega__group a { color: #24344c; font-size: 14.5px; font-weight: 500; line-height: 1.45; }
+  .sbl-header .sbl-mega__group a:hover { color: var(--sbl-navy); }
+  .sbl-header .sbl-mega__group a.sbl-mega__title { margin-bottom: 6px; color: #8a6416; font-size: 14px; font-weight: 800; line-height: 1.3; }
+  .sbl-header .sbl-mega__group a.sbl-mega__all { margin-top: 6px; color: var(--sbl-gold); font-size: 13.5px; font-weight: 800; }
+  .sbl-header .sbl-mega__group a.sbl-mega__all:hover { color: #8a6416; }
+  .sbl-mega__rail { position: sticky; top: 66px; align-self: start; display: grid; gap: 14px; }
+  .sbl-mega__styles p { margin: 0 0 10px; color: #8a6416; font-size: 14px; font-weight: 800; }
+  .sbl-mega__styles div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+  .sbl-mega__style { color: #24344c; font-size: 14.5px; font-weight: 600; }
+  .sbl-mega__style:hover { color: var(--sbl-navy); }
+  .sbl-header .sbl-mega__own {
+    display: grid;
+    gap: 14px;
+    padding: 18px 16px;
+    border-radius: 16px;
+    background: #1c2430;
+    color: #fff;
+  }
+  .sbl-header .sbl-mega__own:hover { color: #fff; }
+  .sbl-mega__own-kicker { font-size: 18px; font-weight: 700; line-height: 1.3; }
+  .sbl-header .sbl-mega__own-button {
     display: inline-flex;
-    width: 40px;
-    height: 40px;
     align-items: center;
     justify-content: center;
-    color: #fff;
-    list-style: none;
+    gap: 6px;
+    min-height: 44px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: var(--sbl-gold);
+    color: #1c2430;
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .sbl-header .sbl-mega__extra { color: var(--sbl-gold); font-size: 14px; font-weight: 800; }
+  .sbl-header .sbl-mega__extra:hover { color: #8a6416; }
+  .sbl-mega__empty {
+    width: min(1440px, calc(100% - 40px));
+    margin: 0 auto 22px;
+    color: #667085;
+    font-size: 14px;
+  }
+  .sbl-mega__empty button {
+    margin-left: 8px;
+    border: 0;
+    background: transparent;
+    color: var(--sbl-navy);
+    font: inherit;
+    font-weight: 800;
     cursor: pointer;
   }
-  .sbl-header__search summary::-webkit-details-marker { display: none; }
-  .sbl-header__icon svg,
-  .sbl-header__search summary svg { width: 22px; height: 22px; }
+  .sbl-mega a[hidden],
+  .sbl-mega__group[hidden],
+  .sbl-mega__empty[hidden] { display: none; }
+  .sbl-header__tools { display: flex; align-items: center; gap: 4px; }
+  .sbl-header__searchbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 156px;
+    height: 40px;
+    margin-right: 4px;
+    padding: 0 12px;
+    border: 1px solid #e4ddd1;
+    border-radius: 999px;
+    background: #fff;
+  }
+  .sbl-header__searchbar svg { width: 16px; height: 16px; color: #667085; flex: none; }
+  .sbl-header__searchbar input[type="search"] {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--sbl-navy);
+    font: inherit;
+    font-size: 13px;
+  }
+  .sbl-header a.sbl-header__cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 0 12px;
+    border-radius: 6px;
+    background: var(--sbl-gold);
+    color: var(--sbl-navy);
+    font-size: 14.5px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+  .sbl-header a.sbl-header__cta:hover { background: #dba849; color: var(--sbl-navy); }
+  .sbl-header a.sbl-header__cta--menu { display: none; }
+  .sbl-header a.sbl-header__cta--bar { margin-left: 6px; }
+  .sbl-header__icon {
+    display: inline-flex;
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    color: var(--sbl-navy);
+  }
+  .sbl-header__icon svg { width: 22px; height: 22px; }
   .sbl-header__cart { position: relative; }
   .sbl-header__cart span {
     position: absolute;
@@ -195,28 +472,21 @@
     line-height: 16px;
     text-align: center;
   }
-  .sbl-header__search { position: relative; }
-  .sbl-header__search form {
-    position: absolute;
-    top: calc(100% + 10px);
-    right: 0;
-    display: flex;
-    width: min(360px, 70vw);
-    padding: 8px;
-    gap: 8px;
-    border-radius: 12px;
-    background: #fff;
-    box-shadow: 0 18px 40px rgba(8, 26, 48, .28);
-  }
-  .sbl-header__search input[type="search"] { min-width: 0; flex: 1; border: 0; outline: 0; color: var(--sbl-navy); font-size: 15px; }
-  .sbl-header__search button { border: 0; border-radius: 8px; background: var(--sbl-navy); color: #fff; font-weight: 800; padding: 0 14px; min-height: 40px; cursor: pointer; }
   .sbl-header__visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-  @media (max-width: 1100px) {
-    .sbl-header__bar { grid-template-columns: auto auto 1fr auto; width: min(100% - 20px, 1440px); min-height: 64px; gap: 12px; }
+  @media (min-width: 1280px) and (max-width: 1439px) {
+    .sbl-header__bar { gap: 16px; }
+    .sbl-header__logo span { font-size: 28px; }
+    .sbl-header__nav { gap: 14px; }
+    .sbl-header__drop summary,
+    .sbl-header__more summary { gap: 6px; font-size: 15px; }
+    .sbl-header__searchbar { width: 110px; }
+  }
+  @media (max-width: 1279px) {
+    .sbl-header__bar { grid-template-columns: auto auto minmax(0, 1fr) auto; width: min(100% - 20px, 1440px); min-height: 64px; gap: 10px; }
     .sbl-header__burger { display: inline-flex; width: 40px; height: 40px; align-items: center; justify-content: center; cursor: pointer; }
     .sbl-header__burger span[aria-hidden="true"],
     .sbl-header__burger span[aria-hidden="true"]::before,
-    .sbl-header__burger span[aria-hidden="true"]::after { display: block; width: 18px; height: 1.6px; background: #fff; content: ""; }
+    .sbl-header__burger span[aria-hidden="true"]::after { display: block; width: 18px; height: 1.6px; background: var(--sbl-navy); content: ""; }
     .sbl-header__burger span[aria-hidden="true"] { position: relative; }
     .sbl-header__burger span[aria-hidden="true"]::before,
     .sbl-header__burger span[aria-hidden="true"]::after { position: absolute; left: 0; }
@@ -228,20 +498,120 @@
       top: 100%;
       left: 0;
       right: 0;
+      z-index: 7;
+      max-height: calc(100vh - 70px);
+      overflow: auto;
       padding: 12px 16px 20px;
       flex-direction: column;
       align-items: stretch;
       gap: 4px;
-      background: var(--sbl-navy);
-      border-bottom: 1px solid rgba(201, 147, 46, .55);
+      background: var(--sbl-header);
+      border-bottom: 3px solid var(--sbl-gold);
     }
     .sbl-header__check:checked ~ .sbl-header__nav { display: flex; }
-    .sbl-header__link,
-    .sbl-header__more summary { min-height: 44px; }
+    .sbl-header a.sbl-header__cta--bar { display: none; }
+    .sbl-header a.sbl-header__cta--menu { display: inline-flex; align-self: flex-start; margin: 4px 0 8px; min-height: 48px; padding: 0 18px; font-size: 17px; }
+    .sbl-header__drop summary,
+    .sbl-header__more summary { min-height: 44px; font-size: 16px; }
+    .sbl-header__drop,
+    .sbl-header__more { position: static; }
     .sbl-header__more-menu { position: static; width: 100%; margin: 4px 0 8px; }
+    .sbl-mega { position: static; max-height: none; margin: 4px 0 10px; border-radius: 14px; box-shadow: none; }
+    .sbl-mega__layout,
+    .sbl-mega__find,
+    .sbl-mega__empty { width: auto; }
+    .sbl-mega__layout { grid-template-columns: 1fr; padding: 8px 14px 16px; }
+    .sbl-mega__find { padding: 12px 14px 4px; }
+    .sbl-mega__cols { grid-template-columns: 1fr 1fr; }
+    .sbl-mega__rail { position: static; }
     .sbl-header__logo span { font-size: 26px; }
+    .sbl-header__searchbar { width: auto; flex: 1; min-width: 0; max-width: 280px; }
+  }
+  @media (max-width: 599px) {
+    .sbl-header__bar { display: flex; flex-wrap: wrap; align-items: center; }
+    .sbl-header__logo { margin-right: auto; }
+    .sbl-header__tools { display: contents; }
+    .sbl-header__searchbar { order: 10; flex: 1 0 100%; width: 100%; max-width: none; margin: 2px 0 8px; }
+    .sbl-mega__cols,
+    .sbl-mega__styles div { grid-template-columns: 1fr; }
+    .sbl-header__searchbar input[type="search"] { font-size: 16px; }
   }
 {% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const header = document.querySelector('[data-sbl-header]');
+    if (!header || header.dataset.sblNavReady === 'true') return;
+    header.dataset.sblNavReady = 'true';
+    const drops = Array.from(header.querySelectorAll('[data-sbl-drop]'));
+
+    drops.forEach((drop) => {
+      const summary = drop.querySelector('summary');
+      const viewAll = drop.dataset.sblViewAll;
+      if (summary && viewAll) {
+        summary.addEventListener('click', (event) => {
+          if (!drop.open) return;
+          event.preventDefault();
+          window.location.assign(viewAll);
+        });
+      }
+      drop.addEventListener('toggle', () => {
+        if (!drop.open) return;
+        drops.forEach((other) => {
+          if (other !== drop) other.open = false;
+        });
+      });
+    });
+
+    const closeOutside = (event) => {
+      const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+      const target = event.target;
+      drops.forEach((drop) => {
+        if (!drop.open) return;
+        const inside = path.length ? path.includes(drop) : target instanceof Node && drop.contains(target);
+        if (!inside) drop.open = false;
+      });
+    };
+    document.addEventListener('click', closeOutside, true);
+    window.addEventListener('blur', () => {
+      drops.forEach((drop) => { drop.open = false; });
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      drops.forEach((drop) => { drop.open = false; });
+    });
+
+    header.querySelectorAll('[data-sbl-mega]').forEach((panel) => {
+      const input = panel.querySelector('[data-sbl-mega-filter]');
+      const empty = panel.querySelector('[data-sbl-empty]');
+      if (!input) return;
+      const apply = () => {
+        const query = input.value.trim().toLowerCase();
+        panel.querySelectorAll('[data-sbl-group]').forEach((group) => {
+          const title = (group.dataset.sblGroup || '').toLowerCase();
+          const titleHit = query !== '' && title.includes(query);
+          let any = titleHit;
+          group.querySelectorAll('[data-sbl-item]').forEach((link) => {
+            const hit = query === '' || titleHit || link.textContent.toLowerCase().includes(query);
+            link.hidden = !hit;
+            if (hit) any = true;
+          });
+          group.hidden = query !== '' && !any;
+        });
+        panel.querySelectorAll('[data-sbl-style]').forEach((link) => {
+          link.hidden = query !== '' && !link.textContent.toLowerCase().includes(query);
+        });
+        if (!empty) return;
+        const groups = Array.from(panel.querySelectorAll('[data-sbl-group]'));
+        const styles = Array.from(panel.querySelectorAll('[data-sbl-style]'));
+        const visibleGroup = groups.some((group) => !group.hidden);
+        const visibleStyle = styles.length === 0 || styles.some((link) => !link.hidden);
+        empty.hidden = !(query && !visibleGroup && !visibleStyle);
+      };
+      input.addEventListener('input', apply);
+    });
+  })();
+{% endjavascript %}
 
 {% schema %}
 {

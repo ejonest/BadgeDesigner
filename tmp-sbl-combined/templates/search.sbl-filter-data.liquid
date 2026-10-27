@@ -1,0 +1,27 @@
+{%- layout none -%}
+{%- if search.performed -%}
+  {%- paginate search.results by 50 -%}
+  {
+    "page": {{ paginate.current_page | json }},
+    "pages": {{ paginate.pages | json }},
+    "products": [
+      {%- assign emitted = false -%}
+      {%- for item in search.results -%}
+        {%- if item.object_type != 'product' -%}{%- continue -%}{%- endif -%}
+        {%- if emitted -%},{%- endif -%}
+        {%- assign emitted = true -%}
+        {
+          "title": {{ item.title | json }},
+          "url": {{ item.url | json }},
+          "image": {% if item.featured_image %}{{ item.featured_image | image_url: width: 600 | json }}{% else %}null{% endif %},
+          "price": {{ item.price_min | money | json }},
+          "priceVaries": {{ item.price_varies | json }},
+          "tags": {{ item.tags | json }}
+        }
+      {%- endfor -%}
+    ]
+  }
+  {%- endpaginate -%}
+{%- else -%}
+{"page":1,"pages":0,"products":[]}
+{%- endif -%}

@@ -1,5 +1,5 @@
 {%- liquid
-  assign catalog = 'restaurants%%Restaurants%%Host stands, dining rooms, restrooms and kitchens%%signage-signs-for-business-food-signs::Restaurant signs;;restroom-signs::Bathroom signs;;employee-only-signs::Staff-only signs;;safety-signs::Safety signs@@hotels%%Hotels%%Front desk, guest rooms, restrooms and property notices%%custom-engraved-desk-nameplates::Front desk nameplates;;restroom-signs::Bathroom signs;;office-signs::Room and door signs;;no-soliciting-signs::Property notices;;employee-only-signs::Staff-only signs%%black-piano-finish-desk-name-plate@@offices%%Offices%%Suites, conference rooms, restrooms and nameplates%%office-signs::Office and door signs;;general-business-signs::Business signs;;restroom-signs::Bathroom signs;;employee-only-signs::Staff-only signs;;custom-engraved-desk-nameplates::Desk nameplates%%signs-bylita-designer-conference-room-sign@@schools%%Schools%%Classrooms, offices, restrooms and safety signs%%designer-school-student-desk-signs::School signs;;restroom-signs::Bathroom signs;;safety-signs::Safety signs;;employee-only-signs::Staff-only signs%%signs-bylita-standard-principal-sign@@universities%%Universities%%Faculty offices, lecture rooms and campus signs%%office-signs::Faculty and room signs;;designer-school-student-desk-signs::Campus signs;;restroom-signs::Bathroom signs;;employee-only-signs::Staff-only signs%%signs-bylita-oval-faculty-lounge-sign@@clinics%%Clinics%%Exam rooms, restrooms and staff areas%%exam-room::Exam and treatment rooms;;restroom-signs::Bathroom signs;;employee-only-signs::Staff-only signs;;safety-signs::Safety signs@@churches%%Churches%%Offices, ministries and gathering spaces%%church-office-signs::Church office signs;;custom-church-products::Church products;;restroom-signs::Bathroom signs;;employee-only-signs::Staff-only signs@@warehouses%%Warehouses%%Docks, restricted areas and safety signs%%safety-signs::Safety signs;;employee-only-signs::Staff-only signs;;office-signs::Door signs;;security-surveillance-signs::Security signs%%fancy-loading-dock-wall-or-door-sign@@government%%Government%%Public buildings, notices and facility signs%%property-signs::Facility notices;;safety-signs::Safety signs;;restroom-signs::Bathroom signs;;office-signs::Room and door signs@@homes%%Homes & rentals%%Welcome signs, house rules and guest information%%signage-signs-for-home::Home signs;;no-soliciting-signs::Property notices;;restroom-signs::Bathroom signs'
+  assign catalog = 'restaurants%%Restaurants%%Host stands, dining rooms, restrooms and kitchens%%signage-signs-for-business-food-signs::Restaurant signs;;restroom-signs::Bathroom signs;;employee-only-signs::Staff-only signs;;safety-signs::Safety signs%%restaurant@@hotels%%Hotels%%Front desk, guest rooms, restrooms and property notices%%custom-engraved-desk-nameplates::Front desk nameplates;;restroom-signs::Bathroom signs;;office-signs::Room and door signs;;no-soliciting-signs::Property notices;;employee-only-signs::Staff-only signs%%hotel@@offices%%Office%%Suites, warehouses, public buildings and facility signs%%office-signs::Office and door signs;;general-business-signs::Business signs;;custom-engraved-desk-nameplates::Desk nameplates;;safety-signs::Safety signs;;security-surveillance-signs::Security signs;;property-signs::Facility notices;;restroom-signs::Bathroom signs;;employee-only-signs::Staff-only signs%%office@@schools%%Schools%%Classrooms, faculty offices, restrooms and campus signs%%designer-school-student-desk-signs::School signs;;office-signs::Faculty and room signs;;restroom-signs::Bathroom signs;;safety-signs::Safety signs;;employee-only-signs::Staff-only signs%%school@@clinics%%Clinics%%Exam rooms, restrooms and staff areas%%exam-room::Exam and treatment rooms;;restroom-signs::Bathroom signs;;employee-only-signs::Staff-only signs;;safety-signs::Safety signs%%clinic@@churches%%Churches%%Offices, ministries and gathering spaces%%church-office-signs::Church office signs;;custom-church-products::Church products;;restroom-signs::Bathroom signs;;employee-only-signs::Staff-only signs%%church@@homes%%Homes & rentals%%Welcome signs, house rules and guest information%%signage-signs-for-home::Home signs;;no-soliciting-signs::Property notices;;restroom-signs::Bathroom signs%%home'
   assign industries = catalog | split: '@@'
   assign custom_tools = '/products/custom-sign%%Design a custom sign%%Any wording for this building%%sbl-sign-designer-real.png@@/products/custom-desk-sign%%Desk nameplate%%Names and titles for every desk%%sbl-desk-sign-designer-real.png@@/products/custom-plaque%%Award plaque%%A logo, a name and a message%%sbl-plaque-designer-shot.jpg@@/products/custom-trophy%%Trophy%%Preview the award before you order%%sbl-trophy-designer-shot.jpg' | split: '@@'
 -%}
@@ -18,29 +18,9 @@
     <div class="sbl-ind__picker">
       {%- for row in industries -%}
         {%- assign parts = row | split: '%%' -%}
-        {%- assign image_product = nil -%}
-        {%- if parts[4] != blank -%}
-          {%- assign image_product = all_products[parts[4]] -%}
-        {%- endif -%}
-        {%- if image_product.featured_image == blank -%}
-          {%- assign image_groups = parts[3] | split: ';;' -%}
-          {%- assign image_group = image_groups | first | split: '::' -%}
-          {%- assign image_collection = collections[image_group[0]] -%}
-          {%- assign image_product = image_collection.products | first -%}
-        {%- endif -%}
         <a href="#{{ parts[0] }}" data-sbl-industry="{{ parts[0] }}">
           <span class="sbl-ind__pick-image">
-            {%- if image_product.featured_image -%}
-              {{
-                image_product.featured_image
-                | image_url: width: 800
-                | image_tag:
-                  loading: 'lazy',
-                  widths: '320, 480, 640, 800',
-                  sizes: '(min-width: 990px) 20vw, 50vw',
-                  alt: image_product.featured_image.alt
-              }}
-            {%- endif -%}
+            {%- render 'sbl-industry-icon', name: parts[4] -%}
           </span>
           <span class="sbl-ind__pick-copy">
             <strong>{{ parts[1] }}</strong>
@@ -48,6 +28,16 @@
           </span>
         </a>
       {%- endfor -%}
+      {%- assign novelty_collection = collections['novelty-signs'] -%}
+      <a href="#novelty" data-sbl-industry="novelty">
+        <span class="sbl-ind__pick-image">
+          {%- render 'sbl-industry-icon', name: 'novelty' -%}
+        </span>
+        <span class="sbl-ind__pick-copy">
+          <strong>Novelty</strong>
+          <span>Joke and gag signs, separate from professional buildings</span>
+        </span>
+      </a>
     </div>
 
     <div class="sbl-ind__toolbar">
@@ -129,6 +119,23 @@
         {%- endfor -%}
       </div>
     {%- endfor -%}
+
+    <div class="sbl-ind__panel" id="novelty" data-sbl-panel="novelty">
+      <p class="sbl-ind__eyebrow">Novelty</p>
+      <h2>Joke signs, on their own.</h2>
+      <p class="sbl-ind__panel-lead">Gag and humorous signs are kept out of offices, clinics, schools, and the other professional lists. They live here instead.</p>
+      {%- if novelty_collection != blank and novelty_collection.products_count > 0 -%}
+        <div class="sbl-ind__group">
+          <div class="sbl-ind__group-head">
+            <h3>Novelty signs</h3>
+            <a href="{{ novelty_collection.url }}">Shop all →</a>
+          </div>
+          <div class="sbl-ind__grid">
+            {%- render 'sbl-ind-products', collection: novelty_collection, limit: 8, include_novelty: true -%}
+          </div>
+        </div>
+      {%- endif -%}
+    </div>
   </div>
 </section>
 
@@ -154,12 +161,16 @@
   .sbl-ind h2 { color: var(--sbl-navy); font-size: clamp(32px, 4vw, 46px); }
   .sbl-ind__lead { max-width: 680px; margin: 16px 0 0; color: #d7dfeb; font-size: 18px; line-height: 1.6; }
   .sbl-ind__body { padding: 36px 0 80px; }
-  .sbl-ind__picker { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+  .sbl-ind__picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
   .sbl-ind__picker a { display: flex; overflow: hidden; min-height: 0; padding: 0; flex-direction: column; border: 1px solid #e4ddd1; border-radius: 12px; background: #fff; align-content: stretch; }
   .sbl-ind__picker a:hover,
   .sbl-ind__picker a.is-current { border-color: var(--sbl-gold); box-shadow: 0 12px 28px rgba(15, 39, 68, .1); }
-  .sbl-ind__pick-image { display: flex; height: 148px; align-items: center; justify-content: center; background: #eee9e0; }
-  .sbl-ind__pick-image img { width: 100%; height: 100%; object-fit: contain; }
+  .sbl-ind__pick-image { display: flex; height: 132px; align-items: center; justify-content: center; background: #fff; }
+  .sbl-ind__icon { display: grid; width: 74px; height: 74px; place-items: center; border: 1px solid #f3e8d8; border-radius: 16px; background: #faf4eb; color: #243850; }
+  .sbl-ind__icon svg { width: 54px; height: 54px; }
+  .sbl-ind__icon svg path,
+  .sbl-ind__icon svg circle { fill: none; stroke: currentColor; }
+  .sbl-ind__icon svg .accent { stroke: #d77c0c; }
   .sbl-ind__pick-copy { display: grid; gap: 6px; padding: 14px 14px 16px; }
   .sbl-ind__picker strong { color: var(--sbl-navy); font-size: 16px; }
   .sbl-ind__pick-copy span { color: var(--sbl-muted); font-size: 13px; line-height: 1.4; }
@@ -212,7 +223,10 @@
     const links = Array.from(root.querySelectorAll('[data-sbl-industry]'));
     const panels = Array.from(root.querySelectorAll('[data-sbl-panel]'));
     const showAll = root.querySelector('[data-sbl-show-all]');
+    const aliases = { universities: 'schools', warehouses: 'offices', government: 'offices' };
+    const resolve = (id) => aliases[id] || id;
     const show = (id, scroll) => {
+      id = resolve(id);
       const match = Boolean(id) && panels.some((panel) => panel.dataset.sblPanel === id);
       root.classList.toggle('has-selection', match);
       panels.forEach((panel) => panel.classList.toggle('is-active', match && panel.dataset.sblPanel === id));

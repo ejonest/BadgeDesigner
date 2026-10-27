@@ -1,0 +1,306 @@
+{%- liquid
+  assign designer_url = section.settings.designer_url | default: '/products/custom-sign'
+-%}
+
+<section class="sbl-bulk" id="sbl-bulk-page">
+  <div class="sbl-bulk__hero">
+    <div class="sbl-bulk__wrap sbl-bulk__hero-grid">
+      <div>
+        <p class="sbl-bulk__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+        <h1>{{ section.settings.heading }}</h1>
+        <p class="sbl-bulk__lead">{{ section.settings.subheading | escape }}</p>
+        <div class="sbl-bulk__actions">
+          <a class="sbl-bulk__button sbl-bulk__button--gold" href="#bulk-quote-form">{{ section.settings.primary_label | escape }}</a>
+          <a class="sbl-bulk__button sbl-bulk__button--ghost" href="{{ designer_url }}">{{ section.settings.secondary_label | escape }}</a>
+        </div>
+        <ul class="sbl-bulk__trust">
+          {%- assign trust_points = section.blocks | where: 'type', 'trust_point' -%}
+          {%- if trust_points.size > 0 -%}
+            {%- for block in trust_points -%}
+              <li {{ block.shopify_attributes }}>✓ {{ block.settings.label | escape }}</li>
+            {%- endfor -%}
+          {%- else -%}
+            <li>✓ Same-day response</li>
+            <li>✓ Made in California</li>
+            <li>✓ No commitment required</li>
+          {%- endif -%}
+        </ul>
+      </div>
+      <div class="sbl-bulk__panel">
+        <h2>{{ section.settings.panel_heading | escape }}</h2>
+        <p>{{ section.settings.panel_text | escape }}</p>
+        <ol>
+          {%- assign steps = section.blocks | where: 'type', 'step' -%}
+          {%- if steps.size > 0 -%}
+            {%- for block in steps -%}
+              <li {{ block.shopify_attributes }}>{{ block.settings.text | escape }}</li>
+            {%- endfor -%}
+          {%- else -%}
+            <li>Design the signs in the sign designer, or describe the set</li>
+            <li>A representative reviews shapes, finishes, and quantity</li>
+            <li>You get pricing and lead time, then place the order when ready</li>
+          {%- endif -%}
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <div class="sbl-bulk__form-section" id="bulk-quote-form">
+    <div class="sbl-bulk__wrap sbl-bulk__form-grid">
+      <div>
+        <p class="sbl-bulk__eyebrow">{{ section.settings.form_eyebrow | escape }}</p>
+        <h2>{{ section.settings.form_heading }}</h2>
+        <p class="sbl-bulk__intro">{{ section.settings.form_intro | escape }}</p>
+        <ul class="sbl-bulk__perks">
+          {%- assign perks = section.blocks | where: 'type', 'perk' -%}
+          {%- if perks.size > 0 -%}
+            {%- for block in perks -%}
+              <li {{ block.shopify_attributes }}>✓ {{ block.settings.text | escape }}</li>
+            {%- endfor -%}
+          {%- else -%}
+            <li>✓ One finish used across wall signs, door signs, and nameplates</li>
+            <li>✓ Duplicate a design and change only the room name</li>
+            <li>✓ Offices, schools, clinics, hotels, and property managers</li>
+          {%- endif -%}
+        </ul>
+        <div class="sbl-bulk__rep">
+          <h3>{{ section.settings.rep_heading | escape }}</h3>
+          <p>{{ section.settings.rep_text | escape }}</p>
+        </div>
+      </div>
+
+      <div class="sbl-bulk__card">
+        {%- if section.settings.form_note != blank -%}
+          <p class="sbl-bulk__note">{{ section.settings.form_note | escape }}</p>
+        {%- endif -%}
+
+        {%- form 'contact', id: 'SblBulkQuoteForm', class: 'sbl-bulk__form' -%}
+          <input type="hidden" name="contact[Subject]" value="{{ section.settings.email_subject | escape }}">
+
+          {%- if form.posted_successfully? -%}
+            <div class="sbl-bulk__status sbl-bulk__status--success" tabindex="-1" autofocus>
+              {{ section.settings.success_message | escape }}
+            </div>
+          {%- elsif form.errors -%}
+            <div class="sbl-bulk__status sbl-bulk__status--error" role="alert" tabindex="-1" autofocus>
+              {{ section.settings.error_message | escape }}
+            </div>
+          {%- endif -%}
+
+          <div class="sbl-bulk__fields">
+            <label>
+              {{ section.settings.name_label | escape }} <span>*</span>
+              <input type="text" name="contact[Name]" autocomplete="name" required value="{% if form.name %}{{ form.name }}{% elsif customer %}{{ customer.name }}{% endif %}">
+            </label>
+            <label>
+              {{ section.settings.company_label | escape }}
+              <input type="text" name="contact[Company]" autocomplete="organization">
+            </label>
+            <label>
+              {{ section.settings.email_label | escape }} <span>*</span>
+              <input type="email" name="contact[email]" autocomplete="email" required spellcheck="false" autocapitalize="off" value="{% if form.email %}{{ form.email }}{% elsif customer %}{{ customer.email }}{% endif %}">
+            </label>
+            <label>
+              {{ section.settings.phone_label | escape }}
+              <input type="tel" name="contact[Phone]" autocomplete="tel" value="{% if customer %}{{ customer.phone }}{% endif %}">
+            </label>
+            <label>
+              {{ section.settings.product_label | escape }} <span>*</span>
+              <select name="contact[Product Type]" required>
+                <option value="" disabled selected>{{ section.settings.product_placeholder | escape }}</option>
+                {%- assign product_options = section.blocks | where: 'type', 'product_option' -%}
+                {%- if product_options.size > 0 -%}
+                  {%- for block in product_options -%}
+                    <option value="{{ block.settings.value | escape }}">{{ block.settings.label | escape }}</option>
+                  {%- endfor -%}
+                {%- else -%}
+                  <option value="Custom wall and door signs">Custom wall and door signs</option>
+                  <option value="Desk signs">Desk signs</option>
+                  <option value="Plaques and awards">Plaques and awards</option>
+                  <option value="Trophies">Trophies</option>
+                  <option value="Ready-made room signs">Ready-made room signs</option>
+                  <option value="Mixed sign set">Mixed sign set</option>
+                {%- endif -%}
+              </select>
+            </label>
+            <label>
+              {{ section.settings.quantity_label | escape }} <span>*</span>
+              <select name="contact[Estimated Quantity]" required>
+                <option value="" disabled selected>{{ section.settings.quantity_placeholder | escape }}</option>
+                {%- assign quantity_options = section.blocks | where: 'type', 'quantity_option' -%}
+                {%- if quantity_options.size > 0 -%}
+                  {%- for block in quantity_options -%}
+                    <option value="{{ block.settings.value | escape }}">{{ block.settings.label | escape }}</option>
+                  {%- endfor -%}
+                {%- else -%}
+                  <option value="10-24">10 – 24</option>
+                  <option value="25-49">25 – 49</option>
+                  <option value="50-99">50 – 99</option>
+                  <option value="100-249">100 – 249</option>
+                  <option value="250+">250+</option>
+                {%- endif -%}
+              </select>
+            </label>
+            <label class="sbl-bulk__field--full">
+              {{ section.settings.details_label | escape }} <span>*</span>
+              <textarea name="contact[Order Details]" required placeholder="{{ section.settings.details_placeholder | escape }}">{{- form.body -}}</textarea>
+            </label>
+          </div>
+
+          <button type="submit">{{ section.settings.submit_label | escape }}</button>
+          {%- if section.settings.fine_print != blank -%}
+            <p class="sbl-bulk__fine">{{ section.settings.fine_print | escape }}</p>
+          {%- endif -%}
+        {%- endform -%}
+      </div>
+    </div>
+  </div>
+</section>
+
+{% stylesheet %}
+  .sbl-bulk {
+    --sbl-navy: #0f2744;
+    --sbl-gold: #c9932e;
+    --sbl-cream: #f5f1eb;
+    --sbl-ink: #1b2433;
+    --sbl-muted: #667085;
+    background: var(--sbl-cream);
+    color: var(--sbl-ink);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .sbl-bulk * { box-sizing: border-box; }
+  .sbl-bulk__wrap { width: min(1120px, calc(100% - 48px)); margin: 0 auto; }
+  .sbl-bulk__hero { background: var(--sbl-navy); color: #fff; padding: 72px 0; }
+  .sbl-bulk__hero-grid,
+  .sbl-bulk__form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, .9fr); gap: 56px; align-items: start; }
+  .sbl-bulk__eyebrow { margin: 0 0 12px; color: var(--sbl-gold); font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+  .sbl-bulk h1,
+  .sbl-bulk h2,
+  .sbl-bulk h3 { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-weight: 500; letter-spacing: -.025em; }
+  .sbl-bulk h1 { font-size: clamp(40px, 5vw, 62px); line-height: 1.05; }
+  .sbl-bulk h1 em { color: #e6c66e; font-style: italic; }
+  .sbl-bulk__lead,
+  .sbl-bulk__panel p,
+  .sbl-bulk__intro,
+  .sbl-bulk__rep p { font-size: 16px; line-height: 1.65; }
+  .sbl-bulk__lead { max-width: 620px; margin: 18px 0 24px; color: #d7dfeb; }
+  .sbl-bulk__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+  .sbl-bulk__button { display: inline-flex; min-height: 50px; padding: 0 22px; align-items: center; border-radius: 7px; font-size: 14px; font-weight: 800; text-decoration: none; }
+  .sbl-bulk__button--gold { background: var(--sbl-gold); color: var(--sbl-navy); }
+  .sbl-bulk__button--ghost { border: 1px solid rgba(255,255,255,.35); color: #fff; }
+  .sbl-bulk__trust,
+  .sbl-bulk__perks { display: grid; margin: 22px 0 0; padding: 0; gap: 8px; list-style: none; }
+  .sbl-bulk__trust { color: #e6c66e; font-size: 14px; font-weight: 700; }
+  .sbl-bulk__panel { padding: 28px; border-radius: 14px; background: #fff; color: var(--sbl-ink); }
+  .sbl-bulk__panel h2 { color: var(--sbl-navy); font-size: 28px; }
+  .sbl-bulk__panel p { margin: 10px 0 18px; color: var(--sbl-muted); }
+  .sbl-bulk__panel ol { display: grid; margin: 0; padding: 0; gap: 12px; list-style: none; counter-reset: sbl-step; }
+  .sbl-bulk__panel li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; font-size: 15px; line-height: 1.45; }
+  .sbl-bulk__panel li::before { counter-increment: sbl-step; content: counter(sbl-step); display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: var(--sbl-navy); color: #fff; font-size: 13px; font-weight: 800; }
+  .sbl-bulk__form-section { padding: 72px 0 88px; }
+  .sbl-bulk__form-section h2 { color: var(--sbl-navy); font-size: clamp(32px, 4vw, 46px); line-height: 1.08; }
+  .sbl-bulk__form-section h2 em { font-style: italic; }
+  .sbl-bulk__intro { margin: 14px 0 18px; color: var(--sbl-muted); }
+  .sbl-bulk__perks { margin-bottom: 22px; color: var(--sbl-ink); font-size: 15px; }
+  .sbl-bulk__rep { padding: 18px 20px; border-radius: 12px; background: #fff; }
+  .sbl-bulk__rep h3 { color: var(--sbl-navy); font-size: 22px; }
+  .sbl-bulk__rep p { margin: 8px 0 0; color: var(--sbl-muted); }
+  .sbl-bulk__card { padding: 28px; border-radius: 16px; background: #fff; box-shadow: 0 18px 40px rgba(15,39,68,.08); }
+  .sbl-bulk__note { margin: 0 0 16px; color: var(--sbl-muted); font-size: 14px; }
+  .sbl-bulk__fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .sbl-bulk__field--full { grid-column: 1 / -1; }
+  .sbl-bulk label { display: grid; gap: 6px; color: var(--sbl-navy); font-size: 13px; font-weight: 800; }
+  .sbl-bulk label span { color: #b42318; }
+  .sbl-bulk input,
+  .sbl-bulk select,
+  .sbl-bulk textarea { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #ddd4c6; border-radius: 8px; color: var(--sbl-ink); font: inherit; font-weight: 500; }
+  .sbl-bulk textarea { min-height: 120px; resize: vertical; }
+  .sbl-bulk button { width: 100%; min-height: 52px; margin-top: 16px; border: 0; border-radius: 8px; background: var(--sbl-navy); color: #fff; font-size: 15px; font-weight: 800; cursor: pointer; }
+  .sbl-bulk__fine { margin: 10px 0 0; color: var(--sbl-muted); font-size: 12px; text-align: center; }
+  .sbl-bulk__status { margin-bottom: 14px; padding: 12px 14px; border-radius: 8px; font-size: 14px; line-height: 1.45; }
+  .sbl-bulk__status--success { background: #e8f6ee; color: #0f6b3c; }
+  .sbl-bulk__status--error { background: #fdecec; color: #9b1c1c; }
+  @media (max-width: 800px) {
+    .sbl-bulk__wrap { width: min(100% - 28px, 1120px); }
+    .sbl-bulk__hero-grid,
+    .sbl-bulk__form-grid,
+    .sbl-bulk__fields { grid-template-columns: 1fr; }
+    .sbl-bulk__hero { padding: 48px 0; }
+    .sbl-bulk__form-section { padding: 48px 0 64px; }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Signs bulk quote",
+  "settings": [
+    { "type": "url", "id": "designer_url", "label": "Sign designer link" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Bulk & business orders" },
+    { "type": "html", "id": "heading", "label": "Heading", "default": "Bulk signs,<br><em>quoted by a real person.</em>" },
+    { "type": "textarea", "id": "subheading", "label": "Subheading", "default": "Design the set in the sign designer, then tell us what you need. A representative reviews wall signs, door signs, desk signs, and matching sets and follows up with volume pricing." },
+    { "type": "text", "id": "primary_label", "label": "Primary button", "default": "Request a quote" },
+    { "type": "text", "id": "secondary_label", "label": "Secondary button", "default": "Open the sign designer" },
+    { "type": "text", "id": "panel_heading", "label": "Panel heading", "default": "How it works" },
+    { "type": "textarea", "id": "panel_text", "label": "Panel text", "default": "Large sign sets are not checked out automatically. Every request is reviewed so the finishes, wording, and lead time match the building." },
+    { "type": "text", "id": "form_eyebrow", "label": "Form eyebrow", "default": "Request a quote" },
+    { "type": "html", "id": "form_heading", "label": "Form heading", "default": "Tell us about<br><em>the sign set.</em>" },
+    { "type": "textarea", "id": "form_intro", "label": "Form intro", "default": "Share the signs you designed, how many you need, and where they will be installed. We typically reply within one business day." },
+    { "type": "text", "id": "rep_heading", "label": "Rep card heading", "default": "A real person reviews every request" },
+    { "type": "textarea", "id": "rep_text", "label": "Rep card text", "default": "Pricing depends on shape, finish, size, and quantity. We confirm the details from your sign designer set and send a quote. There is no commitment." },
+    { "type": "textarea", "id": "form_note", "label": "Form note", "default": "Fields marked with * are required. Include room names or a link to your saved design if you have one." },
+    { "type": "text", "id": "email_subject", "label": "Email subject", "default": "Sign Designer Bulk Quote Request" },
+    { "type": "text", "id": "name_label", "label": "Name label", "default": "Your name" },
+    { "type": "text", "id": "company_label", "label": "Company label", "default": "Company / building" },
+    { "type": "text", "id": "email_label", "label": "Email label", "default": "Email address" },
+    { "type": "text", "id": "phone_label", "label": "Phone label", "default": "Phone number" },
+    { "type": "text", "id": "product_label", "label": "Product label", "default": "What are you ordering?" },
+    { "type": "text", "id": "product_placeholder", "label": "Product placeholder", "default": "Select a sign type..." },
+    { "type": "text", "id": "quantity_label", "label": "Quantity label", "default": "Estimated quantity" },
+    { "type": "text", "id": "quantity_placeholder", "label": "Quantity placeholder", "default": "Select a range..." },
+    { "type": "text", "id": "details_label", "label": "Details label", "default": "Order details" },
+    { "type": "textarea", "id": "details_placeholder", "label": "Details placeholder", "default": "Shapes, finishes, sizes, room names, and anything you already designed in the sign designer..." },
+    { "type": "text", "id": "submit_label", "label": "Submit button", "default": "Submit quote request" },
+    { "type": "text", "id": "fine_print", "label": "Fine print", "default": "By submitting, you agree to be contacted about your bulk sign order." },
+    { "type": "textarea", "id": "success_message", "label": "Success message", "default": "Thank you. Your bulk sign quote request has been received. A representative will contact you shortly." },
+    { "type": "textarea", "id": "error_message", "label": "Error message", "default": "Please check your email address and required fields, then try again." }
+  ],
+  "blocks": [
+    { "type": "trust_point", "name": "Trust point", "settings": [{ "type": "text", "id": "label", "label": "Label", "default": "Same-day response" }] },
+    { "type": "step", "name": "Step", "settings": [{ "type": "text", "id": "text", "label": "Text", "default": "Design the signs, then send the set" }] },
+    { "type": "perk", "name": "Perk", "settings": [{ "type": "text", "id": "text", "label": "Text", "default": "Matching finishes across a whole building" }] },
+    { "type": "product_option", "name": "Product option", "settings": [
+      { "type": "text", "id": "label", "label": "Label", "default": "Custom wall and door signs" },
+      { "type": "text", "id": "value", "label": "Value", "default": "Custom wall and door signs" }
+    ] },
+    { "type": "quantity_option", "name": "Quantity option", "settings": [
+      { "type": "text", "id": "label", "label": "Label", "default": "10 – 24" },
+      { "type": "text", "id": "value", "label": "Value", "default": "10-24" }
+    ] }
+  ],
+  "presets": [{
+    "name": "Signs bulk quote",
+    "blocks": [
+      { "type": "trust_point", "settings": { "label": "Same-day response" } },
+      { "type": "trust_point", "settings": { "label": "Made in California" } },
+      { "type": "trust_point", "settings": { "label": "No commitment required" } },
+      { "type": "step", "settings": { "text": "Design the signs in the sign designer, or describe the set" } },
+      { "type": "step", "settings": { "text": "A representative reviews shapes, finishes, and quantity" } },
+      { "type": "step", "settings": { "text": "You get pricing and lead time, then place the order when ready" } },
+      { "type": "perk", "settings": { "text": "One finish used across wall signs, door signs, and nameplates" } },
+      { "type": "perk", "settings": { "text": "Duplicate a design and change only the room name" } },
+      { "type": "perk", "settings": { "text": "Offices, schools, clinics, hotels, and property managers" } },
+      { "type": "product_option", "settings": { "label": "Custom wall and door signs", "value": "Custom wall and door signs" } },
+      { "type": "product_option", "settings": { "label": "Desk signs", "value": "Desk signs" } },
+      { "type": "product_option", "settings": { "label": "Plaques and awards", "value": "Plaques and awards" } },
+      { "type": "product_option", "settings": { "label": "Trophies", "value": "Trophies" } },
+      { "type": "product_option", "settings": { "label": "Ready-made room signs", "value": "Ready-made room signs" } },
+      { "type": "product_option", "settings": { "label": "Mixed sign set", "value": "Mixed sign set" } },
+      { "type": "quantity_option", "settings": { "label": "10 – 24", "value": "10-24" } },
+      { "type": "quantity_option", "settings": { "label": "25 – 49", "value": "25-49" } },
+      { "type": "quantity_option", "settings": { "label": "50 – 99", "value": "50-99" } },
+      { "type": "quantity_option", "settings": { "label": "100 – 249", "value": "100-249" } },
+      { "type": "quantity_option", "settings": { "label": "250+", "value": "250+" } }
+    ]
+  }]
+}
+{% endschema %}

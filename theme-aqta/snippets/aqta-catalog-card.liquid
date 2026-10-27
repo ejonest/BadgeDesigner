@@ -1,0 +1,24 @@
+{% doc %}
+  One store award on a medals, trophies, or occasions page.
+  Custom medal, custom plaque, and custom trophy are not passed in.
+  @param {string} url - Product path
+  @param {string} image - Product image URL
+  @param {string} title - Short name
+  @param {string} note - Starting price
+{% enddoc %}
+{%- assign price_number = note | remove: 'From $' | times: 100 | round -%}
+<a
+  class="aqta-guide__card"
+  href="{{ url }}"
+  data-aqta-card
+  data-title="{{ title | downcase | escape }}"
+  data-price="{{ price_number }}"
+>
+  <div class="aqta-guide__card-image">
+    <img src="{{ image }}" alt="{{ title }}" width="900" height="900" loading="lazy">
+  </div>
+  <div class="aqta-guide__card-copy">
+    <strong>{{ title }}</strong>
+    <small>{{ note }}</small>
+  </div>
+</a>

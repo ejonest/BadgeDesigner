@@ -531,6 +531,39 @@ export const TROPHY_PRODUCTS: TrophyProduct[] = [
   },
 ];
 
+/**
+ * Option values on the Custom Trophy product. These match the Design option
+ * used by the Gavels Fast custom trophy, so both stores resolve the same way.
+ */
+export const TROPHY_SHOPIFY_DESIGN_BY_ID: Readonly<Record<string, string>> = {
+  baseball: "Baseball",
+  soccer: "Soccer",
+  victory: "Victory",
+  star: "Star",
+  "custom-logo": "Custom Logo",
+  "perfect-attendance": "Perfect Attendance",
+  "perfect-attendance-student": "Perfect Attendance - Student",
+  "team-player": "Team Player",
+  "student-of-the-month": "Student of the Month",
+  "honor-roll": "Honor Roll",
+  "star-employee": "Star Employee",
+  "top-sales": "Top Sales Achievement",
+  "employee-of-the-month": "Employee of the Month",
+};
+
+export function trophyShopifyDesign(id: string): string {
+  return TROPHY_SHOPIFY_DESIGN_BY_ID[id] ?? getTrophyProduct(id).shortLabel;
+}
+
+export function trophyIdForShopifyDesign(label: string): string | null {
+  const target = label.trim().toLowerCase();
+  if (!target || target === "default title") return null;
+  const match = Object.entries(TROPHY_SHOPIFY_DESIGN_BY_ID).find(
+    ([, name]) => name.toLowerCase() === target,
+  );
+  return match?.[0] ?? null;
+}
+
 export function getTrophyProduct(id: string): TrophyProduct {
   return TROPHY_PRODUCTS.find((product) => product.id === id) ?? TROPHY_PRODUCTS[0];
 }

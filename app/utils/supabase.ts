@@ -1606,6 +1606,7 @@ export function convertBadgeToOrderItem(
   const isGavel = Boolean(badge.gavelStyle) || prefix === "gavel";
   const isPen = Boolean(badge.penStyle) || prefix === "pen";
   const isTrophy = Boolean(badge.trophyProductId) || prefix === "trophy";
+  const isMedal = Boolean(badge.medalProductId) || prefix === "medal";
 
   // Use badge-0, badge-1, ... so link-order (which uses line index from cart) can match
   return {
@@ -1637,6 +1638,11 @@ export function convertBadgeToOrderItem(
                 .filter(Boolean)
                 .join(" · ") || "Trophy",
               attachment_method: "none",
+            }
+        : isMedal
+          ? {
+              finish: badge.medalProductLabel || "Medal",
+              attachment_method: "neck ribbon",
             }
       : {
           background_color: formatColor(badge.backgroundColor),

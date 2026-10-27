@@ -1,0 +1,45 @@
+{% doc %}
+  Industry tile icon drawn in the Signs ByLITA homepage mockup style.
+  @param {string} name - restaurant, hotel, office, school, clinic, church, home, warehouse, retail, or novelty
+  @example
+  {% render 'sbl-industry-icon', name: 'clinic' %}
+{% enddoc %}
+
+<span class="sbl-ind__icon">
+  <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    {%- case name -%}
+      {%- when 'restaurant' -%}
+        <path d="M17 9v16q0 8 7 8v23M31 9v16q0 8-7 8M24 9v17M47 33V9q-10 5-10 24h10v23"/>
+        <path class="accent" d="M9 46h8m16 0h8M9 52h8m16 0h8"/>
+      {%- when 'hotel' -%}
+        <path d="M10 55V27l19-15 19 15v28H10ZM23 55V39h12v16M16 30h7m12 0h7"/>
+        <path class="accent" d="M45 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm0 0v14m0-5h8m-8 5h5"/>
+      {%- when 'office' -%}
+        <path d="M17 55V17h30v38M11 55h48M25 55V43h14v12M24 25h4m8 0h4M24 34h4m8 0h4"/>
+        <path class="accent" d="M42 9h13v22H42M48 16h2m-2 7h2"/>
+      {%- when 'school' -%}
+        <path d="m7 24 25-13 25 13-25 13L7 24ZM17 30v17q15 12 30 0V30M57 25v20"/>
+        <path class="accent" d="M12 56h40M22 49v7m20-7v7M57 45l-3 7h6Z"/>
+      {%- when 'clinic' -%}
+        <path d="M14 55V18h36v37M8 55h48M27 55V43h10v12M20 37h5m14 0h5"/>
+        <path class="accent" d="M28 9h8v8h8v8h-8v8h-8v-8h-8v-8h8Z"/>
+      {%- when 'church' -%}
+        <path d="M13 56V32h10V22l9-9 9 9v10h10v24H13ZM27 56V43h10v13M18 39v7m28-7v7"/>
+        <path class="accent" d="M32 5v15m-6-9h12M6 56h52"/>
+      {%- when 'home' -%}
+        <path d="M10 55V27l19-15 19 15v28H10ZM23 55V39h12v16"/>
+        <path class="accent" d="M16 30h7m12 0h7"/>
+      {%- when 'warehouse' -%}
+        <path d="M8 55V24l24-14 24 14v31H8ZM20 55V34h24v21M20 41h24m-24 7h24"/>
+        <path class="accent" d="M14 25h5m11 0h5m11 0h5M32 34v21"/>
+      {%- when 'retail' -%}
+        <path d="M13 28v27h38V28M9 26l6-15h34l6 15M19 55V38h13v17M38 38h7v8h-7Z"/>
+        <path class="accent" d="M9 26q6 10 12 0 5 10 11 0 6 10 11 0 6 10 12 0M23 11l-2 15m20-15 2 15"/>
+      {%- when 'novelty' -%}
+        <path d="M32 8l3.2 10.2L46 21.5l-8.2 6.4L40.4 39 32 33.2 23.6 39l2.6-11.1L18 21.5l10.8-3.3Z"/>
+        <path class="accent" d="M48 12v8M52 16h-8M16 46v6M19 49h-6"/>
+      {%- else -%}
+        <circle cx="32" cy="32" r="16"/>
+    {%- endcase -%}
+  </svg>
+</span>

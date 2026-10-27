@@ -1,0 +1,109 @@
+{% doc %}
+  Renders one Signs ByLITA header mega menu. Category links use the managed
+  product tags (`sbl:category:…`, `sbl:industry:…`, `sbl:family:…`). A target
+  that starts with `url:` is a direct path, and `q:` is a product search.
+  Example phrases always go to product search.
+
+  @param {string} summary - Nav label
+  @param {string} menu_id - Unique id suffix
+  @param {string} section_id - Header section id
+  @param {string} groups - Groups split by @@. Each group is Title%%target%%phrase;;phrase
+  @param {string} catalog_url - All-products collection URL
+  @param {string} search_base - Search URL ending in `q=`
+  @param {string} cta_title - Custom-design card heading
+  @param {string} cta_label - Custom-design card button
+  @param {string} cta_url - Custom-design card destination
+  @param {boolean} [current] - Marks the nav item for the current page
+  @param {string} [placeholder] - In-menu search placeholder
+  @param {string} [styles_heading] - Optional right-rail heading
+  @param {string} [styles] - Optional links, Label|query;;Label|query
+  @param {string} [extra_label] - Optional text link under the rail
+  @param {string} [extra_url] - Destination for the optional text link
+  @param {string} [view_all_url] - Where a second click on the open header goes
+
+  @example
+  {% render 'sbl-mega-panel', summary: 'Popular signs', menu_id: 'popular', section_id: section.id, groups: groups, catalog_url: catalog_url, search_base: search_base, cta_title: "Can't find your wording?", cta_label: 'Design your own sign', cta_url: '/products/custom-sign' %}
+{% enddoc %}
+
+<details class="sbl-header__drop" data-sbl-drop{% if view_all_url != blank %} data-sbl-view-all="{{ view_all_url | escape }}"{% endif %}>
+  <summary class="{% if current %}is-current{% endif %}">{{ summary | escape }}</summary>
+  <div class="sbl-mega" data-sbl-mega>
+    {%- assign filter_id = 'sbl-mega-' | append: menu_id | append: '-' | append: section_id -%}
+    {%- assign filter_placeholder = placeholder | default: 'Search these categories' -%}
+    <form id="{{ filter_id }}" class="sbl-mega__find" action="{{ routes.search_url }}" method="get" role="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 16.5L20 20.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <label class="sbl-header__visually-hidden" for="{{ filter_id }}-input">{{ filter_placeholder | escape }}</label>
+      <input id="{{ filter_id }}-input" type="search" name="q" placeholder="{{ filter_placeholder | escape }}" autocomplete="off" data-sbl-mega-filter>
+      <input type="hidden" name="type" value="product">
+    </form>
+
+    <div class="sbl-mega__layout">
+      <div class="sbl-mega__cols">
+        {%- assign group_rows = groups | split: '@@' -%}
+        {%- for group in group_rows -%}
+          {%- assign parts = group | split: '%%' -%}
+          {%- assign title = parts[0] | strip -%}
+          {%- assign target = parts[1] | strip -%}
+          {%- if title == blank or target == blank -%}{% continue %}{%- endif -%}
+          {%- assign target_kind = target | slice: 0, 4 -%}
+          {%- if target_kind == 'url:' -%}
+            {%- assign view_url = target | remove_first: 'url:' -%}
+          {%- else -%}
+            {%- assign query_kind = target | slice: 0, 2 -%}
+            {%- if query_kind == 'q:' -%}
+              {%- assign view_query = target | remove_first: 'q:' | url_encode -%}
+              {%- assign view_url = search_base | append: view_query -%}
+            {%- else -%}
+              {%- assign tag_handle = target | handleize -%}
+              {%- assign view_url = catalog_url | append: '/' | append: tag_handle -%}
+            {%- endif -%}
+          {%- endif -%}
+          <div class="sbl-mega__group" data-sbl-group="{{ title | escape }}">
+            <a class="sbl-mega__title" href="{{ view_url }}">{{ title | escape }}</a>
+            {%- assign phrases = parts[2] | split: ';;' -%}
+            {%- for phrase in phrases -%}
+              {%- assign phrase_label = phrase | strip -%}
+              {%- if phrase_label == blank -%}{% continue %}{%- endif -%}
+              {%- assign phrase_query = phrase_label | url_encode -%}
+              <a data-sbl-item href="{{ search_base | append: phrase_query }}">{{ phrase_label | escape }}</a>
+            {%- endfor -%}
+            <a class="sbl-mega__all" data-sbl-item href="{{ view_url }}">View all →</a>
+          </div>
+        {%- endfor -%}
+      </div>
+
+      <aside class="sbl-mega__rail">
+        {%- if styles != blank -%}
+          <div class="sbl-mega__styles">
+            <p>{{ styles_heading | default: 'Shop by style' | escape }}</p>
+            <div>
+              {%- assign style_rows = styles | split: ';;' -%}
+              {%- for style in style_rows -%}
+                {%- assign style_parts = style | split: '|' -%}
+                {%- assign style_label = style_parts[0] | strip -%}
+                {%- assign style_query = style_parts[1] | default: style_label | strip | url_encode -%}
+                {%- if style_label != blank -%}
+                  <a class="sbl-mega__style" data-sbl-style href="{{ search_base | append: style_query }}">{{ style_label | escape }}</a>
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+          </div>
+        {%- endif -%}
+
+        <a class="sbl-mega__own" href="{{ cta_url }}">
+          <span class="sbl-mega__own-kicker">{{ cta_title | escape }}</span>
+          <span class="sbl-mega__own-button">{{ cta_label | escape }} <span aria-hidden="true">→</span></span>
+        </a>
+
+        {%- if extra_label != blank and extra_url != blank -%}
+          <a class="sbl-mega__extra" href="{{ extra_url }}">{{ extra_label | escape }}</a>
+        {%- endif -%}
+      </aside>
+    </div>
+
+    <p class="sbl-mega__empty" data-sbl-empty hidden>
+      Nothing in this menu matches.
+      <button type="submit" form="{{ filter_id }}">Search all signs</button>
+    </p>
+  </div>
+</details>

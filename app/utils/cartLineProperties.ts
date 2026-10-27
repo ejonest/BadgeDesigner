@@ -21,6 +21,10 @@ export const CART_PROP = {
   trophyTextLine2: "Trophy Text Line 2",
   trophyTextLine3: "Trophy Text Line 3",
   trophyTextLine4: "Trophy Text Line 4",
+  medalTextLine1: "Medal Text Line 1",
+  medalTextLine2: "Medal Text Line 2",
+  medalTextLine3: "Medal Text Line 3",
+  medalTextLine4: "Medal Text Line 4",
   penCaseBandText: "Case Band Text",
   penCapText: "Pen Cap Text",
   uploadedLogo: "Uploaded Logo",
@@ -170,12 +174,15 @@ export function buildDesignerCartLineProperties(
   const isGavel = input.designerId === "gavel";
   const isPen = input.designerId === "pen";
   const isTrophy = input.designerId === "trophy";
+  const isMedal = input.designerId === "medal";
   const firstLineProperty = isGavel
     ? CART_PROP.gavelTextLine1
     : isPen
       ? CART_PROP.penCaseBandText
       : isTrophy
         ? CART_PROP.trophyTextLine1
+        : isMedal
+          ? CART_PROP.medalTextLine1
         : CART_PROP.textLine1;
   const secondLineProperty = isGavel
     ? CART_PROP.gavelTextLine2
@@ -183,6 +190,8 @@ export function buildDesignerCartLineProperties(
       ? CART_PROP.penCapText
       : isTrophy
         ? CART_PROP.trophyTextLine2
+        : isMedal
+          ? CART_PROP.medalTextLine2
         : CART_PROP.textLine2;
   const properties: Record<string, string> = {
     [firstLineProperty]: input.lines[0]?.text || "",
@@ -191,11 +200,15 @@ export function buildDesignerCartLineProperties(
       ? CART_PROP.gavelTextLine3
       : isTrophy
         ? CART_PROP.trophyTextLine3
+        : isMedal
+          ? CART_PROP.medalTextLine3
         : CART_PROP.textLine3]: input.lines[2]?.text || "",
     [isGavel
       ? CART_PROP.gavelTextLine4
       : isTrophy
         ? CART_PROP.trophyTextLine4
+        : isMedal
+          ? CART_PROP.medalTextLine4
         : CART_PROP.textLine4]: input.lines[3]?.text || "",
     [CART_PROP.customDesign]: "Yes",
     [CART_PROP.designer]: input.designerId,

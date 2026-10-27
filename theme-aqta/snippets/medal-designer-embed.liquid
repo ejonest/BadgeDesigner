@@ -1,0 +1,76 @@
+{% doc %}
+  Embeds the medal designer on personalized medal products.
+{% enddoc %}
+{% liquid
+  assign medal_designer_url = 'https://all-quality-design-tool.vercel.app'
+  assign medal_designer_match = false
+  if product != blank and product.handle contains 'custom-personalized' and product.handle contains 'medal'
+    assign medal_designer_match = true
+  endif
+%}
+{% if medal_designer_match %}
+  {% assign medal_variant = product.selected_or_first_available_variant | default: product.variants[0] %}
+  {% assign medal_unit_price = product.price | divided_by: 100.0 %}
+  <iframe
+    class="medal-designer-iframe"
+    data-medal-designer-embed-root
+    title="Medal designer"
+    src="{{ medal_designer_url }}/medal-designer?embedded=1&shop={{ shop.permanent_domain | url_param_escape }}&storeUrl={{ shop.permanent_domain | url_param_escape }}&product={{ product.id | url_param_escape }}&productHandle={{ product.handle | url_param_escape }}&variantId={{ medal_variant.id | url_param_escape }}&price={{ medal_unit_price }}{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}"
+    style="display:block;width:100%;height:min(90vh,900px);border:0;"
+    loading="lazy"
+    allow="clipboard-read; clipboard-write; fullscreen"
+  ></iframe>
+  <script>
+    (function () {
+      var iframe = document.currentScript && document.currentScript.previousElementSibling;
+      if (!iframe || iframe.getAttribute('data-medal-designer-embed-root') == null) return;
+      if (window.__medalDesignerEmbedMessageBound) return;
+      window.__medalDesignerEmbedMessageBound = true;
+      var designerOrigin = '{{ medal_designer_url }}'.replace(/\/$/, '');
+      var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root ? window.Shopify.routes.root : '/').replace(/\/$/, '');
+
+      function reply(event, requestId, success, error) {
+        if (!requestId || !event.source) return;
+        event.source.postMessage({ action: 'add-to-cart-result', requestId: requestId, success: success, error: error || null }, event.origin);
+      }
+
+      function add(items, event, requestId) {
+        fetch(cartRoot + '/cart/add.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: items.map(function (item) {
+              return { id: parseInt(String(item.variantId), 10), quantity: item.quantity || 1, properties: item.properties || {} };
+            })
+          })
+        })
+          .then(function (response) {
+            return response.json().then(function (body) {
+              if (!response.ok) throw new Error((body && (body.description || body.message)) || ('HTTP ' + response.status));
+              return body;
+            });
+          })
+          .then(function () {
+            reply(event, requestId, true);
+            window.location.href = cartRoot + '/cart';
+          })
+          .catch(function (error) {
+            var message = error && error.message ? error.message : String(error);
+            reply(event, requestId, false, message);
+            alert('Could not add your medal to the cart. Please try again.\n\n' + message);
+          });
+      }
+
+      window.addEventListener('message', function (event) {
+        if (event.origin !== designerOrigin) return;
+        var data = event.data;
+        if (!data || !data.action) return;
+        if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
+          add(data.payload.items, event, data.requestId);
+        } else if (data.action === 'add-to-cart' && data.payload) {
+          add([data.payload], event, data.requestId);
+        }
+      });
+    })();
+  </script>
+{% endif %}
