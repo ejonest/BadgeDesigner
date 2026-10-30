@@ -159,7 +159,9 @@ import {
   defaultSignFinishForShape,
   getSignFinishById,
   getSignFinishesForShape,
+  signFinishDefaultTextColor,
   signShapeHasFinishes,
+  whiteSignFinishForShape,
   type SignFinishOption,
 } from "~/data/signFinishes";
 import {
@@ -208,6 +210,8 @@ import { BadgeTemplatePhotoPreview } from "./BadgeTemplatePhotoPreview";
 import { ProofPdfViewer } from "./ProofPdfViewer";
 import { stableAutosaveDesignId } from "../utils/stableDesignLibraryIds";
 import { createApi, type DesignLibraryListItem } from "../utils/api";
+import { isDesignerEmbeddedInStorefront } from "../utils/shopifyCartClient";
+import { DEFAULT_FONT } from "../constants/fonts";
 import {
   createDesignerAnalytics,
   type DesignerAnalyticsTool,
@@ -639,7 +643,10 @@ function finalizeAllBadgesForDesignLibrarySnapshot(
   );
   const finalizedSlot = {
     ...liveBadge,
-    templateId: universalTemplateId,
+    templateId: effectiveSignTemplateIdForBadge(
+      liveBadge.templateId,
+      universalTemplateId,
+    ),
     backgroundColor: liveBadge.backgroundColor || "#FFFFFF",
   };
   const next = [...multipleBadges];
@@ -1259,7 +1266,7 @@ function DesktopPreviewDimensionFrame({
 }
 
 /** Reference step header: grey / black / green circle + summary (same navy as titles) + chevron (badge redesign only). */
-type AqbBadgeStepVisualState = "done" | "active" | "inactive" | "error";
+type AqbBadgeStepVisualState = "done" | "active" | "inactive" | "error" | "needed";
 
 interface AqbBadgeStepSectionToggleProps {
   buttonRef?: React.Ref<HTMLButtonElement>;
@@ -1268,6 +1275,8 @@ interface AqbBadgeStepSectionToggleProps {
   stepLabel?: string;
   visualState: AqbBadgeStepVisualState;
   title: string;
+  /** Muted note shown beside the title. */
+  hint?: string;
   summary: string | null;
   open: boolean;
   onClick: () => void;
@@ -1281,6 +1290,7 @@ const AqbBadgeStepSectionToggle: React.FC<AqbBadgeStepSectionToggleProps> = ({
   stepLabel,
   visualState,
   title,
+  hint,
   summary,
   open,
   onClick,
@@ -1290,7 +1300,9 @@ const AqbBadgeStepSectionToggle: React.FC<AqbBadgeStepSectionToggleProps> = ({
     ref={buttonRef}
     type="button"
     onClick={onClick}
-    className="aqb-step-toggle group flex h-auto min-h-0 w-full items-center justify-between gap-2 border-0 bg-transparent text-left transition-colors hover:bg-[#faf8f4]"
+    className={`aqb-step-toggle group flex h-auto min-h-0 w-full items-center justify-between gap-2 border-0 text-left transition-colors hover:bg-[#faf8f4] ${
+      visualState === "needed" ? "is-needed" : "bg-transparent"
+    }`}
   >
     <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-2.5 overflow-hidden pr-1">
       <div
@@ -1299,6 +1311,8 @@ const AqbBadgeStepSectionToggle: React.FC<AqbBadgeStepSectionToggleProps> = ({
             ? "bg-[#2d9e75]"
             : visualState === "error"
             ? "bg-[#dc2626]"
+            : visualState === "needed"
+            ? "bg-[#d97706]"
             : visualState === "active"
             ? "bg-[#02132B]"
             : "bg-[#d4cec6]"
@@ -1312,14 +1326,23 @@ const AqbBadgeStepSectionToggle: React.FC<AqbBadgeStepSectionToggleProps> = ({
           <span className="leading-none">{stepLabel ?? stepNumber}</span>
         )}
       </div>
-      <span
-        className={
-          visualState === "inactive"
-            ? "min-w-0 truncate text-[14px] font-medium leading-none text-[#6b7f92]"
-            : "min-w-0 truncate text-[14px] font-semibold leading-none text-[#02132B]"
-        }
-      >
-        {title}
+      <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-1.5">
+        <span
+          className={
+            visualState === "inactive"
+              ? "shrink-0 text-[14px] font-medium leading-none text-[#6b7f92]"
+              : visualState === "needed"
+              ? "shrink-0 text-[14px] font-semibold leading-none text-[#9a3412]"
+              : "shrink-0 text-[14px] font-semibold leading-none text-[#02132B]"
+          }
+        >
+          {title}
+        </span>
+        {hint ? (
+          <span className="text-[12px] font-normal leading-snug text-[#6b7f92]">
+            {hint}
+          </span>
+        ) : null}
       </span>
       {endSlot ? (
         <span className="ml-0.5 flex shrink-0 items-center">{endSlot}</span>
@@ -2225,7 +2248,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     signBorderEnabled: false,
     lines: source.lines.map((line) => ({
       ...line,
-      color: finish.inkColor,
+      color: signFinishDefaultTextColor(finish),
     })),
   });
 
@@ -2238,9 +2261,19 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     const updatedBadge = badgeWithSignFinish(badge, finish);
     setBadge(updatedBadge);
     setMultipleBadges((prev) =>
-      prev.map((item, index) =>
-        index === selectedBadgeIndex ? updatedBadge : item,
-      ),
+      prev.map((item, index) => {
+        if (index === selectedBadgeIndex) return updatedBadge;
+        if (variant !== "sign" || signBulkScopeRef.current !== "all") {
+          return item;
+        }
+        const tid = effectiveSignTemplateIdForBadge(
+          item.templateId,
+          universalTemplateIdRef.current,
+        );
+        const typeId = findSignTypeAndSizeForUniversalTemplate(tid)?.typeId;
+        if (typeId !== finish.shapeTypeId) return item;
+        return badgeWithSignFinish(item, finish);
+      }),
     );
     if (selectedBadgeIndex === 0) setBadge1Data(updatedBadge);
     setSectionsOpen({
@@ -2552,54 +2585,116 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     });
   };
 
-  // Apply all formatting (background color + all text formatting) from current badge to all badges
+  const copyLineFormatting = (
+    targetLines: BadgeLine[],
+    sourceLines: BadgeLine[],
+  ): BadgeLine[] =>
+    targetLines.map((existingLine, lineIndex) => {
+      const sourceLine = sourceLines[lineIndex];
+      if (!sourceLine) return existingLine;
+      const formatting: Partial<BadgeLine> = {
+        color: sourceLine.color,
+        fontFamily: sourceLine.fontFamily,
+        bold: sourceLine.bold,
+        italic: sourceLine.italic,
+        underline: sourceLine.underline,
+        align: sourceLine.align,
+        sizeNorm: sourceLine.sizeNorm,
+        fontSize: sourceLine.fontSize,
+      };
+      return { ...existingLine, ...formatting };
+    });
+
+  const publishAppliedBadges = (updatedMultipleBadges: Badge[]) => {
+    setMultipleBadges(updatedMultipleBadges);
+    const idx = selectedBadgeIndexRef.current;
+    const active = updatedMultipleBadges[idx];
+    if (active) setBadge(active);
+    if (updatedMultipleBadges[0]) setBadge1Data(updatedMultipleBadges[0]);
+    runDraftSaveForBadges(updatedMultipleBadges);
+    queueMicrotask(() => {
+      const run = runCloudAutosaveNowRef.current;
+      if (!run) return;
+      void run({
+        multipleBadgesOverride: updatedMultipleBadges,
+        badgeOverride: updatedMultipleBadges[idx] ?? badgeRef.current,
+      });
+    });
+  };
+
+  // Apply the open design's look to every design. Signs also copy shape, size, and finish.
   const applyAllFormattingToAll = () => {
-    // Save to undo history before making changes
     saveToUndoHistory({
       type: "apply-all-formatting",
       badgeIndex: selectedBadgeIndex,
     });
 
-    const currentBackgroundColor = badge.backgroundColor;
-    const currentLines = badge.lines;
+    const source = badgeRef.current;
+    const currentBackgroundColor = source.backgroundColor;
+    const currentLines = source.lines;
 
-    // Update current badge (ensure it's saved)
+    if (variant === "sign") {
+      const templateId = effectiveSignTemplateIdForBadge(
+        selectedSignSizeTemplateIdRef.current ||
+          universalTemplateIdRef.current,
+        universalTemplateIdRef.current,
+      );
+      const sourceShape =
+        findSignTypeAndSizeForUniversalTemplate(templateId)?.typeId;
+      const finish = getSignFinishById(source.signFinishId);
+      const finishFits = Boolean(
+        finish && sourceShape && finish.shapeTypeId === sourceShape,
+      );
+      const idx = selectedBadgeIndexRef.current;
+      const seeded = multipleBadgesRef.current.map((row, index) =>
+        index === idx
+          ? {
+              ...source,
+              templateId,
+              backgroundColor: source.backgroundColor || "#FFFFFF",
+            }
+          : row,
+      );
+      void (async () => {
+        const changed = await handleUniversalTemplateChange(templateId, {
+          badgesOverride: seeded,
+        });
+        const base = changed ?? seeded;
+        const updatedMultipleBadges = base.map((item) => {
+          const withFinish = finishFits && finish
+            ? badgeWithSignFinish(item, finish)
+            : {
+                ...item,
+                signFinishId: source.signFinishId,
+                signFinishImageSrc: undefined,
+                backgroundColor: currentBackgroundColor,
+                backgroundImage: source.backgroundImage,
+                borderColor: source.borderColor,
+                signBorderOptionId: source.signBorderOptionId,
+                signBorderEnabled: source.signBorderEnabled,
+                signBorderStyleId: source.signBorderStyleId,
+              };
+          return {
+            ...withFinish,
+            templateId,
+            lines: copyLineFormatting(withFinish.lines, currentLines),
+          };
+        });
+        if (finishFits) setHasChosenBackgroundColor(true);
+        publishAppliedBadges(updatedMultipleBadges);
+      })();
+      return;
+    }
+
+    const updatedMultipleBadges = multipleBadges.map((b: Badge) => ({
+      ...b,
+      backgroundColor: currentBackgroundColor,
+      lines: copyLineFormatting(b.lines, currentLines),
+    }));
     setBadge({
-      ...badge,
+      ...source,
       backgroundColor: currentBackgroundColor,
       lines: currentLines,
-    });
-
-    // Sync badge1Data with the first badge after updating
-
-    // Update all badges in multipleBadges
-    const updatedMultipleBadges = multipleBadges.map((b: Badge) => {
-      // Apply background color
-      const updatedBadge = { ...b, backgroundColor: currentBackgroundColor };
-
-      // Apply formatting to all lines (preserve text content)
-      const updatedLines = b.lines.map(
-        (existingLine: BadgeLine, lineIndex: number) => {
-          const sourceLine = currentLines[lineIndex];
-          if (!sourceLine) return existingLine; // If source doesn't have this line, keep existing
-
-          // Extract only formatting properties (not text)
-          const formatting: Partial<BadgeLine> = {
-            color: sourceLine.color,
-            fontFamily: sourceLine.fontFamily,
-            bold: sourceLine.bold,
-            italic: sourceLine.italic,
-            underline: sourceLine.underline,
-            align: sourceLine.align,
-            sizeNorm: sourceLine.sizeNorm,
-            fontSize: sourceLine.fontSize,
-          };
-
-          return { ...existingLine, ...formatting };
-        },
-      );
-
-      return { ...updatedBadge, lines: updatedLines };
     });
     setMultipleBadges(updatedMultipleBadges);
 
@@ -3624,6 +3719,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const badgeRef = useRef<Badge>(badge);
   const selectedBadgeIndexRef = useRef<number>(selectedBadgeIndex);
   const universalTemplateIdRef = useRef<string>(universalTemplateId);
+  /** With more than one sign, shape, size, and finish change only the sign open in the editor. */
+  const signBulkScopeRef = useRef<"one" | "all">("all");
+  signBulkScopeRef.current =
+    variant === "sign" && multipleBadges.length > 1 ? "one" : "all";
   multipleBadgesRef.current = multipleBadges;
   badgeRef.current = badge;
   selectedBadgeIndexRef.current = selectedBadgeIndex;
@@ -3640,13 +3739,14 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const persistCurrentBadgeToSlot = (next: Badge) => {
     const tid = universalTemplateIdRef.current;
     const idx = selectedBadgeIndexRef.current;
+    const slotTemplateId = effectiveSignTemplateIdForBadge(next.templateId, tid);
     setMultipleBadges((prev) => {
       if (prev.length === 0) return prev;
       const copy = [...prev];
       if (copy[idx]) {
         copy[idx] = {
           ...next,
-          templateId: tid,
+          templateId: variant === "sign" ? slotTemplateId : tid,
           backgroundColor: next.backgroundColor || "#FFFFFF",
         };
       }
@@ -3655,7 +3755,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     if (idx === 0) {
       setBadge1Data({
         ...next,
-        templateId: tid,
+        templateId: variant === "sign" ? slotTemplateId : tid,
         backgroundColor: next.backgroundColor || "#FFFFFF",
       });
     }
@@ -3726,7 +3826,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       | "signLogo",
     forStep?: 2 | 3 | 4 | 5 | 6 | 7,
   ) => {
-    if (forStep != null) {
+    if (forStep != null && variant !== "sign") {
       const msg = getIncompleteStepsMessage(forStep);
       if (msg) {
         alert(msg);
@@ -5198,9 +5298,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
    * Local SVG QA panel: customer preview (proof), print-ready, and overlap.
    * Available in any Vite development build — not only designLibraryDummy mode.
    */
-  const isDevSvgQaEnabled = Boolean(
-    (import.meta.env as { DEV?: boolean }).DEV,
-  );
+  const isDevSvgQaEnabled =
+    Boolean((import.meta.env as { DEV?: boolean }).DEV) && variant !== "sign";
   const [devSvgOpen, setDevSvgOpen] = useState(false);
   const [devSvgBusy, setDevSvgBusy] = useState(false);
   const [devSvgError, setDevSvgError] = useState<string | null>(null);
@@ -5694,12 +5793,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       ...(borderIncluded ? [borderDone] : []),
       textDone,
     ];
-    const firstIncomplete = completions.findIndex((c) => !c);
+    const sectionOpenAt = (index: number) => {
+      const openFlags = [
+        sectionsOpen.template,
+        sectionsOpen.size,
+        sectionsOpen.background,
+        ...(borderIncluded ? [sectionsOpen.border] : []),
+        sectionsOpen.textLines,
+      ];
+      return Boolean(openFlags[index]);
+    };
     const visual = (index: number): AqbBadgeStepVisualState => {
       if (completions[index]) return "done";
-      if (firstIncomplete === -1) return "done";
-      if (firstIncomplete === index) return "active";
-      return "inactive";
+      if (sectionOpenAt(index)) return "active";
+      return "needed";
     };
 
     let step = 1;
@@ -5783,6 +5890,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     };
   }, [
     variant,
+    sectionsOpen.template,
+    sectionsOpen.size,
+    sectionsOpen.background,
+    sectionsOpen.border,
+    sectionsOpen.textLines,
     selectedSignTemplateType,
     selectedSignSizeTemplateId,
     hasChosenBackgroundColor,
@@ -5914,7 +6026,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   ]);
 
   const mobileStepsChromeTitle = mobileActiveStepSummary?.allComplete
-    ? "Checkout or add more in the control panel"
+    ? variant === "sign"
+      ? "Ready to check out, or add another sign"
+      : "Checkout or add more in the control panel"
     : mobileActiveStepSummary
       ? usesAqbShell
         ? mobileActiveStepSummary.label
@@ -7245,7 +7359,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         ...badge.lines,
         {
           id: `line-${Date.now()}`,
-          text: isDeskSignVariant(variant)
+          text: variant === "sign"
+            ? ""
+            : isDeskSignVariant(variant)
             ? newLineIndex === 0
               ? "Your Name"
               : "Your Title"
@@ -7324,7 +7440,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   const resetLineToDefault = (index: number) => {
     const designBox = effectiveDesignBox;
     const bgColor = badge.backgroundColor || "#FFFFFF";
-    const defaultColor = getContrastingTextColor(bgColor);
+    const selectedFinish =
+      variant === "sign" ? getSignFinishById(badge.signFinishId) : undefined;
+    const defaultColor = selectedFinish
+      ? signFinishDefaultTextColor(selectedFinish)
+      : getContrastingTextColor(bgColor);
     const defaultSizeNorm = getDefaultSizeNorm(
       index,
       designBox.height,
@@ -7518,21 +7638,66 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       ? getEffectiveDesignBox(currentTemplate, badgeToReset).height
       : 96;
 
+    const preserveSignWording = variant === "sign";
+    const resetFinish =
+      variant === "sign"
+        ? getSignFinishById(badgeToReset.signFinishId)
+        : undefined;
+    const resetLineColor = preserveSignWording
+      ? "#000000"
+      : resetFinish
+        ? signFinishDefaultTextColor(resetFinish)
+        : "#000000";
+
     return badgeToReset.lines.map(
       (line, index) =>
         ({
           id: line.id || `line-${index + 1}`,
-          text: getResetLineDefaultText(index),
+          text: preserveSignWording
+            ? (line.text ?? "")
+            : getResetLineDefaultText(index),
           xNorm: 0.5,
           yNorm: 0.5, // Will be repositioned by calculateCenterPositions
           sizeNorm: getDefaultSizeNorm(index, designBoxHeight),
-          color: "#000000",
+          color: resetLineColor,
           bold: false,
           italic: false,
           underline: false,
-          fontFamily: "Arial",
+          fontFamily: preserveSignWording ? DEFAULT_FONT : "Arial",
           align: "center",
         } as BadgeLine),
+    );
+  };
+
+  const signResetAppearance = (badgeToReset: Badge): Partial<Badge> => {
+    const shapeId = findSignTypeAndSizeForUniversalTemplate(
+      badgeToReset.templateId,
+    )?.typeId;
+    const whiteFinish = whiteSignFinishForShape(shapeId);
+    return {
+      backgroundColor: whiteFinish?.backgroundColor ?? "#FFFFFF",
+      backgroundImage: undefined,
+      ...(whiteFinish
+        ? {
+            signFinishId: whiteFinish.id,
+            signFinishImageSrc: undefined,
+          }
+        : {}),
+    };
+  };
+
+  const fitSignResetLines = (source: Badge, lines: BadgeLine[]): BadgeLine[] => {
+    if (variant !== "sign") return lines;
+    const lineTpl = templates.find((t) => t.id === source.templateId);
+    if (!lineTpl) return lines;
+    const appearance = signResetAppearance(source);
+    const nextBadge = { ...source, ...appearance, lines };
+    return scaleLinesToFit(
+      lines,
+      getEffectiveDesignBox(lineTpl, nextBadge),
+      lineTpl.signTextLayout,
+      lineTpl,
+      nextBadge,
     );
   };
 
@@ -7545,8 +7710,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
     const fallbackId = templates[0]?.id || "rect-1x3";
 
-    // Preserve current number of lines, reset text and formatting to defaults
-    const resetLines = resetBadgeLines(badge);
+    // Preserve wording. Restore the white plate, black text, and default sizes.
+    const resetLines = fitSignResetLines(badge, resetBadgeLines(badge));
 
     // Apply center-based positioning
     const centeredLines = calculateCenterPositions(resetLines);
@@ -7557,13 +7722,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       lines: centeredLines,
       backgroundColor: "#FFFFFF",
       backing: badge.backing || "magnetic", // Preserve backing if it exists
-      ...(isSignLikeVariant(variant)
-        ? {
-            signBorderStyleId: "default",
-            signBorderOptionId: undefined,
-            signBorderEnabled: undefined,
-          }
-        : {}),
+      ...(variant === "sign"
+        ? signResetAppearance(badge)
+        : isSignLikeVariant(variant)
+          ? {
+              signBorderStyleId: "default",
+              signBorderOptionId: undefined,
+              signBorderEnabled: undefined,
+            }
+          : {}),
     };
 
     setBadge(resetBadgeData);
@@ -7592,7 +7759,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
     // Reset all badges in multipleBadges
     const resetMultipleBadges = multipleBadges.map((badgeToReset) => {
-      const resetLines = resetBadgeLines(badgeToReset);
+      const resetLines = fitSignResetLines(
+        badgeToReset,
+        resetBadgeLines(badgeToReset),
+      );
       const centeredLines = calculateCenterPositions(resetLines);
 
       return {
@@ -7601,13 +7771,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         lines: centeredLines,
         backgroundColor: "#FFFFFF",
         backing: badgeToReset.backing || "magnetic",
-        ...(isSignLikeVariant(variant)
-          ? {
-              signBorderStyleId: "default",
-              signBorderOptionId: undefined,
-              signBorderEnabled: undefined,
-            }
-          : {}),
+        ...(variant === "sign"
+          ? signResetAppearance(badgeToReset)
+          : isSignLikeVariant(variant)
+            ? {
+                signBorderStyleId: "default",
+                signBorderOptionId: undefined,
+                signBorderEnabled: undefined,
+              }
+            : {}),
       };
     });
 
@@ -7695,7 +7867,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       );
       return {
         badge: liveBadge,
-        templateId: universalTemplateId, // Always use universal template
+        templateId: universalTemplateId,
       };
     } else {
       // STATIC: Show saved state when not editing
@@ -7710,7 +7882,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         };
         return {
           badge: previewBadge,
-          templateId: universalTemplateId, // Always use universal template
+          templateId:
+            variant === "sign"
+              ? effectiveSignTemplateIdForBadge(
+                  savedBadge.templateId,
+                  universalTemplateId,
+                )
+              : universalTemplateId,
         };
       } else {
         // Fallback to current badge if no saved state
@@ -7814,9 +7992,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
     // AUTO-SAVE: Save current badge state when switching
     // CRITICAL: Ensure backgroundColor is preserved as single source of truth
+    const savedTemplateId =
+      variant === "sign"
+        ? effectiveSignTemplateIdForBadge(badge.templateId, universalTemplateId)
+        : universalTemplateId;
     const validatedBadge = {
       ...badge,
-      templateId: universalTemplateId,
+      templateId: savedTemplateId,
       backgroundColor: badge.backgroundColor || "#FFFFFF", // Ensure color is tracked
     };
     console.log(
@@ -7854,11 +8036,26 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         selectedBadge.lines.map((l: BadgeLine) => l.text),
       );
       const centeredLines = calculateCenterPositions(selectedBadge.lines);
+      const nextTemplateId =
+        variant === "sign"
+          ? effectiveSignTemplateIdForBadge(
+              selectedBadge.templateId,
+              savedTemplateId,
+            )
+          : universalTemplateId;
       setBadge({
         ...selectedBadge,
         lines: centeredLines,
-        templateId: universalTemplateId,
+        templateId: nextTemplateId,
       });
+      if (variant === "sign") {
+        setUniversalTemplateId(nextTemplateId);
+        const match = findSignTypeAndSizeForUniversalTemplate(nextTemplateId);
+        if (match) {
+          setSelectedSignTemplateType(match.typeId);
+          setSelectedSignSizeTemplateId(match.sizeTemplateId);
+        }
+      }
     }
   };
 
@@ -7990,11 +8187,26 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     const badgeToLoad = newMultipleBadges[newSelectedIndex];
     if (badgeToLoad) {
       const centeredLines = calculateCenterPositions(badgeToLoad.lines);
+      const nextTemplateId =
+        variant === "sign"
+          ? effectiveSignTemplateIdForBadge(
+              badgeToLoad.templateId,
+              universalTemplateId,
+            )
+          : universalTemplateId;
       setBadge({
         ...badgeToLoad,
         lines: centeredLines,
-        templateId: universalTemplateId,
+        templateId: nextTemplateId,
       });
+      if (variant === "sign") {
+        setUniversalTemplateId(nextTemplateId);
+        const match = findSignTypeAndSizeForUniversalTemplate(nextTemplateId);
+        if (match) {
+          setSelectedSignTemplateType(match.typeId);
+          setSelectedSignSizeTemplateId(match.sizeTemplateId);
+        }
+      }
     }
     if (newMultipleBadges[0]) {
       setBadge1Data(newMultipleBadges[0]);
@@ -8014,7 +8226,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         .toString(36)
         .slice(2, 9)}`,
     }));
-    dup.templateId = universalTemplateId;
+    dup.templateId =
+      variant === "sign"
+        ? effectiveSignTemplateIdForBadge(source.templateId, universalTemplateId)
+        : universalTemplateId;
     const centeredLines = calculateCenterPositions(dup.lines);
     const dupBadge: Badge = { ...dup, lines: centeredLines };
 
@@ -8031,6 +8246,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setSelectedBadgeIndex(newIndex);
     openEnterTextSectionOnly();
     setBadge(dupBadge);
+    if (variant === "sign") {
+      const duplicatedTemplateId = dupBadge.templateId || universalTemplateId;
+      setUniversalTemplateId(duplicatedTemplateId);
+      const match = findSignTypeAndSizeForUniversalTemplate(duplicatedTemplateId);
+      if (match) {
+        setSelectedSignTemplateType(match.typeId);
+        setSelectedSignSizeTemplateId(match.sizeTemplateId);
+      }
+    }
     if (newMultiple[0]) setBadge1Data(newMultiple[0]);
     setDraftSaveTrigger((t) => t + 1);
     runDraftSaveForBadges(newMultiple);
@@ -8082,6 +8306,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     setShowCsvModal(true);
   };
 
+  const openBulkViewAll = () => {
+    setHighlightViewAllAfterBulk(false);
+    setShowBadgeGridModal(true);
+  };
+
   useEffect(() => {
     if (showBadgeGridModal) setHighlightViewAllAfterBulk(false);
   }, [showBadgeGridModal]);
@@ -8096,7 +8325,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
   }, [highlightViewAllAfterBulk]);
 
   const showAddMultiple =
-    variant === "badge" || isDeskSignVariant(variant);
+    variant === "badge" || variant === "sign" || isDeskSignVariant(variant);
 
   const previewActionsRowProps = {
     labelProduct: config.labelProduct.toLowerCase(),
@@ -8107,10 +8336,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     onCopy: duplicateCurrentBadge,
     onDelete: deleteCurrentBadgeFromPreview,
     onDeleteAll: deleteAllBadgesFromDesign,
-    onViewAll: () => {
-      setHighlightViewAllAfterBulk(false);
-      setShowBadgeGridModal(true);
-    },
+    onViewAll: openBulkViewAll,
     onAddMultiple: openAddMultipleModal,
   };
 
@@ -8182,8 +8408,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
     options?: {
       preserveDeskSignSettings?: boolean;
       deskSignSize?: DeskSignSize;
+      /** Update only this design. Omit to update every design in the order. */
+      onlyIndex?: number;
+      /** List to update. Used when the caller has a newer copy than React state. */
+      badgesOverride?: Badge[];
     },
-  ) => {
+  ): Promise<Badge[] | void> => {
     console.log(`[UNIVERSAL] Template changed to: ${newTemplateId}`);
 
     const keepLoadedTemplate = (loaded: LoadedTemplate | null | undefined) => {
@@ -8551,23 +8781,21 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       });
     };
 
-    const clearSignBorderOnTemplateChange =
-      isSignLikeVariant(variant) &&
-      signTemplateBorderFamilyKey(badge.templateId || oldTemplateId) !==
-        signTemplateBorderFamilyKey(newTemplateId);
-
-    const signBorderPropsOnTemplateChange = clearSignBorderOnTemplateChange
-      ? {
-          signBorderOptionId: undefined,
-          signBorderEnabled: undefined,
-        }
-      : {};
     const nextSignType =
       variant === "sign"
         ? findSignTypeAndSizeForUniversalTemplate(newTemplateId)?.typeId
         : undefined;
 
     const computeBadgeAfterUniversalTemplateChange = (prevB: Badge): Badge => {
+      const borderProps =
+        isSignLikeVariant(variant) &&
+        signTemplateBorderFamilyKey(prevB.templateId || oldTemplateId) !==
+          signTemplateBorderFamilyKey(newTemplateId)
+          ? {
+              signBorderOptionId: undefined,
+              signBorderEnabled: undefined,
+            }
+          : {};
       const previousFinish = getSignFinishById(prevB.signFinishId);
       const finishStillFits = Boolean(
         previousFinish &&
@@ -8637,7 +8865,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       let linesSource = replacementFinish
         ? prevB.lines.map((line) => ({
             ...line,
-            color: replacementFinish.inkColor,
+            color: signFinishDefaultTextColor(replacementFinish),
           }))
         : prevB.lines;
       if (variant === "plaque") {
@@ -8685,7 +8913,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         const refit = applySignLogoRefit({
           ...proto,
           lines: scaledLines,
-          ...signBorderPropsOnTemplateChange,
+          ...borderProps,
         });
         if (
           variant === "plaque" &&
@@ -8717,24 +8945,33 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       return {
         ...proto,
         lines: outLines,
-        ...signBorderPropsOnTemplateChange,
+        ...borderProps,
       };
     };
 
-    // Align universal id with badge in the same synchronous turn as the line refit.
-    setUniversalTemplateId(newTemplateId);
-
     // One refit per badge — previously setBadge + setMultipleBadges each ran applySignLogoRefit for
     // the same badge (2× logo negotiation / snapshots), freezing the UI for tens of seconds.
-    const prevList = multipleBadgesRef.current;
-    const updated = prevList.map(computeBadgeAfterUniversalTemplateChange);
-    const nextCurrent =
-      updated[selectedBadgeIndex] ?? updated[0] ?? badgeRef.current;
-    if (nextCurrent) {
-      setBadge(nextCurrent);
+    const onlyIndex = options?.onlyIndex;
+    const prevList = options?.badgesOverride ?? multipleBadgesRef.current;
+    const updated = prevList.map((badgeRow, index) =>
+      onlyIndex == null || index === onlyIndex
+        ? computeBadgeAfterUniversalTemplateChange(badgeRow)
+        : badgeRow,
+    );
+    const editingThis =
+      onlyIndex == null || onlyIndex === selectedBadgeIndexRef.current;
+    const nextCurrent = editingThis
+      ? (updated[selectedBadgeIndexRef.current] ??
+        updated[0] ??
+        badgeRef.current)
+      : (updated[onlyIndex ?? selectedBadgeIndexRef.current] ??
+        badgeRef.current);
+    if (editingThis) {
+      setUniversalTemplateId(newTemplateId);
+      if (nextCurrent) setBadge(nextCurrent);
     }
     setMultipleBadges(updated);
-    if (updated[0]) {
+    if (updated[0] && (onlyIndex == null || onlyIndex === 0)) {
       setBadge1Data(updated[0]);
     }
     if (variant === "badge") {
@@ -8755,6 +8992,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         setHasChosenBackgroundColor(false);
       }
     }
+    return updated;
   };
 
   // Supabase upload (logic also runs inside addToCart; this standalone flow kept for optional "Upload proof only" use)
@@ -9874,14 +10112,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       };
                     }
                     try {
-                      const [pngBlob, printSvgBlob] = await Promise.all([
-                        generateFullBadgeImage(b, variant, {
-                          rasterScale: 2,
-                          rasterFormat: "image/jpeg",
-                          rasterQuality: 0.88,
-                        }).then(dataURLToBlob),
-                        generatePrintSVGAsBlob(b, tmpl, variant),
-                      ]);
+                      const pngBlob = await generateFullBadgeImage(b, variant, {
+                        rasterScale: 2,
+                        rasterFormat: "image/jpeg",
+                        rasterQuality: 0.88,
+                      }).then(dataURLToBlob);
+                      const printSvgBlob =
+                        variant === "sign"
+                          ? new Blob()
+                          : await generatePrintSVGAsBlob(b, tmpl, variant);
                       return {
                         pngBlob:
                           pngBlob && pngBlob.size > 0 ? pngBlob : new Blob(),
@@ -10027,7 +10266,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       if (!usedFinalize && !proofUploadOk) {
         alert(
           proofUploadWarning
-            ? `Could not save your badge design. Nothing was added to the cart.\n\n${proofUploadWarning}`
+            ? `Could not save your ${config.labelProduct.toLowerCase()} design. Nothing was added to the cart.\n\n${proofUploadWarning}`
             : "Could not save your badge design. Nothing was added to the cart. Please try again.",
         );
         return;
@@ -10192,10 +10431,28 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       ): Record<string, string> => {
         const finish =
           variant === "sign" ? getSignFinishById(b.signFinishId) : undefined;
+        const signMatch =
+          variant === "sign"
+            ? findSignTypeAndSizeForUniversalTemplate(b.templateId)
+            : null;
+        const signShape = signMatch
+          ? ALL_SIGN_TEMPLATE_TYPES.find((type) => type.id === signMatch.typeId)
+          : undefined;
+        const signSize = signShape?.sizes.find(
+          (option) => option.templateId === b.templateId,
+        );
         return {
           ...deskSignCartProperties(b),
+          ...(variant === "sign"
+            ? buildProductionLineProperties("Sign", b.lines)
+            : {}),
+          ...(signShape ? { Shape: signShape.name } : {}),
+          ...(signSize
+            ? { Size: `${signSize.label} (${signSize.sizeText})` }
+            : {}),
           ...(finish
             ? {
+                Finish: finish.label,
                 "_Sign Finish": finish.label,
                 "_Sign Finish ID": finish.id,
               }
@@ -10857,7 +11114,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         onResetAll={promptResetAllBadges}
         showApplyFormatToAll={multipleBadges.length > 1}
         onApplyFormatToAll={applyAllFormattingToAll}
-        applyFormatLabel={`Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`}
+        applyFormatLabel={
+          variant === "sign"
+            ? "Apply this sign's shape, size, finish, and text formatting to every sign"
+            : `Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`
+        }
         onHelp={() => setShowHelpModal(true)}
         onSave={() => {
           void saveBadge();
@@ -11088,7 +11349,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               <p className="aqb-mobile-checkout-bar__meta">
                 {variant === "badge" && badgePriceBreakdownLine
                   ? badgePriceBreakdownLine
-                  : "Finish the steps above to see your total."}
+                  : variant === "sign" &&
+                      stepsComplete &&
+                      multipleBadges.length > 0
+                    ? `Subtotal for ${multipleBadges.length} printed ${
+                        multipleBadges.length === 1 ? "sign" : "signs"
+                      }.`
+                    : "Finish the steps above to see your total."}
               </p>
             )}
           </div>
@@ -11192,9 +11459,27 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           <div className="rounded-lg border border-blue-200 bg-blue-50 text-blue-950 px-3 py-2.5 text-sm leading-snug flex gap-3 items-start">
             <p className="flex-1 min-w-0">
               <span className="font-semibold">Cloud autosave</span> is off until
-              you log in. Sign in to your Shopify account to save your draft to
-              the cloud and use your design library.
+              you log in. Sign in with your Shopify account to save this design
+              and open it again later.
             </p>
+            <button
+              type="button"
+              className="shrink-0 rounded-md bg-[#02132B] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#1a3d5c]"
+              onClick={() => {
+                if (!isDesignerEmbeddedInStorefront()) {
+                  window.alert(
+                    "Open this designer from your store product page, then use Sign in. Shopify’s login brings you back here.",
+                  );
+                  return;
+                }
+                api.sendToParent({
+                  action: "redirect-to-login",
+                  payload: { reason: "cloud-autosave" },
+                });
+              }}
+            >
+              Sign in
+            </button>
             <button
               type="button"
               className="shrink-0 p-1 rounded text-blue-800 hover:bg-blue-100/80"
@@ -11258,11 +11543,15 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           {!storeChromeless ? (
             <div className="flex flex-col gap-1 min-w-0 mb-2">
               <h2 className="text-xl font-bold text-gray-800">
-                {multipleBadges.length === 0
-                  ? `Design Your ${config.labelProduct}`
-                  : `Customize Your ${config.labelProduct} ${
-                      selectedBadgeIndex + 1
-                    } of ${totalBadges}`}
+                {variant === "sign"
+                  ? multipleBadges.length <= 1
+                    ? "Design your sign"
+                    : `Sign ${selectedBadgeIndex + 1} of ${totalBadges}`
+                  : multipleBadges.length === 0
+                    ? `Design Your ${config.labelProduct}`
+                    : `Customize Your ${config.labelProduct} ${
+                        selectedBadgeIndex + 1
+                      } of ${totalBadges}`}
               </h2>
               {multipleBadges.length > 0 && (
                 <span className="text-xl font-bold text-red-600">
@@ -11508,10 +11797,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   aria-expanded={false}
                 >
                   <span className="aqb-mobile-chrome-bar__title">
-                    Control Panel
+                    {variant === "sign" ? "Options" : "Control Panel"}
                   </span>
                   <span className="aqb-mobile-chrome-bar__action">
-                    View full Panel
+                    {variant === "sign" ? "Show options" : "View full Panel"}
                     <ChevronDownIcon className="aqb-mobile-chrome-bar__chevron" />
                   </span>
                 </button>
@@ -11524,10 +11813,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     aria-expanded={true}
                   >
                     <span className="aqb-mobile-chrome-bar__title">
-                      Control Panel
+                      {variant === "sign" ? "Options" : "Control Panel"}
                     </span>
                     <span className="aqb-mobile-chrome-bar__action">
-                      Hide panel
+                      {variant === "sign" ? "Hide options" : "Hide panel"}
                       <ChevronUpIcon className="aqb-mobile-chrome-bar__chevron" />
                     </span>
                   </button>
@@ -11538,10 +11827,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       hasBadges={multipleBadges.length > 0}
                       showAddMultiple={showAddMultiple}
                       highlightViewAll={highlightViewAllAfterBulk}
-                      onViewAll={() => {
-                        setHighlightViewAllAfterBulk(false);
-                        setShowBadgeGridModal(true);
-                      }}
+                      onViewAll={openBulkViewAll}
                       onAddMultiple={openAddMultipleModal}
                       onCopy={duplicateCurrentBadge}
                       onDelete={deleteCurrentBadgeFromPreview}
@@ -11553,7 +11839,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       onResetAll={promptResetAllBadges}
                       showApplyFormatToAll={multipleBadges.length > 1}
                       onApplyFormatToAll={applyAllFormattingToAll}
-                      applyFormatLabel={`Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`}
+                      applyFormatLabel={
+          variant === "sign"
+            ? "Apply this sign's shape, size, finish, and text formatting to every sign"
+            : `Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`
+        }
                       onHelp={() => setShowHelpModal(true)}
                       onSave={() => {
                         void saveBadge();
@@ -11573,7 +11863,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         <div
           className={`aqb-left-panel w-full md:min-w-0 flex-1 min-h-0 md:max-h-[calc(100vh-48px)] md:self-start rounded-xl border border-[rgba(2, 19, 43,0.1)] bg-white shadow-[0_2px_12px_rgba(2, 19, 43,0.06)] flex flex-col ${
             usesAqbShell
-              ? "max-md:overflow-hidden overflow-y-auto md:overflow-y-auto"
+              ? variant === "sign"
+                ? "overflow-y-auto"
+                : "max-md:overflow-hidden overflow-y-auto md:overflow-y-auto"
               : "overflow-y-auto"
           }`}
         >
@@ -11593,7 +11885,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             >
               <div className="min-w-0 flex-1">
                 <h2 className="text-[14px] font-bold uppercase leading-tight tracking-[0.5px] text-[#02132B]">
-                  {multipleBadges.length === 0
+                  {variant === "sign" && multipleBadges.length <= 1
+                    ? "Customize your sign"
+                    : multipleBadges.length === 0
                     ? `Customize your ${config.labelProduct.toLowerCase()}`
                     : `Customize your ${config.labelProduct.toLowerCase()} — ${
                         selectedBadgeIndex + 1
@@ -12187,6 +12481,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   const circleDone = step.done && !isNavSelected;
                   const circleActive =
                     isNavSelected || (!isMobileViewport && step.current);
+                  const signNeeded =
+                    variant === "sign" &&
+                    step.sectionKey !== "signLogo" &&
+                    !step.done &&
+                    !circleActive &&
+                    !circleDone;
                   const stepIndicator = (
                     <>
                       <div
@@ -12199,6 +12499,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             ? "bg-[#2D9E75] text-white"
                             : circleActive
                             ? "bg-[#02132B] text-white shadow-[0_0_0_3px_rgba(2, 19, 43,0.15)]"
+                            : signNeeded
+                            ? "bg-[#d97706] text-white"
                             : "bg-[#D4CEC6] text-white"
                         }`}
                       >
@@ -12220,7 +12522,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                   }`
                                 : "text-[11px] font-semibold"
                             } ${
-                              circleActive ? "text-white" : "text-[#6B7F92]"
+                              circleActive || signNeeded
+                                ? "text-white"
+                                : "text-[#6B7F92]"
                             }`}
                           >
                             {step.circleLabel ?? i + 1}
@@ -12238,6 +12542,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                               ? "font-medium text-[#2d9e75]"
                               : circleActive
                               ? "font-semibold text-[#02132B]"
+                              : signNeeded
+                              ? "font-semibold text-[#9a3412]"
                               : "font-medium text-[#6b7f92]"
                             : "text-gray-600"
                         }`}
@@ -12269,9 +12575,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     {((variant === "badge" &&
                       isMobileViewport &&
                       badgeSectionKey) ||
-                    (variant === "sign" &&
-                      isMobileViewport &&
-                      signSectionKey)) ? (
+                    (variant === "sign" && signSectionKey)) ? (
                       <button
                         type="button"
                         className="aqb-badge-step-item flex shrink-0 touch-manipulation flex-col items-center rounded-md px-0 py-0.5"
@@ -12320,6 +12624,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             })()}
           </div>
 
+
           <div
             ref={(node) => {
               mobileEditorScrollRef.current = node;
@@ -12356,6 +12661,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     isDeskSignVariant(variant)
                       ? "Choose material"
                       : "Pick a Shape"
+                  }
+                  hint={
+                    variant === "sign"
+                      ? "(shape only, finish may be changed later)"
+                      : undefined
                   }
                   summary={
                     isDeskSignVariant(variant)
@@ -12793,7 +13103,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             }));
                             templateGuidedAutoAdvanceDoneRef.current = true;
                           }
-                          handleUniversalTemplateChange(firstSizeId);
+                          handleUniversalTemplateChange(
+                            firstSizeId,
+                            signBulkScopeRef.current === "one"
+                              ? { onlyIndex: selectedBadgeIndexRef.current }
+                              : undefined,
+                          );
                         };
                         return (
                           <>
@@ -13200,11 +13515,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   summary={aqbSignStepHeaderModel.size.summary}
                   open={sectionsOpen.size}
                   onClick={() => {
-                    if (selectedSignTemplateType == null) {
-                      const msg = getIncompleteStepsMessage(2);
-                      if (msg) alert(msg);
-                      return;
-                    }
                     const willBeOpen = !sectionsOpen.size;
                     setSignLogoSectionOpen(false);
                     setSectionsOpen({
@@ -13229,6 +13539,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   }`}
                 >
                   <div className="grid grid-cols-2 gap-2">
+                    {selectedSignTemplateType == null ? (
+                      <p className="col-span-2 text-sm text-[#9a3412]">
+                        Pick a shape to see sizes for that sign.
+                      </p>
+                    ) : null}
                     {(
                       ALL_SIGN_TEMPLATE_TYPES.find(
                         (t) => t.id === selectedSignTemplateType,
@@ -13242,7 +13557,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           setSignSize(
                             sizeOpt.label.toLowerCase().replace(/\s+/g, "-"),
                           );
-                          handleUniversalTemplateChange(sizeOpt.templateId);
+                          handleUniversalTemplateChange(
+                            sizeOpt.templateId,
+                            signBulkScopeRef.current === "one"
+                              ? { onlyIndex: selectedBadgeIndexRef.current }
+                              : undefined,
+                          );
                           if (!signSizeGuidedAutoAdvanceDoneRef.current) {
                             setSectionsOpen({
                               template: false,
@@ -13382,16 +13702,16 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     }
                     open={sectionsOpen.background}
                     onClick={() => {
-                      const msg = getIncompleteStepsMessage(
-                        isDeskSignVariant(variant)
-                          ? 3
-                          : variant === "sign"
+                      if (variant !== "sign") {
+                        const msg = getIncompleteStepsMessage(
+                          isDeskSignVariant(variant)
                             ? 3
                             : badgeBackgroundStepGuard,
-                      );
-                      if (msg) {
-                        alert(msg);
-                        return;
+                        );
+                        if (msg) {
+                          alert(msg);
+                          return;
+                        }
                       }
                       const willBeOpen = !sectionsOpen.background;
                       setSectionsOpen({
@@ -13835,7 +14155,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             </div>
                           ) : (
                             <p className="text-sm text-[#6b7f92]">
-                              No finishes are available for this shape yet.
+                              {selectedSignTemplateType
+                                ? "No finishes are available for this shape yet."
+                                : "Choose a shape first, then pick a finish."}
                             </p>
                           )}
                           {multipleBadges.length > 1 &&
@@ -14099,11 +14421,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   summary={aqbSignStepHeaderModel.border.summary}
                   open={sectionsOpen.border}
                   onClick={() => {
-                    const msg = getIncompleteStepsMessage(4);
-                    if (msg) {
-                      alert(msg);
-                      return;
-                    }
                     const willBeOpen = !sectionsOpen.border;
                     setSignLogoSectionOpen(false);
                     setSectionsOpen({
@@ -14610,22 +14927,20 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   }
                   open={sectionsOpen.textLines}
                   onClick={() => {
-                    const msg = getIncompleteStepsMessage(
-                      isDeskSignVariant(variant)
-                        ? 4
-                        : variant === "sign"
-                        ? signBorderStepRequired
-                          ? 5
-                          : 4
-                        : config.hasSizeStep
-                        ? signBorderStepRequired
-                          ? 5
-                          : 4
-                        : badgeOpenTextGuard,
-                    );
-                    if (msg) {
-                      alert(msg);
-                      return;
+                    if (variant !== "sign") {
+                      const msg = getIncompleteStepsMessage(
+                        isDeskSignVariant(variant)
+                          ? 4
+                          : config.hasSizeStep
+                          ? signBorderStepRequired
+                            ? 5
+                            : 4
+                          : badgeOpenTextGuard,
+                      );
+                      if (msg) {
+                        alert(msg);
+                        return;
+                      }
                     }
                     const willBeOpen = !sectionsOpen.textLines;
                     setSignLogoSectionOpen(false);
@@ -14760,6 +15075,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           ? "aqb-desk-sign"
                           : "default"
                     }
+                    linesInstanceKey={
+                      variant === "sign"
+                        ? `${selectedBadgeIndex}:${badge.templateId ?? ""}`
+                        : undefined
+                    }
+                    onAddSignLine={variant === "sign" ? addLine : undefined}
                     layoutCharLimitByLine={
                       variant === "badge" || isDeskSignVariant(variant)
                         ? aqbLayoutCharLimitByLine
@@ -14962,11 +15283,6 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     summary={aqbSignStepHeaderModel.image.summary}
                     open={signLogoSectionOpen}
                     onClick={() => {
-                      const msg = getIncompleteStepsMessage(6);
-                      if (msg) {
-                        alert(msg);
-                        return;
-                      }
                       const willBeOpen = !signLogoSectionOpen;
                       setSignLogoSectionOpen(willBeOpen);
                       if (willBeOpen) {
@@ -15426,7 +15742,11 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                         e.preventDefault();
                         applyAllFormattingToAll();
                       }}
-                      title={`Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`}
+                      title={
+                        variant === "sign"
+                          ? "Apply this sign's shape, size, finish, and text formatting to every sign"
+                          : `Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`
+                      }
                     >
                       <Square2StackIcon className="w-5 h-5 md:w-6 md:h-6" />
                     </button>
@@ -16167,7 +16487,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 subtitle={
                   variant === "badge"
                     ? "Use View All to see and edit more badges"
-                    : variant === "sign"
+                    : variant === "sign" && multipleBadges.length > 1
                       ? "Use View All to see and edit more signs"
                     : undefined
                 }
@@ -17757,7 +18077,12 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       setSectionsOpened((prev) => ({ ...prev, size: true }));
                       templateGuidedAutoAdvanceDoneRef.current = true;
                     }
-                    handleUniversalTemplateChange(firstSizeId);
+                    handleUniversalTemplateChange(
+                      firstSizeId,
+                      signBulkScopeRef.current === "one"
+                        ? { onlyIndex: selectedBadgeIndexRef.current }
+                        : undefined,
+                    );
                   };
                   return (
                     <>
@@ -19198,6 +19523,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             <p className="mb-4 text-sm text-gray-700">
               Use <strong>View All</strong> above the preview to browse and
               select any {config.labelProduct.toLowerCase()} to edit.
+              {variant === "sign"
+                ? " Each sign can keep its own shape and finish."
+                : ""}
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
               <button
@@ -19205,7 +19533,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded font-medium"
                 onClick={() => {
                   setShowBulkSaveNotice(false);
-                  setShowBadgeGridModal(true);
+                  openBulkViewAll();
                 }}
               >
                 Open View All
@@ -19604,6 +19932,13 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
           mode={resetConfirmMode}
           labelProduct={config.labelProduct.toLowerCase()}
           labelProductPlural={config.labelProductPlural.toLowerCase()}
+          message={
+            variant === "sign"
+              ? resetConfirmMode === "all"
+                ? "This puts every sign back to a white background, black text, and the original text sizes. Your wording, shape, and size stay. To start over, use Delete or Delete all."
+                : "This puts this sign back to a white background, black text, and the original text sizes. Your wording, shape, and size stay. To start over, use Delete."
+              : undefined
+          }
           onConfirm={handleResetConfirm}
           onCancel={closeResetConfirmModal}
           onDontShowAgain={handleResetConfirmDontShowAgain}

@@ -15,6 +15,11 @@ import {
 } from "~/constants/badgeIcons";
 import { getCustomBackgroundDisplayName } from "~/utils/badgeCustomBackgrounds";
 import {
+  ALL_SIGN_TEMPLATE_TYPES,
+  findSignTypeAndSizeForUniversalTemplate,
+} from "~/constants/designerVariants";
+import { getSignFinishById } from "~/data/signFinishes";
+import {
   getTemplateDesignBox,
   loadTemplateById,
 } from "~/utils/templates-canonical";
@@ -503,9 +508,11 @@ function extractSpecs(
   if (designerId === "gavel") return extractGavelSpecs(design);
 
   const specs: ProductionSpec[] = [];
-  pushStringSpec(specs, "Template", design.templateId);
-  if (typeof design.backgroundColor === "string" && design.backgroundColor.trim()) {
-    specs.push({ label: "Background", value: design.backgroundColor.trim() });
+  if (designerId !== "sign") {
+    pushStringSpec(specs, "Template", design.templateId);
+    if (typeof design.backgroundColor === "string" && design.backgroundColor.trim()) {
+      specs.push({ label: "Background", value: design.backgroundColor.trim() });
+    }
   }
 
   if (designerId === "badge") {
@@ -538,6 +545,26 @@ function extractSpecs(
   }
 
   if (designerId === "sign") {
+    const templateId =
+      typeof design.templateId === "string" ? design.templateId : "";
+    const match = templateId
+      ? findSignTypeAndSizeForUniversalTemplate(templateId)
+      : null;
+    const shape = match
+      ? ALL_SIGN_TEMPLATE_TYPES.find((type) => type.id === match.typeId)
+      : undefined;
+    const size = shape?.sizes.find((option) => option.templateId === templateId);
+    if (shape) specs.push({ label: "Shape", value: shape.name });
+    if (size) {
+      specs.push({
+        label: "Size",
+        value: `${size.label} (${size.sizeText})`,
+      });
+    }
+    const finish = getSignFinishById(
+      typeof design.signFinishId === "string" ? design.signFinishId : undefined,
+    );
+    if (finish) specs.push({ label: "Finish", value: finish.label });
     pushStringSpec(specs, "Motif", design.designerMotif);
     if (design.signBorderOptionId === "none" || design.signBorderEnabled === false) {
       specs.push({ label: "Border", value: "None" });
@@ -574,7 +601,9 @@ function extractSpecs(
 
   const meta = asRecord(row.design_meta);
   if (meta) {
-    pushStringSpec(specs, "Sign size", meta.selectedSignSizeTemplateId);
+    if (designerId !== "sign") {
+      pushStringSpec(specs, "Sign size", meta.selectedSignSizeTemplateId);
+    }
     pushStringSpec(specs, "Plaque layout", meta.selectedPlaqueLayoutId);
     pushStringSpec(specs, "Plaque size", meta.selectedPlaqueSize);
   }

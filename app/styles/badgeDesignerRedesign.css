@@ -598,6 +598,10 @@
   line-height: 1.2;
 }
 
+.aqb-redesign-root button.aqb-step-toggle.is-needed {
+  background-color: #fff7ed;
+}
+
 /* Mobile badge designer — compact step nav on a single row */
 @media (max-width: 767px) {
   .aqb-redesign-root .aqb-badge-mobile-step-nav {

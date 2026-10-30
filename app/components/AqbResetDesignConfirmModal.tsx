@@ -10,6 +10,8 @@ export interface AqbResetDesignConfirmModalProps {
   onConfirm: () => void;
   onCancel: () => void;
   onDontShowAgain: () => void;
+  /** Replaces the default explanation when a designer resets differently. */
+  message?: string;
 }
 
 export const AqbResetDesignConfirmModal: React.FC<
@@ -21,12 +23,15 @@ export const AqbResetDesignConfirmModal: React.FC<
   onConfirm,
   onCancel,
   onDontShowAgain,
+  message,
 }) => {
   const isAll = mode === "all";
   const title = isAll ? "Reset all designs?" : "Reset design?";
-  const body = isAll
-    ? `This will reset all ${labelProductPlural} in your design. Text, text settings, and background color will return to defaults for every ${labelProduct}. Your templates and other settings will be kept.`
-    : `This will reset the current ${labelProduct}. Text, text settings, and background color will return to defaults. Your template and other settings will be kept.`;
+  const body =
+    message ??
+    (isAll
+      ? `This will reset all ${labelProductPlural} in your design. Text, text settings, and background color will return to defaults for every ${labelProduct}. Your templates and other settings will be kept.`
+      : `This will reset the current ${labelProduct}. Text, text settings, and background color will return to defaults. Your template and other settings will be kept.`);
 
   return (
     <div

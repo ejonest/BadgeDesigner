@@ -169,7 +169,7 @@ export function LineTable({
 export function ArtworkButtons({ item }: { item: ProductionItem }) {
   return (
     <s-stack direction="inline" gap="base">
-      {item.printSvgUrl ? (
+      {item.designerId !== "sign" && item.printSvgUrl ? (
         <s-button href={item.printSvgUrl} target="_blank">
           Open print SVG
         </s-button>
@@ -248,7 +248,7 @@ export function ProductionItemDetails({
         <PreviewImage
           src={item.thumbnailUrl}
           alt={`${item.productLabel} preview`}
-          label="Preview"
+          label={item.designerId === "sign" ? "Customer preview" : "Preview"}
         />
       ) : null}
 
@@ -268,7 +268,7 @@ export function ProductionItemDetails({
         />
       ) : null}
 
-      {showPrintSvgs && item.printSvgUrl ? (
+      {showPrintSvgs && item.designerId !== "sign" && item.printSvgUrl ? (
         <PreviewImage
           src={item.printSvgUrl}
           alt={`${item.productLabel} print-ready SVG`}
@@ -276,7 +276,7 @@ export function ProductionItemDetails({
         />
       ) : null}
 
-      {showPrintSvgs && item.secondarySvgUrl ? (
+      {showPrintSvgs && item.designerId !== "sign" && item.secondarySvgUrl ? (
         <PreviewImage
           src={item.secondarySvgUrl}
           alt={`${item.productLabel} secondary print SVG`}

@@ -4,8 +4,12 @@
 {% liquid
   assign medal_designer_url = 'https://all-quality-design-tool.vercel.app'
   assign medal_designer_match = false
-  if product != blank and product.handle contains 'custom-personalized' and product.handle contains 'medal'
-    assign medal_designer_match = true
+  if product != blank
+    if product.handle == 'custom-medal'
+      assign medal_designer_match = true
+    elsif product.handle contains 'custom-personalized' and product.handle contains 'medal'
+      assign medal_designer_match = true
+    endif
   endif
 %}
 {% if medal_designer_match %}
@@ -70,6 +74,24 @@
         } else if (data.action === 'add-to-cart' && data.payload) {
           add([data.payload], event, data.requestId);
         }
+      });
+
+      function postProduct(handle) {
+        fetch('/products/' + handle + '.js', { credentials: 'same-origin' })
+          .then(function (response) { return response.ok ? response.json() : null; })
+          .then(function (productJson) {
+            if (!productJson || !iframe.contentWindow) return;
+            iframe.contentWindow.postMessage(
+              { type: 'MEDAL_DESIGNER_SHOPIFY_PRODUCT', payload: productJson },
+              designerOrigin
+            );
+          })
+          .catch(function () {});
+      }
+
+      iframe.addEventListener('load', function () {
+        postProduct({{ product.handle | json }});
+        if ({{ product.handle | json }} !== 'custom-medal') postProduct('custom-medal');
       });
     })();
   </script>

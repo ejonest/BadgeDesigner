@@ -24,6 +24,11 @@ export type MedalProduct = {
   artworkSrc?: string;
   /** Percentages of the square product photo. */
   textArea: MedalBounds;
+  /**
+   * Variant on the single `custom-medal` product. Used when the page catalog
+   * does not already include this center.
+   */
+  shopifyVariantId: string;
 };
 
 const CDN =
@@ -65,6 +70,7 @@ export const MEDAL_PRODUCTS: MedalProduct[] = [
       "stars-and-stripes-custom-personalized-stars-design-medal-choice-of-ribbon-usa-flag-personalized-award",
     ...CENTER_ART,
     artworkSrc: "/images/medal-tool/stars-and-stripes-stars.jpg",
+    shopifyVariantId: "50877524082736",
   },
   {
     id: "stars-and-stripes-wreath",
@@ -76,6 +82,7 @@ export const MEDAL_PRODUCTS: MedalProduct[] = [
       "stars-and-stripes-custom-personalized-wreath-design-medal-choice-of-ribbon-usa-flag-personalized-award",
     ...CENTER_ART,
     artworkSrc: "/images/medal-tool/stars-and-stripes-wreath.jpg",
+    shopifyVariantId: "50877524115504",
   },
   {
     id: "usa-flag-stars",
@@ -86,6 +93,7 @@ export const MEDAL_PRODUCTS: MedalProduct[] = [
     productHandle:
       "usa-flag-custom-personalized-stars-design-medal-choice-of-ribbon-patriotic-personalized-award",
     ...WHITE_CIRCLE,
+    shopifyVariantId: "50877524148272",
   },
   {
     id: "gold-stars",
@@ -96,6 +104,7 @@ export const MEDAL_PRODUCTS: MedalProduct[] = [
     productHandle:
       "gold-star-custom-personalized-stars-design-medal-choice-of-ribbon-usa-flag-personalized-award",
     ...WHITE_CIRCLE,
+    shopifyVariantId: "50877524181040",
   },
   {
     id: "gold-wreath",
@@ -106,6 +115,7 @@ export const MEDAL_PRODUCTS: MedalProduct[] = [
     productHandle:
       "gold-star-custom-personalized-wreath-design-medal-choice-of-ribbon-usa-flag-personalized-award",
     ...WHITE_CIRCLE,
+    shopifyVariantId: "50877524213808",
   },
   {
     id: "usa-flag-wreath",
@@ -116,6 +126,7 @@ export const MEDAL_PRODUCTS: MedalProduct[] = [
     productHandle:
       "usa-flag-custom-personalized-wreath-design-medal-choice-of-ribbon-patriotic-personalized-award",
     ...WHITE_CIRCLE,
+    shopifyVariantId: "50877524246576",
   },
   {
     id: "patriot-stars",
@@ -127,6 +138,7 @@ export const MEDAL_PRODUCTS: MedalProduct[] = [
       "patriot-custom-personalized-stars-design-medal-choice-of-ribbon-usa-flag-personalized-award",
     ...CENTER_ART,
     artworkSrc: "/images/medal-tool/patriot-stars.jpg",
+    shopifyVariantId: "50877524279344",
   },
   {
     id: "patriot-wreath",
@@ -138,6 +150,7 @@ export const MEDAL_PRODUCTS: MedalProduct[] = [
       "patriot-custom-personalized-wreath-design-medal-choice-of-ribbon-usa-flag-personalized-award",
     ...CENTER_ART,
     artworkSrc: "/images/medal-tool/patriot-wreath.jpg",
+    shopifyVariantId: "50877524312112",
   },
   {
     id: "red-white-blue-stars",
@@ -148,6 +161,7 @@ export const MEDAL_PRODUCTS: MedalProduct[] = [
     productHandle:
       "red-white-and-blue-custom-personalized-stars-design-medal-choice-of-ribbon-usa-flag-personalized-award",
     ...NAVY_BAND,
+    shopifyVariantId: "50877524344880",
   },
   {
     id: "red-white-wreath",
@@ -158,8 +172,12 @@ export const MEDAL_PRODUCTS: MedalProduct[] = [
     productHandle:
       "red-white-custom-personalized-wreath-design-medal-choice-of-ribbon-usa-flag-personalized-award",
     ...NAVY_BAND,
+    shopifyVariantId: "50877524377648",
   },
 ];
+
+/** One Shopify product; each center above is a variant on it. */
+export const MEDAL_STYLE_PRODUCT_HANDLE = "custom-medal";
 
 export type MedalShape = "stars" | "wreath";
 

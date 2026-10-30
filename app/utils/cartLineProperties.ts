@@ -171,6 +171,7 @@ export function buildDesignerCartLineProperties(
   }
 
   const thumb = (input.thumbnailUrl ?? "").trim();
+  const isSign = input.designerId === "sign";
   const isGavel = input.designerId === "gavel";
   const isPen = input.designerId === "pen";
   const isTrophy = input.designerId === "trophy";
@@ -193,23 +194,34 @@ export function buildDesignerCartLineProperties(
         : isMedal
           ? CART_PROP.medalTextLine2
         : CART_PROP.textLine2;
+  const signTextLines: Record<string, string> = {};
+  if (isSign) {
+    for (let i = 0; i < 6; i++) {
+      const text = (input.lines[i]?.text ?? "").trim();
+      if (text) signTextLines[`Sign Text Line ${i + 1}`] = text;
+    }
+  }
   const properties: Record<string, string> = {
-    [firstLineProperty]: input.lines[0]?.text || "",
-    [secondLineProperty]: input.lines[1]?.text || "",
-    [isGavel
-      ? CART_PROP.gavelTextLine3
-      : isTrophy
-        ? CART_PROP.trophyTextLine3
-        : isMedal
-          ? CART_PROP.medalTextLine3
-        : CART_PROP.textLine3]: input.lines[2]?.text || "",
-    [isGavel
-      ? CART_PROP.gavelTextLine4
-      : isTrophy
-        ? CART_PROP.trophyTextLine4
-        : isMedal
-          ? CART_PROP.medalTextLine4
-        : CART_PROP.textLine4]: input.lines[3]?.text || "",
+    ...(isSign
+      ? signTextLines
+      : {
+          [firstLineProperty]: input.lines[0]?.text || "",
+          [secondLineProperty]: input.lines[1]?.text || "",
+          [isGavel
+            ? CART_PROP.gavelTextLine3
+            : isTrophy
+              ? CART_PROP.trophyTextLine3
+              : isMedal
+                ? CART_PROP.medalTextLine3
+              : CART_PROP.textLine3]: input.lines[2]?.text || "",
+          [isGavel
+            ? CART_PROP.gavelTextLine4
+            : isTrophy
+              ? CART_PROP.trophyTextLine4
+              : isMedal
+                ? CART_PROP.medalTextLine4
+              : CART_PROP.textLine4]: input.lines[3]?.text || "",
+        }),
     [CART_PROP.customDesign]: "Yes",
     [CART_PROP.designer]: input.designerId,
     [CART_PROP.backgroundColor]: input.backgroundColor || "",

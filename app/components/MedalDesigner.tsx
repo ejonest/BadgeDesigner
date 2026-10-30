@@ -5,6 +5,7 @@ import {
   MEDAL_BACKGROUNDS,
   MEDAL_MAX_QUANTITY,
   MEDAL_PRODUCTS,
+  MEDAL_STYLE_PRODUCT_HANDLE,
   getMedalPrice,
   getMedalProduct,
   medalBackgroundFor,
@@ -19,6 +20,7 @@ import { createApi } from "~/utils/api";
 import {
   findShopifyVariantByLabel,
   isShopifyProductJsPayload,
+  parseShopifyMoney,
   type ShopifyProductJs,
 } from "~/utils/signShopifyCatalog";
 import {
@@ -41,7 +43,7 @@ import {
 import "../styles/gavelDesigner.css";
 import "../styles/medalDesigner.css";
 
-type StepId = "shape" | "background" | "design" | "quantity" | "done";
+type StepId = "shape" | "background" | "design";
 type PendingMedalOrder = {
   designId: string;
   pdf: Blob;
@@ -51,15 +53,11 @@ type PendingMedalOrder = {
   rows: Array<{ lines: string[]; lineStyles: MedalLineStyle[]; quantity: number }>;
 };
 
-type MedalBulkSortKey = "line1" | "line2" | "line3" | "quantity";
-
-const STEPS: StepId[] = ["shape", "background", "design", "quantity", "done"];
+const STEPS: StepId[] = ["shape", "background", "design"];
 const STEP_LABELS: Record<StepId, string> = {
   shape: "Shape",
   background: "Background",
   design: "Design",
-  quantity: "Quantity",
-  done: "Review",
 };
 const MEDAL_LINE_LIMIT = 3;
 const PANEL_COPY: Record<StepId, { title: string; sub: string }> = {
@@ -74,14 +72,6 @@ const PANEL_COPY: Record<StepId, { title: string; sub: string }> = {
   design: {
     title: "Add your custom text",
     sub: "Press Enter for a new line. Your text stays centered and scales to fill the open area.",
-  },
-  quantity: {
-    title: "How many do you need?",
-    sub: "Choose the quantity for this personalized medal.",
-  },
-  done: {
-    title: "Review your medal",
-    sub: "Check the style, text, and quantity before approving the proof.",
   },
 };
 const FONT_OPTIONS = ["Arial", "Montserrat", "Open Sans", "Georgia", "Times New Roman"];
@@ -133,6 +123,40 @@ function isStepId(value: string): value is StepId {
 
 function cloneStyles(styles: MedalLineStyle[]): MedalLineStyle[] {
   return styles.map((style) => ({ ...style }));
+}
+
+function MedalFormatButtons({
+  style,
+  label,
+  onToggle,
+}: {
+  style: MedalLineStyle;
+  label: string;
+  onToggle: (format: "bold" | "italic" | "underline") => void;
+}) {
+  return (
+    <div className="md-line-tools" role="group" aria-label={label}>
+      {(
+        [
+          ["bold", "Bold", "B"],
+          ["italic", "Italic", "I"],
+          ["underline", "Underline", "U"],
+        ] as const
+      ).map(([format, name, mark]) => (
+        <button
+          type="button"
+          key={format}
+          className={style[format] ? "is-on" : ""}
+          aria-label={name}
+          aria-pressed={style[format]}
+          title={name}
+          onClick={() => onToggle(format)}
+        >
+          {mark}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function medalLines(
@@ -189,6 +213,7 @@ function MedalPreview({
   });
   return (
     <div className="md-medal-artwork">
+      <div className="md-medal-crop">
       <img
         src={product.artworkSrc ?? product.imageSrc}
         crossOrigin="anonymous"
@@ -224,6 +249,7 @@ function MedalPreview({
           );
         })}
       </div>
+      </div>
     </div>
   );
 }
@@ -243,9 +269,8 @@ export default function MedalDesigner() {
   const [bulkCsvWarning, setBulkCsvWarning] = useState("");
   const [bulkError, setBulkError] = useState("");
   const [selectedBulkRow, setSelectedBulkRow] = useState(0);
+  const [bulkPane, setBulkPane] = useState<"edit" | "all" | "add">("add");
   const [bulkSearch, setBulkSearch] = useState("");
-  const [bulkSortKey, setBulkSortKey] = useState<MedalBulkSortKey>("line1");
-  const [bulkSortAscending, setBulkSortAscending] = useState(true);
   const bulkCsvInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [cartError, setCartError] = useState("");
@@ -256,6 +281,8 @@ export default function MedalDesigner() {
   const designIdRef = useRef(newDesignId());
   const pendingOrderRef = useRef<PendingMedalOrder | null>(null);
   const catalogRef = useRef<ShopifyProductJs | null>(null);
+  const [catalog, setCatalog] = useState<ShopifyProductJs | null>(null);
+  const skipNextPersist = useRef(false);
   const apiRef = useRef(createApi(undefined, undefined, { designerId: "medal" }));
 
   const product = getMedalProduct(productId);
@@ -272,12 +299,32 @@ export default function MedalDesigner() {
       ? bulkRows[selectedBulkRow].lineStyles
       : lineStyles;
   const designReady = bulkMode
-    ? bulkRows.length > 0
+    ? bulkRows.length > 0 && bulkRows.every((row) => row.lines[0].trim())
     : Boolean(lines[0].trim());
+  const panel =
+    step === "design" && bulkMode
+      ? {
+          title: bulkRows.length > 0 ? "Review each medal" : "Add your medals",
+          sub:
+            bulkRows.length > 0
+              ? "Work on one medal, look at all of them, or add more names."
+              : "Paste a list or upload a CSV. Each medal can say something different.",
+        }
+      : PANEL_COPY[step];
   const queryPrice = Number(readQueryParam("price"));
+  const styleVariant =
+    findShopifyVariantByLabel(catalog, product.shortLabel) ??
+    findShopifyVariantByLabel(catalog, product.label) ??
+    catalog?.variants.find((variant) => String(variant.id) === product.shopifyVariantId) ??
+    null;
+  const catalogUnit = styleVariant ? parseShopifyMoney(styleVariant.price) : 0;
   const price = getMedalPrice(
     orderQuantity,
-    Number.isFinite(queryPrice) && queryPrice > 0 ? queryPrice : 13.99,
+    catalogUnit > 0
+      ? catalogUnit
+      : Number.isFinite(queryPrice) && queryPrice > 0
+        ? queryPrice
+        : 13.99,
   );
   const bulkPastePreview = useMemo(() => {
     if (!bulkCsvText.trim()) return null;
@@ -299,20 +346,8 @@ export default function MedalDesigner() {
         query
           ? row.lines.some((line) => line.toLocaleLowerCase().includes(query))
           : true,
-      )
-      .sort((a, b) => {
-        const left =
-          bulkSortKey === "quantity"
-            ? String(a.row.quantity)
-            : a.row.lines[Number(bulkSortKey.slice(-1)) - 1];
-        const right =
-          bulkSortKey === "quantity"
-            ? String(b.row.quantity)
-            : b.row.lines[Number(bulkSortKey.slice(-1)) - 1];
-        const comparison = left.localeCompare(right, undefined, { numeric: true });
-        return bulkSortAscending ? comparison : -comparison;
-      });
-  }, [bulkRows, bulkSearch, bulkSortAscending, bulkSortKey]);
+      );
+  }, [bulkRows, bulkSearch]);
 
   useEffect(() => {
     try {
@@ -338,11 +373,22 @@ export default function MedalDesigner() {
         bulkCsvText?: string;
         bulkCsvWarning?: string;
       };
-      const savedStep = draft.step === "medal" ? "shape" : draft.step;
+      const savedStep =
+        draft.step === "medal"
+          ? "shape"
+          : draft.step === "quantity" || draft.step === "done"
+            ? "design"
+            : draft.step;
       if (savedStep && isStepId(savedStep)) setStep(savedStep);
       if (draft.visited) {
         const migrated = draft.visited.flatMap((id) =>
-          id === "medal" ? (["shape", "background"] as StepId[]) : isStepId(id) ? [id] : [],
+          id === "medal"
+            ? (["shape", "background"] as StepId[])
+            : id === "quantity" || id === "done"
+              ? (["design"] as StepId[])
+              : isStepId(id)
+                ? [id]
+                : [],
         );
         setVisited(migrated.length > 0 ? [...new Set(migrated)] : ["shape"]);
       }
@@ -353,10 +399,10 @@ export default function MedalDesigner() {
       const restoredId = legacyIds[draft.productId ?? ""] ?? draft.productId;
       if (styleId) {
         setProductId(styleId);
-      } else if (matched) {
-        setProductId(matched.id);
       } else if (restoredId && MEDAL_PRODUCTS.some((item) => item.id === restoredId)) {
         setProductId(restoredId);
+      } else if (matched) {
+        setProductId(matched.id);
       }
       const restoredLines = Array.from({ length: 3 }, (_, index) => String(draft.lines?.[index] ?? ""));
       if (draft.lines) setLines(restoredLines);
@@ -381,7 +427,10 @@ export default function MedalDesigner() {
             }];
           }),
         );
-        if (draft.bulkMode) setBulkMode(true);
+        if (draft.bulkMode) {
+          setBulkMode(true);
+          setBulkPane("edit");
+        }
       }
       const restoredBulkLines = draft.bulkMode && Array.isArray(draft.bulkRows) && draft.bulkRows[0]?.lines
         ? draft.bulkRows[0].lines
@@ -401,8 +450,18 @@ export default function MedalDesigner() {
     const handle = readQueryParam("productHandle");
     let cancelled = false;
     function accept(payload: unknown) {
-      if (!cancelled && isShopifyProductJsPayload(payload)) {
+      if (cancelled || !isShopifyProductJsPayload(payload)) return;
+      const current = catalogRef.current;
+      const incomingIsStyle = payload.handle === MEDAL_STYLE_PRODUCT_HANDLE;
+      const currentIsStyle = current?.handle === MEDAL_STYLE_PRODUCT_HANDLE;
+      if (
+        !current ||
+        (incomingIsStyle && !currentIsStyle) ||
+        (incomingIsStyle === currentIsStyle &&
+          payload.variants.length >= current.variants.length)
+      ) {
         catalogRef.current = payload;
+        setCatalog(payload);
       }
     }
     function onMessage(event: MessageEvent) {
@@ -410,12 +469,17 @@ export default function MedalDesigner() {
       if (data?.type === "MEDAL_DESIGNER_SHOPIFY_PRODUCT") accept(data.payload);
     }
     window.addEventListener("message", onMessage);
-    if (shop && handle) {
-      const params = new URLSearchParams({ shop, handle });
-      fetch(`/api/shopify-product?${params}`)
-        .then((response) => response.json())
-        .then(accept)
-        .catch(() => undefined);
+    if (shop) {
+      const handles = Array.from(
+        new Set([handle, MEDAL_STYLE_PRODUCT_HANDLE].filter((value): value is string => Boolean(value))),
+      );
+      for (const productHandle of handles) {
+        const params = new URLSearchParams({ shop, handle: productHandle });
+        fetch(`/api/shopify-product?${params}`)
+          .then((response) => response.json())
+          .then(accept)
+          .catch(() => undefined);
+      }
     }
     return () => {
       cancelled = true;
@@ -425,6 +489,11 @@ export default function MedalDesigner() {
 
   useEffect(() => {
     if (!restored) return;
+    if (skipNextPersist.current) {
+      skipNextPersist.current = false;
+      localStorage.removeItem(CACHE_KEY);
+      return;
+    }
     localStorage.setItem(
       CACHE_KEY,
       JSON.stringify({
@@ -463,22 +532,8 @@ export default function MedalDesigner() {
     [proofUrl],
   );
 
-  const summary = useMemo(
-    () => [
-      ["Medal", product.shortLabel],
-      [
-        "Text",
-        bulkMode && bulkRows.length > 0
-          ? `${bulkRows.length} personalized design${bulkRows.length === 1 ? "" : "s"}`
-          : lines.filter((line) => line.trim()).join(" / "),
-      ],
-      ["Quantity", String(orderQuantity)],
-      ["Price", `$${price.total.toFixed(2)}`],
-    ],
-    [bulkMode, bulkRows.length, lines, orderQuantity, price.total, product.shortLabel],
-  );
-
   function goToStep(next: StepId) {
+    setCartAdded(false);
     setStep(next);
     setVisited((current) => (current.includes(next) ? current : [...current, next]));
   }
@@ -497,8 +552,11 @@ export default function MedalDesigner() {
 
   function applyFormatToAll() {
     if (bulkRows.length === 0) return;
-    const styles = cloneStyles(lineStyles);
-    setBulkRows((current) => current.map((row) => ({ ...row, lineStyles: cloneStyles(styles) })));
+    const styles = cloneStyles(bulkRows[selectedBulkRow]?.lineStyles ?? lineStyles);
+    setLineStyles(styles);
+    setBulkRows((current) =>
+      current.map((row) => ({ ...row, lineStyles: cloneStyles(styles) })),
+    );
   }
 
   function setActiveText(value: string) {
@@ -531,6 +589,7 @@ export default function MedalDesigner() {
       setBulkCsvWarning(result.warning);
       setSelectedBulkRow(0);
       setTextDraft(linesToText(seeded[0]?.lines ?? []));
+      setBulkPane("all");
     } catch (error) {
       setBulkError(error instanceof Error ? error.message : "The list could not be read.");
     }
@@ -567,14 +626,7 @@ export default function MedalDesigner() {
     setBulkError("");
     setBulkSearch("");
     setSelectedBulkRow(0);
-  }
-
-  function toggleBulkSort(key: MedalBulkSortKey) {
-    if (bulkSortKey === key) setBulkSortAscending((current) => !current);
-    else {
-      setBulkSortKey(key);
-      setBulkSortAscending(true);
-    }
+    setBulkPane("add");
   }
 
   function selectBulkRow(index: number) {
@@ -585,7 +637,66 @@ export default function MedalDesigner() {
     if (styles) setLineStyles(cloneStyles(styles));
   }
 
-  function reset() {
+  function chooseBulkMedal(index: number) {
+    selectBulkRow(index);
+    setBulkPane("edit");
+    requestAnimationFrame(() => {
+      document.querySelector(".md-bulk-one")?.scrollIntoView({ block: "nearest" });
+    });
+  }
+
+  function stepBulkRow(delta: number) {
+    const next = selectedBulkRow + delta;
+    if (next < 0 || next >= bulkRows.length) return;
+    selectBulkRow(next);
+  }
+
+  function updateBulkQuantity(rowIndex: number, raw: string) {
+    const current = bulkRows[rowIndex];
+    if (!current) return;
+    const parsed = Math.round(Number(raw));
+    let quantity = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+    const others = bulkRows.reduce(
+      (sum, row, index) => (index === rowIndex ? sum : sum + row.quantity),
+      0,
+    );
+    const room = MEDAL_MAX_QUANTITY - others;
+    if (room < 1) {
+      quantity = current.quantity;
+      setBulkCsvWarning(
+        `Online pricing supports up to ${MEDAL_MAX_QUANTITY} medals.`,
+      );
+    } else if (quantity > room) {
+      quantity = room;
+      setBulkCsvWarning(
+        `Online pricing supports up to ${MEDAL_MAX_QUANTITY} medals.`,
+      );
+    }
+    setBulkRows((rows) =>
+      rows.map((row, index) =>
+        index === rowIndex ? { ...row, quantity } : row,
+      ),
+    );
+  }
+
+  function removeBulkRow(rowIndex: number) {
+    const next = bulkRows.filter((_, index) => index !== rowIndex);
+    let nextIndex = selectedBulkRow;
+    if (next.length === 0) nextIndex = 0;
+    else if (rowIndex < selectedBulkRow) nextIndex = selectedBulkRow - 1;
+    else if (rowIndex === selectedBulkRow) {
+      nextIndex = Math.min(selectedBulkRow, next.length - 1);
+    }
+    setBulkRows(next);
+    setSelectedBulkRow(nextIndex);
+    setTextDraft(linesToText(next[nextIndex]?.lines ?? []));
+    const styles = next[nextIndex]?.lineStyles;
+    if (styles) setLineStyles(cloneStyles(styles));
+    if (next.length === 0) setBulkPane("add");
+  }
+
+  function reset(options?: { keepAdded?: boolean }) {
+    skipNextPersist.current = true;
     localStorage.removeItem(CACHE_KEY);
     designIdRef.current = newDesignId();
     setStep("shape");
@@ -597,7 +708,7 @@ export default function MedalDesigner() {
     setLineStyles(defaultStyles());
     setQuantity(1);
     setCartError("");
-    setCartAdded(false);
+    setCartAdded(Boolean(options?.keepAdded));
     setProofOpen(false);
     setProofUrl(null);
     pendingOrderRef.current = null;
@@ -703,13 +814,10 @@ export default function MedalDesigner() {
   async function confirmAddToCart() {
     const pending = pendingOrderRef.current;
     if (!pending) return;
-    const matchedVariant = findShopifyVariantByLabel(
-      catalogRef.current,
-      product.shortLabel,
-    );
-    const variantId = matchedVariant
-      ? String(matchedVariant.id)
-      : readQueryParam("variantId");
+    const variantId =
+      (styleVariant ? String(styleVariant.id) : null) ||
+      product.shopifyVariantId ||
+      readQueryParam("variantId");
     if (!variantId) {
       setCartError("Open this designer from a personalized medal product page so it can add to cart.");
       return;
@@ -760,9 +868,7 @@ export default function MedalDesigner() {
       });
       const result = await apiRef.current.addToCartMultiple(cartLines);
       if (!result.success) throw new Error(result.message || "Could not add the medal to cart.");
-      localStorage.removeItem(CACHE_KEY);
-      setProofOpen(false);
-      setCartAdded(true);
+      reset({ keepAdded: true });
     } catch (error) {
       setCartError(error instanceof Error ? error.message : "Could not add to cart.");
     } finally {
@@ -798,10 +904,18 @@ export default function MedalDesigner() {
             );
           })}
         </div>
+        <div className="gf-stepper-compact">
+          <p className="gf-stepper-compact-label">
+            {`Step ${stepIndex + 1} of ${STEPS.length} — ${STEP_LABELS[step]}`}
+          </p>
+          <div className="gf-stepper-compact-rule">
+            <span style={{ width: `${((stepIndex + 1) / STEPS.length) * 100}%` }} />
+          </div>
+        </div>
         <div className="gf-panel">
-          <p className="gf-panel-title">{PANEL_COPY[step].title}</p>
+          <p className="gf-panel-title">{panel.title}</p>
           <div className="gf-panel-lead">
-            <p className="gf-panel-sub gf-panel-sub-lead">{PANEL_COPY[step].sub}</p>
+            <p className="gf-panel-sub gf-panel-sub-lead">{panel.sub}</p>
             {showPreview ? <p className="gf-preview-label">Live preview</p> : null}
           </div>
           <div className={`gf-design-grid ${showPreview ? "" : "is-single"}`}>
@@ -859,253 +973,354 @@ export default function MedalDesigner() {
                         {FONT_OPTIONS.map((font) => <option key={font}>{font}</option>)}
                       </select>
                     </label>
-                    <div className="md-line-tools" role="group" aria-label="Text formatting">
-                      {([
-                        ["bold", "Bold", "B"],
-                        ["italic", "Italic", "I"],
-                        ["underline", "Underline", "U"],
-                      ] as const).map(([format, label, mark]) => (
+                    {bulkMode && bulkPane !== "edit" ? null : (
+                      <MedalFormatButtons
+                        style={lineStyles[0]}
+                        label="Text formatting"
+                        onToggle={(format) => updateFormat({ [format]: !lineStyles[0][format] })}
+                      />
+                    )}
+                  </div>
+                  {bulkMode ? (
+                    <>
+                      <div className="md-bulk-switch" role="tablist" aria-label="Bulk order">
                         <button
                           type="button"
-                          key={format}
-                          className={lineStyles[0][format] ? "is-on" : ""}
-                          aria-label={label}
-                          aria-pressed={lineStyles[0][format]}
-                          title={label}
-                          onClick={() => updateFormat({ [format]: !lineStyles[0][format] })}
+                          role="tab"
+                          aria-selected={bulkPane === "edit"}
+                          className={bulkPane === "edit" ? "is-on" : ""}
+                          disabled={bulkRows.length === 0}
+                          onClick={() => setBulkPane("edit")}
                         >
-                          {mark}
+                          This medal
                         </button>
-                      ))}
-                    </div>
-                  </div>
-                  <label className="md-text-label" htmlFor="md-wording">
-                    Custom Text
-                  </label>
-                  <textarea
-                    id="md-wording"
-                    className="gf-input md-wording"
-                    rows={3}
-                    value={textDraft}
-                    placeholder={"Your Name\nChampion\nYear"}
-                    onKeyDown={(event) => {
-                      if (event.key !== "Enter") return;
-                      const newlines = event.currentTarget.value.split("\n").length - 1;
-                      if (newlines >= MEDAL_LINE_LIMIT - 1) event.preventDefault();
-                    }}
-                    onChange={(event) => setActiveText(event.target.value)}
-                  />
-                  <p className="gf-note">Press Enter for a new line. Up to {MEDAL_LINE_LIMIT} lines.</p>
-                  {bulkMode && bulkRows.length > 1 ? (
-                    <button type="button" className="md-apply-line-format" onClick={applyFormatToAll}>
-                      Apply formatting to all medals
-                    </button>
-                  ) : null}
-                  {!bulkMode && !designReady ? <p className="md-help">Enter line 1 to continue.</p> : null}
-                  {bulkMode ? (
-                    <div className="gf-bulk-import">
-                      <div className="gf-bulk-import-head">
-                        <div>
-                          <p className="gf-add-multiple-title">Bulk Order</p>
-                          <p className="gf-note">
-                            Paste a list of names. The medal, font, and formatting are shared.
-                            Each row keeps its own text.
-                          </p>
-                        </div>
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={bulkPane === "all"}
+                          className={bulkPane === "all" ? "is-on" : ""}
+                          disabled={bulkRows.length === 0}
+                          onClick={() => setBulkPane("all")}
+                        >
+                          View all
+                        </button>
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={bulkPane === "add"}
+                          className={bulkPane === "add" ? "is-on" : ""}
+                          onClick={() => setBulkPane("add")}
+                        >
+                          Add names
+                        </button>
                       </div>
-                      <div className="gf-bulk-paste">
-                        <label className="gf-bulk-paste-label" htmlFor="md-bulk-paste">
-                          Paste your list of names
-                        </label>
-                        <p className="gf-bulk-paste-example">
-                          {MEDAL_BULK_PASTE_EXAMPLES.map((row) => (
-                            <span key={row}>{row}</span>
-                          ))}
-                        </p>
-                        <textarea
-                          id="md-bulk-paste"
-                          className="gf-bulk-paste-input"
-                          rows={4}
-                          spellCheck={false}
-                          placeholder={MEDAL_BULK_PASTE_EXAMPLES.join("\n")}
-                          value={bulkCsvText}
-                          onChange={(event) => {
-                            setBulkCsvText(event.target.value);
-                            setBulkError("");
-                          }}
-                        />
-                        {bulkPastePreview?.error || bulkError ? (
-                          <p className="gf-bulk-paste-error">{bulkError || bulkPastePreview?.error}</p>
-                        ) : null}
-                        {bulkPastePreview?.warning ? (
-                          <p className="gf-bulk-paste-warning">{bulkPastePreview.warning}</p>
-                        ) : null}
-                        <div className="gf-bulk-paste-foot">
-                          <span className="gf-note">
-                            {bulkPastePreview && !bulkPastePreview.error
-                              ? `${bulkPastePreview.rows.length} design${bulkPastePreview.rows.length === 1 ? "" : "s"} ready`
-                              : `Up to ${MEDAL_MAX_QUANTITY} total medals.`}
-                          </span>
-                          <button
-                            type="button"
-                            className="gf-nav-primary"
-                            disabled={!bulkPastePreview || Boolean(bulkPastePreview.error) || bulkPastePreview.rows.length === 0}
-                            onClick={() => applyBulkCsv(bulkCsvText)}
-                          >
-                            Apply this list
-                          </button>
-                        </div>
-                        <div className="gf-bulk-actions">
-                          <button type="button" className="gf-nav-secondary" onClick={downloadBulkCsvTemplate}>
-                            Download template
-                          </button>
-                          <button type="button" className="gf-nav-secondary" onClick={() => bulkCsvInputRef.current?.click()}>
-                            Upload CSV
-                          </button>
-                          <button
-                            type="button"
-                            className="gf-nav-secondary"
-                            onClick={() => {
-                              setTextDraft(linesToText(lines));
-                              exitBulkMode();
-                            }}
-                          >
-                            Use one design
-                          </button>
-                          <input
-                            ref={bulkCsvInputRef}
-                            type="file"
-                            accept=".csv,text/csv"
-                            className="gf-visually-hidden"
+                      {bulkRows.length === 0 || bulkPane === "add" ? (
+                        <div className="gf-bulk-paste">
+                          <label className="gf-bulk-paste-label" htmlFor="md-bulk-paste">
+                            Paste names
+                          </label>
+                          <p className="gf-note">
+                            {bulkRows.length > 0
+                              ? "One medal per line, with a bar between the lines of text. Applying this replaces the current list."
+                              : "One medal per line. Separate the lines of text with a bar, so a comma in a name stays put."}
+                          </p>
+                          <p className="gf-bulk-paste-example">
+                            {MEDAL_BULK_PASTE_EXAMPLES.map((row) => (
+                              <span key={row}>{row}</span>
+                            ))}
+                          </p>
+                          <textarea
+                            id="md-bulk-paste"
+                            className="gf-bulk-paste-input"
+                            rows={4}
+                            spellCheck={false}
+                            placeholder={MEDAL_BULK_PASTE_EXAMPLES.join("\n")}
+                            value={bulkCsvText}
                             onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              if (file) void importBulkCsv(file);
+                              setBulkCsvText(event.target.value);
+                              setBulkError("");
                             }}
                           />
-                        </div>
-                      </div>
-                      {bulkRows.length > 0 ? (
-                        <>
-                          <div className="gf-bulk-status">
-                            <strong>
-                              {bulkRows.length} personalized design{bulkRows.length === 1 ? "" : "s"}
-                            </strong>
-                            <span>{bulkQuantity} total medals</span>
-                          </div>
+                          {bulkPastePreview?.error || bulkError ? (
+                            <p className="gf-bulk-paste-error">{bulkError || bulkPastePreview?.error}</p>
+                          ) : null}
+                          {bulkPastePreview?.warning ? (
+                            <p className="gf-bulk-paste-warning">{bulkPastePreview.warning}</p>
+                          ) : null}
                           {bulkCsvWarning ? <p className="gf-bulk-paste-warning">{bulkCsvWarning}</p> : null}
-                          <div className="gf-bulk-grid-tools">
-                            <label>
-                              <span className="gf-visually-hidden">Search names</span>
+                          <div className="gf-bulk-paste-foot">
+                            <span className="gf-note">
+                              {bulkPastePreview && !bulkPastePreview.error
+                                ? `${bulkPastePreview.rows.length} design${bulkPastePreview.rows.length === 1 ? "" : "s"} ready`
+                                : `Up to ${MEDAL_MAX_QUANTITY} total medals.`}
+                            </span>
+                            <button
+                              type="button"
+                              className="gf-nav-primary"
+                              disabled={!bulkPastePreview || Boolean(bulkPastePreview.error) || bulkPastePreview.rows.length === 0}
+                              onClick={() => applyBulkCsv(bulkCsvText)}
+                            >
+                              Apply this list
+                            </button>
+                          </div>
+                          <div className="md-bulk-links">
+                            <button type="button" className="gf-csv-link" onClick={downloadBulkCsvTemplate}>
+                              Download template
+                            </button>
+                            <button type="button" className="gf-csv-link" onClick={() => bulkCsvInputRef.current?.click()}>
+                              Upload CSV
+                            </button>
+                            <button
+                              type="button"
+                              className="gf-csv-link"
+                              onClick={() => {
+                                setTextDraft(linesToText(lines));
+                                exitBulkMode();
+                              }}
+                            >
+                              Use one design
+                            </button>
+                            <input
+                              ref={bulkCsvInputRef}
+                              type="file"
+                              accept=".csv,text/csv"
+                              className="gf-visually-hidden"
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                if (file) void importBulkCsv(file);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ) : bulkPane === "all" ? (
+                        <div className="md-medal-grid-wrap">
+                          {bulkRows.length > 4 ? (
+                            <label className="md-medal-search">
+                              <span className="gf-visually-hidden">Search medals</span>
                               <input
                                 type="search"
                                 className="gf-input"
-                                placeholder="Search any text…"
+                                placeholder="Search medals"
                                 value={bulkSearch}
                                 onChange={(event) => setBulkSearch(event.target.value)}
                               />
                             </label>
-                            <span className="gf-note">
-                              Viewing {visibleBulkRows.length} of {bulkRows.length}
-                            </span>
-                          </div>
-                          <div className="gf-bulk-grid md-bulk-grid" role="table" aria-label="All personalized medal designs">
-                            <div className="gf-bulk-grid-header" role="row">
-                              <span role="columnheader">#</span>
-                              {(["line1", "line2", "line3"] as const).map((key, index) => (
-                                <button key={key} type="button" role="columnheader" onClick={() => toggleBulkSort(key)}>
-                                  Line {index + 1}
-                                  {bulkSortKey === key ? (bulkSortAscending ? " ↑" : " ↓") : ""}
+                          ) : null}
+                          <div className="md-medal-grid" aria-label="All medals">
+                            {visibleBulkRows.map(({ row, index }) => {
+                              const title = row.lines.find((line) => line.trim()) || "No text yet";
+                              const detail = row.lines
+                                .slice(1)
+                                .map((line) => line.trim())
+                                .filter(Boolean)
+                                .join(" · ");
+                              return (
+                                <button
+                                  key={row.id}
+                                  type="button"
+                                  className={`md-medal-card${selectedBulkRow === index ? " is-selected" : ""}${row.lines[0].trim() ? "" : " is-empty"}`}
+                                  aria-label={`Edit medal ${index + 1}, ${title}`}
+                                  onClick={() => chooseBulkMedal(index)}
+                                >
+                                  <MedalPreview
+                                    product={product}
+                                    lines={row.lines}
+                                    fontFamily={fontFamily}
+                                    lineStyles={row.lineStyles ?? lineStyles}
+                                  />
+                                  <span className="md-medal-card-meta">
+                                    Medal {index + 1}
+                                    {row.quantity > 1 ? ` · Qty ${row.quantity}` : ""}
+                                  </span>
+                                  <span className="md-medal-card-name">{title}</span>
+                                  {detail ? <span className="md-medal-card-detail">{detail}</span> : null}
+                                  {row.lines[0].trim() ? null : (
+                                    <span className="md-medal-card-flag">Needs line 1</span>
+                                  )}
                                 </button>
-                              ))}
-                              <button type="button" role="columnheader" onClick={() => toggleBulkSort("quantity")}>
-                                Qty
-                                {bulkSortKey === "quantity" ? (bulkSortAscending ? " ↑" : " ↓") : ""}
+                              );
+                            })}
+                          </div>
+                          {visibleBulkRows.length === 0 ? (
+                            <p className="gf-note">No medals match that search.</p>
+                          ) : null}
+                        </div>
+                      ) : bulkRows[selectedBulkRow] ? (
+                        <div className="md-bulk-one">
+                          <div className="md-bulk-one-nav">
+                            <button
+                              type="button"
+                              className="gf-csv-link"
+                              disabled={selectedBulkRow <= 0}
+                              onClick={() => stepBulkRow(-1)}
+                            >
+                              Previous
+                            </button>
+                            <strong>
+                              Medal {selectedBulkRow + 1} of {bulkRows.length}
+                            </strong>
+                            <button
+                              type="button"
+                              className="gf-csv-link"
+                              disabled={selectedBulkRow >= bulkRows.length - 1}
+                              onClick={() => stepBulkRow(1)}
+                            >
+                              Next
+                            </button>
+                          </div>
+                          <label className="md-text-label" htmlFor="md-wording">
+                            Text
+                          </label>
+                          <textarea
+                            id="md-wording"
+                            className="gf-input md-wording"
+                            rows={3}
+                            value={textDraft}
+                            placeholder={"Your Name\nChampion\nYear"}
+                            onKeyDown={(event) => {
+                              if (event.key !== "Enter") return;
+                              const newlines = event.currentTarget.value.split("\n").length - 1;
+                              if (newlines >= MEDAL_LINE_LIMIT - 1) event.preventDefault();
+                            }}
+                            onChange={(event) => setActiveText(event.target.value)}
+                          />
+                          <p className="gf-note">Press Enter for a new line. Up to {MEDAL_LINE_LIMIT} lines.</p>
+                          <div className="md-copy-row">
+                            <span>Quantity</span>
+                            <div className="md-copy-stepper">
+                              <button
+                                type="button"
+                                aria-label="Decrease quantity"
+                                onClick={() =>
+                                  updateBulkQuantity(
+                                    selectedBulkRow,
+                                    String(bulkRows[selectedBulkRow].quantity - 1),
+                                  )
+                                }
+                              >
+                                −
+                              </button>
+                              <input
+                                type="number"
+                                min={1}
+                                max={MEDAL_MAX_QUANTITY}
+                                aria-label="Quantity for this medal"
+                                value={bulkRows[selectedBulkRow].quantity}
+                                onChange={(event) =>
+                                  updateBulkQuantity(selectedBulkRow, event.target.value)
+                                }
+                              />
+                              <button
+                                type="button"
+                                aria-label="Increase quantity"
+                                onClick={() =>
+                                  updateBulkQuantity(
+                                    selectedBulkRow,
+                                    String(bulkRows[selectedBulkRow].quantity + 1),
+                                  )
+                                }
+                              >
+                                +
                               </button>
                             </div>
-                            {visibleBulkRows.map(({ row, index }) => (
-                              <button
-                                key={row.id}
-                                type="button"
-                                role="row"
-                                className={`gf-bulk-grid-row ${selectedBulkRow === index ? "is-selected" : ""}`}
-                                onClick={() => selectBulkRow(index)}
-                              >
-                                <span role="cell">{index + 1}</span>
-                                {row.lines.map((value, lineIndex) => (
-                                  <span key={lineIndex} role="cell" title={value}>{value || "—"}</span>
-                                ))}
-                                <strong role="cell">{row.quantity}</strong>
+                          </div>
+                          {bulkCsvWarning ? <p className="gf-bulk-paste-warning">{bulkCsvWarning}</p> : null}
+                          <div className="md-bulk-links">
+                            <button
+                              type="button"
+                              className="gf-csv-link"
+                              onClick={() => removeBulkRow(selectedBulkRow)}
+                            >
+                              Remove this medal
+                            </button>
+                            {bulkRows.length > 1 ? (
+                              <button type="button" className="gf-csv-link" onClick={applyFormatToAll}>
+                                Use this style on all
                               </button>
-                            ))}
-                            {visibleBulkRows.length === 0 ? (
-                              <p className="gf-bulk-grid-empty">No rows match “{bulkSearch}”.</p>
                             ) : null}
                           </div>
-                          <p className="gf-note">Select a row to preview it. Click a heading to sort.</p>
-                        </>
+                          {!designReady ? (
+                            <p className="md-help">Every medal needs a first line before adding to cart.</p>
+                          ) : null}
+                        </div>
                       ) : null}
-                    </div>
+                    </>
                   ) : (
-                    <div className="md-group-order">
-                      <p className="md-group-order-title">Ordering for a group?</p>
-                      <button type="button" className="gf-nav-primary" onClick={() => setBulkMode(true)}>
-                        Bulk Order
-                      </button>
-                    </div>
+                    <>
+                      <label className="md-text-label" htmlFor="md-wording">
+                        Custom Text
+                      </label>
+                      <textarea
+                        id="md-wording"
+                        className="gf-input md-wording"
+                        rows={3}
+                        value={textDraft}
+                        placeholder={"Your Name\nChampion\nYear"}
+                        onKeyDown={(event) => {
+                          if (event.key !== "Enter") return;
+                          const newlines = event.currentTarget.value.split("\n").length - 1;
+                          if (newlines >= MEDAL_LINE_LIMIT - 1) event.preventDefault();
+                        }}
+                        onChange={(event) => setActiveText(event.target.value)}
+                      />
+                      <p className="gf-note">Press Enter for a new line. Up to {MEDAL_LINE_LIMIT} lines.</p>
+                      {!designReady ? <p className="md-help">Enter line 1 before adding to cart.</p> : null}
+                      <div className="md-quantity-card">
+                        <p className="gf-sub-title">How many of this medal?</p>
+                        <div className="md-quantity-control">
+                          <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))}>−</button>
+                          <input
+                            type="number"
+                            min={1}
+                            max={MEDAL_MAX_QUANTITY}
+                            value={quantity}
+                            aria-label="Medal quantity"
+                            onChange={(event) => setQuantity(Math.max(1, Math.min(MEDAL_MAX_QUANTITY, Number(event.target.value) || 1)))}
+                          />
+                          <button type="button" onClick={() => setQuantity((value) => Math.min(MEDAL_MAX_QUANTITY, value + 1))}>+</button>
+                        </div>
+                        <div className="md-price-summary">
+                          <span>${price.perUnit.toFixed(2)} each</span>
+                          <strong>${price.total.toFixed(2)} total</strong>
+                        </div>
+                      </div>
+                      <div className="md-group-order">
+                        <p className="md-group-order-title">Ordering for a group?</p>
+                        <button
+                          type="button"
+                          className="gf-nav-primary"
+                          onClick={() => {
+                            setBulkMode(true);
+                            setBulkPane("add");
+                          }}
+                        >
+                          Bulk Order
+                        </button>
+                      </div>
+                    </>
                   )}
                 </>
               ) : null}
-              {step === "quantity" ? (
-                <div className="md-quantity-card">
-                  <p className="gf-sub-title">Medal quantity</p>
-                  {bulkMode && bulkRows.length > 0 ? (
-                    <>
-                      <div className="gf-bulk-status md-bulk-quantity">
-                        <strong>{bulkQuantity} total medals</strong>
-                        <span>{bulkRows.length} personalized designs</span>
-                      </div>
-                      <p className="gf-note">Quantities come from your list. Return to Design to edit it.</p>
-                    </>
-                  ) : (
-                  <div className="md-quantity-control">
-                    <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))}>−</button>
-                    <input
-                      type="number"
-                      min={1}
-                      max={MEDAL_MAX_QUANTITY}
-                      value={quantity}
-                      onChange={(event) => setQuantity(Math.max(1, Math.min(MEDAL_MAX_QUANTITY, Number(event.target.value) || 1)))}
-                    />
-                    <button type="button" onClick={() => setQuantity((value) => Math.min(MEDAL_MAX_QUANTITY, value + 1))}>+</button>
-                  </div>
-                  )}
-                  <div className="md-price-summary">
-                    <span>${price.perUnit.toFixed(2)} each</span>
-                    <strong>${price.total.toFixed(2)} total</strong>
-                  </div>
+              {step === "design" && bulkMode && bulkRows.length > 0 ? (
+                <div className="md-price-summary md-bulk-total">
+                  <span>{bulkQuantity} medals · ${price.perUnit.toFixed(2)} each</span>
+                  <strong>${price.total.toFixed(2)} total</strong>
                 </div>
               ) : null}
-              {step === "done" ? (
-                <div className="md-review">
-                  {summary.map(([label, value]) => (
-                    <div key={label}><span>{label}</span><strong>{value}</strong></div>
-                  ))}
-                  <p>{cartAdded ? "Added to your cart. Your approved medal artwork is saved with the order." : "Open the proof to approve the center artwork before adding it to your cart."}</p>
-                  {cartError ? <p className="gf-note" role="alert">{cartError}</p> : null}
-                </div>
+              {cartAdded ? (
+                <p className="gf-note">Added to your cart. This designer is ready for a new medal.</p>
               ) : null}
+              {cartError && !proofOpen ? <p className="gf-note" role="alert">{cartError}</p> : null}
               <div className="gf-step-nav">
                 <div className="md-nav-secondary">
                   {stepIndex > 0 ? <button type="button" className="gf-nav-secondary" onClick={() => goToStep(STEPS[stepIndex - 1])}>Back</button> : null}
                   <button type="button" className="gf-nav-secondary" onClick={() => window.confirm("Reset this medal design?") && reset()}>Reset design</button>
                 </div>
-                {step !== "done" ? (
-                  <button type="button" className="gf-nav-primary" disabled={step === "design" && !designReady} onClick={() => goToStep(STEPS[stepIndex + 1])}>Continue</button>
-                ) : cartAdded ? (
-                  <button type="button" className="gf-nav-primary" onClick={reset}>Start another</button>
+                {step !== "design" ? (
+                  <button type="button" className="gf-nav-primary" onClick={() => goToStep(STEPS[stepIndex + 1])}>Continue</button>
                 ) : (
                   <button type="button" className="gf-nav-primary" disabled={busy || !designReady} onClick={() => void reviewProof()}>
-                    {busy ? "Preparing preview…" : "Review your preview & add to cart →"}
+                    {busy ? "Preparing preview…" : "Add to cart"}
                   </button>
                 )}
               </div>
@@ -1123,23 +1338,25 @@ export default function MedalDesigner() {
       </div>
       {proofOpen && proofUrl ? (
         <div className="gf-modal-backdrop" role="dialog" aria-modal="true">
-          <div className="gf-modal">
+          <div className="gf-modal md-proof-modal">
             <h2 className="gf-modal-title">Your medal preview</h2>
-            <p className="gf-muted" style={{ marginBottom: 12 }}>
-              Confirm the text stays in the open center, then add this{" "}
-              {bulkMode && bulkRows.length > 0
-                ? `${bulkRows.length}-design bulk order`
-                : "medal"}{" "}
-              to your cart.
-              {bulkMode && bulkRows.length > 1
-                ? " The preview shows the first medal; every piece is added with the same center and font."
-                : ""}
-            </p>
-            <ProofPdfViewer url={proofUrl} title="Medal preview" loadingLabel="Loading preview..." failureLabel="Could not render the preview." />
-            {cartError ? <div className="gf-error">{cartError}</div> : null}
+            <div className="md-proof-body">
+              <p className="gf-muted">
+                Check the center artwork, then approve it to add this{" "}
+                {bulkMode && bulkRows.length > 0
+                  ? `${bulkRows.length}-design bulk order`
+                  : "medal"}{" "}
+                to your cart.
+                {bulkMode && bulkRows.length > 1
+                  ? " The preview shows the first medal. Every medal is added with its own text."
+                  : ""}
+              </p>
+              <ProofPdfViewer url={proofUrl} title="Medal preview" loadingLabel="Loading preview..." failureLabel="Could not render the preview." />
+              {cartError ? <div className="gf-error">{cartError}</div> : null}
+            </div>
             <div className="gf-modal-actions">
               <button type="button" className="gf-btn-secondary" onClick={() => setProofOpen(false)} disabled={busy}>Edit design</button>
-              <button type="button" className="gf-btn-primary" onClick={() => void confirmAddToCart()} disabled={busy}>{busy ? "Adding…" : "Add to cart"}</button>
+              <button type="button" className="gf-btn-primary" onClick={() => void confirmAddToCart()} disabled={busy}>{busy ? "Adding…" : "Approve and add to cart"}</button>
             </div>
           </div>
         </div>

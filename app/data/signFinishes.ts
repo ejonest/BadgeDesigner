@@ -68,8 +68,55 @@ export function getSignFinishesForShape(
   );
 }
 
+/** White plate with black ink — the reset look for a shape. */
+export function whiteSignFinishForShape(
+  shapeTypeId: string | null | undefined,
+): SignFinishOption | undefined {
+  const finishes = getSignFinishesForShape(shapeTypeId);
+  return (
+    finishes.find((finish) => finish.label === "White / Black") ??
+    finishes.find((finish) => finish.label.startsWith("White")) ??
+    finishes.find(
+      (finish) => finish.backgroundColor.trim().toUpperCase() === "#FFFFFF",
+    )
+  );
+}
+
 export function signShapeHasFinishes(shapeTypeId: string): boolean {
   return SIGN_FINISHES.some((finish) => finish.shapeTypeId === shapeTypeId);
+}
+
+function perceivedLuminance(hex: string): number {
+  const normalized = hex.trim().replace(/^#/, "");
+  if (normalized.length < 6) return 1;
+  const r = Number.parseInt(normalized.slice(0, 2), 16);
+  const g = Number.parseInt(normalized.slice(2, 4), 16);
+  const b = Number.parseInt(normalized.slice(4, 6), 16);
+  if (![r, g, b].every((channel) => Number.isFinite(channel))) return 1;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+/**
+ * Finish photos that are dark even when the stored plate hex is light
+ * (dark oak, brushed silver, and a few mislabeled rustic plates).
+ */
+function finishPhotoIsDark(finish: SignFinishOption): boolean {
+  return /(?:^|-)(?:dark-oak|oak|white-walnut|brush-gold|brush-silver|brushed-silver|rustic-dark-blue-wood)(?:-|$)/.test(
+    finish.id,
+  );
+}
+
+/**
+ * Text color to apply when a finish is chosen. Keeps a light accent such as
+ * gold, and switches near-black ink to white on a dark plate.
+ */
+export function signFinishDefaultTextColor(finish: SignFinishOption): string {
+  const plateIsDark =
+    perceivedLuminance(finish.backgroundColor) <= 0.5 ||
+    finishPhotoIsDark(finish);
+  const inkIsDark = perceivedLuminance(finish.inkColor) <= 0.5;
+  if (plateIsDark && inkIsDark) return "#FFFFFF";
+  return finish.inkColor;
 }
 
 /** First stock photo for a shape, used before the customer picks a finish. */

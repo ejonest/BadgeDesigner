@@ -200,7 +200,7 @@ export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "classic-framed",
     name: "Classic framed",
-    previewImageSrc: "/sign-template-previews/classic-framed.jpg",
+    previewImageSrc: "/sign-finishes/classic-framed/classic-framed-navy-blue-gold.jpg",
     sizes: [
       { templateId: "classic-framed-4x6", label: "Small", sizeText: '4×6"' },
       { templateId: "classic-framed-5x7", label: "Medium", sizeText: '5×7"' },
@@ -215,7 +215,7 @@ export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "standard",
     name: "Standard",
-    previewImageSrc: "/sign-template-previews/standard.jpg",
+    previewImageSrc: "/sign-finishes/standard/standard-sunflower-corners-bold.jpg",
     sizes: [
       { templateId: "standard-2x6-small", label: "Small", sizeText: '2×6"' },
       {
@@ -234,7 +234,7 @@ export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "fancy",
     name: "Fancy",
-    previewImageSrc: "/sign-template-previews/fancy.jpg",
+    previewImageSrc: "/sign-finishes/fancy/fancy-brushed-gold.jpg",
     sizes: [
       { templateId: "fancy-6x3", label: "Small", sizeText: '6×3"' },
       { templateId: "fancy-7x3_5", label: "Medium", sizeText: '7×3.5"' },
@@ -244,7 +244,7 @@ export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "designer-heart",
     name: "Designer",
-    previewImageSrc: "/sign-template-previews/designer.jpg",
+    previewImageSrc: "/sign-finishes/designer-heart/designer-heart-walnut-white.jpg",
     sizes: [
       { templateId: "designer-2x5", label: "Small", sizeText: '2×5"' },
       { templateId: "designer-2_8x7", label: "Medium", sizeText: '2.8×7"' },
@@ -264,6 +264,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "basic",
     name: "Basic",
+    previewImageSrc: "/sign-finishes/basic/basic-brushed-silver.jpg",
     hasBorderTrim: false,
     sizes: [
       { templateId: "basic-2x6", label: "Small", sizeText: '2×6"' },
@@ -274,7 +275,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "circle",
     name: "Circle",
-    previewImageSrc: "/sign-template-previews/circle.jpg",
+    previewImageSrc: "/sign-finishes/circle/circle-red-wood.jpg",
     hasBorderTrim: false,
     sizes: [
       { templateId: "circle-4x4", label: "Small", sizeText: '4×4"' },
@@ -286,7 +287,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "square",
     name: "Square",
-    previewImageSrc: "/sign-template-previews/square.jpg",
+    previewImageSrc: "/sign-finishes/square/square-yellow-black.jpg",
     sizes: [
       { templateId: "square-4x4-small", label: "Small", sizeText: '4×4"' },
       { templateId: "square-6x6-medium", label: "Medium", sizeText: '6×6"' },
@@ -301,7 +302,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "oval",
     name: "Oval",
-    previewImageSrc: "/sign-template-previews/oval.jpg",
+    previewImageSrc: "/sign-finishes/oval/oval-light-timber.jpg",
     sizes: [
       { templateId: "oval-2x5-small", label: "Small", sizeText: '2×5"' },
       {
@@ -316,7 +317,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "portrait",
     name: "Portrait",
-    previewImageSrc: "/sign-template-previews/portrait.jpg",
+    previewImageSrc: "/sign-finishes/portrait/portrait-red-white.jpg",
     sizes: [
       {
         templateId: "portrait-round-4x6",
@@ -339,7 +340,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "victorian",
     name: "Victorian",
-    previewImageSrc: "/sign-template-previews/victorian.jpg",
+    previewImageSrc: "/sign-finishes/victorian/victorian-dark-blue.jpg",
     sizes: [
       { templateId: "victorian-3x6-small", label: "Small", sizeText: '3×6"' },
       {
@@ -357,7 +358,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "notched",
     name: "Notched",
-    previewImageSrc: "/sign-template-previews/notched.jpg",
+    previewImageSrc: "/sign-finishes/notched/notched-ivory-dark-brown.jpg",
     sizes: [
       {
         templateId: "notched-6x3_5-small",
@@ -375,6 +376,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "frontier-elegant",
     name: "Frontier elegant",
+    previewImageSrc: "/sign-finishes/frontier-elegant/frontier-elegant-light-wood.jpg",
     sizes: [
       {
         templateId: "frontier-elegant-7x3-small",
@@ -412,6 +414,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "arrow",
     name: "Arrow",
+    previewImageSrc: "/sign-finishes/arrow/arrow-dark-blue.jpg",
     sizes: [
       {
         templateId: "arrow-24x12",
@@ -423,7 +426,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "triangle",
     name: "Triangle",
-    previewImageSrc: "/sign-finishes/triangle/triangle-black-gold.jpg",
+    previewImageSrc: "/sign-finishes/triangle/triangle-yellow-black.jpg",
     hasBorderTrim: false,
     sizes: [
       {
@@ -449,7 +452,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "door-hanger",
     name: "Door hanger",
-    previewImageSrc: "/sign-template-previews/door-hanger.jpg",
+    previewImageSrc: "/sign-finishes/door-hanger/door-hanger-pastel-pink.jpg",
     sizes: [
       {
         templateId: "door-hanger-4x8",
@@ -461,7 +464,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "headstone-basic",
     name: "Headstone basic",
-    previewImageSrc: "/sign-template-previews/headstone.jpg",
+    previewImageSrc: "/sign-finishes/headstone-basic/headstone-basic-navy-blue-gold.jpg",
     sizes: [
       {
         templateId: "headstone-basic-5x6-small",
@@ -488,6 +491,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "vintage",
     name: "Vintage",
+    previewImageSrc: "/sign-finishes/vintage/vintage-rose.jpg",
     sizes: [
       {
         templateId: "vintage-6_5x4_5-small",
@@ -509,7 +513,7 @@ export const ALL_SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "western-elegant",
     name: "Western elegant",
-    previewImageSrc: "/sign-template-previews/western.jpg",
+    previewImageSrc: "/sign-finishes/western-elegant/western-elegant-red-white.jpg",
     sizes: [
       {
         templateId: "western-elegant-6_75x4_5-small",

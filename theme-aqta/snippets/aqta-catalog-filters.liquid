@@ -35,7 +35,7 @@
   <div class="aqta-filters__group" data-aqta-filter="style">
     <p class="aqta-filters__title" id="aqta-filter-style-{{ kind }}">{% if kind == 'plaques' %}Finish{% else %}Type{% endif %}</p>
     <div class="aqta-filters__list" role="group" aria-labelledby="aqta-filter-style-{{ kind }}">
-      <button type="button" data-value="" aria-pressed="true">All types</button>
+      <button type="button" data-value="" aria-pressed="true">{% if kind == 'plaques' %}All finishes{% else %}All types{% endif %}</button>
       {%- if kind == 'trophies' -%}
         <button type="button" data-value="cup">Cup trophies</button>
         <button type="button" data-value="sports-figure">Sports figures</button>
@@ -49,7 +49,11 @@
       {%- else -%}
         <button type="button" data-value="wood">Wood</button>
         <button type="button" data-value="black-frame">Black frame</button>
+        <button type="button" data-value="black">Black</button>
+        <button type="button" data-value="acrylic">Acrylic</button>
         <button type="button" data-value="patriotic">Patriotic</button>
+        <button type="button" data-value="leatherette">Leatherette</button>
+        <button type="button" data-value="marble">Marble</button>
       {%- endif -%}
     </div>
   </div>
@@ -60,10 +64,8 @@
       <button type="button" data-value="featured" aria-pressed="true">Featured</button>
       <button type="button" data-value="title-asc">Name: A–Z</button>
       <button type="button" data-value="title-desc">Name: Z–A</button>
-      {%- unless kind == 'plaques' -%}
-        <button type="button" data-value="price-asc">Price: low to high</button>
-        <button type="button" data-value="price-desc">Price: high to low</button>
-      {%- endunless -%}
+      <button type="button" data-value="price-asc">Price: low to high</button>
+      <button type="button" data-value="price-desc">Price: high to low</button>
     </div>
   </div>
 
