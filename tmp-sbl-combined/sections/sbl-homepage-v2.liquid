@@ -19,15 +19,6 @@
         </h1>
         <p class="sbl-home__hero-accent">{{ section.settings.hero_accent | escape }}</p>
         <p class="sbl-home__hero-text">{{ section.settings.hero_text | escape }}</p>
-        <div class="sbl-home__hero-actions">
-          <a href="{{ designer_url }}" class="sbl-home__button sbl-home__button--gold sbl-home__button--hero">
-            {{ section.settings.designer_button | escape }}
-            <span aria-hidden="true">→</span>
-          </a>
-          <a href="#sbl-popular" class="sbl-home__button sbl-home__button--outline">
-            {{ section.settings.shop_button | escape }}
-          </a>
-        </div>
         <div class="sbl-home__hero-trust">
           <p>10+ years making signs <span aria-hidden="true">·</span> <strong>Over 1 million signs sold across the USA</strong></p>
           <p class="sbl-home__hero-reviews">
@@ -46,24 +37,14 @@
           height="640"
           loading="eager"
         >
-        <a class="sbl-home__tool-card" href="{{ designer_url }}">
-          <span class="sbl-home__tool-heading">
-            <span class="sbl-home__live-dot" aria-hidden="true"></span>
-            Make it yours
-            <span aria-hidden="true">↗</span>
-          </span>
-          <span class="sbl-home__tool-image">
-            <img
-              src="{{ 'sbl-hero-designer-preview.png' | asset_url }}"
-              alt="Sign designer showing text controls and a personalized brushed gold sign preview"
-              width="926"
-              height="613"
-            >
-          </span>
-          <span class="sbl-home__tool-footer">
-            Try the sign designer
-            <span aria-hidden="true">→</span>
-          </span>
+      </div>
+      <div class="sbl-home__hero-actions">
+        <a href="{{ designer_url }}" class="sbl-home__button sbl-home__button--gold sbl-home__button--hero">
+          {{ section.settings.designer_button | escape }}
+          <span aria-hidden="true">→</span>
+        </a>
+        <a href="#sbl-popular" class="sbl-home__button sbl-home__button--outline">
+          {{ section.settings.shop_button | escape }}
         </a>
       </div>
     </div>
@@ -498,19 +479,20 @@
   .sbl-home__hero { background: var(--sbl-navy); color: #fff; }
   .sbl-home__hero-grid {
     display: grid;
-    grid-template-columns: minmax(20px, calc((100vw - 1440px) / 2)) minmax(320px, 540px) minmax(0, 1fr);
+    grid-template-columns: minmax(28px, calc((100vw - 1280px) / 2)) minmax(460px, 620px) minmax(560px, 1fr);
     gap: 0;
     align-items: stretch;
-    min-height: 560px;
+    min-height: 520px;
     height: auto;
   }
   .sbl-home__hero-copy {
     grid-column: 2;
+    grid-row: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
     min-width: 0;
-    padding: 20px 18px 20px 0;
+    padding: 44px 40px 44px 0;
   }
   .sbl-home__eyebrow,
   .sbl-home__section-label {
@@ -546,17 +528,17 @@
     font-weight: 500;
     letter-spacing: -.025em;
   }
-  .sbl-home__hero-title { max-width: 540px; font-size: clamp(44px, 3.6vw, 56px); line-height: 1.02; }
+  .sbl-home__hero-title { max-width: none; font-size: clamp(48px, 4vw, 64px); line-height: 1.04; }
   .sbl-home__hero-title strong { font-weight: 700; }
   .sbl-home__hero-accent {
-    max-width: 640px;
-    margin: 22px 0 0;
+    max-width: none;
+    margin: 20px 0 0;
     color: #e6c66e;
     font-family: Georgia, 'Times New Roman', serif;
-    font-size: clamp(24px, 2.1vw, 32px);
+    font-size: clamp(26px, 2.2vw, 34px);
     font-style: italic;
     font-weight: 400;
-    line-height: 1.2;
+    line-height: 1.25;
     letter-spacing: -.02em;
   }
   .sbl-home__picker { position: relative; }
@@ -638,16 +620,28 @@
   .sbl-home__menu-group a { color: var(--sbl-navy); font-size: 16px; line-height: 1.35; text-decoration: none; }
   .sbl-home__menu-note { margin: 4px 0 0; padding-top: 14px; border-top: 1px solid #eee7dc; color: var(--sbl-muted); font-size: 13px; }
   .sbl-home__menu-note a { color: var(--sbl-navy); font-weight: 800; }
-  .sbl-home__hero-text { max-width: 520px; margin: 22px 0 0; color: #d7dfeb; font-size: 17px; line-height: 1.5; }
-  .sbl-home__hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 36px; }
+  .sbl-home__hero-text { max-width: none; margin: 22px 0 0; color: #e7eef6; font-size: 20px; line-height: 1.65; }
+  .sbl-home__hero-actions {
+    grid-column: 3;
+    grid-row: 1;
+    z-index: 2;
+    align-self: end;
+    justify-self: end;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: min(286px, calc(100% - 36px));
+    margin: 0 22px 26px 0;
+  }
+  .sbl-home__hero-actions .sbl-home__button { width: 100%; box-shadow: 0 12px 28px rgba(15, 39, 68, .18); }
   .sbl-home__hero-trust {
-    max-width: 520px;
-    margin-top: 32px;
+    max-width: none;
+    margin-top: 28px;
     padding-top: 22px;
     border-top: 1px solid rgba(255, 255, 255, .16);
     color: #d7dfeb;
-    font-size: 15.5px;
-    line-height: 1.45;
+    font-size: 17px;
+    line-height: 1.5;
   }
   .sbl-home__hero-trust p { margin: 0; }
   .sbl-home__hero-trust strong { color: #fff; }
@@ -655,50 +649,12 @@
   .sbl-home__stars { color: #3ddc84; font-size: 18px; letter-spacing: 2px; line-height: 1; }
   .sbl-home__hero-art {
     grid-column: 3;
+    grid-row: 1;
     position: relative;
     overflow: hidden;
     background: #eee8dc;
   }
-  .sbl-home__hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 28% center; }
-  .sbl-home__tool-card {
-    position: absolute;
-    right: 16px;
-    bottom: 16px;
-    display: grid;
-    width: min(42%, 400px);
-    overflow: hidden;
-    border-radius: 12px;
-    background: #fff;
-    color: var(--sbl-navy);
-    text-decoration: none;
-    box-shadow: 0 16px 40px rgba(8, 26, 48, .32);
-  }
-  .sbl-home__tool-card:hover { color: var(--sbl-navy); transform: translateY(-3px); }
-  .sbl-home__tool-heading,
-  .sbl-home__tool-footer {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 800;
-  }
-  .sbl-home__tool-heading {
-    min-height: 42px;
-    padding: 0 14px;
-    background: var(--sbl-gold);
-    font-size: 15px;
-  }
-  .sbl-home__tool-heading .sbl-home__live-dot { background: var(--sbl-navy); box-shadow: none; width: 8px; height: 8px; }
-  .sbl-home__tool-heading span:last-child { margin-left: auto; font-size: 18px; font-weight: 500; }
-  .sbl-home__tool-image { display: block; background: #f4f1eb; }
-  .sbl-home__tool-image img { display: block; width: 100%; height: auto; }
-  .sbl-home__tool-footer {
-    justify-content: space-between;
-    min-height: 40px;
-    padding: 0 14px;
-    border-top: 1px solid #e6e9ed;
-    font-size: 14px;
-  }
-  .sbl-home__tool-footer span { color: var(--sbl-gold); font-size: 18px; }
+  .sbl-home__hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 24% center; }
   .sbl-home__quick-links { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 24px; }
   .sbl-home__quick-links a {
     padding: 8px 12px;
@@ -715,8 +671,8 @@
   .sbl-home__start-copy strong { overflow: hidden; margin-top: 3px; font-size: 17px; text-overflow: ellipsis; white-space: nowrap; }
   .sbl-home__button { display: inline-flex; min-height: 50px; padding: 0 22px; align-items: center; justify-content: center; gap: 8px; border-radius: 7px; font-size: 14px; font-weight: 800; text-decoration: none; }
   .sbl-home__button--hero { min-height: 54px; padding: 0 18px; font-size: 17px; }
-  .sbl-home__button--outline { min-height: 54px; padding: 0 18px; border: 1.5px solid rgba(255,255,255,.5); background: transparent; color: #fff; font-size: 16px; }
-  .sbl-home__button--outline:hover { border-color: #fff; background: rgba(255,255,255,.08); color: #fff; }
+  .sbl-home__button--outline { min-height: 54px; padding: 0 18px; border: 1.5px solid rgba(15, 39, 68, .35); background: #fff; color: var(--sbl-navy); font-size: 16px; }
+  .sbl-home__button--outline:hover { border-color: var(--sbl-navy); background: #f7f4ee; color: var(--sbl-navy); }
   .sbl-home__button--gold { background: var(--sbl-gold); color: var(--sbl-navy); }
   .sbl-home__button--gold:hover { background: #dba849; color: var(--sbl-navy); }
   .sbl-home__button--navy { background: var(--sbl-navy); color: #fff; }
@@ -863,6 +819,29 @@
   .sbl-home .sbl-home__trophy h2 { color: var(--sbl-navy); }
   .sbl-home__trophy .sbl-home__plaque-grid > div > p:not(.sbl-home__section-label) { color: var(--sbl-muted); }
   .sbl-home__trophy .sbl-home__plaque-image img { height: 420px; }
+  @media (max-width: 1100px) {
+    .sbl-home__hero-grid { grid-template-columns: 1fr; height: auto; min-height: 0; }
+    .sbl-home__hero-copy,
+    .sbl-home__hero-art,
+    .sbl-home__hero-actions { grid-column: 1; }
+    .sbl-home__hero-copy { grid-row: 1; max-width: 760px; padding: 40px 28px 8px; }
+    .sbl-home__hero-actions {
+      grid-row: 2;
+      align-self: stretch;
+      justify-self: stretch;
+      flex-direction: row;
+      flex-wrap: wrap;
+      width: auto;
+      max-width: 760px;
+      margin: 0;
+      padding: 8px 28px 28px;
+    }
+    .sbl-home__hero-actions .sbl-home__button { width: auto; box-shadow: none; }
+    .sbl-home__button--outline { border-color: rgba(255,255,255,.5); background: transparent; color: #fff; }
+    .sbl-home__button--outline:hover { border-color: #fff; background: rgba(255,255,255,.08); color: #fff; }
+    .sbl-home__hero-art { grid-row: 3; min-height: 360px; height: 52vw; }
+    .sbl-home__hero-text { font-size: 18px; }
+  }
   @media (max-width: 990px) {
     .sbl-home__hero-grid,
     .sbl-home__bulk,
@@ -871,9 +850,23 @@
     .sbl-home__trophy .sbl-home__plaque-image { order: -1; }
     .sbl-home__hero-grid { grid-template-columns: 1fr; height: auto; min-height: 0; }
     .sbl-home__hero-copy,
-    .sbl-home__hero-art { grid-column: auto; }
-    .sbl-home__hero-copy { padding: 36px 24px 24px; }
-    .sbl-home__hero-art { min-height: 420px; height: 58vw; }
+    .sbl-home__hero-art,
+    .sbl-home__hero-actions { grid-column: 1; }
+    .sbl-home__hero-copy { grid-row: 1; padding: 36px 24px 8px; }
+    .sbl-home__hero-actions {
+      grid-row: 2;
+      align-self: stretch;
+      justify-self: stretch;
+      flex-direction: row;
+      flex-wrap: wrap;
+      width: auto;
+      margin: 0;
+      padding: 8px 24px 28px;
+    }
+    .sbl-home__hero-actions .sbl-home__button { width: auto; box-shadow: none; }
+    .sbl-home__button--outline { border-color: rgba(255,255,255,.5); background: transparent; color: #fff; }
+    .sbl-home__button--outline:hover { border-color: #fff; background: rgba(255,255,255,.08); color: #fff; }
+    .sbl-home__hero-art { grid-row: 3; min-height: 420px; height: 58vw; }
     .sbl-home__designer-card { width: min(620px, 100%); margin: 0 auto; }
     .sbl-home__category-grid,
     .sbl-home__product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -892,18 +885,17 @@
   }
   @media (max-width: 599px) {
     .sbl-home__wrap { width: min(100% - 28px, 1240px); }
-    .sbl-home__hero-copy { padding: 32px 20px 24px; }
+    .sbl-home__hero-copy { padding: 32px 20px 8px; }
     .sbl-home__hero-title { font-size: 42px; }
     .sbl-home__hero-accent { font-size: 24px; }
     .sbl-home__menu-cols { grid-template-columns: 1fr 1fr; }
-    .sbl-home__hero-text { font-size: 16px; }
+    .sbl-home__hero-text { font-size: 17px; line-height: 1.6; }
+    .sbl-home__hero-trust { font-size: 15.5px; }
+    .sbl-home__hero-actions { flex-direction: column; padding: 8px 20px 24px; }
     .sbl-home__button--hero,
     .sbl-home__button--outline { width: 100%; }
     .sbl-home__button--hero { min-height: 52px; font-size: 17px; }
-    .sbl-home__hero-art { min-height: 280px; height: 68vw; }
-    .sbl-home__tool-card { right: 12px; bottom: 12px; width: min(52%, 280px); }
-    .sbl-home__tool-heading { min-height: 34px; font-size: 12px; }
-    .sbl-home__tool-footer { min-height: 32px; font-size: 12px; }
+    .sbl-home__hero-art { min-height: 240px; height: 62vw; }
     .sbl-home__start { align-items: stretch; flex-direction: column; }
     .sbl-home__start-copy { padding: 8px; }
     .sbl-home__designer-image-wrap { height: 390px; }
