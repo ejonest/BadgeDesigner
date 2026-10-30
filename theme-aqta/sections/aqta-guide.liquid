@@ -13,7 +13,7 @@
       <div class="aqta-guide__wrap">
         <p class="aqta-guide__eyebrow">Shop by occasion</p>
         <h1>Awards for the day they earn it.</h1>
-        <p class="aqta-guide__lead">Pick the event. Each list shows the trophies and medals in the store for that day. Plaque styles open the custom plaque designer.</p>
+        <p class="aqta-guide__lead">Pick the event. Each list shows the trophies and medals in the store for that day.</p>
       </div>
     </div>
 
@@ -108,7 +108,7 @@
           {%- else -%}
             <p class="aqta-guide__eyebrow">Plaques</p>
             <h1>See the whole plaque before it is made.</h1>
-            <p class="aqta-guide__lead">Each plaque style opens the custom plaque designer. Choose the layout, add the name, and review the finished award before you order.</p>
+            <p class="aqta-guide__lead">Every plaque below opens its product page. Design a custom plaque when you want to choose the layout, the plate, and the engraving.</p>
           {%- endif -%}
           <ol class="aqta-guide__steps">
             <li>Choose the award</li>
@@ -153,7 +153,7 @@
               <p>Sports, school, events, personalized medals, and place sets.</p>
             {%- else -%}
               <h2>Plaque styles</h2>
-              <p>Each style opens the custom plaque designer.</p>
+              <p>Sports, school, workplace, and recognition plaques from the store.</p>
             {%- endif -%}
           </div>
           {% render 'aqta-catalog-filters', kind: kind %}
@@ -164,13 +164,7 @@
           {%- elsif kind == 'medals' -%}
             {% render 'aqta-medal-catalog' %}
           {%- else -%}
-            <div class="aqta-guide__grid">
-              {% render 'aqta-style-card', image: 'aqta-plaque-boss.jpg', title: 'Boss award', note: 'Wood plaque and easel', url: '/products/custom-plaque' %}
-              {% render 'aqta-style-card', image: 'aqta-plaque-honor.jpg', title: 'Honor roll', note: 'Full board, not a crop', url: '/products/custom-plaque' %}
-              {% render 'aqta-style-card', image: 'aqta-plaque-employee.jpg', title: 'Employee of the month', note: 'Black frame and easel', url: '/products/custom-plaque' %}
-              {% render 'aqta-style-card', image: 'aqta-plaque-service.jpg', title: 'Service award', note: 'Patriotic plate', url: '/products/custom-plaque' %}
-              {% render 'aqta-style-card', image: 'aqta-plaque-graduation.jpg', title: 'Graduation', note: 'Cap emblem and easel', url: '/products/custom-plaque' %}
-            </div>
+            {% render 'aqta-plaque-catalog' %}
           {%- endif -%}
         </div>
       </div>
@@ -267,7 +261,25 @@
   .aqta-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   .aqta-guide__group + .aqta-guide__group { margin-top: 34px; }
   .aqta-guide__group[hidden],
-  .aqta-guide__card[hidden] { display: none; }
+  .aqta-guide__card[hidden],
+  .aqta-guide__card.is-collapsed-extra { display: none; }
+  .aqta-guide__view-all {
+    display: inline-flex;
+    margin-top: 16px;
+    min-height: 40px;
+    padding: 0 14px;
+    align-items: center;
+    border: 1px solid #e4ddd1;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--aqta-navy);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .aqta-guide__view-all:hover { border-color: var(--aqta-gold); color: #9a6c17; }
+  .aqta-guide__view-all[hidden] { display: none; }
   .aqta-guide__group-title { margin: 0; color: var(--aqta-navy); font-family: Georgia, "Times New Roman", serif; font-size: clamp(24px, 3vw, 32px); font-weight: 500; }
   .aqta-guide__card { display: flex; min-width: 0; overflow: hidden; flex-direction: column; border: 1px solid #e4ddd1; border-radius: 12px; background: #fff; }
   a.aqta-guide__card { color: inherit; text-decoration: none; }
@@ -365,8 +377,8 @@
 
       cards.forEach((card, index) => {
         card.dataset.originalIndex = index;
-        card.dataset.industry = industryFor(card);
-        card.dataset.style = styleFor(card);
+        if (!card.hasAttribute('data-industry')) card.dataset.industry = industryFor(card);
+        if (!card.hasAttribute('data-style')) card.dataset.style = styleFor(card);
       });
 
       const choice = (group) => {
@@ -387,8 +399,8 @@
         let visible = 0;
         cards.forEach((card) => {
           const titleMatch = !query || (card.dataset.title || '').includes(query);
-          const industryMatch = !active.industry || card.dataset.industry === active.industry;
-          const styleMatch = !active.style || card.dataset.style === active.style;
+          const industryMatch = !active.industry || card.dataset.industry === 'all' || card.dataset.industry === active.industry;
+          const styleMatch = !active.style || card.dataset.style === 'all' || card.dataset.style === active.style;
           const show = titleMatch && industryMatch && styleMatch;
           card.hidden = !show;
           if (show) visible += 1;
@@ -400,6 +412,49 @@
         if (clear) clear.hidden = !hasFilters;
         if (count) count.textContent = `${visible} ${visible === 1 ? 'result' : 'results'}`;
         if (empty) empty.hidden = visible !== 0;
+        applyRowLimit();
+      };
+
+      const collapseSections = kind === 'plaques';
+      const rowLimitFor = (grid) => {
+        const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').filter((part) => part && part !== 'none').length;
+        return Math.max(1, columns) * 2;
+      };
+      const applyRowLimit = () => {
+        if (!collapseSections) return;
+        groups.forEach((group) => {
+          const grid = group.querySelector('.aqta-guide__grid');
+          if (!grid) return;
+          let button = group.querySelector('[data-aqta-view-all]');
+          if (!button) {
+            button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'aqta-guide__view-all';
+            button.setAttribute('data-aqta-view-all', '');
+            button.hidden = true;
+            button.addEventListener('click', () => {
+              group.classList.toggle('is-expanded');
+              applyRowLimit();
+            });
+            group.appendChild(button);
+          }
+          const groupCards = Array.from(grid.querySelectorAll(':scope > [data-aqta-card]'));
+          const visibleCards = groupCards.filter((card) => !card.hidden);
+          const limit = rowLimitFor(grid);
+          const expanded = group.classList.contains('is-expanded');
+          groupCards.forEach((card) => card.classList.remove('is-collapsed-extra'));
+          if (!expanded) {
+            visibleCards.forEach((card, index) => {
+              if (index >= limit) card.classList.add('is-collapsed-extra');
+            });
+          }
+          const extra = visibleCards.length - limit;
+          button.hidden = extra <= 0;
+          if (extra > 0) {
+            button.textContent = expanded ? 'Show less' : 'View all';
+            button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+          }
+        });
       };
 
       const sortCards = () => {
@@ -444,6 +499,10 @@
       });
       if (sort && params.get('sort')) choose(sort, params.get('sort'));
       sortCards();
+      window.addEventListener('resize', () => {
+        window.clearTimeout(root.aqtaRowLimitTimer);
+        root.aqtaRowLimitTimer = window.setTimeout(applyRowLimit, 150);
+      });
     }
 
     const panels = Array.from(root.querySelectorAll('[data-aqta-panel]'));

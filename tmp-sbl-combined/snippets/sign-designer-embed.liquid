@@ -83,30 +83,85 @@
   }
   window.__signDesignerEmbedMessageBound = true;
 
+  var cartRoot = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root ? window.Shopify.routes.root : '/').replace(/\/$/, '');
+
+  function replyToDesigner(event, requestId, success, error) {
+    if (!requestId || !event.source) return;
+    event.source.postMessage({ action: 'add-to-cart-result', requestId: requestId, success: success, error: error || null }, event.origin);
+  }
+
+  function removeReplacedCartLines(replaceDesignId) {
+    if (!replaceDesignId) return Promise.resolve();
+    return fetch(cartRoot + '/cart.js', { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (cart) {
+        var stale = (cart.items || []).filter(function (item) {
+          var props = item.properties || {};
+          return (props['_Design ID'] || props['Design ID']) === replaceDesignId;
+        });
+        return stale.reduce(function (chain, item) {
+          return chain.then(function () {
+            return fetch(cartRoot + '/cart/change.js', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: item.key, quantity: 0 })
+            });
+          });
+        }, Promise.resolve());
+      })
+      .catch(function (err) {
+        console.error('Sign designer: could not remove replaced cart lines', err);
+      });
+  }
+
+  function addToCart(items, event, requestId, replaceDesignId) {
+    if (!items || !items.length) {
+      replyToDesigner(event, requestId, false, 'No cart items to add');
+      return;
+    }
+    fetch(cartRoot + '/cart/add.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: items.map(function (item) {
+          return { id: parseInt(String(item.variantId), 10), quantity: item.quantity || 1, properties: item.properties || {} };
+        })
+      })
+    })
+      .then(function (res) {
+        return res.json().then(function (body) {
+          if (!res.ok) throw new Error((body && (body.description || body.message)) || ('HTTP ' + res.status));
+          return body;
+        });
+      })
+      .then(function () { return removeReplacedCartLines(replaceDesignId); })
+      .then(function () {
+        replyToDesigner(event, requestId, true);
+        window.location.href = cartRoot + '/cart';
+      })
+      .catch(function (err) {
+        var message = err && err.message ? err.message : String(err);
+        console.error('Sign designer: cart/add.js failed', err);
+        replyToDesigner(event, requestId, false, message);
+        alert('Could not add your sign to the cart. Please try again.\n\n' + message);
+      });
+  }
+
   window.addEventListener('message', function (event) {
     if (event.origin !== designerOrigin) return;
     var data = event.data;
+    if (!data || !data.action) return;
     if (data.action === 'redirect-to-login') {
       var returnTo = window.location.pathname + window.location.search;
       window.location.href = '/customer_authentication/login?return_to=' + encodeURIComponent(returnTo);
       return;
     }
+    if (data.action === 'add-to-cart' && data.payload) {
+      addToCart([data.payload], event, data.requestId, data.payload.replaceDesignId);
+      return;
+    }
     if (data.action === 'add-to-cart-multiple' && data.payload && Array.isArray(data.payload.items)) {
-      var items = data.payload.items.map(function (item) {
-        return { id: item.variantId, quantity: item.quantity || 1, properties: item.properties || {} };
-      });
-      var cartRoot = window.Shopify && window.Shopify.routes && window.Shopify.routes.root ? window.Shopify.routes.root : '/';
-      var cartAddUrl = cartRoot.replace(/\/$/, '') + '/cart/add.js';
-      fetch(cartAddUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: items })
-      })
-        .then(function () { window.location.href = cartRoot.replace(/\/$/, '') + '/cart'; })
-        .catch(function (err) {
-          console.error('Sign designer: cart/add.js failed', err);
-          window.location.href = cartRoot.replace(/\/$/, '') + '/cart';
-        });
+      addToCart(data.payload.items, event, data.requestId, data.payload.replaceDesignId);
     }
   });
 })();

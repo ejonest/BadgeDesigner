@@ -1,24 +1,31 @@
 {% doc %}
-  One store award on a medals, trophies, or occasions page.
-  Custom medal, custom plaque, and custom trophy are not passed in.
+  One store award on a medals, trophies, occasions, or plaques page.
   @param {string} url - Product path
   @param {string} image - Product image URL
-  @param {string} title - Short name
+  @param {string} title - Name shown on the card
   @param {string} note - Starting price
+  @param {string} [search] - Text matched by the catalog search. Defaults to title.
+  @param {string} [industry] - Industry filter value. Inferred from the card when omitted.
+  @param {string} [style] - Finish or type filter value. Inferred from the card when omitted.
 {% enddoc %}
-{%- assign price_number = note | remove: 'From $' | times: 100 | round -%}
+{%- liquid
+  assign card_search = search | default: title
+  assign price_number = note | remove: 'From $' | times: 100 | round
+-%}
 <a
   class="aqta-guide__card"
-  href="{{ url }}"
+  href="{{ url | escape }}"
   data-aqta-card
-  data-title="{{ title | downcase | escape }}"
+  data-title="{{ card_search | downcase | escape }}"
   data-price="{{ price_number }}"
+  {% if industry != blank %}data-industry="{{ industry | escape }}"{% endif %}
+  {% if style != blank %}data-style="{{ style | escape }}"{% endif %}
 >
   <div class="aqta-guide__card-image">
-    <img src="{{ image }}" alt="{{ title }}" width="900" height="900" loading="lazy">
+    <img src="{{ image | escape }}" alt="{{ title | escape }}" width="900" height="900" loading="lazy">
   </div>
   <div class="aqta-guide__card-copy">
-    <strong>{{ title }}</strong>
-    <small>{{ note }}</small>
+    <strong>{{ title | escape }}</strong>
+    <small>{{ note | escape }}</small>
   </div>
 </a>

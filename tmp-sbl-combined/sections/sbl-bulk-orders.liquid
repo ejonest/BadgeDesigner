@@ -36,12 +36,62 @@
               <li {{ block.shopify_attributes }}>{{ block.settings.text | escape }}</li>
             {%- endfor -%}
           {%- else -%}
-            <li>Design the signs in the sign designer, or describe the set</li>
-            <li>A representative reviews shapes, finishes, and quantity</li>
-            <li>You get pricing and lead time, then place the order when ready</li>
+            <li>Design one sign, then add the rest of the list</li>
+            <li>Give each sign its own shape, size, and finish, or match them all</li>
+            <li>Send the set for a quote and place the order when the pricing is ready</li>
           {%- endif -%}
         </ol>
       </div>
+    </div>
+  </div>
+
+  <div class="sbl-bulk__tool" id="sbl-bulk-tool">
+    <div class="sbl-bulk__wrap">
+      <p class="sbl-bulk__eyebrow">{{ section.settings.tool_eyebrow | escape }}</p>
+      <h2>{{ section.settings.tool_heading }}</h2>
+      <p class="sbl-bulk__tool-lead">{{ section.settings.tool_lead | escape }}</p>
+      <div class="sbl-bulk__tool-grid">
+        <figure class="sbl-bulk__shot">
+          <img
+            src="{{ 'sbl-bulk-designer.jpg' | asset_url }}"
+            alt="Sign designer with shape, size, and finish chosen, and a live preview of a conference room sign"
+            width="1248"
+            height="448"
+            loading="lazy"
+          >
+          <figcaption>
+            <h3>{{ section.settings.tool_step_1_title | escape }}</h3>
+            <p>{{ section.settings.tool_step_1_text | escape }}</p>
+          </figcaption>
+        </figure>
+        <figure class="sbl-bulk__shot">
+          <img
+            src="{{ 'sbl-bulk-add-multiple.jpg' | asset_url }}"
+            alt="Add Multiple window with a pasted list of room signs and a five-row preview"
+            width="560"
+            height="760"
+            loading="lazy"
+          >
+          <figcaption>
+            <h3>{{ section.settings.tool_step_2_title | escape }}</h3>
+            <p>{{ section.settings.tool_step_2_text | escape }}</p>
+          </figcaption>
+        </figure>
+        <figure class="sbl-bulk__shot">
+          <img
+            src="{{ 'sbl-bulk-view-all.jpg' | asset_url }}"
+            alt="View All grid of five signs in one order, including a navy restroom sign and a walnut manager sign"
+            width="560"
+            height="600"
+            loading="lazy"
+          >
+          <figcaption>
+            <h3>{{ section.settings.tool_step_3_title | escape }}</h3>
+            <p>{{ section.settings.tool_step_3_text | escape }}</p>
+          </figcaption>
+        </figure>
+      </div>
+      <p class="sbl-bulk__tool-note">{{ section.settings.tool_note | escape }}</p>
     </div>
   </div>
 
@@ -58,9 +108,9 @@
               <li {{ block.shopify_attributes }}>✓ {{ block.settings.text | escape }}</li>
             {%- endfor -%}
           {%- else -%}
-            <li>✓ One finish used across wall signs, door signs, and nameplates</li>
-            <li>✓ Duplicate a design and change only the room name</li>
-            <li>✓ Offices, schools, clinics, hotels, and property managers</li>
+            <li>✓ Paste a list of rooms, doors, or names</li>
+            <li>✓ Each sign can use its own shape, size, and finish</li>
+            <li>✓ Apply all when every sign in the order should match</li>
           {%- endif -%}
         </ul>
         <div class="sbl-bulk__rep">
@@ -197,6 +247,17 @@
   .sbl-bulk__panel ol { display: grid; margin: 0; padding: 0; gap: 12px; list-style: none; counter-reset: sbl-step; }
   .sbl-bulk__panel li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; font-size: 15px; line-height: 1.45; }
   .sbl-bulk__panel li::before { counter-increment: sbl-step; content: counter(sbl-step); display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: var(--sbl-navy); color: #fff; font-size: 13px; font-weight: 800; }
+  .sbl-bulk__tool { padding: 72px 0 24px; background: #fff; }
+  .sbl-bulk__tool h2 { color: var(--sbl-navy); font-size: clamp(32px, 4vw, 46px); line-height: 1.08; }
+  .sbl-bulk__tool h2 em { font-style: italic; }
+  .sbl-bulk__tool-lead { max-width: 680px; margin: 14px 0 28px; color: var(--sbl-muted); font-size: 16px; line-height: 1.65; }
+  .sbl-bulk__tool-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; align-items: start; }
+  .sbl-bulk__shot { margin: 0; overflow: hidden; border: 1px solid #e6dfd4; border-radius: 14px; background: var(--sbl-cream); }
+  .sbl-bulk__shot img { display: block; width: 100%; height: auto; background: #e7e2da; }
+  .sbl-bulk__shot figcaption { padding: 16px 16px 18px; }
+  .sbl-bulk__shot h3 { color: var(--sbl-navy); font-size: 22px; }
+  .sbl-bulk__shot p { margin: 8px 0 0; color: var(--sbl-muted); font-size: 14px; line-height: 1.55; }
+  .sbl-bulk__tool-note { max-width: 760px; margin: 22px 0 0; color: var(--sbl-ink); font-size: 15px; line-height: 1.6; }
   .sbl-bulk__form-section { padding: 72px 0 88px; }
   .sbl-bulk__form-section h2 { color: var(--sbl-navy); font-size: clamp(32px, 4vw, 46px); line-height: 1.08; }
   .sbl-bulk__form-section h2 em { font-style: italic; }
@@ -224,6 +285,7 @@
     .sbl-bulk__wrap { width: min(100% - 28px, 1120px); }
     .sbl-bulk__hero-grid,
     .sbl-bulk__form-grid,
+    .sbl-bulk__tool-grid,
     .sbl-bulk__fields { grid-template-columns: 1fr; }
     .sbl-bulk__hero { padding: 48px 0; }
     .sbl-bulk__form-section { padding: 48px 0 64px; }
@@ -240,6 +302,16 @@
     { "type": "textarea", "id": "subheading", "label": "Subheading", "default": "Design the set in the sign designer, then tell us what you need. A representative reviews wall signs, door signs, desk signs, and matching sets and follows up with volume pricing." },
     { "type": "text", "id": "primary_label", "label": "Primary button", "default": "Request a quote" },
     { "type": "text", "id": "secondary_label", "label": "Secondary button", "default": "Open the sign designer" },
+    { "type": "text", "id": "tool_eyebrow", "label": "Designer steps eyebrow", "default": "In the sign designer" },
+    { "type": "html", "id": "tool_heading", "label": "Designer steps heading", "default": "Build the whole set<br><em>before you ask for a quote.</em>" },
+    { "type": "textarea", "id": "tool_lead", "label": "Designer steps lead", "default": "One order can hold many signs. Design the first one, paste the rest of the wording, then decide which signs match and which ones stay their own." },
+    { "type": "text", "id": "tool_step_1_title", "label": "Step 1 title", "default": "1. Design the first sign" },
+    { "type": "textarea", "id": "tool_step_1_text", "label": "Step 1 text", "default": "Choose the shape, size, and finish, then add the wording. The preview on the right updates as you go." },
+    { "type": "text", "id": "tool_step_2_title", "label": "Step 2 title", "default": "2. Add every room" },
+    { "type": "textarea", "id": "tool_step_2_text", "label": "Step 2 text", "default": "Open Add Multiple and paste a list, or upload a spreadsheet. Each row becomes its own sign. A comma separates the lines of text on that sign." },
+    { "type": "text", "id": "tool_step_3_title", "label": "Step 3 title", "default": "3. Match them, or mix them" },
+    { "type": "textarea", "id": "tool_step_3_text", "label": "Step 3 text", "default": "View All shows every sign in the order. Open one to change its shape, size, or finish. Apply all copies the open sign’s shape, size, and finish onto the rest. Each sign keeps its own wording." },
+    { "type": "textarea", "id": "tool_note", "label": "Designer steps note", "default": "When the set looks right, request a quote below. A representative reviews the shapes, finishes, and quantity, then sends pricing and lead time." },
     { "type": "text", "id": "panel_heading", "label": "Panel heading", "default": "How it works" },
     { "type": "textarea", "id": "panel_text", "label": "Panel text", "default": "Large sign sets are not checked out automatically. Every request is reviewed so the finishes, wording, and lead time match the building." },
     { "type": "text", "id": "form_eyebrow", "label": "Form eyebrow", "default": "Request a quote" },
@@ -266,8 +338,8 @@
   ],
   "blocks": [
     { "type": "trust_point", "name": "Trust point", "settings": [{ "type": "text", "id": "label", "label": "Label", "default": "Same-day response" }] },
-    { "type": "step", "name": "Step", "settings": [{ "type": "text", "id": "text", "label": "Text", "default": "Design the signs, then send the set" }] },
-    { "type": "perk", "name": "Perk", "settings": [{ "type": "text", "id": "text", "label": "Text", "default": "Matching finishes across a whole building" }] },
+    { "type": "step", "name": "Step", "settings": [{ "type": "text", "id": "text", "label": "Text", "default": "Design one sign, then add the rest of the list" }] },
+    { "type": "perk", "name": "Perk", "settings": [{ "type": "text", "id": "text", "label": "Text", "default": "Paste a list of rooms, doors, or names" }] },
     { "type": "product_option", "name": "Product option", "settings": [
       { "type": "text", "id": "label", "label": "Label", "default": "Custom wall and door signs" },
       { "type": "text", "id": "value", "label": "Value", "default": "Custom wall and door signs" }
@@ -283,12 +355,12 @@
       { "type": "trust_point", "settings": { "label": "Same-day response" } },
       { "type": "trust_point", "settings": { "label": "Made in California" } },
       { "type": "trust_point", "settings": { "label": "No commitment required" } },
-      { "type": "step", "settings": { "text": "Design the signs in the sign designer, or describe the set" } },
-      { "type": "step", "settings": { "text": "A representative reviews shapes, finishes, and quantity" } },
+      { "type": "step", "settings": { "text": "Design one sign, then add the rest of the list" } },
+      { "type": "step", "settings": { "text": "Give each sign its own shape, size, and finish, or match them all" } },
       { "type": "step", "settings": { "text": "You get pricing and lead time, then place the order when ready" } },
-      { "type": "perk", "settings": { "text": "One finish used across wall signs, door signs, and nameplates" } },
-      { "type": "perk", "settings": { "text": "Duplicate a design and change only the room name" } },
-      { "type": "perk", "settings": { "text": "Offices, schools, clinics, hotels, and property managers" } },
+      { "type": "perk", "settings": { "text": "Paste a list of rooms, doors, or names" } },
+      { "type": "perk", "settings": { "text": "Each sign can use its own shape, size, and finish" } },
+      { "type": "perk", "settings": { "text": "Apply all when every sign in the order should match" } },
       { "type": "product_option", "settings": { "label": "Custom wall and door signs", "value": "Custom wall and door signs" } },
       { "type": "product_option", "settings": { "label": "Desk signs", "value": "Desk signs" } },
       { "type": "product_option", "settings": { "label": "Plaques and awards", "value": "Plaques and awards" } },

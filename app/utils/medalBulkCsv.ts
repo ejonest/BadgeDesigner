@@ -41,11 +41,17 @@ function header(value: string): string {
   return HEADER_ALIASES[normalized] ?? normalized;
 }
 
+function isColumnName(value: string): boolean {
+  return HEADER_ALIASES[cell(value).toLowerCase()] !== undefined;
+}
+
+/**
+ * A header is a row of column names, such as "Line 1, Line 2, Quantity".
+ * A medal whose text happens to be "line2" is not a header.
+ */
 function looksLikeHeader(cells: string[]): boolean {
-  return cells.some((value) => {
-    const normalized = cell(value).toLowerCase();
-    return /^(?:line\s*[1-3]|quantity|qty)$/.test(normalized);
-  });
+  const filled = cells.map(cell).filter(Boolean);
+  return filled.length > 0 && filled.every(isColumnName);
 }
 
 function makeRow(values: string[], quantity: number, index: number): MedalBulkRow {
@@ -56,11 +62,75 @@ function makeRow(values: string[], quantity: number, index: number): MedalBulkRo
   };
 }
 
+function looksLikePipeList(csv: string): boolean {
+  const lines = csv
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return false;
+  const first = lines[0].toLowerCase();
+  const data =
+    first.startsWith("line 1") || first.startsWith("line1") ? lines.slice(1) : lines;
+  return data.length > 0 && data.every((line) => line.includes("|"));
+}
+
+function finishRows(rows: MedalBulkRow[], truncatedRows: number[]): MedalBulkCsvResult {
+  const total = rows.reduce((sum, row) => sum + row.quantity, 0);
+  if (total > MEDAL_MAX_QUANTITY) {
+    throw new Error(
+      `This list totals ${total} medals. Online pricing currently supports up to ${MEDAL_MAX_QUANTITY}; contact us for a larger order.`,
+    );
+  }
+  return {
+    rows,
+    warning:
+      truncatedRows.length > 0
+        ? `Rows ${truncatedRows.join(", ")} exceeded three lines or ${MAX_LINE_LENGTH} characters; extra text was removed.`
+        : "",
+  };
+}
+
+function parsePipeList(csv: string): MedalBulkCsvResult {
+  const lines = csv
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const first = lines[0]?.toLowerCase() ?? "";
+  const data =
+    first.startsWith("line 1") || first.startsWith("line1") ? lines.slice(1) : lines;
+  const truncatedRows: number[] = [];
+  const rows = data.map((line, index) => {
+    const parts = line.split("|").map(cell);
+    if (!parts[0]) throw new Error(`Row ${index + 1} needs Line 1.`);
+    let quantity = 1;
+    let text = parts;
+    if (parts.length >= 4 && /^\d+$/.test(parts[parts.length - 1] ?? "")) {
+      quantity = Number.parseInt(parts[parts.length - 1] ?? "1", 10);
+      text = parts.slice(0, -1);
+    }
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      throw new Error(`Row ${index + 1} has an invalid quantity.`);
+    }
+    if (text.length > 3 || text.some((value) => value.length > MAX_LINE_LENGTH)) {
+      truncatedRows.push(index + 1);
+    }
+    return makeRow(
+      text.slice(0, 3).map((value) => value.slice(0, MAX_LINE_LENGTH)),
+      quantity,
+      index,
+    );
+  });
+  if (rows.length === 0) throw new Error("Add at least one row of medal text.");
+  return finishRows(rows, truncatedRows);
+}
+
 /**
- * Accepts the downloadable template or pasted comma/tab-separated rows.
+ * Accepts the downloadable template, pasted comma or tab rows, or a bar list
+ * (`Name | Title | Year`) so a comma inside a name stays in one field.
  * Each row is one personalized medal and may carry its own quantity.
  */
 export function parseMedalBulkCsv(csv: string): MedalBulkCsvResult {
+  if (looksLikePipeList(csv)) return parsePipeList(csv);
   const parsed = Papa.parse<string[]>(csv.trim(), {
     skipEmptyLines: "greedy",
     delimitersToGuess: [",", "\t"],
@@ -83,7 +153,9 @@ export function parseMedalBulkCsv(csv: string): MedalBulkCsvResult {
     const headers = allRows[0].map(header);
     const lineColumns = [1, 2, 3].map((line) => headers.indexOf(`line${line}`));
     if (lineColumns[0] < 0) {
-      throw new Error('Include a "Line 1" column, or remove the header row.');
+      throw new Error(
+        "That first row looks like column names, but it needs a Line 1 column. Or delete it and paste one medal per line, such as Avery Cole | Captain | 2026.",
+      );
     }
     const quantityColumn = headers.indexOf("quantity");
     rows = allRows.slice(1).flatMap((values, index): MedalBulkRow[] => {
@@ -107,6 +179,9 @@ export function parseMedalBulkCsv(csv: string): MedalBulkCsvResult {
         ),
       ];
     });
+    if (rows.length === 0) {
+      throw new Error("Add at least one medal under the column names.");
+    }
   } else {
     rows = allRows.map((values, index) => {
       const normalized = values.map(cell);
@@ -131,28 +206,15 @@ export function parseMedalBulkCsv(csv: string): MedalBulkCsvResult {
     });
   }
 
-  const total = rows.reduce((sum, row) => sum + row.quantity, 0);
-  if (total > MEDAL_MAX_QUANTITY) {
-    throw new Error(
-      `This list totals ${total} medals. Online pricing currently supports up to ${MEDAL_MAX_QUANTITY}; contact us for a larger order.`,
-    );
-  }
-
-  return {
-    rows,
-    warning:
-      truncatedRows.length > 0
-        ? `Rows ${truncatedRows.join(", ")} exceeded three lines or ${MAX_LINE_LENGTH} characters; extra text was removed.`
-        : "",
-  };
+  return finishRows(rows, truncatedRows);
 }
 
 export const MEDAL_BULK_CSV_TEMPLATE =
   "Line 1,Line 2,Line 3,Quantity\n" +
-  "CHAMPION,2026,,1\n" +
-  "TEAM,Jordan Lee,2026,1\n";
+  "Avery Cole,Captain,2026,1\n" +
+  "Jordan Lee,Team Captain,2026,1\n";
 
 export const MEDAL_BULK_PASTE_EXAMPLES = [
-  "CHAMPION,2026",
-  "TEAM,Jordan Lee,2026",
+  "Avery Cole | Captain | 2026",
+  "Jordan Lee | Team Captain | 2026",
 ] as const;

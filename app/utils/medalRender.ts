@@ -205,9 +205,29 @@ export async function medalPreviewToPng(input: {
   });
   ctx.restore();
 
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
+  // Same window as `.md-medal-crop { width: 215% }`: the medal disc, not the ribbon.
+  const zoom = 2.15;
+  const cropSize = Math.round(size / zoom);
+  const cropped = document.createElement("canvas");
+  cropped.width = cropSize;
+  cropped.height = cropSize;
+  const cropCtx = cropped.getContext("2d");
+  if (!cropCtx) throw new Error("Could not draw the medal preview.");
+  cropCtx.drawImage(
+    canvas,
+    Math.round((size - cropSize) / 2),
+    size - cropSize,
+    cropSize,
+    cropSize,
+    0,
+    0,
+    cropSize,
+    cropSize,
+  );
+
+  const dataUrl = cropped.toDataURL("image/jpeg", 0.88);
   const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
+    cropped.toBlob(
       (value) => (value ? resolve(value) : reject(new Error("Thumbnail failed."))),
       "image/jpeg",
       0.88,

@@ -280,6 +280,28 @@ export interface BadgeEditorPanelProps {
   layoutCharLimitByLine?: Record<number, boolean>;
   /** Acrylic desk signs: personalized text color is fixed — hide color controls. */
   textColorLocked?: boolean;
+  /** Changes when the edited item changes, so revealed extra lines collapse. */
+  linesInstanceKey?: string;
+  /** Sign designer: create another text line when none are waiting. */
+  onAddSignLine?: () => void;
+}
+
+function CollapsibleLineStyle({
+  collapsed,
+  children,
+}: {
+  collapsed: boolean;
+  children: React.ReactNode;
+}) {
+  if (!collapsed) return <>{children}</>;
+  return (
+    <details className="mt-2 rounded-md border border-[rgba(2,19,43,0.12)] bg-white/70 px-2 py-1.5">
+      <summary className="cursor-pointer text-sm font-semibold text-[#02132B]">
+        Font, size, and color
+      </summary>
+      <div className="pt-2">{children}</div>
+    </details>
+  );
 }
 
 export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
@@ -304,8 +326,14 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
   panelLayout = "default",
   layoutCharLimitByLine,
   textColorLocked = false,
+  linesInstanceKey = "",
+  onAddSignLine,
 }) => {
   const { labelProductPlural } = getDesignerVariantConfig(variant);
+  const [signRevealedExtra, setSignRevealedExtra] = React.useState(0);
+  React.useEffect(() => {
+    setSignRevealedExtra(0);
+  }, [linesInstanceKey]);
   const allItemsLabel = labelProductPlural.toLowerCase();
 
   // Get the current template's designBox for font size calculations
@@ -429,9 +457,23 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
     const linePlaceholder = (idx: number) => {
       if (idx === 0) return "Enter name or organization...";
       if (idx === 1) return "Enter role or title...";
+      if (isSignPanel) return "Optional line";
       const ph = linePlaceholders?.[idx]?.trim();
       return ph || `Insert line ${idx + 1} text here`;
     };
+
+    let signLastFilled = -1;
+    if (isSignPanel) {
+      badge.lines.forEach((line, index) => {
+        if ((line.text ?? "").trim()) signLastFilled = index;
+      });
+    }
+    const signVisibleThrough = isSignPanel
+      ? Math.min(
+          Math.max(0, badge.lines.length - 1),
+          Math.max(1, signLastFilled, 1 + signRevealedExtra),
+        )
+      : badge.lines.length - 1;
 
     const fontOptionsForLine = (line: BadgeLine) => {
       const cur = line.fontFamily ?? "";
@@ -443,6 +485,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
     return (
       <div className="aqb-badge-text-section w-full">
         {badge.lines.map((line: BadgeLine, idx: number) => {
+          if (isSignPanel && idx > signVisibleThrough) return null;
           const linePx = getLineSizePx(line, fontMetricsHeight, fontSizeMinPx);
           const sizePreset = nearestAqbSizePreset(linePx);
           const lineColor = normalizeTextColorHex(line.color ?? "#000000");
@@ -590,6 +633,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                 ) : null}
               </div>
 
+              <CollapsibleLineStyle collapsed={isSignPanel}>
               <div className="aqb-badge-text-row-controls">
                   <div className="aqb-badge-trc-group">
                     <div className="aqb-badge-trc-label">Font</div>
@@ -785,6 +829,7 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                     : "Text color is fixed — acrylic is personalized."}
                 </p>
               ) : null}
+              </CollapsibleLineStyle>
 
               {onApplyFormattingToAll && hasMultipleBadges ? (
                 <button
@@ -799,6 +844,24 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
             </div>
           );
         })}
+        {isSignPanel && signVisibleThrough + 1 < maxLines ? (
+          <div className="sticky bottom-0 z-10 bg-white/95 py-2">
+            <button
+              type="button"
+              className="flex w-full items-center justify-center rounded-lg border-2 border-dashed border-[#02132B] bg-white px-3 py-3 text-[15px] font-semibold text-[#02132B] hover:bg-[#f4f7fb]"
+              onClick={() => {
+                if (signVisibleThrough < badge.lines.length - 1) {
+                  setSignRevealedExtra((count) => count + 1);
+                  return;
+                }
+                onAddSignLine?.();
+              }}
+              disabled={!editable}
+            >
+              Add a line
+            </button>
+          </div>
+        ) : null}
         {addLineButton}
       </div>
     );
