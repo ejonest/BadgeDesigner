@@ -1119,7 +1119,7 @@ export default function MedalDesigner() {
                                   key={row.id}
                                   type="button"
                                   className={`md-medal-card${selectedBulkRow === index ? " is-selected" : ""}${row.lines[0].trim() ? "" : " is-empty"}`}
-                                  aria-label={`Edit medal ${index + 1}, ${title}`}
+                                  aria-label={`Edit medal ${index + 1}, ${title}, quantity ${row.quantity}`}
                                   onClick={() => chooseBulkMedal(index)}
                                 >
                                   <MedalPreview
@@ -1129,8 +1129,8 @@ export default function MedalDesigner() {
                                     lineStyles={row.lineStyles ?? lineStyles}
                                   />
                                   <span className="md-medal-card-meta">
-                                    Medal {index + 1}
-                                    {row.quantity > 1 ? ` · Qty ${row.quantity}` : ""}
+                                    <span>Medal {index + 1}</span>
+                                    <span className="md-medal-card-qty">Qty {row.quantity}</span>
                                   </span>
                                   <span className="md-medal-card-name">{title}</span>
                                   {detail ? <span className="md-medal-card-detail">{detail}</span> : null}

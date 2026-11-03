@@ -337,10 +337,22 @@
 }
 
 .md-medal-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 1px 6px;
+  width: 100%;
+  max-width: 100%;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--gf-olive);
+}
+
+.md-medal-card-qty {
+  white-space: nowrap;
+  color: var(--gf-navy);
 }
 
 .md-medal-card-name {

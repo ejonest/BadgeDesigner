@@ -1,208 +1,238 @@
-{%- liquid
-  assign styles_url = routes.root_url | append: '#aqta-trophies'
--%}
+{% render 'aqta-header', section_id: section.id, current: 'bulk' %}
 
 <section class="aqta-bulk" id="aqta-bulk-page">
-  {% render 'aqta-header', section_id: section.id, current: 'bulk' %}
-
-  <div class="aqta-bulk__hero">
+  <header class="aqta-bulk__hero">
     <div class="aqta-bulk__wrap aqta-bulk__hero-grid">
-      <div>
-        <p class="aqta-bulk__eyebrow">Bulk &amp; banquet orders</p>
-        <h1>Award sets, <em>quoted by a real person.</em></h1>
-        <p class="aqta-bulk__lead">Tell us the trophies, medals, or plaques you need. A representative reviews the styles, engraving, and quantity, then follows up with volume pricing.</p>
-        <div class="aqta-bulk__actions">
-          <a class="aqta-bulk__button aqta-bulk__button--gold" href="#bulk-quote-form">Request a quote</a>
-          <a class="aqta-bulk__button aqta-bulk__button--ghost" href="{{ styles_url }}">See award styles</a>
-        </div>
-        <ul class="aqta-bulk__trust">
-          <li>✓ Same-day response</li>
-          <li>✓ Made in California</li>
-          <li>✓ No commitment required</li>
-        </ul>
+      <div class="aqta-bulk__hero-copy">
+        <p class="aqta-bulk__eyebrow">Bulk orders</p>
+        <h1>A list of names, <em>one award at a time.</em></h1>
+        <p class="aqta-bulk__lead">Paste the roster in the designer. Medals, trophies, and plaques each keep their own wording, and the look stays the same across the set.</p>
       </div>
-      <div class="aqta-bulk__panel">
-        <h2>How it works</h2>
-        <p>Large award sets are not checked out automatically. Every request is reviewed so the style, wording, and lead time match the event.</p>
+      <nav class="aqta-bulk__jumps" aria-label="Design tools">
+        <a href="#bulk-medals">
+          <span class="aqta-bulk__jump-photo">
+            <img src="{{ 'aqta-medal-gold.png' | asset_url }}" alt="" width="900" height="900">
+          </span>
+          <span class="aqta-bulk__jump-copy">
+            <strong>Medals</strong>
+            <small>Paste a roster, one medal per line</small>
+          </span>
+          <span class="aqta-bulk__jump-go" aria-hidden="true">→</span>
+        </a>
+        <a href="#bulk-trophies">
+          <span class="aqta-bulk__jump-photo">
+            <img src="{{ 'aqta-victory-trophy.jpg' | asset_url }}" alt="" width="800" height="1000">
+          </span>
+          <span class="aqta-bulk__jump-copy">
+            <strong>Trophies</strong>
+            <small>One design, a plate for every name</small>
+          </span>
+          <span class="aqta-bulk__jump-go" aria-hidden="true">→</span>
+        </a>
+        <a href="#bulk-plaques">
+          <span class="aqta-bulk__jump-photo">
+            <img src="{{ 'aqta-plaque-honor.jpg' | asset_url }}" alt="" width="900" height="900">
+          </span>
+          <span class="aqta-bulk__jump-copy">
+            <strong>Plaques</strong>
+            <small>One row for each plaque in the set</small>
+          </span>
+          <span class="aqta-bulk__jump-go" aria-hidden="true">→</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <article class="aqta-bulk__tool" id="bulk-medals">
+    <div class="aqta-bulk__wrap aqta-bulk__tool-grid">
+      <div>
+        <p class="aqta-bulk__eyebrow">Medals</p>
+        <h2>Open Bulk Order on the design step.</h2>
         <ol>
-          <li>Describe the trophies, medals, or plaques, or point to a style on the site</li>
-          <li>A representative reviews finishes, engraving, and quantity</li>
-          <li>You get pricing and lead time, then place the order when ready</li>
+          <li>Choose the medal, then open Bulk Order.</li>
+          <li>Paste one medal per line. A bar separates the lines of text on that medal.</li>
+          <li>Open View all and check every name before you continue.</li>
         </ol>
-        <img src="{{ 'aqta-plaque-boss.jpg' | asset_url }}" alt="Full wooden best boss award plaque on an easel" width="900" height="900" loading="lazy">
+        <a class="aqta-bulk__button" href="/products/custom-medal">Design medals <span aria-hidden="true">→</span></a>
       </div>
+      <figure class="aqta-bulk__frame">
+        <img
+          src="{{ 'aqta-bulk-medal.jpg' | asset_url }}"
+          alt="Medal designer View all grid of four personalized medals beside a live preview"
+          width="1244"
+          height="820"
+        >
+      </figure>
     </div>
-  </div>
+  </article>
 
-  <div class="aqta-bulk__form-section" id="bulk-quote-form">
-    <div class="aqta-bulk__wrap aqta-bulk__form-grid">
+  <article class="aqta-bulk__tool aqta-bulk__tool--cream" id="bulk-trophies">
+    <div class="aqta-bulk__wrap aqta-bulk__tool-grid">
       <div>
-        <p class="aqta-bulk__eyebrow">Request a quote</p>
-        <h2>Tell us about <em>the award set.</em></h2>
-        <p class="aqta-bulk__intro">Share what you are recognizing, how many you need, and the wording that should be engraved. We typically reply within one business day.</p>
-        <ul class="aqta-bulk__perks">
-          <li>✓ One look used across trophies, medals, and plaques</li>
-          <li>✓ Change only the name on each award</li>
-          <li>✓ Teams, schools, companies, churches, and banquets</li>
-        </ul>
-        <div class="aqta-bulk__rep">
-          <h3>A real person reviews every request</h3>
-          <p>Pricing depends on the award, the engraving, and the quantity. We confirm the details and send a quote. There is no commitment.</p>
-        </div>
+        <p class="aqta-bulk__eyebrow">Trophies</p>
+        <h2>Bulk Order applies one design to every trophy.</h2>
+        <ol>
+          <li>Choose the trophy and the plate, then open Bulk Order.</li>
+          <li>Paste one trophy per line. The award, plate, and formatting stay shared.</li>
+          <li>View all shows every plate. Select one to preview that trophy.</li>
+        </ol>
+        <a class="aqta-bulk__button" href="/products/custom-trophy">Design trophies <span aria-hidden="true">→</span></a>
       </div>
-
-      <div class="aqta-bulk__card">
-        <p class="aqta-bulk__note">Fields marked with * are required. Include names, dates, and the award style if you already know it.</p>
-        {%- form 'contact', id: 'AqtaBulkQuoteForm', class: 'aqta-bulk__form' -%}
-          <input type="hidden" name="contact[Subject]" value="Trophy and Award Bulk Quote Request">
-
-          {%- if form.posted_successfully? -%}
-            <div class="aqta-bulk__status aqta-bulk__status--success" tabindex="-1" autofocus>
-              Thank you. Your bulk award quote request has been received. A representative will contact you shortly.
-            </div>
-          {%- elsif form.errors -%}
-            <div class="aqta-bulk__status aqta-bulk__status--error" role="alert" tabindex="-1" autofocus>
-              Please check your email address and required fields, then try again.
-            </div>
-          {%- endif -%}
-
-          <div class="aqta-bulk__fields">
-            <label>
-              Your name <span>*</span>
-              <input type="text" name="contact[Name]" autocomplete="name" required value="{% if form.name %}{{ form.name }}{% elsif customer %}{{ customer.name }}{% endif %}">
-            </label>
-            <label>
-              Organization
-              <input type="text" name="contact[Organization]" autocomplete="organization">
-            </label>
-            <label>
-              Email address <span>*</span>
-              <input type="email" name="contact[email]" autocomplete="email" required spellcheck="false" autocapitalize="off" value="{% if form.email %}{{ form.email }}{% elsif customer %}{{ customer.email }}{% endif %}">
-            </label>
-            <label>
-              Phone number
-              <input type="tel" name="contact[Phone]" autocomplete="tel" value="{% if customer %}{{ customer.phone }}{% endif %}">
-            </label>
-            <label>
-              What are you ordering? <span>*</span>
-              <select name="contact[Award type]" required>
-                <option value="" disabled selected>Select an award type...</option>
-                <option value="Trophies">Trophies</option>
-                <option value="Medals">Medals</option>
-                <option value="Plaques">Plaques</option>
-                <option value="Sports awards">Sports awards</option>
-                <option value="Corporate recognition">Corporate recognition</option>
-                <option value="Mixed award set">Mixed award set</option>
-              </select>
-            </label>
-            <label>
-              Estimated quantity <span>*</span>
-              <select name="contact[Estimated quantity]" required>
-                <option value="" disabled selected>Select a range...</option>
-                <option value="10-24">10 – 24</option>
-                <option value="25-49">25 – 49</option>
-                <option value="50-99">50 – 99</option>
-                <option value="100-249">100 – 249</option>
-                <option value="250+">250+</option>
-              </select>
-            </label>
-            <label class="aqta-bulk__field--full">
-              Order details <span>*</span>
-              <textarea name="contact[Order details]" required placeholder="Event, award styles, engraving, names, and the date you need them..."></textarea>
-            </label>
-          </div>
-          <button type="submit">Submit quote request</button>
-          <p class="aqta-bulk__fine">By submitting, you agree to be contacted about your bulk award order.</p>
-        {%- endform -%}
-      </div>
+      <figure class="aqta-bulk__frame">
+        <img
+          src="{{ 'aqta-bulk-trophy.jpg' | asset_url }}"
+          alt="Trophy designer View all grid of four engraved plates beside a live trophy preview"
+          width="1244"
+          height="860"
+        >
+      </figure>
     </div>
-  </div>
+  </article>
+
+  <article class="aqta-bulk__tool" id="bulk-plaques">
+    <div class="aqta-bulk__wrap aqta-bulk__tool-grid">
+      <div>
+        <p class="aqta-bulk__eyebrow">Plaques</p>
+        <h2>Add Multiple Plaques, one row per plaque.</h2>
+        <ol>
+          <li>Open Add Multiple Plaques from the designer toolbar.</li>
+          <li>Paste one plaque per line, with a comma between its lines of text.</li>
+          <li>The preview lists every plaque. Add them, then open View all to check the set.</li>
+        </ol>
+        <a class="aqta-bulk__button" href="/products/custom-plaque">Design plaques <span aria-hidden="true">→</span></a>
+      </div>
+      <figure class="aqta-bulk__frame">
+        <img
+          src="{{ 'aqta-bulk-plaque.jpg' | asset_url }}"
+          alt="Add or Create Multiple Plaques window with a pasted roster and a four-row preview"
+          width="560"
+          height="725"
+        >
+      </figure>
+    </div>
+  </article>
 </section>
 
 {% stylesheet %}
+  body:has(#aqta-bulk-page) > header { display: none; }
   .aqta-bulk {
     --aqta-navy: #0f2744;
     --aqta-gold: #c9932e;
-    --aqta-cream: #f5f1eb;
+    --aqta-cream: #f7f4ee;
     --aqta-ink: #1b2433;
     --aqta-muted: #667085;
-    background: var(--aqta-cream);
+    background: #fff;
     color: var(--aqta-ink);
     font-family: Arial, Helvetica, sans-serif;
   }
   .aqta-bulk * { box-sizing: border-box; }
   .aqta-bulk__wrap { width: min(1120px, calc(100% - 48px)); margin: 0 auto; }
-  .aqta-bulk__hero { background: var(--aqta-navy); color: #fff; padding: 72px 0; }
-  .aqta-bulk__hero-grid,
-  .aqta-bulk__form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .9fr); gap: 56px; align-items: start; }
+  .aqta-bulk__hero { background: var(--aqta-navy); color: #fff; padding: 64px 0 56px; }
+  .aqta-bulk__hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(300px, .95fr); gap: 48px; align-items: center; }
+  .aqta-bulk__hero-copy { max-width: 640px; }
   .aqta-bulk__eyebrow { margin: 0 0 12px; color: var(--aqta-gold); font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
   .aqta-bulk h1,
-  .aqta-bulk h2,
-  .aqta-bulk h3 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-weight: 500; letter-spacing: -.025em; }
-  .aqta-bulk h1 { font-size: clamp(40px, 5vw, 62px); line-height: 1.05; }
-  .aqta-bulk h1 em,
-  .aqta-bulk h2 em { color: #e6c66e; font-style: italic; }
-  .aqta-bulk__form-section h2 em { color: var(--aqta-navy); }
-  .aqta-bulk__lead,
-  .aqta-bulk__panel p,
-  .aqta-bulk__intro,
-  .aqta-bulk__rep p { font-size: 16px; line-height: 1.65; }
-  .aqta-bulk__lead { max-width: 620px; margin: 18px 0 24px; color: #d7dfeb; }
-  .aqta-bulk__actions { display: flex; flex-wrap: wrap; gap: 12px; }
-  .aqta-bulk__button { display: inline-flex; min-height: 50px; padding: 0 22px; align-items: center; border-radius: 7px; font-size: 14px; font-weight: 800; text-decoration: none; }
-  .aqta-bulk__button--gold { background: var(--aqta-gold); color: var(--aqta-navy); }
-  .aqta-bulk__button--gold:hover { background: #dba849; color: var(--aqta-navy); }
-  .aqta-bulk__button--ghost { border: 1px solid rgba(255,255,255,.35); color: #fff; }
-  .aqta-bulk__trust,
-  .aqta-bulk__perks { display: grid; margin: 22px 0 0; padding: 0; gap: 8px; list-style: none; }
-  .aqta-bulk__trust { color: #e6c66e; font-size: 14px; font-weight: 700; }
-  .aqta-bulk__panel { padding: 28px; border-radius: 14px; background: #fff; color: var(--aqta-ink); }
-  .aqta-bulk__panel h2 { color: var(--aqta-navy); font-size: 28px; }
-  .aqta-bulk__panel p { margin: 10px 0 18px; color: var(--aqta-muted); }
-  .aqta-bulk__panel ol { display: grid; margin: 0; padding: 0; gap: 12px; list-style: none; counter-reset: aqta-step; }
-  .aqta-bulk__panel li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; font-size: 15px; line-height: 1.45; }
-  .aqta-bulk__panel li::before { counter-increment: aqta-step; content: counter(aqta-step); display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: var(--aqta-navy); color: #fff; font-size: 13px; font-weight: 800; }
-  .aqta-bulk__panel img { display: block; width: 100%; height: 320px; margin-top: 22px; object-fit: contain; border-radius: 12px; background: #f7f4ee; }
-  .aqta-bulk__form-section { padding: 72px 0 88px; }
-  .aqta-bulk__form-section h2 { color: var(--aqta-navy); font-size: clamp(32px, 4vw, 46px); line-height: 1.08; }
-  .aqta-bulk__intro { margin: 14px 0 18px; color: var(--aqta-muted); }
-  .aqta-bulk__perks { margin-bottom: 22px; color: var(--aqta-ink); font-size: 15px; }
-  .aqta-bulk__rep { padding: 18px 20px; border-radius: 12px; background: #fff; }
-  .aqta-bulk__rep h3 { color: var(--aqta-navy); font-size: 22px; }
-  .aqta-bulk__rep p { margin: 8px 0 0; color: var(--aqta-muted); }
-  .aqta-bulk__card { padding: 28px; border-radius: 16px; background: #fff; box-shadow: 0 18px 40px rgba(15,39,68,.08); }
-  .aqta-bulk__note { margin: 0 0 16px; color: var(--aqta-muted); font-size: 14px; }
-  .aqta-bulk__fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .aqta-bulk__field--full { grid-column: 1 / -1; }
-  .aqta-bulk label { display: grid; gap: 6px; color: var(--aqta-navy); font-size: 13px; font-weight: 800; }
-  .aqta-bulk label span { color: #b42318; }
-  .aqta-bulk input,
-  .aqta-bulk select,
-  .aqta-bulk textarea { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #ddd4c6; border-radius: 8px; color: var(--aqta-ink); font: inherit; font-weight: 500; background: #fff; }
-  .aqta-bulk textarea { min-height: 120px; resize: vertical; }
-  .aqta-bulk button { width: 100%; min-height: 52px; margin-top: 16px; border: 0; border-radius: 8px; background: var(--aqta-navy); color: #fff; font-size: 15px; font-weight: 800; cursor: pointer; }
-  .aqta-bulk__fine { margin: 10px 0 0; color: var(--aqta-muted); font-size: 12px; text-align: center; }
-  .aqta-bulk__status { margin-bottom: 14px; padding: 12px 14px; border-radius: 8px; font-size: 14px; line-height: 1.45; }
-  .aqta-bulk__status--success { background: #e8f6ee; color: #0f6b3c; }
-  .aqta-bulk__status--error { background: #fdecec; color: #9b1c1c; }
-  #bulk-quote-form { scroll-margin-top: 96px; }
-  @media (max-width: 800px) {
+  .aqta-bulk h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-weight: 500; letter-spacing: -.025em; }
+  .aqta-bulk h1 { font-size: clamp(40px, 5vw, 64px); line-height: 1.05; }
+  .aqta-bulk h1 em { color: #e6c66e; font-style: italic; }
+  .aqta-bulk h2 { color: var(--aqta-navy); font-size: clamp(32px, 4vw, 44px); line-height: 1.12; }
+  .aqta-bulk__lead { max-width: 620px; margin: 18px 0 0; color: #d7dfeb; font-size: 17px; line-height: 1.6; }
+  .aqta-bulk__jumps { display: grid; gap: 12px; }
+  .aqta-bulk__jumps a {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+    padding: 10px 16px 10px 10px;
+    border-radius: 16px;
+    background: #fff;
+    color: var(--aqta-navy);
+    text-decoration: none;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, .22);
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .aqta-bulk__jumps a:hover { transform: translateY(-2px); box-shadow: 0 20px 40px rgba(0, 0, 0, .28); color: var(--aqta-navy); }
+  .aqta-bulk__jump-photo {
+    display: grid;
+    height: 88px;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--aqta-cream);
+  }
+  .aqta-bulk__jump-photo img { width: 100%; height: 100%; object-fit: contain; }
+  .aqta-bulk__jump-copy { display: grid; gap: 3px; min-width: 0; }
+  .aqta-bulk__jump-copy strong { font-family: Georgia, "Times New Roman", serif; font-size: 22px; font-weight: 500; letter-spacing: -.02em; }
+  .aqta-bulk__jump-copy small { color: var(--aqta-muted); font-size: 13px; line-height: 1.35; }
+  .aqta-bulk__jump-go {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 50%;
+    background: #f6efe2;
+    color: #9a6d12;
+    font-size: 18px;
+    font-weight: 800;
+  }
+  .aqta-bulk__jumps a:hover .aqta-bulk__jump-go { background: var(--aqta-gold); color: var(--aqta-navy); }
+  .aqta-bulk__tool { padding: 72px 0; background: #fff; }
+  .aqta-bulk__tool--cream { background: var(--aqta-cream); }
+  .aqta-bulk__tool-grid { display: grid; grid-template-columns: minmax(0, .82fr) minmax(320px, 1.18fr); gap: 40px; align-items: center; }
+  .aqta-bulk__tool ol { display: grid; margin: 22px 0 28px; padding: 0; gap: 14px; list-style: none; counter-reset: aqta-step; }
+  .aqta-bulk__tool li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; align-items: start; color: var(--aqta-ink); font-size: 16px; line-height: 1.5; }
+  .aqta-bulk__tool li::before {
+    counter-increment: aqta-step;
+    content: counter(aqta-step);
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--aqta-navy);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .aqta-bulk__button {
+    display: inline-flex;
+    min-height: 50px;
+    padding: 0 22px;
+    align-items: center;
+    border-radius: 7px;
+    background: var(--aqta-navy);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    text-decoration: none;
+  }
+  .aqta-bulk__button:hover { background: #18375f; color: #fff; }
+  .aqta-bulk__frame {
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid #e6dfd4;
+    border-radius: 16px;
+    background: var(--aqta-cream);
+  }
+  .aqta-bulk__frame img { display: block; width: 100%; height: auto; }
+  #bulk-medals,
+  #bulk-trophies,
+  #bulk-plaques { scroll-margin-top: 96px; }
+  @media (max-width: 860px) {
     .aqta-bulk__wrap { width: min(100% - 28px, 1120px); }
+    .aqta-bulk__hero { padding: 40px 0 36px; }
     .aqta-bulk__hero-grid,
-    .aqta-bulk__form-grid,
-    .aqta-bulk__fields { grid-template-columns: 1fr; }
-    .aqta-bulk__hero { padding: 48px 0; }
-    .aqta-bulk__form-section { padding: 48px 0 64px; }
-    .aqta-bulk__panel img { height: 260px; }
+    .aqta-bulk__tool-grid { grid-template-columns: 1fr; gap: 28px; }
+    .aqta-bulk__tool { padding: 48px 0; }
   }
 {% endstylesheet %}
 
 {% schema %}
 {
-  "name": "Awards bulk quote",
+  "name": "Bulk orders",
   "settings": [],
   "presets": [
-    { "name": "Awards bulk quote" }
+    { "name": "Bulk orders" }
   ]
 }
 {% endschema %}

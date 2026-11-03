@@ -38,10 +38,10 @@ import {
 import "../styles/gavelDesigner.css";
 import "../styles/trophyDesigner.css";
 
-type StepId = "trophy" | "plate" | "design" | "quantity" | "done";
+type StepId = "trophy" | "plate" | "design" | "done";
 type PreviewMode = "plate" | "trophy";
 type LineSize = "small" | "medium" | "large";
-type TrophyBulkSortKey = "line1" | "line2" | "line3" | "quantity";
+type TrophyBulkPane = "edit" | "all" | "add";
 type TrophyLineStyle = {
   size: LineSize;
   bold: boolean;
@@ -66,12 +66,11 @@ type PendingTrophyOrder = {
   logoName: string;
 };
 
-const STEPS: StepId[] = ["trophy", "plate", "design", "quantity", "done"];
+const STEPS: StepId[] = ["trophy", "plate", "design", "done"];
 const STEP_LABELS: Record<StepId, string> = {
   trophy: "Award",
   plate: "Plate",
   design: "Design",
-  quantity: "Quantity",
   done: "Review",
 };
 const PANEL_COPY: Record<StepId, { title: string; sub: string }> = {
@@ -86,10 +85,6 @@ const PANEL_COPY: Record<StepId, { title: string; sub: string }> = {
   design: {
     title: "Add your custom text",
     sub: "Your wording appears instantly in both the plate and trophy views.",
-  },
-  quantity: {
-    title: "How many do you need?",
-    sub: "Choose the quantity for this personalized trophy.",
   },
   done: {
     title: "Review your trophy",
@@ -117,8 +112,41 @@ const LINE_SIZE_SCALE: Record<LineSize, number> = {
   large: 1.28,
 };
 
+const LINE_LIMIT = 3;
+const LINE_MAX = 40;
+
 function defaultLineStyles(): TrophyLineStyle[] {
-  return Array.from({ length: 3 }, () => ({ ...DEFAULT_LINE_STYLE }));
+  return Array.from({ length: LINE_LIMIT }, () => ({ ...DEFAULT_LINE_STYLE }));
+}
+
+function linesToText(lines: string[]): string {
+  let last = -1;
+  lines.forEach((line, index) => {
+    if (line.length > 0) last = index;
+  });
+  return last < 0 ? "" : lines.slice(0, last + 1).join("\n");
+}
+
+function clampTrophyText(value: string): string {
+  return value
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .slice(0, LINE_LIMIT)
+    .map((line) => line.slice(0, LINE_MAX))
+    .join("\n");
+}
+
+function textToLines(value: string): [string, string, string] {
+  const parts = value.replace(/\r\n/g, "\n").split("\n");
+  return [0, 1, 2].map((index) => (parts[index] ?? "").slice(0, LINE_MAX)) as [
+    string,
+    string,
+    string,
+  ];
+}
+
+function isStepId(value: string): value is StepId {
+  return (STEPS as string[]).includes(value);
 }
 
 function cloneLineStyles(styles: TrophyLineStyle[]): TrophyLineStyle[] {
@@ -423,6 +451,7 @@ export default function TrophyDesigner() {
   const [productId, setProductId] = useState(TROPHY_PRODUCTS[0].id);
   const [plateId, setPlateId] = useState(TROPHY_PRODUCTS[0].options[0].id);
   const [lines, setLines] = useState(["", "", ""]);
+  const [textDraft, setTextDraft] = useState("");
   const [fontFamily, setFontFamily] = useState("Arial");
   const [lineStyles, setLineStyles] = useState<TrophyLineStyle[]>(
     defaultLineStyles,
@@ -447,10 +476,8 @@ export default function TrophyDesigner() {
   const [bulkCsvWarning, setBulkCsvWarning] = useState("");
   const [bulkError, setBulkError] = useState("");
   const [selectedBulkRow, setSelectedBulkRow] = useState(0);
+  const [bulkPane, setBulkPane] = useState<TrophyBulkPane>("add");
   const [bulkSearch, setBulkSearch] = useState("");
-  const [bulkSortKey, setBulkSortKey] =
-    useState<TrophyBulkSortKey>("line1");
-  const [bulkSortAscending, setBulkSortAscending] = useState(true);
   const bulkCsvInputRef = useRef<HTMLInputElement>(null);
   const [restored, setRestored] = useState(false);
 
@@ -478,10 +505,20 @@ export default function TrophyDesigner() {
       : lineStyles;
   const price = getTrophyPrice(orderQuantity);
   const designReady = bulkMode
-    ? bulkRows.length > 0
+    ? bulkRows.length > 0 && bulkRows.every((row) => row.lines[0].trim())
     : product.logoInsert
       ? Boolean(logoDataUrl) || Boolean(lines[0].trim())
       : Boolean(lines[0].trim());
+  const panel =
+    step === "design" && bulkMode
+      ? {
+          title: bulkRows.length > 0 ? "Review each trophy" : "Add your trophies",
+          sub:
+            bulkRows.length > 0
+              ? "Work on one trophy, look at all of them, or add more names."
+              : "Paste a list or upload a CSV. Each trophy can say something different.",
+        }
+      : PANEL_COPY[step];
   const bulkPastePreview = useMemo(() => {
     if (!bulkCsvText.trim()) return null;
     try {
@@ -501,27 +538,10 @@ export default function TrophyDesigner() {
       .map((row, index) => ({ row, index }))
       .filter(({ row }) =>
         query
-          ? row.lines.some((line) =>
-              line.toLocaleLowerCase().includes(query),
-            )
+          ? row.lines.some((line) => line.toLocaleLowerCase().includes(query))
           : true,
-      )
-      .sort((a, b) => {
-        const aValue =
-          bulkSortKey === "quantity"
-            ? a.row.quantity
-            : a.row.lines[Number(bulkSortKey.slice(-1)) - 1];
-        const bValue =
-          bulkSortKey === "quantity"
-            ? b.row.quantity
-            : b.row.lines[Number(bulkSortKey.slice(-1)) - 1];
-        const comparison =
-          typeof aValue === "number" && typeof bValue === "number"
-            ? aValue - bValue
-            : String(aValue).localeCompare(String(bValue));
-        return bulkSortAscending ? comparison : -comparison;
-      });
-  }, [bulkRows, bulkSearch, bulkSortAscending, bulkSortKey]);
+      );
+  }, [bulkRows, bulkSearch]);
 
   // Switching to a product without a Plate step can strand the wizard there.
   useEffect(() => {
@@ -538,7 +558,10 @@ export default function TrophyDesigner() {
         setPlateId(styled.options[0].id);
       }
       if (raw) {
-        const draft = JSON.parse(raw) as TrophyDraft;
+        const draft = JSON.parse(raw) as Omit<TrophyDraft, "step" | "visited"> & {
+          step?: string;
+          visited?: string[];
+        };
         // v1 drafts stored only the trophy body, whose ids match the four
         // original products, so they carry straight over.
         const restoredProduct = TROPHY_PRODUCTS.find(
@@ -554,9 +577,10 @@ export default function TrophyDesigner() {
         }
         // Older v1 drafts did not record wizard progress. If they contain
         // wording, resume at Design instead of discarding that working context.
+        const savedStep = draft.step === "quantity" ? "design" : draft.step;
         const restoredStep =
-          draft.step && STEPS.includes(draft.step)
-            ? draft.step
+          savedStep && isStepId(savedStep)
+            ? savedStep
             : draft.lines?.some(
                   (line) => typeof line === "string" && line.trim(),
                 )
@@ -566,9 +590,10 @@ export default function TrophyDesigner() {
           setStep(restoredStep);
           const restoredIndex = STEPS.indexOf(restoredStep);
           const validVisited = Array.isArray(draft.visited)
-            ? draft.visited.filter((item): item is StepId =>
-                STEPS.includes(item),
-              )
+            ? draft.visited.flatMap((item) => {
+                const id = item === "quantity" ? "design" : item;
+                return isStepId(id) ? [id] : [];
+              })
             : [];
           setVisited(
             Array.from(
@@ -577,13 +602,13 @@ export default function TrophyDesigner() {
           );
         }
         if (Array.isArray(draft.lines)) {
-          setLines(
-            Array.from({ length: 3 }, (_, index) =>
-              typeof draft.lines?.[index] === "string"
-                ? draft.lines[index].slice(0, 40)
-                : "",
-            ),
+          const restoredLines = Array.from({ length: LINE_LIMIT }, (_, index) =>
+            typeof draft.lines?.[index] === "string"
+              ? draft.lines[index].slice(0, LINE_MAX)
+              : "",
           );
+          setLines(restoredLines);
+          setTextDraft(linesToText(restoredLines));
         }
         if (FONT_OPTIONS.includes(draft.fontFamily ?? "")) {
           setFontFamily(draft.fontFamily!);
@@ -638,6 +663,8 @@ export default function TrophyDesigner() {
           ) {
             setBulkMode(true);
             setBulkRows(restoredRows);
+            setBulkPane("edit");
+            setTextDraft(linesToText(restoredRows[0].lines));
             setLineStyles(
               cloneLineStyles(restoredRows[0].lineStyles ?? defaultLineStyles()),
             );
@@ -759,6 +786,7 @@ export default function TrophyDesigner() {
     setProductId(nextProduct.id);
     setPlateId(nextProduct.options[0].id);
     setLines([...nextProduct.defaultLines]);
+    if (!bulkMode) setTextDraft(linesToText(nextProduct.defaultLines));
     setLogoDataUrl(null);
     setLogoName("");
     setLogoFile(null);
@@ -792,6 +820,8 @@ export default function TrophyDesigner() {
       setBulkRows(seeded);
       setBulkCsvWarning(result.warning);
       setSelectedBulkRow(0);
+      setBulkPane("all");
+      setTextDraft(linesToText(seeded[0]?.lines ?? []));
       setQuantity(
         result.rows.reduce((sum, row) => sum + row.quantity, 0),
       );
@@ -835,32 +865,107 @@ export default function TrophyDesigner() {
     setBulkError("");
     setBulkSearch("");
     setSelectedBulkRow(0);
-  }
-
-  function toggleBulkSort(key: TrophyBulkSortKey) {
-    if (bulkSortKey === key) {
-      setBulkSortAscending((current) => !current);
-    } else {
-      setBulkSortKey(key);
-      setBulkSortAscending(true);
-    }
+    setBulkPane("add");
+    setTextDraft(linesToText(lines));
   }
 
   function selectBulkRow(index: number) {
     setSelectedBulkRow(index);
-    const styles = bulkRows[index]?.lineStyles;
+    const row = bulkRows[index];
+    if (row) setTextDraft(linesToText(row.lines));
+    const styles = row?.lineStyles;
     if (styles) setLineStyles(cloneLineStyles(styles));
   }
 
-  function applyLineFormatToAll(lineIndex: number) {
-    const source = lineStyles[lineIndex];
-    if (!source || bulkRows.length === 0) return;
+  function chooseBulkTrophy(index: number) {
+    selectBulkRow(index);
+    setBulkPane("edit");
+    requestAnimationFrame(() => {
+      document.querySelector(".tr-bulk-one")?.scrollIntoView({ block: "nearest" });
+    });
+  }
+
+  function stepBulkRow(delta: number) {
+    const next = selectedBulkRow + delta;
+    if (next < 0 || next >= bulkRows.length) return;
+    selectBulkRow(next);
+  }
+
+  function updateBulkQuantity(rowIndex: number, raw: string) {
+    const current = bulkRows[rowIndex];
+    if (!current) return;
+    const parsed = Math.round(Number(raw));
+    let nextQuantity = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+    const others = bulkRows.reduce(
+      (sum, row, index) => (index === rowIndex ? sum : sum + row.quantity),
+      0,
+    );
+    const room = TROPHY_MAX_PRICED_QUANTITY - others;
+    if (room < 1) {
+      nextQuantity = current.quantity;
+      setBulkCsvWarning(
+        `Online pricing supports up to ${TROPHY_MAX_PRICED_QUANTITY} trophies.`,
+      );
+    } else if (nextQuantity > room) {
+      nextQuantity = room;
+      setBulkCsvWarning(
+        `Online pricing supports up to ${TROPHY_MAX_PRICED_QUANTITY} trophies.`,
+      );
+    }
+    setBulkRows((rows) =>
+      rows.map((row, index) =>
+        index === rowIndex ? { ...row, quantity: nextQuantity } : row,
+      ),
+    );
+    setQuantity(others + nextQuantity);
+  }
+
+  function removeBulkRow(rowIndex: number) {
+    const next = bulkRows.filter((_, index) => index !== rowIndex);
+    let nextIndex = selectedBulkRow;
+    if (next.length === 0) nextIndex = 0;
+    else if (rowIndex < selectedBulkRow) nextIndex = selectedBulkRow - 1;
+    else if (rowIndex === selectedBulkRow) {
+      nextIndex = Math.min(selectedBulkRow, next.length - 1);
+    }
+    setBulkRows(next);
+    setSelectedBulkRow(nextIndex);
+    setQuantity(next.reduce((sum, row) => sum + row.quantity, 0) || 1);
+    setTextDraft(linesToText(next[nextIndex]?.lines ?? []));
+    const styles = next[nextIndex]?.lineStyles;
+    if (styles) setLineStyles(cloneLineStyles(styles));
+    if (next.length === 0) setBulkPane("add");
+  }
+
+  function applyFormatsToAll() {
+    if (bulkRows.length === 0) return;
+    const styles = cloneLineStyles(lineStyles);
     setBulkRows((current) =>
-      current.map((row) => {
-        const styles = restoreLineStyles(row.lineStyles);
-        styles[lineIndex] = { ...source };
-        return { ...row, lineStyles: styles };
-      }),
+      current.map((row) => ({ ...row, lineStyles: cloneLineStyles(styles) })),
+    );
+  }
+
+  function setActiveText(value: string) {
+    const draft = clampTrophyText(value);
+    setTextDraft(draft);
+    const next = textToLines(draft);
+    if (bulkMode && bulkRows[selectedBulkRow]) {
+      setBulkRows((rows) =>
+        rows.map((row, index) =>
+          index === selectedBulkRow ? { ...row, lines: next } : row,
+        ),
+      );
+      return;
+    }
+    setLines([...next]);
+  }
+
+  function setOrderQuantity(raw: number) {
+    setQuantity(
+      Math.min(
+        TROPHY_MAX_PRICED_QUANTITY,
+        Math.max(1, Math.round(raw) || 1),
+      ),
     );
   }
 
@@ -910,6 +1015,7 @@ export default function TrophyDesigner() {
     setProductId(TROPHY_PRODUCTS[0].id);
     setPlateId(TROPHY_PRODUCTS[0].options[0].id);
     setLines(["", "", ""]);
+    setTextDraft("");
     setFontFamily("Arial");
     setLineStyles(defaultLineStyles());
     setQuantity(1);
@@ -929,6 +1035,7 @@ export default function TrophyDesigner() {
     setBulkError("");
     setBulkSearch("");
     setSelectedBulkRow(0);
+    setBulkPane("add");
   }
 
   /** Builds the proof PDF and saves the draft; the cart line comes later. */
@@ -1155,6 +1262,101 @@ export default function TrophyDesigner() {
     }
   }
 
+  function renderPlateCopy() {
+    return (
+      <>
+        <label className="tr-text-label" htmlFor="tr-wording">
+          Text
+        </label>
+        <textarea
+          id="tr-wording"
+          className="gf-input tr-wording"
+          rows={3}
+          value={textDraft}
+          placeholder={"CHAMPIONS\nAlex Morgan\n2026"}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            const newlines = event.currentTarget.value.split("\n").length - 1;
+            if (newlines >= LINE_LIMIT - 1) event.preventDefault();
+          }}
+          onChange={(event) => setActiveText(event.target.value)}
+        />
+        <p className="gf-note">
+          Press Enter for a new line. Up to {LINE_LIMIT} lines, {LINE_MAX} characters each.
+        </p>
+        <div className="tr-style-list">
+          <span className="tr-style-heading">Line style</span>
+          {lineStyles.map((style, index) => (
+            <div className="tr-style-row" key={index}>
+              <span>Line {index + 1}</span>
+              <div className="tr-line-style-controls">
+                <div
+                  className="tr-line-size-group"
+                  role="group"
+                  aria-label={`Line ${index + 1} size`}
+                >
+                  {(
+                    [
+                      ["small", "Small"],
+                      ["medium", "Med"],
+                      ["large", "Large"],
+                    ] as const
+                  ).map(([size, label]) => (
+                    <button
+                      type="button"
+                      key={size}
+                      className={style.size === size ? "is-on" : ""}
+                      aria-label={size}
+                      aria-pressed={style.size === size}
+                      title={size}
+                      onClick={() => updateLineStyle(index, { size })}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div
+                  className="tr-line-format-group"
+                  role="group"
+                  aria-label={`Line ${index + 1} formatting`}
+                >
+                  {(
+                    [
+                      ["bold", "Bold"],
+                      ["italic", "Italic"],
+                      ["underline", "Underline"],
+                    ] as const
+                  ).map(([format, label]) => (
+                    <button
+                      type="button"
+                      key={format}
+                      className={style[format] ? "is-on" : ""}
+                      aria-label={label}
+                      aria-pressed={style[format]}
+                      title={label}
+                      onClick={() =>
+                        updateLineStyle(index, { [format]: !style[format] })
+                      }
+                    >
+                      {format === "bold" ? "B" : format === "italic" ? "I" : "U"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {bulkMode && bulkRows.length > 1 ? (
+          <div className="tr-bulk-links">
+            <button type="button" className="gf-csv-link" onClick={applyFormatsToAll}>
+              Use this style on all
+            </button>
+          </div>
+        ) : null}
+      </>
+    );
+  }
+
   return (
     <div
       className={`gf-designer-root gf-wizard-root tr-designer ${
@@ -1199,11 +1401,9 @@ export default function TrophyDesigner() {
         </div>
 
         <div className="gf-panel">
-          <p className="gf-panel-title">{PANEL_COPY[step].title}</p>
+          <p className="gf-panel-title">{panel.title}</p>
           <div className="gf-panel-lead">
-            <p className="gf-panel-sub gf-panel-sub-lead">
-              {PANEL_COPY[step].sub}
-            </p>
+            <p className="gf-panel-sub gf-panel-sub-lead">{panel.sub}</p>
             {showPreview ? (
               <p className="gf-preview-label">Live preview</p>
             ) : null}
@@ -1212,9 +1412,7 @@ export default function TrophyDesigner() {
           <div className={`gf-design-grid ${showPreview ? "" : "is-single"}`}>
             <div className="gf-controls-col">
               {showPreview ? (
-                <p className="gf-panel-sub gf-panel-sub-follow">
-                  {PANEL_COPY[step].sub}
-                </p>
+                <p className="gf-panel-sub gf-panel-sub-follow">{panel.sub}</p>
               ) : null}
 
               {step === "trophy" ? (
@@ -1311,430 +1509,330 @@ export default function TrophyDesigner() {
                       </select>
                     </label>
                   </div>
-                  {lines.map((line, index) => (
-                    <div className="gf-line-block" key={index}>
-                      <div className="gf-line-label">
-                        {bulkMode ? "Formatting for " : ""}
-                        Line {index + 1}
-                        {!bulkMode
-                          ? index === 0
-                            ? " (required)"
-                            : " (optional)"
-                          : ""}
-                      </div>
-                      <div className="tr-line-style-controls">
-                        <div
-                          className="tr-line-size-group"
-                          role="group"
-                          aria-label={`Line ${index + 1} size`}
-                        >
-                          {(
-                            [
-                              ["small", "Small"],
-                              ["medium", "Med"],
-                              ["large", "Large"],
-                            ] as const
-                          ).map(([size, label]) => (
-                            <button
-                              type="button"
-                              key={size}
-                              className={
-                                lineStyles[index].size === size ? "is-on" : ""
-                              }
-                              aria-pressed={lineStyles[index].size === size}
-                              onClick={() => updateLineStyle(index, { size })}
-                            >
-                              {label}
-                            </button>
-                          ))}
-                        </div>
-                        <div
-                          className="tr-line-format-group"
-                          role="group"
-                          aria-label={`Line ${index + 1} formatting`}
-                        >
-                          {(
-                            [
-                              ["bold", "Bold"],
-                              ["italic", "Italic"],
-                              ["underline", "Underline"],
-                            ] as const
-                          ).map(([format, label]) => (
-                            <button
-                              type="button"
-                              key={format}
-                              className={
-                                lineStyles[index][format] ? "is-on" : ""
-                              }
-                              aria-label={label}
-                              aria-pressed={lineStyles[index][format]}
-                              title={label}
-                              onClick={() =>
-                                updateLineStyle(index, {
-                                  [format]: !lineStyles[index][format],
-                                })
-                              }
-                            >
-                              {format === "bold"
-                                ? "B"
-                                : format === "italic"
-                                  ? "I"
-                                  : "U"}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      {bulkMode && bulkRows.length > 1 ? (
+                  {bulkMode ? (
+                    <>
+                      <div className="tr-bulk-switch" role="tablist" aria-label="Bulk order">
                         <button
                           type="button"
-                          className="tr-apply-line-format"
-                          onClick={() => applyLineFormatToAll(index)}
+                          role="tab"
+                          aria-selected={bulkPane === "edit"}
+                          className={bulkPane === "edit" ? "is-on" : ""}
+                          disabled={bulkRows.length === 0}
+                          onClick={() => setBulkPane("edit")}
                         >
-                          Apply line {index + 1} format to all trophies
+                          This trophy
                         </button>
-                      ) : null}
-                      {bulkMode ? (
-                        <div className="gf-bulk-text-preview">
-                          <div>
-                            <span>Selected row</span>
-                            <strong>{previewLines[index] || "—"}</strong>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <input
-                            className="gf-input"
-                            value={line}
-                            maxLength={40}
-                            placeholder={
-                              index === 0
-                                ? "CHAMPIONS"
-                                : index === 1
-                                  ? "2026"
-                                  : "Optional line"
-                            }
-                            onChange={(event) =>
-                              setLines((current) =>
-                                current.map((value, lineIndex) =>
-                                  lineIndex === index
-                                    ? event.target.value
-                                    : value,
-                                ),
-                              )
-                            }
-                          />
-                          <span className="gf-char-count">
-                            {line.length}/40
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                  {!bulkMode && !designReady ? (
-                    <p className="tr-help">
-                      {product.logoInsert
-                        ? "Upload a logo or enter line 1 to continue."
-                        : "Enter line 1 to continue."}
-                    </p>
-                  ) : null}
-                  {bulkMode ? (
-                    <div className="gf-bulk-import">
-                      <div className="gf-bulk-import-head">
-                        <div>
-                          <p className="gf-add-multiple-title">Add Multiple</p>
-                          <p className="gf-note">
-                            Paste a list of names. One design is applied to
-                            every piece. Award, plate, formatting, and uploaded
-                            logo are shared across the order.
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="gf-bulk-paste">
-                        <label
-                          className="gf-bulk-paste-label"
-                          htmlFor="tr-bulk-paste"
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={bulkPane === "all"}
+                          className={bulkPane === "all" ? "is-on" : ""}
+                          disabled={bulkRows.length === 0}
+                          onClick={() => setBulkPane("all")}
                         >
-                          Paste your list of names
-                        </label>
-                        <p className="gf-bulk-paste-example">
-                          {TROPHY_BULK_PASTE_EXAMPLES.map((row) => (
-                            <span key={row}>{row}</span>
-                          ))}
-                        </p>
-                        <textarea
-                          id="tr-bulk-paste"
-                          className="gf-bulk-paste-input"
-                          rows={4}
-                          spellCheck={false}
-                          placeholder={TROPHY_BULK_PASTE_EXAMPLES.join("\n")}
-                          value={bulkCsvText}
-                          onChange={(event) => {
-                            setBulkCsvText(event.target.value);
-                            setBulkError("");
-                          }}
-                        />
-                        {bulkPastePreview?.error || bulkError ? (
-                          <p className="gf-bulk-paste-error">
-                            {bulkError || bulkPastePreview?.error}
+                          View all
+                        </button>
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={bulkPane === "add"}
+                          className={bulkPane === "add" ? "is-on" : ""}
+                          onClick={() => setBulkPane("add")}
+                        >
+                          Add names
+                        </button>
+                      </div>
+                      {bulkRows.length === 0 || bulkPane === "add" ? (
+                        <div className="gf-bulk-paste">
+                          <label className="gf-bulk-paste-label" htmlFor="tr-bulk-paste">
+                            Paste names
+                          </label>
+                          <p className="gf-note">
+                            {bulkRows.length > 0
+                              ? "One trophy per line, with commas between the lines of text. Applying this replaces the current list."
+                              : "One trophy per line. Separate the lines of text with commas. Award, plate, and logo stay the same for every piece."}
                           </p>
-                        ) : null}
-                        {bulkPastePreview?.warning ? (
-                          <p className="gf-bulk-paste-warning">
-                            {bulkPastePreview.warning}
+                          <p className="gf-bulk-paste-example">
+                            {TROPHY_BULK_PASTE_EXAMPLES.map((row) => (
+                              <span key={row}>{row}</span>
+                            ))}
                           </p>
-                        ) : null}
-                        <div className="gf-bulk-paste-foot">
-                          <span className="gf-note">
-                            {bulkPastePreview && !bulkPastePreview.error
-                              ? `${bulkPastePreview.rows.length} design${
-                                  bulkPastePreview.rows.length === 1 ? "" : "s"
-                                } ready`
-                              : `Up to ${TROPHY_MAX_PRICED_QUANTITY} total trophies.`}
-                          </span>
-                          <button
-                            type="button"
-                            className="gf-nav-primary"
-                            disabled={
-                              !bulkPastePreview ||
-                              Boolean(bulkPastePreview.error) ||
-                              bulkPastePreview.rows.length === 0
-                            }
-                            onClick={() => applyBulkCsv(bulkCsvText)}
-                          >
-                            Apply this list
-                          </button>
-                        </div>
-                        <div className="gf-bulk-actions">
-                          <button
-                            type="button"
-                            className="gf-nav-secondary"
-                            onClick={downloadBulkCsvTemplate}
-                          >
-                            Download template
-                          </button>
-                          <button
-                            type="button"
-                            className="gf-nav-secondary"
-                            onClick={() => bulkCsvInputRef.current?.click()}
-                          >
-                            Upload CSV
-                          </button>
-                          <button
-                            type="button"
-                            className="gf-nav-secondary"
-                            onClick={exitBulkMode}
-                          >
-                            Use one design
-                          </button>
-                          <input
-                            ref={bulkCsvInputRef}
-                            type="file"
-                            accept=".csv,text/csv"
-                            className="gf-visually-hidden"
+                          <textarea
+                            id="tr-bulk-paste"
+                            className="gf-bulk-paste-input"
+                            rows={4}
+                            spellCheck={false}
+                            placeholder={TROPHY_BULK_PASTE_EXAMPLES.join("\n")}
+                            value={bulkCsvText}
                             onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              if (file) void importBulkCsv(file);
+                              setBulkCsvText(event.target.value);
+                              setBulkError("");
                             }}
                           />
-                        </div>
-                      </div>
-
-                      {bulkRows.length > 0 ? (
-                        <>
-                          <div className="gf-bulk-status">
-                            <strong>
-                              {bulkRows.length} personalized design
-                              {bulkRows.length === 1 ? "" : "s"}
-                            </strong>
-                            <span>{bulkQuantity} total trophies</span>
-                          </div>
-                          {bulkCsvWarning ? (
-                            <p className="gf-bulk-paste-warning">
-                              {bulkCsvWarning}
+                          {bulkPastePreview?.error || bulkError ? (
+                            <p className="gf-bulk-paste-error">
+                              {bulkError || bulkPastePreview?.error}
                             </p>
                           ) : null}
-                          <div className="gf-bulk-grid-tools">
-                            <label>
-                              <span className="gf-visually-hidden">
-                                Search names
-                              </span>
+                          {bulkPastePreview?.warning ? (
+                            <p className="gf-bulk-paste-warning">{bulkPastePreview.warning}</p>
+                          ) : null}
+                          {bulkCsvWarning ? (
+                            <p className="gf-bulk-paste-warning">{bulkCsvWarning}</p>
+                          ) : null}
+                          <div className="gf-bulk-paste-foot">
+                            <span className="gf-note">
+                              {bulkPastePreview && !bulkPastePreview.error
+                                ? `${bulkPastePreview.rows.length} design${bulkPastePreview.rows.length === 1 ? "" : "s"} ready`
+                                : `Up to ${TROPHY_MAX_PRICED_QUANTITY} total trophies.`}
+                            </span>
+                            <button
+                              type="button"
+                              className="gf-nav-primary"
+                              disabled={
+                                !bulkPastePreview ||
+                                Boolean(bulkPastePreview.error) ||
+                                bulkPastePreview.rows.length === 0
+                              }
+                              onClick={() => applyBulkCsv(bulkCsvText)}
+                            >
+                              Apply this list
+                            </button>
+                          </div>
+                          <div className="tr-bulk-links">
+                            <button type="button" className="gf-csv-link" onClick={downloadBulkCsvTemplate}>
+                              Download template
+                            </button>
+                            <button
+                              type="button"
+                              className="gf-csv-link"
+                              onClick={() => bulkCsvInputRef.current?.click()}
+                            >
+                              Upload CSV
+                            </button>
+                            <button type="button" className="gf-csv-link" onClick={exitBulkMode}>
+                              Use one design
+                            </button>
+                            <input
+                              ref={bulkCsvInputRef}
+                              type="file"
+                              accept=".csv,text/csv"
+                              className="gf-visually-hidden"
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                if (file) void importBulkCsv(file);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ) : bulkPane === "all" ? (
+                        <div className="tr-bulk-cards-wrap">
+                          {bulkRows.length > 4 ? (
+                            <label className="tr-bulk-search">
+                              <span className="gf-visually-hidden">Search trophies</span>
                               <input
                                 type="search"
                                 className="gf-input"
-                                placeholder="Search any text…"
+                                placeholder="Search trophies"
                                 value={bulkSearch}
-                                onChange={(event) =>
-                                  setBulkSearch(event.target.value)
-                                }
+                                onChange={(event) => setBulkSearch(event.target.value)}
                               />
                             </label>
-                            <span className="gf-note">
-                              Viewing {visibleBulkRows.length} of{" "}
-                              {bulkRows.length}
-                            </span>
-                          </div>
-                          <div
-                            className="gf-bulk-grid tr-bulk-grid"
-                            role="table"
-                            aria-label="All personalized trophy designs"
-                          >
-                            <div className="gf-bulk-grid-header" role="row">
-                              <span role="columnheader">#</span>
-                              {(
-                                ["line1", "line2", "line3"] as const
-                              ).map((key, index) => (
+                          ) : null}
+                          <div className="tr-bulk-cards" aria-label="All trophies">
+                            {visibleBulkRows.map(({ row, index }) => {
+                              const title = row.lines.find((line) => line.trim()) || "No text yet";
+                              const detail = row.lines
+                                .slice(1)
+                                .map((line) => line.trim())
+                                .filter(Boolean)
+                                .join(" · ");
+                              return (
                                 <button
-                                  key={key}
+                                  key={row.id}
                                   type="button"
-                                  role="columnheader"
-                                  onClick={() => toggleBulkSort(key)}
+                                  className={`tr-bulk-card${selectedBulkRow === index ? " is-selected" : ""}${row.lines[0].trim() ? "" : " is-empty"}`}
+                                  aria-label={`Edit trophy ${index + 1}, ${title}, quantity ${row.quantity}`}
+                                  onClick={() => chooseBulkTrophy(index)}
                                 >
-                                  Line {index + 1}
-                                  {bulkSortKey === key
-                                    ? bulkSortAscending
-                                      ? " ↑"
-                                      : " ↓"
-                                    : ""}
+                                  <PlateArtwork
+                                    option={option}
+                                    lines={row.lines}
+                                    fontFamily={fontFamily}
+                                    lineStyles={row.lineStyles ?? lineStyles}
+                                  />
+                                  <span className="tr-bulk-card-meta">
+                                    <span>Trophy {index + 1}</span>
+                                    <span className="tr-bulk-card-qty">Qty {row.quantity}</span>
+                                  </span>
+                                  <span className="tr-bulk-card-name">{title}</span>
+                                  {detail ? <span className="tr-bulk-card-detail">{detail}</span> : null}
+                                  {row.lines[0].trim() ? null : (
+                                    <span className="tr-bulk-card-flag">Needs line 1</span>
+                                  )}
                                 </button>
-                              ))}
+                              );
+                            })}
+                          </div>
+                          {visibleBulkRows.length === 0 ? (
+                            <p className="gf-note">No trophies match that search.</p>
+                          ) : null}
+                          {!designReady ? (
+                            <p className="tr-help">Every trophy needs a first line before you continue.</p>
+                          ) : null}
+                        </div>
+                      ) : bulkRows[selectedBulkRow] ? (
+                        <div className="tr-bulk-one">
+                          <div className="tr-bulk-one-nav">
+                            <button
+                              type="button"
+                              className="gf-csv-link"
+                              disabled={selectedBulkRow <= 0}
+                              onClick={() => stepBulkRow(-1)}
+                            >
+                              Previous
+                            </button>
+                            <strong>
+                              Trophy {selectedBulkRow + 1} of {bulkRows.length}
+                            </strong>
+                            <button
+                              type="button"
+                              className="gf-csv-link"
+                              disabled={selectedBulkRow >= bulkRows.length - 1}
+                              onClick={() => stepBulkRow(1)}
+                            >
+                              Next
+                            </button>
+                          </div>
+                          {renderPlateCopy()}
+                          <div className="tr-copy-row">
+                            <span>Quantity</span>
+                            <div className="tr-copy-stepper">
                               <button
                                 type="button"
-                                role="columnheader"
-                                onClick={() => toggleBulkSort("quantity")}
+                                aria-label="Decrease quantity"
+                                onClick={() =>
+                                  updateBulkQuantity(
+                                    selectedBulkRow,
+                                    String(bulkRows[selectedBulkRow].quantity - 1),
+                                  )
+                                }
                               >
-                                Qty
-                                {bulkSortKey === "quantity"
-                                  ? bulkSortAscending
-                                    ? " ↑"
-                                    : " ↓"
-                                  : ""}
+                                −
+                              </button>
+                              <input
+                                type="number"
+                                min={1}
+                                max={TROPHY_MAX_PRICED_QUANTITY}
+                                aria-label="Quantity for this trophy"
+                                value={bulkRows[selectedBulkRow].quantity}
+                                onChange={(event) =>
+                                  updateBulkQuantity(selectedBulkRow, event.target.value)
+                                }
+                              />
+                              <button
+                                type="button"
+                                aria-label="Increase quantity"
+                                onClick={() =>
+                                  updateBulkQuantity(
+                                    selectedBulkRow,
+                                    String(bulkRows[selectedBulkRow].quantity + 1),
+                                  )
+                                }
+                              >
+                                +
                               </button>
                             </div>
-                            {visibleBulkRows.map(({ row, index }) => (
-                              <button
-                                key={row.id}
-                                type="button"
-                                role="row"
-                                className={`gf-bulk-grid-row ${
-                                  selectedBulkRow === index
-                                    ? "is-selected"
-                                    : ""
-                                }`}
-                                onClick={() => selectBulkRow(index)}
-                              >
-                                <span role="cell">{index + 1}</span>
-                                {row.lines.map((line, lineIndex) => (
-                                  <span
-                                    key={lineIndex}
-                                    role="cell"
-                                    title={line}
-                                  >
-                                    {line || "—"}
-                                  </span>
-                                ))}
-                                <strong role="cell">{row.quantity}</strong>
-                              </button>
-                            ))}
-                            {visibleBulkRows.length === 0 ? (
-                              <p className="gf-bulk-grid-empty">
-                                No rows match “{bulkSearch}”.
-                              </p>
-                            ) : null}
                           </div>
-                          <p className="gf-note">
-                            Select a row to preview it. Click a heading to sort.
-                          </p>
-                        </>
+                          {bulkCsvWarning ? (
+                            <p className="gf-bulk-paste-warning">{bulkCsvWarning}</p>
+                          ) : null}
+                          <div className="tr-bulk-links">
+                            <button
+                              type="button"
+                              className="gf-csv-link"
+                              onClick={() => removeBulkRow(selectedBulkRow)}
+                            >
+                              Remove this trophy
+                            </button>
+                          </div>
+                          {!designReady ? (
+                            <p className="tr-help">Every trophy needs a first line before you continue.</p>
+                          ) : null}
+                        </div>
                       ) : null}
-                    </div>
+                      {bulkRows.length > 0 ? (
+                        <div className="tr-price-summary tr-bulk-total">
+                          <span>
+                            {bulkQuantity} trophies · ${price.perUnit.toFixed(2)} each
+                          </span>
+                          <strong>${price.total.toFixed(2)} total</strong>
+                        </div>
+                      ) : null}
+                    </>
                   ) : (
-                    <div className="gf-add-multiple">
-                      <p className="gf-note">
-                        Ordering for a group? Add Multiple — paste your list of
-                        names and one design is applied to every piece.
-                      </p>
-                      <button
-                        type="button"
-                        className="gf-nav-primary"
-                        onClick={() => setBulkMode(true)}
-                      >
-                        Add Multiple
-                      </button>
-                    </div>
-
+                    <>
+                      {renderPlateCopy()}
+                      {!designReady ? (
+                        <p className="tr-help">
+                          {product.logoInsert
+                            ? "Upload a logo or enter line 1 to continue."
+                            : "Enter line 1 to continue."}
+                        </p>
+                      ) : null}
+                      <div className="tr-quantity-card">
+                        <p className="gf-sub-title">How many of this trophy?</p>
+                        <div className="tr-quantity-control">
+                          <button
+                            type="button"
+                            aria-label="Decrease quantity"
+                            onClick={() => setOrderQuantity(quantity - 1)}
+                          >
+                            −
+                          </button>
+                          <input
+                            type="number"
+                            min={1}
+                            max={TROPHY_MAX_PRICED_QUANTITY}
+                            value={quantity}
+                            aria-label="Trophy quantity"
+                            onChange={(event) =>
+                              setOrderQuantity(Number(event.target.value))
+                            }
+                          />
+                          <button
+                            type="button"
+                            aria-label="Increase quantity"
+                            onClick={() => setOrderQuantity(quantity + 1)}
+                          >
+                            +
+                          </button>
+                        </div>
+                        <div className="tr-price-summary">
+                          <span>${price.perUnit.toFixed(2)} each</span>
+                          <strong>${price.total.toFixed(2)} total</strong>
+                        </div>
+                        <p className="gf-note">
+                          Need more than {TROPHY_MAX_PRICED_QUANTITY}? Contact us
+                          for volume pricing.
+                        </p>
+                      </div>
+                      <div className="tr-group-order">
+                        <p className="tr-group-order-title">Ordering for a group?</p>
+                        <button
+                          type="button"
+                          className="gf-nav-primary"
+                          onClick={() => {
+                            setBulkMode(true);
+                            setBulkPane("add");
+                          }}
+                        >
+                          Bulk Order
+                        </button>
+                      </div>
+                    </>
                   )}
                 </>
-              ) : null}
-
-              {step === "quantity" ? (
-                <div className="tr-quantity-card">
-                  <p className="gf-sub-title">Trophy quantity</p>
-                  {bulkMode ? (
-                    <>
-                      <div className="gf-bulk-status tr-bulk-quantity">
-                        <strong>{bulkQuantity} total trophies</strong>
-                        <span>{bulkRows.length} personalized designs</span>
-                      </div>
-                      <p className="gf-note">
-                        Quantities come from your list. Return to Design to
-                        edit it.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="tr-quantity-control">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setQuantity((current) => Math.max(1, current - 1))
-                          }
-                        >
-                          −
-                        </button>
-                        <input
-                          type="number"
-                          min={1}
-                          max={TROPHY_MAX_PRICED_QUANTITY}
-                          value={quantity}
-                          onChange={(event) =>
-                            setQuantity(
-                              Math.min(
-                                TROPHY_MAX_PRICED_QUANTITY,
-                                Math.max(1, Number(event.target.value) || 1),
-                              ),
-                            )
-                          }
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setQuantity((current) =>
-                              Math.min(
-                                TROPHY_MAX_PRICED_QUANTITY,
-                                current + 1,
-                              ),
-                            )
-                          }
-                        >
-                          +
-                        </button>
-                      </div>
-                      <p className="gf-note">
-                        Every trophy in this quantity uses the same plate
-                        design and wording.
-                      </p>
-                    </>
-                  )}
-                  <div className="tr-price-summary">
-                    <span>${price.perUnit.toFixed(2)} each</span>
-                    <strong>${price.total.toFixed(2)} total</strong>
-                  </div>
-                  <p className="gf-note">
-                    Need more than {TROPHY_MAX_PRICED_QUANTITY}? Contact us for
-                    volume pricing.
-                  </p>
-                </div>
               ) : null}
 
               {step === "done" ? (

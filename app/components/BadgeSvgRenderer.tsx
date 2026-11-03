@@ -165,6 +165,19 @@ export default function BadgeSvgRenderer({
     ? getSignTemplateUiContentScale(templateId)
     : 1;
 
+  // Keep the SVG viewport on the viewBox aspect. Stretching the element to a
+  // wider thumbnail box lets some browsers paint the plate past the finish photo.
+  const viewBoxAspect = React.useMemo(() => {
+    const match = svg.match(
+      /viewBox\s*=\s*["']\s*[-\d.]+\s+[-\d.]+\s+([-\d.]+)\s+([-\d.]+)/,
+    );
+    if (!match) return null;
+    const width = Number(match[1]);
+    const height = Number(match[2]);
+    if (!(width > 0 && height > 0)) return null;
+    return width / height;
+  }, [svg]);
+
   // Sparse-plate sign templates use signUiScale > 1 for legibility. Scaling the outer box
   // grows past the preview bounds; instead shrink layout by 1/s then scale(s) so the
   // painted result still fits the same window as other sizes.
@@ -207,7 +220,12 @@ export default function BadgeSvgRenderer({
           />
         ) : (
           <div
-            className="w-full h-full min-h-0 min-w-0 [&>svg]:h-full [&>svg]:w-full [&>svg]:max-h-full [&>svg]:max-w-full"
+            className="flex h-full max-h-full min-h-0 w-auto max-w-full items-center justify-center [&>svg]:h-full [&>svg]:w-full"
+            style={
+              viewBoxAspect
+                ? { aspectRatio: String(viewBoxAspect), height: "100%" }
+                : { width: "100%", height: "100%" }
+            }
             dangerouslySetInnerHTML={{ __html: svg }}
           />
         )}

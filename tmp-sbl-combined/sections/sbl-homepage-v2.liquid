@@ -19,6 +19,15 @@
         </h1>
         <p class="sbl-home__hero-accent">{{ section.settings.hero_accent | escape }}</p>
         <p class="sbl-home__hero-text">{{ section.settings.hero_text | escape }}</p>
+        <div class="sbl-home__hero-actions">
+          <a href="{{ designer_url }}" class="sbl-home__button sbl-home__button--gold sbl-home__button--hero">
+            {{ section.settings.designer_button | escape }}
+            <span aria-hidden="true">→</span>
+          </a>
+          <a href="#sbl-popular" class="sbl-home__button sbl-home__button--outline">
+            {{ section.settings.shop_button | escape }}
+          </a>
+        </div>
         <div class="sbl-home__hero-trust">
           <p>10+ years making signs <span aria-hidden="true">·</span> <strong>Over 1 million signs sold across the USA</strong></p>
           <p class="sbl-home__hero-reviews">
@@ -33,19 +42,10 @@
           class="sbl-home__hero-photo"
           src="{{ 'sbl-hero-sign-range.jpg' | asset_url }}"
           alt="Personalized office signs in blue, black, white, red, gold, brushed silver and woodgrain finishes"
-          width="1024"
-          height="640"
+          width="742"
+          height="560"
           loading="eager"
         >
-      </div>
-      <div class="sbl-home__hero-actions">
-        <a href="{{ designer_url }}" class="sbl-home__button sbl-home__button--gold sbl-home__button--hero">
-          {{ section.settings.designer_button | escape }}
-          <span aria-hidden="true">→</span>
-        </a>
-        <a href="#sbl-popular" class="sbl-home__button sbl-home__button--outline">
-          {{ section.settings.shop_button | escape }}
-        </a>
       </div>
     </div>
   </div>
@@ -67,6 +67,83 @@
         <input type="hidden" name="type" value="product">
         <button type="submit">Search</button>
       </form>
+    </div>
+  </div>
+
+  <div class="sbl-home__steps">
+    <div class="sbl-home__wrap">
+      <h2>Design Your Sign in 4 Simple Steps</h2>
+      <div class="sbl-home__steps-track">
+        <div class="sbl-home__step">
+          <div class="sbl-home__step-icon">
+            <span class="sbl-home__step-badge">1</span>
+            <svg viewBox="0 0 76 76" fill="none" aria-hidden="true">
+              <rect x="11" y="11" width="54" height="54" rx="7" stroke="#02132B" stroke-width="2.75"/>
+              <path d="M11 27h54" stroke="#02132B" stroke-width="2"/>
+              <circle cx="19" cy="20" r="3.5" fill="#ED8918"/>
+              <path d="M38 27v38" stroke="#02132B" stroke-width="2"/>
+              <path d="M11 46h54" stroke="#02132B" stroke-width="2"/>
+              <path d="M17 31v11" stroke="#02132B" stroke-width="2.25" stroke-linecap="round"/>
+              <circle cx="27" cy="36.5" r="5.2" fill="#ED8918"/>
+              <path d="M17 50v11" stroke="#02132B" stroke-width="2.25" stroke-linecap="round"/>
+              <circle cx="27" cy="55.5" r="5.2" fill="#ED8918"/>
+            </svg>
+          </div>
+          <h3>Choose a template</h3>
+          <p>Pick a style you like</p>
+        </div>
+        <span class="sbl-home__step-arrow" aria-hidden="true"><svg viewBox="0 0 96 24" fill="none"><path d="M4 12h72" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M68 6l12 6-12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div class="sbl-home__step">
+          <div class="sbl-home__step-icon">
+            <span class="sbl-home__step-badge">2</span>
+            <svg viewBox="0 0 76 76" fill="none" aria-hidden="true">
+              <g transform="translate(7, 7) scale(2.6)" stroke="#02132B" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round">
+                <path fill="#FFFFFF" d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+              </g>
+              <circle cx="42.1" cy="24.9" r="2.6" fill="#ED8918" stroke="#02132B" stroke-width="1.6"/>
+              <circle cx="52.5" cy="34.3" r="2.6" fill="#FFFFFF" stroke="#02132B" stroke-width="1.6"/>
+              <circle cx="29.1" cy="27.5" r="2.6" fill="#ED8918" stroke="#02132B" stroke-width="1.6"/>
+              <circle cx="23.9" cy="39.5" r="2.6" fill="#ED8918" stroke="#02132B" stroke-width="1.6"/>
+            </svg>
+          </div>
+          <h3>Customize it</h3>
+          <p>Add colors, graphics &amp; text</p>
+        </div>
+        <span class="sbl-home__step-arrow" aria-hidden="true"><svg viewBox="0 0 96 24" fill="none"><path d="M4 12h72" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M68 6l12 6-12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div class="sbl-home__step">
+          <div class="sbl-home__step-icon">
+            <span class="sbl-home__step-badge">3</span>
+            <svg viewBox="0 0 76 76" fill="none" aria-hidden="true">
+              <path d="M16 40c8-13 36-13 44 0-8 13-36 13-44 0z" stroke="#02132B" stroke-width="2.75" stroke-linejoin="round"/>
+              <circle cx="38" cy="40" r="9.5" stroke="#02132B" stroke-width="2.25"/>
+              <circle cx="38" cy="40" r="4.25" fill="#02132B"/>
+              <path d="M38 24v-7" stroke="#02132B" stroke-width="2.5" stroke-linecap="round"/>
+              <path d="M19 30.5l-5-5" stroke="#02132B" stroke-width="2.5" stroke-linecap="round"/>
+              <path d="M57 30.5l5-5" stroke="#02132B" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3>Preview live</h3>
+          <p>See exactly how it will look</p>
+        </div>
+        <span class="sbl-home__step-arrow" aria-hidden="true"><svg viewBox="0 0 96 24" fill="none"><path d="M4 12h72" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M68 6l12 6-12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div class="sbl-home__step">
+          <div class="sbl-home__step-icon">
+            <span class="sbl-home__step-badge">4</span>
+            <svg viewBox="0 0 76 76" fill="none" aria-hidden="true">
+              <path d="M14 19h7" stroke="#02132B" stroke-width="2.75" stroke-linecap="round"/>
+              <path d="M21 19L28 48" stroke="#02132B" stroke-width="2.75" stroke-linecap="round"/>
+              <path d="M23 26h33" stroke="#02132B" stroke-width="2.75" stroke-linecap="round"/>
+              <path d="M56 26l-4 18" stroke="#02132B" stroke-width="2.75" stroke-linecap="round"/>
+              <path d="M27 44h25" stroke="#02132B" stroke-width="2.75" stroke-linecap="round"/>
+              <path d="M28 48h22" stroke="#02132B" stroke-width="2.75" stroke-linecap="round"/>
+              <circle cx="32" cy="52" r="3.5" stroke="#02132B" stroke-width="2.25"/>
+              <circle cx="46" cy="52" r="3.5" stroke="#02132B" stroke-width="2.25"/>
+            </svg>
+          </div>
+          <h3>Place your order</h3>
+          <p>Ships fast. No artwork fees.</p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -145,110 +222,43 @@
     </div>
   </div>
 
-  <div class="sbl-home__spaces" id="sbl-real-signs" data-sbl-spaces>
+  {%- liquid
+    assign home_signs_url = collections['signage-signs-for-home'].url | default: '/collections/signage-signs-for-home'
+    assign space_cards = "sbl-space-welcome.jpg%%1254%%1254%%Green Hello sign, burgundy Garden Room plaque, and gold custom sign on a textured wall%%Custom Signs%%Your words, made to last.%%designer@@sbl-space-restroom.jpg%%1254%%1254%%Brushed gold restroom sign with an arrow on a navy door%%Restroom & Hygiene%%Easy to find, every time.%%sbl:category:restroom-hygiene@@sbl-space-property.jpg%%1254%%1254%%Wood private property sign on a green gate beside house number 128%%Private Property%%Mark the line, kindly.%%sbl:category:property-notices@@sbl-space-surveillance.jpg%%1254%%1254%%Notice sign for 24 hour video surveillance mounted on a brick wall%%Security & Surveillance%%A little peace of mind.%%sbl:category:security-camera@@sbl-space-office.jpg%%1254%%1254%%Brushed metal conference room sign beside a main office sign on a wood door%%Office & Room ID%%From the front desk to the meeting room.%%sbl:category:office-door@@sbl-space-push-pull.jpg%%1000%%1000%%Gold push and pull signs on glass entry doors%%Push Pull Door Signs%%Push, pull, and every detail covered.%%sbl:category:push-pull@@sbl-space-classroom.jpg%%1254%%1254%%Classroom 12 sign on a blue door beside a gold library plaque%%Schools & Classrooms%%Clear directions for every campus.%%sbl:industry:education@@sbl-space-clinic.jpg%%1254%%1254%%Family Care sign and please check in sign on a clinic wall%%Medical & Clinic%%Help patients find their way.%%sbl:industry:healthcare@@sbl-space-nurses.jpg%%1254%%1254%%Nurses' station sign above a staff only sign outside a clinic hallway%%Staff & Restricted Areas%%Clear for the team.%%sbl:category:staff-private@@sbl-space-wayfinding.jpg%%1254%%1254%%Directional signs for reception and meeting rooms on an office wall%%Directional & Wayfinding%%Point the way, room to room.%%sbl:category:wayfinding-directory@@sbl-space-gate.jpg%%1600%%703%%Private property sign on a black gate beside gold house number 24%%House Numbers & Gates%%Welcome home, clearly marked.%%home@@sbl-space-monitored.jpg%%1254%%1254%%Blue this property is monitored sign on a chain-link fence%%Outdoor & Fence Signs%%Built for the elements.%%sbl:category:security-camera"
+    assign space_cards = space_cards | split: '@@'
+  -%}
+  <div class="sbl-home__spaces" id="sbl-real-signs">
     <div class="sbl-home__wrap">
       <div class="sbl-home__spaces-head">
         <div>
           <p class="sbl-home__section-label">The details that make a place</p>
           <h2>Real signs. Real spaces.</h2>
-          <p>See the finishing touches in real spaces. Select a photo to take a closer look.</p>
+          <p>See the finishing touches in real spaces. Select a photo to shop that kind of sign.</p>
         </div>
         <span class="sbl-home__spaces-label">Signs in everyday spaces</span>
       </div>
       <div class="sbl-home__spaces-grid">
-        <button type="button" class="sbl-home__space" data-sbl-space data-caption="Decorative signs on a wall">
-          <span class="sbl-home__space-image">
-            <img src="{{ 'sbl-space-welcome.jpg' | asset_url }}" alt="Green Hello sign, burgundy Garden Room plaque, and gold custom sign on a textured wall" width="1254" height="1254" loading="lazy">
-            <span class="sbl-home__space-expand" aria-hidden="true">↗</span>
-          </span>
-          <span class="sbl-home__space-copy"><strong>A personal welcome</strong><small>Decorative signs on a wall</small></span>
-        </button>
-        <button type="button" class="sbl-home__space" data-sbl-space data-caption="Restroom sign on a door">
-          <span class="sbl-home__space-image">
-            <img src="{{ 'sbl-space-restroom.jpg' | asset_url }}" alt="Brushed gold restroom sign with an arrow on a navy door" width="1254" height="1254" loading="lazy">
-            <span class="sbl-home__space-expand" aria-hidden="true">↗</span>
-          </span>
-          <span class="sbl-home__space-copy"><strong>Easy to find</strong><small>Restroom sign on a door</small></span>
-        </button>
-        <button type="button" class="sbl-home__space" data-sbl-space data-caption="Private property sign on a gate">
-          <span class="sbl-home__space-image">
-            <img src="{{ 'sbl-space-property.jpg' | asset_url }}" alt="Wood private property sign on a green gate beside house number 128" width="1254" height="1254" loading="lazy">
-            <span class="sbl-home__space-expand" aria-hidden="true">↗</span>
-          </span>
-          <span class="sbl-home__space-copy"><strong>A clear boundary</strong><small>Private property sign on a gate</small></span>
-        </button>
-        <button type="button" class="sbl-home__space" data-sbl-space data-caption="Video surveillance sign at an entrance">
-          <span class="sbl-home__space-image">
-            <img src="{{ 'sbl-space-surveillance.jpg' | asset_url }}" alt="Notice sign for 24 hour video surveillance mounted on a brick wall" width="1254" height="1254" loading="lazy">
-            <span class="sbl-home__space-expand" aria-hidden="true">↗</span>
-          </span>
-          <span class="sbl-home__space-copy"><strong>A little peace of mind</strong><small>Video surveillance sign at an entrance</small></span>
-        </button>
-        <button type="button" class="sbl-home__space" data-sbl-space data-caption="Conference room and main office signs">
-          <span class="sbl-home__space-image">
-            <img src="{{ 'sbl-space-office.jpg' | asset_url }}" alt="Brushed metal conference room sign beside a main office sign on a wood door" width="1254" height="1254" loading="lazy">
-            <span class="sbl-home__space-expand" aria-hidden="true">↗</span>
-          </span>
-          <span class="sbl-home__space-copy"><strong>Set the tone</strong><small>Conference room and main office</small></span>
-        </button>
-        <button type="button" class="sbl-home__space" data-sbl-space data-caption="Push and pull signs on glass doors">
-          <span class="sbl-home__space-image">
-            <img src="{{ 'sbl-space-push-pull.jpg' | asset_url }}" alt="Gold push and pull signs on glass entry doors" width="1000" height="1000" loading="lazy">
-            <span class="sbl-home__space-expand" aria-hidden="true">↗</span>
-          </span>
-          <span class="sbl-home__space-copy"><strong>Every detail covered</strong><small>Push and pull signs on glass doors</small></span>
-        </button>
-        <button type="button" class="sbl-home__space" data-sbl-space data-caption="Classroom and library signs">
-          <span class="sbl-home__space-image">
-            <img src="{{ 'sbl-space-classroom.jpg' | asset_url }}" alt="Classroom 12 sign on a blue door beside a gold library plaque" width="1254" height="1254" loading="lazy">
-            <span class="sbl-home__space-expand" aria-hidden="true">↗</span>
-          </span>
-          <span class="sbl-home__space-copy"><strong>Find the room</strong><small>Classroom and library signs</small></span>
-        </button>
-        <button type="button" class="sbl-home__space" data-sbl-space data-caption="Clinic signs at the door">
-          <span class="sbl-home__space-image">
-            <img src="{{ 'sbl-space-clinic.jpg' | asset_url }}" alt="Family Care sign and please check in sign on a clinic wall" width="1254" height="1254" loading="lazy">
-            <span class="sbl-home__space-expand" aria-hidden="true">↗</span>
-          </span>
-          <span class="sbl-home__space-copy"><strong>A calm arrival</strong><small>Clinic signs at the door</small></span>
-        </button>
-        <button type="button" class="sbl-home__space" data-sbl-space data-caption="Nurses' station and staff only signs">
-          <span class="sbl-home__space-image">
-            <img src="{{ 'sbl-space-nurses.jpg' | asset_url }}" alt="Nurses' station sign above a staff only sign outside a clinic hallway" width="1254" height="1254" loading="lazy">
-            <span class="sbl-home__space-expand" aria-hidden="true">↗</span>
-          </span>
-          <span class="sbl-home__space-copy"><strong>Clear for the team</strong><small>Nurses’ station and staff only</small></span>
-        </button>
-        <button type="button" class="sbl-home__space" data-sbl-space data-caption="Reception and meeting room directions">
-          <span class="sbl-home__space-image">
-            <img src="{{ 'sbl-space-wayfinding.jpg' | asset_url }}" alt="Directional signs for reception and meeting rooms on an office wall" width="1254" height="1254" loading="lazy">
-            <span class="sbl-home__space-expand" aria-hidden="true">↗</span>
-          </span>
-          <span class="sbl-home__space-copy"><strong>Point the way</strong><small>Reception and meeting rooms</small></span>
-        </button>
-        <button type="button" class="sbl-home__space" data-sbl-space data-caption="House number and private property sign">
-          <span class="sbl-home__space-image">
-            <img src="{{ 'sbl-space-gate.jpg' | asset_url }}" alt="Private property sign on a black gate beside gold house number 24" width="1600" height="703" loading="lazy">
-            <span class="sbl-home__space-expand" aria-hidden="true">↗</span>
-          </span>
-          <span class="sbl-home__space-copy"><strong>At the gate</strong><small>House number and private property</small></span>
-        </button>
-        <button type="button" class="sbl-home__space" data-sbl-space data-caption="Security sign on a fence">
-          <span class="sbl-home__space-image">
-            <img src="{{ 'sbl-space-monitored.jpg' | asset_url }}" alt="Blue this property is monitored sign on a chain-link fence" width="1254" height="1254" loading="lazy">
-            <span class="sbl-home__space-expand" aria-hidden="true">↗</span>
-          </span>
-          <span class="sbl-home__space-copy"><strong>Watched from the street</strong><small>Security sign on a fence</small></span>
-        </button>
+        {%- for row in space_cards -%}
+          {%- assign parts = row | split: '%%' -%}
+          {%- assign space_target = parts[6] -%}
+          {%- if space_target == 'designer' -%}
+            {%- assign space_url = designer_url -%}
+          {%- elsif space_target == 'home' -%}
+            {%- assign space_url = home_signs_url -%}
+          {%- else -%}
+            {%- assign space_handle = space_target | handleize -%}
+            {%- assign space_url = routes.all_products_collection_url | append: '/' | append: space_handle -%}
+          {%- endif -%}
+          <a class="sbl-home__space" href="{{ space_url }}">
+            <span class="sbl-home__space-image">
+              <img src="{{ parts[0] | asset_url }}" alt="{{ parts[3] | escape }}" width="{{ parts[1] }}" height="{{ parts[2] }}" loading="lazy">
+              <span class="sbl-home__space-expand" aria-hidden="true">↗</span>
+            </span>
+            <span class="sbl-home__space-copy"><strong>{{ parts[4] | escape }}</strong><small>{{ parts[5] | escape }}</small></span>
+          </a>
+        {%- endfor -%}
       </div>
     </div>
-    <dialog class="sbl-home__viewer" data-sbl-viewer aria-label="Photo">
-      <div class="sbl-home__viewer-head">
-        <p data-sbl-viewer-caption></p>
-        <button type="button" data-sbl-viewer-close aria-label="Close photo">×</button>
-      </div>
-      <img data-sbl-viewer-image alt="" width="1254" height="1254">
-    </dialog>
   </div>
 
   <div class="sbl-home__section sbl-home__section--cream" id="sbl-popular">
@@ -479,20 +489,24 @@
   .sbl-home__hero { background: var(--sbl-navy); color: #fff; }
   .sbl-home__hero-grid {
     display: grid;
-    grid-template-columns: minmax(28px, calc((100vw - 1280px) / 2)) minmax(460px, 620px) minmax(560px, 1fr);
-    gap: 0;
+    grid-template-columns: minmax(0, 1fr) clamp(600px, 56vw, 960px);
+    gap: clamp(24px, 2.4vw, 40px);
     align-items: stretch;
-    min-height: 520px;
+    min-height: 0;
     height: auto;
+    padding-left: clamp(28px, 2.4vw, 48px);
   }
   .sbl-home__hero-copy {
-    grid-column: 2;
+    grid-column: 1;
     grid-row: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: space-between;
+    align-self: stretch;
+    gap: 14px;
     min-width: 0;
-    padding: 44px 40px 44px 0;
+    max-width: 860px;
+    padding: 28px 8px 24px 0;
   }
   .sbl-home__eyebrow,
   .sbl-home__section-label {
@@ -507,7 +521,7 @@
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 14px;
+    margin-bottom: 0;
     color: #3ddc84;
     font-size: 14px;
     letter-spacing: .12em;
@@ -528,14 +542,14 @@
     font-weight: 500;
     letter-spacing: -.025em;
   }
-  .sbl-home__hero-title { max-width: none; font-size: clamp(48px, 4vw, 64px); line-height: 1.04; }
+  .sbl-home__hero-title { max-width: none; font-size: clamp(50px, 4.4vw, 68px); line-height: 1.14; }
   .sbl-home__hero-title strong { font-weight: 700; }
   .sbl-home__hero-accent {
     max-width: none;
-    margin: 20px 0 0;
+    margin: 0;
     color: #e6c66e;
     font-family: Georgia, 'Times New Roman', serif;
-    font-size: clamp(26px, 2.2vw, 34px);
+    font-size: clamp(28px, 2.4vw, 36px);
     font-style: italic;
     font-weight: 400;
     line-height: 1.25;
@@ -620,24 +634,22 @@
   .sbl-home__menu-group a { color: var(--sbl-navy); font-size: 16px; line-height: 1.35; text-decoration: none; }
   .sbl-home__menu-note { margin: 4px 0 0; padding-top: 14px; border-top: 1px solid #eee7dc; color: var(--sbl-muted); font-size: 13px; }
   .sbl-home__menu-note a { color: var(--sbl-navy); font-weight: 800; }
-  .sbl-home__hero-text { max-width: none; margin: 22px 0 0; color: #e7eef6; font-size: 20px; line-height: 1.65; }
+  .sbl-home__hero-text { max-width: 600px; margin: 0; color: #e7eef6; font-size: 20px; line-height: 1.7; }
   .sbl-home__hero-actions {
-    grid-column: 3;
-    grid-row: 1;
-    z-index: 2;
-    align-self: end;
-    justify-self: end;
     display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: min(286px, calc(100% - 36px));
-    margin: 0 22px 26px 0;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 14px;
+    width: 100%;
+    max-width: 720px;
+    margin: 0;
   }
-  .sbl-home__hero-actions .sbl-home__button { width: 100%; box-shadow: 0 12px 28px rgba(15, 39, 68, .18); }
+  .sbl-home__hero-actions .sbl-home__button { flex: 1 1 auto; width: auto; min-height: 64px; padding: 0 12px; font-size: 19px; white-space: nowrap; box-shadow: 0 12px 28px rgba(15, 39, 68, .18); }
   .sbl-home__hero-trust {
     max-width: none;
-    margin-top: 28px;
-    padding-top: 22px;
+    margin-top: 0;
+    padding-top: 18px;
     border-top: 1px solid rgba(255, 255, 255, .16);
     color: #d7dfeb;
     font-size: 17px;
@@ -648,13 +660,16 @@
   .sbl-home__hero-reviews { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
   .sbl-home__stars { color: #3ddc84; font-size: 18px; letter-spacing: 2px; line-height: 1; }
   .sbl-home__hero-art {
-    grid-column: 3;
+    grid-column: 2;
     grid-row: 1;
     position: relative;
+    align-self: start;
+    width: 100%;
+    aspect-ratio: 742 / 560;
     overflow: hidden;
     background: #eee8dc;
   }
-  .sbl-home__hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 24% center; }
+  .sbl-home__hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: left center; }
   .sbl-home__quick-links { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 24px; }
   .sbl-home__quick-links a {
     padding: 8px 12px;
@@ -675,6 +690,52 @@
   .sbl-home__button--outline:hover { border-color: var(--sbl-navy); background: #f7f4ee; color: var(--sbl-navy); }
   .sbl-home__button--gold { background: var(--sbl-gold); color: var(--sbl-navy); }
   .sbl-home__button--gold:hover { background: #dba849; color: var(--sbl-navy); }
+  .sbl-home__hero-actions .sbl-home__button--gold,
+  .sbl-home__hero-actions .sbl-home__button--outline {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .sbl-home__hero-actions .sbl-home__button--gold {
+    border: 1px solid #a87a22;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0) 46%, rgba(110,68,12,.2)),
+      repeating-linear-gradient(112deg, rgba(255,255,255,.22) 0 1px, rgba(255,255,255,0) 1px 3px),
+      linear-gradient(180deg, #f6dc96 0%, #e4b44c 46%, #c6922c 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.75), inset 0 -1px 0 rgba(110,68,12,.28), 0 10px 22px rgba(201,147,46,.34);
+  }
+  .sbl-home__hero-actions .sbl-home__button--gold:hover {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,0) 46%, rgba(110,68,12,.16)),
+      repeating-linear-gradient(112deg, rgba(255,255,255,.22) 0 1px, rgba(255,255,255,0) 1px 3px),
+      linear-gradient(180deg, #ffe3a4 0%, #efc15a 46%, #d4a33a 100%);
+    color: var(--sbl-navy);
+  }
+  .sbl-home__hero-actions .sbl-home__button--outline {
+    border: 1.5px solid #e2c27a;
+    background: linear-gradient(180deg, #fff 0%, #f8f1e3 100%);
+    box-shadow: inset 0 1px 0 #fff, 0 10px 22px rgba(15,39,68,.14);
+  }
+  .sbl-home__hero-actions .sbl-home__button--gold::after,
+  .sbl-home__hero-actions .sbl-home__button--outline::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 32%, rgba(255,255,255,.62) 50%, transparent 68%);
+    transform: translateX(-130%);
+    animation: sbl-gold-sheen 5.2s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .sbl-home__hero-actions .sbl-home__button--outline::after { animation-delay: 1.4s; }
+  @keyframes sbl-gold-sheen {
+    0%, 58% { transform: translateX(-130%); }
+    82% { transform: translateX(130%); }
+    100% { transform: translateX(130%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sbl-home__hero-actions .sbl-home__button--gold::after,
+    .sbl-home__hero-actions .sbl-home__button--outline::after { animation: none; }
+  }
   .sbl-home__button--navy { background: var(--sbl-navy); color: #fff; }
   .sbl-home__button--navy:hover { background: #183b64; color: #fff; }
   .sbl-home__hero-notes { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 18px; color: #bfcbd9; font-size: 13px; }
@@ -690,14 +751,28 @@
   .sbl-home__slide-image[data-active="true"] { opacity: 1; }
   .sbl-home__quick-links a[aria-current="true"] { border-color: var(--sbl-gold); background: rgba(201,147,46,.16); color: #fff; }
   .sbl-home__designer-cta { display: flex; padding: 15px 4px 2px; align-items: center; justify-content: space-between; color: var(--sbl-navy); font-size: 15px; font-weight: 800; }
-  .sbl-home__search-wrap { position: relative; z-index: 2; margin-top: 28px; }
+  .sbl-home__search-wrap { position: relative; z-index: 2; padding: 28px 0 8px; background: #fff; }
   .sbl-home__search { display: flex; min-height: 68px; padding: 8px 8px 8px 20px; align-items: center; gap: 12px; border: 1px solid #e7e0d4; border-radius: 12px; background: #fff; box-shadow: 0 15px 38px rgba(15,39,68,.15); }
   .sbl-home__search-icon { color: var(--sbl-gold); font-size: 30px; line-height: 1; }
   .sbl-home__search input { min-width: 0; flex: 1; border: 0; outline: 0; color: var(--sbl-ink); font-size: 16px; }
   .sbl-home__search button { align-self: stretch; padding: 0 26px; border: 0; border-radius: 7px; background: var(--sbl-navy); color: #fff; font-weight: 800; cursor: pointer; }
   .sbl-home__search--repeat { margin-top: 28px; }
+  .sbl-home__steps { padding: 56px 0 72px; border-bottom: 1px solid rgba(2, 19, 43, .1); background: #fff; color: #02132b; }
+  .sbl-home__steps h2 { margin: 0 0 56px; color: #02132b; font-size: clamp(28px, 3.2vw, 38px); font-weight: 700; line-height: 1.15; text-align: center; }
+  .sbl-home__steps-track { display: flex; align-items: flex-start; justify-content: space-between; }
+  .sbl-home__step { flex: 0 1 240px; max-width: 260px; display: flex; flex-direction: column; align-items: center; padding: 0 12px; text-align: center; }
+  .sbl-home__step-icon { position: relative; width: 104px; height: 104px; margin-bottom: 22px; color: #02132b; }
+  .sbl-home__step-icon svg { width: 76px; height: 76px; display: block; margin: 14px auto 0; fill: none; stroke: none; }
+  .sbl-home__step-icon svg [fill="#02132B"] { fill: #02132B; }
+  .sbl-home__step-icon svg [fill="#ED8918"] { fill: #ED8918; }
+  .sbl-home__step-icon svg [fill="#FFFFFF"] { fill: #FFFFFF; }
+  .sbl-home__step-badge { position: absolute; top: -2px; left: -2px; z-index: 1; display: flex; width: 28px; height: 28px; align-items: center; justify-content: center; border-radius: 50%; background: #22c55e; color: #fff; font-size: 14px; font-weight: 700; line-height: 1; box-shadow: 0 2px 8px rgba(34, 197, 94, .35); }
+  .sbl-home__step h3 { margin: 0 0 8px; color: #02132b; font-family: Arial, Helvetica, sans-serif; font-size: 17px; font-weight: 700; letter-spacing: 0; line-height: 1.25; }
+  .sbl-home__step p { max-width: 220px; margin: 0; color: #667085; font-size: 14px; line-height: 1.5; }
+  .sbl-home__step-arrow { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; min-width: 56px; max-width: 140px; margin-top: 38px; padding: 0 8px; color: #02132b; opacity: .7; }
+  .sbl-home__step-arrow svg { width: 100%; max-width: 120px; height: 24px; fill: none; stroke: currentColor; }
   .sbl-home__visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-  .sbl-home__benefits { margin-top: 40px; padding: 30px 0; border-top: 1px solid #e0e5eb; border-bottom: 1px solid #e0e5eb; background: #fff; }
+  .sbl-home__benefits { margin-top: 0; padding: 30px 0; border-top: 0; border-bottom: 1px solid #e0e5eb; background: #fff; }
   .sbl-home__benefits-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; }
   .sbl-home__benefit { display: flex; align-items: center; gap: 15px; padding-right: 24px; border-right: 1px solid #e0e5eb; }
   .sbl-home__benefit:last-child { border-right: 0; }
@@ -749,22 +824,16 @@
   .sbl-home__spaces-head p:not(.sbl-home__section-label) { max-width: 560px; margin: 0; color: var(--sbl-muted); font-size: 16px; line-height: 1.6; }
   .sbl-home__spaces-label { color: #768396; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
   .sbl-home__spaces-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
-  .sbl-home__space { display: block; width: 100%; padding: 0; overflow: hidden; border: 1px solid #e0e5eb; border-radius: 5px; background: #fff; color: var(--sbl-ink); font: inherit; text-align: left; cursor: pointer; }
+  .sbl-home__space { display: block; width: 100%; padding: 0; overflow: hidden; border: 1px solid #e0e5eb; border-radius: 5px; background: #fff; color: var(--sbl-ink); font: inherit; text-align: left; text-decoration: none; cursor: pointer; }
   .sbl-home__space:focus-visible { outline: 2px solid rgba(244, 148, 19, .7); outline-offset: 3px; }
   .sbl-home__space-image { position: relative; display: block; height: 290px; overflow: hidden; background: #e9e7e2; }
   .sbl-home__space-image img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s ease; }
+  .sbl-home__space:hover { color: var(--sbl-ink); }
   .sbl-home__space:hover img { transform: scale(1.04); }
   .sbl-home__space-expand { position: absolute; right: 12px; bottom: 12px; display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .93); color: var(--sbl-navy); font-size: 14px; }
   .sbl-home__space-copy { display: block; padding: 20px; }
   .sbl-home__space-copy strong { display: block; margin-bottom: 7px; font-family: Georgia, 'Times New Roman', serif; font-size: 21px; font-weight: 500; }
   .sbl-home__space-copy small { display: block; color: var(--sbl-muted); font-size: 13px; line-height: 1.45; }
-  .sbl-home__viewer { width: auto; max-width: min(92vw, 1100px); padding: 0 0 16px; border: 0; border-radius: 10px; background: #fff; color: var(--sbl-ink); }
-  .sbl-home__viewer:not([open]) { display: none; }
-  .sbl-home__viewer::backdrop { background: rgba(8, 26, 48, .72); }
-  .sbl-home__viewer-head { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 16px; }
-  .sbl-home__viewer-head p { margin: 0; font-size: 14px; }
-  .sbl-home__viewer-head button { width: 36px; height: 36px; flex: none; border: 0; background: transparent; color: #667085; font-size: 26px; line-height: 1; cursor: pointer; }
-  .sbl-home__viewer img { display: block; width: fit-content; max-width: 100%; max-height: 78dvh; height: auto; margin: 0 auto; }
   .sbl-home__section { padding: 82px 0; }
   .sbl-home__section--cream { background: var(--sbl-cream); }
   .sbl-home__section--white { background: #fff; }
@@ -820,27 +889,24 @@
   .sbl-home__trophy .sbl-home__plaque-grid > div > p:not(.sbl-home__section-label) { color: var(--sbl-muted); }
   .sbl-home__trophy .sbl-home__plaque-image img { height: 420px; }
   @media (max-width: 1100px) {
-    .sbl-home__hero-grid { grid-template-columns: 1fr; height: auto; min-height: 0; }
+    .sbl-home__hero-grid { grid-template-columns: 1fr; height: auto; min-height: 0; padding-left: 0; gap: 0; }
     .sbl-home__hero-copy,
-    .sbl-home__hero-art,
-    .sbl-home__hero-actions { grid-column: 1; }
-    .sbl-home__hero-copy { grid-row: 1; max-width: 760px; padding: 40px 28px 8px; }
+    .sbl-home__hero-art { grid-column: 1; }
+    .sbl-home__hero-copy { grid-row: 1; max-width: none; padding: 40px 28px 28px; }
     .sbl-home__hero-actions {
-      grid-row: 2;
-      align-self: stretch;
-      justify-self: stretch;
       flex-direction: row;
       flex-wrap: wrap;
-      width: auto;
-      max-width: 760px;
-      margin: 0;
-      padding: 8px 28px 28px;
+      width: 100%;
+      max-width: 720px;
+      margin-top: 22px;
     }
     .sbl-home__hero-actions .sbl-home__button { width: auto; box-shadow: none; }
     .sbl-home__button--outline { border-color: rgba(255,255,255,.5); background: transparent; color: #fff; }
     .sbl-home__button--outline:hover { border-color: #fff; background: rgba(255,255,255,.08); color: #fff; }
-    .sbl-home__hero-art { grid-row: 3; min-height: 360px; height: 52vw; }
+    .sbl-home__hero-art { grid-row: 2; width: 100%; height: auto; min-height: 0; aspect-ratio: 742 / 560; }
     .sbl-home__hero-text { font-size: 18px; }
+    .sbl-home__hero-title { font-size: 52px; }
+    .sbl-home__hero-accent { font-size: 30px; }
   }
   @media (max-width: 990px) {
     .sbl-home__hero-grid,
@@ -848,25 +914,20 @@
     .sbl-home__plaque-grid,
     .sbl-home__trophy .sbl-home__plaque-grid { grid-template-columns: 1fr; }
     .sbl-home__trophy .sbl-home__plaque-image { order: -1; }
-    .sbl-home__hero-grid { grid-template-columns: 1fr; height: auto; min-height: 0; }
+    .sbl-home__hero-grid { grid-template-columns: 1fr; height: auto; min-height: 0; padding-left: 0; gap: 0; }
     .sbl-home__hero-copy,
-    .sbl-home__hero-art,
-    .sbl-home__hero-actions { grid-column: 1; }
-    .sbl-home__hero-copy { grid-row: 1; padding: 36px 24px 8px; }
+    .sbl-home__hero-art { grid-column: 1; }
+    .sbl-home__hero-copy { grid-row: 1; padding: 36px 24px 28px; }
     .sbl-home__hero-actions {
-      grid-row: 2;
-      align-self: stretch;
-      justify-self: stretch;
       flex-direction: row;
       flex-wrap: wrap;
-      width: auto;
-      margin: 0;
-      padding: 8px 24px 28px;
+      width: 100%;
+      margin-top: 22px;
     }
     .sbl-home__hero-actions .sbl-home__button { width: auto; box-shadow: none; }
     .sbl-home__button--outline { border-color: rgba(255,255,255,.5); background: transparent; color: #fff; }
     .sbl-home__button--outline:hover { border-color: #fff; background: rgba(255,255,255,.08); color: #fff; }
-    .sbl-home__hero-art { grid-row: 3; min-height: 420px; height: 58vw; }
+    .sbl-home__hero-art { grid-row: 2; width: 100%; height: auto; min-height: 0; aspect-ratio: 742 / 560; }
     .sbl-home__designer-card { width: min(620px, 100%); margin: 0 auto; }
     .sbl-home__category-grid,
     .sbl-home__product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -882,20 +943,25 @@
     .sbl-home__benefit:nth-child(2) { border-right: 0; }
     .sbl-home__ind-head { align-items: stretch; flex-direction: column; gap: 20px; }
     .sbl-home__ind-search { min-width: 0; }
+    .sbl-home__steps { padding: 40px 0 8px; }
+    .sbl-home__steps h2 { margin-bottom: 28px; }
+    .sbl-home__steps-track { flex-wrap: wrap; justify-content: center; gap: 28px 12px; }
+    .sbl-home__step { flex: 1 1 calc(50% - 20px); max-width: none; }
+    .sbl-home__step-arrow { display: none; }
   }
   @media (max-width: 599px) {
     .sbl-home__wrap { width: min(100% - 28px, 1240px); }
-    .sbl-home__hero-copy { padding: 32px 20px 8px; }
+    .sbl-home__hero-copy { padding: 32px 20px 24px; }
     .sbl-home__hero-title { font-size: 42px; }
     .sbl-home__hero-accent { font-size: 24px; }
     .sbl-home__menu-cols { grid-template-columns: 1fr 1fr; }
     .sbl-home__hero-text { font-size: 17px; line-height: 1.6; }
     .sbl-home__hero-trust { font-size: 15.5px; }
-    .sbl-home__hero-actions { flex-direction: column; padding: 8px 20px 24px; }
+    .sbl-home__hero-actions { flex-direction: column; margin-top: 20px; }
     .sbl-home__button--hero,
     .sbl-home__button--outline { width: 100%; }
-    .sbl-home__button--hero { min-height: 52px; font-size: 17px; }
-    .sbl-home__hero-art { min-height: 240px; height: 62vw; }
+    .sbl-home__button--hero { min-height: 64px; font-size: 20px; }
+    .sbl-home__hero-art { width: 100%; min-height: 0; height: auto; aspect-ratio: 742 / 560; }
     .sbl-home__start { align-items: stretch; flex-direction: column; }
     .sbl-home__start-copy { padding: 8px; }
     .sbl-home__designer-image-wrap { height: 390px; }
@@ -950,34 +1016,6 @@
 {% endstylesheet %}
 
 {% javascript %}
-  (() => {
-    document.querySelectorAll('[data-sbl-spaces]').forEach((root) => {
-      if (root.dataset.sblSpacesReady === 'true') return;
-      root.dataset.sblSpacesReady = 'true';
-      const viewer = root.querySelector('[data-sbl-viewer]');
-      const image = root.querySelector('[data-sbl-viewer-image]');
-      const caption = root.querySelector('[data-sbl-viewer-caption]');
-      const close = root.querySelector('[data-sbl-viewer-close]');
-      if (!viewer || !image || typeof viewer.showModal !== 'function') return;
-      root.querySelectorAll('[data-sbl-space]').forEach((button) => {
-        button.addEventListener('click', () => {
-          const photo = button.querySelector('img');
-          if (!photo) return;
-          image.src = photo.currentSrc || photo.src;
-          image.alt = button.dataset.caption || photo.alt;
-          image.width = photo.naturalWidth || photo.width;
-          image.height = photo.naturalHeight || photo.height;
-          if (caption) caption.textContent = button.dataset.caption || '';
-          viewer.showModal();
-        });
-      });
-      if (close) close.addEventListener('click', () => viewer.close());
-      viewer.addEventListener('click', (event) => {
-        if (event.target === viewer) viewer.close();
-      });
-    });
-  })();
-
   (() => {
     document.querySelectorAll('[data-sbl-ind]').forEach((section) => {
       if (section.dataset.sblIndReady === 'true') return;
@@ -1087,7 +1125,7 @@
     { "type": "image_picker", "id": "designer_image", "label": "Designer screenshot" },
     { "type": "textarea", "id": "designer_image_alt", "label": "Designer image alt text", "default": "Signs ByLITA custom sign designer showing a live engraved sign preview" },
     { "type": "text", "id": "designer_card_link", "label": "Designer card link text", "default": "Open the live designer" },
-    { "type": "textarea", "id": "search_placeholder", "label": "Search placeholder", "default": "Search ready-made signs: restroom, employees only, hand wash..." },
+    { "type": "textarea", "id": "search_placeholder", "label": "Search placeholder", "default": "Search over 5000 ready made signs" },
     { "type": "text", "id": "categories_label", "label": "Categories label", "default": "Popular signs" },
     { "type": "text", "id": "categories_heading", "label": "Categories heading", "default": "The signs every building needs." },
     { "type": "text", "id": "categories_link", "label": "Categories link text", "default": "Shop all signs" },

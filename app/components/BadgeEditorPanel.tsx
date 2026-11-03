@@ -634,7 +634,11 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
               </div>
 
               <CollapsibleLineStyle collapsed={isSignPanel}>
-              <div className="aqb-badge-text-row-controls">
+              <div
+                className={`aqb-badge-text-row-controls${
+                  isSignPanel ? " aqb-badge-text-row-controls--sign" : ""
+                }`}
+              >
                   <div className="aqb-badge-trc-group">
                     <div className="aqb-badge-trc-label">Font</div>
                     <FontFamilySelect
@@ -650,20 +654,22 @@ export const BadgeEditorPanel: React.FC<BadgeEditorPanelProps> = ({
                     />
                   </div>
                 {isSignPanel ? (
-                  <div className="aqb-badge-trc-group">
+                  <div className="aqb-badge-trc-group aqb-badge-trc-size">
                     <div className="aqb-badge-trc-label">Size</div>
-                    <FontSizeControl
-                      line={line}
-                      lineIndex={idx}
-                      designBox={{
-                        ...designBox,
-                        height: fontMetricsHeight,
-                      }}
-                      editable={editable}
-                      onLineChange={onLineChange}
-                      minFontPx={fontSizeMinPx}
-                      maxFontPx={maxFontPxForLine}
-                    />
+                    <div className="aqb-badge-font-size-stepper">
+                      <FontSizeControl
+                        line={line}
+                        lineIndex={idx}
+                        designBox={{
+                          ...designBox,
+                          height: fontMetricsHeight,
+                        }}
+                        editable={editable}
+                        onLineChange={onLineChange}
+                        minFontPx={fontSizeMinPx}
+                        maxFontPx={maxFontPxForLine}
+                      />
+                    </div>
                   </div>
                 ) : !isDeskSignPanel ? (
                   <div className="aqb-badge-trc-group">

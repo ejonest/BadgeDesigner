@@ -1748,7 +1748,63 @@ function badgeShowingSignFinish(
   };
 }
 
-/** Shape-specific stock finish rendered across the full sign die. */
+/** Pixel size of an inlined PNG or JPEG. External URLs return null. */
+function rasterSizeFromDataUrl(
+  src: string,
+): { width: number; height: number } | null {
+  const match = src.match(/^data:image\/(?:png|jpe?g);base64,([A-Za-z0-9+/=]+)/i);
+  if (!match) return null;
+  if (typeof atob !== "function") return null;
+  let bytes: Uint8Array;
+  try {
+    const binary = atob(match[1]);
+    bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  } catch {
+    return null;
+  }
+  if (bytes.length >= 24 && bytes[0] === 0x89 && bytes[1] === 0x50) {
+    const width =
+      (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+    const height =
+      (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+    return width > 0 && height > 0
+      ? { width: width >>> 0, height: height >>> 0 }
+      : null;
+  }
+  let i = 2;
+  while (i + 8 < bytes.length) {
+    if (bytes[i] !== 0xff) break;
+    const marker = bytes[i + 1];
+    if (marker === 0xd8) {
+      i += 2;
+      continue;
+    }
+    if (marker === 0xd9 || marker === 0xda) break;
+    const segmentLength = (bytes[i + 2] << 8) | bytes[i + 3];
+    if (segmentLength < 2) break;
+    const isStartOfFrame =
+      marker >= 0xc0 &&
+      marker <= 0xcf &&
+      marker !== 0xc4 &&
+      marker !== 0xc8 &&
+      marker !== 0xcc;
+    if (isStartOfFrame && i + 8 < bytes.length) {
+      const height = (bytes[i + 5] << 8) | bytes[i + 6];
+      const width = (bytes[i + 7] << 8) | bytes[i + 8];
+      return width > 0 && height > 0 ? { width, height } : null;
+    }
+    i += 2 + segmentLength;
+  }
+  return null;
+}
+
+/**
+ * Shape finish photo, stretched across the whole die.
+ * Drawn at its own pixel size, then scaled onto the plate. A mismatched
+ * `preserveAspectRatio="none"` box is what left a strip of plate color
+ * beside the classic framed photo (and would do the same on any other shape).
+ */
 function renderSignFinishLayer(
   badge: Badge,
   template: LoadedTemplate,
@@ -1757,12 +1813,27 @@ function renderSignFinishLayer(
     badge.signFinishImageSrc ??
     getSignFinishById(badge.signFinishId)?.imageSrc;
   if (!src) return "";
-  return `<image
-    href="${esc(src)}"
-    xlink:href="${esc(src)}"
+  const href = esc(src);
+  const natural = rasterSizeFromDataUrl(src);
+  if (!natural) {
+    return `<image
+    href="${href}"
+    xlink:href="${href}"
     x="0" y="0"
     width="${template.widthPx}" height="${template.heightPx}"
     preserveAspectRatio="none"
+    style="image-rendering:optimizeQuality"
+  />`;
+  }
+  const scaleX = template.widthPx / natural.width;
+  const scaleY = template.heightPx / natural.height;
+  return `<image
+    href="${href}"
+    xlink:href="${href}"
+    x="0" y="0"
+    width="${natural.width}" height="${natural.height}"
+    preserveAspectRatio="xMidYMid meet"
+    transform="scale(${scaleX}, ${scaleY})"
     style="image-rendering:optimizeQuality"
   />`;
 }
@@ -2613,10 +2684,7 @@ export function renderBadgeToSvgString(
     !isPrint && badge.backgroundImage
       ? renderBg(badge.backgroundImage, designBox)
       : "";
-  const signFinishLayer = renderSignFinishLayer(
-    badge,
-    template,
-  );
+  const signFinishLayer = renderSignFinishLayer(badge, template);
 
   // Text rendering: desk signs + AQB badge presets use exact sizeNorm px (no fractional re-shrink).
   const lineLayout = isDeskSignTemplateId(template.id)
@@ -3001,10 +3069,7 @@ export async function renderBadgeToSvgStringWithFonts(
     !isPrint && badge.backgroundImage
       ? renderBg(badge.backgroundImage, designBox)
       : "";
-  const signFinishLayer = renderSignFinishLayer(
-    badge,
-    template,
-  );
+  const signFinishLayer = renderSignFinishLayer(badge, template);
 
   // Text rendering with embedded fonts, uniform spacing and proportional scaling
   const lineLayout = isDeskSignTemplateId(template.id)

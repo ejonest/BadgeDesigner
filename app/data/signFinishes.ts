@@ -107,25 +107,30 @@ function finishPhotoIsDark(finish: SignFinishOption): boolean {
 }
 
 /**
- * Text color to apply when a finish is chosen. Keeps a light accent such as
- * gold, and switches near-black ink to white on a dark plate.
+ * Text color to apply when a finish is chosen. Always black or white,
+ * picked for contrast against the plate. Accent inks such as gold stay
+ * off the lettering.
  */
 export function signFinishDefaultTextColor(finish: SignFinishOption): string {
   const plateIsDark =
     perceivedLuminance(finish.backgroundColor) <= 0.5 ||
     finishPhotoIsDark(finish);
-  const inkIsDark = perceivedLuminance(finish.inkColor) <= 0.5;
-  if (plateIsDark && inkIsDark) return "#FFFFFF";
-  return finish.inkColor;
+  return plateIsDark ? "#FFFFFF" : "#000000";
 }
 
-/** First stock photo for a shape, used before the customer picks a finish. */
+/** White plate with black text, used before the customer picks a finish. */
 export function defaultSignFinishForShape(
   shapeTypeId: string | null | undefined,
 ): SignFinishOption | undefined {
   const finishes = getSignFinishesForShape(shapeTypeId);
   return (
-    finishes.find((finish) => finish.group === "Core colors") ?? finishes[0]
+    finishes.find((finish) => finish.label === "White / Black") ??
+    finishes.find(
+      (finish) =>
+        finish.label.startsWith("White") && !finishPhotoIsDark(finish),
+    ) ??
+    finishes.find((finish) => finish.group === "Core colors") ??
+    finishes[0]
   );
 }
 
