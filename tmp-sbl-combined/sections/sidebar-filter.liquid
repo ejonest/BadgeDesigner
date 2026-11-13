@@ -3,6 +3,10 @@
 {% else %}
 	{% assign has_refined = true %} 
 {% endif %}
+{% assign sbl_sign_browse = false %}
+{% if template contains 'search' or collection.handle == 'all' %}
+  {% assign sbl_sign_browse = true %}
+{% endif %}
 
 
 {% if section.settings.display_sidebar or settings.category_layout == "right_sidebar" or template.suffix == 'right-sidebar' %}
@@ -22,7 +26,21 @@
         {% render 'icon-close' %}    
     </a>
   
-    {% if section.settings.enable_categories %}
+    {%- liquid
+      assign sbl_category_selected = false
+      if current_tags
+        for sbl_current_tag in current_tags
+          if sbl_current_tag contains 'sbl:category:'
+            assign sbl_category_selected = true
+            break
+          endif
+        endfor
+      endif
+    -%}
+    {% if sbl_sign_browse %}
+    {% render 'sbl-sign-filters' %}
+    {% endif %}
+    {% if section.settings.enable_categories and sbl_category_selected == false and sbl_sign_browse == false %}
     <div class="widget sidebar-links" data-has-collapse>
         {% if section.settings.title_categories != blank %}
         <div class="widget-title">
@@ -107,7 +125,9 @@
     </div>
     {% endif %}
 
+    {% unless sbl_sign_browse %}
     {% render 'sbl-sign-filters' %}
+    {% endunless %}
   
     <div class="sidebar-filter" data-has-collapse>
         {% if settings.category_layout == "right_sidebar" or settings.category_layout == "express_order" or template.suffix == 'express-order' or settings.category_layout == "mansory" or template.suffix == 'mansory' or settings.category_layout == "full_with" or template.suffix == 'fullwidth' or template.suffix == 'right-sidebar' or settings.category_layout == "with_banner" or template.suffix == 'with-banner' %}
@@ -138,7 +158,7 @@
                         <input type="checkbox" value="{{ tag_value }}" {% if current_tags contains tag %}checked{% endif %}/>
                         <a href="{{tag_value}}" class="selected-tag">
                           <span>
-                            {{tag | split: '|' | first}}
+                            {% render 'sbl-tag-label', tag: tag %}
                             <svg xmlns="http://www.w3.org/2000/svg" fill="#000000" viewBox="0 0 48 48" width="144px" height="144px"><path d="M 38.982422 6.9707031 A 2.0002 2.0002 0 0 0 37.585938 7.5859375 L 24 21.171875 L 10.414062 7.5859375 A 2.0002 2.0002 0 0 0 8.9785156 6.9804688 A 2.0002 2.0002 0 0 0 7.5859375 10.414062 L 21.171875 24 L 7.5859375 37.585938 A 2.0002 2.0002 0 1 0 10.414062 40.414062 L 24 26.828125 L 37.585938 40.414062 A 2.0002 2.0002 0 1 0 40.414062 37.585938 L 26.828125 24 L 40.414062 10.414062 A 2.0002 2.0002 0 0 0 38.982422 6.9707031 z"/></svg>
                           </span>
                         </a>

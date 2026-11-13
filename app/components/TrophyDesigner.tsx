@@ -377,7 +377,7 @@ function PlateArtwork({
   );
 }
 
-function TrophyPreview({
+function TrophyArtwork({
   product,
   option,
   lines,
@@ -396,7 +396,40 @@ function TrophyPreview({
 }) {
   if (mode === "plate") {
     return (
-      <div className="tr-preview-stage is-plate">
+      <PlateArtwork
+        option={option}
+        lines={lines}
+        fontFamily={fontFamily}
+        lineStyles={lineStyles}
+      />
+    );
+  }
+
+  return (
+    <div className="tr-trophy-artwork">
+      <img className="tr-trophy-photo" src={option.trophySrc} alt="" />
+      {product.logoInsert && logoSrc ? (
+        <img
+          className="tr-trophy-insert"
+          src={logoSrc}
+          alt="Uploaded logo"
+          style={{
+            left: `${product.logoInsert.left}%`,
+            top: `${product.logoInsert.top}%`,
+            width: `${product.logoInsert.width}%`,
+            height: `${product.logoInsert.height}%`,
+          }}
+        />
+      ) : null}
+      <div
+        className="tr-trophy-plate"
+        style={{
+          left: `${product.plateBounds.left}%`,
+          top: `${product.plateBounds.top}%`,
+          width: `${product.plateBounds.width}%`,
+          height: `${product.plateBounds.height}%`,
+        }}
+      >
         <PlateArtwork
           option={option}
           lines={lines}
@@ -404,43 +437,24 @@ function TrophyPreview({
           lineStyles={lineStyles}
         />
       </div>
-    );
-  }
+    </div>
+  );
+}
 
+function TrophyPreview(
+  props: {
+    product: TrophyProduct;
+    option: TrophyPlateOption;
+    lines: string[];
+    fontFamily: string;
+    lineStyles: TrophyLineStyle[];
+    logoSrc?: string | null;
+    mode: PreviewMode;
+  },
+) {
   return (
-    <div className="tr-preview-stage is-trophy">
-      <div className="tr-trophy-artwork">
-        <img className="tr-trophy-photo" src={option.trophySrc} alt="" />
-        {product.logoInsert && logoSrc ? (
-          <img
-            className="tr-trophy-insert"
-            src={logoSrc}
-            alt="Uploaded logo"
-            style={{
-              left: `${product.logoInsert.left}%`,
-              top: `${product.logoInsert.top}%`,
-              width: `${product.logoInsert.width}%`,
-              height: `${product.logoInsert.height}%`,
-            }}
-          />
-        ) : null}
-        <div
-          className="tr-trophy-plate"
-          style={{
-            left: `${product.plateBounds.left}%`,
-            top: `${product.plateBounds.top}%`,
-            width: `${product.plateBounds.width}%`,
-            height: `${product.plateBounds.height}%`,
-          }}
-        >
-          <PlateArtwork
-            option={option}
-            lines={lines}
-            fontFamily={fontFamily}
-            lineStyles={lineStyles}
-          />
-        </div>
-      </div>
+    <div className={`tr-preview-stage is-${props.mode}`}>
+      <TrophyArtwork {...props} />
     </div>
   );
 }
@@ -504,6 +518,32 @@ export default function TrophyDesigner() {
       ? bulkRows[selectedBulkRow].lineStyles
       : lineStyles;
   const price = getTrophyPrice(orderQuantity);
+  const proofPieces = useMemo(() => {
+    const captionFor = (value: string[]) =>
+      value
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .join(" · ");
+    if (bulkMode && bulkRows.length > 0) {
+      return bulkRows.flatMap((row, rowIndex) =>
+        Array.from({ length: Math.max(1, row.quantity) }, (_, copy) => ({
+          key: `${rowIndex}-${copy}`,
+          lines: row.lines,
+          lineStyles: row.lineStyles ?? lineStyles,
+          caption: captionFor(row.lines),
+        })),
+      );
+    }
+    return Array.from({ length: Math.max(1, quantity) }, (_, copy) => ({
+      key: `order-${copy}`,
+      lines,
+      lineStyles,
+      caption: captionFor(lines),
+    }));
+  }, [bulkMode, bulkRows, lineStyles, lines, quantity]);
+  const proofCaptionsDiffer = proofPieces.some(
+    (piece) => piece.caption !== proofPieces[0]?.caption,
+  );
   const designReady = bulkMode
     ? bulkRows.length > 0 && bulkRows.every((row) => row.lines[0].trim())
     : product.logoInsert
@@ -1089,7 +1129,8 @@ export default function TrophyDesigner() {
 
       const svgBlob = (svg: string) =>
         new Blob([svg], { type: "image/svg+xml" });
-      let proofPdf: Blob | null = null;
+      const proofItems: Parameters<typeof generateTrophyProofPdf>[0]["items"] =
+        [];
       for (let index = 0; index < rowSpecs.length; index += 1) {
         const row = rowSpecs[index];
         const svg = trophyPlateToSvgString({
@@ -1117,18 +1158,22 @@ export default function TrophyDesigner() {
           thumb.blob,
           `trophy-${index}-thumbnail.jpg`,
         );
-        if (index === 0) {
-          proofPdf = await generateTrophyProofPdf({
-            designId,
-            thumbnailDataUrl: thumb.dataUrl,
-            awardLabel: product.label,
-            plateLabel: option.label,
-            lines: row.lines,
-            quantity: orderQuantity,
-            unitPrice: price.perUnit,
-          });
-        }
+        proofItems.push({
+          dataUrl: thumb.dataUrl,
+          width: thumb.width,
+          height: thumb.height,
+          lines: row.lines,
+          quantity: row.quantity,
+        });
       }
+      const proofPdf = await generateTrophyProofPdf({
+        designId,
+        awardLabel: product.shortLabel,
+        plateLabel: option.label,
+        items: proofItems,
+        unitPrice: price.perUnit,
+        totalPrice: price.total,
+      });
 
       const draftRes = await fetch(getDesignerApiPaths("trophy").saveDraft, {
         method: "POST",
@@ -1153,6 +1198,7 @@ export default function TrophyDesigner() {
         unitPrice: price.perUnit,
         logoName,
       };
+      if (proofUrl) URL.revokeObjectURL(proofUrl);
       setProofUrl(URL.createObjectURL(proofPdf));
       setProofOpen(true);
     } catch (caught) {
@@ -1936,19 +1982,48 @@ export default function TrophyDesigner() {
                       <span className="gf-switch-short">Trophy</span>
                     </button>
                   </div>
-                  <TrophyPreview
-                    product={product}
-                    option={option}
-                    lines={previewLines}
-                    fontFamily={fontFamily}
-                    lineStyles={previewLineStyles}
-                    logoSrc={logoDataUrl}
-                    mode={previewMode}
-                  />
+                  {step === "done" && proofPieces.length > 1 ? (
+                    <div className="tr-preview-stage is-order">
+                      <div
+                        className={`tr-proof-grid is-${previewMode}`}
+                        aria-label={`${proofPieces.length} trophies in this order`}
+                      >
+                        {proofPieces.map((piece, index) => (
+                          <figure className="tr-proof-card" key={piece.key}>
+                            <TrophyArtwork
+                              product={product}
+                              option={option}
+                              lines={piece.lines}
+                              fontFamily={fontFamily}
+                              lineStyles={piece.lineStyles}
+                              logoSrc={logoDataUrl}
+                              mode={previewMode}
+                            />
+                            {proofCaptionsDiffer ? (
+                              <figcaption>
+                                {piece.caption || `Trophy ${index + 1}`}
+                              </figcaption>
+                            ) : null}
+                          </figure>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <TrophyPreview
+                      product={product}
+                      option={option}
+                      lines={previewLines}
+                      fontFamily={fontFamily}
+                      lineStyles={previewLineStyles}
+                      logoSrc={logoDataUrl}
+                      mode={previewMode}
+                    />
+                  )}
                 </div>
                 <p className="tr-preview-caption">
-                  Preview is an approximation. Final engraving placement may
-                  vary slightly.
+                  {step === "done" && proofPieces.length > 1
+                    ? `Showing all ${proofPieces.length} trophies in this order. Final engraving placement may vary slightly.`
+                    : "Preview is an approximation. Final engraving placement may vary slightly."}
                 </p>
               </div>
             ) : null}
@@ -1958,25 +2033,21 @@ export default function TrophyDesigner() {
 
       {proofOpen && proofUrl ? (
         <div className="gf-modal-backdrop" role="dialog" aria-modal="true">
-          <div className="gf-modal">
+          <div className="gf-modal tr-proof-modal">
             <h2 className="gf-modal-title">Your preview</h2>
-            <p className="gf-muted" style={{ marginBottom: 12 }}>
-              Confirm the wording and plate, then add this{" "}
-              {bulkMode && bulkRows.length > 0
-                ? `${bulkRows.length}-design bulk order`
-                : "trophy"}{" "}
-              to your cart.{" "}
-              {bulkMode && bulkRows.length > 1
-                ? "The preview shows the first name; every piece is added with the same award, plate, and font."
-                : ""}
+            <div className="tr-proof-body">
+            <p className="gf-muted">
+              Confirm every trophy in this order, including wording and
+              quantity, then add it to your cart.
             </p>
             <ProofPdfViewer
               url={proofUrl}
-              title="Trophy plate preview"
+              title="Trophy preview"
               loadingLabel="Loading preview..."
               failureLabel="Could not render the preview."
             />
             {cartError ? <div className="gf-error">{cartError}</div> : null}
+            </div>
             <div className="gf-modal-actions">
               <button
                 type="button"

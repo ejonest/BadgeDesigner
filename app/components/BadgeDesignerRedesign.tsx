@@ -61,6 +61,7 @@ import { AqbBadgeOrderQtySection } from "./AqbBadgeOrderQtySection";
 import { AqbDeskSignOrderSection } from "./AqbDeskSignOrderSection";
 import { BadgeQtyStepper } from "./BadgeQtyStepper";
 import { AqbToolActionsRow } from "./AqbToolActionsRow";
+import { AqbDesignActions } from "./AqbDesignActions";
 import { AqbMobileActionsBar } from "./AqbMobileActionsBar";
 import {
   AqbResetDesignConfirmModal,
@@ -16491,7 +16492,32 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 }
                 extra={usesAqbShell ? undefined : cloudLibrarySaveHint}
               />
-              <AqbPreviewActionsRow {...previewActionsRowProps} />
+              {usesAqbShell ? (
+                <AqbDesignActions
+                  {...previewActionsRowProps}
+                  onUndo={handleUndo}
+                  undoDisabled={undoHistory.length === 0}
+                  onReset={promptResetBadge}
+                  showResetAll={multipleBadges.length > 1}
+                  onResetAll={promptResetAllBadges}
+                  showApplyFormatToAll={multipleBadges.length > 1}
+                  onApplyFormatToAll={applyAllFormattingToAll}
+                  applyFormatLabel={
+                    variant === "sign"
+                      ? "Apply this sign's shape, size, color, and text formatting to every sign"
+                      : `Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`
+                  }
+                  onHelp={() => setShowHelpModal(true)}
+                  onSave={() => {
+                    void saveBadge();
+                  }}
+                  onLoad={() => {
+                    void onLoadDesignClick();
+                  }}
+                />
+              ) : (
+                <AqbPreviewActionsRow {...previewActionsRowProps} />
+              )}
             </div>
             <div className="aqb-preview-area relative min-h-[220px] gap-3.5 bg-[#E8E4DC] px-3 py-7 md:px-5 flex flex-col items-center justify-center">
               {multipleBadges.length > 0 ? (
@@ -16914,7 +16940,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               </div>
               {multipleBadges.length > 0 ? deskSignInkNoticeUi : null}
             </div>
-            {aqbBadgeToolActions}
+            {usesAqbShell ? null : aqbBadgeToolActions}
             {multipleBadges.length > 0
               ? (() => {
                   const p = getBadgeForPreview(

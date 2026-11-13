@@ -1,3 +1,5 @@
+import type { PlaqueAwardFormatDefinition } from "../constants/plaqueFormats";
+
 export interface BadgeLine {
   id: string;
   text: string;
@@ -15,6 +17,12 @@ export interface BadgeLine {
   italic?: boolean;
   underline?: boolean;
   fontFamily?: string;
+  /** Plaque award layout: multiplies that line’s format size. 1 matches the format. */
+  plaqueSizeScale?: number;
+  /** When true, bold and italic replace the award format’s emphasis for this line. */
+  plaqueEmphasisCustom?: boolean;
+  /** When true, fontFamily replaces the plaque default for this line only. */
+  plaqueFontCustom?: boolean;
 }
 
 /**
@@ -105,6 +113,14 @@ export interface Badge {
    * {@link plaqueUseDefaultAttachedAwardVisual} supplies the default Standard look).
    */
   plaqueFormatId?: string;
+  /**
+   * Catalog design chosen in the plaque picker. Print and reload use
+   * {@link plaqueFormatSnapshot} so later catalog edits do not change this order.
+   */
+  plaqueCatalogSlug?: string;
+  plaqueCatalogSchemaVersion?: number;
+  /** Immutable award-format copy captured when the customer chose a catalog design. */
+  plaqueFormatSnapshot?: PlaqueAwardFormatDefinition;
   backing: 'pin' | 'magnetic' | 'adhesive';
   /** Name badge tool: optional left-side pictogram id from {@link BADGE_ICON_IDS}. Omit = none. */
   badgeIconId?: string;

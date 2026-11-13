@@ -118,11 +118,24 @@ export function signFinishDefaultTextColor(finish: SignFinishOption): string {
   return plateIsDark ? "#FFFFFF" : "#000000";
 }
 
-/** White plate with black text, used before the customer picks a finish. */
+/** Shape-picker photos and the finish applied when that shape is first chosen. */
+const SHAPE_DEFAULT_FINISH_IDS: Record<string, string> = {
+  standard: "standard-blue-white",
+  "designer-heart": "designer-heart-brushed-silver",
+};
+
+/** Finish used before the customer picks one. Standard starts blue; Designer starts brushed silver; other shapes start white. */
 export function defaultSignFinishForShape(
   shapeTypeId: string | null | undefined,
 ): SignFinishOption | undefined {
   const finishes = getSignFinishesForShape(shapeTypeId);
+  const preferredId = shapeTypeId
+    ? SHAPE_DEFAULT_FINISH_IDS[shapeTypeId]
+    : undefined;
+  if (preferredId) {
+    const preferred = finishes.find((finish) => finish.id === preferredId);
+    if (preferred) return preferred;
+  }
   return (
     finishes.find((finish) => finish.label === "White / Black") ??
     finishes.find(

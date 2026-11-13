@@ -119,10 +119,10 @@
       "cart_supermarket": "Cart",
       "label": "Note",
       "label_text": "Additional comments",
-      "free_shipping_message_1": "You quality for free shipping!",
+      "free_shipping_message_1": "You qualify for free shipping!",
       "free_shipping_message_2": "Only",
       "free_shipping_message_3": "away from",
-      "free_shipping_message_4": "free shipping",
+      "free_shipping_message_4": "free shipping on qualifying orders",
       "free_shipping_1": "Free",
       "free_shipping_2": "TBD",
       "shipping_calculator_button": "Calculate Shipping",
@@ -160,8 +160,8 @@
       "error": "Error",
       "loading": "Loading",
       "close": "Close",
-      "popup_cart_des": "The following items has been added to your cart:",
-      "items_in_your_cart": "items in your shopping cart "
+      "popup_cart_des": "Added to your cart:",
+      "items_in_your_cart": "in your shopping cart "
     }
   },
   "slideshow": {

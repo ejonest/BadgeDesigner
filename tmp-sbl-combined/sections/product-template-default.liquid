@@ -687,6 +687,41 @@ endfor
 </div>
 
 {{ 'option_selection.js' | shopify_asset_url | script_tag }}
+{% unless product == empty or is_sign_designer_product or is_plaque_designer_product or extra_designer != blank %}
+<script>
+  (function () {
+    var colors = ['Blue','Green','Black','White','Red','Yellow','Brown','Grey','Gray','Gold','Silver','Navy','Burgundy','Orange','Pink','Purple','Beige','Ivory','Tan','Cream','Marble'];
+    function clean(text) {
+      var fixed = String(text || '').replace(/(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)'/g, '$1 x $2"');
+      return fixed.split(' / ').map(function (part) {
+        var words = part.trim().split(/\s+/);
+        var last = words[words.length - 1];
+        if (words.length > 2 && colors.indexOf(last) !== -1) return last;
+        return part.trim();
+      }).join(' / ');
+    }
+    function apply() {
+      document.querySelectorAll('.selector-wrapper select option, .product-shop select[name="id"] option').forEach(function (opt) {
+        var isVariant = opt.parentElement && opt.parentElement.name === 'id';
+        var source = opt.getAttribute('data-sbl-source');
+        if (!source) {
+          source = isVariant ? opt.textContent : (opt.value || opt.textContent);
+          opt.setAttribute('data-sbl-source', source);
+        }
+        if (!isVariant) opt.value = source;
+        var next = clean(source);
+        if (opt.textContent !== next) opt.textContent = next;
+      });
+    }
+    apply();
+    var tries = 0;
+    var timer = setInterval(function () {
+      apply();
+      if (++tries > 12) clearInterval(timer);
+    }, 250);
+  })();
+</script>
+{% endunless %}
 
 {% unless product == empty or is_sign_designer_product or is_plaque_designer_product or extra_designer != blank %}
 <script>

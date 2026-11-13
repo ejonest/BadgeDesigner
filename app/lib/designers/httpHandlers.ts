@@ -41,6 +41,9 @@ const DESIGN_META_KEYS = [
   "selectedPlaqueLayoutId",
   "selectedPlaqueSize",
   "badgeOrderQty",
+  "plaqueCatalogSlug",
+  "plaqueCatalogSchemaVersion",
+  "plaqueFormatSnapshot",
 ] as const;
 
 function pickDesignMeta(

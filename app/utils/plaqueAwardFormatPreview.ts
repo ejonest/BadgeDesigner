@@ -28,6 +28,23 @@ const PLAQUE_AWARD_FORMAT_PREVIEW_LOGO_SRC = `data:image/svg+xml,${encodeURIComp
   PREVIEW_LOGO_SVG,
 )}`;
 
+/** Generic emblem for the attached-plate card on the layout step. */
+const ATTACHED_LAYOUT_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#f4f1ea"/>
+  <circle cx="100" cy="74" r="36" fill="none" stroke="#1a1a1a" stroke-width="6"/>
+  <path d="M100 50l7.2 16.4 17.8 1.8-13.4 11.8 4 17.4L100 88.8 84.4 97.4l4-17.4-13.4-11.8 17.8-1.8z" fill="#1a1a1a"/>
+  <text x="100" y="142" text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', serif" font-size="36" font-weight="700"
+    fill="#1a1a1a">Your</text>
+  <text x="100" y="182" text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', serif" font-size="36" font-weight="700"
+    fill="#1a1a1a">Logo</text>
+</svg>`;
+
+export const PLAQUE_ATTACHED_LAYOUT_LOGO_SRC = `data:image/svg+xml,${encodeURIComponent(
+  ATTACHED_LAYOUT_LOGO_SVG,
+)}`;
+
 /**
  * Deterministic badge for “Choose award format” thumbnails: brushed-gold plate, sample copy, placeholder logo.
  */
@@ -95,13 +112,21 @@ export function buildPlaqueLayoutPreviewBadge(params: {
   plateBackgroundHex?: string;
 }): Badge | null {
   if (params.layoutId === "plaque-attached") {
-    return buildPlaqueAwardFormatPreviewBadge({
+    const badge = buildPlaqueAwardFormatPreviewBadge({
       formatId: DEFAULT_PLAQUE_ATTACHED_FORMAT_ID,
       templateId: params.templateId,
       maxLines: ATTACHED_PLAQUE_MAX_TEXT_LINES,
       defaultLineShape: params.defaultLineShape,
       plateBackgroundHex: params.plateBackgroundHex,
     });
+    if (!badge?.logo) return badge;
+    return {
+      ...badge,
+      logo: {
+        ...badge.logo,
+        src: PLAQUE_ATTACHED_LAYOUT_LOGO_SRC,
+      },
+    };
   }
 
   return {

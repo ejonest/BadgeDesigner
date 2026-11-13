@@ -48,6 +48,27 @@
         <strong> &nbsp;"{{ search.terms }}"&nbsp; </strong>
         {% render 'multilang' with settings.search_4 %}
       </h2>
+      <p class="sbl-search-count">{{ search.results_count }} {% if search.results_count == 1 %}sign{% else %}signs{% endif %}</p>
+      <label for="sbl-search-sort">Sort by</label>
+      <select id="sbl-search-sort">
+        <option value="relevance">Relevance</option>
+        <option value="price-ascending">Price, low to high</option>
+        <option value="price-descending">Price, high to low</option>
+      </select>
+      <script>
+        (function () {
+          var select = document.getElementById('sbl-search-sort');
+          if (!select) return;
+          var current = new URL(window.location.href).searchParams.get('sort_by') || 'relevance';
+          if (select.querySelector('option[value="' + current + '"]')) select.value = current;
+          select.addEventListener('change', function () {
+            var url = new URL(window.location.href);
+            url.searchParams.set('sort_by', select.value);
+            url.searchParams.delete('page');
+            window.location = url.toString();
+          });
+        })();
+      </script>
     </header>
 
     {% comment %}

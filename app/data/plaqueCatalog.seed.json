@@ -1,0 +1,918 @@
+{
+  "schemaVersion": 1,
+  "designs": [
+    {
+      "slug": "church",
+      "name": "Church and religion",
+      "description": "Religious emblem on a full metal plate.",
+      "category": "Church",
+      "sort": 10,
+      "layoutId": "plaque-attached",
+      "showInAttachedPicker": true,
+      "defaultPlate": "black-white",
+      "defaultFrame": "wood",
+      "schemaVersion": 1,
+      "format": {
+        "id": "plaque-catalog-church",
+        "name": "Church and religion",
+        "description": "Presented-to plate. The religious emblem is the catalog artwork; the customer edits the wording.",
+        "border": "thick",
+        "layoutEngine": "classic-fixed",
+        "slots": [
+          {
+            "kind": "static",
+            "text": "presented to",
+            "sizeMul": 0.42,
+            "italic": true
+          },
+          {
+            "kind": "user",
+            "userIndex": 0,
+            "placeholder": "YOUR NAME HERE",
+            "editorLabel": "Recipient name",
+            "sizeMul": 1.18,
+            "bold": true,
+            "uppercase": true
+          },
+          {
+            "kind": "user",
+            "userIndex": 1,
+            "placeholder": "Your custom text here",
+            "editorLabel": "Award line 1",
+            "sizeMul": 0.82
+          },
+          {
+            "kind": "divider",
+            "style": "whisker"
+          },
+          {
+            "kind": "user",
+            "userIndex": 2,
+            "placeholder": "Your custom text here",
+            "editorLabel": "Award line 2",
+            "sizeMul": 0.82
+          },
+          {
+            "kind": "user",
+            "userIndex": 3,
+            "placeholder": "Date here",
+            "editorLabel": "Date",
+            "sizeMul": 0.78
+          }
+        ]
+      },
+      "variants": [
+        {
+          "plate": "black-white",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Church/Church-and-Religion-Theme-Customizable-Award-Plaque-Black-Frame-(black-white)-main-400x400-preview.jpg",
+          "storagePath": "catalog/church/black-black-white.jpg",
+          "imageUrl": "https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/plaque-images/catalog/church/black-black-white.jpg"
+        },
+        {
+          "plate": "full-color",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Church/Church-and-Religion-Theme-Customizable-Award-Plaque-Black-Frame-(full-color)-main-400x400-preview.jpg",
+          "storagePath": "catalog/church/black-full-color.jpg",
+          "imageUrl": "https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/plaque-images/catalog/church/black-full-color.jpg"
+        },
+        {
+          "plate": "gold",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Church/Church-and-Religion-Theme-Customizable-Award-Plaque-Black-Frame-(gold)-main-400x400-preview.jpg",
+          "storagePath": "catalog/church/black-gold.jpg",
+          "imageUrl": "https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/plaque-images/catalog/church/black-gold.jpg"
+        },
+        {
+          "plate": "silver",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Church/Church-and-Religion-Theme-Customizable-Award-Plaque-Black-Frame-(silver)-main-400x400-preview.jpg",
+          "storagePath": "catalog/church/black-silver.jpg",
+          "imageUrl": "https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/plaque-images/catalog/church/black-silver.jpg"
+        },
+        {
+          "plate": "white-black",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Church/Church-and-Religion-Theme-Customizable-Award-Plaque-Black-Frame-(white-black)-main-400x400-preview.jpg",
+          "storagePath": "catalog/church/black-white-black.jpg",
+          "imageUrl": "https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/plaque-images/catalog/church/black-white-black.jpg"
+        },
+        {
+          "plate": "black-white",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Church/Church-and-Religion-Theme-Customizable-Award-Plaque-(black-white)-main-400x400-preview.jpg",
+          "storagePath": "catalog/church/wood-black-white.jpg",
+          "imageUrl": "https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/plaque-images/catalog/church/wood-black-white.jpg"
+        },
+        {
+          "plate": "full-color",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Church/Church-and-Religion-Theme-Customizable-Award-Plaque-(full-color)-main-400x400-preview.jpg",
+          "storagePath": "catalog/church/wood-full-color.jpg",
+          "imageUrl": "https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/plaque-images/catalog/church/wood-full-color.jpg"
+        },
+        {
+          "plate": "gold",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Church/Church-and-Religion-Theme-Customizable-Award-Plaque-(gold)-main-400x400-preview.jpg",
+          "storagePath": "catalog/church/wood-gold.jpg",
+          "imageUrl": "https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/plaque-images/catalog/church/wood-gold.jpg"
+        },
+        {
+          "plate": "silver",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Church/Church-and-Religion-Theme-Customizable-Award-Plaque-(silver)-main-400x400-preview.jpg",
+          "storagePath": "catalog/church/wood-silver.jpg",
+          "imageUrl": "https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/plaque-images/catalog/church/wood-silver.jpg"
+        },
+        {
+          "plate": "white-black",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Church/Church-and-Religion-Theme-Customizable-Award-Plaque-(white-black)-main-400x400-preview.jpg",
+          "storagePath": "catalog/church/wood-white-black.jpg",
+          "imageUrl": "https://ssgexgjjlectoqjiekri.supabase.co/storage/v1/object/public/plaque-images/catalog/church/wood-white-black.jpg"
+        }
+      ]
+    },
+    {
+      "slug": "logo",
+      "name": "Your logo",
+      "description": "Room on the plate for your logo.",
+      "category": "Logo",
+      "sort": 20,
+      "layoutId": "plaque-attached",
+      "showInAttachedPicker": true,
+      "defaultPlate": "black-white",
+      "defaultFrame": "wood",
+      "schemaVersion": 1,
+      "format": {
+        "id": "plaque-catalog-logo",
+        "name": "Your logo",
+        "description": "Presented-to plate with space above the wording for an uploaded logo.",
+        "border": "thick",
+        "layoutEngine": "classic-fixed",
+        "slots": [
+          {
+            "kind": "static",
+            "text": "presented to",
+            "sizeMul": 0.42,
+            "italic": true
+          },
+          {
+            "kind": "user",
+            "userIndex": 0,
+            "placeholder": "YOUR NAME HERE",
+            "editorLabel": "Recipient name",
+            "sizeMul": 1.18,
+            "bold": true,
+            "uppercase": true
+          },
+          {
+            "kind": "user",
+            "userIndex": 1,
+            "placeholder": "Your custom text here",
+            "editorLabel": "Award line 1",
+            "sizeMul": 0.82
+          },
+          {
+            "kind": "divider",
+            "style": "whisker"
+          },
+          {
+            "kind": "user",
+            "userIndex": 2,
+            "placeholder": "Your custom text here",
+            "editorLabel": "Award line 2",
+            "sizeMul": 0.82
+          },
+          {
+            "kind": "user",
+            "userIndex": 3,
+            "placeholder": "Date here",
+            "editorLabel": "Date",
+            "sizeMul": 0.78
+          }
+        ]
+      },
+      "variants": [
+        {
+          "plate": "black-white",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Logo Plaques/Custom-Insert-Your-Logo-Award-Plaque-wood-frame-(black-white)-Black-Frame-main-400x400-preview.jpg",
+          "storagePath": "catalog/logo/black-black-white.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=logo&plate=black-white&frame=black"
+        },
+        {
+          "plate": "full-color",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Logo Plaques/Custom-Insert-Your-Logo-Award-Plaque-wood-frame-(full-color)-Black-Frame-main-400x400-preview.jpg",
+          "storagePath": "catalog/logo/black-full-color.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=logo&plate=full-color&frame=black"
+        },
+        {
+          "plate": "gold",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Logo Plaques/Custom-Insert-Your-Logo-Award-Plaque-wood-frame-(brushed-gold)-Black-Frame-main-400x400-preview.jpg",
+          "storagePath": "catalog/logo/black-gold.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=logo&plate=gold&frame=black"
+        },
+        {
+          "plate": "silver",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Logo Plaques/Custom-Insert-Your-Logo-Award-Plaque-wood-frame-(brushed-silver)-Black-Frame-main-400x400-preview.jpg",
+          "storagePath": "catalog/logo/black-silver.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=logo&plate=silver&frame=black"
+        },
+        {
+          "plate": "white-black",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Logo Plaques/Custom-Insert-Your-Logo-Award-Plaque-wood-frame-(white-black)-Black-Frame-main-400x400-preview.jpg",
+          "storagePath": "catalog/logo/black-white-black.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=logo&plate=white-black&frame=black"
+        },
+        {
+          "plate": "black-white",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Logo Plaques/Custom-Insert-Your-Logo-Award-Plaque-wood-frame-(black-white)-main-400x400-preview.jpg",
+          "storagePath": "catalog/logo/wood-black-white.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=logo&plate=black-white&frame=wood"
+        },
+        {
+          "plate": "full-color",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Logo Plaques/Custom-Insert-Your-Logo-Award-Plaque-wood-frame-(full-color)-main-400x400-preview.jpg",
+          "storagePath": "catalog/logo/wood-full-color.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=logo&plate=full-color&frame=wood"
+        },
+        {
+          "plate": "gold",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Logo Plaques/Custom-Insert-Your-Logo-Award-Plaque-wood-frame-(brushed-gold)-main-400x400-preview.jpg",
+          "storagePath": "catalog/logo/wood-gold.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=logo&plate=gold&frame=wood"
+        },
+        {
+          "plate": "silver",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Logo Plaques/Custom-Insert-Your-Logo-Award-Plaque-wood-frame-(brushed-silver)-main-400x400-preview.jpg",
+          "storagePath": "catalog/logo/wood-silver.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=logo&plate=silver&frame=wood"
+        },
+        {
+          "plate": "white-black",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Logo Plaques/Custom-Insert-Your-Logo-Award-Plaque-wood-frame-(white-black)-main-400x400-preview.jpg",
+          "storagePath": "catalog/logo/wood-white-black.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=logo&plate=white-black&frame=wood"
+        }
+      ]
+    },
+    {
+      "slug": "teacher",
+      "name": "Teacher recognition",
+      "description": "Teacher recognition on a full metal plate.",
+      "category": "Teacher",
+      "sort": 30,
+      "layoutId": "plaque-attached",
+      "showInAttachedPicker": true,
+      "defaultPlate": "black-white",
+      "defaultFrame": "wood",
+      "schemaVersion": 1,
+      "format": {
+        "id": "plaque-catalog-teacher",
+        "name": "Teacher recognition",
+        "description": "Presented-to plate for a teacher recognition award.",
+        "border": "thick",
+        "layoutEngine": "classic-fixed",
+        "slots": [
+          {
+            "kind": "static",
+            "text": "presented to",
+            "sizeMul": 0.42,
+            "italic": true
+          },
+          {
+            "kind": "user",
+            "userIndex": 0,
+            "placeholder": "YOUR NAME HERE",
+            "editorLabel": "Recipient name",
+            "sizeMul": 1.18,
+            "bold": true,
+            "uppercase": true
+          },
+          {
+            "kind": "user",
+            "userIndex": 1,
+            "placeholder": "Your custom text here",
+            "editorLabel": "Award line 1",
+            "sizeMul": 0.82
+          },
+          {
+            "kind": "divider",
+            "style": "whisker"
+          },
+          {
+            "kind": "user",
+            "userIndex": 2,
+            "placeholder": "Your custom text here",
+            "editorLabel": "Award line 2",
+            "sizeMul": 0.82
+          },
+          {
+            "kind": "user",
+            "userIndex": 3,
+            "placeholder": "Date here",
+            "editorLabel": "Date",
+            "sizeMul": 0.78
+          }
+        ]
+      },
+      "variants": [
+        {
+          "plate": "black-white",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Teacher Plaque/Teacher-Recognition-Customizable-Award-Plaque-Black-Frame-(black-white)-main-400x400-preview.jpg",
+          "storagePath": "catalog/teacher/black-black-white.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=teacher&plate=black-white&frame=black"
+        },
+        {
+          "plate": "full-color",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Teacher Plaque/Teacher-Recognition-Customizable-Award-Plaque-Black-Frame-(full-color)-main-400x400-preview.jpg",
+          "storagePath": "catalog/teacher/black-full-color.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=teacher&plate=full-color&frame=black"
+        },
+        {
+          "plate": "gold",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Teacher Plaque/Teacher-Recognition-Customizable-Award-Plaque-Black-Frame-(gold)-main-400x400-preview.jpg",
+          "storagePath": "catalog/teacher/black-gold.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=teacher&plate=gold&frame=black"
+        },
+        {
+          "plate": "silver",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Teacher Plaque/Teacher-Recognition-Customizable-Award-Plaque-Black-Frame-(silver)-main-400x400-preview.jpg",
+          "storagePath": "catalog/teacher/black-silver.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=teacher&plate=silver&frame=black"
+        },
+        {
+          "plate": "white-black",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Teacher Plaque/Teacher-Recognition-Customizable-Award-Plaque-Black-Frame-(white-black)-main-400x400-preview.jpg",
+          "storagePath": "catalog/teacher/black-white-black.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=teacher&plate=white-black&frame=black"
+        },
+        {
+          "plate": "black-white",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Teacher Plaque/Teacher-Recognition-Customizable-Award-Plaque-(black-white)-main-400x400-preview.jpg",
+          "storagePath": "catalog/teacher/wood-black-white.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=teacher&plate=black-white&frame=wood"
+        },
+        {
+          "plate": "full-color",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Teacher Plaque/Teacher-Recognition-Customizable-Award-Plaque-(full-color)-main-400x400-preview.jpg",
+          "storagePath": "catalog/teacher/wood-full-color.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=teacher&plate=full-color&frame=wood"
+        },
+        {
+          "plate": "gold",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Teacher Plaque/Teacher-Recognition-Customizable-Award-Plaque-(gold)-main-400x400-preview.jpg",
+          "storagePath": "catalog/teacher/wood-gold.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=teacher&plate=gold&frame=wood"
+        },
+        {
+          "plate": "silver",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Teacher Plaque/Teacher-Recognition-Customizable-Award-Plaque-(silver)-main-400x400-preview.jpg",
+          "storagePath": "catalog/teacher/wood-silver.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=teacher&plate=silver&frame=wood"
+        },
+        {
+          "plate": "white-black",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Teacher Plaque/Teacher-Recognition-Customizable-Award-Plaque-(white-black)-main-400x400-preview.jpg",
+          "storagePath": "catalog/teacher/wood-white-black.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=teacher&plate=white-black&frame=wood"
+        }
+      ]
+    },
+    {
+      "slug": "service",
+      "name": "Thank you for your service",
+      "description": "Military and first responders on a full metal plate.",
+      "category": "Service",
+      "sort": 40,
+      "layoutId": "plaque-attached",
+      "showInAttachedPicker": true,
+      "defaultPlate": "black-white",
+      "defaultFrame": "wood",
+      "schemaVersion": 1,
+      "format": {
+        "id": "plaque-catalog-service",
+        "name": "Thank you for your service",
+        "description": "Presented-to plate for military and first-responder recognition.",
+        "border": "thick",
+        "layoutEngine": "classic-fixed",
+        "slots": [
+          {
+            "kind": "static",
+            "text": "presented to",
+            "sizeMul": 0.42,
+            "italic": true
+          },
+          {
+            "kind": "user",
+            "userIndex": 0,
+            "placeholder": "YOUR NAME HERE",
+            "editorLabel": "Recipient name",
+            "sizeMul": 1.18,
+            "bold": true,
+            "uppercase": true
+          },
+          {
+            "kind": "user",
+            "userIndex": 1,
+            "placeholder": "Your custom text here",
+            "editorLabel": "Award line 1",
+            "sizeMul": 0.82
+          },
+          {
+            "kind": "divider",
+            "style": "whisker"
+          },
+          {
+            "kind": "user",
+            "userIndex": 2,
+            "placeholder": "Your custom text here",
+            "editorLabel": "Award line 2",
+            "sizeMul": 0.82
+          },
+          {
+            "kind": "user",
+            "userIndex": 3,
+            "placeholder": "Date here",
+            "editorLabel": "Date",
+            "sizeMul": 0.78
+          }
+        ]
+      },
+      "variants": [
+        {
+          "plate": "black-white",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You For your Service Plaque/Thank-You-For-Your-Service-Military-and-First-Responders-Customizable-Award-Plaque-Black-Frame-(black-white)-main-400x400-preview.jpg",
+          "storagePath": "catalog/service/black-black-white.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=service&plate=black-white&frame=black"
+        },
+        {
+          "plate": "full-color",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You For your Service Plaque/Thank-You-For-Your-Service-Military-and-First-Responders-Customizable-Award-Plaque-Black-Frame-(full-color)-main-400x400-preview.jpg",
+          "storagePath": "catalog/service/black-full-color.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=service&plate=full-color&frame=black"
+        },
+        {
+          "plate": "gold",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You For your Service Plaque/Thank-You-For-Your-Service-Military-and-First-Responders-Customizable-Award-Plaque-Black-Frame-(gold)-main-400x400-preview.jpg",
+          "storagePath": "catalog/service/black-gold.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=service&plate=gold&frame=black"
+        },
+        {
+          "plate": "silver",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You For your Service Plaque/Thank-You-For-Your-Service-Military-and-First-Responders-Customizable-Award-Plaque-Black-Frame-(silver)-main-400x400-preview.jpg",
+          "storagePath": "catalog/service/black-silver.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=service&plate=silver&frame=black"
+        },
+        {
+          "plate": "white-black",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You For your Service Plaque/Thank-You-For-Your-Service-Military-and-First-Responders-Customizable-Award-Plaque-Black-Frame-(white-black)-main-400x400-preview.jpg",
+          "storagePath": "catalog/service/black-white-black.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=service&plate=white-black&frame=black"
+        },
+        {
+          "plate": "black-white",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You For your Service Plaque/Thank-You-For-Your-Service-Military-and-First-Responders-Customizable-Award-Plaque-(black-white)-main-400x400-preview.jpg",
+          "storagePath": "catalog/service/wood-black-white.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=service&plate=black-white&frame=wood"
+        },
+        {
+          "plate": "full-color",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You For your Service Plaque/Thank-You-For-Your-Service-Military-and-First-Responders-Customizable-Award-Plaque-(full-color)-main-400x400-preview.jpg",
+          "storagePath": "catalog/service/wood-full-color.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=service&plate=full-color&frame=wood"
+        },
+        {
+          "plate": "gold",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You For your Service Plaque/Thank-You-For-Your-Service-Military-and-First-Responders-Customizable-Award-Plaque-(gold)-main-400x400-preview.jpg",
+          "storagePath": "catalog/service/wood-gold.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=service&plate=gold&frame=wood"
+        },
+        {
+          "plate": "silver",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You For your Service Plaque/Thank-You-For-Your-Service-Military-and-First-Responders-Customizable-Award-Plaque-(silver)-main-400x400-preview.jpg",
+          "storagePath": "catalog/service/wood-silver.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=service&plate=silver&frame=wood"
+        },
+        {
+          "plate": "white-black",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You For your Service Plaque/Thank-You-For-Your-Service-Military-and-First-Responders-Customizable-Award-Plaque-(white-black)-main-400x400-preview.jpg",
+          "storagePath": "catalog/service/wood-white-black.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=service&plate=white-black&frame=wood"
+        }
+      ]
+    },
+    {
+      "slug": "appreciation",
+      "name": "Thank you",
+      "description": "Thank-you artwork on a full metal plate.",
+      "category": "Appreciation",
+      "sort": 50,
+      "layoutId": "plaque-attached",
+      "showInAttachedPicker": true,
+      "defaultPlate": "black-white",
+      "defaultFrame": "wood",
+      "schemaVersion": 1,
+      "format": {
+        "id": "plaque-catalog-appreciation",
+        "name": "Thank you",
+        "description": "Presented-to plate for gratitude and appreciation awards.",
+        "border": "thick",
+        "layoutEngine": "classic-fixed",
+        "slots": [
+          {
+            "kind": "static",
+            "text": "presented to",
+            "sizeMul": 0.42,
+            "italic": true
+          },
+          {
+            "kind": "user",
+            "userIndex": 0,
+            "placeholder": "YOUR NAME HERE",
+            "editorLabel": "Recipient name",
+            "sizeMul": 1.18,
+            "bold": true,
+            "uppercase": true
+          },
+          {
+            "kind": "user",
+            "userIndex": 1,
+            "placeholder": "Your custom text here",
+            "editorLabel": "Award line 1",
+            "sizeMul": 0.82
+          },
+          {
+            "kind": "divider",
+            "style": "whisker"
+          },
+          {
+            "kind": "user",
+            "userIndex": 2,
+            "placeholder": "Your custom text here",
+            "editorLabel": "Award line 2",
+            "sizeMul": 0.82
+          },
+          {
+            "kind": "user",
+            "userIndex": 3,
+            "placeholder": "Date here",
+            "editorLabel": "Date",
+            "sizeMul": 0.78
+          }
+        ]
+      },
+      "variants": [
+        {
+          "plate": "black-white",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You & Appreciation/Thank-You-Gratitude-and-Appreciation-Customizable-Award-Plaque-Black-Frame-(black-white)-main-400x400-preview.jpg",
+          "storagePath": "catalog/appreciation/black-black-white.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=appreciation&plate=black-white&frame=black"
+        },
+        {
+          "plate": "full-color",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You & Appreciation/Thank-You-Gratitude-and-Appreciation-Customizable-Award-Plaque-Black-Frame-(full-color)-main-400x400-preview.jpg",
+          "storagePath": "catalog/appreciation/black-full-color.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=appreciation&plate=full-color&frame=black"
+        },
+        {
+          "plate": "gold",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You & Appreciation/Thank-You-Gratitude-and-Appreciation-Customizable-Award-Plaque-Black-Frame-(gold)-main-400x400-preview.jpg",
+          "storagePath": "catalog/appreciation/black-gold.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=appreciation&plate=gold&frame=black"
+        },
+        {
+          "plate": "silver",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You & Appreciation/Thank-You-Gratitude-and-Appreciation-Customizable-Award-Plaque-Black-Frame-(silver)-main-400x400-preview.jpg",
+          "storagePath": "catalog/appreciation/black-silver.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=appreciation&plate=silver&frame=black"
+        },
+        {
+          "plate": "white-black",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You & Appreciation/Thank-You-Gratitude-and-Appreciation-Customizable-Award-Plaque-Black-Frame-(white-black)-main-400x400-preview.jpg",
+          "storagePath": "catalog/appreciation/black-white-black.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=appreciation&plate=white-black&frame=black"
+        },
+        {
+          "plate": "black-white",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You & Appreciation/Thank-You-Gratitude-and-Appreciation-Customizable-Award-Plaque-(black-white)-main-400x400-preview.jpg",
+          "storagePath": "catalog/appreciation/wood-black-white.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=appreciation&plate=black-white&frame=wood"
+        },
+        {
+          "plate": "full-color",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You & Appreciation/Thank-You-Gratitude-and-Appreciation-Customizable-Award-Plaque-(full-color)-main-400x400-preview.jpg",
+          "storagePath": "catalog/appreciation/wood-full-color.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=appreciation&plate=full-color&frame=wood"
+        },
+        {
+          "plate": "gold",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You & Appreciation/Thank-You-Gratitude-and-Appreciation-Customizable-Award-Plaque-(gold)-main-400x400-preview.jpg",
+          "storagePath": "catalog/appreciation/wood-gold.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=appreciation&plate=gold&frame=wood"
+        },
+        {
+          "plate": "silver",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You & Appreciation/Thank-You-Gratitude-and-Appreciation-Customizable-Award-Plaque-(silver)-main-400x400-preview.jpg",
+          "storagePath": "catalog/appreciation/wood-silver.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=appreciation&plate=silver&frame=wood"
+        },
+        {
+          "plate": "white-black",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Thank You & Appreciation/Thank-You-Gratitude-and-Appreciation-Customizable-Award-Plaque-(white-black)-main-400x400-preview.jpg",
+          "storagePath": "catalog/appreciation/wood-white-black.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=appreciation&plate=white-black&frame=wood"
+        }
+      ]
+    },
+    {
+      "slug": "your-award",
+      "name": "Your award",
+      "description": "First, second, and third place award plates.",
+      "category": "Awards",
+      "sort": 60,
+      "layoutId": "plaque-attached",
+      "showInAttachedPicker": true,
+      "defaultPlate": "black-white",
+      "defaultFrame": "wood",
+      "schemaVersion": 1,
+      "format": {
+        "id": "plaque-catalog-your-award",
+        "name": "Your award",
+        "description": "Wreath plate. A short line under the wreath, the name and date between the rules, and a closing line.",
+        "border": "thick",
+        "layoutEngine": "classic-fixed",
+        "slots": [
+          {
+            "kind": "user",
+            "userIndex": 0,
+            "placeholder": "Your text here",
+            "editorLabel": "Message",
+            "sizeMul": 0.55
+          },
+          {
+            "kind": "divider",
+            "style": "rule"
+          },
+          {
+            "kind": "user",
+            "userIndex": 1,
+            "placeholder": "YOUR NAME HERE",
+            "editorLabel": "Recipient name",
+            "sizeMul": 1.18,
+            "bold": true,
+            "uppercase": true
+          },
+          {
+            "kind": "user",
+            "userIndex": 2,
+            "placeholder": "Date here",
+            "editorLabel": "Date",
+            "sizeMul": 0.7
+          },
+          {
+            "kind": "divider",
+            "style": "rule"
+          },
+          {
+            "kind": "user",
+            "userIndex": 3,
+            "placeholder": "Extra text here",
+            "editorLabel": "Extra line",
+            "sizeMul": 0.55
+          }
+        ]
+      },
+      "variants": [
+        {
+          "plate": "black-white",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Your Award Plaque/_Your-Award_-Plaque-Bundles-(1st,-2nd,-3rd)-wooden-(black-white)-main-400x400.jpg",
+          "storagePath": "catalog/your-award/wood-black-white.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=your-award&plate=black-white&frame=wood"
+        },
+        {
+          "plate": "gold",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Your Award Plaque/_Your-Award_-Plaque-Bundles-(1st,-2nd,-3rd)-wooden-(brushed-gold)-main-400x400.jpg",
+          "storagePath": "catalog/your-award/wood-gold.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=your-award&plate=gold&frame=wood"
+        },
+        {
+          "plate": "white-black",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "Your Award Plaque/_Your-Award_-Plaque-Bundles-(1st,-2nd,-3rd)-wooden-(white-black)-main-400x400.jpg",
+          "storagePath": "catalog/your-award/wood-white-black.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=your-award&plate=white-black&frame=wood"
+        }
+      ]
+    },
+    {
+      "slug": "in-loving-memory",
+      "name": "In loving memory",
+      "description": "Photo opening on the wood, with a separate memorial plate.",
+      "category": "Memorial",
+      "sort": 70,
+      "layoutId": "plaque-detached-landscape",
+      "showInAttachedPicker": false,
+      "defaultPlate": "gold",
+      "defaultFrame": "wood",
+      "schemaVersion": 1,
+      "format": {
+        "id": "plaque-catalog-in-loving-memory",
+        "name": "In loving memory",
+        "description": "Photo plaque. The opening is printed separately from the memorial plate.",
+        "border": "victorian",
+        "layoutEngine": "classic-fixed",
+        "slots": [
+          {
+            "kind": "static",
+            "text": "In Loving Memory",
+            "sizeMul": 0.7,
+            "italic": true
+          },
+          {
+            "kind": "static",
+            "text": "of",
+            "sizeMul": 0.42,
+            "italic": true
+          },
+          {
+            "kind": "user",
+            "userIndex": 0,
+            "placeholder": "Name",
+            "editorLabel": "Name",
+            "sizeMul": 0.9
+          }
+        ]
+      },
+      "variants": [
+        {
+          "plate": "black-white",
+          "frame": "black",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "In Loving Memory Photo Plaque/In-Loving-Memory-photo-black-plaque-main-400x400.jpg",
+          "storagePath": "catalog/in-loving-memory/black-black-white.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=in-loving-memory&plate=black-white&frame=black"
+        },
+        {
+          "plate": "gold",
+          "frame": "wood",
+          "width": 400,
+          "height": 400,
+          "sourceFile": "In Loving Memory Photo Plaque/In-Loving-Memory-photo-wooden-plaque-main-400x400.jpg",
+          "storagePath": "catalog/in-loving-memory/wood-gold.jpg",
+          "imageUrl": "/api/plaque-catalog-asset?slug=in-loving-memory&plate=gold&frame=wood"
+        }
+      ]
+    }
+  ]
+}

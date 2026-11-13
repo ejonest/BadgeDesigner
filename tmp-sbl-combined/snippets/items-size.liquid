@@ -22,8 +22,8 @@
 
     {% if option_count <= 4 %}
     <li class="size-item">
-        <a title="{{value}}" href="{{ product.url}}?variant={{ variant.id }}">
-        {{ value }}
+        <a title="{% render 'sbl-variant-label', label: value %}" href="{{ product.url}}?variant={{ variant.id }}">
+        {% render 'sbl-variant-label', label: value %}
         </a>
     </li>
     {% endif %}

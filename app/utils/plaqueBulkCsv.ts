@@ -6,6 +6,12 @@ export type PlaqueLineStyle = {
   bold: boolean;
   italic: boolean;
   underline: boolean;
+  /** Empty uses the plaque’s default font. */
+  fontFamily: string;
+  /** 1 matches the format or the usual line size. */
+  sizeScale: number;
+  /** When true, bold and italic replace the award format’s emphasis. */
+  emphasisCustom: boolean;
 };
 
 export type PlaqueBulkRow = {

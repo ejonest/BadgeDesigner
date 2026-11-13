@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "taxonomyVersion": "2026-10-16",
+  "taxonomyVersion": "2026-11-06",
   "name": "Signs ByLITA",
   "managedPrefix": "sbl:",
   "minimumScore": 3,
@@ -129,7 +129,8 @@
         "hand wash", "wash hands", "wash your hands", "please wash", "hand soap", "sanitize",
         "please flush", "do not flush", "flush after", "hygiene", "feminine", "diaper",
         "changing station", "changing room", "powder room",
-        "unisex", "all gender", "ladies and gents", "men women", "mens room", "womens room",
+        "unisex", "all gender", "ladies and gents", "ladies", "gentlemen", "men women", "mens room", "womens room",
+        "shower", "mop", "conserve water",
         "staff restroom", "public restroom", "customers only",
         "wash", "rinse", "conserve water", "do not waste water", "waste water"
       ],
@@ -165,7 +166,8 @@
         "biohazard", "high voltage", "electrical panel", "watch your step", "watch your head",
         "wet floor", "slippery", "sharp", "emergency", "sprinkler", "no weapons", "no firearms",
         "unattended", "open door slowly", "construction zone", "do not block", "shallow water",
-        "no diving", "stairs", "facp", "eye wash"
+        "no diving", "stairs", "facp", "eye wash", "water gets very hot", "oxygen",
+        "handrail", "proposition 65", "no climbing"
       ],
       "exclude": ["novelty", "desk sign", "nameplate", "name plate", "wall print", "funny", "coffee", "soliciting"],
       "searchAliases": ["safety", "warning", "caution", "emergency"]
@@ -176,7 +178,8 @@
       "label": "Security & camera",
       "keywords": [
         "surveillance", "video recording", "on camera", "cctv", "security camera",
-        "24hr", "24 hr", "24 hour", "alarm", "monitored", "smile you", "premises"
+        "24hr", "24 hr", "24 hour", "alarm", "monitored", "smile you",
+        "audio and video", "audio video", "unauthorized recording", "recording or photography"
       ],
       "searchAliases": ["security", "camera", "surveillance", "cctv"]
     },
@@ -187,7 +190,7 @@
       "keywords": [
         "employees only", "employee only", "staff only", "authorized personnel", "personnel only",
         "authorized only", "no entry", "do not enter", "no entrar", "restricted",
-        "employees only beyond", "employee entrance", "no guest access", "private",
+        "employees only beyond", "employee entrance", "no guest access", "no guest", "no guests", "private",
         "solo empleados", "prohibido"
       ],
       "exclude": ["private property", "private restroom", "novelty"],
@@ -200,7 +203,9 @@
       "keywords": [
         "break room", "breakroom", "kitchen", "microwave", "refrigerator", "fridge", "dishes",
         "paper towel", "napkin", "breakfast", "lunch room", "hydration", "dishwasher",
-        "coffee station", "clean station", "clean the microwave"
+        "coffee station", "coffee bar", "clean station", "clean the microwave",
+        "pantry", "ice machine", "grill", "snack", "dirty dishes", "wash rinse", "sanitize",
+        "food or drink", "no outside food", "do not put any food", "drinking water", "nacho"
       ],
       "exclude": ["flush", "novelty"],
       "searchAliases": ["break-room", "kitchen", "microwave", "dishes"]
@@ -237,7 +242,8 @@
       "keywords": [
         "no soliciting", "no solicitar", "soliciting", "private property", "no trespassing",
         "trespassing", "keep gate closed", "beware of dog", "dog in yard", "doorbell",
-        "no flyers", "no politics", "no hunting", "posted", "2nd amendment", "second amendment"
+        "no flyers", "no politics", "no hunting", "posted", "2nd amendment", "second amendment",
+        "private residence", "panhandling", "loitering"
       ],
       "searchAliases": ["no-soliciting", "private-property", "no-trespassing", "beware-of-dog"]
     },
@@ -260,7 +266,7 @@
       "kind": "category",
       "id": "do-not-disturb",
       "label": "Do not disturb",
-      "keywords": ["do not disturb", "please knock", "knock before", "quiet please", "quiet hours", "in session", "session in progress", "shhh"],
+      "keywords": ["do not disturb", "please knock", "knock before", "do not knock", "do not ring", "quiet please", "quiet hours", "quiet space", "in session", "session in progress", "shhh", "keep noise", "noise to a minimum", "having a nap", "cell phone"],
       "searchAliases": ["do-not-disturb", "please-knock", "quiet", "in-session"]
     },
     {
@@ -285,7 +291,8 @@
       "keywords": [
         "pay here", "no checks", "no refund", "come again", "refuse service", "we are open",
         "we are closed", "open closed", "store hours", "checkout", "cashier", "fitting room",
-        "dressing room", "all sales final", "customer service", "no shirt", "shoes required"
+        "dressing room", "all sales final", "customer service", "no shirt", "shoes required",
+        "no cash", "cash only", "cash preferred", "tips", "please pay", "back in 5"
       ],
       "searchAliases": ["retail", "checkout", "store-hours", "open-closed"]
     },
@@ -293,21 +300,21 @@
       "kind": "category",
       "id": "parking-traffic",
       "label": "Parking & traffic",
-      "keywords": ["parking", "no parking", "tow away", "tow zone", "reserved parking", "handicap parking", "loading zone", "valet", "speed limit"],
+      "keywords": ["parking", "no parking", "tow away", "tow zone", "reserved parking", "handicap parking", "loading zone", "valet", "speed limit", "electric vehicle", "ev charging", "ev"],
       "searchAliases": ["parking", "no-parking", "tow-away", "reserved-parking"]
     },
     {
       "kind": "category",
       "id": "accessibility-ada",
       "label": "Accessibility & ADA",
-      "keywords": ["ada", "wheelchair", "accessible", "accessibility", "braille", "service animal", "service dog", "handicap"],
+      "keywords": ["ada", "wheelchair", "accessible", "accessibility", "braille", "service animal", "service animals", "service dog", "handicap", "assisted listening"],
       "searchAliases": ["ada", "accessible", "wheelchair", "braille"]
     },
     {
       "kind": "category",
       "id": "wayfinding-directory",
       "label": "Wayfinding & directories",
-      "keywords": ["wayfinding", "you are here", "directory", "this way", "arrow", "other door", "left arrow", "right arrow"],
+      "keywords": ["wayfinding", "you are here", "directory", "this way", "arrow", "other door", "left arrow", "right arrow", "up arrow", "front door", "back door", "other gate"],
       "searchAliases": ["wayfinding", "directory", "arrow", "directional"]
     },
     {
@@ -316,6 +323,149 @@
       "label": "Pool, pet & facility rules",
       "keywords": ["pool", "no diving", "no pets", "pets allowed", "service dog", "spa rules", "sauna", "steam room", "locker room", "gym"],
       "searchAliases": ["pool", "no-pets", "sauna", "locker-room"]
+    },
+    {
+      "kind": "category",
+      "id": "fire-electrical",
+      "label": "Fire & electrical",
+      "keywords": [
+        "electrical room", "electrical panel", "facp", "fire sprinkler", "fire extinguisher",
+        "sprinkler room", "sprinkler water", "fire riser", "high voltage", "fire exit"
+      ],
+      "exclude": ["novelty"],
+      "searchAliases": ["electrical", "fire", "sprinkler", "facp"]
+    },
+    {
+      "kind": "category",
+      "id": "dogs-pets",
+      "label": "Dogs & pets",
+      "keywords": [
+        "beware of dog", "dog will bite", "dog in yard", "dogs in yard", "no pets",
+        "pets allowed", "service animal", "service animals", "service dog"
+      ],
+      "exclude": ["novelty"],
+      "searchAliases": ["dog", "pets", "beware-of-dog", "service-animal"]
+    },
+    {
+      "kind": "category",
+      "id": "weapons-notices",
+      "label": "Weapons notices",
+      "keywords": [
+        "firearm", "firearms", "no weapons", "weapons allowed", "armed property",
+        "armed veteran", "2nd amendment", "second amendment"
+      ],
+      "exclude": ["novelty"],
+      "searchAliases": ["firearms", "weapons", "armed", "second-amendment"]
+    },
+    {
+      "kind": "category",
+      "id": "door-instructions",
+      "label": "Door instructions",
+      "keywords": [
+        "keep door closed", "door closed", "close door", "remain closed", "door must remain",
+        "open door slowly", "close door gently", "slide door", "slide", "door to remain", "keep gate closed",
+        "electric gate"
+      ],
+      "exclude": ["novelty", "door hanger"],
+      "searchAliases": ["door-closed", "close-door", "open-slowly", "slide-door"]
+    },
+    {
+      "kind": "category",
+      "id": "reception-assistance",
+      "label": "Reception & assistance",
+      "keywords": [
+        "ring bell", "ring doorbell", "for assistance", "please check in", "wait to be seated",
+        "order here", "help yourself", "refreshments", "delivery drivers"
+      ],
+      "exclude": ["do not ring", "do not knock", "novelty"],
+      "searchAliases": ["ring-bell", "check-in", "assistance", "order-here"]
+    },
+    {
+      "kind": "category",
+      "id": "payments-policy",
+      "label": "Payments & policies",
+      "keywords": [
+        "no cash", "cash only", "cash preferred", "all sales final", "no checks",
+        "credit card", "debit", "tips", "please pay", "refuse service",
+        "not responsible", "open closed", "back in 5", "come again", "donation", "no alcohol"
+      ],
+      "exclude": ["novelty"],
+      "searchAliases": ["no-cash", "cash-only", "tips", "all-sales-final"]
+    },
+    {
+      "kind": "category",
+      "id": "mail-delivery",
+      "label": "Mail & delivery",
+      "keywords": [
+        "mail drop", "drop box", "outgoing mail", "packages", "package",
+        "deliveries", "delivery", "mail here"
+      ],
+      "exclude": ["novelty", "email"],
+      "searchAliases": ["mail", "packages", "drop-box", "delivery"]
+    },
+    {
+      "kind": "category",
+      "id": "rooms-closets",
+      "label": "Rooms & closets",
+      "keywords": [
+        "laundry", "linen closet", "coat closet", "supply closet", "storage closet",
+        "janitor", "utility closet", "utility room", "server room", "conference room",
+        "waiting room", "pantry", "maintenance room", "laboratory", "x-ray", "x ray",
+        "main office", "lost and found", "lost & found", "elevator", "storage",
+        "towel", "lab", "office", "changing room", "cleaning supplies"
+      ],
+      "exclude": ["novelty", "restroom", "bathroom", "office or business", "office workplace"],
+      "searchAliases": ["laundry", "closet", "conference-room", "server-room"]
+    },
+    {
+      "kind": "category",
+      "id": "beauty-salon",
+      "label": "Beauty & spa",
+      "keywords": [
+        "waxing", "facial room", "treatment room", "dressing room", "fitting room", "changing room",
+        "beauty", "relaxation room", "salon", "sauna"
+      ],
+      "exclude": ["novelty"],
+      "searchAliases": ["salon", "spa", "waxing", "fitting-room"]
+    },
+    {
+      "kind": "category",
+      "id": "gym-fitness",
+      "label": "Gym & fitness",
+      "keywords": ["fitness", "weights", "gym", "locker room", "wipe down machines"],
+      "exclude": ["novelty"],
+      "searchAliases": ["gym", "fitness", "weights", "locker-room"]
+    },
+    {
+      "kind": "category",
+      "id": "church",
+      "label": "Church",
+      "keywords": ["sanctuary", "church", "pastor", "chapel", "worship"],
+      "exclude": ["novelty", "worship coffee"],
+      "searchAliases": ["church", "sanctuary", "pastor", "chapel"]
+    },
+    {
+      "kind": "category",
+      "id": "house-rules",
+      "label": "House rules",
+      "keywords": [
+        "remove your shoes", "remove shoes", "shoes off", "quitarse", "wipe your feet",
+        "quiet hours", "keep noise", "noise to a minimum", "no pooping",
+        "children unattended", "leave your children", "leave children", "no children",
+        "shirt and shoes", "shoes required", "do not touch", "do not sit",
+        "clean up after yourself", "cell phone", "thermostat", "temperature", "a c",
+        "respectful behavior"
+      ],
+      "exclude": ["novelty"],
+      "searchAliases": ["shoes-off", "quiet-hours", "house-rules", "children"]
+    },
+    {
+      "kind": "category",
+      "id": "bilingual",
+      "label": "Bilingual",
+      "keywords": ["bilingual", "baño", "bano", "no solicitar", "empuje", "jale", "quitarse", "reduzca"],
+      "exclude": ["novelty"],
+      "searchAliases": ["bilingual", "spanish", "bano", "solicitar"]
     },
     {
       "kind": "industry",
@@ -495,7 +645,7 @@
       "kind": "family",
       "id": "door-hanger",
       "label": "Door hangers",
-      "keywords": ["door hanger", "doorknob", "door knob"],
+      "keywords": ["door hanger", "doorknob", "door knob", "out of order", "out of service", "cleaning in progress"],
       "searchAliases": ["door-hanger", "doorknob", "door-knob-sign", "hanger"]
     },
     {
@@ -510,7 +660,10 @@
     ["restroom", "bathroom", "washroom", "lavatory", "toilet", "bano"],
     ["employees only", "staff only", "personnel only", "authorized personnel", "solo empleados"],
     ["desk sign", "desk nameplate", "desktop name plate", "nameplate"],
-    ["security camera", "video surveillance", "cctv", "video recording"],
+    ["security camera", "video surveillance", "cctv", "video recording", "on camera"],
+    ["electrical room", "electrical panel", "fire sprinkler", "facp"],
+    ["beware of dog", "dog in yard", "no pets"],
+    ["no cash", "cash only", "all sales final", "cash preferred"],
     ["break room", "breakroom", "staff kitchen"],
     ["no smoking", "smoke free", "tobacco free", "no vaping"],
     ["no soliciting", "no solicitar", "no trespassing"],

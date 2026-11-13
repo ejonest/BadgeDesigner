@@ -15,6 +15,7 @@ import {
   plaqueAwardEditorPlaceholdersForFormat,
   plaqueAwardFormatUserLineCount,
   plaqueAwardFormatsPickerHasExtras,
+  type PlaqueAwardFormatDefinition,
 } from "~/constants/plaqueFormats";
 import {
   DEFAULT_PLAQUE_LAYOUT_ID,
@@ -49,8 +50,18 @@ import {
 import {
   buildPlaqueAwardFormatPreviewBadge,
   buildPlaqueLayoutPreviewBadge,
+  PLAQUE_ATTACHED_LAYOUT_LOGO_SRC,
 } from "~/utils/plaqueAwardFormatPreview";
 import { PLAQUE_DEFAULT_BRUSH_GOLD_HEX } from "~/utils/plaqueRender";
+import {
+  blankPlaquePlateImage,
+  hexForPlaqueCatalogPlate,
+  PLAQUE_CUSTOM_PLATE_SLUG,
+  plaqueCatalogPlateForHex,
+  plaqueCatalogVariantForPlate,
+  representativePlaqueCatalogVariant,
+  type PlaqueCatalogDesign,
+} from "~/utils/plaqueCatalog";
 import { FEATURED_BRUSHED_SILVER_HEX } from "~/constants/colors";
 import {
   isShopifyProductJsPayload,
@@ -85,11 +96,15 @@ type PendingPlaqueOrder = {
   sizeLabel: string;
   plateName: string;
   formatName: string;
+  catalogSlug: string;
+  catalogSchemaVersion: number;
+  formatSnapshot: PlaqueCatalogDesign["format"] | null;
 };
 
 const DETACHED_LINE_COUNT = 6;
 const FONT_OPTIONS = ["Georgia", "Times New Roman", "Arial", "Montserrat", "Open Sans"];
-const CACHE_KEY = "plaque-designer-wizard-v1";
+const SIZE_STEPS = [0.75, 0.85, 1, 1.15, 1.3, 1.45];
+const CACHE_KEY = "plaque-designer-wizard-v2";
 const FALLBACK_PRICE = 24.99;
 const DEFAULT_SHAPE: BadgeLineShape = {
   xNorm: 0.5,
@@ -100,13 +115,34 @@ const DEFAULT_SHAPE: BadgeLineShape = {
   align: "center",
 };
 const PLATE_FINISHES = [
-  { value: PLAQUE_DEFAULT_BRUSH_GOLD_HEX, name: "Brushed Gold" },
-  { value: FEATURED_BRUSHED_SILVER_HEX, name: "Brushed Silver" },
-  { value: "#FFFFFF", name: "White" },
-  { value: "#000000", name: "Black" },
-  { value: "#0000FF", name: "Blue" },
-  { value: "#FF0000", name: "Red" },
+  { value: PLAQUE_DEFAULT_BRUSH_GOLD_HEX, name: "Brushed Gold", detail: "Gold plate and frame." },
+  { value: FEATURED_BRUSHED_SILVER_HEX, name: "Brushed Silver", detail: "Silver plate and frame." },
+  { value: "#000000", name: "Black", detail: "Black plate." },
 ] as const;
+const PLAQUE_TEXT_COLORS = [
+  { value: "#0D1B2A", name: "Navy" },
+  { value: "#FFFFFF", name: "White" },
+  { value: "#C8962A", name: "Gold" },
+  { value: "#C0392B", name: "Red" },
+  { value: "#1A5C8E", name: "Blue" },
+] as const;
+const DEFAULT_TEXT_COLOR = PLAQUE_TEXT_COLORS[0].value;
+
+function plaqueTextColor(hex: string): string {
+  const match = PLAQUE_TEXT_COLORS.find((color) => color.value.toLowerCase() === hex.trim().toLowerCase());
+  return match?.value ?? DEFAULT_TEXT_COLOR;
+}
+
+function isAllowedPlateHex(hex: string): boolean {
+  return PLATE_FINISHES.some((finish) => finish.value.toLowerCase() === hex.trim().toLowerCase());
+}
+
+/** Logo plates and photo plaques take an upload. Emblem plates already include the artwork. */
+function designAcceptsImageUpload(design: PlaqueCatalogDesign | null, customPlate: boolean, layout: string): boolean {
+  if (customPlate || isPlaqueDetachedLayoutId(layout)) return true;
+  if (!design) return false;
+  return /logo/i.test(`${design.slug} ${design.name} ${design.description}`);
+}
 const PLACEMENT_LABEL: Record<SignLogoPlacement, string> = {
   left: "Left",
   right: "Right",
@@ -131,7 +167,7 @@ const STEP_LABELS: Record<StepId, string> = {
   layout: "Layout",
   size: "Size",
   format: "Format",
-  metal: "Metal",
+  metal: "Finish",
   design: "Design",
 };
 const PANEL_COPY: Record<StepId, { title: string; sub: string }> = {
@@ -149,11 +185,11 @@ const PANEL_COPY: Record<StepId, { title: string; sub: string }> = {
   },
   metal: {
     title: "Choose the plate finish",
-    sub: "This is the metal color behind your text. Photo-plaque frames use the same metal.",
+    sub: "Brushed gold, brushed silver, or black. Text color, wording, and images come after this.",
   },
   design: {
-    title: "Add your image and text",
-    sub: "Upload an image where the layout has room for one, then add the wording.",
+    title: "Add your wording",
+    sub: "Choose a text color, then enter the wording.",
   },
 };
 
@@ -185,8 +221,53 @@ function textToLines(value: string, limit: number): string[] {
   return Array.from({ length: limit }, (_, index) => parts[index] ?? "");
 }
 
+function emptyStyle(): PlaqueLineStyle {
+  return {
+    bold: false,
+    italic: false,
+    underline: false,
+    fontFamily: "",
+    sizeScale: 1,
+    emphasisCustom: false,
+  };
+}
+
+function normalizeStyle(style: Partial<PlaqueLineStyle> | undefined): PlaqueLineStyle {
+  const scale = typeof style?.sizeScale === "number" && Number.isFinite(style.sizeScale) ? style.sizeScale : 1;
+  const font = FONT_OPTIONS.includes(style?.fontFamily ?? "") ? style?.fontFamily ?? "" : "";
+  return {
+    bold: Boolean(style?.bold),
+    italic: Boolean(style?.italic),
+    underline: Boolean(style?.underline),
+    fontFamily: font,
+    sizeScale: Math.min(SIZE_STEPS[SIZE_STEPS.length - 1], Math.max(SIZE_STEPS[0], scale)),
+    emphasisCustom: Boolean(style?.emphasisCustom),
+  };
+}
+
 function emptyStyles(count: number): PlaqueLineStyle[] {
-  return Array.from({ length: count }, () => ({ bold: false, italic: false, underline: false }));
+  return Array.from({ length: count }, () => emptyStyle());
+}
+
+function stylesFor(styles: PlaqueLineStyle[] | undefined, count: number): PlaqueLineStyle[] {
+  const next = emptyStyles(count);
+  (styles ?? []).forEach((style, index) => {
+    if (index < count) next[index] = normalizeStyle(style);
+  });
+  return next;
+}
+
+function sizeStepIndex(scale: number): number {
+  let best = 0;
+  let bestDist = Infinity;
+  SIZE_STEPS.forEach((step, index) => {
+    const dist = Math.abs(step - scale);
+    if (dist < bestDist) {
+      best = index;
+      bestDist = dist;
+    }
+  });
+  return best;
 }
 
 function cloneStyles(styles: PlaqueLineStyle[]): PlaqueLineStyle[] {
@@ -201,10 +282,6 @@ function inkForPlate(hex: string): string {
   const b = Number.parseInt(raw.slice(4, 6), 16);
   const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
   return luminance < 0.45 ? "#ffffff" : "#111111";
-}
-
-function colorInputValue(hex: string): string {
-  return /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : PLAQUE_DEFAULT_BRUSH_GOLD_HEX;
 }
 
 function dataUrlToBlob(dataUrl: string): Blob {
@@ -262,6 +339,77 @@ function PlaqueFormatButtons({
   );
 }
 
+type CatalogLineRole = "name" | "body" | "date" | "caption" | "extra";
+
+type CatalogLinePlan = {
+  variant: "presented" | "award";
+  lines: { text: string; placeholder: boolean; role: CatalogLineRole; bodyIndex: number; userIndex: number }[];
+};
+
+/** Four customer lines, placed in the open bands of the plate photo. Your Award uses a different order. */
+function catalogLinePlan(
+  format: PlaqueAwardFormatDefinition | null | undefined,
+  userLines: string[],
+): CatalogLinePlan | null {
+  if (!format) return null;
+  const users = format.slots.filter((slot) => slot.kind === "user");
+  if (users.length === 0) return null;
+  const award = !users[0].bold && users.some((slot) => slot.bold);
+  const roles: CatalogLineRole[] = award
+    ? ["caption", "name", "date", "extra"]
+    : ["name", "body", "body", "date"];
+  let bodyCount = 0;
+  return {
+    variant: award ? "award" : "presented",
+    lines: users.map((slot, index) => {
+      const typed = userLines[slot.userIndex]?.trim() ?? "";
+      const raw = typed || slot.placeholder;
+      const role = roles[index] ?? "body";
+      const bodyIndex = role === "body" ? bodyCount++ : 0;
+      return {
+        text: slot.uppercase ? raw.toUpperCase() : raw,
+        placeholder: typed.length === 0,
+        role,
+        bodyIndex,
+        userIndex: slot.userIndex,
+      };
+    }),
+  };
+}
+
+function formatEngraving(
+  format: PlaqueAwardFormatDefinition | null | undefined,
+  userLines: string[],
+  placeholders: boolean,
+): { text: string; bold: boolean; italic: boolean; userIndex: number | null }[] {
+  if (!format) return [];
+  const rows: { text: string; bold: boolean; italic: boolean; userIndex: number | null }[] = [];
+  for (const slot of format.slots) {
+    if (slot.kind === "static") {
+      rows.push({ text: slot.text, bold: Boolean(slot.bold), italic: Boolean(slot.italic), userIndex: null });
+    } else if (slot.kind === "user") {
+      const typed = userLines[slot.userIndex]?.trim() ?? "";
+      const sample = slot.userIndex === 0 ? "YOUR NAME" : slot.placeholder;
+      const text = placeholders ? sample : typed;
+      if (text) rows.push({ text, bold: Boolean(slot.bold), italic: Boolean(slot.italic), userIndex: slot.userIndex });
+    } else if (slot.kind === "divider") {
+      rows.push({ text: "— • —", bold: false, italic: false, userIndex: null });
+    }
+  }
+  return rows;
+}
+
+function engravingStyles(
+  rows: { bold: boolean; italic: boolean; userIndex: number | null }[],
+  userStyles: PlaqueLineStyle[] | undefined,
+): PlaqueLineStyle[] {
+  return rows.map((row) => {
+    if (row.userIndex == null) return { ...emptyStyle(), bold: row.bold, italic: row.italic };
+    const user = normalizeStyle(userStyles?.[row.userIndex]);
+    return user.emphasisCustom ? user : { ...user, bold: row.bold, italic: row.italic };
+  });
+}
+
 function PlaqueArt({ badge, frame }: { badge: Badge; frame: "choice" | "card" | "stage" }) {
   const templateId = badge.templateId || defaultPlaqueTemplateId();
   return (
@@ -271,17 +419,158 @@ function PlaqueArt({ badge, frame }: { badge: Badge; frame: "choice" | "card" | 
   );
 }
 
+type PhotoPlaqueFrame = "portrait" | "landscape";
+
+/** Blank plaques: sample photo in the frame, empty plate. The wording is drawn straight onto the plate. */
+const PHOTO_PLAQUE_IMAGE: Record<PhotoPlaqueFrame, { gold: string; silver: string; black: string }> = {
+  portrait: {
+    gold: "/images/plaque/photo/stage-portrait-gold.jpg",
+    silver: "/images/plaque/photo/stage-portrait-silver.jpg",
+    black: "/images/plaque/photo/stage-portrait-black.jpg",
+  },
+  landscape: {
+    gold: "/images/plaque/photo/stage-landscape-gold.jpg",
+    silver: "/images/plaque/photo/stage-landscape-silver.jpg",
+    black: "/images/plaque/photo/stage-landscape-black.jpg",
+  },
+};
+
+function photoPlaqueFrame(layout: string): PhotoPlaqueFrame | null {
+  if (layout === "plaque-detached-portrait") return "portrait";
+  if (layout === "plaque-detached-landscape") return "landscape";
+  return null;
+}
+
+function photoPlaqueImage(frame: PhotoPlaqueFrame, plate: string): string {
+  if (plate === "silver") return PHOTO_PLAQUE_IMAGE[frame].silver;
+  if (plate === "black-white") return PHOTO_PLAQUE_IMAGE[frame].black;
+  return PHOTO_PLAQUE_IMAGE[frame].gold;
+}
+
+/** Your Award’s product photo fills more of the square than the other plates. These copies sit in the same frame, so the card and the preview use one crop. */
+const YOUR_AWARD_FRAME: Partial<Record<string, string>> = {
+  "black-white": "/images/plaque/catalog/your-award-black-white.jpg",
+  gold: "/images/plaque/catalog/your-award-gold.jpg",
+  silver: "/images/plaque/catalog/your-award-silver.jpg",
+  "white-black": "/images/plaque/catalog/your-award-white-black.jpg",
+};
+
+function PlaquePhotoStage({
+  src,
+  lines,
+  styles,
+  image,
+  ink,
+  fontFamily,
+  catalog,
+  photo,
+  catalogLayout,
+}: {
+  src: string;
+  lines: string[];
+  styles: PlaqueLineStyle[];
+  image: PlaqueImage | null;
+  ink: string;
+  fontFamily: string;
+  /** Ready-made plates already show the emblem and “presented to”, so the name sits in the open band. */
+  catalog?: boolean;
+  /** Photo plaques use a product photo, with the upload in the frame and wording on the plate. */
+  photo?: PhotoPlaqueFrame;
+  /** Customer lines anchored to the engraved bands on a catalog plate photo. */
+  catalogLayout?: CatalogLinePlan | null;
+}) {
+  const written = lines
+    .map((text, index) => ({ text: text.trim(), style: styles[index] }))
+    .filter((line) => line.text.length > 0);
+  return (
+    <div className={`pd-preview-frame pd-photo-stage${photo ? ` is-photo is-${photo}` : ""}`}>
+      <div className={`pd-photo-zoom${catalogLayout?.variant === "award" ? " is-award" : ""}`}>
+        <img className="pd-photo-base" src={src} alt="" />
+        {photo && image ? (
+          <div className="pd-photo-window">
+            <img src={image.src} alt="" />
+          </div>
+        ) : null}
+        {catalogLayout && !photo && image ? <img className="pd-catalog-logo" src={image.src} alt="" /> : null}
+        {catalogLayout && !photo
+          ? catalogLayout.lines.map((line, index) => {
+              const style = styles[line.userIndex];
+              const scale = style?.sizeScale ?? 1;
+              const family = style?.fontFamily?.trim() || fontFamily;
+              return (
+                <p
+                  key={`${line.role}-${index}`}
+                  className={`pd-catalog-line is-${line.role}${line.role === "body" ? ` is-i${line.bodyIndex}` : ""}${line.placeholder ? " is-placeholder" : ""}`}
+                  style={{
+                    color: ink,
+                    fontFamily: family,
+                    ["--pd-line-scale" as string]: String(scale),
+                    ...(style?.emphasisCustom
+                      ? {
+                          fontWeight: style.bold ? 700 : 400,
+                          fontStyle: style.italic ? "italic" : "normal",
+                        }
+                      : null),
+                    textDecoration: style?.underline ? "underline" : undefined,
+                  }}
+                >
+                  {line.text}
+                </p>
+              );
+            })
+          : null}
+        {catalogLayout && !photo ? null : (
+        <div className={`pd-photo-plate${catalog ? " is-catalog" : ""}`}>
+        {!photo && image ? <img className="pd-photo-logo" src={image.src} alt="" /> : null}
+        {written.length > 0 ? (
+          <div className="pd-photo-lines" style={{ color: ink, fontFamily }}>
+            {written.map((line, index) => {
+              const scale = line.style?.sizeScale ?? 1;
+              const family = line.style?.fontFamily?.trim();
+              return (
+                <p
+                  key={`${line.text}-${index}`}
+                  style={{
+                    fontWeight: line.style?.bold ? 700 : 400,
+                    fontStyle: line.style?.italic ? "italic" : "normal",
+                    textDecoration: line.style?.underline ? "underline" : "none",
+                    fontFamily: family || undefined,
+                    ["--pd-line-scale" as string]: String(scale),
+                    fontSize: photo ? undefined : `calc(${index === 0 ? "1.35em" : "1em"} * ${scale})`,
+                  }}
+                >
+                  {line.text}
+                </p>
+              );
+            })}
+          </div>
+        ) : null}
+        </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function PlaqueDesigner() {
   const [step, setStep] = useState<StepId>("layout");
   const [visited, setVisited] = useState<StepId[]>(["layout"]);
-  const [layoutId, setLayoutId] = useState(DEFAULT_PLAQUE_LAYOUT_ID);
+  const [layoutId, setLayoutId] = useState("");
+  const [needsLayoutChoice, setNeedsLayoutChoice] = useState(false);
+  const [layoutPane, setLayoutPane] = useState<"layouts" | "designs">("layouts");
+  const [catalogSlug, setCatalogSlug] = useState("");
+  const [needsDesignChoice, setNeedsDesignChoice] = useState(false);
+  const [plaqueCatalogDesigns, setPlaqueCatalogDesigns] = useState<PlaqueCatalogDesign[]>([]);
   const [size, setSize] = useState<PlaqueSizeKey>(DEFAULT_PLAQUE_SIZE);
   const [formatId, setFormatId] = useState(DEFAULT_PLAQUE_ATTACHED_FORMAT_ID);
   const [plate, setPlate] = useState(PLAQUE_DEFAULT_BRUSH_GOLD_HEX);
+  const [textColor, setTextColor] = useState(DEFAULT_TEXT_COLOR);
   const [fontFamily, setFontFamily] = useState("Georgia");
   const [lines, setLines] = useState<string[]>(() => textToLines("", 4));
   const [textDraft, setTextDraft] = useState("");
   const [lineStyles, setLineStyles] = useState<PlaqueLineStyle[]>(() => emptyStyles(4));
+  const [lineFocus, setLineFocus] = useState(0);
+  const [wordingMode, setWordingMode] = useState<"all" | "line">("all");
   const [quantity, setQuantity] = useState(1);
   const [sharedImage, setSharedImage] = useState<PlaqueImage | null>(null);
   const [placementChoice, setPlacementChoice] = useState<SignLogoPlacement>("top");
@@ -312,17 +601,29 @@ export default function PlaqueDesigner() {
   const apiRef = useRef(createApi(undefined, undefined, { designerId: "plaque" }));
 
   const attached = layoutId === "plaque-attached";
-  const format = getPlaqueAwardFormatById(formatId) ?? getPlaqueAwardFormatById(DEFAULT_PLAQUE_ATTACHED_FORMAT_ID);
-  const lineCount = attached && format ? Math.max(1, plaqueAwardFormatUserLineCount(format)) : DETACHED_LINE_COUNT;
-  const steps = useMemo<StepId[]>(
-    () =>
-      attached
-        ? ["layout", "size", "format", "metal", "design"]
-        : ["layout", "size", "metal", "design"],
-    [attached],
+  const attachedCatalogDesigns = plaqueCatalogDesigns.filter(
+    (design) => design.showInAttachedPicker && design.layoutId === "plaque-attached",
   );
+  const selectedCatalogDesign =
+    attachedCatalogDesigns.find((design) => design.slug === catalogSlug) ?? null;
+  const customPlate = catalogSlug === PLAQUE_CUSTOM_PLATE_SLUG;
+  const showImageUpload = designAcceptsImageUpload(selectedCatalogDesign, customPlate, layoutId);
+  const imageRequired = showImageUpload && attached;
+  const format =
+    selectedCatalogDesign?.format ??
+    getPlaqueAwardFormatById(formatId) ??
+    getPlaqueAwardFormatById(DEFAULT_PLAQUE_ATTACHED_FORMAT_ID);
+  const lineCount = attached && format ? Math.max(1, plaqueAwardFormatUserLineCount(format)) : DETACHED_LINE_COUNT;
+  const steps = useMemo<StepId[]>(() => {
+    if (!layoutId) return ["layout", "size", "metal", "design"];
+    return attached && !selectedCatalogDesign
+      ? ["layout", "size", "format", "metal", "design"]
+      : ["layout", "size", "metal", "design"];
+  }, [attached, layoutId, selectedCatalogDesign]);
   const stepIndex = Math.max(0, steps.indexOf(step));
-  const templateId = buildPlaqueTemplateId(layoutId, normalizePlaqueSizeForLayout(layoutId, size));
+  const templateId = layoutId
+    ? buildPlaqueTemplateId(layoutId, normalizePlaqueSizeForLayout(layoutId, size))
+    : defaultPlaqueTemplateId();
   const labels = attached
     ? plaqueAwardEditorLabelsForFormat(format, lineCount).map((label, index) => label || `Line ${index + 1}`)
     : Array.from({ length: lineCount }, (_, index) => `Line ${index + 1}`);
@@ -340,11 +641,16 @@ export default function PlaqueDesigner() {
     bulkMode && bulkRows[selectedBulkRow]?.lineStyles
       ? bulkRows[selectedBulkRow].lineStyles
       : lineStyles;
+  const focusIndex = Math.min(lineFocus, Math.max(0, lineCount - 1));
+  const focusStyle = normalizeStyle(activeStyles?.[focusIndex]);
+  const focusEmphasis = lineEmphasis(focusStyle, focusIndex);
+  const focusFont = focusStyle.fontFamily || fontFamily;
+  const focusSizeIndex = sizeStepIndex(focusStyle.sizeScale);
   const activeImage =
     bulkMode && bulkRows[selectedBulkRow]?.image !== undefined
       ? bulkRows[selectedBulkRow].image
       : sharedImage;
-  const imageReady = !attached || (
+  const imageReady = !imageRequired || (
     bulkMode && bulkRows.length > 0
       ? bulkRows.every((row) => (row.image === undefined ? sharedImage : row.image))
       : Boolean(sharedImage)
@@ -362,7 +668,19 @@ export default function PlaqueDesigner() {
               ? "Work on one plaque, look at all of them, or add more names."
               : "Paste a list or upload a CSV. Each plaque can say something different.",
         }
-      : PANEL_COPY[step];
+      : step === "layout" && layoutPane === "designs"
+        ? {
+            title: "Choose a design",
+            sub: "Pick a ready-made plate, or start with a blank one and add your own image and wording.",
+          }
+        : step === "design"
+          ? {
+              title: "Add your wording",
+              sub: showImageUpload
+                ? "Choose a text color, enter the wording, then add an image. Each line can have its own font and size."
+                : "Choose a text color, then enter the wording. Each line can have its own font and size.",
+            }
+          : PANEL_COPY[step];
   const shopifyOptions = getPlaqueShopifyShapeSizeForTemplateId(templateId);
   const priced = shopifyOptions ? resolveSignVariantIdAndPrice(catalog, shopifyOptions.shape, shopifyOptions.size) : null;
   const queryPrice = Number(readQueryParam("price"));
@@ -373,8 +691,32 @@ export default function PlaqueDesigner() {
         ? queryPrice
         : FALLBACK_PRICE;
   const price = { perUnit: unitPrice, total: unitPrice * Math.max(1, orderQuantity) };
-  const plateName = PLATE_FINISHES.find((finish) => finish.value.toLowerCase() === plate.toLowerCase())?.name ?? plate;
-  const layoutLabel = LAYOUT_COPY[layoutId]?.title ?? layoutId;
+  const plateName = PLATE_FINISHES.find((finish) => finish.value.toLowerCase() === plate.toLowerCase())?.name ?? "Brushed Gold";
+  const layoutLabel = selectedCatalogDesign?.name ?? LAYOUT_COPY[layoutId]?.title ?? layoutId;
+  const attachedPlatePhoto = attachedCatalogDesigns[0]
+    ? representativePlaqueCatalogVariant(attachedCatalogDesigns[0])
+    : undefined;
+  const stagePlate = plaqueCatalogPlateForHex(plate);
+  function plateFinishImage(hex: string): string | undefined {
+    const key = plaqueCatalogPlateForHex(hex);
+    if (!key) return blankPlaquePlateImage("gold");
+    if (selectedCatalogDesign?.slug === "your-award" && YOUR_AWARD_FRAME[key]) return YOUR_AWARD_FRAME[key];
+    if (selectedCatalogDesign) {
+      return plaqueCatalogVariantForPlate(selectedCatalogDesign, key)?.imageUrl ?? blankPlaquePlateImage(key);
+    }
+    return blankPlaquePlateImage(key);
+  }
+  const photoFrame = photoPlaqueFrame(layoutId);
+  const stagePhoto = photoFrame
+    ? photoPlaqueImage(photoFrame, stagePlate ?? "gold")
+    : !attached
+      ? undefined
+      : selectedCatalogDesign
+        ? plateFinishImage(plate)
+        : customPlate
+          ? blankPlaquePlateImage(stagePlate) ?? blankPlaquePlateImage("gold")
+          : attachedPlatePhoto?.imageUrl;
+  const stageInk = textColor;
   const sizeLabel = [
     getPlaqueSizeStepDisplay(layoutId, size).primaryLine,
     ...getPlaqueSizeStepDisplay(layoutId, size).detailLines,
@@ -402,26 +744,32 @@ export default function PlaqueDesigner() {
   }, [bulkRows, bulkSearch]);
 
   function badgeFor(texts: string[], styles: PlaqueLineStyle[], image: PlaqueImage | null | undefined, id: string): Badge {
-    const ink = inkForPlate(plate);
     const shown = texts.some((line) => line.trim())
       ? texts
       : attached
         ? texts
         : placeholders.map((placeholder) => placeholder || "");
-    const badgeLines: BadgeLine[] = shown.slice(0, lineCount).map((text, index) => ({
-      id: `line-${index + 1}`,
-      text,
-      xNorm: 0.5,
-      yNorm: 0.5,
-      sizeNorm: 0.22,
-      align: "center",
-      color: ink,
-      fontFamily,
-      bold: styles[index]?.bold ?? false,
-      italic: styles[index]?.italic ?? false,
-      underline: styles[index]?.underline ?? false,
-    }));
-    const logo = image
+    const badgeLines: BadgeLine[] = shown.slice(0, lineCount).map((text, index) => {
+      const style = normalizeStyle(styles[index]);
+      const chosenFont = style.fontFamily || fontFamily;
+      return {
+        id: `line-${index + 1}`,
+        text,
+        xNorm: 0.5,
+        yNorm: 0.5,
+        sizeNorm: 0.22 * style.sizeScale,
+        align: "center" as const,
+        color: textColor,
+        fontFamily: chosenFont,
+        bold: style.bold,
+        italic: style.italic,
+        underline: style.underline,
+        plaqueSizeScale: style.sizeScale,
+        plaqueEmphasisCustom: style.emphasisCustom,
+        plaqueFontCustom: Boolean(style.fontFamily),
+      };
+    });
+    const logo = showImageUpload && image
       ? {
           src: image.src,
           fileName: image.fileName,
@@ -437,14 +785,31 @@ export default function PlaqueDesigner() {
       backgroundColor: plate,
       backing: "magnetic",
       ...(attached && format ? { plaqueFormatId: format.id } : {}),
+      ...(selectedCatalogDesign
+        ? {
+            plaqueCatalogSlug: selectedCatalogDesign.slug,
+            plaqueCatalogSchemaVersion: selectedCatalogDesign.schemaVersion,
+            plaqueFormatSnapshot: selectedCatalogDesign.format,
+          }
+        : {}),
       ...(logo ? { logo } : {}),
     };
   }
 
+  const previewImage =
+    activeImage ??
+    (step === "layout" && attached && !selectedCatalogDesign
+      ? {
+          src: PLAQUE_ATTACHED_LAYOUT_LOGO_SRC,
+          fileName: "Your Logo",
+          width: 200,
+          height: 200,
+        }
+      : null);
   const previewBadge = badgeFor(
     activeLines,
     activeStyles ?? emptyStyles(lineCount),
-    activeImage,
+    previewImage,
     "plaque-preview",
   );
   const layoutPreviews = useMemo(
@@ -488,9 +853,12 @@ export default function PlaqueDesigner() {
         step?: string;
         visited?: string[];
         layoutId?: string;
+        layoutPane?: string;
+        catalogSlug?: string;
         size?: PlaqueSizeKey;
         formatId?: string;
         plate?: string;
+        textColor?: string;
         fontFamily?: string;
         lines?: string[];
         lineStyles?: PlaqueLineStyle[];
@@ -504,11 +872,18 @@ export default function PlaqueDesigner() {
       if (draft.layoutId && PLAQUE_LAYOUT_OPTIONS.some((option) => option.id === draft.layoutId)) {
         setLayoutId(draft.layoutId);
       }
+      if (typeof draft.catalogSlug === "string") setCatalogSlug(draft.catalogSlug);
+      if (draft.layoutPane === "designs" || draft.layoutPane === "layouts") {
+        setLayoutPane(draft.layoutPane);
+      } else if (draft.catalogSlug) {
+        setLayoutPane("designs");
+      }
       if (draft.size === "small" || draft.size === "medium" || draft.size === "large") {
         setSize(normalizePlaqueSizeForLayout(draft.layoutId || DEFAULT_PLAQUE_LAYOUT_ID, draft.size));
       }
       if (draft.formatId && getPlaqueAwardFormatById(draft.formatId)) setFormatId(draft.formatId);
-      if (typeof draft.plate === "string" && draft.plate.startsWith("#")) setPlate(draft.plate);
+      if (typeof draft.plate === "string" && isAllowedPlateHex(draft.plate)) setPlate(draft.plate);
+      if (typeof draft.textColor === "string") setTextColor(plaqueTextColor(draft.textColor));
       if (FONT_OPTIONS.includes(draft.fontFamily ?? "")) setFontFamily(draft.fontFamily!);
       if (draft.placement) setPlacementChoice(draft.placement);
       const restoredLines = Array.isArray(draft.lines) ? draft.lines.map((line) => String(line ?? "")) : [];
@@ -516,7 +891,9 @@ export default function PlaqueDesigner() {
         setLines(restoredLines);
         setTextDraft(linesToText(restoredLines));
       }
-      if (Array.isArray(draft.lineStyles) && draft.lineStyles.length > 0) setLineStyles(draft.lineStyles);
+      if (Array.isArray(draft.lineStyles) && draft.lineStyles.length > 0) {
+        setLineStyles(draft.lineStyles.map((style) => normalizeStyle(style)));
+      }
       if (typeof draft.quantity === "number") {
         setQuantity(Math.max(1, Math.min(PLAQUE_MAX_QUANTITY, Math.round(draft.quantity))));
       }
@@ -528,7 +905,9 @@ export default function PlaqueDesigner() {
               id: row.id || `bulk-plaque-cached-${index}`,
               lines: row.lines.map((line) => String(line ?? "")),
               quantity: Math.max(1, Math.round(Number(row.quantity) || 1)),
-              lineStyles: Array.isArray(row.lineStyles) ? row.lineStyles : undefined,
+              lineStyles: Array.isArray(row.lineStyles)
+                ? row.lineStyles.map((style) => normalizeStyle(style))
+                : undefined,
             }];
           }),
         );
@@ -601,8 +980,25 @@ export default function PlaqueDesigner() {
     const nextLayout = layoutFromOption(variant.option1 || "") || layoutFromOption(variant.option2 || "");
     const nextSize = sizeFromOption(variant.option2 || "") || sizeFromOption(variant.option1 || "");
     if (nextLayout) setLayoutId(nextLayout);
+    if (nextLayout && nextLayout !== "plaque-attached") setCatalogSlug("");
     if (nextSize) setSize(normalizePlaqueSizeForLayout(nextLayout || DEFAULT_PLAQUE_LAYOUT_ID, nextSize));
   }, [catalog]);
+
+  useEffect(() => {
+    const shop = readQueryParam("shop") || readQueryParam("storeUrl");
+    const params = shop ? `?shop=${encodeURIComponent(shop)}` : "";
+    let cancelled = false;
+    fetch(`/api/plaque-catalog${params}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: { designs?: PlaqueCatalogDesign[] } | null) => {
+        if (cancelled || !Array.isArray(payload?.designs)) return;
+        setPlaqueCatalogDesigns(payload.designs);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!restored) return;
@@ -614,9 +1010,12 @@ export default function PlaqueDesigner() {
       step,
       visited,
       layoutId,
+      layoutPane,
+      catalogSlug,
       size,
       formatId,
       plate,
+      textColor,
       fontFamily,
       lines,
       lineStyles,
@@ -634,12 +1033,15 @@ export default function PlaqueDesigner() {
     bulkMode,
     bulkRows,
     fontFamily,
+    catalogSlug,
+    layoutPane,
     formatId,
     layoutId,
     lineStyles,
     lines,
     placementChoice,
     plate,
+    textColor,
     quantity,
     restored,
     size,
@@ -649,8 +1051,36 @@ export default function PlaqueDesigner() {
 
   function goToStep(next: StepId) {
     if (!steps.includes(next)) return;
+    if (step === "layout" && next !== "layout") setLayoutPane("layouts");
     setStep(next);
     setVisited((current) => (current.includes(next) ? current : [...current, next]));
+  }
+
+  function goBack() {
+    if (step === "layout" && layoutPane === "designs") {
+      setLayoutPane("layouts");
+      setNeedsDesignChoice(false);
+      return;
+    }
+    const previous = steps[stepIndex - 1];
+    if (previous) goToStep(previous);
+  }
+
+  function goForward() {
+    if (step === "layout" && !layoutId) {
+      setNeedsLayoutChoice(true);
+      return;
+    }
+    if (step === "layout" && layoutId === "plaque-attached" && layoutPane === "layouts") {
+      openAttachedDesigns();
+      return;
+    }
+    if (step === "layout" && layoutPane === "designs" && !catalogSlug) {
+      setNeedsDesignChoice(true);
+      return;
+    }
+    const next = steps[stepIndex + 1];
+    if (next) goToStep(next);
   }
 
   function resizeText(count: number) {
@@ -667,7 +1097,9 @@ export default function PlaqueDesigner() {
       rows.map((row) => ({
         ...row,
         lines: textToLines(linesToText(row.lines), count),
-        lineStyles: row.lineStyles ? textToLines(linesToText(row.lines), count).map((_, index) => row.lineStyles?.[index] ?? { bold: false, italic: false, underline: false }) : row.lineStyles,
+        lineStyles: row.lineStyles
+          ? textToLines(linesToText(row.lines), count).map((_, index) => normalizeStyle(row.lineStyles?.[index]))
+          : row.lineStyles,
       })),
     );
   }
@@ -677,8 +1109,60 @@ export default function PlaqueDesigner() {
     const nextSize = normalizePlaqueSizeForLayout(nextLayout, size);
     const nextAttached = nextLayout === "plaque-attached";
     const count = nextAttached && format ? Math.max(1, plaqueAwardFormatUserLineCount(format)) : DETACHED_LINE_COUNT;
+    setCatalogSlug("");
+    setLayoutPane("layouts");
+    setNeedsDesignChoice(false);
+    setNeedsLayoutChoice(false);
     setLayoutId(nextLayout);
     setSize(nextSize);
+    if (lines.length !== count) resizeText(count);
+  }
+
+  function openAttachedDesigns() {
+    allowUrlDefaults.current = false;
+    setLayoutId("plaque-attached");
+    setSize(normalizePlaqueSizeForLayout("plaque-attached", size));
+    setLayoutPane("designs");
+    setNeedsDesignChoice(false);
+    setNeedsLayoutChoice(false);
+  }
+
+  function selectCustomPlate() {
+    allowUrlDefaults.current = false;
+    const next = getPlaqueAwardFormatById(DEFAULT_PLAQUE_ATTACHED_FORMAT_ID);
+    const count = next ? Math.max(1, plaqueAwardFormatUserLineCount(next)) : 4;
+    setCatalogSlug(PLAQUE_CUSTOM_PLATE_SLUG);
+    setFormatId(DEFAULT_PLAQUE_ATTACHED_FORMAT_ID);
+    setLayoutId("plaque-attached");
+    setLayoutPane("designs");
+    setNeedsDesignChoice(false);
+    setSize(normalizePlaqueSizeForLayout("plaque-attached", size));
+    if (lines.length !== count) resizeText(count);
+  }
+
+  function applyPlate(nextPlate: string) {
+    setTextColor((current) => {
+      const darkText = current.toLowerCase() === DEFAULT_TEXT_COLOR.toLowerCase() || current.toLowerCase() === "#111111";
+      const lightText = current.toLowerCase() === "#ffffff";
+      const nextIsDark = inkForPlate(nextPlate) === "#ffffff";
+      if (nextIsDark && darkText) return "#FFFFFF";
+      if (!nextIsDark && lightText) return DEFAULT_TEXT_COLOR;
+      return current;
+    });
+    setPlate(nextPlate);
+  }
+
+  function selectCatalogDesign(design: PlaqueCatalogDesign) {
+    allowUrlDefaults.current = false;
+    const count = Math.max(1, plaqueAwardFormatUserLineCount(design.format));
+    setCatalogSlug(design.slug);
+    setFormatId(design.format.id);
+    setLayoutId("plaque-attached");
+    setLayoutPane("designs");
+    setNeedsDesignChoice(false);
+    setSize(normalizePlaqueSizeForLayout("plaque-attached", size));
+    const hex = hexForPlaqueCatalogPlate(design.slug === "your-award" ? "black-white" : design.defaultPlate);
+    if (hex && isAllowedPlateHex(hex)) applyPlate(hex);
     if (lines.length !== count) resizeText(count);
   }
 
@@ -696,16 +1180,69 @@ export default function PlaqueDesigner() {
     }
   }
 
-  function updateFormat(update: Partial<PlaqueLineStyle>) {
-    const next = (activeStyles ?? emptyStyles(lineCount)).map((style) => ({ ...style, ...update }));
-    setLineStyles(next);
+  function commitStyles(next: PlaqueLineStyle[]) {
+    const normalized = next.map((style) => normalizeStyle(style));
+    setLineStyles(normalized);
     if (bulkMode && bulkRows.length > 0) {
       setBulkRows((rows) =>
         rows.map((row, rowIndex) =>
-          rowIndex === selectedBulkRow ? { ...row, lineStyles: cloneStyles(next) } : row,
+          rowIndex === selectedBulkRow ? { ...row, lineStyles: cloneStyles(normalized) } : row,
         ),
       );
     }
+  }
+
+  function updateLine(index: number, update: Partial<PlaqueLineStyle>) {
+    const next = stylesFor(activeStyles, lineCount);
+    next[index] = normalizeStyle({ ...next[index], ...update });
+    commitStyles(next);
+  }
+
+  function slotEmphasis(index: number): { bold: boolean; italic: boolean } {
+    if (!attached || !format) return { bold: false, italic: false };
+    const slot = format.slots.find((item) => item.kind === "user" && item.userIndex === index);
+    if (!slot || slot.kind !== "user") return { bold: false, italic: false };
+    return { bold: Boolean(slot.bold), italic: Boolean(slot.italic) };
+  }
+
+  function lineEmphasis(style: PlaqueLineStyle, index: number): { bold: boolean; italic: boolean } {
+    if (style.emphasisCustom || !attached) return { bold: style.bold, italic: style.italic };
+    return slotEmphasis(index);
+  }
+
+  function toggleLineEmphasis(key: "bold" | "italic" | "underline") {
+    const style = normalizeStyle(activeStyles?.[focusIndex]);
+    if (key === "underline") {
+      updateLine(focusIndex, { underline: !style.underline });
+      return;
+    }
+    const effective = lineEmphasis(style, focusIndex);
+    updateLine(focusIndex, {
+      emphasisCustom: true,
+      bold: key === "bold" ? !effective.bold : effective.bold,
+      italic: key === "italic" ? !effective.italic : effective.italic,
+    });
+  }
+
+  function applyLineStyleToAll() {
+    const source = normalizeStyle(activeStyles?.[focusIndex]);
+    const resolvedFont = source.fontFamily || fontFamily;
+    const next = stylesFor(activeStyles, lineCount).map((style) => ({
+      ...style,
+      fontFamily: resolvedFont,
+      sizeScale: source.sizeScale,
+      underline: source.underline,
+      ...(source.emphasisCustom
+        ? { emphasisCustom: true, bold: source.bold, italic: source.italic }
+        : {}),
+    }));
+    commitStyles(next);
+  }
+
+  function setActiveLineText(index: number, value: string) {
+    const next = textToLines(textDraft, lineCount);
+    next[index] = value.replace(/[\r\n]/g, "");
+    setActiveText(linesToText(next));
   }
 
   function applyFormatToAll() {
@@ -886,14 +1423,21 @@ export default function PlaqueDesigner() {
     allowUrlDefaults.current = false;
     setStep("layout");
     setVisited(["layout"]);
-    setLayoutId(DEFAULT_PLAQUE_LAYOUT_ID);
+    setLayoutId("");
+    setLayoutPane("layouts");
+    setCatalogSlug("");
+    setNeedsDesignChoice(false);
+    setNeedsLayoutChoice(false);
     setSize(DEFAULT_PLAQUE_SIZE);
     setFormatId(DEFAULT_PLAQUE_ATTACHED_FORMAT_ID);
     setPlate(PLAQUE_DEFAULT_BRUSH_GOLD_HEX);
+    setTextColor(DEFAULT_TEXT_COLOR);
     setFontFamily("Georgia");
     setLines(textToLines("", 4));
     setTextDraft("");
     setLineStyles(emptyStyles(4));
+    setLineFocus(0);
+    setWordingMode("all");
     setQuantity(1);
     setSharedImage(null);
     setPlacementChoice("top");
@@ -978,6 +1522,15 @@ export default function PlaqueDesigner() {
           productId: readQueryParam("product") || templateId,
           shopId: readQueryParam("shop") || readQueryParam("storeUrl"),
           allBadges: badgesForSave,
+          selectedPlaqueLayoutId: layoutId,
+          selectedPlaqueSize: size,
+          ...(selectedCatalogDesign
+            ? {
+                plaqueCatalogSlug: selectedCatalogDesign.slug,
+                plaqueCatalogSchemaVersion: selectedCatalogDesign.schemaVersion,
+                plaqueFormatSnapshot: selectedCatalogDesign.format,
+              }
+            : {}),
           isQaTest: readQueryParam("qaTest") === "1" || undefined,
         }),
       );
@@ -1003,6 +1556,9 @@ export default function PlaqueDesigner() {
         sizeLabel,
         plateName,
         formatName: attached && format ? format.name : "",
+        catalogSlug: selectedCatalogDesign?.slug ?? "",
+        catalogSchemaVersion: selectedCatalogDesign?.schemaVersion ?? 0,
+        formatSnapshot: selectedCatalogDesign?.format ?? null,
       };
       if (proofUrl) URL.revokeObjectURL(proofUrl);
       setProofUrl(URL.createObjectURL(proofPdf));
@@ -1056,7 +1612,9 @@ export default function PlaqueDesigner() {
             "_Plaque Layout": pending.layoutLabel,
             "_Plaque Size": pending.sizeLabel,
             "_Plate Finish": pending.plateName,
+            "_Text Color": textColor,
             ...(pending.formatName ? { "_Award Format": pending.formatName } : {}),
+            ...(pending.catalogSlug ? { "_Plaque Design": pending.catalogSlug } : {}),
           },
         }),
       }));
@@ -1072,7 +1630,117 @@ export default function PlaqueDesigner() {
 
   const imageCopy = isPlaqueDetachedLayoutId(layoutId)
     ? "The framed opening is for a printed photo. An icon on the metal plate is optional — choose left or right if you add one."
-    : "Your image sits on the metal plate above the text. PNG, JPEG, WebP, or GIF.";
+    : selectedCatalogDesign
+      ? "Add the logo that sits above the wording. PNG, JPEG, WebP, or GIF."
+      : "Your image sits on the metal plate above the text. PNG, JPEG, WebP, or GIF.";
+
+  const wordingEditor = (
+    <div className="pd-wording">
+      <div className="pd-wording-switch" role="tablist" aria-label="How to edit the wording">
+        <button type="button" role="tab" aria-selected={wordingMode === "all"} className={wordingMode === "all" ? "is-on" : ""} onClick={() => setWordingMode("all")}>
+          Edit all
+        </button>
+        <button type="button" role="tab" aria-selected={wordingMode === "line"} className={wordingMode === "line" ? "is-on" : ""} onClick={() => setWordingMode("line")}>
+          Edit line by line
+        </button>
+      </div>
+      {wordingMode === "line" ? (
+        <div className="pd-line-editor">
+          <div className="pd-line-picks" role="tablist" aria-label="Line to edit">
+            {labels.map((label, index) => (
+              <button
+                type="button"
+                key={`${label}-${index}`}
+                role="tab"
+                aria-selected={focusIndex === index}
+                className={focusIndex === index ? "is-on" : ""}
+                title={activeLines[index]?.trim() || placeholders[index] || label}
+                onClick={() => setLineFocus(index)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <label className="md-text-label" htmlFor="pd-line-text">
+            {labels[focusIndex] ?? "Line"}
+            <input
+              id="pd-line-text"
+              className="gf-input"
+              value={activeLines[focusIndex] ?? ""}
+              placeholder={placeholders[focusIndex] || ""}
+              onChange={(event) => setActiveLineText(focusIndex, event.target.value)}
+            />
+          </label>
+          <div className="md-format-row">
+            <label>
+              Font
+              <select
+                className="gf-input"
+                aria-label={`Font for ${labels[focusIndex] ?? "this line"}`}
+                value={focusFont}
+                onChange={(event) => updateLine(focusIndex, { fontFamily: event.target.value })}
+              >
+                {FONT_OPTIONS.map((font) => <option key={font}>{font}</option>)}
+              </select>
+            </label>
+            <div className="pd-size-field">
+              <span className="pd-field-label" id="pd-size-label">Size</span>
+              <div className="pd-size-stepper" role="group" aria-labelledby="pd-size-label">
+                <button
+                  type="button"
+                  aria-label={`Smaller text for ${labels[focusIndex] ?? "this line"}`}
+                  disabled={focusSizeIndex <= 0}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => updateLine(focusIndex, { sizeScale: SIZE_STEPS[focusSizeIndex - 1] })}
+                >
+                  −
+                </button>
+                <span>{Math.round(focusStyle.sizeScale * 100)}%</span>
+                <button
+                  type="button"
+                  aria-label={`Larger text for ${labels[focusIndex] ?? "this line"}`}
+                  disabled={focusSizeIndex >= SIZE_STEPS.length - 1}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => updateLine(focusIndex, { sizeScale: SIZE_STEPS[focusSizeIndex + 1] })}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            <PlaqueFormatButtons
+              style={{ ...focusStyle, bold: focusEmphasis.bold, italic: focusEmphasis.italic }}
+              onToggle={toggleLineEmphasis}
+            />
+          </div>
+          <button type="button" className="gf-csv-link pd-line-apply" onClick={applyLineStyleToAll}>
+            Use this font and size on every line
+          </button>
+          {attached ? <p className="gf-note">Dividers stay with the award format.</p> : null}
+        </div>
+      ) : (
+        <>
+          <label className="md-text-label" htmlFor="pd-wording">Custom text</label>
+          <textarea
+            id="pd-wording"
+            className="gf-input md-wording"
+            rows={Math.min(lineCount, 6)}
+            value={textDraft}
+            placeholder={placeholders.filter(Boolean).join("\n")}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              const newlines = event.currentTarget.value.split("\n").length - 1;
+              if (newlines >= lineCount - 1) event.preventDefault();
+            }}
+            onChange={(event) => setActiveText(event.target.value)}
+          />
+          <p className="gf-note">
+            Press Enter for a new line. Up to {lineCount} lines.
+            {attached ? ` ${labels.map((label, index) => `Line ${index + 1} is ${label}`).join(". ")}.` : ""}
+          </p>
+        </>
+      )}
+    </div>
+  );
 
   return (
     <div className="gf-designer-root gf-wizard-root md-designer pd-designer is-preview-step">
@@ -1118,20 +1786,85 @@ export default function PlaqueDesigner() {
           </div>
           <div className="gf-design-grid">
             <div className="gf-controls-col">
-              {step === "layout" ? (
+              {step === "layout" && layoutPane === "designs" ? (
+                <div className="md-product-grid pd-layout-grid pd-design-grid">
+                  {attachedCatalogDesigns.map((design) => {
+                    const photo =
+                      design.slug === "your-award"
+                        ? { imageUrl: YOUR_AWARD_FRAME["black-white"] }
+                        : plaqueCatalogVariantForPlate(design, "black-white") ??
+                          representativePlaqueCatalogVariant(design);
+                    return (
+                      <button
+                        type="button"
+                        key={design.slug}
+                        className={`gf-toggle-card ${catalogSlug === design.slug ? "is-selected" : ""}`}
+                        onClick={() => selectCatalogDesign(design)}
+                      >
+                        <span className="pd-choice-art pd-plate-frame">
+                          {photo ? (
+                            <span className="pd-plate-photo">
+                              <img src={photo.imageUrl} alt="" />
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="gf-toggle-label">{design.name}</span>
+                        <span className="gf-toggle-sub">{design.description}</span>
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    className={`gf-toggle-card ${customPlate ? "is-selected" : ""}`}
+                    onClick={selectCustomPlate}
+                  >
+                    <span className="pd-choice-art pd-plate-frame">
+                      <span className="pd-plate-photo">
+                        <img src={blankPlaquePlateImage("black-white")} alt="" />
+                      </span>
+                    </span>
+                    <span className="gf-toggle-label">Make your own</span>
+                    <span className="gf-toggle-sub">A blank plate for your own image and wording.</span>
+                  </button>
+                  {needsDesignChoice ? <p className="md-help">Choose a design to continue.</p> : null}
+                </div>
+              ) : null}
+              {step === "layout" && layoutPane === "layouts" ? (
                 <div className="md-product-grid pd-layout-grid">
-                  {layoutPreviews.map(({ option, badge }) => (
-                    <button
-                      type="button"
-                      key={option.id}
-                      className={`gf-toggle-card ${layoutId === option.id ? "is-selected" : ""}`}
-                      onClick={() => selectLayout(option.id)}
-                    >
-                      {badge ? <PlaqueArt badge={badge} frame="choice" /> : null}
-                      <span className="gf-toggle-label">{LAYOUT_COPY[option.id]?.title ?? option.name}</span>
-                      <span className="gf-toggle-sub">{LAYOUT_COPY[option.id]?.detail ?? option.description}</span>
-                    </button>
-                  ))}
+                  {layoutPreviews.map(({ option, badge }) => {
+                    const attachedCard = option.id === "plaque-attached";
+                    return (
+                      <button
+                        type="button"
+                        key={option.id}
+                        className={`gf-toggle-card ${layoutId === option.id ? "is-selected" : ""}`}
+                        onClick={() => attachedCard ? openAttachedDesigns() : selectLayout(option.id)}
+                      >
+                        {attachedCard && attachedPlatePhoto ? (
+                          <span className="pd-choice-art pd-plate-frame">
+                            <span className="pd-plate-photo">
+                              <img src={attachedPlatePhoto.imageUrl} alt="" />
+                            </span>
+                          </span>
+                        ) : photoPlaqueFrame(option.id) === "portrait" ? (
+                          <span className="pd-choice-art pd-plate-frame">
+                            <span className="pd-plate-photo">
+                              <img src="/images/plaque/photo/portrait-card.jpg" alt="" />
+                            </span>
+                          </span>
+                        ) : photoPlaqueFrame(option.id) === "landscape" ? (
+                          <span className="pd-choice-art pd-plate-frame">
+                            <span className="pd-plate-photo">
+                              <img src="/images/plaque/photo/landscape-card.jpg" alt="" />
+                            </span>
+                          </span>
+                        ) : badge ? <PlaqueArt badge={badge} frame="choice" /> : null}
+                        <span className="gf-toggle-label">{LAYOUT_COPY[option.id]?.title ?? option.name}</span>
+                        <span className="gf-toggle-sub">{LAYOUT_COPY[option.id]?.detail ?? option.description}</span>
+                      </button>
+                    );
+                  })}
+                  {needsLayoutChoice ? <p className="md-help">Choose a layout to continue.</p> : null}
                 </div>
               ) : null}
               {step === "size" ? (
@@ -1157,14 +1890,33 @@ export default function PlaqueDesigner() {
               {step === "format" ? (
                 <>
                   <div className="md-product-grid pd-format-grid">
-                    {formatPreviews.map(({ item, badge }) => (
+                    {formatPreviews.map(({ item }) => (
                       <button
                         type="button"
                         key={item.id}
                         className={`gf-toggle-card ${formatId === item.id ? "is-selected" : ""}`}
                         onClick={() => selectFormat(item.id)}
                       >
-                        {badge ? <PlaqueArt badge={badge} frame="choice" /> : null}
+                        <span className="pd-choice-art pd-real-plate">
+                          <span className="pd-real-plate-frame">
+                          <img src={blankPlaquePlateImage(stagePlate) ?? blankPlaquePlateImage("gold")} alt="" />
+                          <span className="pd-photo-plate">
+                            <span className="pd-photo-lines" style={{ color: textColor, fontFamily }}>
+                              {formatEngraving(item, [], true).map((row, index) => (
+                                <p
+                                  key={`${row.text}-${index}`}
+                                  style={{
+                                    fontWeight: row.bold ? 700 : 400,
+                                    fontStyle: row.italic ? "italic" : "normal",
+                                  }}
+                                >
+                                  {row.text}
+                                </p>
+                              ))}
+                            </span>
+                          </span>
+                          </span>
+                        </span>
                         <span className="gf-toggle-label">{item.name}</span>
                       </button>
                     ))}
@@ -1177,87 +1929,48 @@ export default function PlaqueDesigner() {
                 </>
               ) : null}
               {step === "metal" ? (
-                <div className="pd-swatches">
-                  {PLATE_FINISHES.map((finish) => (
-                    <button
-                      type="button"
-                      key={finish.value}
-                      className={`pd-swatch ${plate.toLowerCase() === finish.value.toLowerCase() ? "is-selected" : ""}`}
-                      onClick={() => setPlate(finish.value)}
-                    >
-                      <span className="pd-swatch-chip" style={{ background: finish.value }} />
-                      <span>{finish.name}</span>
-                    </button>
-                  ))}
-                  <label className="pd-custom-color">
-                    Custom
-                    <input
-                      type="color"
-                      aria-label="Custom plate color"
-                      value={colorInputValue(plate)}
-                      onChange={(event) => setPlate(event.target.value)}
-                    />
-                  </label>
+                <div className="md-product-grid pd-finish-grid">
+                  {PLATE_FINISHES.map((finish) => {
+                    const src = plateFinishImage(finish.value);
+                    return (
+                      <button
+                        type="button"
+                        key={finish.value}
+                        className={`gf-toggle-card ${plate.toLowerCase() === finish.value.toLowerCase() ? "is-selected" : ""}`}
+                        onClick={() => applyPlate(finish.value)}
+                      >
+                        <span className="pd-choice-art pd-plate-frame">
+                          {src ? (
+                            <span className="pd-plate-photo">
+                              <img src={src} alt="" />
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="gf-toggle-label">{finish.name}</span>
+                        <span className="gf-toggle-sub">{finish.detail}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               ) : null}
               {step === "design" ? (
                 <>
-                  <div className="pd-image-block">
-                    <p className="md-text-label">Image</p>
-                    <p className="gf-note">{imageCopy}</p>
-                    <div className="pd-image-actions">
-                      {sharedImage ? <img className="pd-image-thumb" src={sharedImage.src} alt="" /> : null}
-                      <button type="button" className="gf-nav-secondary" onClick={() => sharedImageInputRef.current?.click()}>
-                        {sharedImage ? "Replace image" : "Choose image"}
-                      </button>
-                      {sharedImage ? (
-                        <button type="button" className="gf-csv-link" onClick={() => setSharedImage(null)}>
-                          Remove image
-                        </button>
-                      ) : null}
-                      <input
-                        ref={sharedImageInputRef}
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
-                        className="gf-visually-hidden"
-                        onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          event.target.value = "";
-                          void chooseSharedImage(file);
-                        }}
-                      />
+                  <div className="pd-text-color">
+                    <span className="pd-text-color-label" id="pd-text-color-label">Text color</span>
+                    <div className="pd-text-swatches" role="group" aria-labelledby="pd-text-color-label">
+                      {PLAQUE_TEXT_COLORS.map((color) => (
+                        <button
+                          type="button"
+                          key={color.value}
+                          className={`pd-text-swatch${textColor.toLowerCase() === color.value.toLowerCase() ? " is-selected" : ""}${color.value === "#FFFFFF" ? " is-light" : ""}`}
+                          style={{ background: color.value }}
+                          aria-label={color.name}
+                          aria-pressed={textColor.toLowerCase() === color.value.toLowerCase()}
+                          onClick={() => setTextColor(color.value)}
+                        />
+                      ))}
                     </div>
-                    {sharedImage && placementOptions.length > 1 ? (
-                      <div className="pd-placement" role="group" aria-label="Image placement">
-                        {placementOptions.map((option) => (
-                          <button
-                            type="button"
-                            key={option}
-                            className={`gf-nav-secondary ${placement === option ? "is-selected" : ""}`}
-                            onClick={() => setPlacementChoice(option)}
-                          >
-                            {PLACEMENT_LABEL[option]}
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-                    {attached && !imageReady ? <p className="md-help">Add an image before adding to cart.</p> : null}
                   </div>
-                  <div className="md-format-row">
-                    <label>
-                      Font
-                      <select className="gf-input" value={fontFamily} onChange={(event) => setFontFamily(event.target.value)}>
-                        {FONT_OPTIONS.map((font) => <option key={font}>{font}</option>)}
-                      </select>
-                    </label>
-                    {!attached && (bulkMode ? bulkPane === "edit" || bulkRows.length === 0 : true) ? (
-                      <PlaqueFormatButtons
-                        style={activeStyles?.[0] ?? { bold: false, italic: false, underline: false }}
-                        onToggle={(formatKey) => updateFormat({ [formatKey]: !(activeStyles?.[0]?.[formatKey]) })}
-                      />
-                    ) : null}
-                  </div>
-                  {attached ? <p className="gf-note">Bold, italic, and dividers follow the award format.</p> : null}
                   {bulkMode ? (
                     <>
                       <div className="md-bulk-switch" role="tablist" aria-label="Bulk order">
@@ -1377,25 +2090,8 @@ export default function PlaqueDesigner() {
                             <strong>Plaque {selectedBulkRow + 1} of {bulkRows.length}</strong>
                             <button type="button" className="gf-csv-link" disabled={selectedBulkRow >= bulkRows.length - 1} onClick={() => stepBulkRow(1)}>Next</button>
                           </div>
-                          <label className="md-text-label" htmlFor="pd-wording">Text</label>
-                          <textarea
-                            id="pd-wording"
-                            className="gf-input md-wording"
-                            rows={Math.min(lineCount, 6)}
-                            value={textDraft}
-                            placeholder={placeholders.filter(Boolean).join("\n")}
-                            onKeyDown={(event) => {
-                              if (event.key !== "Enter") return;
-                              const newlines = event.currentTarget.value.split("\n").length - 1;
-                              if (newlines >= lineCount - 1) event.preventDefault();
-                            }}
-                            onChange={(event) => setActiveText(event.target.value)}
-                          />
-                          <p className="gf-note">
-                            Press Enter for a new line. Up to {lineCount} lines.
-                            {attached ? ` ${labels.map((label, index) => `Line ${index + 1} is ${label}`).join(". ")}.` : ""}
-                          </p>
-                          <div className="pd-image-actions">
+                          {wordingEditor}
+                          {showImageUpload ? <div className="pd-image-actions">
                             <button type="button" className="gf-csv-link" onClick={() => rowImageInputRef.current?.click()}>
                               {bulkRows[selectedBulkRow].image ? "Replace this plaque's image" : "Different image for this plaque"}
                             </button>
@@ -1422,7 +2118,7 @@ export default function PlaqueDesigner() {
                                 void chooseRowImage(file);
                               }}
                             />
-                          </div>
+                          </div> : null}
                           <div className="md-copy-row">
                             <span>Quantity</span>
                             <div className="md-copy-stepper">
@@ -1438,31 +2134,61 @@ export default function PlaqueDesigner() {
                               <button type="button" className="gf-csv-link" onClick={applyFormatToAll}>Use this style on all</button>
                             ) : null}
                           </div>
-                          {!designReady ? <p className="md-help">Every plaque needs a first line{attached ? " and an image" : ""} before adding to cart.</p> : null}
+                          {!designReady ? <p className="md-help">Every plaque needs a first line{imageRequired ? " and an image" : ""} before adding to cart.</p> : null}
                         </div>
                       ) : null}
                     </>
                   ) : (
                     <>
-                      <label className="md-text-label" htmlFor="pd-wording">Custom text</label>
-                      <textarea
-                        id="pd-wording"
-                        className="gf-input md-wording"
-                        rows={Math.min(lineCount, 6)}
-                        value={textDraft}
-                        placeholder={placeholders.filter(Boolean).join("\n")}
-                        onKeyDown={(event) => {
-                          if (event.key !== "Enter") return;
-                          const newlines = event.currentTarget.value.split("\n").length - 1;
-                          if (newlines >= lineCount - 1) event.preventDefault();
-                        }}
-                        onChange={(event) => setActiveText(event.target.value)}
-                      />
-                      <p className="gf-note">
-                        Press Enter for a new line. Up to {lineCount} lines.
-                        {attached ? ` ${labels.map((label, index) => `Line ${index + 1} is ${label}`).join(". ")}.` : ""}
-                      </p>
+                      {wordingEditor}
                       {!textReady ? <p className="md-help">Enter line 1 before adding to cart.</p> : null}
+                    </>
+                  )}
+                  {showImageUpload ? (
+                    <div className="pd-image-block">
+                      <p className="md-text-label">Image</p>
+                      <p className="gf-note">{imageCopy}</p>
+                      <div className="pd-image-actions">
+                        {sharedImage ? <img className="pd-image-thumb" src={sharedImage.src} alt="" /> : null}
+                        <button type="button" className="gf-nav-secondary" onClick={() => sharedImageInputRef.current?.click()}>
+                          {sharedImage ? "Replace image" : "Choose image"}
+                        </button>
+                        {sharedImage ? (
+                          <button type="button" className="gf-csv-link" onClick={() => setSharedImage(null)}>
+                            Remove image
+                          </button>
+                        ) : null}
+                        <input
+                          ref={sharedImageInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                          className="gf-visually-hidden"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            event.target.value = "";
+                            void chooseSharedImage(file);
+                          }}
+                        />
+                      </div>
+                      {sharedImage && placementOptions.length > 1 ? (
+                        <div className="pd-placement" role="group" aria-label="Image placement">
+                          {placementOptions.map((option) => (
+                            <button
+                              type="button"
+                              key={option}
+                              className={`gf-nav-secondary ${placement === option ? "is-selected" : ""}`}
+                              onClick={() => setPlacementChoice(option)}
+                            >
+                              {PLACEMENT_LABEL[option]}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                      {imageRequired && !imageReady ? <p className="md-help">Add an image before adding to cart.</p> : null}
+                    </div>
+                  ) : null}
+                  {!bulkMode ? (
+                    <>
                       <div className="md-quantity-card">
                         <p className="gf-sub-title">How many of this plaque?</p>
                         <div className="md-quantity-control">
@@ -1489,7 +2215,7 @@ export default function PlaqueDesigner() {
                         </button>
                       </div>
                     </>
-                  )}
+                  ) : null}
                 </>
               ) : null}
               {step === "design" && bulkMode && bulkRows.length > 0 ? (
@@ -1502,11 +2228,11 @@ export default function PlaqueDesigner() {
               {cartError && !proofOpen ? <p className="gf-note" role="alert">{cartError}</p> : null}
               <div className="gf-step-nav">
                 <div className="md-nav-secondary">
-                  {stepIndex > 0 ? <button type="button" className="gf-nav-secondary" onClick={() => goToStep(steps[stepIndex - 1])}>Back</button> : null}
+                  {stepIndex > 0 || (step === "layout" && layoutPane === "designs") ? <button type="button" className="gf-nav-secondary" onClick={goBack}>Back</button> : null}
                   <button type="button" className="gf-nav-secondary" onClick={() => window.confirm("Reset this plaque design?") && reset()}>Reset design</button>
                 </div>
                 {step !== "design" ? (
-                  <button type="button" className="gf-nav-primary" onClick={() => goToStep(steps[stepIndex + 1])}>Continue</button>
+                  <button type="button" className="gf-nav-primary" onClick={goForward}>Continue</button>
                 ) : (
                   <button type="button" className="gf-nav-primary" disabled={busy || !designReady} onClick={() => void reviewProof()}>
                     {busy ? "Preparing preview…" : "Add to cart"}
@@ -1516,7 +2242,44 @@ export default function PlaqueDesigner() {
             </div>
             <div className="gf-preview-pane">
               <div className="md-preview-stage">
-                <PlaqueArt badge={previewBadge} frame="stage" />
+                {stagePhoto ? (
+                  <PlaquePhotoStage
+                    src={stagePhoto}
+                    lines={
+                      photoFrame
+                        ? activeLines.some((line) => line.trim())
+                          ? activeLines
+                          : placeholders
+                        : customPlate
+                          ? formatEngraving(format, activeLines, !activeLines.some((line) => line.trim())).map((row) => row.text)
+                          : activeLines
+                    }
+                    styles={
+                      photoFrame
+                        ? activeLines.some((line) => line.trim())
+                          ? stylesFor(activeStyles, lineCount)
+                          : emptyStyles(lineCount)
+                        : customPlate
+                          ? engravingStyles(
+                              formatEngraving(format, activeLines, !activeLines.some((line) => line.trim())),
+                              activeStyles,
+                            )
+                          : stylesFor(activeStyles, lineCount)
+                    }
+                    image={showImageUpload ? activeImage : null}
+                    ink={stageInk}
+                    fontFamily={fontFamily}
+                    catalog={Boolean(selectedCatalogDesign)}
+                    catalogLayout={selectedCatalogDesign ? catalogLinePlan(format, activeLines) : null}
+                    photo={photoFrame ?? undefined}
+                  />
+                ) : layoutId ? (
+                  <PlaqueArt badge={previewBadge} frame="stage" />
+                ) : (
+                  <div className="pd-preview-frame pd-photo-empty">
+                    <p>Choose a layout to see your plaque.</p>
+                  </div>
+                )}
               </div>
               <p className="md-preview-caption">Preview is an approximation. Final placement may vary slightly.</p>
             </div>

@@ -7,46 +7,66 @@
 
 <section id="sbl-home-{{ section.id }}" class="sbl-home" data-sbl-home>
   <div class="sbl-home__hero">
-    <div class="sbl-home__hero-grid">
-      <div class="sbl-home__hero-copy">
-        <p class="sbl-home__eyebrow sbl-home__eyebrow--live">
-          <span class="sbl-home__live-dot" aria-hidden="true"></span>
-          {{ section.settings.hero_eyebrow | escape }}
-        </p>
-        <h1 class="sbl-home__hero-title">
-          <strong>{{ section.settings.hero_heading | escape }}</strong><br>
-          {{ section.settings.hero_subheading | escape }}
-        </h1>
-        <p class="sbl-home__hero-accent">{{ section.settings.hero_accent | escape }}</p>
-        <p class="sbl-home__hero-text">{{ section.settings.hero_text | escape }}</p>
-        <div class="sbl-home__hero-actions">
+    <div class="sbl-home__hero-split">
+      <div class="sbl-home__hero-pane sbl-home__hero-pane--custom">
+        <div class="sbl-home__hero-body">
+          <p class="sbl-home__eyebrow sbl-home__eyebrow--live">
+            <span class="sbl-home__live-dot" aria-hidden="true"></span>
+            {{ section.settings.hero_eyebrow | escape }}
+          </p>
+          <h1 class="sbl-home__hero-title">
+            <strong>{{ section.settings.hero_heading | escape }}</strong>
+            {{ section.settings.hero_subheading | escape }}
+          </h1>
+          <p class="sbl-home__hero-accent">{{ section.settings.hero_accent | escape }}</p>
+          <p class="sbl-home__hero-text">{{ section.settings.hero_text | escape }}</p>
           <a href="{{ designer_url }}" class="sbl-home__button sbl-home__button--gold sbl-home__button--hero">
             {{ section.settings.designer_button | escape }}
             <span aria-hidden="true">→</span>
           </a>
-          <a href="#sbl-popular" class="sbl-home__button sbl-home__button--outline">
-            {{ section.settings.shop_button | escape }}
-          </a>
         </div>
-        <div class="sbl-home__hero-trust">
-          <p>10+ years making signs <span aria-hidden="true">·</span> <strong>Over 1 million signs sold across the USA</strong></p>
-          <p class="sbl-home__hero-reviews">
-            <span class="sbl-home__stars" aria-hidden="true">★★★★★</span>
-            <span>Thousands of 5-star reviews</span>
-          </p>
+        <div class="sbl-home__hero-photo sbl-home__hero-photo--custom">
+          <img
+            src="{{ 'sbl-hero-custom-photo.jpg' | asset_url }}"
+            alt="A navy Main Office sign on a wood office door"
+            width="1012"
+            height="987"
+            loading="eager"
+          >
         </div>
       </div>
 
-      <div class="sbl-home__hero-art">
-        <img
-          class="sbl-home__hero-photo"
-          src="{{ 'sbl-hero-sign-range.jpg' | asset_url }}"
-          alt="Personalized office signs in blue, black, white, red, gold, brushed silver and woodgrain finishes"
-          width="742"
-          height="560"
-          loading="eager"
-        >
+      <div class="sbl-home__hero-pane sbl-home__hero-pane--ready">
+        <div class="sbl-home__hero-body">
+          <p class="sbl-home__eyebrow">Ready to ship</p>
+          <h2 class="sbl-home__hero-title">
+            <strong>Ready-Made Signs</strong>
+            for Every Space.
+          </h2>
+          <p class="sbl-home__hero-accent">Find the wording you need.</p>
+          <p class="sbl-home__hero-text">More than 5,000 signs for restrooms, offices, safety, and private property. Search by the words on the sign, or browse the catalog.</p>
+          <a href="{{ routes.all_products_collection_url }}" class="sbl-home__button sbl-home__button--navy sbl-home__button--hero">
+            {{ section.settings.shop_button | escape }}
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
+        <div class="sbl-home__hero-photo sbl-home__hero-photo--ready">
+          <img
+            src="{{ 'sbl-hero-ready-photo.jpg' | asset_url }}"
+            alt="A black Please Wash Your Hands sign on a white tile wall"
+            width="606"
+            height="600"
+            loading="eager"
+          >
+        </div>
       </div>
+    </div>
+    <div class="sbl-home__hero-trust sbl-home__hero-trust--bar">
+      <p>10+ years making signs <span aria-hidden="true">·</span> <strong>Over 1 million signs sold across the USA</strong></p>
+      <p class="sbl-home__hero-reviews">
+        <span class="sbl-home__stars" aria-hidden="true">★★★★★</span>
+        <span>Thousands of 5-star reviews</span>
+      </p>
     </div>
   </div>
 
@@ -73,6 +93,7 @@
   <div class="sbl-home__steps">
     <div class="sbl-home__wrap">
       <h2>Design Your Sign in 4 Simple Steps</h2>
+      <p class="sbl-home__steps-note">Bulk orders use the same steps. Design once, duplicate, and change only the wording.</p>
       <div class="sbl-home__steps-track">
         <div class="sbl-home__step">
           <div class="sbl-home__step-icon">
@@ -143,35 +164,6 @@
           <h3>Place your order</h3>
           <p>Ships fast. No artwork fees.</p>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="sbl-home__benefits">
-    <div class="sbl-home__wrap sbl-home__benefits-grid">
-      <div class="sbl-home__benefit">
-        <span class="sbl-home__benefit-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M3 6h11v11H3zM14 10h4l3 4v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
-        </span>
-        <div><strong>Free US shipping</strong><span>On every order, to your door</span></div>
-      </div>
-      <div class="sbl-home__benefit">
-        <span class="sbl-home__benefit-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg>
-        </span>
-        <div><strong>Shipped fast</strong><span>Most orders ship within 48 hours</span></div>
-      </div>
-      <div class="sbl-home__benefit">
-        <span class="sbl-home__benefit-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="m5 16-1 5 5-1L20 9l-4-4L5 16ZM14 7l4 4"/></svg>
-        </span>
-        <div><strong>Made your way</strong><span>Your wording, colors and size</span></div>
-      </div>
-      <div class="sbl-home__benefit">
-        <span class="sbl-home__benefit-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M5 21V4h14v17M9 8h2m2 0h2M9 12h2m2 0h2M10 21v-5h4v5"/></svg>
-        </span>
-        <div><strong>Bulk made easy</strong><span>From one sign to a whole building</span></div>
       </div>
     </div>
   </div>
@@ -454,7 +446,7 @@
       <div>
         <p class="sbl-home__section-label">Trophies & awards</p>
         <h2>{{ section.settings.trophy_heading | escape }}</h2>
-        <p>Pick a trophy style, add your logo and engraving, and see the finished award before you order.</p>
+        <p>Pick a trophy style, add your logo and a personalized message, and see the finished award before you order.</p>
         <a href="{{ trophy_url }}" class="sbl-home__button sbl-home__button--gold">
           Design a trophy →
         </a>
@@ -480,21 +472,91 @@
     --sbl-cream: #f5f1eb;
     --sbl-ink: #1b2433;
     --sbl-muted: #667085;
+    display: flex;
+    flex-direction: column;
     background: var(--sbl-cream);
     color: var(--sbl-ink);
     font-family: Arial, Helvetica, sans-serif;
   }
+  .sbl-home__hero { order: 1; }
+  .sbl-home__search-wrap { order: 2; }
+  #sbl-popular { order: 3; }
+  .sbl-home__section--white { order: 4; }
+  #sbl-real-signs { order: 5; }
+  .sbl-home__steps { order: 6; }
+  #sbl-industries { order: 7; }
+  #sbl-bulk { order: 8; }
+  .sbl-home__plaque { order: 9; }
+  .sbl-home__trophy { order: 10; }
   .sbl-home * { box-sizing: border-box; }
   .sbl-home__wrap { width: min(1240px, calc(100% - 48px)); margin: 0 auto; }
   .sbl-home__hero { background: var(--sbl-navy); color: #fff; }
-  .sbl-home__hero-grid {
+  .sbl-home__hero-split {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(600px, 56vw, 960px);
-    gap: clamp(24px, 2.4vw, 40px);
+    grid-template-columns: 1fr 1fr;
     align-items: stretch;
-    min-height: 0;
-    height: auto;
-    padding-left: clamp(28px, 2.4vw, 48px);
+  }
+  .sbl-home__hero-pane {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    min-width: 0;
+    min-height: 400px;
+  }
+  .sbl-home__hero-pane--ready {
+    background: #f7f3ec;
+    color: var(--sbl-navy);
+  }
+  .sbl-home__hero-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
+    padding: 36px 28px 36px clamp(24px, 3vw, 48px);
+  }
+  .sbl-home__hero-pane .sbl-home__eyebrow { margin: 0; font-size: 12px; white-space: nowrap; }
+  .sbl-home__hero-pane .sbl-home__hero-title { font-size: clamp(28px, 2.3vw, 38px); line-height: 1.12; }
+  .sbl-home__hero-pane .sbl-home__hero-title strong { display: block; }
+  .sbl-home__hero-pane .sbl-home__hero-accent { font-size: clamp(17px, 1.35vw, 21px); }
+  .sbl-home__hero-pane .sbl-home__hero-text { font-size: 15px; line-height: 1.55; }
+  .sbl-home__hero-pane--ready .sbl-home__hero-text { color: var(--sbl-muted); }
+  .sbl-home__hero-pane--ready .sbl-home__hero-accent { color: #8a6416; }
+  .sbl-home__hero-pane .sbl-home__button--hero {
+    min-height: 50px;
+    margin-top: 6px;
+    padding: 0 18px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  @media (min-width: 1101px) and (max-width: 1400px) {
+    .sbl-home__hero-body { padding: 32px 20px 32px 24px; }
+  }
+  .sbl-home__hero-photo {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+    background: #d9cdb8;
+  }
+  .sbl-home__hero-photo img {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .sbl-home__hero-photo--custom img { object-position: 60% 40%; }
+  .sbl-home__hero-photo--ready img { object-position: 100% 30%; }
+  .sbl-home__hero-trust--bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 24px;
+    width: min(1240px, calc(100% - 80px));
+    margin: 0 auto;
+    padding: 18px 0 22px;
   }
   .sbl-home__hero-copy {
     grid-column: 1;
@@ -542,14 +604,14 @@
     font-weight: 500;
     letter-spacing: -.025em;
   }
-  .sbl-home__hero-title { max-width: none; font-size: clamp(50px, 4.4vw, 68px); line-height: 1.14; }
+  .sbl-home__hero-title { max-width: none; font-size: clamp(36px, 3vw, 48px); line-height: 1.14; }
   .sbl-home__hero-title strong { font-weight: 700; }
   .sbl-home__hero-accent {
     max-width: none;
     margin: 0;
     color: #e6c66e;
     font-family: Georgia, 'Times New Roman', serif;
-    font-size: clamp(28px, 2.4vw, 36px);
+    font-size: clamp(22px, 1.8vw, 28px);
     font-style: italic;
     font-weight: 400;
     line-height: 1.25;
@@ -634,7 +696,7 @@
   .sbl-home__menu-group a { color: var(--sbl-navy); font-size: 16px; line-height: 1.35; text-decoration: none; }
   .sbl-home__menu-note { margin: 4px 0 0; padding-top: 14px; border-top: 1px solid #eee7dc; color: var(--sbl-muted); font-size: 13px; }
   .sbl-home__menu-note a { color: var(--sbl-navy); font-weight: 800; }
-  .sbl-home__hero-text { max-width: 600px; margin: 0; color: #e7eef6; font-size: 20px; line-height: 1.7; }
+  .sbl-home__hero-text { max-width: none; margin: 0; color: #e7eef6; font-size: 16px; line-height: 1.55; }
   .sbl-home__hero-actions {
     display: flex;
     flex-direction: row;
@@ -669,7 +731,6 @@
     overflow: hidden;
     background: #eee8dc;
   }
-  .sbl-home__hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: left center; }
   .sbl-home__quick-links { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 24px; }
   .sbl-home__quick-links a {
     padding: 8px 12px;
@@ -736,7 +797,7 @@
     .sbl-home__hero-actions .sbl-home__button--gold::after,
     .sbl-home__hero-actions .sbl-home__button--outline::after { animation: none; }
   }
-  .sbl-home__button--navy { background: var(--sbl-navy); color: #fff; }
+  .sbl-home a.sbl-home__button--navy { background: var(--sbl-navy); color: #fff; }
   .sbl-home__button--navy:hover { background: #183b64; color: #fff; }
   .sbl-home__hero-notes { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 18px; color: #bfcbd9; font-size: 13px; }
   .sbl-home__designer-card { position: relative; display: block; padding: 16px; border-radius: 16px; background: #fff; box-shadow: 0 32px 70px rgba(0,0,0,.32), 0 0 0 0 rgba(201,147,46,0); color: var(--sbl-ink); text-decoration: none; transition: transform .25s ease, box-shadow .25s ease; }
@@ -758,7 +819,8 @@
   .sbl-home__search button { align-self: stretch; padding: 0 26px; border: 0; border-radius: 7px; background: var(--sbl-navy); color: #fff; font-weight: 800; cursor: pointer; }
   .sbl-home__search--repeat { margin-top: 28px; }
   .sbl-home__steps { padding: 56px 0 72px; border-bottom: 1px solid rgba(2, 19, 43, .1); background: #fff; color: #02132b; }
-  .sbl-home__steps h2 { margin: 0 0 56px; color: #02132b; font-size: clamp(28px, 3.2vw, 38px); font-weight: 700; line-height: 1.15; text-align: center; }
+  .sbl-home__steps h2 { margin: 0 0 12px; color: #02132b; font-size: clamp(28px, 3.2vw, 38px); font-weight: 700; line-height: 1.15; text-align: center; }
+  .sbl-home__steps .sbl-home__steps-note { max-width: 640px; margin: 0 auto 40px; color: #667085; font-size: 16px; line-height: 1.5; text-align: center; }
   .sbl-home__steps-track { display: flex; align-items: flex-start; justify-content: space-between; }
   .sbl-home__step { flex: 0 1 240px; max-width: 260px; display: flex; flex-direction: column; align-items: center; padding: 0 12px; text-align: center; }
   .sbl-home__step-icon { position: relative; width: 104px; height: 104px; margin-bottom: 22px; color: #02132b; }
@@ -772,20 +834,8 @@
   .sbl-home__step-arrow { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; min-width: 56px; max-width: 140px; margin-top: 38px; padding: 0 8px; color: #02132b; opacity: .7; }
   .sbl-home__step-arrow svg { width: 100%; max-width: 120px; height: 24px; fill: none; stroke: currentColor; }
   .sbl-home__visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-  .sbl-home__benefits { margin-top: 0; padding: 30px 0; border-top: 0; border-bottom: 1px solid #e0e5eb; background: #fff; }
-  .sbl-home__benefits-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; }
-  .sbl-home__benefit { display: flex; align-items: center; gap: 15px; padding-right: 24px; border-right: 1px solid #e0e5eb; }
-  .sbl-home__benefit:last-child { border-right: 0; }
-  .sbl-home__benefit-icon { display: grid; width: 46px; height: 46px; flex: none; place-items: center; border-radius: 9px; background: #fff2e2; color: #d9780b; }
-  .sbl-home__benefit-icon svg { width: 22px; height: 22px; stroke-width: 1.6; }
-  .sbl-home__benefit-icon svg,
-  .sbl-home__benefit-icon svg *,
   .sbl-home__ind-search svg,
   .sbl-home__ind-search svg * { fill: none; stroke: currentColor; }
-  .sbl-home__benefit strong,
-  .sbl-home__benefit div span { display: block; }
-  .sbl-home__benefit strong { margin-bottom: 4px; color: var(--sbl-ink); font-size: 15px; }
-  .sbl-home__benefit div span { color: var(--sbl-muted); font-size: 14px; line-height: 1.45; }
   .sbl-home__ind { padding: 80px 0 72px; background: #fff; }
   #sbl-industries { scroll-margin-top: 90px; }
   .sbl-home__ind-head { display: flex; margin-bottom: 34px; align-items: end; justify-content: space-between; gap: 30px; }
@@ -889,49 +939,22 @@
   .sbl-home__trophy .sbl-home__plaque-grid > div > p:not(.sbl-home__section-label) { color: var(--sbl-muted); }
   .sbl-home__trophy .sbl-home__plaque-image img { height: 420px; }
   @media (max-width: 1100px) {
-    .sbl-home__hero-grid { grid-template-columns: 1fr; height: auto; min-height: 0; padding-left: 0; gap: 0; }
-    .sbl-home__hero-copy,
-    .sbl-home__hero-art { grid-column: 1; }
-    .sbl-home__hero-copy { grid-row: 1; max-width: none; padding: 40px 28px 28px; }
-    .sbl-home__hero-actions {
-      flex-direction: row;
-      flex-wrap: wrap;
-      width: 100%;
-      max-width: 720px;
-      margin-top: 22px;
-    }
-    .sbl-home__hero-actions .sbl-home__button { width: auto; box-shadow: none; }
-    .sbl-home__button--outline { border-color: rgba(255,255,255,.5); background: transparent; color: #fff; }
-    .sbl-home__button--outline:hover { border-color: #fff; background: rgba(255,255,255,.08); color: #fff; }
-    .sbl-home__hero-art { grid-row: 2; width: 100%; height: auto; min-height: 0; aspect-ratio: 742 / 560; }
-    .sbl-home__hero-text { font-size: 18px; }
-    .sbl-home__hero-title { font-size: 52px; }
-    .sbl-home__hero-accent { font-size: 30px; }
+    .sbl-home__hero-split { grid-template-columns: 1fr; }
+    .sbl-home__hero-pane { min-height: 340px; }
+    .sbl-home__hero-trust--bar { width: min(100% - 48px, 1240px); }
+    .sbl-home__hero-title { font-size: 40px; }
+    .sbl-home__hero-accent { font-size: 24px; }
   }
   @media (max-width: 990px) {
-    .sbl-home__hero-grid,
+    .sbl-home__hero-split,
     .sbl-home__bulk,
     .sbl-home__plaque-grid,
     .sbl-home__trophy .sbl-home__plaque-grid { grid-template-columns: 1fr; }
     .sbl-home__trophy .sbl-home__plaque-image { order: -1; }
-    .sbl-home__hero-grid { grid-template-columns: 1fr; height: auto; min-height: 0; padding-left: 0; gap: 0; }
-    .sbl-home__hero-copy,
-    .sbl-home__hero-art { grid-column: 1; }
-    .sbl-home__hero-copy { grid-row: 1; padding: 36px 24px 28px; }
-    .sbl-home__hero-actions {
-      flex-direction: row;
-      flex-wrap: wrap;
-      width: 100%;
-      margin-top: 22px;
-    }
-    .sbl-home__hero-actions .sbl-home__button { width: auto; box-shadow: none; }
-    .sbl-home__button--outline { border-color: rgba(255,255,255,.5); background: transparent; color: #fff; }
-    .sbl-home__button--outline:hover { border-color: #fff; background: rgba(255,255,255,.08); color: #fff; }
-    .sbl-home__hero-art { grid-row: 2; width: 100%; height: auto; min-height: 0; aspect-ratio: 742 / 560; }
+    .sbl-home__hero-pane { padding: 28px 20px 24px; }
     .sbl-home__designer-card { width: min(620px, 100%); margin: 0 auto; }
     .sbl-home__category-grid,
     .sbl-home__product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .sbl-home__benefits-grid,
     .sbl-home__ind-grid,
     .sbl-home__spaces-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .sbl-home__spaces { padding: 56px 0; }
@@ -940,28 +963,27 @@
     .sbl-home__spaces-grid { gap: 16px; }
     .sbl-home__space-copy { padding: 15px; }
     .sbl-home__space-copy strong { font-size: 19px; }
-    .sbl-home__benefit:nth-child(2) { border-right: 0; }
     .sbl-home__ind-head { align-items: stretch; flex-direction: column; gap: 20px; }
     .sbl-home__ind-search { min-width: 0; }
-    .sbl-home__steps { padding: 40px 0 8px; }
-    .sbl-home__steps h2 { margin-bottom: 28px; }
+    .sbl-home__steps { padding: 40px 0 48px; }
+    .sbl-home__steps h2 { margin-bottom: 8px; }
+    .sbl-home__steps .sbl-home__steps-note { margin-bottom: 32px; font-size: 15px; }
     .sbl-home__steps-track { flex-wrap: wrap; justify-content: center; gap: 28px 12px; }
     .sbl-home__step { flex: 1 1 calc(50% - 20px); max-width: none; }
     .sbl-home__step-arrow { display: none; }
   }
   @media (max-width: 599px) {
     .sbl-home__wrap { width: min(100% - 28px, 1240px); }
-    .sbl-home__hero-copy { padding: 32px 20px 24px; }
-    .sbl-home__hero-title { font-size: 42px; }
-    .sbl-home__hero-accent { font-size: 24px; }
     .sbl-home__menu-cols { grid-template-columns: 1fr 1fr; }
-    .sbl-home__hero-text { font-size: 17px; line-height: 1.6; }
-    .sbl-home__hero-trust { font-size: 15.5px; }
-    .sbl-home__hero-actions { flex-direction: column; margin-top: 20px; }
-    .sbl-home__button--hero,
-    .sbl-home__button--outline { width: 100%; }
-    .sbl-home__button--hero { min-height: 64px; font-size: 20px; }
-    .sbl-home__hero-art { width: 100%; min-height: 0; height: auto; aspect-ratio: 742 / 560; }
+    .sbl-home__hero-pane { padding: 28px 16px 22px; }
+    .sbl-home__hero-title { font-size: 34px; }
+    .sbl-home__hero-accent { font-size: 22px; }
+    .sbl-home__hero-text { font-size: 16px; }
+    .sbl-home__hero-pane { grid-template-columns: 1fr; min-height: 0; }
+    .sbl-home__hero-photo { order: -1; aspect-ratio: 16 / 9; }
+    .sbl-home__hero-body { padding: 24px 16px 28px; }
+    .sbl-home__hero-pane .sbl-home__button--hero { width: 100%; }
+    .sbl-home__hero-trust--bar { width: min(100% - 32px, 1240px); }
     .sbl-home__start { align-items: stretch; flex-direction: column; }
     .sbl-home__start-copy { padding: 8px; }
     .sbl-home__designer-image-wrap { height: 390px; }
@@ -969,11 +991,6 @@
     .sbl-home__search button { width: 100%; min-height: 48px; }
     .sbl-home__category-grid,
     .sbl-home__product-grid { grid-template-columns: 1fr; }
-    .sbl-home__benefits-grid { gap: 20px 14px; }
-    .sbl-home__benefit { padding-right: 8px; gap: 10px; border-right: 0; }
-    .sbl-home__benefit-icon { width: 38px; height: 38px; }
-    .sbl-home__benefit strong { font-size: 14px; }
-    .sbl-home__benefit div span { font-size: 13px; }
     .sbl-home__ind { padding: 56px 0; }
     .sbl-home__ind-grid { gap: 12px; }
     .sbl-home__ind-card { padding: 18px 14px 14px; }
@@ -1001,7 +1018,6 @@
     .sbl-home__ind-grid { gap: 16px; }
     .sbl-home__ind-card { padding: 22px 18px 18px; }
     .sbl-home__ind-name { font-size: 20px; }
-    .sbl-home__benefit { padding-right: 12px; gap: 10px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .sbl-home__ind-card,
@@ -1116,14 +1132,14 @@
     { "type": "text", "id": "hero_heading", "label": "Hero heading", "default": "Custom Signs" },
     { "type": "text", "id": "hero_subheading", "label": "Hero subheading", "default": "for Your Business." },
     { "type": "text", "id": "hero_accent", "label": "Hero accent", "default": "Designed in minutes. Shipped fast." },
-    { "type": "textarea", "id": "hero_text", "label": "Hero text", "default": "Design door, wall and desk signs in your own wording, shape, size and color, with a live preview before you buy. Order one sign or a whole building's worth. Customized and shipped from our US facility." },
+    { "type": "textarea", "id": "hero_text", "label": "Hero text", "default": "Design door, wall and desk signs in your own wording, shape, size and color, with a live preview before you buy. Order one sign or a whole building's worth. All custom orders are customized in the US." },
     { "type": "text", "id": "input_label", "label": "Designer prompt label", "default": "Your sign can say anything" },
     { "type": "text", "id": "input_example", "label": "Designer prompt example", "default": "Add your custom text in the designer" },
     { "type": "text", "id": "designer_button", "label": "Designer button", "default": "Design your custom sign" },
     { "type": "text", "id": "shop_button", "label": "Ready-made signs button", "default": "Shop ready-made signs" },
     { "type": "text", "id": "designer_kicker", "label": "Designer card label", "default": "Real custom sign designer" },
     { "type": "image_picker", "id": "designer_image", "label": "Designer screenshot" },
-    { "type": "textarea", "id": "designer_image_alt", "label": "Designer image alt text", "default": "Signs ByLITA custom sign designer showing a live engraved sign preview" },
+    { "type": "textarea", "id": "designer_image_alt", "label": "Designer image alt text", "default": "Signs ByLITA custom sign designer showing a live personalized sign preview" },
     { "type": "text", "id": "designer_card_link", "label": "Designer card link text", "default": "Open the live designer" },
     { "type": "textarea", "id": "search_placeholder", "label": "Search placeholder", "default": "Search over 5000 ready made signs" },
     { "type": "text", "id": "categories_label", "label": "Categories label", "default": "Popular signs" },

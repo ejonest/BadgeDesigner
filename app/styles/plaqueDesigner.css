@@ -6,6 +6,10 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.pd-layout-grid .md-help {
+  grid-column: 1 / -1;
+}
+
 .pd-choice-art,
 .pd-card-art,
 .pd-preview-frame {
@@ -18,6 +22,343 @@
 
 .pd-choice-art {
   height: 168px;
+  flex: 0 0 168px;
+  align-items: flex-end;
+  border-radius: 8px;
+  background: #f4f1ea;
+}
+
+.pd-choice-art img,
+.pd-finish-preview {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+/* Product photos include a white margin. Fit the plaque itself into the card,
+   the same way the rendered layouts fill their art. */
+.pd-plate-frame {
+  align-items: center;
+  justify-content: center;
+  justify-self: stretch;
+  width: 100%;
+  min-width: 0;
+}
+
+.pd-plate-photo {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-height: 100%;
+  aspect-ratio: 230 / 304;
+  overflow: hidden;
+}
+
+.pd-plate-frame .pd-plate-photo img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(100% * 400 / 230);
+  height: auto;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  object-fit: fill;
+  object-position: center center;
+}
+
+.pd-designer .md-product-grid .gf-toggle-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: subgrid;
+  grid-row: span 3;
+  align-content: start;
+  height: auto;
+  gap: 6px;
+}
+
+.pd-designer .pd-format-grid .gf-toggle-card {
+  grid-row: span 2;
+}
+
+/* Design cards stay equal height, with the description directly under its title. */
+.pd-designer .pd-design-grid {
+  align-items: stretch;
+}
+
+.pd-designer .pd-design-grid .gf-toggle-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  grid-row: auto;
+  height: 100%;
+  gap: 6px;
+}
+
+.pd-designer .pd-design-grid .gf-toggle-sub {
+  margin-top: 0;
+}
+
+.pd-designer .md-product-grid .gf-toggle-label {
+  display: block;
+  line-height: 1.25;
+}
+
+.pd-designer .md-product-grid .gf-toggle-sub {
+  display: block;
+}
+
+.pd-wording-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 0 0 12px;
+  padding: 4px;
+  border: 1px solid var(--gf-border);
+  border-radius: 10px;
+  background: var(--gf-cream);
+}
+
+.pd-wording-switch button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gf-navy);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pd-wording-switch button.is-on {
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(10, 22, 40, 0.08);
+}
+
+.pd-line-editor {
+  margin-bottom: 4px;
+}
+
+.pd-line-editor .md-text-label input {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  font-weight: 400;
+}
+
+.pd-line-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.pd-line-picks button {
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--gf-border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--gf-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.pd-line-picks button.is-on {
+  background: var(--gf-navy);
+  border-color: var(--gf-navy);
+  color: #fff;
+}
+
+.pd-line-editor .md-format-row {
+  flex-wrap: nowrap;
+  align-items: flex-end;
+}
+
+.pd-line-editor .md-format-row > label {
+  flex: 1 1 auto;
+}
+
+.pd-line-editor .pd-field-label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--gf-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.pd-line-editor .pd-size-field {
+  flex: 0 0 auto;
+}
+
+.pd-line-editor .md-format-row select.gf-input,
+.pd-line-editor .pd-size-stepper,
+.pd-line-editor .md-format-row .md-line-tools {
+  height: 42px;
+  box-sizing: border-box;
+}
+
+.pd-line-editor .md-format-row select.gf-input {
+  margin-top: 5px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.pd-line-editor .md-format-row .md-line-tools {
+  flex: 0 0 126px;
+  margin: 0;
+}
+
+.pd-line-editor .md-format-row .md-line-tools button {
+  min-height: 0;
+  height: 100%;
+}
+
+.pd-size-stepper {
+  display: flex;
+  align-items: stretch;
+  width: max-content;
+  overflow: hidden;
+  border: 1px solid var(--gf-border);
+  border-radius: 7px;
+  background: #fff;
+  user-select: none;
+}
+
+.pd-size-stepper button {
+  flex: 0 0 36px;
+  width: 36px;
+  max-width: 36px;
+  height: auto;
+  border: 0;
+  background: #fff;
+  color: var(--gf-navy);
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pd-size-stepper button:focus {
+  outline: none;
+}
+
+.pd-size-stepper button:focus-visible {
+  outline: 2px solid rgba(10, 22, 40, 0.35);
+  outline-offset: -2px;
+}
+
+.pd-size-stepper button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pd-size-stepper span {
+  flex: 0 0 46px;
+  width: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gf-navy);
+}
+
+.pd-line-apply {
+  margin-top: 2px;
+}
+
+.pd-text-color {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.pd-text-color-label {
+  color: var(--gf-navy);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.pd-text-swatches {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pd-text-swatch {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  padding: 0;
+  border: 2px solid rgba(10, 22, 40, 0.18);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.pd-text-swatch.is-light {
+  border-color: rgba(10, 22, 40, 0.28);
+}
+
+.pd-text-swatch.is-selected {
+  border-color: var(--gf-gold-2);
+  box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.28);
+}
+
+.pd-real-plate {
+  align-items: center;
+}
+
+.pd-real-plate-frame {
+  position: relative;
+  height: 100%;
+  aspect-ratio: 1;
+  max-width: 100%;
+}
+
+.pd-real-plate-frame > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pd-real-plate .pd-photo-plate {
+  left: 31%;
+  top: 20%;
+  width: 38%;
+  height: 58%;
+  gap: 0.12rem;
+}
+
+.pd-real-plate .pd-photo-lines p {
+  font-size: calc(9px * var(--pd-line-scale, 1));
+  line-height: 1.15;
+}
+
+.pd-real-plate .pd-photo-lines p:nth-child(2) {
+  font-size: calc(11px * var(--pd-line-scale, 1));
+}
+
+.pd-finish-preview {
+  width: 168px;
+  height: 168px;
+  flex: 0 0 100%;
+  object-fit: contain;
+  object-position: left center;
   border-radius: 8px;
   background: #f4f1ea;
 }
@@ -30,6 +371,220 @@
   width: min(100%, 420px);
   height: 500px;
   margin: 0 auto;
+}
+
+.pd-preview-frame.pd-photo-stage {
+  position: relative;
+}
+
+/* The square plaque image sets the height, so no width crops the wood edge. */
+.pd-preview-frame.pd-photo-stage.is-photo {
+  height: auto;
+}
+
+.pd-photo-stage.is-photo .pd-photo-zoom {
+  width: min(100%, 460px);
+  height: auto;
+  aspect-ratio: 1;
+  container-type: size;
+}
+
+.pd-photo-window {
+  position: absolute;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.pd-photo-window img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Measured on the blank plaque images (stage-*.jpg): the photo opening is the inside of the
+   metal frame, and the wording box sits inside the plate’s border. Nothing is drawn over the
+   plate except the text itself. */
+.pd-photo-stage.is-landscape .pd-photo-window {
+  left: 21.9%;
+  top: 12%;
+  width: 56.55%;
+  height: 38.1%;
+}
+
+.pd-photo-stage.is-landscape .pd-photo-plate {
+  left: 23.4%;
+  top: 58.3%;
+  width: 53.2%;
+  height: 27.3%;
+}
+
+.pd-photo-stage.is-portrait .pd-photo-window {
+  left: 25.75%;
+  top: 14%;
+  width: 48.5%;
+  height: 34.9%;
+}
+
+.pd-photo-stage.is-portrait .pd-photo-plate {
+  left: 27.5%;
+  top: 60.3%;
+  width: 45%;
+  height: 22.3%;
+}
+
+.pd-photo-stage.is-photo .pd-photo-plate {
+  z-index: 2;
+  gap: 0.08rem;
+  justify-content: center;
+  padding: 4px 8px;
+}
+
+.pd-photo-stage.is-photo .pd-photo-lines {
+  width: 100%;
+}
+
+.pd-photo-stage.is-photo .pd-photo-lines p {
+  font-size: calc(11px * var(--pd-line-scale, 1));
+  line-height: 1.15;
+}
+
+.pd-photo-stage.is-photo .pd-photo-lines p:nth-child(2) {
+  font-size: calc(13px * var(--pd-line-scale, 1));
+}
+
+.pd-photo-zoom {
+  position: relative;
+  flex: 0 0 auto;
+  height: calc(100% * 400 / 304);
+  aspect-ratio: 1;
+  container-type: size;
+}
+
+/* Catalog plates already engrave the emblem, “presented to”, and the divider.
+   Each customer line sits in the open band those marks leave. */
+.pd-catalog-logo {
+  position: absolute;
+  left: 36%;
+  top: 27%;
+  width: 28%;
+  height: 14%;
+  object-fit: contain;
+  z-index: 2;
+}
+
+.pd-catalog-line {
+  position: absolute;
+  left: 29%;
+  width: 42%;
+  margin: 0;
+  transform: translateY(-50%);
+  text-align: center;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 2;
+}
+
+.pd-catalog-line.is-placeholder {
+  opacity: 0.8;
+}
+
+.pd-catalog-line.is-name {
+  top: 52%;
+  font-size: calc(3.4cqh * var(--pd-line-scale, 1));
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.pd-catalog-line.is-body.is-i0 {
+  top: 57.2%;
+  font-size: calc(2.35cqh * var(--pd-line-scale, 1));
+}
+
+.pd-catalog-line.is-body.is-i1 {
+  top: 66.6%;
+  font-size: calc(2.35cqh * var(--pd-line-scale, 1));
+}
+
+.pd-catalog-line.is-date {
+  top: 72.6%;
+  font-size: calc(2.15cqh * var(--pd-line-scale, 1));
+}
+
+.pd-photo-zoom.is-award .pd-catalog-line.is-caption {
+  top: 50.2%;
+  font-size: calc(2.05cqh * var(--pd-line-scale, 1));
+}
+
+.pd-photo-zoom.is-award .pd-catalog-line.is-name {
+  top: 61.4%;
+  font-size: calc(2.5cqh * var(--pd-line-scale, 1));
+}
+
+.pd-photo-zoom.is-award .pd-catalog-line.is-date {
+  top: 66.4%;
+  font-size: calc(2cqh * var(--pd-line-scale, 1));
+}
+
+.pd-photo-zoom.is-award .pd-catalog-line.is-extra {
+  top: 73.5%;
+  font-size: calc(2.05cqh * var(--pd-line-scale, 1));
+}
+
+.pd-photo-base {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.pd-photo-plate.is-catalog {
+  justify-content: flex-end;
+  padding-bottom: 23%;
+}
+
+.pd-photo-plate {
+  position: absolute;
+  left: 26%;
+  top: 24%;
+  width: 48%;
+  height: 58%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  overflow: hidden;
+  text-align: center;
+  pointer-events: none;
+}
+
+.pd-photo-logo {
+  width: 58%;
+  max-height: 42%;
+  object-fit: contain;
+}
+
+.pd-photo-lines {
+  width: 88%;
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.15;
+}
+
+.pd-photo-lines p {
+  margin: 0;
+  font-size: calc(clamp(11px, 2.1vw, 18px) * var(--pd-line-scale, 1));
+}
+
+.pd-photo-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5c584f;
+  text-align: center;
+  padding: 24px;
 }
 
 .pd-size-grid {
@@ -155,8 +710,13 @@
   margin-top: 8px;
 }
 
+.pd-finish-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .pd-format-grid .pd-choice-art {
   height: 180px;
+  flex-basis: 180px;
   background: #fff;
 }
 
@@ -173,7 +733,8 @@
 
 @media (max-width: 640px) {
   .pd-layout-grid,
-  .pd-format-grid {
+  .pd-format-grid,
+  .pd-finish-grid {
     grid-template-columns: 1fr;
   }
 }

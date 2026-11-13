@@ -1,0 +1,22 @@
+{%- layout none -%}
+{%- paginate collection.products by 50 -%}
+{
+  "page": {{ paginate.current_page | json }},
+  "pages": {{ paginate.pages | json }},
+  "products": [
+    {%- assign emitted = false -%}
+    {%- for product in collection.products -%}
+      {%- if emitted -%},{%- endif -%}
+      {%- assign emitted = true -%}
+      {
+        "title": {{ product.title | json }},
+        "url": {{ product.url | json }},
+        "image": {% if product.featured_image %}{{ product.featured_image | image_url: width: 600 | json }}{% else %}null{% endif %},
+        "price": {{ product.price_min | money | json }},
+        "priceVaries": {{ product.price_varies | json }},
+        "tags": {{ product.tags | json }}
+      }
+    {%- endfor -%}
+  ]
+}
+{%- endpaginate -%}

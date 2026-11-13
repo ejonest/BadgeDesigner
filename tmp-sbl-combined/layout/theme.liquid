@@ -22,7 +22,34 @@
 
   <!-- Title and description ================================================== -->
   <title>
-  {{ page_title }}{% if current_tags %} &ndash; tagged "{{ current_tags | join: ', ' }}"{% endif %}{% if current_page != 1 %} &ndash; Page {{ current_page }}{% endif %}{% unless page_title contains shop.name %} &ndash; {{ shop.name }}{% endunless %}
+  {%- if template.name == 'index' -%}
+    Signs ByLITA – Custom and Ready-Made Signs
+  {%- elsif page.handle == 'about-us' -%}
+    About Signs ByLITA – {{ shop.name }}
+  {%- elsif page.handle == 'contact-us' -%}
+    Contact Us – {{ shop.name }}
+  {%- elsif page.handle == 'shipping-delivery' -%}
+    Shipping &amp; Delivery – {{ shop.name }}
+  {%- elsif page.handle == 'faqs' or page.handle == 'returns-exchanges' -%}
+    Frequently Asked Questions – {{ shop.name }}
+  {%- elsif page.handle == 'privacy-policy' -%}
+    Privacy Policy – {{ shop.name }}
+  {%- elsif page.handle == 'terms-conditions' -%}
+    Terms &amp; Conditions – {{ shop.name }}
+  {%- else -%}
+    {%- assign sbl_page_title = page_title | split: ' – tagged' | first | split: ' - tagged' | first -%}
+    {{ sbl_page_title }}
+    {%- if current_tags -%}
+      {%- capture sbl_title_tags -%}
+        {%- for sbl_tag in current_tags -%}
+          {%- render 'sbl-tag-label', tag: sbl_tag -%}{%- unless forloop.last -%}, {% endunless -%}
+        {%- endfor -%}
+      {%- endcapture -%}
+      &ndash; {{ sbl_title_tags | strip }}
+    {%- endif -%}
+    {%- if current_page != 1 %} &ndash; Page {{ current_page }}{% endif -%}
+    {%- unless sbl_page_title contains shop.name %} &ndash; {{ shop.name }}{% endunless -%}
+  {%- endif -%}
   </title>
 
   {% if page_description %}
@@ -107,8 +134,32 @@
     {% endif %}
 	{% render 'scheme' %}
     <div class="wrapper-container wrapper-body">	
-        <main class="main-content" role="main">      
+        <main class="main-content" role="main">
+            {%- liquid
+              assign sbl_info_handle = ''
+              if template.name == 'page'
+                assign sbl_info_handle = page.handle
+              endif
+            -%}
+            {%- if sbl_info_handle == 'about-us' or sbl_info_handle == 'contact-us' or sbl_info_handle == 'shipping-delivery' or sbl_info_handle == 'faqs' or sbl_info_handle == 'returns-exchanges' or sbl_info_handle == 'privacy-policy' or sbl_info_handle == 'terms-conditions' -%}
+              {{ 'sbl-info-pages.css' | asset_url | stylesheet_tag }}
+              {%- case sbl_info_handle -%}
+                {%- when 'about-us' -%}
+                  {% render 'sbl-page-about' %}
+                {%- when 'contact-us' -%}
+                  {% render 'sbl-page-contact' %}
+                {%- when 'shipping-delivery' -%}
+                  {% render 'sbl-page-shipping' %}
+                {%- when 'faqs' or 'returns-exchanges' -%}
+                  {% render 'sbl-page-faq' %}
+                {%- when 'privacy-policy' -%}
+                  {% render 'sbl-page-privacy' %}
+                {%- when 'terms-conditions' -%}
+                  {% render 'sbl-page-terms' %}
+              {%- endcase -%}
+            {%- else -%}
             {{ content_for_layout }}
+            {%- endif -%}
         </main>    
             
         {% if settings.footer_layout == 'default' %}        

@@ -1,0 +1,36 @@
+{% doc %}
+  Customer-facing label for a variant title or option value.
+  The stored variant value is left unchanged. A size written with a
+  foot mark, such as 9 x 5', is shown in inches. A long color value
+  that ends in the color name is shown as that color.
+
+  @param label {string} variant title or option value
+
+  @example
+  {% render 'sbl-variant-label', label: item.variant.title %}
+{% enddoc %}
+{%- liquid
+  assign sbl_raw = label | default: '' | replace: " x 5'", ' x 5"' | replace: "x 5'", 'x 5"'
+  assign sbl_colors = 'Blue,Green,Black,White,Red,Yellow,Brown,Grey,Gray,Gold,Silver,Navy,Burgundy,Orange,Pink,Purple,Beige,Ivory,Tan,Cream,Marble' | split: ','
+  assign sbl_parts = sbl_raw | split: ' / '
+  assign sbl_out = ''
+  for sbl_part in sbl_parts
+    assign sbl_piece = sbl_part
+    assign sbl_words = sbl_part | split: ' '
+    assign sbl_last = sbl_words | last
+    if sbl_words.size > 2
+      for sbl_color in sbl_colors
+        if sbl_last == sbl_color
+          assign sbl_piece = sbl_color
+          break
+        endif
+      endfor
+    endif
+    if sbl_out == blank
+      assign sbl_out = sbl_piece
+    else
+      assign sbl_out = sbl_out | append: ' / ' | append: sbl_piece
+    endif
+  endfor
+-%}
+{{- sbl_out -}}
