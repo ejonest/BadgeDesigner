@@ -49,5 +49,30 @@
     "includes": [
       "industry:faith"
     ]
+  },
+  {
+    "name": "cctv surveillance",
+    "product": {
+      "title": "Property Under 24hr Audio and Video Recording",
+      "descriptionHtml": "<p>Security camera notice.</p>",
+      "productType": "Signs",
+      "tags": []
+    },
+    "includes": [
+      "category:security-camera"
+    ]
+  },
+  {
+    "name": "fire and electrical",
+    "product": {
+      "title": "Fire Sprinkler Riser Room",
+      "descriptionHtml": "<p>Fire safety room sign.</p>",
+      "productType": "Signs",
+      "tags": []
+    },
+    "includes": [
+      "category:fire-electrical",
+      "category:safety-compliance"
+    ]
   }
 ]

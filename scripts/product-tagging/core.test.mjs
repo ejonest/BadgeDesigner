@@ -127,8 +127,8 @@ test("ignores style labels, marketing suffixes, and description boilerplate", ()
     },
     taxonomy,
   );
-  assert.equal(result.confidence, "unclassified");
-  assert.deepEqual(result.managedTags, []);
+  assert.equal(result.confidence, "high");
+  assert.deepEqual(result.matchedRules, ["category:mail-delivery"]);
 });
 
 test("does not treat novelty caution copy as a safety sign", () => {

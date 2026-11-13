@@ -1,9 +1,9 @@
 {% doc %}
-  Sign type and sign shape filters for collection and search sidebars.
-  Type is hanging, wall, or table top. Shape groups the catalog shape tags
-  (square, rectangle, circle, victorian, and the other shapes in the catalog).
-  Choices within a group match any selected option. A type and a shape together
-  both have to match.
+  Sign type, sign category, and sign shape filters for collection and search sidebars.
+  Type is hanging, wall, or table top. Category is the message people search
+  for (restroom, CCTV, fire, and the other topics in the catalog). Shape groups
+  the catalog shape tags. Choices within a group match any selected option.
+  A type, a category, and a shape together all have to match.
 
   @example
   {% render 'sbl-sign-filters' %}
@@ -29,6 +29,11 @@
     cursor: pointer;
   }
   .sbl-sign-filters__group { display: flex; flex-direction: column; }
+  .sbl-sign-filters__group--scroll {
+    max-height: 320px;
+    overflow: auto;
+    padding-right: 4px;
+  }
   .sbl-sign-filters__choice-hidden { display: none !important; }
   .sbl-sign-filters__status {
     margin: 8px 0 0;
@@ -39,6 +44,15 @@
     padding: 28px 8px;
     color: #667085;
     text-align: center;
+  }
+  .sbl-sign-filters [data-sbl-category-nav] a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .sbl-sign-filters [data-sbl-category-nav] a:before {
+    content: "";
+    position: absolute;
+    inset: 0;
   }
 {% endstylesheet %}
 
@@ -52,8 +66,102 @@
     {% if search.performed %}data-sbl-context="search"{% else %}data-sbl-context="collection"{% endif %}
     {% if sbl_professional contains sbl_professional_token %}data-sbl-skip-novelty="true"{% endif %}
   >
+    {%- liquid
+      assign sbl_category_selected = false
+      if current_tags
+        for sbl_current_tag in current_tags
+          if sbl_current_tag contains 'sbl:category:'
+            assign sbl_category_selected = true
+            break
+          endif
+        endfor
+      endif
+    -%}
+    {%- capture sbl_category_section -%}
     <div class="widget-title">
-      <h3 class="sidebar-title"><span>Sign type</span></h3>
+      <h3 class="sidebar-title"><span>Category</span></h3>
+    </div>
+    <div class="sbl-sign-filters__group sbl-sign-filters__group--scroll" data-sbl-filter-group="category">
+      <input id="sbl-cat-restroom" type="checkbox" value="restroom">
+      <label for="sbl-cat-restroom">Restroom &amp; hygiene</label>
+      <input id="sbl-cat-cctv" type="checkbox" value="cctv">
+      <label for="sbl-cat-cctv">CCTV &amp; surveillance</label>
+      <input id="sbl-cat-fire" type="checkbox" value="fire">
+      <label for="sbl-cat-fire">Fire &amp; electrical</label>
+      <input id="sbl-cat-safety" type="checkbox" value="safety">
+      <label for="sbl-cat-safety">Safety warnings</label>
+      <input id="sbl-cat-staff" type="checkbox" value="staff">
+      <label for="sbl-cat-staff">Staff only &amp; private</label>
+      <input id="sbl-cat-entrance" type="checkbox" value="entrance">
+      <label for="sbl-cat-entrance">Entrance &amp; exit</label>
+      <input id="sbl-cat-push" type="checkbox" value="push">
+      <label for="sbl-cat-push">Push &amp; pull</label>
+      <input id="sbl-cat-property" type="checkbox" value="property">
+      <label for="sbl-cat-property">Property &amp; no soliciting</label>
+      <input id="sbl-cat-dogs" type="checkbox" value="dogs">
+      <label for="sbl-cat-dogs">Dogs &amp; pets</label>
+      <input id="sbl-cat-weapons" type="checkbox" value="weapons">
+      <label for="sbl-cat-weapons">Weapons notices</label>
+      <input id="sbl-cat-smoking" type="checkbox" value="smoking">
+      <label for="sbl-cat-smoking">No smoking</label>
+      <input id="sbl-cat-doors" type="checkbox" value="doors">
+      <label for="sbl-cat-doors">Door instructions</label>
+      <input id="sbl-cat-quiet" type="checkbox" value="quiet">
+      <label for="sbl-cat-quiet">Do not disturb &amp; quiet</label>
+      <input id="sbl-cat-reception" type="checkbox" value="reception">
+      <label for="sbl-cat-reception">Reception &amp; assistance</label>
+      <input id="sbl-cat-payments" type="checkbox" value="payments">
+      <label for="sbl-cat-payments">Payments &amp; policies</label>
+      <input id="sbl-cat-kitchen" type="checkbox" value="kitchen">
+      <label for="sbl-cat-kitchen">Kitchen &amp; break room</label>
+      <input id="sbl-cat-rooms" type="checkbox" value="rooms">
+      <label for="sbl-cat-rooms">Rooms &amp; closets</label>
+      <input id="sbl-cat-wayfinding" type="checkbox" value="wayfinding">
+      <label for="sbl-cat-wayfinding">Wayfinding &amp; arrows</label>
+      <input id="sbl-cat-mail" type="checkbox" value="mail">
+      <label for="sbl-cat-mail">Mail &amp; delivery</label>
+      <input id="sbl-cat-beauty" type="checkbox" value="beauty">
+      <label for="sbl-cat-beauty">Beauty &amp; spa</label>
+      <input id="sbl-cat-gym" type="checkbox" value="gym">
+      <label for="sbl-cat-gym">Gym &amp; fitness</label>
+      <input id="sbl-cat-church" type="checkbox" value="church">
+      <label for="sbl-cat-church">Church</label>
+      <input id="sbl-cat-house" type="checkbox" value="house">
+      <label for="sbl-cat-house">House rules</label>
+      <input id="sbl-cat-trash" type="checkbox" value="trash">
+      <label for="sbl-cat-trash">Trash &amp; recycling</label>
+      <input id="sbl-cat-access" type="checkbox" value="access">
+      <label for="sbl-cat-access">Accessibility</label>
+      <input id="sbl-cat-pool" type="checkbox" value="pool">
+      <label for="sbl-cat-pool">Pool &amp; spa</label>
+      <input id="sbl-cat-parking" type="checkbox" value="parking">
+      <label for="sbl-cat-parking">Parking &amp; EV</label>
+      <input id="sbl-cat-hanger" type="checkbox" value="hanger">
+      <label for="sbl-cat-hanger">Door hangers</label>
+      <input id="sbl-cat-bilingual" type="checkbox" value="bilingual">
+      <label for="sbl-cat-bilingual">Bilingual</label>
+    </div>
+    {%- endcapture -%}
+    {%- if sbl_category_selected -%}
+    <div class="widget-title">
+      <h3 class="sidebar-title"><span>Category</span></h3>
+    </div>
+    <div class="sbl-sign-filters__group sbl-sign-filters__group--scroll" data-sbl-category-nav>
+      {%- assign sbl_category_nav = 'Restroom & hygiene|sbl:category:restroom-hygiene||CCTV & surveillance|sbl:category:security-camera||Fire & electrical|sbl:category:fire-electrical||Safety warnings|sbl:category:safety-compliance||Staff only & private|sbl:category:staff-private||Entrance & exit|sbl:category:entrance-exit||Push & pull|sbl:category:push-pull||Property & no soliciting|sbl:category:property-notices||Dogs & pets|sbl:category:dogs-pets||Weapons notices|sbl:category:weapons-notices||No smoking|sbl:category:no-smoking||Door instructions|sbl:category:door-instructions||Do not disturb & quiet|sbl:category:do-not-disturb||Reception & assistance|sbl:category:reception-assistance||Payments & policies|sbl:category:payments-policy||Kitchen & break room|sbl:category:kitchen-break-room||Rooms & closets|sbl:category:rooms-closets||Wayfinding & arrows|sbl:category:wayfinding-directory||Mail & delivery|sbl:category:mail-delivery||Beauty & spa|sbl:category:beauty-salon||Gym & fitness|sbl:category:gym-fitness||Church|sbl:category:church||House rules|sbl:category:house-rules||Trash & recycling|sbl:category:waste-recycling||Accessibility|sbl:category:accessibility-ada||Pool & spa|sbl:category:pool-pet-facility||Parking & EV|sbl:category:parking-traffic||Door hangers|sbl:family:door-hanger||Bilingual|sbl:category:bilingual' | split: '||' -%}
+      {%- for sbl_nav_item in sbl_category_nav -%}
+        {%- assign sbl_nav_parts = sbl_nav_item | split: '|' -%}
+        {%- assign sbl_nav_label = sbl_nav_parts | first -%}
+        {%- assign sbl_nav_tag = sbl_nav_parts | last -%}
+        <input type="checkbox" tabindex="-1" {% if current_tags contains sbl_nav_tag %}checked{% endif %}>
+        <label><a href="{{ collection.url }}/{{ sbl_nav_tag | handleize }}">{{ sbl_nav_label }}</a></label>
+      {%- endfor -%}
+    </div>
+    {%- endif -%}
+    <div class="widget-title">
+      <h3 class="sidebar-title">
+        <span>Sign type</span>
+        <button type="button" class="sbl-sign-filters__clear" data-sbl-filter-clear hidden>Clear</button>
+      </h3>
     </div>
     <div class="sbl-sign-filters__group" data-sbl-filter-group="type">
       <input id="sbl-type-hanging" type="checkbox" value="hanging">
@@ -63,12 +171,12 @@
       <input id="sbl-type-table" type="checkbox" value="table">
       <label for="sbl-type-table">Table top</label>
     </div>
+    {%- unless sbl_category_selected -%}
+      {{ sbl_category_section }}
+    {%- endunless -%}
 
     <div class="widget-title">
-      <h3 class="sidebar-title">
-        <span>Sign shape</span>
-        <button type="button" class="sbl-sign-filters__clear" data-sbl-filter-clear hidden>Clear</button>
-      </h3>
+      <h3 class="sidebar-title"><span>Sign shape</span></h3>
     </div>
     <div class="sbl-sign-filters__group" data-sbl-filter-group="shape">
       <input id="sbl-shape-square" type="checkbox" value="square">
@@ -120,6 +228,37 @@
         triangle: ['sbl:shape:triangle'],
         arch: ['sbl:shape:headstone']
       };
+      var CATEGORIES = {
+        restroom: { tags: ['sbl:category:restroom-hygiene'], keywords: ['restroom', 'bathroom', 'washroom', 'toilet', 'lavatory', 'flush', 'wash your hands', 'wash hands', 'hand wash', 'all gender', 'unisex', 'powder room', 'diaper', 'changing station', 'ladies', 'gentlemen', 'men women', 'bano', 'feminine', 'mop cleaning', 'shower', 'conserve water'], exclude: ['wash rinse'] },
+        cctv: { keywords: ['cctv', 'surveillance', 'on camera', 'video recording', 'audio and video', 'audio video', 'security camera', 'unauthorized recording', 'recording or photography', 'video surveillance'] },
+        fire: { tags: ['sbl:category:fire-electrical'], keywords: ['electrical room', 'electrical panel', 'facp', 'fire sprinkler', 'fire extinguisher', 'sprinkler room', 'sprinkler water', 'fire riser', 'high voltage'] },
+        safety: { keywords: ['watch your step', 'watch your head', 'slippery', 'wet floor', 'first aid', 'no diving', 'handrail', 'oxygen', 'water gets very hot', 'caution', 'open door slowly', 'proposition 65', 'stairs', 'no climbing'] },
+        staff: { tags: ['sbl:category:staff-private'], keywords: ['employees only', 'employee only', 'staff only', 'authorized personnel', 'no guest', 'no guests', 'employee entrance', 'staff restroom', 'employee restroom', 'private', 'restricted to members', 'no entry without permission'], exclude: ['private property', 'private residence', 'private restroom', 'door hanger'] },
+        entrance: { tags: ['sbl:category:entrance-exit'], keywords: ['exit', 'entrance', 'way out'] },
+        push: { keywords: ['push pull', 'push and pull', 'empuje', 'jale'] },
+        property: { tags: ['sbl:category:property-notices'], keywords: ['no soliciting', 'no solicitar', 'soliciting', 'trespass', 'trespassing', 'private property', 'private residence', 'no flyers', 'no politics', 'panhandling', 'loitering', 'no hunting', 'do not ring'] },
+        dogs: { tags: ['sbl:category:dogs-pets'], keywords: ['beware of dog', 'dog will bite', 'dog in yard', 'dogs in yard', 'no pets', 'service animal', 'service dog', 'pets allowed'] },
+        weapons: { tags: ['sbl:category:weapons-notices'], keywords: ['firearm', 'firearms', 'weapon', 'weapons', 'armed property', 'armed veteran', '2nd amendment', 'second amendment'] },
+        smoking: { tags: ['sbl:category:no-smoking'], keywords: ['smoking', 'smoke free', 'smokefree', 'vaping', 'vape', 'no fumar'] },
+        doors: { tags: ['sbl:category:door-instructions'], keywords: ['keep door closed', 'door closed', 'close door', 'remain closed', 'door must remain', 'open door slowly', 'close door gently', 'slide door', 'slide', 'door to remain', 'keep gate closed', 'electric gate'], exclude: ['door hanger'] },
+        quiet: { tags: ['sbl:category:do-not-disturb'], keywords: ['do not disturb', 'please knock', 'knock before', 'do not knock', 'do not ring', 'quiet hours', 'quiet space', 'quiet please', 'keep noise', 'noise to a minimum', 'having a nap', 'in session', 'cell phone'] },
+        reception: { tags: ['sbl:category:reception-assistance'], keywords: ['ring bell', 'ring doorbell', 'for assistance', 'please check in', 'wait to be seated', 'order here', 'help yourself', 'refreshments'], exclude: ['do not ring', 'do not knock'] },
+        payments: { tags: ['sbl:category:payments-policy'], keywords: ['no cash', 'cash only', 'cash preferred', 'all sales final', 'no checks', 'credit card', 'debit', 'tips', 'please pay', 'refuse service', 'not responsible', 'open closed', 'back in 5', 'come again', 'shoes required', 'checkout', 'donation', 'no alcohol'] },
+        kitchen: { tags: ['sbl:category:kitchen-break-room'], keywords: ['break room', 'breakroom', 'kitchen', 'microwave', 'fridge', 'refrigerator', 'dishes', 'dishwasher', 'coffee', 'pantry', 'ice machine', 'grill', 'snack', 'hydration', 'wash rinse', 'sanitize', 'food or drink', 'no outside food', 'do not put any food', 'drinking water', 'nacho'], exclude: ['flush'] },
+        rooms: { tags: ['sbl:category:rooms-closets'], keywords: ['laundry', 'linen', 'towel', 'coat closet', 'supply closet', 'storage closet', 'janitor', 'utility closet', 'utility room', 'server room', 'conference', 'waiting room', 'pantry', 'maintenance', 'laboratory', 'lab', 'x ray', 'xray', 'main office', 'lost and found', 'elevator', 'office sign', 'office', 'manager', 'lounge', 'storage', 'closet', 'changing room', 'cleaning supplies'], exclude: ['restroom', 'bathroom', 'electrical room', 'sprinkler room', 'office or business', 'office workplace'] },
+        wayfinding: { tags: ['sbl:category:wayfinding-directory'], keywords: ['left arrow', 'right arrow', 'up arrow', 'this way', 'other door', 'front door', 'back door', 'other gate', 'directional', 'you are here'] },
+        mail: { tags: ['sbl:category:mail-delivery'], keywords: ['mail drop', 'drop box', 'outgoing mail', 'packages', 'package', 'deliveries', 'delivery', 'deliver', 'mail'], exclude: ['email'] },
+        beauty: { tags: ['sbl:category:beauty-salon'], keywords: ['waxing', 'facial', 'treatment room', 'dressing room', 'fitting room', 'changing room', 'beauty', 'relaxation', 'salon', 'sauna'] },
+        gym: { tags: ['sbl:category:gym-fitness'], keywords: ['fitness', 'weights', 'gym', 'locker room', 'wipe down machines'] },
+        church: { tags: ['sbl:category:church', 'sbl:industry:faith'], keywords: ['sanctuary', 'church', 'pastor', 'chapel'] },
+        house: { tags: ['sbl:category:house-rules'], keywords: ['remove your shoes', 'remove shoes', 'shoes off', 'quitarse', 'wipe your feet', 'quiet hours', 'keep noise', 'noise to a minimum', 'no pooping', 'children unattended', 'leave your children', 'leave children', 'no children', 'shirt and shoes', 'shoes required', 'do not touch', 'do not sit', 'clean up after yourself', 'cell phone', 'thermostat', 'temperature', 'a c', 'respectful behavior'] },
+        trash: { tags: ['sbl:category:waste-recycling'], keywords: ['trash', 'recycling', 'recycle', 'garbage', 'compost', 'cans and bottles'], exclude: ['waste water'] },
+        access: { tags: ['sbl:category:accessibility-ada'], keywords: ['wheelchair', 'accessible', 'accessibility', 'braille', 'service animal', 'assisted listening', 'handicap'] },
+        pool: { keywords: ['pool', 'no diving', 'sauna'] },
+        parking: { tags: ['sbl:category:parking-traffic'], keywords: ['parking', 'tow away', 'tow zone', 'loading zone', 'valet', 'electric vehicle', 'ev'] },
+        hanger: { tags: ['sbl:family:door-hanger'], keywords: ['door hanger', 'doorknob', 'door knob', 'out of order', 'out of service', 'cleaning in progress'] },
+        bilingual: { tags: ['sbl:category:bilingual'], keywords: ['bilingual', 'bano', 'no solicitar', 'empuje', 'jale', 'quitarse', 'reduzca', 'spanish'] }
+      };
       var NOVELTY = ['novelty', 'gag gift', 'poo room', 'poop room', 'shit just got real', 'wash your balls', 'wash your paws', 'be gross', 'stop stealing our toilet', 'do not steal the toilet', 'steal the toilet paper', 'shit show'];
 
       var statusEl = root.querySelector('[data-sbl-filter-status]');
@@ -170,6 +309,38 @@
         });
       }
 
+      function fold(text) {
+        return (text || '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/&/g, ' and ')
+          .replace(/[^a-z0-9]+/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      function hasPhrase(foldedTitle, phrase) {
+        var folded = fold(phrase);
+        var hay = ' ' + foldedTitle + ' ';
+        if (hay.indexOf(' ' + folded + ' ') !== -1) return true;
+        if (!folded || folded.endsWith('s')) return false;
+        return hay.indexOf(' ' + folded + 's ') !== -1;
+      }
+
+      function matchesCategory(product, categories) {
+        if (!categories.length) return true;
+        var tags = tagsOf(product);
+        var title = fold(String(product.title || '').split('|')[0]);
+        return categories.some(function (id) {
+          var spec = CATEGORIES[id];
+          if (!spec) return false;
+          if ((spec.exclude || []).some(function (phrase) { return hasPhrase(title, phrase); })) return false;
+          if ((spec.keywords || []).some(function (phrase) { return hasPhrase(title, phrase); })) return true;
+          return (spec.tags || []).some(function (tag) { return tags.indexOf(tag) !== -1; });
+        });
+      }
+
       function visibleCatalog() {
         return (catalog || []).filter(function (product) { return !isNovelty(product); });
       }
@@ -177,8 +348,9 @@
       function matching() {
         var types = selected('type');
         var shapes = selected('shape');
+        var categories = selected('category');
         return visibleCatalog().filter(function (product) {
-          return matchesType(product, types) && matchesShape(product, shapes);
+          return matchesType(product, types) && matchesShape(product, shapes) && matchesCategory(product, categories);
         });
       }
 
@@ -187,7 +359,9 @@
         root.querySelectorAll('[data-sbl-filter-group] input').forEach(function (input) {
           var group = input.closest('[data-sbl-filter-group]').getAttribute('data-sbl-filter-group');
           var count = products.filter(function (product) {
-            return group === 'type' ? matchesType(product, [input.value]) : matchesShape(product, [input.value]);
+            if (group === 'type') return matchesType(product, [input.value]);
+            if (group === 'shape') return matchesShape(product, [input.value]);
+            return matchesCategory(product, [input.value]);
           }).length;
           var hide = count === 0 && !input.checked;
           input.classList.toggle('sbl-sign-filters__choice-hidden', hide);
@@ -305,10 +479,13 @@
         var params = new URLSearchParams(window.location.search);
         var types = selected('type');
         var shapes = selected('shape');
+        var categories = selected('category');
         if (types.length) params.set('sign_type', types.join(','));
         else params.delete('sign_type');
         if (shapes.length) params.set('sign_shape', shapes.join(','));
         else params.delete('sign_shape');
+        if (categories.length) params.set('sign_category', categories.join(','));
+        else params.delete('sign_category');
         var next = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
         window.history.replaceState({}, '', next);
       }
@@ -316,7 +493,8 @@
       function apply() {
         var types = selected('type');
         var shapes = selected('shape');
-        var active = types.length || shapes.length;
+        var categories = selected('category');
+        var active = types.length || shapes.length || categories.length;
         clearBtn.hidden = !active;
         if (!catalog) return;
         hideEmptyChoices();
@@ -335,8 +513,8 @@
 
       function readUrl() {
         var params = new URLSearchParams(window.location.search);
-        ['type', 'shape'].forEach(function (group) {
-          var raw = params.get(group === 'type' ? 'sign_type' : 'sign_shape') || '';
+        ['type', 'shape', 'category'].forEach(function (group) {
+          var raw = params.get(group === 'type' ? 'sign_type' : group === 'shape' ? 'sign_shape' : 'sign_category') || '';
           raw.split(',').forEach(function (value) {
             var input = root.querySelector('[data-sbl-filter-group="' + group + '"] input[value="' + value + '"]');
             if (input) input.checked = true;
@@ -351,7 +529,49 @@
         return params;
       }
 
+      function collectionIsTagged() {
+        var parts = window.location.pathname.split('/').filter(Boolean);
+        var index = parts.indexOf('collections');
+        return index !== -1 && parts.length - index > 2;
+      }
+
+      function listedProduct(product) {
+        var price = String(product.price || '').replace(/<[^>]+>/g, '').trim();
+        if (product.priceVaries && price.indexOf('from ') !== 0) price = 'from ' + price;
+        product.price = price;
+        product.tags = product.tags || [];
+        return product;
+      }
+
+      function loadTaggedCollection() {
+        var params = previewParams(new URLSearchParams());
+        params.set('view', 'sbl-filter-data');
+        var products = [];
+        var page = 1;
+        var pages = 1;
+        function next() {
+          params.set('page', String(page));
+          return fetch(window.location.pathname + '?' + params.toString(), { credentials: 'same-origin' })
+            .then(function (response) {
+              if (!response.ok) throw new Error('unavailable');
+              return response.json();
+            })
+            .then(function (data) {
+              if (!data || !data.products) throw new Error('unavailable');
+              data.products.forEach(function (product) { products.push(listedProduct(product)); });
+              pages = data.pages || 1;
+              if (page < pages && page < 60) {
+                page += 1;
+                return next();
+              }
+              return products;
+            });
+        }
+        return next();
+      }
+
       function loadCollection() {
+        if (collectionIsTagged()) return loadTaggedCollection();
         var products = [];
         var page = 1;
         function next() {
@@ -375,6 +595,7 @@
         var params = previewParams(new URLSearchParams(window.location.search));
         params.delete('sign_type');
         params.delete('sign_shape');
+        params.delete('sign_category');
         params.delete('page');
         params.set('view', 'sbl-filter-data');
         if (!params.get('type')) params.set('type', 'product');
@@ -410,7 +631,7 @@
           .then(function (products) {
             catalog = products;
             apply();
-            if (!selected('type').length && !selected('shape').length) statusEl.textContent = '';
+            if (!selected('type').length && !selected('shape').length && !selected('category').length) statusEl.textContent = '';
           })
           .catch(function () {
             statusEl.textContent = 'Filters could not be loaded.';

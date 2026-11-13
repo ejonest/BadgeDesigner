@@ -1,0 +1,95 @@
+{% doc %}
+  Customer-facing name for a catalog tag. Internal sbl tags such as
+  sbl:category:security-camera are shown as Security & surveillance.
+  Other tags are returned unchanged.
+
+  @param tag {string} product or collection tag
+
+  @example
+  {% render 'sbl-tag-label', tag: current_tags.first %}
+{% enddoc %}
+{%- liquid
+  assign sbl_tag_label = tag
+  if tag contains 'sbl:'
+    assign sbl_slug = tag | split: ':' | last
+    case sbl_slug
+      when 'security-camera'
+        assign sbl_tag_label = 'Security & surveillance'
+      when 'restroom-hygiene'
+        assign sbl_tag_label = 'Restroom & hygiene'
+      when 'fire-electrical'
+        assign sbl_tag_label = 'Fire & electrical'
+      when 'safety-compliance'
+        assign sbl_tag_label = 'Safety & compliance'
+      when 'staff-private'
+        assign sbl_tag_label = 'Staff only & private'
+      when 'entrance-exit'
+        assign sbl_tag_label = 'Entrance & exit'
+      when 'retail-customer'
+        assign sbl_tag_label = 'Retail & customer service'
+      when 'office-door'
+        assign sbl_tag_label = 'Office & room ID'
+      when 'property-notices'
+        assign sbl_tag_label = 'Property & no soliciting'
+      when 'dogs-pets'
+        assign sbl_tag_label = 'Dogs & pets'
+      when 'weapons-notices'
+        assign sbl_tag_label = 'Weapons notices'
+      when 'no-smoking'
+        assign sbl_tag_label = 'No smoking'
+      when 'door-instructions'
+        assign sbl_tag_label = 'Door instructions'
+      when 'do-not-disturb'
+        assign sbl_tag_label = 'Do not disturb & quiet'
+      when 'reception-assistance'
+        assign sbl_tag_label = 'Reception & assistance'
+      when 'payments-policy'
+        assign sbl_tag_label = 'Payments & policies'
+      when 'kitchen-break-room'
+        assign sbl_tag_label = 'Kitchen & break room'
+      when 'rooms-closets'
+        assign sbl_tag_label = 'Rooms & closets'
+      when 'wayfinding-directory'
+        assign sbl_tag_label = 'Wayfinding & arrows'
+      when 'mail-delivery'
+        assign sbl_tag_label = 'Mail & delivery'
+      when 'beauty-salon'
+        assign sbl_tag_label = 'Beauty & spa'
+      when 'gym-fitness'
+        assign sbl_tag_label = 'Gym & fitness'
+      when 'church'
+        assign sbl_tag_label = 'Church'
+      when 'house-rules'
+        assign sbl_tag_label = 'House rules'
+      when 'waste-recycling'
+        assign sbl_tag_label = 'Trash & recycling'
+      when 'accessibility-ada'
+        assign sbl_tag_label = 'Accessibility'
+      when 'parking-traffic'
+        assign sbl_tag_label = 'Parking & EV'
+      when 'bilingual'
+        assign sbl_tag_label = 'Bilingual'
+      when 'push-pull'
+        assign sbl_tag_label = 'Push & pull'
+      when 'pool-pet-facility'
+        assign sbl_tag_label = 'Pool, pet & facility'
+      when 'novelty'
+        assign sbl_tag_label = 'Novelty'
+      when 'social-distancing'
+        assign sbl_tag_label = 'Social distancing'
+      when 'desk-nameplates'
+        assign sbl_tag_label = 'Desk nameplates'
+      when 'names-titles'
+        assign sbl_tag_label = 'Names & titles'
+      when 'hanging'
+        assign sbl_tag_label = 'Hanging'
+      when 'wall'
+        assign sbl_tag_label = 'Wall'
+      when 'table'
+        assign sbl_tag_label = 'Table top'
+      else
+        assign sbl_tag_label = sbl_slug | replace: '-', ' ' | capitalize
+    endcase
+  endif
+-%}
+{{- sbl_tag_label -}}

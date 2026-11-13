@@ -1,0 +1,29 @@
+{% doc %}
+  Navy page hero for the Signs ByLITA info pages.
+  @param eyebrow {string} Small uppercase label
+  @param title {string} Page heading. May include an em tag written by this theme.
+  @param text {string} Supporting sentence
+  @param aside_label {string} Optional label on the right
+  @param aside_text {string} Optional text on the right
+{% enddoc %}
+<header class="sbl-info-hero">
+  <div class="sbl-info-hero__inner">
+    <div class="sbl-info-hero__row">
+      <div>
+        {% if eyebrow != blank %}
+          <p class="sbl-info-kicker">{{ eyebrow | escape }}</p>
+        {% endif %}
+        <h1>{{ title }}</h1>
+        {% if text != blank %}
+          <p class="sbl-info-hero__text">{{ text | escape }}</p>
+        {% endif %}
+      </div>
+      {% if aside_text != blank %}
+        <div class="sbl-info-hero__aside">
+          {% if aside_label != blank %}<span>{{ aside_label | escape }}</span>{% endif %}
+          <strong>{{ aside_text | escape }}</strong>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</header>

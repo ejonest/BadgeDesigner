@@ -4,6 +4,7 @@
  */
 
 import type { Badge, BadgeLine } from "../types/badge";
+import { ATTACHED_PLAQUE_MAX_TEXT_LINES } from "./plaqueLayouts";
 
 export type PlaqueDividerStyle =
   | "diamond"
@@ -745,13 +746,121 @@ export function getPlaqueAwardFormatById(
   return BY_ID[id.trim()];
 }
 
+const PLAQUE_FORMAT_BORDERS = new Set<PlaquePlateBorder>([
+  "none",
+  "thin",
+  "thick",
+  "heavy",
+  "double",
+  "victorian",
+]);
+const PLAQUE_FORMAT_DIVIDERS = new Set<PlaqueDividerStyle>([
+  "diamond",
+  "scroll",
+  "dots",
+  "rule",
+  "star",
+  "dash",
+  "whisker",
+  "music",
+  "taperGem",
+]);
+const PLAQUE_FORMAT_ENGINES = new Set<PlaqueAwardLayoutEngine>([
+  "classic-fixed",
+  "content-stack",
+]);
+
+function isFormatRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object";
+}
+
 /**
- * Attached plaque SVG: explicit {@link Badge.plaqueFormatId}, else optional default visual
- * ({@link Badge.plaqueUseDefaultAttachedAwardVisual}) before the user picks Step 3, else legacy generic lines.
+ * Accept a catalog or order snapshot only when every border, divider, and line
+ * slot is something the renderer already knows how to draw.
+ */
+export function parsePlaqueAwardFormatSnapshot(
+  value: unknown,
+): PlaqueAwardFormatDefinition | undefined {
+  if (!isFormatRecord(value)) return undefined;
+  const id = typeof value.id === "string" ? value.id.trim() : "";
+  const name = typeof value.name === "string" ? value.name.trim() : "";
+  const description = typeof value.description === "string" ? value.description : "";
+  const border = value.border;
+  if (!id || !name || typeof border !== "string" || !PLAQUE_FORMAT_BORDERS.has(border as PlaquePlateBorder)) {
+    return undefined;
+  }
+  if (!Array.isArray(value.slots) || value.slots.length === 0 || value.slots.length > 12) return undefined;
+  const layoutEngine = value.layoutEngine;
+  if (
+    layoutEngine !== undefined &&
+    (typeof layoutEngine !== "string" || !PLAQUE_FORMAT_ENGINES.has(layoutEngine as PlaqueAwardLayoutEngine))
+  ) {
+    return undefined;
+  }
+  const slots: PlaqueAwardSlot[] = [];
+  let userCount = 0;
+  for (const slot of value.slots) {
+    if (!isFormatRecord(slot) || typeof slot.kind !== "string") return undefined;
+    if (slot.kind === "divider") {
+      if (typeof slot.style !== "string" || !PLAQUE_FORMAT_DIVIDERS.has(slot.style as PlaqueDividerStyle)) {
+        return undefined;
+      }
+      slots.push({ kind: "divider", style: slot.style as PlaqueDividerStyle });
+      continue;
+    }
+    if (typeof slot.sizeMul !== "number" || slot.sizeMul <= 0 || slot.sizeMul > 4) return undefined;
+    const italic = slot.italic === true ? true : undefined;
+    const bold = slot.bold === true ? true : undefined;
+    if (slot.kind === "static") {
+      if (typeof slot.text !== "string" || slot.text.length === 0 || slot.text.length > 80) return undefined;
+      slots.push({ kind: "static", text: slot.text, sizeMul: slot.sizeMul, italic, bold });
+      continue;
+    }
+    if (slot.kind === "user") {
+      if (
+        typeof slot.userIndex !== "number" ||
+        !Number.isInteger(slot.userIndex) ||
+        slot.userIndex < 0 ||
+        slot.userIndex >= ATTACHED_PLAQUE_MAX_TEXT_LINES
+      ) {
+        return undefined;
+      }
+      if (typeof slot.placeholder !== "string" || typeof slot.editorLabel !== "string") return undefined;
+      userCount += 1;
+      slots.push({
+        kind: "user",
+        userIndex: slot.userIndex,
+        placeholder: slot.placeholder.slice(0, 80),
+        editorLabel: slot.editorLabel.slice(0, 80),
+        sizeMul: slot.sizeMul,
+        italic,
+        bold,
+        uppercase: slot.uppercase === true ? true : undefined,
+      });
+      continue;
+    }
+    return undefined;
+  }
+  if (userCount > ATTACHED_PLAQUE_MAX_TEXT_LINES) return undefined;
+  return {
+    id,
+    name,
+    description,
+    border: border as PlaquePlateBorder,
+    slots,
+    ...(layoutEngine ? { layoutEngine: layoutEngine as PlaqueAwardLayoutEngine } : {}),
+  };
+}
+
+/**
+ * Attached plaque SVG: saved catalog snapshot, else explicit {@link Badge.plaqueFormatId},
+ * else optional default visual before the user picks a format, else legacy generic lines.
  */
 export function resolveAttachedPlaqueAwardFormatForRender(
   badge: Badge,
 ): PlaqueAwardFormatDefinition | undefined {
+  const snapshot = parsePlaqueAwardFormatSnapshot(badge.plaqueFormatSnapshot);
+  if (snapshot) return snapshot;
   const explicit = getPlaqueAwardFormatById(badge.plaqueFormatId);
   if (explicit) return explicit;
   if (badge.plaqueUseDefaultAttachedAwardVisual === true) {

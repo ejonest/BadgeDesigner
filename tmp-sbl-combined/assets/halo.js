@@ -3781,7 +3781,7 @@
                 freeshipEligible = 1;
             } else {
                 extraPrice = parseInt(freeshipPrice - cartTotalPrice);
-                freeshipText = freeshipText2 + Shopify.formatMoney(extraPrice * 100, window.money_format) + freeshipText3 + '<b>  ' + freeshipText4 + ' </b>';
+                freeshipText = freeshipText2 + ' ' + Shopify.formatMoney(extraPrice * 100, window.money_format) + ' ' + freeshipText3 + ' <b>' + freeshipText4 + '</b>';
                 shipVal = window.free_shipping_text.free_shipping_2;
             }
 

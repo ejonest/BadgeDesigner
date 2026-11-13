@@ -296,6 +296,103 @@
   text-align: center;
 }
 
+/* One compact toolbar for the preview. Secondary actions stay folded. */
+.aqb-redesign-root .aqb-design-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--aqb-border);
+  background: #fff;
+}
+
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__more {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 6px;
+  border-top: 1px dashed var(--aqb-border);
+  padding-top: 8px;
+}
+
+/* Higher specificity than the shared .aqb-ta-btn rules so every label stays
+   readable: icon above the text, navy ink, and long words wrap instead of
+   spilling out of the button. */
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__btn {
+  flex: initial;
+  min-width: 0;
+  min-height: 58px;
+  padding: 8px 4px;
+  gap: 4px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-color: rgba(2, 19, 43, 0.18);
+}
+
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__btn .aqb-ta-icon svg {
+  width: 18px;
+  height: 18px;
+  color: #02132b;
+}
+
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__btn .aqb-ta-label--desktop {
+  display: block;
+  width: 100%;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #02132b;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: normal;
+  hyphens: auto;
+}
+
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__btn .aqb-ta-label--mobile {
+  display: none;
+}
+
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__btn:disabled {
+  opacity: 0.4;
+}
+
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__btn:disabled .aqb-ta-label,
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__btn:disabled .aqb-ta-icon {
+  color: #6b7f92;
+}
+
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__btn.aqb-ta-btn--highlight .aqb-ta-label {
+  color: #1a3d5c;
+}
+
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__btn.aqb-ta-btn--accent {
+  background: var(--aqb-atc-ready);
+  border-color: var(--aqb-atc-ready);
+}
+
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__btn.aqb-ta-btn--accent .aqb-ta-label {
+  font-weight: 700;
+}
+
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__btn.aqb-ta-btn--more.is-expanded {
+  background: var(--aqb-cream);
+  border-color: var(--aqb-navy);
+}
+
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__btn.aqb-ta-btn--danger .aqb-ta-label,
+.aqb-redesign-root .aqb-design-actions .aqb-design-actions__btn.aqb-ta-btn--danger .aqb-ta-icon {
+  color: #b91c1c;
+}
+
 .aqb-redesign-root .aqb-preview-actions-row {
   display: flex;
   flex-direction: column;
@@ -1581,11 +1678,39 @@
   margin-top: 8px;
 }
 
+/* Sign: size stepper is a row, centered on the font menu beside it. */
+.aqb-redesign-root .aqb-badge-text-row-controls--sign {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 16px;
+  row-gap: 4px;
+  align-items: center;
+}
+
 .aqb-redesign-root .aqb-badge-trc-group {
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+}
+
+.aqb-redesign-root .aqb-badge-text-row-controls--sign .aqb-badge-trc-group {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  align-items: center;
+}
+
+.aqb-redesign-root .aqb-badge-text-row-controls--sign .aqb-badge-trc-size {
+  justify-items: center;
+}
+
+.aqb-redesign-root .aqb-badge-font-size-stepper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .aqb-redesign-root .aqb-badge-trc-label {

@@ -61,6 +61,7 @@ import { AqbBadgeOrderQtySection } from "./AqbBadgeOrderQtySection";
 import { AqbDeskSignOrderSection } from "./AqbDeskSignOrderSection";
 import { BadgeQtyStepper } from "./BadgeQtyStepper";
 import { AqbToolActionsRow } from "./AqbToolActionsRow";
+import { AqbDesignActions } from "./AqbDesignActions";
 import { AqbMobileActionsBar } from "./AqbMobileActionsBar";
 import {
   AqbResetDesignConfirmModal,
@@ -3530,7 +3531,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       const actions: string[] = [];
       if (forStep >= 2 && !st1) actions.push("pick a template");
       if (forStep >= 3 && !st2) actions.push("choose a size");
-      if (forStep >= 4 && !st3) actions.push("select a finish");
+      if (forStep >= 4 && !st3) actions.push("select a color");
       if (forStep >= 5 && signBorderStepRequired && !signBorderConfigured) {
         actions.push("select a border type");
       }
@@ -5958,7 +5959,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
       const entries: StepEntry[] = [
         { label: "Pick a Shape", done: selectedSignTemplateType != null },
         { label: "Choose size", done: selectedSignSizeTemplateId != null },
-        { label: "Pick a Finish", done: signFinishConfigured },
+        { label: "Pick a Color", done: signFinishConfigured },
         ...(signBorderStepRequired
           ? [{ label: "Border", done: signBorderConfigured }]
           : []),
@@ -10452,7 +10453,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
             : {}),
           ...(finish
             ? {
-                Finish: finish.label,
+                Color: finish.label,
                 "_Sign Finish": finish.label,
                 "_Sign Finish ID": finish.id,
               }
@@ -11116,7 +11117,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
         onApplyFormatToAll={applyAllFormattingToAll}
         applyFormatLabel={
           variant === "sign"
-            ? "Apply this sign's shape, size, finish, and text formatting to every sign"
+            ? "Apply this sign's shape, size, color, and text formatting to every sign"
             : `Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`
         }
         onHelp={() => setShowHelpModal(true)}
@@ -11841,7 +11842,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       onApplyFormatToAll={applyAllFormattingToAll}
                       applyFormatLabel={
           variant === "sign"
-            ? "Apply this sign's shape, size, finish, and text formatting to every sign"
+            ? "Apply this sign's shape, size, color, and text formatting to every sign"
             : `Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`
         }
                       onHelp={() => setShowHelpModal(true)}
@@ -12213,7 +12214,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
 
                 const backgroundLabel =
                   config.templatesKey === "sign"
-                    ? "Finishes"
+                    ? "Pick a Color"
                     : variant === "badge"
                       ? "Pick a Color"
                       : "Background";
@@ -12287,12 +12288,10 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                     : []),
                   {
                     label:
-                      variant === "sign" ? "Pick a Finish" : backgroundLabel,
+                      variant === "sign" ? "Pick a Color" : backgroundLabel,
                     navLabel:
                       variant === "badge" || variant === "sign"
-                        ? variant === "sign"
-                          ? "Finish"
-                          : "Color"
+                        ? "Color"
                         : undefined,
                     sectionKey:
                       variant === "sign" ? ("background" as const) : undefined,
@@ -12664,7 +12663,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                   }
                   hint={
                     variant === "sign"
-                      ? "(shape only, finish may be changed later)"
+                      ? "Shape only, color selected at step 3"
                       : undefined
                   }
                   summary={
@@ -13690,7 +13689,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       isDeskSignVariant(variant)
                         ? "Colors"
                         : variant === "sign"
-                          ? "Pick a Finish"
+                          ? "Pick a Color"
                           : badgeBackgroundStepTitle
                     }
                     summary={
@@ -13772,7 +13771,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                             ? "Step 4: Metal plate finish"
                             : "Step 3: Metal plate finish"
                           : config.templatesKey === "sign"
-                          ? "Step 3: Pick a finish"
+                          ? "Step 3: Pick a color"
                           : "Pick a Color"}
                       </h3>
                       {(variant === "sign"
@@ -14156,8 +14155,8 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           ) : (
                             <p className="text-sm text-[#6b7f92]">
                               {selectedSignTemplateType
-                                ? "No finishes are available for this shape yet."
-                                : "Choose a shape first, then pick a finish."}
+                                ? "No colors are available for this shape yet."
+                                : "Choose a shape first, then pick a color."}
                             </p>
                           )}
                           {multipleBadges.length > 1 &&
@@ -14167,9 +14166,9 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                                   type="button"
                                   onClick={applySignFinishToAll}
                                   className="whitespace-nowrap rounded px-2 py-1 text-xs text-[#02132B] underline transition-colors hover:text-[#1a3d5c]"
-                                  title={`Apply finish to all ${config.labelProductPlural.toLowerCase()}`}
+                                  title={`Apply color to all ${config.labelProductPlural.toLowerCase()}`}
                                 >
-                                  Apply finish to all{" "}
+                                  Apply color to all{" "}
                                   {config.labelProductPlural.toLowerCase()}
                                 </button>
                             </div>
@@ -15744,7 +15743,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       }}
                       title={
                         variant === "sign"
-                          ? "Apply this sign's shape, size, finish, and text formatting to every sign"
+                          ? "Apply this sign's shape, size, color, and text formatting to every sign"
                           : `Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`
                       }
                     >
@@ -16493,7 +16492,32 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                 }
                 extra={usesAqbShell ? undefined : cloudLibrarySaveHint}
               />
-              <AqbPreviewActionsRow {...previewActionsRowProps} />
+              {usesAqbShell ? (
+                <AqbDesignActions
+                  {...previewActionsRowProps}
+                  onUndo={handleUndo}
+                  undoDisabled={undoHistory.length === 0}
+                  onReset={promptResetBadge}
+                  showResetAll={multipleBadges.length > 1}
+                  onResetAll={promptResetAllBadges}
+                  showApplyFormatToAll={multipleBadges.length > 1}
+                  onApplyFormatToAll={applyAllFormattingToAll}
+                  applyFormatLabel={
+                    variant === "sign"
+                      ? "Apply this sign's shape, size, color, and text formatting to every sign"
+                      : `Apply background color and all text formatting from current ${config.labelProduct.toLowerCase()} to all ${config.labelProductPlural.toLowerCase()}`
+                  }
+                  onHelp={() => setShowHelpModal(true)}
+                  onSave={() => {
+                    void saveBadge();
+                  }}
+                  onLoad={() => {
+                    void onLoadDesignClick();
+                  }}
+                />
+              ) : (
+                <AqbPreviewActionsRow {...previewActionsRowProps} />
+              )}
             </div>
             <div className="aqb-preview-area relative min-h-[220px] gap-3.5 bg-[#E8E4DC] px-3 py-7 md:px-5 flex flex-col items-center justify-center">
               {multipleBadges.length > 0 ? (
@@ -16916,7 +16940,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               </div>
               {multipleBadges.length > 0 ? deskSignInkNoticeUi : null}
             </div>
-            {aqbBadgeToolActions}
+            {usesAqbShell ? null : aqbBadgeToolActions}
             {multipleBadges.length > 0
               ? (() => {
                   const p = getBadgeForPreview(
@@ -16982,7 +17006,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                       </div>
                       <div className="flex justify-between gap-2">
                         <span className="text-[#6b7f92]">
-                          {variant === "sign" ? "Finish" : "Background"}
+                          {variant === "sign" ? "Color" : "Background"}
                         </span>
                         <span className="font-medium text-[#02132B] text-right">
                           {bgName}
@@ -17350,7 +17374,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
                           selectedSignSizeTemplateId == null,
                       },
                       {
-                        label: variant === "sign" ? "Finish" : "Backgrounds",
+                        label: variant === "sign" ? "Color" : "Backgrounds",
                         done:
                           variant === "sign"
                             ? signFinishConfigured
@@ -19524,7 +19548,7 @@ const BadgeDesignerRedesign: React.FC<BadgeDesignerRedesignProps> = ({
               Use <strong>View All</strong> above the preview to browse and
               select any {config.labelProduct.toLowerCase()} to edit.
               {variant === "sign"
-                ? " Each sign can keep its own shape and finish."
+                ? " Each sign can keep its own shape and color."
                 : ""}
             </p>
             <div className="flex flex-col sm:flex-row gap-2">

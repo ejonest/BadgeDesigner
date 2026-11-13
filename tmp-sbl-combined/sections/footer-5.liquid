@@ -53,11 +53,20 @@
                     {% if linklists[footer_linklist].links.size > 0 %}
                     <ul>
                         {% for link in linklists[footer_linklist].links %}
+                        {% unless link.url contains 'returns-exchanges' %}
                         <li>
                             <a href="{{ link.url}}" title="{{ link.title }}" class="foot-link">
                                 {% render 'multilang' with link.title %}
                             </a>
                         </li>
+                        {% endunless %}
+                        {% if link.url contains 'privacy-policy' %}
+                        <li>
+                            <a href="{{ link.url }}#do-not-sell" title="Do Not Sell or Share My Personal Information" class="foot-link">
+                                Do Not Sell or Share My Personal Information
+                            </a>
+                        </li>
+                        {% endif %}
                         {% endfor %}
                     </ul>
                     {% endif %}

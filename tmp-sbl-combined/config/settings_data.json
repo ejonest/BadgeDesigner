@@ -300,7 +300,7 @@
               "info_icon_2": "<i class=\"fa fa-phone-square\"></i>",
               "info_text_2": "(310) 534-1138",
               "info_icon_3": "<i class=\"fa fa-envelope-o\"></i>",
-              "info_text_3": "<a href=\"mailto:info@signbylita.com\" target=\"_blank\">info@signbylita.com</a>"
+              "info_text_3": "<a href=\"mailto:info@signsbylita.com\" target=\"_blank\">info@signsbylita.com</a>"
             }
           }
         },
@@ -535,7 +535,8 @@
       "cart-template": {
         "type": "cart-template",
         "settings": {
-          "cart_notes": true
+          "cart_notes": true,
+          "cart_countdown_enable": false
         }
       },
       "faq-page": {
@@ -898,7 +899,7 @@
           "enable_img_2": false,
           "link_img_2": "shopify://collections/congu",
           "enable_custom_block": true,
-          "title_custom_block": "FREE SHIPPING ON ALL ORDERS",
+          "title_custom_block": "FREE SHIPPING ON QUALIFYING ORDERS",
           "quote_custom_block": ""
         }
       },
@@ -1548,7 +1549,7 @@
           "search_border_color": "#cbcbcb",
           "bg_header_bottom_color": "#fff",
           "header_bottom_link_color": "#646464",
-          "free_shipping_text_1": "Free Express Shipping for all orders",
+          "free_shipping_text_1": "Free express shipping on qualifying orders",
           "free_shipping_text_2": "Free In-store returns",
           "bg_cart_color": "#fff",
           "cart_color": "#646464"
@@ -1672,7 +1673,7 @@
           "header_bottom_text_color": "#e8dfcd",
           "display_header_social": true,
           "display_customer_service": true,
-          "customer_service_text": "<strong>FREE SHIPPING ON ALL ORDERS ( US ONLY ) </strong>",
+          "customer_service_text": "<strong>FREE SHIPPING ON QUALIFYING ORDERS ( US ONLY ) </strong>",
           "display_free_shipping": false,
           "free_shipping_text": "Mid-Season Sale Up to 70% OFF",
           "brand_type": "image",
@@ -1740,13 +1741,13 @@
           "policies_bg_color": "#232323",
           "policies_color": "#fff",
           "icon_1": "",
-          "text_1": "Free Shipping on all orders *",
+          "text_1": "Free shipping on qualifying orders *",
           "link_1": "",
           "icon_2": "",
-          "text_2": "Free Shipping on all orders *",
+          "text_2": "Free shipping on qualifying orders *",
           "link_2": "",
           "icon_3": "",
-          "text_3": "Free Shipping on all orders *",
+          "text_3": "Free shipping on qualifying orders *",
           "link_3": "",
           "display_megamenu": true
         }
@@ -2153,7 +2154,7 @@
             "settings": {
               "icon": "<i class=\"fa fa-truck\" aria-hidden=\"true\" style=\"color:#c9932e;\"></i>",
               "title": "Free Shipping",
-              "text": "We offer Free Shipping on all orders. Orders ship out within 48 hours, often faster"
+              "text": "Free standard shipping on qualifying orders. The threshold is shown in your cart and at checkout. Most orders ship within 2 business days. Ready-made signs often ship the same day."
             }
           },
           "1595315817308": {

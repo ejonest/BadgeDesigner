@@ -29,6 +29,99 @@
         assign collection_heading = 'Awards & Plaques'
         assign hide_collection_description = true
       endif
+      if collection.handle == 'all' or collection.title == 'Products'
+        assign sbl_category_heading = ''
+        if current_tags
+          for sbl_current_tag in current_tags
+            unless sbl_current_tag contains 'sbl:category:'
+              continue
+            endunless
+            assign sbl_slug = sbl_current_tag | split: 'sbl:category:' | last
+            assign sbl_label = ''
+            case sbl_slug
+              when 'security-camera'
+                assign sbl_label = 'Security & surveillance'
+              when 'restroom-hygiene'
+                assign sbl_label = 'Restroom & hygiene'
+              when 'fire-electrical'
+                assign sbl_label = 'Fire & electrical'
+              when 'safety-compliance'
+                assign sbl_label = 'Safety & compliance'
+              when 'staff-private'
+                assign sbl_label = 'Staff only & private'
+              when 'entrance-exit'
+                assign sbl_label = 'Entrance & exit'
+              when 'retail-customer'
+                assign sbl_label = 'Retail & customer service'
+              when 'office-door'
+                assign sbl_label = 'Office & room ID'
+              when 'property-notices'
+                assign sbl_label = 'Property & no soliciting'
+              when 'dogs-pets'
+                assign sbl_label = 'Dogs & pets'
+              when 'weapons-notices'
+                assign sbl_label = 'Weapons notices'
+              when 'no-smoking'
+                assign sbl_label = 'No smoking'
+              when 'door-instructions'
+                assign sbl_label = 'Door instructions'
+              when 'do-not-disturb'
+                assign sbl_label = 'Do not disturb & quiet'
+              when 'reception-assistance'
+                assign sbl_label = 'Reception & assistance'
+              when 'payments-policy'
+                assign sbl_label = 'Payments & policies'
+              when 'kitchen-break-room'
+                assign sbl_label = 'Kitchen & break room'
+              when 'rooms-closets'
+                assign sbl_label = 'Rooms & closets'
+              when 'wayfinding-directory'
+                assign sbl_label = 'Wayfinding & arrows'
+              when 'mail-delivery'
+                assign sbl_label = 'Mail & delivery'
+              when 'beauty-salon'
+                assign sbl_label = 'Beauty & spa'
+              when 'gym-fitness'
+                assign sbl_label = 'Gym & fitness'
+              when 'church'
+                assign sbl_label = 'Church'
+              when 'house-rules'
+                assign sbl_label = 'House rules'
+              when 'waste-recycling'
+                assign sbl_label = 'Trash & recycling'
+              when 'accessibility-ada'
+                assign sbl_label = 'Accessibility'
+              when 'parking-traffic'
+                assign sbl_label = 'Parking & EV'
+              when 'bilingual'
+                assign sbl_label = 'Bilingual'
+              when 'push-pull'
+                assign sbl_label = 'Push & pull'
+              when 'pool-pet-facility'
+                assign sbl_label = 'Pool, pet & facility'
+              when 'novelty'
+                assign sbl_label = 'Novelty'
+              when 'social-distancing'
+                assign sbl_label = 'Social distancing'
+              when 'desk-nameplates'
+                assign sbl_label = 'Desk nameplates'
+              when 'names-titles'
+                assign sbl_label = 'Names & titles'
+            endcase
+            if sbl_label == blank
+              assign sbl_label = sbl_slug | replace: '-', ' ' | capitalize
+            endif
+            if sbl_category_heading == blank
+              assign sbl_category_heading = sbl_label
+            else
+              assign sbl_category_heading = sbl_category_heading | append: ', ' | append: sbl_label
+            endif
+          endfor
+        endif
+        if sbl_category_heading != blank
+          assign collection_heading = sbl_category_heading
+        endif
+      endif
     -%}
     <h1>
       {% render 'multilang' with collection_heading %}

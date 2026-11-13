@@ -409,9 +409,40 @@ type PlannedText = {
   sizeMul: number;
   bold: boolean;
   italic: boolean;
+  /** Format emphasis, kept so a per-line override does not change which plate layout runs. */
+  formatBold: boolean;
   /** `undefined` = static caption — use plate contrast color */
   userLineIndex?: number;
+  /** 1 keeps the format size. */
+  sizeScale: number;
+  /** Set only when this line picks its own family. */
+  fontFamilyRaw?: string;
 };
+
+function awardLineFontPx(base: number, sizeScale: number | undefined, cap: number): number {
+  const scale =
+    typeof sizeScale === "number" && Number.isFinite(sizeScale) && sizeScale > 0
+      ? sizeScale
+      : 1;
+  const limit = scale > 1 ? cap * scale : cap;
+  return clamp(Math.round(base * scale), SIGN_TEXT_MIN_FONT_PX, limit);
+}
+
+function plannedFont(
+  slot: PlannedText,
+  fallbackRaw: string,
+  fallbackEscaped: string,
+): { raw: string; escaped: string } {
+  const raw = slot.fontFamilyRaw?.trim();
+  if (!raw) return { raw: fallbackRaw, escaped: fallbackEscaped };
+  return { raw, escaped: esc(raw.replace(/"/g, "'")) };
+}
+
+function userSizeScale(line: BadgeLine | undefined): number {
+  const n = line?.plaqueSizeScale;
+  if (typeof n !== "number" || !Number.isFinite(n) || n <= 0) return 1;
+  return clamp(n, 0.65, 1.85);
+}
 
 type PlannedDiv = { t: "div"; style: PlaqueDividerStyle };
 
@@ -482,6 +513,68 @@ function plaqueAwardClassicRows(params: {
   const l2 = plannedTextForUserIndex(planned, 2);
   const date = plannedTextForUserIndex(planned, 3);
   const div = planned.find((p) => p.t === "div") as PlannedDiv | undefined;
+  const nameSlot = planned.find(
+    (p) => p.t === "text" && p.userLineIndex !== undefined && p.formatBold,
+  ) as PlannedText | undefined;
+  const firstUser = planned.find(
+    (p) => p.t === "text" && p.userLineIndex !== undefined,
+  ) as PlannedText | undefined;
+  // Your Award: a short line, the name, the date, then a closing line. The name is not line 1.
+  if (nameSlot && firstUser && !firstUser.formatBold && nameSlot.userLineIndex !== 0) {
+    const extra = plannedTextForUserIndex(planned, 3);
+    const dividers = planned.filter((p) => p.t === "div") as PlannedDiv[];
+    const awardRows: PlaqueAwardLayoutRow[] = [];
+    const pushUser = (slot: PlannedText | undefined, yFrac: number, fontSize: number) => {
+      if (!slot?.text) return;
+      const idx = slot.userLineIndex ?? 0;
+      const family = plannedFont(slot, fontFamilyRaw, familyEscaped);
+      const fontWeight = slot.bold ? "bold" : "normal";
+      const fontStyle = slot.italic ? "italic" : "normal";
+      const sized = shrinkFontToFitMaxWidth(
+        slot.text,
+        family.raw,
+        fontWeight,
+        fontStyle,
+        maxNameWidth,
+        awardLineFontPx(fontSize, slot.sizeScale, Math.max(fontSize, 72)),
+        SIGN_TEXT_MIN_FONT_PX,
+      );
+      awardRows.push({
+        kind: "text",
+        text: slot.text,
+        x: cx,
+        y: db.y + H * yFrac,
+        fontSize: sized,
+        anchor: "middle",
+        familyEscaped: family.escaped,
+        fontWeight,
+        fontStyle,
+        fill: userLines[idx]?.color?.trim() || defaultTextColor,
+        underline: Boolean(userLines[idx]?.underline),
+      });
+    };
+    pushUser(firstUser, 0.42, fsCaption);
+    if (dividers[0]) {
+      const cy = db.y + H * 0.48;
+      awardRows.push({
+        kind: "divider",
+        cy,
+        markup: dividerSvg(dividers[0].style, cx, cy, db.width, defaultTextColor, dividerArtIdSuffix),
+      });
+    }
+    pushUser(nameSlot, 0.56, fsName);
+    pushUser(plannedTextForUserIndex(planned, 2), 0.64, fsDate);
+    if (dividers[1]) {
+      const cy = db.y + H * 0.73;
+      awardRows.push({
+        kind: "divider",
+        cy,
+        markup: dividerSvg(dividers[1].style, cx, cy, db.width, defaultTextColor, dividerArtIdSuffix),
+      });
+    }
+    pushUser(extra, 0.84, fsCaption);
+    return awardRows;
+  }
   /** With no divider row, nudge the second body line into the band classic reserves for divider art. */
   const yLine2 = db.y + H * (div ? 0.79 : 0.765);
 
@@ -501,45 +594,37 @@ function plaqueAwardClassicRows(params: {
       underline: false,
     });
   }
-  if (name?.text) {
-    const fsNameFitted = shrinkFontToFitMaxWidth(
-      name.text,
-      fontFamilyRaw,
-      "bold",
-      "normal",
+  const pushFitted = (slot: PlannedText | undefined, y: number, base: number, cap: number) => {
+    if (!slot?.text) return;
+    const family = plannedFont(slot, fontFamilyRaw, familyEscaped);
+    const fontWeight = slot.bold ? "bold" : "normal";
+    const fontStyle = slot.italic ? "italic" : "normal";
+    const fontSize = shrinkFontToFitMaxWidth(
+      slot.text,
+      family.raw,
+      fontWeight,
+      fontStyle,
       maxNameWidth,
-      fsName,
+      awardLineFontPx(base, slot.sizeScale, cap),
       SIGN_TEXT_MIN_FONT_PX,
     );
+    const idx = slot.userLineIndex ?? 0;
     rows.push({
       kind: "text",
-      text: name.text,
+      text: slot.text,
       x: cx,
-      y: yName,
-      fontSize: fsNameFitted,
+      y,
+      fontSize,
       anchor: "middle",
-      familyEscaped,
-      fontWeight: "bold",
-      fontStyle: "normal",
-      fill: userLines[0]?.color?.trim() || defaultTextColor,
-      underline: Boolean(userLines[0]?.underline),
+      familyEscaped: family.escaped,
+      fontWeight,
+      fontStyle,
+      fill: userLines[idx]?.color?.trim() || defaultTextColor,
+      underline: Boolean(userLines[idx]?.underline),
     });
-  }
-  if (l1?.text) {
-    rows.push({
-      kind: "text",
-      text: l1.text,
-      x: cx,
-      y: yLine1,
-      fontSize: fsBody,
-      anchor: "middle",
-      familyEscaped,
-      fontWeight: "normal",
-      fontStyle: "normal",
-      fill: userLines[1]?.color?.trim() || defaultTextColor,
-      underline: Boolean(userLines[1]?.underline),
-    });
-  }
+  };
+  pushFitted(name, yName, fsName, 120);
+  pushFitted(l1, yLine1, fsBody, 88);
   if (div) {
     rows.push({
       kind: "divider",
@@ -554,36 +639,8 @@ function plaqueAwardClassicRows(params: {
       ),
     });
   }
-  if (l2?.text) {
-    rows.push({
-      kind: "text",
-      text: l2.text,
-      x: cx,
-      y: yLine2,
-      fontSize: fsBody,
-      anchor: "middle",
-      familyEscaped,
-      fontWeight: "normal",
-      fontStyle: "normal",
-      fill: userLines[2]?.color?.trim() || defaultTextColor,
-      underline: Boolean(userLines[2]?.underline),
-    });
-  }
-  if (date?.text) {
-    rows.push({
-      kind: "text",
-      text: date.text,
-      x: cx,
-      y: yDate,
-      fontSize: fsDate,
-      anchor: "middle",
-      familyEscaped,
-      fontWeight: "normal",
-      fontStyle: "normal",
-      fill: userLines[3]?.color?.trim() || defaultTextColor,
-      underline: Boolean(userLines[3]?.underline),
-    });
-  }
+  pushFitted(l2, yLine2, fsBody, 88);
+  pushFitted(date, yDate, fsDate, 72);
   return rows;
 }
 
@@ -636,7 +693,8 @@ export function layoutPlaqueAwardFormat(
   const dividerArtIdSuffix = options?.dividerArtIdSuffix;
   const cr = layout.contentRect;
   const fontFamily =
-    userLines[0]?.fontFamily?.trim() || "Georgia, 'Times New Roman', serif";
+    userLines.find((line) => line.fontFamily?.trim() && !line.plaqueFontCustom)?.fontFamily?.trim() ||
+    "Georgia, 'Times New Roman', serif";
   const familyEscaped = esc(fontFamily.replace(/"/g, "'"));
 
   const planned: Planned[] = [];
@@ -679,13 +737,15 @@ export function layoutPlaqueAwardFormat(
       totalH += divHeight + gapAfter;
       continue;
     }
+    const sizeScale = p.sizeScale > 0 ? p.sizeScale : 1;
+    const measureFamily = p.fontFamilyRaw?.trim() || fontFamily;
     const fs = Math.max(
       SIGN_TEXT_MIN_FONT_PX,
-      Math.round(baseBodyPx * p.sizeMul),
+      Math.round(baseBodyPx * p.sizeMul * sizeScale),
     );
     const m = measureTextPx(
       p.text,
-      fontFamily,
+      measureFamily,
       fs,
       p.bold ? "bold" : "normal",
       p.italic ? "italic" : "normal",
@@ -734,11 +794,15 @@ export function layoutPlaqueAwardFormat(
       SIGN_TEXT_MIN_FONT_PX,
       Math.round((met.kind === "text" ? met.fontSize : baseBodyPx) * scale),
     );
+    const lineFamilyRaw = p.fontFamilyRaw?.trim() || fontFamily;
+    const lineFamilyEscaped = p.fontFamilyRaw?.trim()
+      ? esc(p.fontFamilyRaw.trim().replace(/"/g, "'"))
+      : familyEscaped;
     const hScaled =
       met.kind === "text"
         ? measureTextPx(
             p.text,
-            fontFamily,
+            lineFamilyRaw,
             fs,
             p.bold ? "bold" : "normal",
             p.italic ? "italic" : "normal",
@@ -759,7 +823,7 @@ export function layoutPlaqueAwardFormat(
       y: midY,
       fontSize: fs,
       anchor: "middle",
-      familyEscaped,
+      familyEscaped: lineFamilyEscaped,
       fontWeight: p.bold ? "bold" : "normal",
       fontStyle: p.italic ? "italic" : "normal",
       fill,
@@ -788,6 +852,8 @@ function appendSlot(
       sizeMul: slot.sizeMul,
       bold: slot.bold ?? false,
       italic: slot.italic ?? false,
+      formatBold: slot.bold ?? false,
+      sizeScale: 1,
     });
     return;
   }
@@ -795,13 +861,17 @@ function appendSlot(
   let text = (L?.text ?? "").trim();
   if (!text) text = slot.placeholder;
   if (slot.uppercase) text = text.toUpperCase();
+  const customEmphasis = Boolean(L?.plaqueEmphasisCustom);
   out.push({
     t: "text",
     text,
     sizeMul: slot.sizeMul,
-    bold: slot.bold ?? false,
-    italic: slot.italic ?? false,
+    bold: customEmphasis ? Boolean(L?.bold) : Boolean(slot.bold),
+    italic: customEmphasis ? Boolean(L?.italic) : Boolean(slot.italic),
+    formatBold: Boolean(slot.bold),
     userLineIndex: slot.userIndex,
+    sizeScale: userSizeScale(L),
+    fontFamilyRaw: L?.plaqueFontCustom ? L.fontFamily?.trim() || undefined : undefined,
   });
 }
 

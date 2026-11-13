@@ -215,7 +215,7 @@ export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "standard",
     name: "Standard",
-    previewImageSrc: "/sign-finishes/standard/standard-sunflower-corners-bold.jpg",
+    previewImageSrc: "/sign-finishes/standard/standard-blue-white.jpg",
     sizes: [
       { templateId: "standard-2x6-small", label: "Small", sizeText: '2×6"' },
       {
@@ -244,7 +244,7 @@ export const SIGN_TEMPLATE_TYPES: SignTemplateType[] = [
   {
     id: "designer-heart",
     name: "Designer",
-    previewImageSrc: "/sign-finishes/designer-heart/designer-heart-walnut-white.jpg",
+    previewImageSrc: "/sign-finishes/designer-heart/designer-heart-brushed-silver.jpg",
     sizes: [
       { templateId: "designer-2x5", label: "Small", sizeText: '2×5"' },
       { templateId: "designer-2_8x7", label: "Medium", sizeText: '2.8×7"' },

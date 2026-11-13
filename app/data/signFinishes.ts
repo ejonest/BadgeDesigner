@@ -107,25 +107,43 @@ function finishPhotoIsDark(finish: SignFinishOption): boolean {
 }
 
 /**
- * Text color to apply when a finish is chosen. Keeps a light accent such as
- * gold, and switches near-black ink to white on a dark plate.
+ * Text color to apply when a finish is chosen. Always black or white,
+ * picked for contrast against the plate. Accent inks such as gold stay
+ * off the lettering.
  */
 export function signFinishDefaultTextColor(finish: SignFinishOption): string {
   const plateIsDark =
     perceivedLuminance(finish.backgroundColor) <= 0.5 ||
     finishPhotoIsDark(finish);
-  const inkIsDark = perceivedLuminance(finish.inkColor) <= 0.5;
-  if (plateIsDark && inkIsDark) return "#FFFFFF";
-  return finish.inkColor;
+  return plateIsDark ? "#FFFFFF" : "#000000";
 }
 
-/** First stock photo for a shape, used before the customer picks a finish. */
+/** Shape-picker photos and the finish applied when that shape is first chosen. */
+const SHAPE_DEFAULT_FINISH_IDS: Record<string, string> = {
+  standard: "standard-blue-white",
+  "designer-heart": "designer-heart-brushed-silver",
+};
+
+/** Finish used before the customer picks one. Standard starts blue; Designer starts brushed silver; other shapes start white. */
 export function defaultSignFinishForShape(
   shapeTypeId: string | null | undefined,
 ): SignFinishOption | undefined {
   const finishes = getSignFinishesForShape(shapeTypeId);
+  const preferredId = shapeTypeId
+    ? SHAPE_DEFAULT_FINISH_IDS[shapeTypeId]
+    : undefined;
+  if (preferredId) {
+    const preferred = finishes.find((finish) => finish.id === preferredId);
+    if (preferred) return preferred;
+  }
   return (
-    finishes.find((finish) => finish.group === "Core colors") ?? finishes[0]
+    finishes.find((finish) => finish.label === "White / Black") ??
+    finishes.find(
+      (finish) =>
+        finish.label.startsWith("White") && !finishPhotoIsDark(finish),
+    ) ??
+    finishes.find((finish) => finish.group === "Core colors") ??
+    finishes[0]
   );
 }
 
