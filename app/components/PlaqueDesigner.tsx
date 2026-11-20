@@ -52,6 +52,14 @@ import {
   buildPlaqueLayoutPreviewBadge,
   PLAQUE_ATTACHED_LAYOUT_LOGO_SRC,
 } from "~/utils/plaqueAwardFormatPreview";
+import {
+  PLAQUE_LINE_MAX_ROWS,
+  PLAQUE_LINE_WRAP_AT,
+  capPlaqueLineRows,
+  plaqueSymbolDropPercent,
+  plaqueTopLineExtraRows,
+  wrapPlaqueLine,
+} from "~/utils/plaqueLineWrap";
 import { PLAQUE_DEFAULT_BRUSH_GOLD_HEX } from "~/utils/plaqueRender";
 import {
   blankPlaquePlateImage,
@@ -346,6 +354,164 @@ type CatalogLinePlan = {
   lines: { text: string; placeholder: boolean; role: CatalogLineRole; bodyIndex: number; userIndex: number }[];
 };
 
+type EmblemWindow = { left: number; top: number; width: number; height: number };
+
+/** Engraved emblem on the ready-made plates, as a percent of the product photo. Bottom stays above “presented to”. */
+const PLAQUE_EMBLEM_WINDOW: Record<string, EmblemWindow> = {
+  church: { left: 40, top: 23.2, width: 20, height: 19 },
+  teacher: { left: 42.5, top: 23, width: 15, height: 19.2 },
+  service: { left: 39, top: 23, width: 21.5, height: 19.2 },
+  appreciation: { left: 35, top: 24.8, width: 29, height: 17 },
+};
+
+const CATALOG_ROW_PERCENT: Record<CatalogLineRole, number> = {
+  name: 3.4,
+  body: 2.45,
+  date: 2.3,
+  caption: 2.2,
+  extra: 2.2,
+};
+
+function catalogBaseTop(
+  line: { role: CatalogLineRole; bodyIndex: number },
+  variant: CatalogLinePlan["variant"],
+): number {
+  if (variant === "award") {
+    if (line.role === "caption") return 50.2;
+    if (line.role === "name") return 61.4;
+    if (line.role === "date") return 66.4;
+    return 73.5;
+  }
+  if (line.role === "name") return 52;
+  if (line.role === "date") return 72.6;
+  return line.bodyIndex === 0 ? 57.2 : 66.6;
+}
+
+function wrapLimitForRole(role: CatalogLineRole): number {
+  return role === "name" ? 18 : 24;
+}
+
+function wrappedRows(text: string, role: CatalogLineRole): string[] {
+  const wrapped = wrapPlaqueLine(text, wrapLimitForRole(role));
+  return wrapped.length > 0 ? wrapped : [text];
+}
+
+type AwardFrame = {
+  tops: number[];
+  /** How far each dotted rule moves, in percent of the photo. Negative is up. */
+  topRule: number;
+  bottomRule: number;
+};
+
+/** Row height of each Your Award line at 100% size, as a percent of the photo. Matches the CSS line sizes. */
+const AWARD_ROW_PERCENT: Record<CatalogLineRole, number> = {
+  caption: 2.15,
+  name: 2.63,
+  date: 2.1,
+  extra: 2.15,
+  body: 2.1,
+};
+/** Lowest point the extra line may reach. The engraved plate ends near 87% of the photo. */
+const AWARD_STACK_LIMIT = 85.5;
+
+/**
+ * Your Award stack, top to bottom: caption, top dotted rule, name, lower dotted rule, date, extra.
+ * Rows keep their size and the stack grows downward. The lower rule rides with the name, so the
+ * date always sits under it. The top rule only moves when the caption grows or the stack runs
+ * off the plate.
+ */
+function awardFrame(
+  lines: { role: CatalogLineRole; text: string }[],
+  sizes: number[] = [],
+): AwardFrame {
+  const blockOf = (role: CatalogLineRole) => {
+    const index = lines.findIndex((item) => item.role === role);
+    if (index < 0) return 0;
+    const rows = wrappedRows(lines[index].text, role).length;
+    return rows * AWARD_ROW_PERCENT[role] * (sizes[index] ?? 1);
+  };
+  const RULE_TOP = 56.8;
+  const RULE_BOTTOM = 64.3;
+  const CAPTION_CENTER = 50.2;
+  const captionBlock = blockOf("caption");
+  const nameBlock = blockOf("name");
+  const dateBlock = blockOf("date");
+  const extraBlock = blockOf("extra");
+
+  const topRuleFloor = CAPTION_CENTER + captionBlock / 2 + 1.2;
+  let topRule = Math.max(RULE_TOP, topRuleFloor);
+  let gapTopRuleToName = 3.3;
+  let gapNameToRule = 1.57;
+  const gapRuleToDate = 1.05;
+  let gapDateToExtra = 5;
+  const stackBottom = () =>
+    topRule + gapTopRuleToName + nameBlock + gapNameToRule + gapRuleToDate + dateBlock + gapDateToExtra + extraBlock;
+
+  let over = stackBottom() - AWARD_STACK_LIMIT;
+  if (over > 0) {
+    const give = Math.min(over, Math.max(0, gapDateToExtra - 3));
+    gapDateToExtra -= give;
+    over -= give;
+  }
+  if (over > 0) {
+    const give = Math.min(over, Math.max(0, topRule - topRuleFloor));
+    topRule -= give;
+    over -= give;
+  }
+  if (over > 0) {
+    const give = Math.min(over, Math.max(0, gapTopRuleToName - 2));
+    gapTopRuleToName -= give;
+    over -= give;
+  }
+
+  const nameTop = topRule + gapTopRuleToName;
+  const lowerRule = nameTop + nameBlock + gapNameToRule;
+  const dateTop = lowerRule + gapRuleToDate;
+  const extraTop = dateTop + dateBlock + gapDateToExtra;
+  const centers: Record<string, number> = {
+    caption: CAPTION_CENTER,
+    name: nameTop + nameBlock / 2,
+    date: dateTop + dateBlock / 2,
+    extra: extraTop + extraBlock / 2,
+  };
+  return {
+    tops: lines.map((line) => centers[line.role] ?? CAPTION_CENTER),
+    topRule: topRule - RULE_TOP,
+    bottomRule: lowerRule - RULE_BOTTOM,
+  };
+}
+
+/** Keep short lines on their marks. Wrapped lines keep their size and push what is below them. */
+function catalogLineOffsets(
+  lines: { role: CatalogLineRole; bodyIndex: number; text: string }[],
+  variant: CatalogLinePlan["variant"],
+  sizes: number[] = [],
+): { top: number; scale: number }[] {
+  if (variant === "award") {
+    const frame = awardFrame(lines, sizes);
+    return frame.tops.map((top) => ({ top, scale: 1 }));
+  }
+  const pieces = lines.map((line) => wrappedRows(line.text, line.role));
+  const centers = lines.map((line) => catalogBaseTop(line, variant));
+  const rowH = lines.map((line) => CATALOG_ROW_PERCENT[line.role]);
+  for (let index = 0; index < lines.length; index += 1) {
+    const half = (rowH[index] * pieces[index].length) / 2;
+    const previousBottom =
+      index === 0
+        ? centers[0] - rowH[0] / 2
+        : centers[index - 1] + (rowH[index - 1] * pieces[index - 1].length) / 2 + 0.5;
+    const minCenter = previousBottom + half;
+    if (centers[index] < minCenter) centers[index] = minCenter;
+  }
+  return centers.map((top) => ({ top, scale: 1 }));
+}
+
+function emblemClipInset(window: EmblemWindow): string {
+  const right = Math.max(0, 100 - window.left - window.width);
+  const bottom = Math.max(0, 100 - window.top - window.height);
+  return `inset(${window.top}% ${right}% ${bottom}% ${window.left}%)`;
+}
+
 /** Four customer lines, placed in the open bands of the plate photo. Your Award uses a different order. */
 function catalogLinePlan(
   format: PlaqueAwardFormatDefinition | null | undefined,
@@ -455,6 +621,44 @@ const YOUR_AWARD_FRAME: Partial<Record<string, string>> = {
   "white-black": "/images/plaque/catalog/your-award-white-black.jpg",
 };
 
+function PlaqueWrappedText({ text, limit }: { text: string; limit?: number }) {
+  const parts = wrapPlaqueLine(text, limit).slice(0, PLAQUE_LINE_MAX_ROWS);
+  const shown = parts.length > 0 ? parts : [text];
+  return shown.map((part, index) => (
+    <span className="pd-catalog-row" key={`${index}-${part}`}>
+      {part}
+    </span>
+  ));
+}
+
+/** Dotted rules engraved on Your Award, as a percent of the product photo. The line runs most of the plate width. */
+const AWARD_RULE_WINDOW = {
+  top: { left: 21.5, top: 56.25, width: 57, height: 1.15 },
+  bottom: { left: 21.5, top: 63.6, width: 57, height: 1.2 },
+};
+
+function AwardRuleShift({ src, window, shift }: { src: string; window: EmblemWindow; shift: number }) {
+  if (Math.abs(shift) < 0.2) return null;
+  const coverGap = window.height + 0.35;
+  const cover: EmblemWindow = { ...window, top: window.top - coverGap };
+  return (
+    <>
+      <img
+        className="pd-emblem-layer"
+        src={src}
+        alt=""
+        style={{ clipPath: emblemClipInset(cover), transform: `translateY(${coverGap}%)` }}
+      />
+      <img
+        className="pd-emblem-layer"
+        src={src}
+        alt=""
+        style={{ clipPath: emblemClipInset(window), transform: `translateY(${shift}%)` }}
+      />
+    </>
+  );
+}
+
 function PlaquePhotoStage({
   src,
   lines,
@@ -465,6 +669,8 @@ function PlaquePhotoStage({
   catalog,
   photo,
   catalogLayout,
+  symbolDrop = 0,
+  emblem,
 }: {
   src: string;
   lines: string[];
@@ -478,14 +684,49 @@ function PlaquePhotoStage({
   photo?: PhotoPlaqueFrame;
   /** Customer lines anchored to the engraved bands on a catalog plate photo. */
   catalogLayout?: CatalogLinePlan | null;
+  /** Percent of the plate photo. Set when the first or second line wraps. */
+  symbolDrop?: number;
+  /** Blank-plate patch plus a shifted copy of the engraved emblem. */
+  emblem?: { coverSrc: string; window: EmblemWindow; blend: "lighten" | "darken" } | null;
 }) {
   const written = lines
     .map((text, index) => ({ text: text.trim(), style: styles[index] }))
     .filter((line) => line.text.length > 0);
+  const lineSizes = catalogLayout
+    ? catalogLayout.lines.map((line) => styles[line.userIndex]?.sizeScale ?? 1)
+    : [];
+  const award = catalogLayout?.variant === "award" ? awardFrame(catalogLayout.lines, lineSizes) : null;
+  const placed = catalogLayout
+    ? award
+      ? award.tops.map((top) => ({ top, scale: 1 }))
+      : catalogLineOffsets(catalogLayout.lines, catalogLayout.variant, lineSizes)
+    : [];
+  const drop = symbolDrop > 0 ? `${symbolDrop}%` : "0%";
+  const emblemClip = emblem ? emblemClipInset(emblem.window) : "";
   return (
-    <div className={`pd-preview-frame pd-photo-stage${photo ? ` is-photo is-${photo}` : ""}`}>
+    <div
+      className={`pd-preview-frame pd-photo-stage${photo ? ` is-photo is-${photo}` : ""}${symbolDrop > 0 ? " is-symbol-drop" : ""}`}
+      style={{ ["--pd-symbol-drop" as string]: drop }}
+    >
       <div className={`pd-photo-zoom${catalogLayout?.variant === "award" ? " is-award" : ""}`}>
         <img className="pd-photo-base" src={src} alt="" />
+        {emblem && symbolDrop > 0 ? (
+          <>
+            <img className="pd-emblem-layer" src={emblem.coverSrc} alt="" style={{ clipPath: emblemClip }} />
+            <img
+              className="pd-emblem-layer is-shifted"
+              src={src}
+              alt=""
+              style={{ clipPath: emblemClip, transform: `translateY(${drop})`, mixBlendMode: emblem.blend }}
+            />
+          </>
+        ) : null}
+        {award ? (
+          <>
+            <AwardRuleShift src={src} window={AWARD_RULE_WINDOW.top} shift={award.topRule} />
+            <AwardRuleShift src={src} window={AWARD_RULE_WINDOW.bottom} shift={award.bottomRule} />
+          </>
+        ) : null}
         {photo && image ? (
           <div className="pd-photo-window">
             <img src={image.src} alt="" />
@@ -495,7 +736,8 @@ function PlaquePhotoStage({
         {catalogLayout && !photo
           ? catalogLayout.lines.map((line, index) => {
               const style = styles[line.userIndex];
-              const scale = style?.sizeScale ?? 1;
+              const placedLine = placed[index];
+              const scale = (style?.sizeScale ?? 1) * (placedLine?.scale ?? 1);
               const family = style?.fontFamily?.trim() || fontFamily;
               return (
                 <p
@@ -504,6 +746,7 @@ function PlaquePhotoStage({
                   style={{
                     color: ink,
                     fontFamily: family,
+                    top: placedLine ? `${placedLine.top}%` : undefined,
                     ["--pd-line-scale" as string]: String(scale),
                     ...(style?.emphasisCustom
                       ? {
@@ -514,7 +757,7 @@ function PlaquePhotoStage({
                     textDecoration: style?.underline ? "underline" : undefined,
                   }}
                 >
-                  {line.text}
+                  <PlaqueWrappedText text={line.text} limit={wrapLimitForRole(line.role)} />
                 </p>
               );
             })
@@ -539,7 +782,7 @@ function PlaquePhotoStage({
                     fontSize: photo ? undefined : `calc(${index === 0 ? "1.35em" : "1em"} * ${scale})`,
                   }}
                 >
-                  {line.text}
+                  <PlaqueWrappedText text={line.text} />
                 </p>
               );
             })}
@@ -570,7 +813,6 @@ export default function PlaqueDesigner() {
   const [textDraft, setTextDraft] = useState("");
   const [lineStyles, setLineStyles] = useState<PlaqueLineStyle[]>(() => emptyStyles(4));
   const [lineFocus, setLineFocus] = useState(0);
-  const [wordingMode, setWordingMode] = useState<"all" | "line">("all");
   const [quantity, setQuantity] = useState(1);
   const [sharedImage, setSharedImage] = useState<PlaqueImage | null>(null);
   const [placementChoice, setPlacementChoice] = useState<SignLogoPlacement>("top");
@@ -1437,7 +1679,6 @@ export default function PlaqueDesigner() {
     setTextDraft("");
     setLineStyles(emptyStyles(4));
     setLineFocus(0);
-    setWordingMode("all");
     setQuantity(1);
     setSharedImage(null);
     setPlacementChoice("top");
@@ -1634,17 +1875,22 @@ export default function PlaqueDesigner() {
       ? "Add the logo that sits above the wording. PNG, JPEG, WebP, or GIF."
       : "Your image sits on the metal plate above the text. PNG, JPEG, WebP, or GIF.";
 
+  const focusLineText = activeLines[focusIndex] ?? "";
+  const previewPlan = selectedCatalogDesign ? catalogLinePlan(format, activeLines) : null;
+  const focusRole = previewPlan?.lines.find((line) => line.userIndex === focusIndex)?.role;
+  const focusWrapLimit = focusRole ? wrapLimitForRole(focusRole) : PLAQUE_LINE_WRAP_AT;
+  const focusAtRowCap = wrapPlaqueLine(focusLineText, focusWrapLimit).length >= PLAQUE_LINE_MAX_ROWS;
+  const symbolExtraRows = previewPlan
+    ? previewPlan.variant === "award"
+      ? 0
+      : previewPlan.lines.slice(0, 2).reduce(
+          (sum, line) => sum + Math.max(0, wrappedRows(line.text, line.role).length - 1),
+          0,
+        )
+    : plaqueTopLineExtraRows(activeLines);
+
   const wordingEditor = (
     <div className="pd-wording">
-      <div className="pd-wording-switch" role="tablist" aria-label="How to edit the wording">
-        <button type="button" role="tab" aria-selected={wordingMode === "all"} className={wordingMode === "all" ? "is-on" : ""} onClick={() => setWordingMode("all")}>
-          Edit all
-        </button>
-        <button type="button" role="tab" aria-selected={wordingMode === "line"} className={wordingMode === "line" ? "is-on" : ""} onClick={() => setWordingMode("line")}>
-          Edit line by line
-        </button>
-      </div>
-      {wordingMode === "line" ? (
         <div className="pd-line-editor">
           <div className="pd-line-picks" role="tablist" aria-label="Line to edit">
             {labels.map((label, index) => (
@@ -1663,12 +1909,21 @@ export default function PlaqueDesigner() {
           </div>
           <label className="md-text-label" htmlFor="pd-line-text">
             {labels[focusIndex] ?? "Line"}
-            <input
+            <textarea
               id="pd-line-text"
-              className="gf-input"
-              value={activeLines[focusIndex] ?? ""}
+              className="gf-input pd-line-text"
+              rows={Math.min(4, Math.max(1, Math.ceil(focusLineText.length / 22) || 1))}
+              value={focusLineText}
               placeholder={placeholders[focusIndex] || ""}
-              onChange={(event) => setActiveLineText(focusIndex, event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.preventDefault();
+              }}
+              onChange={(event) =>
+                setActiveLineText(
+                  focusIndex,
+                  capPlaqueLineRows(event.target.value.replace(/[\r\n]/g, ""), focusWrapLimit),
+                )
+              }
             />
           </label>
           <div className="md-format-row">
@@ -1715,30 +1970,13 @@ export default function PlaqueDesigner() {
           <button type="button" className="gf-csv-link pd-line-apply" onClick={applyLineStyleToAll}>
             Use this font and size on every line
           </button>
-          {attached ? <p className="gf-note">Dividers stay with the award format.</p> : null}
-        </div>
-      ) : (
-        <>
-          <label className="md-text-label" htmlFor="pd-wording">Custom text</label>
-          <textarea
-            id="pd-wording"
-            className="gf-input md-wording"
-            rows={Math.min(lineCount, 6)}
-            value={textDraft}
-            placeholder={placeholders.filter(Boolean).join("\n")}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") return;
-              const newlines = event.currentTarget.value.split("\n").length - 1;
-              if (newlines >= lineCount - 1) event.preventDefault();
-            }}
-            onChange={(event) => setActiveText(event.target.value)}
-          />
           <p className="gf-note">
-            Press Enter for a new line. Up to {lineCount} lines.
-            {attached ? ` ${labels.map((label, index) => `Line ${index + 1} is ${label}`).join(". ")}.` : ""}
+            {previewPlan?.variant === "award"
+              ? "A long line wraps onto up to three rows at the same size. The dotted rules move to make room, and the date stays under the lower rule."
+              : "A long line wraps onto up to three rows at the same size. A long first or second line moves the emblem down."}
           </p>
-        </>
-      )}
+          {focusAtRowCap ? <p className="gf-note">This line uses all three rows.</p> : null}
+        </div>
     </div>
   );
 
@@ -2271,6 +2509,18 @@ export default function PlaqueDesigner() {
                     fontFamily={fontFamily}
                     catalog={Boolean(selectedCatalogDesign)}
                     catalogLayout={selectedCatalogDesign ? catalogLinePlan(format, activeLines) : null}
+                    symbolDrop={plaqueSymbolDropPercent(symbolExtraRows)}
+                    emblem={
+                      selectedCatalogDesign &&
+                      PLAQUE_EMBLEM_WINDOW[selectedCatalogDesign.slug] &&
+                      blankPlaquePlateImage(stagePlate ?? null)
+                        ? {
+                            coverSrc: blankPlaquePlateImage(stagePlate ?? null) ?? "",
+                            window: PLAQUE_EMBLEM_WINDOW[selectedCatalogDesign.slug],
+                            blend: inkForPlate(plate) === "#ffffff" ? "lighten" : "darken",
+                          }
+                        : null
+                    }
                     photo={photoFrame ?? undefined}
                   />
                 ) : layoutId ? (

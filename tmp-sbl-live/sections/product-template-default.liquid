@@ -41,15 +41,22 @@ endfor
       padding-bottom: 0 !important;
       max-width: none !important;
     }
+    .product-template .container > .breadcrumb {
+      display: none !important;
+    }
+    .halo-product-content > .row.pro-page {
+      padding-top: 0 !important;
+    }
     .product-template--plaque-designer .plaque-designer-iframe-outer iframe.plaque-designer-iframe {
       width: 100% !important;
-      min-height: min(100vh, 900px) !important;
-      height: min(100vh, 900px) !important;
+      min-height: 0 !important;
+      height: calc(100dvh - 188px) !important;
+      max-height: calc(100dvh - 188px) !important;
       border: 0 !important;
       display: block !important;
     }
   {%- endstyle -%}
-  <div class="plaque-designer-iframe-outer" style="width:100vw;margin-left:calc(-50vw + 50%);margin-right:calc(-50vw + 50%);min-height:min(100vh,900px);">
+  <div class="plaque-designer-iframe-outer" style="width:100vw;margin-left:calc(-50vw + 50%);margin-right:calc(-50vw + 50%);min-height:0;">
     {% render 'plaque-designer-embed' %}
   </div>
 {%- elsif is_sign_designer_product -%}

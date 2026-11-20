@@ -33,22 +33,27 @@
 
     {% if search.results_count == 0 %}
     <header class="page-header">
-      <h2>
-        {% render 'multilang' with settings.search_1 %}
-        <strong> &nbsp;"{{ search.terms }}"&nbsp; </strong>
-        {% render 'multilang' with settings.search_2 %}
-      </h2>
+      <div class="sbl-result-heading">
+        <h2>
+          {% render 'multilang' with settings.search_1 %}
+          <strong> &nbsp;"{{ search.terms }}"&nbsp; </strong>
+          {% render 'multilang' with settings.search_2 %}
+        </h2>
+        <p class="sbl-result-count" data-sbl-result-count>0 signs</p>
+      </div>
     </header>
 
     {% else %}
 
     <header class="page-header">
-      <h2>
-        {% render 'multilang' with settings.search_3 %}
-        <strong> &nbsp;"{{ search.terms }}"&nbsp; </strong>
-        {% render 'multilang' with settings.search_4 %}
-      </h2>
-      <p class="sbl-search-count">{{ search.results_count }} {% if search.results_count == 1 %}sign{% else %}signs{% endif %}</p>
+      <div class="sbl-result-heading">
+        <h2>
+          {% render 'multilang' with settings.search_3 %}
+          <strong> &nbsp;"{{ search.terms }}"&nbsp; </strong>
+          {% render 'multilang' with settings.search_4 %}
+        </h2>
+        <p class="sbl-result-count" data-sbl-result-count>{{ search.results_count }} {{ search.results_count | pluralize: 'sign', 'signs' }}</p>
+      </div>
       <label for="sbl-search-sort">Sort by</label>
       <select id="sbl-search-sort">
         <option value="relevance">Relevance</option>
@@ -93,7 +98,7 @@
           {% if settings.style_product_grid == 'style_product_grid_2' %}
             {% render 'product-grid-item-style-2' with product as product %}
           {% else %}
-            {% render 'product-grid-item' with product as product %}
+            {% render 'product-grid-item', product: product, sbl_quick_buy: true %}
           {% endif %}
         </div>
         {% endfor %}

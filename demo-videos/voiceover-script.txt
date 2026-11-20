@@ -1,0 +1,9 @@
+Voice: macOS Samantha, about 12 seconds.
+
+Design a custom plaque in your browser. Choose the layout, the size, and the metal finish, then type your wording. The preview updates live, so you see the plaque before you order.
+
+What the picture does while that plays:
+- Layout: photo plaque, landscape
+- Size: large, 9 by 12 inch frame
+- Finish: brushed silver
+- Wording: Presented to / Alex Morgan / Employee of the Year

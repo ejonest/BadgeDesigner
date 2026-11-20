@@ -25,15 +25,15 @@
             <span aria-hidden="true">→</span>
           </a>
         </div>
-        <div class="sbl-home__hero-photo sbl-home__hero-photo--custom">
+        <a class="sbl-home__hero-photo sbl-home__hero-photo--custom" href="{{ designer_url }}">
           <img
-            src="{{ 'sbl-hero-custom-photo.jpg' | asset_url }}"
-            alt="A navy Main Office sign on a wood office door"
-            width="1012"
-            height="987"
+            src="{{ 'sbl-hero-designer-screen.png' | asset_url }}"
+            alt="The Signs ByLITA sign designer showing the Designer shape, size, color, and text steps"
+            width="750"
+            height="956"
             loading="eager"
           >
-        </div>
+        </a>
       </div>
 
       <div class="sbl-home__hero-pane sbl-home__hero-pane--ready">
@@ -45,17 +45,17 @@
           </h2>
           <p class="sbl-home__hero-accent">Find the wording you need.</p>
           <p class="sbl-home__hero-text">More than 5,000 signs for restrooms, offices, safety, and private property. Search by the words on the sign, or browse the catalog.</p>
-          <a href="{{ routes.all_products_collection_url }}" class="sbl-home__button sbl-home__button--navy sbl-home__button--hero">
+          <a href="{{ routes.all_products_collection_url }}" class="sbl-home__button sbl-home__button--gold sbl-home__button--hero">
             {{ section.settings.shop_button | escape }}
             <span aria-hidden="true">→</span>
           </a>
         </div>
         <div class="sbl-home__hero-photo sbl-home__hero-photo--ready">
           <img
-            src="{{ 'sbl-hero-ready-photo.jpg' | asset_url }}"
-            alt="A black Please Wash Your Hands sign on a white tile wall"
-            width="606"
-            height="600"
+            src="{{ 'sbl-hero-sign-collage.jpg' | asset_url }}"
+            alt="A set of ready-made signs, including Main Office, Welcome, Restrooms, Private, Staff Only, Meeting Room, and Please Come In"
+            width="1024"
+            height="908"
             loading="eager"
           >
         </div>
@@ -332,22 +332,6 @@
           {%- endif -%}
         {%- endfor -%}
       </div>
-
-      <form class="sbl-home__search sbl-home__search--repeat" action="{{ routes.search_url }}" method="get" role="search">
-        <span class="sbl-home__search-icon" aria-hidden="true">⌕</span>
-        <label class="sbl-home__visually-hidden" for="sbl-home-search-popular-{{ section.id }}">
-          Search signs by wording
-        </label>
-        <input
-          id="sbl-home-search-popular-{{ section.id }}"
-          type="search"
-          name="q"
-          placeholder="{{ section.settings.search_placeholder | escape }}"
-          autocomplete="off"
-        >
-        <input type="hidden" name="type" value="product">
-        <button type="submit">Search</button>
-      </form>
     </div>
   </div>
 
@@ -500,11 +484,11 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     min-width: 0;
-    min-height: 400px;
+    min-height: 460px;
   }
   .sbl-home__hero-pane--ready {
-    background: #f7f3ec;
-    color: var(--sbl-navy);
+    background: var(--sbl-navy);
+    color: #fff;
   }
   .sbl-home__hero-body {
     display: flex;
@@ -520,8 +504,6 @@
   .sbl-home__hero-pane .sbl-home__hero-title strong { display: block; }
   .sbl-home__hero-pane .sbl-home__hero-accent { font-size: clamp(17px, 1.35vw, 21px); }
   .sbl-home__hero-pane .sbl-home__hero-text { font-size: 15px; line-height: 1.55; }
-  .sbl-home__hero-pane--ready .sbl-home__hero-text { color: var(--sbl-muted); }
-  .sbl-home__hero-pane--ready .sbl-home__hero-accent { color: #8a6416; }
   .sbl-home__hero-pane .sbl-home__button--hero {
     min-height: 50px;
     margin-top: 6px;
@@ -537,6 +519,7 @@
     min-width: 0;
     overflow: hidden;
     background: #d9cdb8;
+    text-decoration: none;
   }
   .sbl-home__hero-photo img {
     position: absolute;
@@ -546,8 +529,69 @@
     height: 100%;
     object-fit: cover;
   }
-  .sbl-home__hero-photo--custom img { object-position: 60% 40%; }
-  .sbl-home__hero-photo--ready img { object-position: 100% 30%; }
+  .sbl-home__hero-photo--custom { background: #f3f0ea; }
+  .sbl-home__hero-photo--custom img {
+    inset: 12px;
+    width: calc(100% - 24px);
+    height: calc(100% - 24px);
+    object-fit: contain;
+    object-position: center;
+  }
+  .sbl-home__hero-photo--ready { background: #f3efe8; }
+  .sbl-home__hero-photo--ready img {
+    inset: 10px;
+    width: calc(100% - 20px);
+    height: calc(100% - 20px);
+    object-fit: contain;
+    object-position: center;
+  }
+  .sbl-home__phrase-search {
+    display: flex;
+    width: 100%;
+    min-height: 48px;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 4px 4px 12px;
+    border: 1px solid #e4ddd1;
+    border-radius: 10px;
+    background: #fff;
+  }
+  .sbl-home__phrase-search-icon { display: flex; color: #98a2b3; }
+  .sbl-home__phrase-search-icon svg { width: 18px; height: 18px; }
+  .sbl-home__phrase-search input {
+    min-width: 0;
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--sbl-navy);
+    font: inherit;
+    font-size: 14px;
+  }
+  .sbl-home__phrase-search button {
+    height: 40px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--sbl-navy);
+    color: #fff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .sbl-home__phrases { display: flex; flex-wrap: wrap; gap: 8px; }
+  .sbl-home__phrases a {
+    padding: 7px 12px;
+    border: 1px solid #e4ddd1;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--sbl-navy);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .sbl-home__phrases a:hover { border-color: var(--sbl-navy); color: var(--sbl-navy); }
   .sbl-home__hero-trust--bar {
     display: flex;
     flex-wrap: wrap;
@@ -558,6 +602,7 @@
     margin: 0 auto;
     padding: 18px 0 22px;
   }
+  .sbl-home__hero-trust--bar .sbl-home__hero-reviews { margin-top: 0; }
   .sbl-home__hero-copy {
     grid-column: 1;
     grid-row: 1;
@@ -720,6 +765,8 @@
   .sbl-home__hero-trust p { margin: 0; }
   .sbl-home__hero-trust strong { color: #fff; }
   .sbl-home__hero-reviews { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .sbl-home__trust-gem { color: var(--sbl-gold); font-size: 11px; line-height: 1; }
+  .sbl-home__verify { padding: 0 4px; border: 1px dashed rgba(255, 255, 255, .75); border-radius: 3px; }
   .sbl-home__stars { color: #3ddc84; font-size: 18px; letter-spacing: 2px; line-height: 1; }
   .sbl-home__hero-art {
     grid-column: 2;
@@ -940,8 +987,9 @@
   .sbl-home__trophy .sbl-home__plaque-image img { height: 420px; }
   @media (max-width: 1100px) {
     .sbl-home__hero-split { grid-template-columns: 1fr; }
-    .sbl-home__hero-pane { min-height: 340px; }
-    .sbl-home__hero-trust--bar { width: min(100% - 48px, 1240px); }
+    .sbl-home__hero-pane { min-height: 0; }
+    .sbl-home__hero-trust--bar { width: min(100% - 32px, 1240px); flex-wrap: wrap; }
+    .sbl-home__hero-trust--bar p { white-space: normal; }
     .sbl-home__hero-title { font-size: 40px; }
     .sbl-home__hero-accent { font-size: 24px; }
   }
@@ -951,7 +999,7 @@
     .sbl-home__plaque-grid,
     .sbl-home__trophy .sbl-home__plaque-grid { grid-template-columns: 1fr; }
     .sbl-home__trophy .sbl-home__plaque-image { order: -1; }
-    .sbl-home__hero-pane { padding: 28px 20px 24px; }
+    .sbl-home__hero-pane { padding: 0; }
     .sbl-home__designer-card { width: min(620px, 100%); margin: 0 auto; }
     .sbl-home__category-grid,
     .sbl-home__product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -975,14 +1023,14 @@
   @media (max-width: 599px) {
     .sbl-home__wrap { width: min(100% - 28px, 1240px); }
     .sbl-home__menu-cols { grid-template-columns: 1fr 1fr; }
-    .sbl-home__hero-pane { padding: 28px 16px 22px; }
+    .sbl-home__hero-pane { padding: 0; }
+    .sbl-home__hero-pane { grid-template-columns: 1fr; }
     .sbl-home__hero-title { font-size: 34px; }
-    .sbl-home__hero-accent { font-size: 22px; }
+    .sbl-home__hero-accent { font-size: 20px; }
     .sbl-home__hero-text { font-size: 16px; }
-    .sbl-home__hero-pane { grid-template-columns: 1fr; min-height: 0; }
-    .sbl-home__hero-photo { order: -1; aspect-ratio: 16 / 9; }
-    .sbl-home__hero-body { padding: 24px 16px 28px; }
+    .sbl-home__hero-body { padding: 24px 16px 20px; }
     .sbl-home__hero-pane .sbl-home__button--hero { width: 100%; }
+    .sbl-home__hero-photo { height: auto; aspect-ratio: 4 / 3; }
     .sbl-home__hero-trust--bar { width: min(100% - 32px, 1240px); }
     .sbl-home__start { align-items: stretch; flex-direction: column; }
     .sbl-home__start-copy { padding: 8px; }
@@ -1120,6 +1168,7 @@
       }, 2800);
     });
   })();
+
 {% endjavascript %}
 
 {% schema %}
@@ -1131,8 +1180,8 @@
     { "type": "textarea", "id": "hero_eyebrow", "label": "Hero eyebrow", "default": "Custom Sign Tool — Live Now" },
     { "type": "text", "id": "hero_heading", "label": "Hero heading", "default": "Custom Signs" },
     { "type": "text", "id": "hero_subheading", "label": "Hero subheading", "default": "for Your Business." },
-    { "type": "text", "id": "hero_accent", "label": "Hero accent", "default": "Designed in minutes. Shipped fast." },
-    { "type": "textarea", "id": "hero_text", "label": "Hero text", "default": "Design door, wall and desk signs in your own wording, shape, size and color, with a live preview before you buy. Order one sign or a whole building's worth. All custom orders are customized in the US." },
+    { "type": "text", "id": "hero_accent", "label": "Hero accent", "default": "Designed in minutes. Most orders ship in 48 hours." },
+    { "type": "textarea", "id": "hero_text", "label": "Hero text", "default": "Design door, wall and desk signs in your own wording, shape, size and color, with a live preview before you buy. Order one sign or a whole building's worth." },
     { "type": "text", "id": "input_label", "label": "Designer prompt label", "default": "Your sign can say anything" },
     { "type": "text", "id": "input_example", "label": "Designer prompt example", "default": "Add your custom text in the designer" },
     { "type": "text", "id": "designer_button", "label": "Designer button", "default": "Design your custom sign" },

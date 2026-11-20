@@ -1,0 +1,185 @@
+{% doc %}
+  SEO overrides for the homepage, the industry hub, catalog tag landings,
+  and the four designer products.
+
+  key: title, description, canonical, or social.
+  canonical is blank unless this page needs a canonical other than canonical_url.
+  social is blank when this page should keep the theme's default tags.
+
+  @param key {string}
+{% enddoc %}
+{%- liquid
+  assign sbl_title = ''
+  assign sbl_description = ''
+  assign sbl_canonical = ''
+  assign sbl_image_file = ''
+  assign sbl_image_width = ''
+  assign sbl_image_height = ''
+  assign sbl_image_alt = ''
+  assign sbl_og_type = 'website'
+  assign sbl_image_url = ''
+  capture sbl_cl_copy
+    render 'sbl-collection-landing', collection: collection, key: 'text'
+  endcapture
+  assign sbl_cl_copy = sbl_cl_copy | strip
+
+  if template.name == 'index'
+    assign sbl_title = 'Signs ByLITA – Custom and Ready-Made Signs'
+    assign sbl_description = 'Design custom door, wall, and desk signs online, or shop 5,000 ready-made signs for restrooms, offices, and safety. Made in the USA. Most orders ship in 48 hours.'
+    assign sbl_image_file = 'sbl-space-gate.jpg'
+    assign sbl_image_width = '1600'
+    assign sbl_image_height = '703'
+    assign sbl_image_alt = 'Private property sign and house number 24 on a gate'
+  elsif template.suffix == 'sbl-industries'
+    assign sbl_title = 'Signs for Every Kind of Building – ' | append: shop.name
+    assign sbl_description = 'Shop signs for offices, schools, clinics, restaurants, churches, and hotels. Start with a custom design or choose ready-made wording for every room.'
+    assign sbl_image_file = 'sbl-space-office.jpg'
+    assign sbl_image_alt = 'Conference room and main office signs on a door'
+    if template.name == 'collection'
+      assign sbl_canonical = shop.url | append: routes.all_products_collection_url | append: '?view=sbl-industries'
+    endif
+  elsif template.name == 'product'
+    capture sbl_title
+      render 'sbl-designer-landing', product: product, key: 'title'
+    endcapture
+    capture sbl_description
+      render 'sbl-designer-landing', product: product, key: 'text'
+    endcapture
+    capture sbl_image_file
+      render 'sbl-designer-landing', product: product, key: 'image'
+    endcapture
+    assign sbl_title = sbl_title | strip
+    assign sbl_description = sbl_description | strip
+    assign sbl_image_file = sbl_image_file | strip
+    assign sbl_image_alt = sbl_title
+    if sbl_title != blank
+      assign sbl_og_type = 'product'
+    endif
+  elsif template.name == 'collection' and sbl_cl_copy != blank
+    capture sbl_title
+      render 'sbl-collection-landing', collection: collection, key: 'title'
+    endcapture
+    assign sbl_title = sbl_title | strip
+    if current_page != 1
+      assign sbl_title = sbl_title | append: ' – Page ' | append: current_page
+    endif
+    assign sbl_description = sbl_cl_copy
+    assign sbl_image_alt = collection.title | split: '|' | first | strip
+    if collection.image != blank
+      assign sbl_image_url = collection.image | image_url: width: 1200
+    else
+      capture sbl_cl_img
+        render 'sbl-collection-landing', collection: collection, key: 'image'
+      endcapture
+      assign sbl_image_file = sbl_cl_img | strip
+    endif
+  elsif template.name == 'collection' and collection.handle == 'all' and current_tags.size > 0
+    assign sbl_tag_labels = ''
+    assign sbl_primary_tag = ''
+    for sbl_tag in current_tags
+      if sbl_tag contains 'sbl:category:' or sbl_tag contains 'sbl:industry:' or sbl_tag contains 'sbl:family:'
+        if sbl_primary_tag == blank
+          assign sbl_primary_tag = sbl_tag
+        endif
+        capture sbl_one_label
+          render 'sbl-tag-label', tag: sbl_tag
+        endcapture
+        assign sbl_one_label = sbl_one_label | strip
+        if sbl_tag_labels == blank
+          assign sbl_tag_labels = sbl_one_label
+        else
+          assign sbl_tag_labels = sbl_tag_labels | append: ', ' | append: sbl_one_label
+        endif
+      endif
+    endfor
+    if sbl_primary_tag != blank
+      capture sbl_description
+        render 'sbl-tag-blurb', tag: sbl_primary_tag
+      endcapture
+      assign sbl_description = sbl_description | strip
+      assign sbl_title = sbl_tag_labels | append: ' signs – ' | append: shop.name
+      if current_page != 1
+        assign sbl_title = sbl_title | append: ' – Page ' | append: current_page
+      endif
+      assign sbl_image_alt = sbl_tag_labels | append: ' signs'
+      assign sbl_slug = sbl_primary_tag | split: ':' | last
+      case sbl_slug
+        when 'restroom-hygiene'
+          assign sbl_image_file = 'sbl-space-restroom.jpg'
+        when 'property-notices'
+          assign sbl_image_file = 'sbl-space-property.jpg'
+        when 'security-camera'
+          assign sbl_image_file = 'sbl-space-surveillance.jpg'
+        when 'office-door', 'business-office'
+          assign sbl_image_file = 'sbl-space-office.jpg'
+        when 'push-pull'
+          assign sbl_image_file = 'sbl-space-push-pull.jpg'
+        when 'education', 'education-school', 'education-university'
+          assign sbl_image_file = 'sbl-space-classroom.jpg'
+        when 'healthcare'
+          assign sbl_image_file = 'sbl-space-clinic.jpg'
+        when 'staff-private'
+          assign sbl_image_file = 'sbl-space-nurses.jpg'
+        when 'wayfinding-directory'
+          assign sbl_image_file = 'sbl-space-wayfinding.jpg'
+        else
+          assign sbl_image_file = 'sbl-space-office.jpg'
+      endcase
+    endif
+  endif
+
+  if sbl_image_file != blank
+    assign sbl_image_url = sbl_image_file | asset_url
+  endif
+  if sbl_image_url != blank
+    unless sbl_image_url contains '://'
+      if sbl_image_url contains '//'
+        assign sbl_image_url = 'https:' | append: sbl_image_url
+      else
+        assign sbl_image_url = request.origin | append: sbl_image_url
+      endif
+    endunless
+  endif
+
+  if sbl_canonical == blank and sbl_title != blank
+    assign sbl_share_url = canonical_url
+  else
+    assign sbl_share_url = sbl_canonical
+  endif
+-%}
+{%- if key == 'title' -%}
+{{- sbl_title -}}
+{%- elsif key == 'description' -%}
+{{- sbl_description -}}
+{%- elsif key == 'canonical' -%}
+{{- sbl_canonical -}}
+{%- elsif key == 'social' and sbl_title != blank -%}
+<meta property="og:type" content="{{ sbl_og_type | escape }}">
+<meta property="og:title" content="{{ sbl_title | escape }}">
+<meta property="og:description" content="{{ sbl_description | escape }}">
+<meta property="og:url" content="{{ sbl_share_url | escape }}">
+<meta property="og:site_name" content="{{ shop.name | escape }}">
+{%- if sbl_image_url != blank -%}
+<meta property="og:image" content="{{ sbl_image_url | escape }}">
+<meta property="og:image:secure_url" content="{{ sbl_image_url | escape }}">
+<meta property="og:image:alt" content="{{ sbl_image_alt | escape }}">
+{%- if sbl_image_width != blank -%}
+<meta property="og:image:width" content="{{ sbl_image_width | escape }}">
+<meta property="og:image:height" content="{{ sbl_image_height | escape }}">
+{%- endif -%}
+{%- endif -%}
+{%- if sbl_og_type == 'product' -%}
+<meta property="og:price:amount" content="{{ product.price | money_without_currency | strip_html }}">
+<meta property="og:price:currency" content="{{ shop.currency | escape }}">
+{%- endif -%}
+<meta name="twitter:card" content="summary_large_image">
+{%- if settings.twittercard_handle != blank -%}
+<meta name="twitter:site" content="{{ settings.twittercard_handle | escape }}">
+{%- endif -%}
+<meta name="twitter:title" content="{{ sbl_title | escape }}">
+<meta name="twitter:description" content="{{ sbl_description | escape }}">
+{%- if sbl_image_url != blank -%}
+<meta name="twitter:image" content="{{ sbl_image_url | escape }}">
+<meta name="twitter:image:alt" content="{{ sbl_image_alt | escape }}">
+{%- endif -%}
+{%- endif -%}

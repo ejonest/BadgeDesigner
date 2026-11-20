@@ -1,6 +1,6 @@
 {%- layout none -%}
 {%- if search.performed -%}
-  {%- paginate search.results by 50 -%}
+  {%- paginate search.results by 250 -%}
   {
     "page": {{ paginate.current_page | json }},
     "pages": {{ paginate.pages | json }},
@@ -11,10 +11,14 @@
         {%- if emitted -%},{%- endif -%}
         {%- assign emitted = true -%}
         {
+          "id": {{ item.id | json }},
           "title": {{ item.title | json }},
           "url": {{ item.url | json }},
-          "image": {% if item.featured_image %}{{ item.featured_image | image_url: width: 600 | json }}{% else %}null{% endif %},
-          "price": {{ item.price_min | money | json }},
+          "image": {% if item.featured_image %}{{ item.featured_image.src | json }}{% else %}null{% endif %},
+          "images": [{% for image in item.images limit: 8 %}{% unless forloop.first %},{% endunless %}{{ image | image_url: width: 600 | json }}{% endfor %}],
+          "variants": [{% for variant in item.variants limit: 24 %}{% unless forloop.first %},{% endunless %}{"id":{{ variant.id | json }},"title":{{ variant.title | json }},"available":{{ variant.available | json }}}{% endfor %}],
+          "variantCount": {{ item.variants.size | json }},
+          "price": {{ item.price_min | divided_by: 100.0 | json }},
           "priceVaries": {{ item.price_varies | json }},
           "tags": {{ item.tags | json }}
         }

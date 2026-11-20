@@ -1,5 +1,7 @@
+{%- capture sbl_landing_heading -%}{%- render 'sbl-collection-landing', collection: collection, key: 'heading' -%}{%- endcapture -%}
+{%- assign sbl_landing_heading = sbl_landing_heading | strip -%}
 <header class="collection-header">
-  {% if section.settings.display_collection_image %}
+  {% if section.settings.display_collection_image and sbl_landing_heading == blank %}
   <div class="collection-image">
     {% if collection.description contains '<img' or section.settings.collection_image != blank %}
 
@@ -122,12 +124,35 @@
           assign collection_heading = sbl_category_heading
         endif
       endif
+      assign sbl_result_count = collection.products_count
+      if paginate.items != blank
+        assign sbl_result_count = paginate.items
+      endif
     -%}
-    <h1>
-      {% render 'multilang' with collection_heading %}
-    </h1>
-
-    {% if collection.description != '' and section.settings.display_collection_des and hide_collection_description == false %}
+    <div class="sbl-result-heading">
+      {%- if sbl_landing_heading == blank -%}
+      <h1>
+        {% render 'multilang' with collection_heading %}
+      </h1>
+      {%- endif -%}
+      <p class="sbl-result-count" data-sbl-result-count>
+        {{ sbl_result_count }} {{ sbl_result_count | pluralize: 'sign', 'signs' }}
+      </p>
+    </div>
+    {%- if collection.handle == 'all' and template.suffix != 'sbl-industries' and current_tags.size > 0 -%}
+      {%- assign sbl_intro_tag = '' -%}
+      {%- for sbl_tag in current_tags -%}
+        {%- if sbl_intro_tag == blank -%}
+          {%- if sbl_tag contains 'sbl:category:' or sbl_tag contains 'sbl:industry:' or sbl_tag contains 'sbl:family:' -%}
+            {%- assign sbl_intro_tag = sbl_tag -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- if sbl_intro_tag != blank -%}
+        <p class="sbl-landing-intro">{% render 'sbl-tag-blurb', tag: sbl_intro_tag %}</p>
+      {%- endif -%}
+    {%- endif -%}
+    {% if sbl_landing_heading == blank and collection.description != '' and section.settings.display_collection_des and hide_collection_description == false %}
     <div class="collection-des">
       {% if settings.enable_multilang and collection.description contains '[lang2]' %}      
       <div class="rte lang1">
