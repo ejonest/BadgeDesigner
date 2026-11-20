@@ -1,0 +1,74 @@
+{% doc %}
+  Crawlable heading and intro for the four designer products.
+  key: title, text, image, or blank to print the banner.
+
+  @param product {product}
+  @param key {string}
+{% enddoc %}
+{%- liquid
+  assign sbl_designer_title = ''
+  assign sbl_designer_heading = ''
+  assign sbl_designer_text = ''
+  assign sbl_designer_image = ''
+  case product.handle
+    when 'custom-sign'
+      assign sbl_designer_title = 'Design a Custom Sign – ' | append: shop.name
+      assign sbl_designer_heading = 'Design a custom sign'
+      assign sbl_designer_text = 'Choose a shape, type your wording, and pick the size and colors. Preview the door, wall, or desk sign before you order. Most orders ship in 48 hours.'
+      assign sbl_designer_image = 'sbl-sign-designer-real.png'
+    when 'custom-desk-sign'
+      assign sbl_designer_title = 'Design a Desk Nameplate – ' | append: shop.name
+      assign sbl_designer_heading = 'Design a desk nameplate'
+      assign sbl_designer_text = 'Add a name and title, then choose the holder finish. Preview the nameplate before you order it for one desk or a whole office.'
+      assign sbl_designer_image = 'sbl-desk-sign-designer-real.png'
+    when 'custom-plaque'
+      assign sbl_designer_title = 'Design an Award Plaque – ' | append: shop.name
+      assign sbl_designer_heading = 'Design an award plaque'
+      assign sbl_designer_text = 'Add a logo, a recipient name, and a message. Preview the plaque, then order one award or a set for a ceremony.'
+      assign sbl_designer_image = 'sbl-plaque-designer-shot.jpg'
+    when 'custom-trophy'
+      assign sbl_designer_title = 'Design a Trophy – ' | append: shop.name
+      assign sbl_designer_heading = 'Design a trophy'
+      assign sbl_designer_text = 'Pick a trophy style, add your logo and a message, and preview the award before you order it for a team, a school, or a company.'
+      assign sbl_designer_image = 'sbl-trophy-designer-shot.jpg'
+  endcase
+-%}
+{%- if sbl_designer_heading != blank -%}
+  {%- if key == 'title' -%}
+    {{- sbl_designer_title -}}
+  {%- elsif key == 'text' -%}
+    {{- sbl_designer_text -}}
+  {%- elsif key == 'image' -%}
+    {{- sbl_designer_image -}}
+  {%- elsif key == blank or key == 'html' -%}
+    <div class="sbl-designer-landing">
+      <div class="sbl-designer-landing__inner">
+        <h1>{{ sbl_designer_heading | escape }}</h1>
+        <p>{{ sbl_designer_text | escape }}</p>
+      </div>
+    </div>
+    <style>
+      .sbl-designer-landing {
+        background: #f5f1eb;
+        color: #02132b;
+      }
+      .sbl-designer-landing__inner {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 18px 24px 16px;
+      }
+      .sbl-designer-landing h1 {
+        margin: 0 0 6px;
+        font-size: 28px;
+        line-height: 1.15;
+        font-weight: 700;
+      }
+      .sbl-designer-landing p {
+        margin: 0;
+        max-width: 68ch;
+        font-size: 15px;
+        line-height: 1.5;
+      }
+    </style>
+  {%- endif -%}
+{%- endif -%}

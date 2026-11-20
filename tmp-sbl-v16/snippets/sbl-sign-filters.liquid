@@ -1,0 +1,1012 @@
+{% doc %}
+  Sign type, sign category, and sign shape filters for collection and search sidebars.
+  Type is hanging, wall, or table top. Category is the message people search
+  for (restroom, CCTV, fire, and the other topics in the catalog). Shape groups
+  the catalog shape tags. Choices within a group match any selected option.
+  A type, a category, and a shape together all have to match.
+  Each choice shows how many signs match it along with the filters already
+  chosen in the other groups. The heading beside the title shows the current total.
+
+  @example
+  {% render 'sbl-sign-filters' %}
+{% enddoc %}
+
+{% stylesheet %}
+  .sbl-sign-filters { margin: 22px 0 8px; }
+  .sbl-sign-filters .widget-title { margin-top: 18px; }
+  .sbl-sign-filters .widget-title:first-child { margin-top: 0; }
+  .sbl-sign-filters .sidebar-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .sbl-sign-filters__clear {
+    border: 0;
+    padding: 0;
+    background: none;
+    color: #8a6a2f;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .sbl-sign-filters__group { display: flex; flex-direction: column; }
+  .sbl-sign-filters__panel:not([open]) > .sbl-sign-filters__group { display: none; }
+  .sbl-sign-filters__group--scroll {
+    max-height: 320px;
+    overflow: auto;
+    padding-right: 4px;
+  }
+  .sbl-sign-filters__choice-hidden { display: none !important; }
+  .sbl-sign-filters__status {
+    margin: 8px 0 0;
+    color: #667085;
+    font-size: 13px;
+  }
+  .sbl-sign-filters__group > label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .sbl-sign-filters__name {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .sbl-sign-filters__count {
+    margin-left: auto;
+    flex: 0 0 auto;
+    color: #667085;
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .sbl-result-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 24px;
+  }
+  .sbl-result-heading > h1,
+  .sbl-result-heading > h2 {
+    margin: 0;
+    flex: 1 1 auto;
+  }
+  .collection-header .sbl-result-heading {
+    margin-bottom: 18px;
+  }
+  .search-page .sbl-result-heading {
+    margin-bottom: 22px;
+  }
+  .sbl-result-count {
+    margin: 0;
+    flex: 0 0 auto;
+    color: #667085;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    white-space: nowrap;
+  }
+  .sbl-sign-filters__empty {
+    padding: 28px 8px;
+    color: #667085;
+    text-align: center;
+  }
+  .sbl-sign-filters [data-sbl-category-nav] a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .sbl-sign-filters [data-sbl-category-nav] a:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  .sbl-sign-filters__panel {
+    margin: 0;
+  }
+  .sbl-sign-filters__panel > summary {
+    list-style: none;
+    cursor: pointer;
+  }
+  .sbl-sign-filters__panel > summary::-webkit-details-marker {
+    display: none;
+  }
+  .sbl-sign-filters__panel:not([open]) > summary .sidebar-title {
+    flex-wrap: wrap;
+  }
+  .sbl-sign-filters__panel > summary .sidebar-title::after {
+    content: "";
+    order: 2;
+    width: 7px;
+    height: 7px;
+    margin-left: auto;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    flex: 0 0 auto;
+    position: relative;
+    top: -3px;
+  }
+  .sbl-sign-filters__panel[open] > summary .sidebar-title::after {
+    transform: rotate(-135deg);
+    top: 1px;
+  }
+  .sbl-sign-filters__panel-current {
+    order: 3;
+    flex: 1 0 100%;
+    margin-top: 6px;
+    overflow: hidden;
+    color: #8a6a2f;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-align: left;
+    text-overflow: ellipsis;
+    text-transform: none;
+    white-space: nowrap;
+  }
+  .sbl-sign-filters__panel-current:empty,
+  .sbl-sign-filters__panel[open] .sbl-sign-filters__panel-current {
+    display: none;
+  }
+{% endstylesheet %}
+
+{%- if collection.handle != blank or search.performed -%}
+  <script>
+    (function () {
+      if (window.__sblFilterPrefetch) return;
+      var path = window.location.pathname;
+      var parts = path.split('/').filter(Boolean);
+      var collectionIndex = parts.indexOf('collections');
+      var search = parts.indexOf('search') !== -1;
+      var tagged = collectionIndex !== -1 && parts.length - collectionIndex > 2;
+      var preview = '';
+      var current = new URLSearchParams(window.location.search).get('preview_theme_id');
+      if (current) preview = current;
+      else if (window.Shopify && Shopify.theme && Shopify.theme.role && Shopify.theme.role !== 'main' && Shopify.theme.id) preview = String(Shopify.theme.id);
+      var url = '';
+      if (search) {
+        var params = new URLSearchParams(window.location.search);
+        params.delete('sign_type');
+        params.delete('sign_shape');
+        params.delete('sign_category');
+        params.delete('page');
+        params.set('view', 'sbl-filter-data');
+        if (!params.get('type')) params.set('type', 'product');
+        params.set('page', '1');
+        if (preview) params.set('preview_theme_id', preview);
+        url = '/search?' + params.toString();
+      } else if (tagged) {
+        var next = new URLSearchParams();
+        next.set('view', 'sbl-filter-data');
+        next.set('page', '1');
+        if (preview) next.set('preview_theme_id', preview);
+        url = path + '?' + next.toString();
+      } else if (collectionIndex !== -1) {
+        url = path.replace(/\/$/, '') + '/products.json?limit=250&page=1';
+      }
+      if (!url) return;
+      var themeId = window.Shopify && Shopify.theme && Shopify.theme.id ? String(Shopify.theme.id) : '0';
+      var cacheKey = search
+        ? 'sbl-filter-catalog:v2:' + themeId + ':search:' + (new URLSearchParams(window.location.search).get('q') || '')
+        : 'sbl-filter-catalog:v2:' + themeId + ':' + path;
+      try {
+        var cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null');
+        if (cached && cached.products && cached.products.length && Date.now() - cached.at < 30 * 60 * 1000) return;
+      } catch (error) {}
+      window.__sblFilterPrefetch = fetch(url, { credentials: 'same-origin' }).then(function (response) {
+        if (!response.ok) throw new Error('unavailable');
+        return response.json();
+      });
+    })();
+  </script>
+  {%- assign sbl_professional = '|restroom-signs|employee-only-signs|safety-signs|office-signs|general-business-signs|exam-room|church-office-signs|custom-church-products|security-surveillance-signs|property-signs|no-soliciting-signs|signage-signs-for-home|signage-signs-for-business-food-signs|designer-school-student-desk-signs|custom-engraved-desk-nameplates|' -%}
+  {%- assign sbl_professional_token = '|' | append: collection.handle | append: '|' -%}
+  <span data-sbl-filters-slot hidden></span>
+  <div
+    class="widget sbl-sign-filters"
+    data-sbl-filters
+    {% if search.performed %}data-sbl-context="search"{% else %}data-sbl-context="collection"{% endif %}
+    {% if sbl_professional contains sbl_professional_token %}data-sbl-skip-novelty="true"{% endif %}
+  >
+    {%- liquid
+      assign sbl_category_selected = false
+      if current_tags
+        for sbl_current_tag in current_tags
+          if sbl_current_tag contains 'sbl:category:'
+            assign sbl_category_selected = true
+            break
+          endif
+        endfor
+      endif
+    -%}
+    {%- capture sbl_category_section -%}
+    <details class="sbl-sign-filters__panel" data-sbl-category-panel open>
+      <summary class="widget-title">
+        <h3 class="sidebar-title">
+          <span>Category</span>
+          <span class="sbl-sign-filters__panel-current" data-sbl-category-current></span>
+        </h3>
+      </summary>
+    <div class="sbl-sign-filters__group sbl-sign-filters__group--scroll" data-sbl-filter-group="category">
+      <input id="sbl-cat-restroom" type="checkbox" value="restroom">
+      <label for="sbl-cat-restroom">Restroom &amp; hygiene</label>
+      <input id="sbl-cat-cctv" type="checkbox" value="cctv">
+      <label for="sbl-cat-cctv">CCTV &amp; surveillance</label>
+      <input id="sbl-cat-fire" type="checkbox" value="fire">
+      <label for="sbl-cat-fire">Fire &amp; electrical</label>
+      <input id="sbl-cat-safety" type="checkbox" value="safety">
+      <label for="sbl-cat-safety">Safety warnings</label>
+      <input id="sbl-cat-staff" type="checkbox" value="staff">
+      <label for="sbl-cat-staff">Staff only &amp; private</label>
+      <input id="sbl-cat-entrance" type="checkbox" value="entrance">
+      <label for="sbl-cat-entrance">Entrance &amp; exit</label>
+      <input id="sbl-cat-push" type="checkbox" value="push">
+      <label for="sbl-cat-push">Push &amp; pull</label>
+      <input id="sbl-cat-property" type="checkbox" value="property">
+      <label for="sbl-cat-property">Property &amp; no soliciting</label>
+      <input id="sbl-cat-dogs" type="checkbox" value="dogs">
+      <label for="sbl-cat-dogs">Dogs &amp; pets</label>
+      <input id="sbl-cat-weapons" type="checkbox" value="weapons">
+      <label for="sbl-cat-weapons">Weapons notices</label>
+      <input id="sbl-cat-smoking" type="checkbox" value="smoking">
+      <label for="sbl-cat-smoking">No smoking</label>
+      <input id="sbl-cat-doors" type="checkbox" value="doors">
+      <label for="sbl-cat-doors">Door instructions</label>
+      <input id="sbl-cat-quiet" type="checkbox" value="quiet">
+      <label for="sbl-cat-quiet">Do not disturb &amp; quiet</label>
+      <input id="sbl-cat-reception" type="checkbox" value="reception">
+      <label for="sbl-cat-reception">Reception &amp; assistance</label>
+      <input id="sbl-cat-payments" type="checkbox" value="payments">
+      <label for="sbl-cat-payments">Payments &amp; policies</label>
+      <input id="sbl-cat-kitchen" type="checkbox" value="kitchen">
+      <label for="sbl-cat-kitchen">Kitchen &amp; break room</label>
+      <input id="sbl-cat-rooms" type="checkbox" value="rooms">
+      <label for="sbl-cat-rooms">Rooms &amp; closets</label>
+      <input id="sbl-cat-wayfinding" type="checkbox" value="wayfinding">
+      <label for="sbl-cat-wayfinding">Wayfinding &amp; arrows</label>
+      <input id="sbl-cat-mail" type="checkbox" value="mail">
+      <label for="sbl-cat-mail">Mail &amp; delivery</label>
+      <input id="sbl-cat-beauty" type="checkbox" value="beauty">
+      <label for="sbl-cat-beauty">Beauty &amp; spa</label>
+      <input id="sbl-cat-gym" type="checkbox" value="gym">
+      <label for="sbl-cat-gym">Gym &amp; fitness</label>
+      <input id="sbl-cat-church" type="checkbox" value="church">
+      <label for="sbl-cat-church">Church</label>
+      <input id="sbl-cat-house" type="checkbox" value="house">
+      <label for="sbl-cat-house">House rules</label>
+      <input id="sbl-cat-trash" type="checkbox" value="trash">
+      <label for="sbl-cat-trash">Trash &amp; recycling</label>
+      <input id="sbl-cat-access" type="checkbox" value="access">
+      <label for="sbl-cat-access">Accessibility</label>
+      <input id="sbl-cat-pool" type="checkbox" value="pool">
+      <label for="sbl-cat-pool">Pool &amp; spa</label>
+      <input id="sbl-cat-parking" type="checkbox" value="parking">
+      <label for="sbl-cat-parking">Parking &amp; EV</label>
+      <input id="sbl-cat-hanger" type="checkbox" value="hanger">
+      <label for="sbl-cat-hanger">Door hangers</label>
+      <input id="sbl-cat-bilingual" type="checkbox" value="bilingual">
+      <label for="sbl-cat-bilingual">Bilingual</label>
+    </div>
+    </details>
+    {%- endcapture -%}
+    {%- if sbl_category_selected -%}
+    {%- assign sbl_category_nav = 'Restroom & hygiene|sbl:category:restroom-hygiene||CCTV & surveillance|sbl:category:security-camera||Fire & electrical|sbl:category:fire-electrical||Safety warnings|sbl:category:safety-compliance||Staff only & private|sbl:category:staff-private||Entrance & exit|sbl:category:entrance-exit||Push & pull|sbl:category:push-pull||Property & no soliciting|sbl:category:property-notices||Dogs & pets|sbl:category:dogs-pets||Weapons notices|sbl:category:weapons-notices||No smoking|sbl:category:no-smoking||Door instructions|sbl:category:door-instructions||Do not disturb & quiet|sbl:category:do-not-disturb||Reception & assistance|sbl:category:reception-assistance||Payments & policies|sbl:category:payments-policy||Kitchen & break room|sbl:category:kitchen-break-room||Rooms & closets|sbl:category:rooms-closets||Wayfinding & arrows|sbl:category:wayfinding-directory||Mail & delivery|sbl:category:mail-delivery||Beauty & spa|sbl:category:beauty-salon||Gym & fitness|sbl:category:gym-fitness||Church|sbl:category:church||House rules|sbl:category:house-rules||Trash & recycling|sbl:category:waste-recycling||Accessibility|sbl:category:accessibility-ada||Pool & spa|sbl:category:pool-pet-facility||Parking & EV|sbl:category:parking-traffic||Door hangers|sbl:family:door-hanger||Bilingual|sbl:category:bilingual' | split: '||' -%}
+    {%- assign sbl_selected_category_label = '' -%}
+    {%- for sbl_nav_item in sbl_category_nav -%}
+      {%- assign sbl_nav_parts = sbl_nav_item | split: '|' -%}
+      {%- if current_tags contains sbl_nav_parts.last -%}
+        {%- if sbl_selected_category_label == blank -%}
+          {%- assign sbl_selected_category_label = sbl_nav_parts.first -%}
+        {%- else -%}
+          {%- assign sbl_selected_category_label = sbl_selected_category_label | append: ', ' | append: sbl_nav_parts.first -%}
+        {%- endif -%}
+      {%- endif -%}
+    {%- endfor -%}
+    <details class="sbl-sign-filters__panel" data-sbl-category-panel>
+      <summary class="widget-title">
+        <h3 class="sidebar-title">
+          <span>Category</span>
+          <span class="sbl-sign-filters__panel-current">{{ sbl_selected_category_label }}</span>
+        </h3>
+      </summary>
+    <div class="sbl-sign-filters__group sbl-sign-filters__group--scroll" data-sbl-category-nav>
+      {%- for sbl_nav_item in sbl_category_nav -%}
+        {%- assign sbl_nav_parts = sbl_nav_item | split: '|' -%}
+        {%- assign sbl_nav_label = sbl_nav_parts | first -%}
+        {%- assign sbl_nav_tag = sbl_nav_parts | last -%}
+        <input type="checkbox" tabindex="-1" {% if current_tags contains sbl_nav_tag %}checked{% endif %}>
+        <label><a href="{{ collection.url }}/{{ sbl_nav_tag | handleize }}">{{ sbl_nav_label }}</a></label>
+      {%- endfor -%}
+    </div>
+    </details>
+    {%- endif -%}
+    <div class="widget-title">
+      <h3 class="sidebar-title">
+        <span>Sign type</span>
+        <button type="button" class="sbl-sign-filters__clear" data-sbl-filter-clear hidden>Clear</button>
+      </h3>
+    </div>
+    <div class="sbl-sign-filters__group" data-sbl-filter-group="type">
+      <input id="sbl-type-hanging" type="checkbox" value="hanging">
+      <label for="sbl-type-hanging">Hanging</label>
+      <input id="sbl-type-wall" type="checkbox" value="wall">
+      <label for="sbl-type-wall">Wall</label>
+      <input id="sbl-type-table" type="checkbox" value="table">
+      <label for="sbl-type-table">Table top</label>
+    </div>
+    {%- unless sbl_category_selected -%}
+      {{ sbl_category_section }}
+    {%- endunless -%}
+
+    <div class="widget-title">
+      <h3 class="sidebar-title"><span>Sign shape</span></h3>
+    </div>
+    <div class="sbl-sign-filters__group" data-sbl-filter-group="shape">
+      <input id="sbl-shape-square" type="checkbox" value="square">
+      <label for="sbl-shape-square">Square</label>
+      <input id="sbl-shape-rectangle" type="checkbox" value="rectangle">
+      <label for="sbl-shape-rectangle">Rectangle</label>
+      <input id="sbl-shape-circle" type="checkbox" value="circle">
+      <label for="sbl-shape-circle">Circle</label>
+      <input id="sbl-shape-oval" type="checkbox" value="oval">
+      <label for="sbl-shape-oval">Oval</label>
+      <input id="sbl-shape-victorian" type="checkbox" value="victorian">
+      <label for="sbl-shape-victorian">Victorian</label>
+      <input id="sbl-shape-fancy" type="checkbox" value="fancy">
+      <label for="sbl-shape-fancy">Fancy</label>
+      <input id="sbl-shape-designer" type="checkbox" value="designer">
+      <label for="sbl-shape-designer">Designer</label>
+      <input id="sbl-shape-portrait" type="checkbox" value="portrait">
+      <label for="sbl-shape-portrait">Portrait round</label>
+      <input id="sbl-shape-arrow" type="checkbox" value="arrow">
+      <label for="sbl-shape-arrow">Arrow</label>
+      <input id="sbl-shape-heart" type="checkbox" value="heart">
+      <label for="sbl-shape-heart">Heart</label>
+      <input id="sbl-shape-triangle" type="checkbox" value="triangle">
+      <label for="sbl-shape-triangle">Triangle</label>
+      <input id="sbl-shape-arch" type="checkbox" value="arch">
+      <label for="sbl-shape-arch">Arch</label>
+    </div>
+    <p class="sbl-sign-filters__status" data-sbl-filter-status>Loading filters…</p>
+  </div>
+{%- endif -%}
+
+{% javascript %}
+    (function () {
+      var root = document.querySelector('[data-sbl-filters]');
+      if (!root || root.dataset.sblReady === 'true') return;
+      root.dataset.sblReady = 'true';
+
+      var SHAPES = {
+        square: ['sbl:shape:square', 'sbl:shape:table-square-5x5'],
+        rectangle: ['sbl:shape:standard', 'sbl:shape:basic', 'sbl:shape:classic', 'sbl:shape:classic-framed', 'sbl:shape:heritage', 'sbl:shape:notched-standard', 'sbl:shape:table-6x8'],
+        circle: ['sbl:shape:circle', 'sbl:shape:table-circle'],
+        oval: ['sbl:shape:oval'],
+        victorian: ['sbl:shape:victorian'],
+        fancy: ['sbl:shape:fancy'],
+        designer: ['sbl:shape:designer'],
+        portrait: ['sbl:shape:portrait-round'],
+        arrow: ['sbl:shape:arrow'],
+        heart: ['sbl:shape:table-heart'],
+        triangle: ['sbl:shape:triangle'],
+        arch: ['sbl:shape:headstone']
+      };
+      var CATEGORIES = {
+        restroom: { tags: ['sbl:category:restroom-hygiene'], keywords: ['restroom', 'bathroom', 'washroom', 'toilet', 'lavatory', 'flush', 'wash your hands', 'wash hands', 'hand wash', 'all gender', 'unisex', 'powder room', 'diaper', 'changing station', 'ladies', 'gentlemen', 'men women', 'bano', 'feminine', 'mop cleaning', 'shower', 'conserve water'], exclude: ['wash rinse'] },
+        cctv: { keywords: ['cctv', 'surveillance', 'on camera', 'video recording', 'audio and video', 'audio video', 'security camera', 'unauthorized recording', 'recording or photography', 'video surveillance'] },
+        fire: { tags: ['sbl:category:fire-electrical'], keywords: ['electrical room', 'electrical panel', 'facp', 'fire sprinkler', 'fire extinguisher', 'sprinkler room', 'sprinkler water', 'fire riser', 'high voltage'] },
+        safety: { keywords: ['watch your step', 'watch your head', 'slippery', 'wet floor', 'first aid', 'no diving', 'handrail', 'oxygen', 'water gets very hot', 'caution', 'open door slowly', 'proposition 65', 'stairs', 'no climbing'] },
+        staff: { tags: ['sbl:category:staff-private'], keywords: ['employees only', 'employee only', 'staff only', 'authorized personnel', 'no guest', 'no guests', 'employee entrance', 'staff restroom', 'employee restroom', 'private', 'restricted to members', 'no entry without permission'], exclude: ['private property', 'private residence', 'private restroom', 'door hanger'] },
+        entrance: { tags: ['sbl:category:entrance-exit'], keywords: ['exit', 'entrance', 'way out'] },
+        push: { keywords: ['push pull', 'push and pull', 'empuje', 'jale'] },
+        property: { tags: ['sbl:category:property-notices'], keywords: ['no soliciting', 'no solicitar', 'soliciting', 'trespass', 'trespassing', 'private property', 'private residence', 'no flyers', 'no politics', 'panhandling', 'loitering', 'no hunting', 'do not ring'] },
+        dogs: { tags: ['sbl:category:dogs-pets'], keywords: ['beware of dog', 'dog will bite', 'dog in yard', 'dogs in yard', 'no pets', 'service animal', 'service dog', 'pets allowed'] },
+        weapons: { tags: ['sbl:category:weapons-notices'], keywords: ['firearm', 'firearms', 'weapon', 'weapons', 'armed property', 'armed veteran', '2nd amendment', 'second amendment'] },
+        smoking: { tags: ['sbl:category:no-smoking'], keywords: ['smoking', 'smoke free', 'smokefree', 'vaping', 'vape', 'no fumar'] },
+        doors: { tags: ['sbl:category:door-instructions'], keywords: ['keep door closed', 'door closed', 'close door', 'remain closed', 'door must remain', 'open door slowly', 'close door gently', 'slide door', 'slide', 'door to remain', 'keep gate closed', 'electric gate'], exclude: ['door hanger'] },
+        quiet: { tags: ['sbl:category:do-not-disturb'], keywords: ['do not disturb', 'please knock', 'knock before', 'do not knock', 'do not ring', 'quiet hours', 'quiet space', 'quiet please', 'keep noise', 'noise to a minimum', 'having a nap', 'in session', 'cell phone'] },
+        reception: { tags: ['sbl:category:reception-assistance'], keywords: ['ring bell', 'ring doorbell', 'for assistance', 'please check in', 'wait to be seated', 'order here', 'help yourself', 'refreshments'], exclude: ['do not ring', 'do not knock'] },
+        payments: { tags: ['sbl:category:payments-policy'], keywords: ['no cash', 'cash only', 'cash preferred', 'all sales final', 'no checks', 'credit card', 'debit', 'tips', 'please pay', 'refuse service', 'not responsible', 'open closed', 'back in 5', 'come again', 'shoes required', 'checkout', 'donation', 'no alcohol'] },
+        kitchen: { tags: ['sbl:category:kitchen-break-room'], keywords: ['break room', 'breakroom', 'kitchen', 'microwave', 'fridge', 'refrigerator', 'dishes', 'dishwasher', 'coffee', 'pantry', 'ice machine', 'grill', 'snack', 'hydration', 'wash rinse', 'sanitize', 'food or drink', 'no outside food', 'do not put any food', 'drinking water', 'nacho'], exclude: ['flush'] },
+        rooms: { tags: ['sbl:category:rooms-closets'], keywords: ['laundry', 'linen', 'towel', 'coat closet', 'supply closet', 'storage closet', 'janitor', 'utility closet', 'utility room', 'server room', 'conference', 'waiting room', 'pantry', 'maintenance', 'laboratory', 'lab', 'x ray', 'xray', 'main office', 'lost and found', 'elevator', 'office sign', 'office', 'manager', 'lounge', 'storage', 'closet', 'changing room', 'cleaning supplies'], exclude: ['restroom', 'bathroom', 'electrical room', 'sprinkler room', 'office or business', 'office workplace'] },
+        wayfinding: { tags: ['sbl:category:wayfinding-directory'], keywords: ['left arrow', 'right arrow', 'up arrow', 'this way', 'other door', 'front door', 'back door', 'other gate', 'directional', 'you are here'] },
+        mail: { tags: ['sbl:category:mail-delivery'], keywords: ['mail drop', 'drop box', 'outgoing mail', 'packages', 'package', 'deliveries', 'delivery', 'deliver', 'mail'], exclude: ['email'] },
+        beauty: { tags: ['sbl:category:beauty-salon'], keywords: ['waxing', 'facial', 'treatment room', 'dressing room', 'fitting room', 'changing room', 'beauty', 'relaxation', 'salon', 'sauna'] },
+        gym: { tags: ['sbl:category:gym-fitness'], keywords: ['fitness', 'weights', 'gym', 'locker room', 'wipe down machines'] },
+        church: { tags: ['sbl:category:church', 'sbl:industry:faith'], keywords: ['sanctuary', 'church', 'pastor', 'chapel'] },
+        house: { tags: ['sbl:category:house-rules'], keywords: ['remove your shoes', 'remove shoes', 'shoes off', 'quitarse', 'wipe your feet', 'quiet hours', 'keep noise', 'noise to a minimum', 'no pooping', 'children unattended', 'leave your children', 'leave children', 'no children', 'shirt and shoes', 'shoes required', 'do not touch', 'do not sit', 'clean up after yourself', 'cell phone', 'thermostat', 'temperature', 'a c', 'respectful behavior'] },
+        trash: { tags: ['sbl:category:waste-recycling'], keywords: ['trash', 'recycling', 'recycle', 'garbage', 'compost', 'cans and bottles'], exclude: ['waste water'] },
+        access: { tags: ['sbl:category:accessibility-ada'], keywords: ['wheelchair', 'accessible', 'accessibility', 'braille', 'service animal', 'assisted listening', 'handicap'] },
+        pool: { keywords: ['pool', 'no diving', 'sauna'] },
+        parking: { tags: ['sbl:category:parking-traffic'], keywords: ['parking', 'tow away', 'tow zone', 'loading zone', 'valet', 'electric vehicle', 'ev'] },
+        hanger: { tags: ['sbl:family:door-hanger'], keywords: ['door hanger', 'doorknob', 'door knob', 'out of order', 'out of service', 'cleaning in progress'] },
+        bilingual: { tags: ['sbl:category:bilingual'], keywords: ['bilingual', 'bano', 'no solicitar', 'empuje', 'jale', 'quitarse', 'reduzca', 'spanish'] }
+      };
+      var NOVELTY = ['novelty', 'gag gift', 'poo room', 'poop room', 'shit just got real', 'wash your balls', 'wash your paws', 'be gross', 'stop stealing our toilet', 'do not steal the toilet', 'steal the toilet paper', 'shit show'];
+
+      var statusEl = root.querySelector('[data-sbl-filter-status]');
+      var clearBtn = root.querySelector('[data-sbl-filter-clear]');
+      var catalog = null;
+      var catalogComplete = false;
+      var loading = null;
+      var originalGrid = null;
+      var gridWasReplaced = false;
+
+      function selected(group) {
+        return Array.prototype.map.call(
+          root.querySelectorAll('[data-sbl-filter-group="' + group + '"] input:checked'),
+          function (input) { return input.value; }
+        );
+      }
+
+      function tagsOf(product) {
+        return product.tags || [];
+      }
+
+      function isNovelty(product) {
+        if (root.dataset.sblSkipNovelty !== 'true') return false;
+        var tags = tagsOf(product).join('|').toLowerCase();
+        var title = (product.title || '').toLowerCase();
+        if (tags.indexOf('novelty') !== -1) return true;
+        return NOVELTY.some(function (phrase) { return title.indexOf(phrase) !== -1; });
+      }
+
+      function fold(text) {
+        return (text || '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/&/g, ' and ')
+          .replace(/[^a-z0-9]+/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      function visibleCatalog() {
+        return (catalog || []).filter(function (product) { return !isNovelty(product); });
+      }
+
+      function phraseIn(hay, phrase) {
+        if (hay.indexOf(' ' + phrase + ' ') !== -1) return true;
+        if (!phrase || phrase.charAt(phrase.length - 1) === 's') return false;
+        return hay.indexOf(' ' + phrase + 's ') !== -1;
+      }
+
+      Object.keys(CATEGORIES).forEach(function (id) {
+        var spec = CATEGORIES[id];
+        spec._keywords = (spec.keywords || []).map(fold);
+        spec._exclude = (spec.exclude || []).map(fold);
+      });
+
+      function indexCatalog(products) {
+        products.forEach(function (product) {
+          if (product._sbl) return;
+          var tags = tagsOf(product);
+          var hay = ' ' + fold(String(product.title || '').split('|')[0]) + ' ';
+          var flags = { type: {}, shape: {}, category: {} };
+          flags.type.hanging = tags.indexOf('sbl:shape:5x10-hanging') !== -1;
+          flags.type.table = tags.indexOf('sbl:class:table-sign') !== -1;
+          flags.type.wall = tags.indexOf('sbl:class:sign') !== -1 && !flags.type.hanging;
+          Object.keys(SHAPES).forEach(function (shape) {
+            var wanted = SHAPES[shape];
+            flags.shape[shape] = wanted.some(function (tag) { return tags.indexOf(tag) !== -1; });
+          });
+          Object.keys(CATEGORIES).forEach(function (id) {
+            var spec = CATEGORIES[id];
+            if (spec._exclude.some(function (phrase) { return phraseIn(hay, phrase); })) {
+              flags.category[id] = false;
+              return;
+            }
+            if (spec._keywords.some(function (phrase) { return phraseIn(hay, phrase); })) {
+              flags.category[id] = true;
+              return;
+            }
+            flags.category[id] = (spec.tags || []).some(function (tag) { return tags.indexOf(tag) !== -1; });
+          });
+          product._sbl = flags;
+        });
+      }
+
+      function matchesFlags(product, group, values) {
+        if (!values.length) return true;
+        var flags = product._sbl && product._sbl[group];
+        if (!flags) return false;
+        return values.some(function (value) { return flags[value]; });
+      }
+
+      function resultText(count) {
+        return count === 1 ? '1 sign' : count + ' signs';
+      }
+
+      function showResultCount(count) {
+        document.querySelectorAll('[data-sbl-result-count]').forEach(function (node) {
+          node.textContent = resultText(count);
+        });
+      }
+
+      function choiceCountEl(label) {
+        if (!label) return null;
+        var existing = label.querySelector('[data-sbl-choice-count]');
+        if (existing) return existing;
+        var name = document.createElement('span');
+        name.className = 'sbl-sign-filters__name';
+        while (label.firstChild) name.appendChild(label.firstChild);
+        label.appendChild(name);
+        var countEl = document.createElement('span');
+        countEl.className = 'sbl-sign-filters__count';
+        countEl.setAttribute('data-sbl-choice-count', '');
+        label.appendChild(countEl);
+        return countEl;
+      }
+
+      function matching() {
+        var types = selected('type');
+        var shapes = selected('shape');
+        var categories = selected('category');
+        return visibleCatalog().filter(function (product) {
+          return matchesFlags(product, 'type', types) && matchesFlags(product, 'shape', shapes) && matchesFlags(product, 'category', categories);
+        });
+      }
+
+      function hideEmptyChoices() {
+        var products = visibleCatalog();
+        var types = selected('type');
+        var shapes = selected('shape');
+        var categories = selected('category');
+        root.querySelectorAll('[data-sbl-filter-group] input').forEach(function (input) {
+          var group = input.closest('[data-sbl-filter-group]').getAttribute('data-sbl-filter-group');
+          var count = 0;
+          products.forEach(function (product) {
+            if (group !== 'type' && !matchesFlags(product, 'type', types)) return;
+            if (group !== 'shape' && !matchesFlags(product, 'shape', shapes)) return;
+            if (group !== 'category' && !matchesFlags(product, 'category', categories)) return;
+            if (matchesFlags(product, group, [input.value])) count += 1;
+          });
+          var label = root.querySelector('label[for="' + input.id + '"]');
+          var countEl = choiceCountEl(label);
+          if (countEl) countEl.textContent = String(count);
+          var hide = catalogComplete && count === 0 && !input.checked;
+          input.classList.toggle('sbl-sign-filters__choice-hidden', hide);
+          if (label) label.classList.toggle('sbl-sign-filters__choice-hidden', hide);
+        });
+      }
+
+      function grid() {
+        return document.querySelector('.halo-collection-content .product-collection');
+      }
+
+      function pagination() {
+        var main = document.querySelector('.halo-collection-content .col-main');
+        return main ? main.querySelector('.padding') : null;
+      }
+
+      function money(amount) {
+        var number = Number(amount);
+        if (!isFinite(number)) return '';
+        return '$' + number.toFixed(2);
+      }
+
+      function cardFromCollection(product) {
+        var prices = (product.variants || []).map(function (variant) { return Number(variant.price); }).filter(function (price) { return price > 0; });
+        var min = prices.length ? Math.min.apply(null, prices) : 0;
+        var max = prices.length ? Math.max.apply(null, prices) : 0;
+        var image = product.images && product.images[0] && product.images[0].src;
+        if (image && image.indexOf('width=') === -1) image += (image.indexOf('?') === -1 ? '?' : '&') + 'width=600';
+        return {
+          title: product.title,
+          url: '/products/' + product.handle,
+          image: image || '',
+          price: (min && min !== max ? 'from ' : '') + money(min),
+          tags: product.tags || []
+        };
+      }
+
+      function render(products) {
+        var host = grid();
+        if (!host) return;
+        if (originalGrid === null) originalGrid = host.innerHTML;
+        host.textContent = '';
+        if (!products.length) {
+          var empty = document.createElement('p');
+          empty.className = 'col-12 sbl-sign-filters__empty';
+          empty.textContent = 'No signs match these filters.';
+          host.appendChild(empty);
+          return;
+        }
+        var sample = document.createElement('div');
+        sample.innerHTML = originalGrid;
+        var sampleItem = sample.querySelector('.grid-item');
+        var itemClass = sampleItem ? sampleItem.className : 'grid-item col-6 col-md-4 col-lg-3';
+        products.forEach(function (product) {
+          var item = document.createElement('div');
+          item.className = itemClass;
+          var inner = document.createElement('div');
+          inner.className = 'inner product-item';
+          var top = document.createElement('div');
+          top.className = 'inner-top';
+          var imageWrap = document.createElement('div');
+          imageWrap.className = 'product-top';
+          var imageBox = document.createElement('div');
+          imageBox.className = 'product-image';
+          var link = document.createElement('a');
+          link.className = 'product-grid-image';
+          link.href = product.url;
+          link.style.paddingTop = '100%';
+          if (product.image) {
+            var img = document.createElement('img');
+            img.src = product.image;
+            img.alt = product.title;
+            img.width = 600;
+            img.height = 600;
+            img.loading = 'lazy';
+            img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;';
+            link.appendChild(img);
+          }
+          imageBox.appendChild(link);
+          imageWrap.appendChild(imageBox);
+          var bottom = document.createElement('div');
+          bottom.className = 'product-bottom';
+          var title = document.createElement('a');
+          title.className = 'product-title';
+          title.href = product.url;
+          title.textContent = product.title;
+          var priceBox = document.createElement('div');
+          priceBox.className = 'price-box';
+          var price = document.createElement('div');
+          price.className = 'price-regular';
+          var priceText = document.createElement('span');
+          priceText.textContent = product.price || '';
+          price.appendChild(priceText);
+          priceBox.appendChild(price);
+          bottom.appendChild(title);
+          bottom.appendChild(priceBox);
+          top.appendChild(imageWrap);
+          top.appendChild(bottom);
+          inner.appendChild(top);
+          item.appendChild(inner);
+          host.appendChild(item);
+        });
+      }
+
+      function restore() {
+        var host = grid();
+        if (host && originalGrid !== null && gridWasReplaced) host.innerHTML = originalGrid;
+        gridWasReplaced = false;
+        var pages = pagination();
+        if (pages) pages.hidden = false;
+      }
+
+      function writeUrl() {
+        var params = new URLSearchParams(window.location.search);
+        var types = selected('type');
+        var shapes = selected('shape');
+        var categories = selected('category');
+        if (types.length) params.set('sign_type', types.join(','));
+        else params.delete('sign_type');
+        if (shapes.length) params.set('sign_shape', shapes.join(','));
+        else params.delete('sign_shape');
+        if (categories.length) params.set('sign_category', categories.join(','));
+        else params.delete('sign_category');
+        var next = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.history.replaceState({}, '', next);
+      }
+
+      function syncCategoryPanel() {
+        var group = root.querySelector('[data-sbl-filter-group="category"]');
+        if (!group) return;
+        var panel = group.closest('details');
+        if (!panel) return;
+        var names = [];
+        group.querySelectorAll('input:checked').forEach(function (input) {
+          var label = input.id ? root.querySelector('label[for="' + input.id + '"]') : null;
+          if (!label) return;
+          var name = label.querySelector('.sbl-sign-filters__name');
+          names.push((name ? name.textContent : label.textContent).replace(/\s+/g, ' ').trim());
+        });
+        var current = panel.querySelector('[data-sbl-category-current]');
+        if (current) current.textContent = names.join(', ');
+        var signature = names.join('|');
+        if (panel.dataset.sblCategories === signature) return;
+        panel.dataset.sblCategories = signature;
+        panel.open = names.length === 0;
+      }
+
+      function apply() {
+        syncCategoryPanel();
+        var types = selected('type');
+        var shapes = selected('shape');
+        var categories = selected('category');
+        var active = types.length || shapes.length || categories.length;
+        clearBtn.hidden = !active;
+        if (!catalog) return;
+        hideEmptyChoices();
+        if (!active) {
+          restore();
+          statusEl.textContent = '';
+          if (catalogComplete) showResultCount(visibleCatalog().length);
+          return;
+        }
+        var products = matching();
+        render(products);
+        gridWasReplaced = true;
+        var pages = pagination();
+        if (pages) pages.hidden = true;
+        statusEl.textContent = '';
+        showResultCount(products.length);
+      }
+
+      function readUrl() {
+        var params = new URLSearchParams(window.location.search);
+        ['type', 'shape', 'category'].forEach(function (group) {
+          var raw = params.get(group === 'type' ? 'sign_type' : group === 'shape' ? 'sign_shape' : 'sign_category') || '';
+          raw.split(',').forEach(function (value) {
+            var input = root.querySelector('[data-sbl-filter-group="' + group + '"] input[value="' + value + '"]');
+            if (input) input.checked = true;
+          });
+        });
+      }
+
+      function previewParams(params) {
+        if (window.Shopify && Shopify.theme && Shopify.theme.role && Shopify.theme.role !== 'main') {
+          params.set('preview_theme_id', String(Shopify.theme.id));
+        }
+        return params;
+      }
+
+      function collectionIsTagged() {
+        var parts = window.location.pathname.split('/').filter(Boolean);
+        var index = parts.indexOf('collections');
+        return index !== -1 && parts.length - index > 2;
+      }
+
+      function listedProduct(product) {
+        var price = product.price;
+        if (typeof price === 'number') price = '$' + price.toFixed(2);
+        else price = String(price || '').replace(/<[^>]+>/g, '').trim();
+        if (product.priceVaries && price.indexOf('from ') !== 0) price = 'from ' + price;
+        product.price = price;
+        if (product.image && product.image.indexOf('width=') === -1) {
+          product.image += (product.image.indexOf('?') === -1 ? '?' : '&') + 'width=600';
+        }
+        product.tags = product.tags || [];
+        return product;
+      }
+
+      function takePrefetch(url) {
+        var pending = window.__sblFilterPrefetch;
+        window.__sblFilterPrefetch = null;
+        if (!pending) return fetchJson(url);
+        return pending.catch(function () { return fetchJson(url); });
+      }
+
+      function fetchJson(url) {
+        return fetch(url, { credentials: 'same-origin' }).then(function (response) {
+          if (!response.ok) throw new Error('unavailable');
+          return response.json();
+        });
+      }
+
+      function mapPool(items, limit, worker) {
+        var results = new Array(items.length);
+        var cursor = 0;
+        var running = 0;
+        if (!items.length) return Promise.resolve(results);
+        return new Promise(function (resolve, reject) {
+          function launch() {
+            if (cursor >= items.length && running === 0) {
+              resolve(results);
+              return;
+            }
+            while (running < limit && cursor < items.length) {
+              (function (index) {
+                running += 1;
+                Promise.resolve(worker(items[index])).then(function (value) {
+                  results[index] = value;
+                  running -= 1;
+                  launch();
+                }, reject);
+              })(cursor);
+              cursor += 1;
+            }
+          }
+          launch();
+        });
+      }
+
+      function cacheKey() {
+        var themeId = window.Shopify && Shopify.theme && Shopify.theme.id ? String(Shopify.theme.id) : '0';
+        if (root.dataset.sblContext === 'search') {
+          var params = new URLSearchParams(window.location.search);
+          return 'sbl-filter-catalog:v2:' + themeId + ':search:' + (params.get('q') || '');
+        }
+        return 'sbl-filter-catalog:v2:' + themeId + ':' + window.location.pathname;
+      }
+
+      function readCache() {
+        try {
+          var raw = sessionStorage.getItem(cacheKey());
+          if (!raw) return null;
+          var data = JSON.parse(raw);
+          if (!data || !data.products || !data.products.length) return null;
+          if (Date.now() - data.at > 30 * 60 * 1000) return null;
+          return data.products;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function writeCache(products) {
+        try {
+          sessionStorage.setItem(cacheKey(), JSON.stringify({ at: Date.now(), products: products }));
+        } catch (error) {
+          try {
+            var slim = products.map(function (product) {
+              return {
+                title: product.title,
+                url: product.url,
+                image: product.image || '',
+                price: product.price || '',
+                tags: product.tags || []
+              };
+            });
+            sessionStorage.setItem(cacheKey(), JSON.stringify({ at: Date.now(), products: slim }));
+          } catch (again) {}
+        }
+      }
+
+      function receive(products, done) {
+        catalog = products;
+        catalogComplete = done;
+        indexCatalog(catalog);
+        apply();
+        if (products.length || done) statusEl.textContent = '';
+        if (done) writeCache(products);
+      }
+
+      function loadPaged(urlFor, mapPage, maxPages, note) {
+        return takePrefetch(urlFor(1)).then(function (data) {
+          if (!data || !data.products) throw new Error('unavailable');
+          var products = mapPage(data);
+          var pages = Math.min(data.pages || 1, maxPages);
+          if (note) note(products, pages <= 1);
+          if (pages <= 1) return products;
+          var nums = [];
+          for (var page = 2; page <= pages; page++) nums.push(page);
+          return mapPool(nums, 4, function (page) {
+            return fetchJson(urlFor(page)).then(function (batch) {
+              if (!batch || batch.page !== page) return [];
+              return mapPage(batch);
+            });
+          }).then(function (batches) {
+            batches.forEach(function (batch) {
+              batch.forEach(function (product) { products.push(product); });
+            });
+            if (note) note(products, true);
+            return products;
+          });
+        });
+      }
+
+      function loadTaggedCollection(note) {
+        var params = previewParams(new URLSearchParams());
+        params.set('view', 'sbl-filter-data');
+        return loadPaged(function (page) {
+          var next = new URLSearchParams(params);
+          next.set('page', String(page));
+          return window.location.pathname + '?' + next.toString();
+        }, function (data) {
+          return (data.products || []).map(listedProduct);
+        }, 12, note);
+      }
+
+      function loadCollection(note) {
+        if (collectionIsTagged()) return loadTaggedCollection(note);
+        var base = window.location.pathname.replace(/\/$/, '') + '/products.json?limit=250&page=';
+        return takePrefetch(base + '1').then(function (data) {
+          var products = (data.products || []).map(cardFromCollection);
+          var full = (data.products || []).length === 250;
+          if (note) note(products, !full);
+          if (!full) return products;
+          function nextWave(page) {
+            if (page > 12) {
+              if (note) note(products, true);
+              return products;
+            }
+            var last = Math.min(page + 3, 12);
+            var nums = [];
+            for (var current = page; current <= last; current++) nums.push(current);
+            return mapPool(nums, 4, function (current) {
+              return fetchJson(base + current).then(function (batch) {
+                return (batch.products || []).map(cardFromCollection);
+              });
+            }).then(function (batches) {
+              var short = false;
+              batches.forEach(function (batch) {
+                if (short) return;
+                batch.forEach(function (product) { products.push(product); });
+                if (batch.length < 250) short = true;
+              });
+              if (short || last >= 12) {
+                if (note) note(products, true);
+                return products;
+              }
+              return nextWave(last + 1);
+            });
+          }
+          return nextWave(2);
+        });
+      }
+
+      function loadSearch(note) {
+        var params = previewParams(new URLSearchParams(window.location.search));
+        params.delete('sign_type');
+        params.delete('sign_shape');
+        params.delete('sign_category');
+        params.delete('page');
+        params.set('view', 'sbl-filter-data');
+        if (!params.get('type')) params.set('type', 'product');
+        return loadPaged(function (page) {
+          var next = new URLSearchParams(params);
+          next.set('page', String(page));
+          return '/search?' + next.toString();
+        }, function (data) {
+          return (data.products || []).map(listedProduct);
+        }, 6, note);
+      }
+
+      function load() {
+        if (loading) return loading;
+        var cached = readCache();
+        if (cached) {
+          catalog = cached;
+          catalogComplete = true;
+          indexCatalog(catalog);
+          apply();
+          statusEl.textContent = '';
+          loading = Promise.resolve(cached);
+          return loading;
+        }
+        statusEl.textContent = 'Loading filters…';
+        var loadSource = root.dataset.sblContext === 'search' ? loadSearch : loadCollection;
+        loading = loadSource(receive).catch(function () {
+          if (!catalog || !catalog.length) statusEl.textContent = 'Filters could not be loaded.';
+          else {
+            catalogComplete = true;
+            apply();
+            statusEl.textContent = '';
+          }
+        });
+        return loading;
+      }
+
+      root.addEventListener('change', function (event) {
+        if (!event.target.matches('input[type="checkbox"]')) return;
+        writeUrl();
+        syncCategoryPanel();
+        if (!catalog) load();
+        else apply();
+      });
+      clearBtn.addEventListener('click', function () {
+        root.querySelectorAll('input[type="checkbox"]').forEach(function (input) { input.checked = false; });
+        writeUrl();
+        apply();
+      });
+
+      function place() {
+        var slot = document.querySelector('[data-sbl-filters-slot]');
+        var main = document.querySelector('.halo-collection-content .col-main');
+        if (!slot || !main) return;
+        if (window.innerWidth < 1200) {
+          if (root.parentElement !== main) main.insertBefore(root, main.firstChild);
+        } else if (root.previousElementSibling !== slot) {
+          slot.insertAdjacentElement('afterend', root);
+        }
+      }
+      place();
+      window.addEventListener('resize', place);
+      readUrl();
+      syncCategoryPanel();
+      load();
+    })();
+{% endjavascript %}

@@ -36,6 +36,7 @@ endfor
   {%- assign extra_designer = 'pen' -%}
 {%- endif -%}
 <div data-section-id="{{ section.id }}" data-section-type="product" id="ProductSection-{{ section.id }}" class="{% if is_sign_designer_product %}product-template--sign-designer {% endif %}{% if is_plaque_designer_product %}product-template--plaque-designer {% endif %}{% if extra_designer != blank %}product-template--{{ extra_designer }}-designer {% endif %}" data-enable-history-state="true" data-collections-related="{{ routes.collections_url }}/{{collection.handle}}?view=related">
+{% render 'sbl-designer-landing', product: product, key: 'html' %}
 {%- if is_plaque_designer_product -%}
   {%- style -%}
     #ProductSection-{{ section.id }}.product-template--plaque-designer {
@@ -43,15 +44,22 @@ endfor
       padding-bottom: 0 !important;
       max-width: none !important;
     }
+    .product-template .container > .breadcrumb {
+      display: none !important;
+    }
+    .halo-product-content > .row.pro-page {
+      padding-top: 0 !important;
+    }
     .product-template--plaque-designer .plaque-designer-iframe-outer iframe.plaque-designer-iframe {
       width: 100% !important;
-      min-height: min(100vh, 900px) !important;
-      height: min(100vh, 900px) !important;
+      min-height: 0 !important;
+      height: calc(100dvh - 188px) !important;
+      max-height: calc(100dvh - 188px) !important;
       border: 0 !important;
       display: block !important;
     }
   {%- endstyle -%}
-  <div class="plaque-designer-iframe-outer" style="width:100vw;margin-left:calc(-50vw + 50%);margin-right:calc(-50vw + 50%);min-height:min(100vh,900px);">
+  <div class="plaque-designer-iframe-outer" style="width:100vw;margin-left:calc(-50vw + 50%);margin-right:calc(-50vw + 50%);min-height:0;">
     {% render 'plaque-designer-embed' %}
   </div>
 {%- elsif is_sign_designer_product -%}

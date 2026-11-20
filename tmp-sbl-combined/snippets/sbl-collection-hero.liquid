@@ -1,0 +1,98 @@
+{% doc %}
+  Full-width header for the eight homepage category collections.
+  Shows the category name, lifestyle photos, and the SEO paragraph.
+  The filtered product grid stays in the collection template below.
+
+  @param collection {collection}
+{% enddoc %}
+{%- capture sbl_hero_heading -%}{%- render 'sbl-collection-landing', collection: collection, key: 'heading' -%}{%- endcapture -%}
+{%- assign sbl_hero_heading = sbl_hero_heading | strip -%}
+{%- if sbl_hero_heading != blank -%}
+  {%- capture sbl_hero_text -%}{%- render 'sbl-collection-landing', collection: collection, key: 'text' -%}{%- endcapture -%}
+  {%- capture sbl_hero_images -%}{%- render 'sbl-collection-landing', collection: collection, key: 'images' -%}{%- endcapture -%}
+  {%- assign sbl_hero_text = sbl_hero_text | strip -%}
+  {%- assign sbl_hero_images = sbl_hero_images | strip | split: '||' -%}
+  <section class="sbl-cat-hero" aria-label="{{ sbl_hero_heading | escape }}">
+    <div class="sbl-cat-hero__inner">
+      <div class="sbl-cat-hero__copy">
+        <p class="sbl-cat-hero__eyebrow">Ready-made signs</p>
+        <h1>{{ sbl_hero_heading | escape }}</h1>
+        <p>{{ sbl_hero_text | escape }}</p>
+      </div>
+      {%- if sbl_hero_images.size > 0 -%}
+        <div class="sbl-cat-hero__photos{% if sbl_hero_images.size == 1 %} sbl-cat-hero__photos--single{% endif %}">
+          {%- for sbl_photo in sbl_hero_images -%}
+            {%- assign sbl_photo_parts = sbl_photo | split: '%%' -%}
+            <img
+              src="{{ sbl_photo_parts[0] | asset_url }}"
+              alt="{{ sbl_photo_parts[1] | escape }}"
+              width="900"
+              height="900"
+              loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
+            >
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </section>
+  <style>
+    .sbl-cat-hero {
+      background: #f5f1eb;
+      color: #02132b;
+    }
+    .sbl-cat-hero__inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 36px 24px 32px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      gap: 28px 36px;
+      align-items: center;
+    }
+    .sbl-cat-hero__eyebrow {
+      margin: 0 0 8px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #9a6c17;
+    }
+    .sbl-cat-hero h1 {
+      margin: 0 0 12px;
+      font-size: clamp(32px, 4vw, 48px);
+      line-height: 1.1;
+      font-weight: 700;
+    }
+    .sbl-cat-hero__copy p:last-child {
+      margin: 0;
+      max-width: 62ch;
+      font-size: 16px;
+      line-height: 1.55;
+      color: #3d4a5c;
+    }
+    .sbl-cat-hero__photos {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .sbl-cat-hero__photos--single {
+      grid-template-columns: 1fr;
+    }
+    .sbl-cat-hero__photos img {
+      width: 100%;
+      height: 280px;
+      object-fit: cover;
+      border-radius: 8px;
+      display: block;
+    }
+    @media (max-width: 800px) {
+      .sbl-cat-hero__inner {
+        grid-template-columns: 1fr;
+        padding: 28px 18px 24px;
+      }
+      .sbl-cat-hero__photos img {
+        height: 200px;
+      }
+    }
+  </style>
+{%- endif -%}

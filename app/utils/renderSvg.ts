@@ -131,6 +131,7 @@ import {
   plaqueAwardPlateBorderSvgMarkup,
   plaqueAwardRowsToSvgMarkup,
 } from "~/utils/plaqueAwardLayout";
+import { plaqueSymbolDropPx, plaqueTopLineExtraRows } from "~/utils/plaqueLineWrap";
 
 type RenderOpts = {
   /**
@@ -912,6 +913,10 @@ export function getEffectiveSignTextLayoutAndLogoDrawForBadge(
             badge.logo,
             trimBox.y + trimBox.height * PLAQUE_CLASSIC_Y_PRESENTED_TO_FRAC,
             plaqueAwardLogoTopOffsetPx(trimBox, awardFmt!.border),
+            plaqueSymbolDropPx(
+              trimBox.height,
+              plaqueTopLineExtraRows((badge.lines ?? []).map((line) => line.text ?? "")),
+            ),
           )
         : plaqueAttachedLogoDrawRectFixed(
             plaqueAttachedLogoBandRect(trimBox),

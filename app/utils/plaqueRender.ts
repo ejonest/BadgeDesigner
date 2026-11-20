@@ -122,6 +122,8 @@ export function plaqueAttachedLogoDrawRectClassic(
   logo: BadgeImage | undefined,
   presentedToY: number,
   topInsetPx: number,
+  /** Extra drop when the top wording lines wrap, so the emblem stays above them. */
+  dropPx = 0,
 ): SignLogoDrawRect | null {
   const logoBand = plaqueAttachedLogoBandRect(trimBox);
   const sized = plaqueAttachedLogoDrawRectFixed(logoBand, logo);
@@ -131,7 +133,7 @@ export function plaqueAttachedLogoDrawRectClassic(
   const topY = trimBox.y + topInsetPx;
   const gapBeforeCaption = Math.max(10, trimBox.height * 0.018);
   const centerY = (topY + presentedToY) / 2;
-  let y = centerY - fh / 2;
+  let y = centerY - fh / 2 + Math.max(0, dropPx);
 
   const yMin = topY + 2;
   const yMax = presentedToY - gapBeforeCaption - fh;

@@ -46,7 +46,7 @@
       {% if settings.style_product_grid == 'style_product_grid_2' %}
         {% render 'product-grid-item-style-2' with product as product %}
       {% else %}
-        {% render 'product-grid-item' with product as product %}
+        {% render 'product-grid-item', product: product, sbl_quick_buy: true %}
       {% endif %}
     </div>
     {% endfor %}

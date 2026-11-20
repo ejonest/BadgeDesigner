@@ -21,9 +21,15 @@
   </script>
 
   <!-- Title and description ================================================== -->
+  {%- capture sbl_seo_title -%}{%- render 'sbl-landing-meta', key: 'title' -%}{%- endcapture -%}
+  {%- assign sbl_seo_title = sbl_seo_title | strip -%}
+  {%- capture sbl_seo_description -%}{%- render 'sbl-landing-meta', key: 'description' -%}{%- endcapture -%}
+  {%- assign sbl_seo_description = sbl_seo_description | strip -%}
+  {%- capture sbl_seo_canonical -%}{%- render 'sbl-landing-meta', key: 'canonical' -%}{%- endcapture -%}
+  {%- assign sbl_seo_canonical = sbl_seo_canonical | strip -%}
   <title>
-  {%- if template.name == 'index' -%}
-    Signs ByLITA – Custom and Ready-Made Signs
+  {%- if sbl_seo_title != blank -%}
+    {{ sbl_seo_title | escape }}
   {%- elsif page.handle == 'about-us' -%}
     About Signs ByLITA – {{ shop.name }}
   {%- elsif page.handle == 'contact-us' -%}
@@ -52,16 +58,22 @@
   {%- endif -%}
   </title>
 
-  {% if page_description %}
+  {%- if sbl_seo_description != blank -%}
+  <meta name="description" content="{{ sbl_seo_description | escape }}">
+  {%- elsif page_description -%}
   <meta name="description" content="{{ page_description | escape | split: '[/countdown]' | last | strip_html }}">
-  {% endif %}
+  {%- endif -%}
 
   <!-- Product meta ================================================== -->
-  {% render 'fb-open-graph-tags' %}
-  {% render 'twitter-card' %}
+  {%- if sbl_seo_title != blank -%}
+    {%- render 'sbl-landing-meta', key: 'social' -%}
+  {%- else -%}
+    {% render 'fb-open-graph-tags' %}
+    {% render 'twitter-card' %}
+  {%- endif -%}
 
   <!-- Helpers ================================================== -->
-  <link rel="canonical" href="{{ canonical_url }}">
+  <link rel="canonical" href="{% if sbl_seo_canonical != blank %}{{ sbl_seo_canonical | escape }}{% else %}{{ canonical_url }}{% endif %}">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, minimal-ui">
   <link rel="preload" href="{{ 'vendor.min.css' | asset_url }}" as="style">
   <!-- <link rel="preload" href="{{ 'theme-styles.css' | asset_url }}" as="style">
@@ -120,9 +132,6 @@
     {% endif %}
 
 <body data-url-lang="{{ routes.cart_url }}" id="{{ page_title | handle }}" class="{{ header_class }} {{ layout_class }} {% if customer %}customer-logged-in {% endif %}template-{{ template | replace: '.', ' ' | truncatewords: 1, '' | handle }}{% if settings.style_product_grid == 'style_product_grid_2' %} style_product_grid_2{% endif %}{% if settings.layout_style == 'layout_style_1170' %} layout_style_1170{% endif %}{% unless settings.enable_before_you_leave_mb %} before-you-leave-disableMobile{% endunless %}{% if settings.product_layout == 'skin_1' %} product_layout_skin_1{% endif %}">
-  	{% if template contains 'index' %}  
-    <h1 style="display: none">{{ page_title | split: '|' | first }}</h1>
-    {% endif %}
     {% render 'wrapper-header' %}   
 
     {% if settings.header_layout == 'vertical' %}

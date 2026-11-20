@@ -53,11 +53,13 @@
                     {% if linklists[footer_linklist].links.size > 0 %}
                     <ul>
                         {% for link in linklists[footer_linklist].links %}
+                        {% unless link.url contains '/collections/gavels' or link.title == 'Gavels' %}
                         <li>
                             <a href="{{ link.url}}" title="{{ link.title }}" class="foot-link">
                                 {% render 'multilang' with link.title %}
                             </a>
                         </li>
+                        {% endunless %}
                         {% endfor %}
                     </ul>
                     {% endif %}

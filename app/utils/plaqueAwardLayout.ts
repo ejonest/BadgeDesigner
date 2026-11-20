@@ -9,6 +9,7 @@ import { plaqueAwardLayoutEngine } from "~/constants/plaqueFormats";
 import { PLAQUE_MUSIC_DIVIDER_MASK_DATA_URL } from "~/constants/plaqueMusicDividerMaskDataUrl";
 import { PLAQUE_TAPER_GEM_DIVIDER_MASK_DATA_URL } from "~/constants/plaqueTaperGemDividerMaskDataUrl";
 import { PLAQUE_VICTORIAN_BORDER_MASK_DATA_URL } from "~/constants/plaqueVictorianBorderMaskDataUrl";
+import { wrapPlaqueLine } from "~/utils/plaqueLineWrap";
 import type { ResolvedSignTextLayout } from "~/utils/signTextLayout";
 import { SIGN_TEXT_MIN_FONT_PX } from "~/utils/signTextLayout";
 
@@ -89,6 +90,15 @@ function shrinkFontToFitMaxWidth(
     fs -= 1;
   }
   return Math.max(floor, fs);
+}
+
+function wrappedPieces(text: string): string[] {
+  const pieces = wrapPlaqueLine(text);
+  return pieces.length > 0 ? pieces : [text];
+}
+
+function longestPiece(pieces: string[]): string {
+  return pieces.reduce((best, part) => (part.length > best.length ? part : best));
 }
 
 const esc = (s: string) =>
@@ -524,14 +534,16 @@ function plaqueAwardClassicRows(params: {
     const extra = plannedTextForUserIndex(planned, 3);
     const dividers = planned.filter((p) => p.t === "div") as PlannedDiv[];
     const awardRows: PlaqueAwardLayoutRow[] = [];
+    let floorY = db.y;
     const pushUser = (slot: PlannedText | undefined, yFrac: number, fontSize: number) => {
       if (!slot?.text) return;
       const idx = slot.userLineIndex ?? 0;
       const family = plannedFont(slot, fontFamilyRaw, familyEscaped);
       const fontWeight = slot.bold ? "bold" : "normal";
       const fontStyle = slot.italic ? "italic" : "normal";
+      const shown = wrappedPieces(slot.text);
       const sized = shrinkFontToFitMaxWidth(
-        slot.text,
+        longestPiece(shown),
         family.raw,
         fontWeight,
         fontStyle,
@@ -539,39 +551,40 @@ function plaqueAwardClassicRows(params: {
         awardLineFontPx(fontSize, slot.sizeScale, Math.max(fontSize, 72)),
         SIGN_TEXT_MIN_FONT_PX,
       );
-      awardRows.push({
-        kind: "text",
-        text: slot.text,
-        x: cx,
-        y: db.y + H * yFrac,
-        fontSize: sized,
-        anchor: "middle",
-        familyEscaped: family.escaped,
-        fontWeight,
-        fontStyle,
-        fill: userLines[idx]?.color?.trim() || defaultTextColor,
-        underline: Boolean(userLines[idx]?.underline),
+      const step = sized * 1.18;
+      const start = Math.max(db.y + H * yFrac, floorY);
+      shown.forEach((text, piece) => {
+        awardRows.push({
+          kind: "text",
+          text,
+          x: cx,
+          y: start + piece * step,
+          fontSize: sized,
+          anchor: "middle",
+          familyEscaped: family.escaped,
+          fontWeight,
+          fontStyle,
+          fill: userLines[idx]?.color?.trim() || defaultTextColor,
+          underline: Boolean(userLines[idx]?.underline),
+        });
       });
+      floorY = start + (shown.length - 1) * step + step * 0.85;
+    };
+    const pushDivider = (slot: PlannedDiv | undefined, yFrac: number) => {
+      if (!slot) return;
+      const cy = Math.max(db.y + H * yFrac, floorY);
+      awardRows.push({
+        kind: "divider",
+        cy,
+        markup: dividerSvg(slot.style, cx, cy, db.width, defaultTextColor, dividerArtIdSuffix),
+      });
+      floorY = cy + Math.max(8, fsCaption);
     };
     pushUser(firstUser, 0.42, fsCaption);
-    if (dividers[0]) {
-      const cy = db.y + H * 0.48;
-      awardRows.push({
-        kind: "divider",
-        cy,
-        markup: dividerSvg(dividers[0].style, cx, cy, db.width, defaultTextColor, dividerArtIdSuffix),
-      });
-    }
+    pushDivider(dividers[0], 0.48);
     pushUser(nameSlot, 0.56, fsName);
     pushUser(plannedTextForUserIndex(planned, 2), 0.64, fsDate);
-    if (dividers[1]) {
-      const cy = db.y + H * 0.73;
-      awardRows.push({
-        kind: "divider",
-        cy,
-        markup: dividerSvg(dividers[1].style, cx, cy, db.width, defaultTextColor, dividerArtIdSuffix),
-      });
-    }
+    pushDivider(dividers[1], 0.73);
     pushUser(extra, 0.84, fsCaption);
     return awardRows;
   }
@@ -594,50 +607,59 @@ function plaqueAwardClassicRows(params: {
       underline: false,
     });
   }
-  const pushFitted = (slot: PlannedText | undefined, y: number, base: number, cap: number) => {
+  let floorY = db.y;
+  const pushFitted = (slot: PlannedText | undefined, y: number, base: number, capLimit: number) => {
     if (!slot?.text) return;
     const family = plannedFont(slot, fontFamilyRaw, familyEscaped);
     const fontWeight = slot.bold ? "bold" : "normal";
     const fontStyle = slot.italic ? "italic" : "normal";
+    const shown = wrappedPieces(slot.text);
     const fontSize = shrinkFontToFitMaxWidth(
-      slot.text,
+      longestPiece(shown),
       family.raw,
       fontWeight,
       fontStyle,
       maxNameWidth,
-      awardLineFontPx(base, slot.sizeScale, cap),
+      awardLineFontPx(base, slot.sizeScale, capLimit),
       SIGN_TEXT_MIN_FONT_PX,
     );
+    const step = fontSize * 1.18;
+    const start = Math.max(y, floorY);
     const idx = slot.userLineIndex ?? 0;
-    rows.push({
-      kind: "text",
-      text: slot.text,
-      x: cx,
-      y,
-      fontSize,
-      anchor: "middle",
-      familyEscaped: family.escaped,
-      fontWeight,
-      fontStyle,
-      fill: userLines[idx]?.color?.trim() || defaultTextColor,
-      underline: Boolean(userLines[idx]?.underline),
+    shown.forEach((text, piece) => {
+      rows.push({
+        kind: "text",
+        text,
+        x: cx,
+        y: start + piece * step,
+        fontSize,
+        anchor: "middle",
+        familyEscaped: family.escaped,
+        fontWeight,
+        fontStyle,
+        fill: userLines[idx]?.color?.trim() || defaultTextColor,
+        underline: Boolean(userLines[idx]?.underline),
+      });
     });
+    floorY = start + (shown.length - 1) * step + step * 0.85;
   };
   pushFitted(name, yName, fsName, 120);
   pushFitted(l1, yLine1, fsBody, 88);
   if (div) {
+    const cy = Math.max(yDivider, floorY);
     rows.push({
       kind: "divider",
-      cy: yDivider,
+      cy,
       markup: dividerSvg(
         div.style,
         cx,
-        yDivider,
+        cy,
         db.width,
         defaultTextColor,
         dividerArtIdSuffix,
       ),
     });
+    floorY = cy + Math.max(10, fsBody * 0.55);
   }
   pushFitted(l2, yLine2, fsBody, 88);
   pushFitted(date, yDate, fsDate, 72);

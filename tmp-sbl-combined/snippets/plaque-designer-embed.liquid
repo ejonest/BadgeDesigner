@@ -32,8 +32,8 @@
   class="plaque-designer-iframe"
   data-plaque-designer-embed-root
   title="Plaque designer"
-  src="{{ plaque_designer_url }}?variant=plaque&shop={{ shop.permanent_domain | url_param_escape }}&storeUrl={{ shop.permanent_domain | url_param_escape }}&product={{ product.id | url_param_escape }}&plaqueProductHandle={{ product.handle | url_param_escape }}&variantIdSign={{ plaque_fallback_variant.id | url_param_escape }}{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}"
-  style="display:block;width:100%;height:min(90vh,900px);border:0;"
+  src="{{ plaque_designer_url }}/plaque-designer?embedded=1&shop={{ shop.permanent_domain | url_param_escape }}&storeUrl={{ shop.permanent_domain | url_param_escape }}&product={{ product.id | url_param_escape }}&plaqueProductHandle={{ product.handle | url_param_escape }}&variantIdSign={{ plaque_fallback_variant.id | url_param_escape }}{% if customer %}&customerId={{ customer.id | url_param_escape }}{% endif %}"
+  style="display:block;width:100%;height:calc(100dvh - 188px);max-height:calc(100dvh - 188px);border:0;"
   loading="lazy"
   allow="clipboard-read; clipboard-write"
 ></iframe>
@@ -53,6 +53,47 @@
   if (!iframeEl.isConnected) {
     return;
   }
+
+  // The designer cannot report its height across origins. Every desktop step
+  // fits in this many CSS pixels, so the frame renders at that height and is
+  // scaled down to whatever space is left under the store header.
+  var PLAQUE_DESIGN_HEIGHT = 1060;
+  var PLAQUE_SCALE_MIN_WIDTH = 1000;
+  // Below this the text is too small to read; the frame scrolls instead.
+  var PLAQUE_MIN_SCALE = 0.6;
+
+  function setFrameSize(width, height, scale) {
+    iframeEl.style.setProperty('width', width, 'important');
+    iframeEl.style.setProperty('height', height + 'px', 'important');
+    iframeEl.style.setProperty('max-height', height + 'px', 'important');
+    iframeEl.style.setProperty('min-height', '0px', 'important');
+    iframeEl.style.transformOrigin = '0 0';
+    iframeEl.style.transform = scale < 1 ? 'scale(' + scale + ')' : '';
+  }
+
+  function fitPlaqueFrame() {
+    var scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    var top = iframeEl.getBoundingClientRect().top + scrollY;
+    var available = Math.round(window.innerHeight - top - 12);
+    if (available < 520) available = Math.max(460, window.innerHeight - 96);
+    var outer = iframeEl.closest('.plaque-designer-iframe-outer') || iframeEl.parentElement;
+    if (outer) {
+      outer.style.minHeight = '0px';
+      outer.style.height = available + 'px';
+      outer.style.overflow = 'hidden';
+    }
+
+    var outerWidth = outer ? outer.clientWidth : window.innerWidth;
+    var scale = Math.min(1, available / PLAQUE_DESIGN_HEIGHT);
+    if (window.innerWidth < PLAQUE_SCALE_MIN_WIDTH || scale >= 1) {
+      setFrameSize('100%', available, 1);
+      return;
+    }
+    scale = Math.max(PLAQUE_MIN_SCALE, scale);
+    setFrameSize(Math.ceil(outerWidth / scale) + 'px', Math.floor(available / scale), scale);
+  }
+  fitPlaqueFrame();
+  window.addEventListener('resize', fitPlaqueFrame);
 
   var designerOrigin = '{{ plaque_designer_url }}'.replace(/\/$/, '');
   var iframe = iframeEl;

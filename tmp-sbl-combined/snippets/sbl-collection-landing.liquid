@@ -1,0 +1,76 @@
+{% doc %}
+  Copy and lifestyle photos for the eight homepage category collections.
+  key: heading, title, text, image, or images.
+  Blank for every other collection.
+
+  @param collection {collection}
+  @param key {string}
+{% enddoc %}
+{%- liquid
+  assign sbl_cl_heading = ''
+  assign sbl_cl_title = ''
+  assign sbl_cl_text = ''
+  assign sbl_cl_image = ''
+  assign sbl_cl_images = ''
+  case collection.handle
+    when 'hanging-wall-table-signs'
+      assign sbl_cl_heading = 'Hanging, wall & table'
+      assign sbl_cl_title = 'Hanging, Wall & Table Signs – ' | append: shop.name
+      assign sbl_cl_text = 'Hanging signs, wall signs, table signs, and desk signs for offices, shops, and homes. Pick a ready-made design, or write your own wording in the sign designer and preview the finished sign before you order.'
+      assign sbl_cl_image = 'sbl-space-welcome.jpg'
+      assign sbl_cl_images = 'sbl-space-welcome.jpg%%Hello, Garden Room, and custom gold signs on a textured wall||sbl-space-office.jpg%%Conference room and main office signs beside a wood door'
+    when 'restroom-signs'
+      assign sbl_cl_heading = 'Restroom & hygiene'
+      assign sbl_cl_title = 'Restroom Signs – ' | append: shop.name
+      assign sbl_cl_text = 'Restroom door and wall signs for men, women, all-gender, and accessible restrooms, plus hand-washing reminders. Choose a ready-made sign or design a matching set and preview it before you order.'
+      assign sbl_cl_image = 'sbl-space-restroom.jpg'
+      assign sbl_cl_images = 'sbl-space-restroom.jpg%%Brushed gold restroom sign with an arrow on a navy door||sbl-hero-ready-photo.jpg%%Please wash your hands sign on a white tile wall above a sink'
+    when 'office-signs'
+      assign sbl_cl_heading = 'Office & door signs'
+      assign sbl_cl_title = 'Office Signs for Doors & Walls – ' | append: shop.name
+      assign sbl_cl_text = 'Door and wall signs for offices, conference rooms, suites, and directories. Choose a ready-made design, or design a matching set and preview each sign before you order.'
+      assign sbl_cl_image = 'sbl-space-office.jpg'
+      assign sbl_cl_images = 'sbl-space-office.jpg%%Conference room and main office signs beside a wood door||sbl-space-wayfinding.jpg%%Directional reception and meeting room signs on an office wall'
+    when 'safety-signs'
+      assign sbl_cl_heading = 'Safety & compliance'
+      assign sbl_cl_title = 'Safety Signs – ' | append: shop.name
+      assign sbl_cl_text = 'Warning, caution, and facility safety signs for workplaces, property, and public spaces. Choose a ready-made sign, or design your own with the exact wording your building needs.'
+      assign sbl_cl_image = 'sbl-hero-ready-photo.jpg'
+      assign sbl_cl_images = 'sbl-hero-ready-photo.jpg%%Please wash your hands sign mounted on a tiled wall||sbl-space-wayfinding.jpg%%Wall signs directing people through a building'
+    when 'security-surveillance-signs'
+      assign sbl_cl_heading = 'Security & camera'
+      assign sbl_cl_title = 'Security & Surveillance Signs – ' | append: shop.name
+      assign sbl_cl_text = 'Video surveillance and monitored-property signs for doors, gates, and walls. Choose a ready-made sign or design your own and preview it before you order.'
+      assign sbl_cl_image = 'sbl-space-surveillance.jpg'
+      assign sbl_cl_images = 'sbl-space-surveillance.jpg%%24 hour video surveillance notice on a brick wall||sbl-space-monitored.jpg%%This property is monitored sign on a chain-link fence'
+    when 'employee-only-signs'
+      assign sbl_cl_heading = 'Staff only & private'
+      assign sbl_cl_title = 'Employee Only Signs – ' | append: shop.name
+      assign sbl_cl_text = 'Employees-only, staff-only, and restricted-area signs for doors and hallways. Choose a ready-made sign or design a matching set for every door in the building.'
+      assign sbl_cl_image = 'sbl-space-nurses.jpg'
+      assign sbl_cl_images = 'sbl-space-nurses.jpg%%Nurses station sign above a staff only sign in a clinic hallway||sbl-space-office.jpg%%Office door signs for rooms that are not open to visitors'
+    when 'signage-signs-for-business-food-signs'
+      assign sbl_cl_heading = 'Kitchen & break room'
+      assign sbl_cl_title = 'Kitchen & Break Room Signs – ' | append: shop.name
+      assign sbl_cl_text = 'Food and restaurant signs for kitchens, break rooms, and dining rooms. Hand-washing reminders, staff notices, and room signs for cafés, restaurants, and office kitchens. Choose a ready-made sign or design your own and preview it before you order.'
+      assign sbl_cl_image = 'sbl-hero-ready-photo.jpg'
+      assign sbl_cl_images = 'sbl-hero-ready-photo.jpg%%Please wash your hands sign above a kitchen sink||sbl-space-welcome.jpg%%Custom wall signs in round, framed, and bar shapes'
+    when 'custom-engraved-desk-nameplates'
+      assign sbl_cl_heading = 'Desk nameplates'
+      assign sbl_cl_title = 'Custom Engraved Desk Nameplates – ' | append: shop.name
+      assign sbl_cl_text = 'Engraved desk nameplates for names and titles. Choose a finish, add the wording, and preview the nameplate before you order one for each desk.'
+      assign sbl_cl_image = 'sbl-desk-sign-designer-real.png'
+      assign sbl_cl_images = 'sbl-desk-sign-designer-real.png%%Desk nameplate designer with a name and title on the preview||sbl-space-office.jpg%%Finished office signs beside a conference room door'
+  endcase
+-%}
+{%- if key == 'heading' -%}
+{{- sbl_cl_heading -}}
+{%- elsif key == 'title' -%}
+{{- sbl_cl_title -}}
+{%- elsif key == 'text' -%}
+{{- sbl_cl_text -}}
+{%- elsif key == 'image' -%}
+{{- sbl_cl_image -}}
+{%- elsif key == 'images' -%}
+{{- sbl_cl_images -}}
+{%- endif -%}

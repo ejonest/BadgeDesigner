@@ -62,7 +62,6 @@
     </label>
 
     <nav class="sbl-header__nav" aria-label="Primary">
-      <a class="sbl-header__shop sbl-header__shop--menu" href="{{ catalog_url }}">Shop ready-made</a>
       <a class="sbl-header__cta sbl-header__cta--menu" href="/products/custom-sign">
         Design your sign
         <span aria-hidden="true">→</span>
@@ -180,12 +179,17 @@
     </nav>
 
     <div class="sbl-header__tools">
-      <form class="sbl-header__searchbar" action="{{ routes.search_url }}" method="get" role="search">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 16.5L20 20.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        <label class="sbl-header__visually-hidden" for="sbl-header-search-{{ section.id }}">Search signs</label>
-        <input id="sbl-header-search-{{ section.id }}" type="search" name="q" placeholder="Search signs" autocomplete="off">
-        <input type="hidden" name="type" value="product">
-      </form>
+      <details class="sbl-header__searchdrop">
+        <summary class="sbl-header__icon" aria-label="Search signs">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 16.5L20 20.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </summary>
+        <form class="sbl-header__searchpop" action="{{ routes.search_url }}" method="get" role="search">
+          <label class="sbl-header__visually-hidden" for="sbl-header-search-{{ section.id }}">Search signs</label>
+          <input id="sbl-header-search-{{ section.id }}" type="search" name="q" placeholder="Search signs" autocomplete="off">
+          <input type="hidden" name="type" value="product">
+          <button type="submit">Search</button>
+        </form>
+      </details>
 
       <a class="sbl-header__icon" href="{% if customer %}{{ routes.account_url }}{% else %}{{ routes.account_login_url }}{% endif %}" aria-label="Account">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 19.2c1.4-3 3.8-4.4 7-4.4s5.6 1.4 7 4.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -197,8 +201,10 @@
           <span data-cart-count>{{ cart.item_count }}</span>
         </a>
       </div>
-      <a class="sbl-header__shop sbl-header__shop--bar" href="{{ catalog_url }}">Shop ready-made</a>
-      <a class="sbl-header__cta sbl-header__cta--bar" href="/products/custom-sign">Design your sign</a>
+      <a class="sbl-header__cta sbl-header__cta--bar" href="/products/custom-sign">
+        Design your sign
+        <span aria-hidden="true">→</span>
+      </a>
     </div>
   </div>
 </header>
@@ -406,6 +412,47 @@
   .sbl-mega__group[hidden],
   .sbl-mega__empty[hidden] { display: none; }
   .sbl-header__tools { display: flex; align-items: center; gap: 4px; }
+  .sbl-header__searchdrop { position: relative; }
+  .sbl-header__searchdrop summary { list-style: none; cursor: pointer; }
+  .sbl-header__searchdrop summary::-webkit-details-marker,
+  .sbl-header__searchdrop summary::marker { display: none; content: ""; }
+  .sbl-header__searchpop {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 8;
+    display: flex;
+    width: min(280px, 70vw);
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 16px 40px rgba(8, 26, 48, .18);
+  }
+  .sbl-header__searchpop input[type="search"] {
+    width: 100%;
+    min-width: 0;
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid #e4ddd1;
+    border-radius: 8px;
+    color: var(--sbl-navy);
+    font: inherit;
+    font-size: 14px;
+  }
+  .sbl-header__searchpop button {
+    height: 38px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--sbl-navy);
+    color: #fff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+  }
   .sbl-header__searchbar {
     display: flex;
     align-items: center;
@@ -524,7 +571,6 @@
     .sbl-header__bar { width: calc(100% - 32px); max-width: none; gap: 12px; }
     .sbl-header__nav { gap: 16px; flex-wrap: nowrap; }
     .sbl-header__tools { gap: 2px; }
-    .sbl-header__searchbar { width: 148px; margin-right: 4px; }
     .sbl-header__icon { width: 34px; }
     .sbl-header a.sbl-header__shop--bar,
     .sbl-header a.sbl-header__cta--bar { min-height: 42px; padding: 0 12px; font-size: 14px; }
@@ -535,7 +581,6 @@
     .sbl-header__drop summary,
     .sbl-header__more summary { gap: 3px; font-size: 14px; }
     .sbl-header__logo span { font-size: 26px; }
-    .sbl-header__searchbar { width: 112px; }
   }
   @media (max-width: 1279px) {
     .sbl-header__bar { grid-template-columns: auto auto minmax(0, 1fr) auto; width: min(100% - 20px, 1440px); min-height: 64px; gap: 10px; }
@@ -583,16 +628,13 @@
     .sbl-mega__cols { grid-template-columns: 1fr 1fr; }
     .sbl-mega__rail { position: static; }
     .sbl-header__logo span { font-size: 26px; }
-    .sbl-header__searchbar { width: auto; flex: 1; min-width: 0; max-width: 280px; }
   }
   @media (max-width: 599px) {
     .sbl-header__bar { display: flex; flex-wrap: wrap; align-items: center; }
     .sbl-header__logo { margin-right: auto; }
     .sbl-header__tools { display: contents; }
-    .sbl-header__searchbar { order: 10; flex: 1 0 100%; width: 100%; max-width: none; margin: 2px 0 8px; }
     .sbl-mega__cols,
     .sbl-mega__styles div { grid-template-columns: 1fr; }
-    .sbl-header__searchbar input[type="search"] { font-size: 16px; }
   }
 {% endstylesheet %}
 
@@ -618,13 +660,23 @@
         drops.forEach((other) => {
           if (other !== drop) other.open = false;
         });
+        if (searchDrop) searchDrop.open = false;
       });
     });
+
+    const searchDrop = header.querySelector('.sbl-header__searchdrop');
+    const panels = searchDrop ? drops.concat(searchDrop) : drops;
+    if (searchDrop) {
+      searchDrop.addEventListener('toggle', () => {
+        if (!searchDrop.open) return;
+        drops.forEach((drop) => { drop.open = false; });
+      });
+    }
 
     const closeOutside = (event) => {
       const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
       const target = event.target;
-      drops.forEach((drop) => {
+      panels.forEach((drop) => {
         if (!drop.open) return;
         const inside = path.length ? path.includes(drop) : target instanceof Node && drop.contains(target);
         if (!inside) drop.open = false;
@@ -632,11 +684,11 @@
     };
     document.addEventListener('click', closeOutside, true);
     window.addEventListener('blur', () => {
-      drops.forEach((drop) => { drop.open = false; });
+      panels.forEach((drop) => { drop.open = false; });
     });
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return;
-      drops.forEach((drop) => { drop.open = false; });
+      panels.forEach((drop) => { drop.open = false; });
     });
 
     header.querySelectorAll('[data-sbl-mega]').forEach((panel) => {
